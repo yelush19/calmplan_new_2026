@@ -1,20 +1,17 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Client, Task } from '@/api/entities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from '@/components/ui/dialog';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader, RefreshCw, Users, Search,
   ChevronLeft, ChevronRight,
-  ExternalLink, Calculator, Briefcase, TrendingUp,
-  ArrowLeft, Eye
+  ExternalLink, Calculator, Briefcase,
+  Plus, Check, X, ArrowLeft
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -29,12 +26,11 @@ const COLUMN_GROUPS = [
     bgColor: 'bg-slate-50',
     headerBg: 'bg-slate-600',
     headerText: 'text-white',
-    cellBg: 'bg-slate-50/50',
     drillDownPage: 'TaxReportsDashboard',
     icon: Calculator,
     columns: [
-      { key: 'vat', label: 'מע"מ', categories: ['מע"מ', 'work_vat_reporting'] },
-      { key: 'tax_advances', label: 'מקדמות מ"ה', categories: ['מקדמות מס', 'work_tax_advances'] },
+      { key: 'vat', label: 'מע"מ', categories: ['מע"מ', 'work_vat_reporting'], createCategory: 'מע"מ', createTitle: 'מע"מ' },
+      { key: 'tax_advances', label: 'מקדמות מ"ה', categories: ['מקדמות מס', 'work_tax_advances'], createCategory: 'מקדמות מס', createTitle: 'מקדמות מס הכנסה' },
     ],
   },
   {
@@ -43,35 +39,74 @@ const COLUMN_GROUPS = [
     bgColor: 'bg-gray-50',
     headerBg: 'bg-gray-600',
     headerText: 'text-white',
-    cellBg: 'bg-gray-50/50',
     drillDownPage: 'PayrollDashboard',
     icon: Briefcase,
     columns: [
-      { key: 'payroll', label: 'שכר', categories: ['שכר', 'work_payroll'] },
-      { key: 'social_security', label: 'ביט"ל', categories: ['ביטוח לאומי', 'work_social_security'] },
-      { key: 'deductions', label: 'ניכויים', categories: ['ניכויים', 'work_deductions'] },
+      { key: 'payroll', label: 'שכר', categories: ['שכר', 'work_payroll'], createCategory: 'שכר', createTitle: 'שכר' },
+      { key: 'social_security', label: 'ביט"ל', categories: ['ביטוח לאומי', 'work_social_security'], createCategory: 'ביטוח לאומי', createTitle: 'ביטוח לאומי' },
+      { key: 'deductions', label: 'ניכויים', categories: ['ניכויים', 'work_deductions'], createCategory: 'ניכויים', createTitle: 'ניכויים' },
     ],
   },
 ];
 
 const ALL_COLUMNS = COLUMN_GROUPS.flatMap(g => g.columns);
 
-// Status config - filled colored cells
+// Status config
 const STATUS_CONFIG = {
-  not_started:                   { label: 'ממתין',          bg: 'bg-gray-200',       text: 'text-gray-700',     priority: 3 },
-  in_progress:                   { label: 'בעבודה',         bg: 'bg-emerald-200',    text: 'text-emerald-900',  priority: 2 },
-  completed:                     { label: 'הושלם',          bg: 'bg-emerald-400',    text: 'text-white',        priority: 5 },
-  postponed:                     { label: 'נדחה',           bg: 'bg-gray-300',       text: 'text-gray-600',     priority: 4 },
-  waiting_for_approval:          { label: 'לבדיקה',         bg: 'bg-amber-200',      text: 'text-amber-900',    priority: 2 },
-  waiting_for_materials:         { label: 'ממתין לחומרים',  bg: 'bg-amber-100',      text: 'text-amber-800',    priority: 1 },
-  issue:                         { label: 'דורש טיפול',     bg: 'bg-amber-300',      text: 'text-amber-900',    priority: 0 },
-  issues:                        { label: 'דורש טיפול',     bg: 'bg-amber-300',      text: 'text-amber-900',    priority: 0 },
-  ready_for_reporting:           { label: 'מוכן לדיווח',    bg: 'bg-teal-200',       text: 'text-teal-900',     priority: 3 },
-  reported_waiting_for_payment:  { label: 'ממתין לתשלום',   bg: 'bg-sky-200',        text: 'text-sky-900',      priority: 4 },
+  not_started:                   { label: 'ממתין',          bg: 'bg-gray-200',       text: 'text-gray-700',     border: 'border-gray-300',    priority: 3 },
+  in_progress:                   { label: 'בעבודה',         bg: 'bg-emerald-200',    text: 'text-emerald-900',  border: 'border-emerald-300', priority: 2 },
+  completed:                     { label: 'הושלם',          bg: 'bg-emerald-400',    text: 'text-white',        border: 'border-emerald-500', priority: 5 },
+  postponed:                     { label: 'נדחה',           bg: 'bg-gray-300',       text: 'text-gray-600',     border: 'border-gray-400',    priority: 4 },
+  waiting_for_approval:          { label: 'לבדיקה',         bg: 'bg-amber-200',      text: 'text-amber-900',    border: 'border-amber-300',   priority: 2 },
+  waiting_for_materials:         { label: 'ממתין לחומרים',  bg: 'bg-amber-100',      text: 'text-amber-800',    border: 'border-amber-200',   priority: 1 },
+  issue:                         { label: 'דורש טיפול',     bg: 'bg-amber-300',      text: 'text-amber-900',    border: 'border-amber-400',   priority: 0 },
+  issues:                        { label: 'דורש טיפול',     bg: 'bg-amber-300',      text: 'text-amber-900',    border: 'border-amber-400',   priority: 0 },
+  ready_for_reporting:           { label: 'מוכן לדיווח',    bg: 'bg-teal-200',       text: 'text-teal-900',     border: 'border-teal-300',    priority: 3 },
+  reported_waiting_for_payment:  { label: 'ממתין לתשלום',   bg: 'bg-sky-200',        text: 'text-sky-900',      border: 'border-sky-300',     priority: 4 },
 };
 
+// Statuses available for quick-change (excluding 'issues' duplicate)
+const CHANGEABLE_STATUSES = Object.entries(STATUS_CONFIG).filter(([k]) => k !== 'issues');
+
 const EMPTY_STATUS = { label: '-', bg: 'bg-white', text: 'text-gray-300' };
-const NA_STATUS =    { label: 'לא רלוונטי', bg: 'bg-gray-100', text: 'text-gray-400' };
+const NA_STATUS = { label: 'לא רלוונטי', bg: 'bg-gray-100', text: 'text-gray-400' };
+
+// Popover positioned near a cell
+function CellPopover({ anchorRect, onClose, children }) {
+  const popoverRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  if (!anchorRect) return null;
+
+  const top = anchorRect.bottom + 4;
+  const left = Math.max(8, Math.min(anchorRect.left, window.innerWidth - 220));
+
+  return (
+    <div
+      ref={popoverRef}
+      className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-2 min-w-[200px] animate-in fade-in-0 zoom-in-95"
+      style={{ top, left }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function ClientsDashboardPage() {
   const navigate = useNavigate();
@@ -81,7 +116,10 @@ export default function ClientsDashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedCell, setSelectedCell] = useState(null);
+
+  // Popover state for inline editing
+  const [popover, setPopover] = useState(null); // { anchorRect, clientName, clientId, colKey, group, task }
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
@@ -131,7 +169,6 @@ export default function ClientsDashboardPage() {
   const getCellStatus = (clientName, colKey) => {
     const items = clientDataMap[clientName]?.[colKey];
     if (!items || items.length === 0) return null;
-    // Return the most urgent status (lowest priority number)
     return items.reduce((best, item) => {
       const bestP = STATUS_CONFIG[best.status]?.priority ?? 99;
       const itemP = STATUS_CONFIG[item.status]?.priority ?? 99;
@@ -158,7 +195,7 @@ export default function ClientsDashboardPage() {
         if (statusFilter === 'has_issues') return allTasks.some(t => t.status === 'issue' || t.status === 'issues' || t.status === 'waiting_for_materials');
         if (statusFilter === 'all_done') return allTasks.length > 0 && allTasks.every(t => t.status === 'completed');
         if (statusFilter === 'in_progress') return allTasks.some(t => t.status !== 'completed' && t.status !== 'not_started');
-        if (statusFilter === 'not_started') return allTasks.some(t => t.status === 'not_started');
+        if (statusFilter === 'not_started') return allTasks.some(t => t.status === 'not_started') || allTasks.length === 0;
         return true;
       });
     }
@@ -189,7 +226,6 @@ export default function ClientsDashboardPage() {
     setSelectedMonth(curr => dir === 'prev' ? subMonths(curr, 1) : addMonths(curr, 1));
   };
 
-  // Navigate to drill-down page with client filter
   const navigateToDrillDown = (group, clientName) => {
     const url = createPageUrl(group.drillDownPage) + '?client=' + encodeURIComponent(clientName);
     navigate(url);
@@ -209,6 +245,79 @@ export default function ClientsDashboardPage() {
     return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
   };
 
+  // === Interactive: open popover on cell click ===
+  const handleCellClick = useCallback((e, client, col, group) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const bestTask = getCellStatus(client.name, col.key);
+    setPopover({
+      anchorRect: rect,
+      clientName: client.name,
+      clientId: client.id,
+      colKey: col.key,
+      col,
+      group,
+      task: bestTask,
+    });
+  }, [clientDataMap]);
+
+  // === Interactive: update task status ===
+  const handleStatusChange = async (newStatus) => {
+    if (!popover || isUpdating) return;
+    setIsUpdating(true);
+
+    try {
+      if (popover.task) {
+        // Update existing task
+        await Task.update(popover.task.id, { status: newStatus });
+      } else {
+        // Create new task
+        const end = endOfMonth(selectedMonth);
+        const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: he });
+        await Task.create({
+          title: `${popover.col.createTitle} - ${popover.clientName} - ${monthLabel}`,
+          client_name: popover.clientName,
+          client_id: popover.clientId,
+          category: popover.col.createCategory,
+          status: newStatus,
+          due_date: format(end, 'yyyy-MM-dd'),
+        });
+      }
+
+      // Refresh tasks without full reload
+      const start = startOfMonth(selectedMonth);
+      const end = endOfMonth(selectedMonth);
+      const tasksData = await Task.filter({
+        due_date: { '>=': format(start, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
+      }).catch(() => []);
+      setTasks(tasksData || []);
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+
+    setIsUpdating(false);
+    setPopover(null);
+  };
+
+  // === Interactive: create task for empty cell ===
+  const handleCreateTask = async (e, client, col, group) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPopover({
+      anchorRect: rect,
+      clientName: client.name,
+      clientId: client.id,
+      colKey: col.key,
+      col,
+      group,
+      task: null,
+    });
+  };
+
+  const closePopover = useCallback(() => {
+    if (!isUpdating) setPopover(null);
+  }, [isUpdating]);
+
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
@@ -220,7 +329,7 @@ export default function ClientsDashboardPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">לוח לקוחות</h1>
-            <p className="text-sm text-gray-500">מצב דיווחים חודשי - {format(selectedMonth, 'MMMM yyyy', { locale: he })}</p>
+            <p className="text-sm text-gray-500">לחץ על תא לשינוי סטטוס | תא ריק = יצירת משימה</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -308,7 +417,7 @@ export default function ClientsDashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[750px]">
                 <thead>
-                  {/* Group headers - dark, bold */}
+                  {/* Group headers */}
                   <tr>
                     <th rowSpan={2} className="text-right px-4 py-3 font-bold text-gray-700 text-sm bg-gray-100 sticky right-0 z-20 border-b-2 border-gray-300 min-w-[160px]">
                       לקוח
@@ -363,7 +472,6 @@ export default function ClientsDashboardPage() {
                                 </div>
                               )}
                             </div>
-                            {/* Mini progress indicator */}
                             {clientTotal > 0 && (
                               <div className="w-8 h-8 relative">
                                 <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 32 32">
@@ -393,24 +501,31 @@ export default function ClientsDashboardPage() {
 
                             const bestTask = getCellStatus(client.name, col.key);
                             if (!bestTask) {
+                              // Empty cell - clickable to create task
                               return (
                                 <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
-                                  <div className={`${EMPTY_STATUS.bg} ${EMPTY_STATUS.text} rounded py-1.5 text-xs font-medium mx-0.5 border border-dashed border-gray-200`}>
-                                    -
-                                  </div>
+                                  <button
+                                    onClick={(e) => handleCreateTask(e, client, col, group)}
+                                    className="w-full bg-white hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 rounded py-1.5 text-xs font-medium mx-0.5 border border-dashed border-gray-200 hover:border-emerald-300 transition-all cursor-pointer group/empty"
+                                    title={`צור משימת ${col.label} עבור ${client.name}`}
+                                  >
+                                    <span className="group-hover/empty:hidden">-</span>
+                                    <Plus className="w-3.5 h-3.5 mx-auto hidden group-hover/empty:block" />
+                                  </button>
                                 </td>
                               );
                             }
 
                             const config = STATUS_CONFIG[bestTask.status] || STATUS_CONFIG.not_started;
                             const cellTasks = clientDataMap[client.name]?.[col.key] || [];
+                            const isActive = popover?.clientName === client.name && popover?.colKey === col.key;
 
                             return (
                               <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
                                 <button
-                                  onClick={() => navigateToDrillDown(group, client.name)}
-                                  className={`w-full ${config.bg} ${config.text} rounded py-1.5 text-xs font-semibold mx-0.5 hover:opacity-80 hover:shadow-sm transition-all cursor-pointer`}
-                                  title={`${client.name} - ${col.label}: ${config.label} (לחץ למעבר)`}
+                                  onClick={(e) => handleCellClick(e, client, col, group)}
+                                  className={`w-full ${config.bg} ${config.text} rounded py-1.5 text-xs font-semibold mx-0.5 hover:opacity-80 hover:shadow-sm transition-all cursor-pointer ${isActive ? 'ring-2 ring-emerald-500 ring-offset-1' : ''}`}
+                                  title={`${client.name} - ${col.label}: ${config.label} (לחץ לשינוי סטטוס)`}
                                 >
                                   {config.label}
                                   {cellTasks.length > 1 && (
@@ -438,7 +553,6 @@ export default function ClientsDashboardPage() {
                           <td key={col.key} className={`px-2 py-2.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
                             <div className="text-sm font-bold text-gray-700">{colStats.pct}%</div>
                             <div className="text-[10px] text-gray-500">{colStats.done}/{colStats.total}</div>
-                            {/* Mini progress bar */}
                             <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                               <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${colStats.pct}%` }} />
                             </div>
@@ -464,6 +578,57 @@ export default function ClientsDashboardPage() {
             </Button>
           </Link>
         </Card>
+      )}
+
+      {/* Status Change Popover */}
+      {popover && (
+        <CellPopover anchorRect={popover.anchorRect} onClose={closePopover}>
+          <div className="space-y-1">
+            {/* Header */}
+            <div className="px-2 py-1.5 border-b border-gray-100 mb-1">
+              <div className="font-semibold text-sm text-gray-800">{popover.clientName}</div>
+              <div className="text-xs text-gray-500">{popover.col.label} - {popover.task ? 'שינוי סטטוס' : 'יצירת משימה חדשה'}</div>
+            </div>
+
+            {/* Status options */}
+            {CHANGEABLE_STATUSES.map(([statusKey, config]) => {
+              const isCurrent = popover.task?.status === statusKey;
+              return (
+                <button
+                  key={statusKey}
+                  onClick={() => handleStatusChange(statusKey)}
+                  disabled={isUpdating}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded text-xs font-semibold transition-all
+                    ${isCurrent
+                      ? `${config.bg} ${config.text} ring-2 ${config.border}`
+                      : `hover:${config.bg} ${config.text} hover:opacity-90 bg-gray-50`
+                    }
+                    ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                  `}
+                >
+                  {isCurrent && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
+                  <span className={isCurrent ? '' : 'mr-5'}>{config.label}</span>
+                </button>
+              );
+            })}
+
+            {/* Drill-down link */}
+            {popover.task && (
+              <div className="border-t border-gray-100 pt-1 mt-1">
+                <button
+                  onClick={() => {
+                    navigateToDrillDown(popover.group, popover.clientName);
+                    setPopover(null);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded text-xs text-gray-600 hover:bg-gray-100 transition-all cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  צפה בפירוט מלא
+                </button>
+              </div>
+            )}
+          </div>
+        </CellPopover>
       )}
 
       {/* Quick Navigation Cards */}
@@ -516,7 +681,7 @@ export default function ClientsDashboardPage() {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-2 justify-center py-2">
-        {Object.entries(STATUS_CONFIG).filter(([k]) => k !== 'issues').map(([key, config]) => (
+        {CHANGEABLE_STATUSES.map(([key, config]) => (
           <span key={key} className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-semibold ${config.bg} ${config.text}`}>
             {config.label}
           </span>

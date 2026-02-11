@@ -183,7 +183,25 @@ export default function TasksPage() {
         };
       });
 
-      setTasks(normalizedTasks);
+      // 6. סינון משימות ישנות - משימות שהושלמו לפני יותר מ-60 יום לא רלוונטיות
+      // משימות לא-הושלמו שעברו יותר מ-180 יום - כנראה תקועות ולא רלוונטיות
+      const MAX_COMPLETED_AGE_DAYS = 60;
+      const MAX_STALE_AGE_DAYS = 180;
+      const now = Date.now();
+
+      const freshTasks = normalizedTasks.filter(task => {
+        const taskDate = task.due_date || task.created_date;
+        if (!taskDate) return true;
+        const daysSince = Math.floor((now - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
+
+        // משימות שהושלמו לפני יותר מ-60 יום - הסתר
+        if (task.status === 'completed' && daysSince > MAX_COMPLETED_AGE_DAYS) return false;
+        // משימות תקועות מעל 180 יום - הסתר
+        if (task.status !== 'completed' && daysSince > MAX_STALE_AGE_DAYS) return false;
+        return true;
+      });
+
+      setTasks(freshTasks);
     } catch (error) {
       console.error("שגיאה בטעינת משימות:", error);
       setTasks([]);

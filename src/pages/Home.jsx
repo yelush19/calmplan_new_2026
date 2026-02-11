@@ -81,7 +81,18 @@ export default function HomePage() {
         Event.list("-start_date", 1000).catch(() => []),
       ]);
 
-      const allTasks = Array.isArray(tasksData) ? tasksData : [];
+      const rawTasks = Array.isArray(tasksData) ? tasksData : [];
+
+      // סינון משימות ישנות: הושלמו לפני 60+ יום או תקועות 180+ יום
+      const nowMs = Date.now();
+      const allTasks = rawTasks.filter(task => {
+        const taskDate = task.due_date || task.created_date;
+        if (!taskDate) return true;
+        const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (task.status === 'completed' && daysSince > 60) return false;
+        if (task.status !== 'completed' && daysSince > 180) return false;
+        return true;
+      });
 
       // 4. חלוקת המשימות לפי קונטקסט לספירה נכונה - שימוש במשתנים המקומיים
       const workTasks = allTasks.filter(task => task.monday_board_id && currentWorkBoardIds.includes(task.monday_board_id));
