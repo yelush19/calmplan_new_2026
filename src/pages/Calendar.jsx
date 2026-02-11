@@ -64,9 +64,10 @@ export default function CalendarPage() {
       // 3. קריאת המשימות והאירועים
       const [tasksData, eventsData] = await Promise.all([
         Task.filter({
-          'monday_sync.board_id': { '$in': allBoardIds },
-          status: { $ne: "completed" }  // לא להביא משימות שהושלמו
-        }, "-created_date", 2000).catch(() => []),
+          'monday_board_id': { '$in': allBoardIds },
+        }, "-created_date", 2000).then(tasks =>
+          (tasks || []).filter(t => t.status !== 'completed')
+        ).catch(() => []),
         Event.list("-start_date", 1000).catch(() => []),
       ]);
 

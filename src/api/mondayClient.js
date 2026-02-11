@@ -301,6 +301,10 @@ export async function findStatusColumnId(boardId) {
  * Updates existing item or creates new one
  */
 export async function pushClientToMonday(client, boardId) {
+  if (!boardId) {
+    throw new Error('חסר boardId - לא ניתן לסנכרן ללא לוח Monday מקושר');
+  }
+
   const statusColumnId = await findStatusColumnId(boardId);
 
   // Build column values
@@ -344,6 +348,10 @@ export async function pushClientToMonday(client, boardId) {
  * Push a task's data back to Monday.com
  */
 export async function pushTaskToMonday(task, boardId) {
+  if (!boardId) {
+    throw new Error('חסר boardId - לא ניתן לסנכרן ללא לוח Monday מקושר');
+  }
+
   const statusColumnId = await findStatusColumnId(boardId);
 
   const columnValues = {};
