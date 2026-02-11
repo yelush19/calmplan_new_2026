@@ -528,6 +528,7 @@ export default function MondayIntegrationPage() {
 
   const loadPageData = useCallback(async () => {
     setIsLoading(true);
+    setError(null); // Clear previous errors on reload
     await Promise.all([
       loadData(),
       loadAvailableBoards()
