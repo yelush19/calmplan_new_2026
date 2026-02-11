@@ -103,10 +103,180 @@ export const mondayApi = async (params) => {
 
 // ===== Reports Automation =====
 
+// ===== Israeli Accounting Process Definitions =====
+//
+// Process types and their frequencies (per client):
+//   מע"מ          - חודשי / דו-חודשי / לא רלוונטי (from vat_reporting_frequency)
+//   מקדמות מס     - חודשי / דו-חודשי / לא רלוונטי (from tax_advances_frequency)
+//   שכר           - חודשי / לא רלוונטי (from payroll_frequency)
+//   ביטוח לאומי   - רק ללקוחות עם שכר (payroll), חודשי
+//   ניכויים       - רק ללקוחות עם שכר (payroll), חודשי או דו-חודשי
+//   דוח שנתי      - שנתי, יעד 31 במאי
+//
+// Only active clients (status === 'active') get tasks.
+
+const PROCESS_TEMPLATES = {
+  vat: {
+    name: 'דיווח מע"מ',
+    category: 'מע"מ',
+    frequencyField: 'vat_reporting_frequency',
+    dayOfMonth: 15,
+    requiresPayroll: false,
+  },
+  payroll: {
+    name: 'דיווח שכר',
+    category: 'שכר',
+    frequencyField: 'payroll_frequency',
+    dayOfMonth: 15,
+    requiresPayroll: true,
+  },
+  tax_advances: {
+    name: 'מקדמות מס',
+    category: 'מקדמות מס',
+    frequencyField: 'tax_advances_frequency',
+    dayOfMonth: 15,
+    requiresPayroll: false,
+  },
+  social_security: {
+    name: 'ביטוח לאומי',
+    category: 'ביטוח לאומי',
+    frequencyField: null, // monthly when payroll exists
+    dayOfMonth: 15,
+    requiresPayroll: true,
+  },
+  deductions: {
+    name: 'ניכויים במקור',
+    category: 'ניכויים',
+    frequencyField: null, // monthly or bimonthly, follows payroll
+    dayOfMonth: 15,
+    requiresPayroll: true,
+  },
+  annual_report: {
+    name: 'דוח שנתי',
+    category: 'דוח שנתי',
+    frequencyField: null,
+    dayOfMonth: 31,
+    dueMonth: 5,
+    frequency: 'yearly',
+    requiresPayroll: false,
+  },
+};
+
+// Map client service_types → which process templates apply
+const SERVICE_TYPE_TO_TEMPLATES = {
+  'bookkeeping': ['vat', 'payroll', 'tax_advances', 'social_security', 'deductions'],
+  'payroll': ['payroll', 'social_security', 'deductions'],
+  'tax_reports': ['annual_report', 'tax_advances'],
+  'vat': ['vat'],
+  'annual_reports': ['annual_report'],
+  'full_service': ['vat', 'payroll', 'tax_advances', 'social_security', 'annual_report', 'deductions'],
+};
+
+// Bi-monthly period names (due month → period name)
+const BIMONTHLY_PERIOD_NAMES = {
+  2: 'ינואר-פברואר',
+  4: 'מרץ-אפריל',
+  6: 'מאי-יוני',
+  8: 'יולי-אוגוסט',
+  10: 'ספטמבר-אוקטובר',
+  12: 'נובמבר-דצמבר',
+};
+
+const BIMONTHLY_DUE_MONTHS = [2, 4, 6, 8, 10, 12];
+
+const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+/**
+ * Check if client has payroll service active.
+ */
+function clientHasPayroll(client) {
+  const services = client.service_types || [];
+  const hasPayrollService = services.includes('payroll') || services.includes('full_service') || services.includes('bookkeeping');
+  const payrollFreq = client.reporting_info?.payroll_frequency;
+  return hasPayrollService && payrollFreq !== 'not_applicable';
+}
+
+/**
+ * Get the templates applicable to a client based on service_types.
+ * Filters out payroll-dependent templates if client has no payroll.
+ */
+function getClientTemplates(client) {
+  const serviceTypes = client.service_types || [];
+  if (serviceTypes.length === 0) return [];
+
+  const templateKeys = new Set();
+  serviceTypes.forEach(st => {
+    const templates = SERVICE_TYPE_TO_TEMPLATES[st];
+    if (templates) templates.forEach(t => templateKeys.add(t));
+  });
+
+  // Remove payroll-dependent templates if client has no payroll
+  const hasPayroll = clientHasPayroll(client);
+  if (!hasPayroll) {
+    templateKeys.delete('payroll');
+    templateKeys.delete('social_security');
+    templateKeys.delete('deductions');
+  }
+
+  return [...templateKeys];
+}
+
+/**
+ * Get client frequency for a template.
+ * Returns: 'monthly' | 'bimonthly' | 'not_applicable' | 'yearly'
+ */
+function getClientFrequency(templateKey, client) {
+  const template = PROCESS_TEMPLATES[templateKey];
+  if (!template) return 'not_applicable';
+  if (template.frequency === 'yearly') return 'yearly';
+  if (template.frequencyField) {
+    const freq = client.reporting_info?.[template.frequencyField] || 'monthly';
+    // No quarterly - only monthly or bimonthly
+    if (freq === 'quarterly') return 'bimonthly';
+    return freq;
+  }
+  // social_security: monthly (when payroll exists)
+  // deductions: monthly or bimonthly (follows payroll reporting)
+  if (templateKey === 'social_security') return 'monthly';
+  if (templateKey === 'deductions') return client.reporting_info?.payroll_frequency || 'monthly';
+  return 'monthly';
+}
+
+/**
+ * Check if a process template should run for a given month for a specific client.
+ */
+function shouldRunForMonth(templateKey, month, client) {
+  const freq = getClientFrequency(templateKey, client);
+  if (freq === 'not_applicable') return false;
+  if (freq === 'yearly') return month === PROCESS_TEMPLATES[templateKey]?.dueMonth;
+  if (freq === 'bimonthly') return BIMONTHLY_DUE_MONTHS.includes(month);
+  return true; // monthly
+}
+
+/**
+ * Get the description for a report item based on its frequency.
+ */
+function getReportDescription(templateKey, month, year, client) {
+  const template = PROCESS_TEMPLATES[templateKey];
+  const freq = getClientFrequency(templateKey, client);
+
+  if (freq === 'yearly') {
+    return `דוח שנתי לשנת ${year - 1}`;
+  }
+  if (freq === 'bimonthly') {
+    const periodName = BIMONTHLY_PERIOD_NAMES[month] || '';
+    return `${template.name} ${periodName} ${year}`;
+  }
+  // Monthly - report for previous month
+  const reportMonthIdx = month - 2; // e.g. Feb(2) -> Jan index(0)
+  const reportMonthName = MONTH_NAMES[reportMonthIdx < 0 ? 11 : reportMonthIdx];
+  const reportYear = reportMonthIdx < 0 ? year - 1 : year;
+  return `${template.name} ${reportMonthName} ${reportYear}`;
+}
+
 /**
  * Create monthly report items in the appropriate Monday board.
- * Reads clients from local DB, finds the monthly board for the given month/year,
- * and creates report items for each client that has relevant services.
+ * Uses the same logic as ClientRecurringTasks.jsx for service→template mapping.
  */
 export const mondayReportsAutomation = async (params) => {
   const { targetYear, targetMonth } = params;
@@ -147,56 +317,38 @@ export const mondayReportsAutomation = async (params) => {
     const columns = await monday.getBoardColumns(boardId);
     const colMap = {};
     for (const col of columns) {
-      const titleLower = col.title.toLowerCase();
-      if (titleLower.includes('לקוח') || titleLower.includes('client')) colMap.client = col.id;
-      if (titleLower.includes('סוג') || titleLower.includes('type')) colMap.reportType = col.id;
-      if (titleLower.includes('תאריך') || titleLower.includes('date')) colMap.dueDate = col.id;
+      const titleLower = col.title;
+      if (titleLower.includes('לקוח')) colMap.client = col.id;
+      if (titleLower.includes('סוג')) colMap.reportType = col.id;
+      if (titleLower.includes('תאריך')) colMap.dueDate = col.id;
       if (col.type === 'color') colMap.status = col.id;
     }
 
     // Get all active clients
     const allClients = await entities.Client.list();
-    const activeClients = allClients.filter(c => c.status === 'active' || !c.status);
+    const activeClients = allClients.filter(c => c.status === 'active');
 
     log.push(`${timestamp()} נמצאו ${activeClients.length} לקוחות פעילים`);
-
-    // Define report types per service
-    const SERVICE_REPORTS = [
-      { service: 'payroll', label: 'הכנת שכר', dayOfMonth: 9 },
-      { service: 'vat_reporting', label: 'דיווח מע״מ', dayOfMonth: 15 },
-      { service: 'tax_advances', label: 'מקדמות מס', dayOfMonth: 15 },
-      { service: 'bookkeeping', label: 'הנהלת חשבונות', dayOfMonth: 20 },
-      { service: 'reconciliation', label: 'התאמות חשבונות', dayOfMonth: 25 },
-    ];
 
     let created = 0;
     const errors = [];
 
     for (const client of activeClients) {
-      const clientServices = client.service_types || [];
+      const templateKeys = getClientTemplates(client);
 
-      for (const report of SERVICE_REPORTS) {
-        // Check if client has this service
-        if (clientServices.length > 0 && !clientServices.includes(report.service)) continue;
-        // If no services defined, create payroll + vat by default
-        if (clientServices.length === 0 && report.service !== 'payroll' && report.service !== 'vat_reporting') continue;
+      for (const templateKey of templateKeys) {
+        if (!shouldRunForMonth(templateKey, month, client)) continue;
 
-        // Check vat frequency
-        if (report.service === 'vat_reporting') {
-          const freq = client.reporting_info?.vat_reporting_frequency;
-          if (freq === 'not_applicable') continue;
-          if (freq === 'bimonthly' && month % 2 !== 0) continue;
-          if (freq === 'quarterly' && month % 3 !== 0) continue;
-        }
-
-        const itemName = `${client.name} - ${report.label}`;
-        const dueDay = Math.min(report.dayOfMonth, 28);
+        const template = PROCESS_TEMPLATES[templateKey];
+        const description = getReportDescription(templateKey, month, year, client);
+        const itemName = `${client.name} - ${description}`;
+        const dueDay = Math.min(template.dayOfMonth, 28);
         const dueDate = `${year}-${monthNum}-${String(dueDay).padStart(2, '0')}`;
 
         const columnValues = {};
         if (colMap.status) columnValues[colMap.status] = { label: 'ממתין' };
         if (colMap.client) columnValues[colMap.client] = client.name;
-        if (colMap.reportType) columnValues[colMap.reportType] = report.label;
+        if (colMap.reportType) columnValues[colMap.reportType] = template.category;
         if (colMap.dueDate) columnValues[colMap.dueDate] = { date: dueDate };
 
         try {
@@ -1074,7 +1226,7 @@ export const createWeeklyPlan = async () => {
 
 /**
  * Generate process tasks for clients based on their services.
- * Creates tasks in local DB (and optionally in Monday.com boards).
+ * Uses the same template/service mapping as ClientRecurringTasks.jsx.
  * taskType: 'all' | 'mondayReports' | 'balanceSheets' | 'reconciliations'
  */
 export const generateProcessTasks = async (params = {}) => {
@@ -1086,9 +1238,19 @@ export const generateProcessTasks = async (params = {}) => {
   const currentYear = now.getFullYear();
   const monthNum = String(currentMonth).padStart(2, '0');
 
+  // PayrollDashboard process categories for local task categories
+  const TEMPLATE_TO_WORK_CATEGORY = {
+    vat: 'work_vat_reporting',
+    payroll: 'work_payroll',
+    tax_advances: 'work_tax_advances',
+    social_security: 'work_social_security',
+    deductions: 'work_deductions',
+    annual_report: 'work_client_management',
+  };
+
   try {
     const allClients = await entities.Client.list();
-    const activeClients = allClients.filter(c => c.status === 'active' || !c.status);
+    const activeClients = allClients.filter(c => c.status === 'active');
     const existingTasks = await entities.Task.list();
 
     log.push(`${timestamp()} נמצאו ${activeClients.length} לקוחות פעילים, ${existingTasks.length} משימות קיימות`);
@@ -1098,49 +1260,44 @@ export const generateProcessTasks = async (params = {}) => {
       details: []
     };
 
-    // --- Monthly Reports ---
+    // --- Monthly/Periodic Reports (שכר, מע"מ, מקדמות, ביטוח לאומי, ניכויים) ---
     if (taskType === 'all' || taskType === 'mondayReports') {
-      log.push(`${timestamp()} יוצר משימות דיווח חודשיות...`);
-      const reportTypes = [
-        { service: 'payroll', label: 'הכנת שכר', category: 'work_payroll', dayOfMonth: 9 },
-        { service: 'vat_reporting', label: 'דיווח מע״מ', category: 'work_vat_reporting', dayOfMonth: 15 },
-        { service: 'tax_advances', label: 'מקדמות מס', category: 'work_authorities', dayOfMonth: 15 },
-      ];
+      log.push(`${timestamp()} יוצר משימות דיווח תקופתיות...`);
 
       for (const client of activeClients) {
-        const clientServices = client.service_types || [];
+        const templateKeys = getClientTemplates(client);
 
-        for (const report of reportTypes) {
-          if (clientServices.length > 0 && !clientServices.includes(report.service)) continue;
-          if (clientServices.length === 0 && report.service !== 'payroll' && report.service !== 'vat_reporting') continue;
+        for (const templateKey of templateKeys) {
+          // Skip annual reports here (handled in balanceSheets section)
+          if (templateKey === 'annual_report' && taskType === 'mondayReports') continue;
 
-          if (report.service === 'vat_reporting') {
-            const freq = client.reporting_info?.vat_reporting_frequency;
-            if (freq === 'not_applicable') continue;
-            if (freq === 'bimonthly' && currentMonth % 2 !== 0) continue;
-            if (freq === 'quarterly' && currentMonth % 3 !== 0) continue;
-          }
+          if (!shouldRunForMonth(templateKey, currentMonth, client)) continue;
 
-          const title = `${client.name} - ${report.label} ${monthNum}/${currentYear}`;
+          const template = PROCESS_TEMPLATES[templateKey];
+          const description = getReportDescription(templateKey, currentMonth, currentYear, client);
+          const title = `${client.name} - ${description}`;
+          const workCategory = TEMPLATE_TO_WORK_CATEGORY[templateKey] || template.category;
 
           // Skip if similar task already exists
           const exists = existingTasks.some(t =>
-            t.title === title || (t.client_name === client.name && t.category === report.category &&
+            t.title === title ||
+            (t.client_name === client.name && t.category === workCategory &&
               t.due_date && t.due_date.startsWith(`${currentYear}-${monthNum}`))
           );
           if (exists) continue;
 
-          const dueDay = Math.min(report.dayOfMonth, 28);
+          const dueDay = Math.min(template.dayOfMonth, 28);
           try {
             await entities.Task.create({
               title,
-              category: report.category,
+              category: workCategory,
               client_related: true,
               client_name: client.name,
               client_id: client.id,
               status: 'not_started',
-              priority: report.service === 'payroll' ? 'high' : 'medium',
+              priority: 'high',
               due_date: `${currentYear}-${monthNum}-${String(dueDay).padStart(2, '0')}`,
+              is_recurring: true,
             });
             results.summary.tasksCreated++;
           } catch (err) {
@@ -1162,15 +1319,15 @@ export const generateProcessTasks = async (params = {}) => {
       }
     }
 
-    // --- Balance Sheets ---
+    // --- Balance Sheets / Annual Reports (דוח שנתי) ---
     if (taskType === 'all' || taskType === 'balanceSheets') {
-      log.push(`${timestamp()} יוצר משימות מאזנים...`);
+      log.push(`${timestamp()} יוצר משימות דוחות שנתיים / מאזנים...`);
 
       for (const client of activeClients) {
-        const clientServices = client.service_types || [];
-        if (clientServices.length > 0 && !clientServices.includes('annual_reports')) continue;
+        const templateKeys = getClientTemplates(client);
+        if (!templateKeys.includes('annual_report')) continue;
 
-        const title = `${client.name} - מאזן שנתי ${currentYear - 1}`;
+        const title = `${client.name} - דוח שנתי לשנת ${currentYear - 1}`;
         const exists = existingTasks.some(t => t.title === title);
         if (exists) continue;
 
@@ -1184,6 +1341,7 @@ export const generateProcessTasks = async (params = {}) => {
             status: 'not_started',
             priority: 'medium',
             due_date: `${currentYear}-05-31`,
+            is_recurring: true,
           });
           results.summary.tasksCreated++;
         } catch (err) {
@@ -1192,13 +1350,15 @@ export const generateProcessTasks = async (params = {}) => {
       }
     }
 
-    // --- Reconciliations ---
+    // --- Reconciliations (התאמות חשבונות) ---
     if (taskType === 'all' || taskType === 'reconciliations') {
       log.push(`${timestamp()} יוצר משימות התאמות...`);
 
       for (const client of activeClients) {
         const clientServices = client.service_types || [];
-        if (clientServices.length > 0 && !clientServices.includes('reconciliation') && !clientServices.includes('bookkeeping')) continue;
+        if (clientServices.length > 0 &&
+            !clientServices.includes('bookkeeping') &&
+            !clientServices.includes('full_service')) continue;
 
         const title = `${client.name} - התאמת חשבונות ${monthNum}/${currentYear}`;
         const exists = existingTasks.some(t => t.title === title);
@@ -1213,7 +1373,8 @@ export const generateProcessTasks = async (params = {}) => {
             client_id: client.id,
             status: 'not_started',
             priority: 'medium',
-            due_date: `${currentYear}-${monthNum}-${String(Math.min(25, 28)).padStart(2, '0')}`,
+            due_date: `${currentYear}-${monthNum}-25`,
+            is_recurring: true,
           });
           results.summary.tasksCreated++;
         } catch (err) {

@@ -570,7 +570,8 @@ export default function MondayIntegrationPage() {
             10: "שליחת דוח אחיד למתפעל",
             11: "העלאת מס״ב סוציאליות",
             12: "שידור אחיד באמצעות טמל",
-            13: "העלאת תשלומי רשויות לבנק"
+            13: "העלאת תשלומי רשויות לבנק",
+            14: "סגירה ל-PNL"
           }
         })
       });
@@ -578,7 +579,7 @@ export default function MondayIntegrationPage() {
       if (response.data.success) {
         setAddColumnResult({
           type: 'success',
-          message: `✅ עמודת "שירותים" נוספה בהצלחה ללוח הלקוחות עם 14 סוגי שירותים!`,
+          message: `✅ עמודת "שירותים" נוספה בהצלחה ללוח הלקוחות עם 15 סוגי שירותים!`,
           columnId: response.data.column.id
         });
       } else {
@@ -1249,7 +1250,7 @@ export default function MondayIntegrationPage() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-green-900">הוספת עמודת שירותים ללוח לקוחות</h3>
-                <p className="text-sm text-green-700">הוסף עמודת Dropdown עם 14 סוגי שירותים לבחירה</p>
+                <p className="text-sm text-green-700">הוסף עמודת Dropdown עם 15 סוגי שירותים לבחירה</p>
               </div>
             </div>
 
@@ -1285,7 +1286,7 @@ export default function MondayIntegrationPage() {
 
             <div className="bg-green-100/50 p-3 rounded-lg">
               <p className="text-sm text-green-800 font-semibold mb-2">
-                השירותים שיתווספו (14 סוגים):
+                השירותים שיתווספו (15 סוגים):
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-green-700">
                 <div className="space-y-1">
@@ -1310,6 +1311,7 @@ export default function MondayIntegrationPage() {
                     <li>• העלאת מס״ב סוציאליות</li>
                     <li>• שידור אחיד באמצעות טמל</li>
                     <li>• העלאת תשלומי רשויות לבנק</li>
+                    <li>• סגירה ל-PNL</li>
                   </ul>
                 </div>
               </div>
@@ -1329,7 +1331,7 @@ export default function MondayIntegrationPage() {
               ) : (
                 <>
                   <Plus className="w-5 h-5 ml-2" />
-                  הוסף עמודת שירותים (14 סוגים)
+                  הוסף עמודת שירותים (15 סוגים)
                 </>
               )}
             </Button>
@@ -1339,7 +1341,7 @@ export default function MondayIntegrationPage() {
                 <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>
                   <strong>שים לב:</strong> פעולה זו תוסיף עמודה חדשה ללוח הלקוחות ב-Monday.com 
-                  עם 14 סוגי שירותים. תוכל לבחור מספר שירותים לכל לקוח (multi-select).
+                  עם 15 סוגי שירותים. תוכל לבחור מספר שירותים לכל לקוח (multi-select).
                 </span>
               </p>
             </div>
