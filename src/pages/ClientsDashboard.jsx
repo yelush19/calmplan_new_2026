@@ -9,27 +9,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
 import {
   Loader, RefreshCw, Users, Search,
-  CheckCircle, Clock, AlertTriangle, ChevronLeft, ChevronRight,
-  ExternalLink, Calculator, Briefcase, TrendingUp
+  ChevronLeft, ChevronRight,
+  ExternalLink, Calculator, Briefcase, TrendingUp,
+  ArrowLeft, Eye
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 
-// === Column Groups - Taxes and Payroll only (Reconciliations later) ===
+// === Column Groups ===
 const COLUMN_GROUPS = [
   {
     key: 'taxes',
     label: 'מיסים',
-    color: 'bg-slate-50',
-    headerColor: 'bg-slate-100 text-slate-700',
+    bgColor: 'bg-slate-50',
+    headerBg: 'bg-slate-600',
+    headerText: 'text-white',
+    cellBg: 'bg-slate-50/50',
     drillDownPage: 'TaxReportsDashboard',
     icon: Calculator,
     columns: [
@@ -40,8 +40,10 @@ const COLUMN_GROUPS = [
   {
     key: 'payroll',
     label: 'שכר',
-    color: 'bg-gray-50',
-    headerColor: 'bg-gray-100 text-gray-700',
+    bgColor: 'bg-gray-50',
+    headerBg: 'bg-gray-600',
+    headerText: 'text-white',
+    cellBg: 'bg-gray-50/50',
     drillDownPage: 'PayrollDashboard',
     icon: Briefcase,
     columns: [
@@ -54,21 +56,25 @@ const COLUMN_GROUPS = [
 
 const ALL_COLUMNS = COLUMN_GROUPS.flatMap(g => g.columns);
 
-// Calm, professional color scheme - greens and grays, minimal red
+// Status config - filled colored cells
 const STATUS_CONFIG = {
-  not_started: { label: 'ממתין', color: 'bg-gray-100 text-gray-600', dotColor: 'bg-gray-400', priority: 3 },
-  in_progress: { label: 'בעבודה', color: 'bg-emerald-50 text-emerald-700', dotColor: 'bg-emerald-500', priority: 2 },
-  completed: { label: 'הושלם', color: 'bg-emerald-100 text-emerald-800', dotColor: 'bg-emerald-600', priority: 5 },
-  postponed: { label: 'נדחה', color: 'bg-gray-100 text-gray-500', dotColor: 'bg-gray-400', priority: 4 },
-  waiting_for_approval: { label: 'לבדיקה', color: 'bg-amber-50 text-amber-700', dotColor: 'bg-amber-500', priority: 2 },
-  waiting_for_materials: { label: 'ממתין לחומרים', color: 'bg-gray-200 text-gray-600', dotColor: 'bg-gray-500', priority: 1 },
-  issue: { label: 'דורש טיפול', color: 'bg-amber-100 text-amber-800', dotColor: 'bg-amber-600', priority: 0 },
-  issues: { label: 'דורש טיפול', color: 'bg-amber-100 text-amber-800', dotColor: 'bg-amber-600', priority: 0 },
-  ready_for_reporting: { label: 'מוכן לדיווח', color: 'bg-teal-50 text-teal-700', dotColor: 'bg-teal-500', priority: 3 },
-  reported_waiting_for_payment: { label: 'ממתין לתשלום', color: 'bg-sky-50 text-sky-700', dotColor: 'bg-sky-500', priority: 4 },
+  not_started:                   { label: 'ממתין',          bg: 'bg-gray-200',       text: 'text-gray-700',     priority: 3 },
+  in_progress:                   { label: 'בעבודה',         bg: 'bg-emerald-200',    text: 'text-emerald-900',  priority: 2 },
+  completed:                     { label: 'הושלם',          bg: 'bg-emerald-400',    text: 'text-white',        priority: 5 },
+  postponed:                     { label: 'נדחה',           bg: 'bg-gray-300',       text: 'text-gray-600',     priority: 4 },
+  waiting_for_approval:          { label: 'לבדיקה',         bg: 'bg-amber-200',      text: 'text-amber-900',    priority: 2 },
+  waiting_for_materials:         { label: 'ממתין לחומרים',  bg: 'bg-amber-100',      text: 'text-amber-800',    priority: 1 },
+  issue:                         { label: 'דורש טיפול',     bg: 'bg-amber-300',      text: 'text-amber-900',    priority: 0 },
+  issues:                        { label: 'דורש טיפול',     bg: 'bg-amber-300',      text: 'text-amber-900',    priority: 0 },
+  ready_for_reporting:           { label: 'מוכן לדיווח',    bg: 'bg-teal-200',       text: 'text-teal-900',     priority: 3 },
+  reported_waiting_for_payment:  { label: 'ממתין לתשלום',   bg: 'bg-sky-200',        text: 'text-sky-900',      priority: 4 },
 };
 
+const EMPTY_STATUS = { label: '-', bg: 'bg-white', text: 'text-gray-300' };
+const NA_STATUS =    { label: 'לא רלוונטי', bg: 'bg-gray-100', text: 'text-gray-400' };
+
 export default function ClientsDashboardPage() {
+  const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,7 +101,7 @@ export default function ClientsDashboardPage() {
       setClients(
         (clientsData || [])
           .filter(c => c.status === 'active')
-          .sort((a, b) => a.name.localeCompare(b.name, 'he'))
+          .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
       );
       setTasks(tasksData || []);
     } catch (error) {
@@ -104,7 +110,7 @@ export default function ClientsDashboardPage() {
     setIsLoading(false);
   };
 
-  // Build client -> column -> items lookup
+  // Build client -> column -> tasks lookup
   const clientDataMap = useMemo(() => {
     const map = {};
     tasks.forEach(task => {
@@ -114,7 +120,7 @@ export default function ClientsDashboardPage() {
         if (col.categories && col.categories.includes(task.category)) {
           if (!map[clientName]) map[clientName] = {};
           if (!map[clientName][col.key]) map[clientName][col.key] = [];
-          map[clientName][col.key].push({ type: 'task', data: task, status: task.status });
+          map[clientName][col.key].push(task);
           break;
         }
       }
@@ -122,14 +128,21 @@ export default function ClientsDashboardPage() {
     return map;
   }, [tasks]);
 
-  const getCellPrimaryStatus = (clientName, colKey) => {
+  const getCellStatus = (clientName, colKey) => {
     const items = clientDataMap[clientName]?.[colKey];
     if (!items || items.length === 0) return null;
+    // Return the most urgent status (lowest priority number)
     return items.reduce((best, item) => {
       const bestP = STATUS_CONFIG[best.status]?.priority ?? 99;
       const itemP = STATUS_CONFIG[item.status]?.priority ?? 99;
       return itemP < bestP ? item : best;
     }, items[0]);
+  };
+
+  const hasPayroll = (client) => {
+    return client.service_types?.some(st =>
+      ['payroll', 'full_service', 'bookkeeping'].includes(st)
+    ) || client.reporting_info?.payroll_frequency === 'monthly';
   };
 
   const filteredClients = useMemo(() => {
@@ -141,17 +154,18 @@ export default function ClientsDashboardPage() {
     if (statusFilter !== 'all') {
       result = result.filter(client => {
         const data = clientDataMap[client.name] || {};
-        const allItems = Object.values(data).flat();
-        if (statusFilter === 'has_issues') return allItems.some(i => i.status === 'issue' || i.status === 'issues' || i.status === 'waiting_for_materials');
-        if (statusFilter === 'all_done') return allItems.length > 0 && allItems.every(i => i.status === 'completed');
-        if (statusFilter === 'in_progress') return allItems.some(i => i.status !== 'completed' && i.status !== 'not_started');
-        if (statusFilter === 'not_started') return allItems.some(i => i.status === 'not_started');
+        const allTasks = Object.values(data).flat();
+        if (statusFilter === 'has_issues') return allTasks.some(t => t.status === 'issue' || t.status === 'issues' || t.status === 'waiting_for_materials');
+        if (statusFilter === 'all_done') return allTasks.length > 0 && allTasks.every(t => t.status === 'completed');
+        if (statusFilter === 'in_progress') return allTasks.some(t => t.status !== 'completed' && t.status !== 'not_started');
+        if (statusFilter === 'not_started') return allTasks.some(t => t.status === 'not_started');
         return true;
       });
     }
     return result;
   }, [clients, searchTerm, statusFilter, clientDataMap]);
 
+  // Stats
   const stats = useMemo(() => {
     let total = 0, completed = 0, issues = 0, inProgress = 0;
     clients.forEach(client => {
@@ -160,10 +174,10 @@ export default function ClientsDashboardPage() {
         const items = data[col.key];
         if (items && items.length > 0) {
           total++;
-          const primary = getCellPrimaryStatus(client.name, col.key);
-          if (primary?.status === 'completed') completed++;
-          else if (primary?.status === 'issue' || primary?.status === 'issues' || primary?.status === 'waiting_for_materials') issues++;
-          else if (primary?.status !== 'not_started') inProgress++;
+          const best = getCellStatus(client.name, col.key);
+          if (best?.status === 'completed') completed++;
+          else if (best?.status === 'issue' || best?.status === 'issues' || best?.status === 'waiting_for_materials') issues++;
+          else if (best?.status !== 'not_started') inProgress++;
         }
       });
     });
@@ -175,48 +189,24 @@ export default function ClientsDashboardPage() {
     setSelectedMonth(curr => dir === 'prev' ? subMonths(curr, 1) : addMonths(curr, 1));
   };
 
-  const renderCell = (clientName, col) => {
-    const primary = getCellPrimaryStatus(clientName, col.key);
-    if (!primary) {
-      return (
-        <td key={col.key} className="px-1 py-1.5 text-center border-l border-gray-100/60">
-          <span className="text-gray-300 text-xs">-</span>
-        </td>
-      );
-    }
-    const config = STATUS_CONFIG[primary.status] || STATUS_CONFIG.not_started;
-    return (
-      <td key={col.key} className="px-1 py-1 text-center border-l border-gray-100/60">
-        <TooltipProvider delayDuration={200}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => setSelectedCell({
-                  clientName, colKey: col.key, colLabel: col.label,
-                  items: clientDataMap[clientName]?.[col.key] || []
-                })}
-                className={`inline-flex items-center justify-center gap-1 px-2 py-1 rounded text-xs font-medium ${config.color} hover:opacity-80 transition-all cursor-pointer min-w-[54px]`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
-                {config.label}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              <p>{clientName} - {col.label}: {config.label}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </td>
-    );
+  // Navigate to drill-down page with client filter
+  const navigateToDrillDown = (group, clientName) => {
+    const url = createPageUrl(group.drillDownPage) + '?client=' + encodeURIComponent(clientName);
+    navigate(url);
   };
 
-  const serviceTypeLabel = (st) => {
-    const labels = {
-      full_service: 'מלא', bookkeeping: 'הנה"ח', payroll: 'שכר',
-      tax_reports: 'מס', vat: 'מע"מ', annual_reports: 'שנתי',
-      vat_reporting: 'מע"מ', reconciliation: 'התאמות', consulting: 'ייעוץ',
-    };
-    return labels[st] || st;
+  // Column completion stats
+  const getColumnStats = (colKey) => {
+    let total = 0, done = 0;
+    clients.forEach(c => {
+      const items = clientDataMap[c.name]?.[colKey];
+      if (items && items.length > 0) {
+        total++;
+        const best = getCellStatus(c.name, colKey);
+        if (best?.status === 'completed') done++;
+      }
+    });
+    return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
   };
 
   return (
@@ -225,184 +215,233 @@ export default function ClientsDashboardPage() {
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-            <Users className="w-5 h-5 text-emerald-600" />
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
+            <Users className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">לוח לקוחות</h1>
-            <p className="text-sm text-gray-500">מצב דיווחים - {format(selectedMonth, 'MMMM yyyy', { locale: he })}</p>
+            <p className="text-sm text-gray-500">מצב דיווחים חודשי - {format(selectedMonth, 'MMMM yyyy', { locale: he })}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-          <span className="font-medium text-sm w-28 text-center text-gray-700">
-            {format(selectedMonth, 'MMMM yyyy', { locale: he })}
-          </span>
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('next')}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button onClick={loadData} variant="outline" size="icon" className="h-8 w-8" disabled={isLoading}>
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <span className="font-semibold text-sm w-28 text-center text-gray-700">
+              {format(selectedMonth, 'MMMM yyyy', { locale: he })}
+            </span>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('next')}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+          </div>
+          <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </motion.div>
 
-      {/* Summary - clean, minimal */}
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-        <Card className="border-gray-200/80 shadow-sm">
-          <CardContent className="p-2.5 text-center">
-            <div className="text-xl font-bold text-gray-700">{filteredClients.length}</div>
-            <div className="text-[11px] text-gray-400">לקוחות</div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-gray-700">{filteredClients.length}</div>
+            <div className="text-xs text-gray-500">לקוחות פעילים</div>
           </CardContent>
         </Card>
-        <Card className="border-gray-200/80 shadow-sm">
-          <CardContent className="p-2.5 text-center">
-            <div className="text-xl font-bold text-gray-600">{stats.total}</div>
-            <div className="text-[11px] text-gray-400">משימות</div>
+        <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-gray-600">{stats.total}</div>
+            <div className="text-xs text-gray-500">תהליכים</div>
           </CardContent>
         </Card>
-        <Card className="border-emerald-200/60 shadow-sm">
-          <CardContent className="p-2.5 text-center">
-            <div className="text-xl font-bold text-emerald-600">{stats.completed}</div>
-            <div className="text-[11px] text-gray-400">הושלמו</div>
+        <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-sm">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-emerald-600">{stats.completed}</div>
+            <div className="text-xs text-gray-500">הושלמו</div>
           </CardContent>
         </Card>
-        <Card className="border-gray-200/80 shadow-sm hidden md:block">
-          <CardContent className="p-2.5 text-center">
-            <div className="text-xl font-bold text-amber-600">{stats.issues}</div>
-            <div className="text-[11px] text-gray-400">דורש טיפול</div>
+        <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200 shadow-sm hidden md:block">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-amber-600">{stats.issues}</div>
+            <div className="text-xs text-gray-500">דורש טיפול</div>
           </CardContent>
         </Card>
-        <Card className="border-emerald-200/60 shadow-sm hidden md:block">
-          <CardContent className="p-2.5 text-center">
-            <div className="text-xl font-bold text-emerald-700">{stats.pct}%</div>
-            <div className="text-[11px] text-gray-400">התקדמות</div>
+        <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-sm hidden md:block">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-emerald-700">{stats.pct}%</div>
+            <div className="text-xs text-gray-500">התקדמות כוללת</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters - clean */}
+      {/* Filters */}
       <div className="flex flex-col md:flex-row gap-2">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-300 w-4 h-4" />
+          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input placeholder="חיפוש לקוח..." value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10 h-9 text-sm border-gray-200" />
+            className="pr-10 h-9 text-sm border-gray-200 bg-white" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-44 h-9 text-sm border-gray-200">
-            <SelectValue placeholder="סנן" />
+          <SelectTrigger className="w-full md:w-44 h-9 text-sm border-gray-200 bg-white">
+            <SelectValue placeholder="סנן לפי סטטוס" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">הכל</SelectItem>
+            <SelectItem value="all">כל הלקוחות</SelectItem>
             <SelectItem value="has_issues">דורש טיפול</SelectItem>
             <SelectItem value="in_progress">בעבודה</SelectItem>
             <SelectItem value="not_started">טרם התחיל</SelectItem>
-            <SelectItem value="all_done">הושלם</SelectItem>
+            <SelectItem value="all_done">הכל הושלם</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Board Table */}
+      {/* === THE BOARD === */}
       {isLoading ? (
         <div className="flex justify-center items-center h-48">
-          <Loader className="w-8 h-8 animate-spin text-emerald-500" />
+          <Loader className="w-10 h-10 animate-spin text-emerald-500" />
         </div>
       ) : filteredClients.length > 0 ? (
-        <Card className="border-gray-200/80 shadow-sm overflow-hidden">
+        <Card className="border-gray-300 shadow-md overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse min-w-[700px]">
+              <table className="w-full border-collapse min-w-[750px]">
                 <thead>
-                  {/* Group headers */}
+                  {/* Group headers - dark, bold */}
                   <tr>
-                    <th rowSpan={2} className="text-right px-3 py-2 font-semibold text-gray-600 text-sm bg-white sticky right-0 z-20 border-b border-gray-200 min-w-[140px]">
+                    <th rowSpan={2} className="text-right px-4 py-3 font-bold text-gray-700 text-sm bg-gray-100 sticky right-0 z-20 border-b-2 border-gray-300 min-w-[160px]">
                       לקוח
                     </th>
                     {COLUMN_GROUPS.map(group => (
                       <th key={group.key} colSpan={group.columns.length}
-                        className={`px-2 py-1.5 text-center font-semibold text-xs border-b border-x border-gray-200/80 ${group.headerColor}`}>
+                        className={`px-3 py-2.5 text-center font-bold text-sm border-b-2 border-gray-300 border-x-2 border-gray-300 ${group.headerBg} ${group.headerText}`}>
                         <Link to={createPageUrl(group.drillDownPage)}
-                          className="inline-flex items-center gap-1 hover:underline">
+                          className="inline-flex items-center gap-2 hover:opacity-80 transition-opacity">
+                          <group.icon className="w-4 h-4" />
                           {group.label}
-                          <ExternalLink className="w-2.5 h-2.5 opacity-40" />
+                          <ExternalLink className="w-3 h-3 opacity-60" />
                         </Link>
                       </th>
                     ))}
                   </tr>
-                  <tr className="border-b border-gray-200">
+                  {/* Sub-column headers */}
+                  <tr className="border-b-2 border-gray-300">
                     {COLUMN_GROUPS.map(group =>
-                      group.columns.map(col => (
-                        <th key={col.key} className={`px-2 py-1.5 text-center text-[11px] font-medium text-gray-500 border-x border-gray-100/60 ${group.color}`}>
-                          {col.label}
-                        </th>
-                      ))
+                      group.columns.map((col, idx) => {
+                        const colStats = getColumnStats(col.key);
+                        return (
+                          <th key={col.key} className={`px-2 py-2 text-center text-xs font-semibold text-gray-600 ${group.bgColor} ${idx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                            <div>{col.label}</div>
+                            <div className="text-[10px] font-normal text-gray-400 mt-0.5">{colStats.pct}% ({colStats.done}/{colStats.total})</div>
+                          </th>
+                        );
+                      })
                     )}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredClients.map((client, index) => {
+                    const clientHasPayroll = hasPayroll(client);
                     const data = clientDataMap[client.name] || {};
-                    const hasAnyData = Object.keys(data).length > 0;
-                    const hasPayroll = client.service_types?.some(st =>
-                      ['payroll', 'full_service', 'bookkeeping'].includes(st)
-                    ) || client.reporting_info?.payroll_frequency === 'monthly';
+                    const allClientTasks = Object.values(data).flat();
+                    const clientDone = allClientTasks.filter(t => t.status === 'completed').length;
+                    const clientTotal = allClientTasks.length;
 
                     return (
                       <tr key={client.id}
-                        className={`border-b border-gray-100/80 transition-colors hover:bg-emerald-50/20 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                        <td className="px-3 py-1.5 sticky right-0 bg-inherit z-10 border-l border-gray-200/60">
-                          <div className="font-medium text-gray-700 text-sm">{client.name}</div>
-                          <div className="flex gap-0.5 mt-0.5">
-                            {(client.service_types || []).slice(0, 3).map(st => (
-                              <span key={st} className="text-[9px] bg-gray-100/80 text-gray-400 px-1 rounded">
-                                {serviceTypeLabel(st)}
-                              </span>
-                            ))}
-                            {!hasAnyData && <span className="text-[9px] text-gray-300 italic">ללא משימות</span>}
+                        className={`border-b border-gray-200 transition-colors hover:bg-emerald-50/30 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                        {/* Client name cell */}
+                        <td className="px-4 py-2.5 sticky right-0 z-10 border-l-2 border-gray-300"
+                          style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fafafa' }}>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold text-gray-800 text-sm">{client.name}</div>
+                              {clientTotal > 0 && (
+                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                  {clientDone}/{clientTotal} הושלמו
+                                </div>
+                              )}
+                            </div>
+                            {/* Mini progress indicator */}
+                            {clientTotal > 0 && (
+                              <div className="w-8 h-8 relative">
+                                <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 32 32">
+                                  <circle cx="16" cy="16" r="12" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                                  <circle cx="16" cy="16" r="12" fill="none" stroke="#10b981" strokeWidth="3"
+                                    strokeDasharray={`${(clientDone / clientTotal) * 75.4} 75.4`}
+                                    strokeLinecap="round" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
                         </td>
+
+                        {/* Process cells */}
                         {COLUMN_GROUPS.map(group =>
-                          group.columns.map(col => {
-                            // Show dash for payroll columns on non-payroll clients
-                            if (group.key === 'payroll' && !hasPayroll) {
+                          group.columns.map((col, colIdx) => {
+                            // Payroll N/A for non-payroll clients
+                            if (group.key === 'payroll' && !clientHasPayroll) {
                               return (
-                                <td key={col.key} className="px-1 py-1 text-center border-l border-gray-100/60">
-                                  <span className="text-gray-200 text-xs">-</span>
+                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                                  <div className={`${NA_STATUS.bg} ${NA_STATUS.text} rounded py-1.5 text-xs font-medium mx-0.5`}>
+                                    {NA_STATUS.label}
+                                  </div>
                                 </td>
                               );
                             }
-                            return <React.Fragment key={col.key}>{renderCell(client.name, col)}</React.Fragment>;
+
+                            const bestTask = getCellStatus(client.name, col.key);
+                            if (!bestTask) {
+                              return (
+                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                                  <div className={`${EMPTY_STATUS.bg} ${EMPTY_STATUS.text} rounded py-1.5 text-xs font-medium mx-0.5 border border-dashed border-gray-200`}>
+                                    -
+                                  </div>
+                                </td>
+                              );
+                            }
+
+                            const config = STATUS_CONFIG[bestTask.status] || STATUS_CONFIG.not_started;
+                            const cellTasks = clientDataMap[client.name]?.[col.key] || [];
+
+                            return (
+                              <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                                <button
+                                  onClick={() => navigateToDrillDown(group, client.name)}
+                                  className={`w-full ${config.bg} ${config.text} rounded py-1.5 text-xs font-semibold mx-0.5 hover:opacity-80 hover:shadow-sm transition-all cursor-pointer`}
+                                  title={`${client.name} - ${col.label}: ${config.label} (לחץ למעבר)`}
+                                >
+                                  {config.label}
+                                  {cellTasks.length > 1 && (
+                                    <span className="text-[9px] opacity-70 mr-1">({cellTasks.length})</span>
+                                  )}
+                                </button>
+                              </td>
+                            );
                           })
                         )}
                       </tr>
                     );
                   })}
                 </tbody>
-                {/* Footer with completion percentages */}
+                {/* Footer */}
                 <tfoot>
-                  <tr className="bg-gray-50/80 border-t border-gray-200">
-                    <td className="px-3 py-2 sticky right-0 bg-gray-50/80 z-10 text-xs font-medium text-gray-500">
-                      סה"כ
+                  <tr className="bg-gray-100 border-t-2 border-gray-300">
+                    <td className="px-4 py-2.5 sticky right-0 bg-gray-100 z-10 text-sm font-bold text-gray-700 border-l-2 border-gray-300">
+                      סה"כ ({filteredClients.length} לקוחות)
                     </td>
                     {COLUMN_GROUPS.map(group =>
-                      group.columns.map(col => {
-                        let total = 0, done = 0;
-                        clients.forEach(c => {
-                          const items = clientDataMap[c.name]?.[col.key];
-                          if (items && items.length > 0) {
-                            total++;
-                            const primary = getCellPrimaryStatus(c.name, col.key);
-                            if (primary?.status === 'completed') done++;
-                          }
-                        });
-                        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                      group.columns.map((col, colIdx) => {
+                        const colStats = getColumnStats(col.key);
                         return (
-                          <td key={col.key} className="px-1 py-2 text-center border-l border-gray-200/60">
-                            <div className="text-xs font-semibold text-gray-600">{pct}%</div>
-                            <div className="text-[9px] text-gray-400">{done}/{total}</div>
+                          <td key={col.key} className={`px-2 py-2.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                            <div className="text-sm font-bold text-gray-700">{colStats.pct}%</div>
+                            <div className="text-[10px] text-gray-500">{colStats.done}/{colStats.total}</div>
+                            {/* Mini progress bar */}
+                            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                              <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${colStats.pct}%` }} />
+                            </div>
                           </td>
                         );
                       })
@@ -414,97 +453,78 @@ export default function ClientsDashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="p-10 text-center border-gray-200/80">
-          <Users className="w-12 h-12 mx-auto text-gray-200 mb-3" />
-          <h3 className="text-lg font-medium text-gray-500 mb-1">אין לקוחות פעילים להצגה</h3>
-          <p className="text-sm text-gray-400">הוסף לקוחות או שנה סינון</p>
+        <Card className="p-12 text-center border-gray-200 shadow-sm">
+          <Users className="w-14 h-14 mx-auto text-gray-300 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">אין לקוחות פעילים להצגה</h3>
+          <p className="text-sm text-gray-400 mb-4">הוסף לקוחות דרך ניהול לקוחות או שנה סינון</p>
+          <Link to={createPageUrl('ClientManagement')}>
+            <Button variant="outline" className="gap-2">
+              <Users className="w-4 h-4" />
+              ניהול לקוחות
+            </Button>
+          </Link>
         </Card>
       )}
 
-      {/* Quick navigation links */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      {/* Quick Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {COLUMN_GROUPS.map(group => {
           const Icon = group.icon;
+          const groupTasks = tasks.filter(t =>
+            group.columns.some(col => col.categories.includes(t.category))
+          );
+          const groupDone = groupTasks.filter(t => t.status === 'completed').length;
+          const groupPct = groupTasks.length > 0 ? Math.round((groupDone / groupTasks.length) * 100) : 0;
+
           return (
             <Link key={group.key} to={createPageUrl(group.drillDownPage)}>
-              <Card className="border-gray-200/80 hover:border-emerald-200 hover:shadow-sm transition-all cursor-pointer">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${group.headerColor}`}>
-                    <Icon className="w-4 h-4" />
+              <Card className="border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${group.headerBg} shadow-sm`}>
+                    <Icon className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-sm text-gray-700">{group.label}</div>
-                    <div className="text-[11px] text-gray-400">פירוט מלא</div>
+                    <div className="font-bold text-gray-700 group-hover:text-emerald-700 transition-colors">{group.label}</div>
+                    <div className="text-xs text-gray-400">
+                      {groupDone}/{groupTasks.length} הושלמו
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1.5">
+                      <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${groupPct}%` }} />
+                    </div>
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-gray-300" />
+                  <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
                 </CardContent>
               </Card>
             </Link>
           );
         })}
         <Link to={createPageUrl('ClientManagement')}>
-          <Card className="border-gray-200/80 hover:border-emerald-200 hover:shadow-sm transition-all cursor-pointer">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-600">
-                <Users className="w-4 h-4" />
+          <Card className="border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-500 shadow-sm">
+                <Users className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-sm text-gray-700">ניהול לקוחות</div>
-                <div className="text-[11px] text-gray-400">הוספה ועריכה</div>
+                <div className="font-bold text-gray-700 group-hover:text-emerald-700 transition-colors">ניהול לקוחות</div>
+                <div className="text-xs text-gray-400">הוספה, עריכה וצפייה</div>
               </div>
-              <ExternalLink className="w-3.5 h-3.5 text-gray-300" />
+              <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
             </CardContent>
           </Card>
         </Link>
       </div>
 
-      {/* Legend - subtle */}
-      <div className="flex flex-wrap gap-1.5 justify-center py-2">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2 justify-center py-2">
         {Object.entries(STATUS_CONFIG).filter(([k]) => k !== 'issues').map(([key, config]) => (
-          <span key={key} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${config.color}`}>
-            <span className={`w-1 h-1 rounded-full ${config.dotColor}`} />
+          <span key={key} className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-semibold ${config.bg} ${config.text}`}>
             {config.label}
           </span>
         ))}
+        <span className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-semibold ${NA_STATUS.bg} ${NA_STATUS.text}`}>
+          {NA_STATUS.label}
+        </span>
       </div>
-
-      {/* Detail Dialog */}
-      <Dialog open={!!selectedCell} onOpenChange={(open) => { if (!open) setSelectedCell(null); }}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle className="text-base">
-              {selectedCell?.clientName} - {selectedCell?.colLabel}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              {format(selectedMonth, 'MMMM yyyy', { locale: he })}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedCell?.items && selectedCell.items.length > 0 ? (
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-              {selectedCell.items.map((item, idx) => {
-                const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.not_started;
-                const d = item.data;
-                return (
-                  <div key={idx} className="p-3 border border-gray-200/80 rounded-lg space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-sm text-gray-700">{d.title}</span>
-                      <Badge className={`${config.color} text-[10px] px-1.5`}>{config.label}</Badge>
-                    </div>
-                    {d.due_date && (
-                      <div className="text-[11px] text-gray-400">תאריך יעד: {d.due_date}</div>
-                    )}
-                    {d.description && (
-                      <div className="text-[11px] text-gray-500 whitespace-pre-wrap">{d.description}</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-sm text-gray-400">אין פריטים</div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
