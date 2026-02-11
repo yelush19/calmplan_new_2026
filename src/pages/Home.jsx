@@ -10,8 +10,10 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
-  AlertTriangle, Plus, ArrowRight, Sparkles, Target, User as UserIcon
+  AlertTriangle, Plus, ArrowRight, Sparkles, Target, User as UserIcon,
+  FileBarChart, RefreshCw
 } from "lucide-react";
+import AggressiveReminderSystem from "@/components/notifications/AggressiveReminderSystem";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -223,12 +225,15 @@ export default function HomePage() {
         className="text-center space-y-2"
       >
         <h1 className="text-4xl font-bold text-gray-800">
-          {getGreeting()}, {userName}! 👋
+          {getGreeting()}, {userName}!
         </h1>
         <p className="text-xl text-gray-600">
           {format(new Date(), 'EEEE, d בMMMM yyyy')}
         </p>
       </motion.div>
+
+      {/* Aggressive Reminder System - Safety Net */}
+      <AggressiveReminderSystem />
 
       {/* Quick Stats */}
       <motion.div
@@ -496,12 +501,12 @@ export default function HomePage() {
           </Card>
         </Link>
 
-        <Link to={createPageUrl("SeedData")}>
+        <Link to={createPageUrl("WeeklySummary")}>
           <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
             <CardContent className="p-6 text-center">
-              <Sparkles className="w-8 h-8 mx-auto mb-3 text-orange-600" />
-              <h3 className="font-semibold text-orange-800 mb-2">נתוני דמו</h3>
-              <p className="text-sm text-orange-600">צור נתוני בדיקה</p>
+              <FileBarChart className="w-8 h-8 mx-auto mb-3 text-orange-600" />
+              <h3 className="font-semibold text-orange-800 mb-2">סיכום שבועי</h3>
+              <p className="text-sm text-orange-600">מה נפל? מה הושלם?</p>
             </CardContent>
           </Card>
         </Link>

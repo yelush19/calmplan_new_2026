@@ -21,6 +21,95 @@ import { Client, Dashboard, Task, AccountReconciliation, WeeklySchedule, ClientA
 import { mondayApi } from '@/api/functions';
 import { mondayBoardApi } from '@/api/functions';
 import { mondayReportsAutomation } from "@/api/functions";
+import { getMondayToken, setMondayToken, hasMondayToken } from '@/api/mondayClient';
+
+// Token Configuration Component
+const TokenConfig = ({ onTokenSaved }) => {
+  const [token, setToken] = useState(getMondayToken());
+  const [showToken, setShowToken] = useState(false);
+  const [saved, setSaved] = useState(hasMondayToken());
+
+  const handleSave = () => {
+    if (token.trim()) {
+      setMondayToken(token.trim());
+      setSaved(true);
+      if (onTokenSaved) onTokenSaved();
+      setTimeout(() => setSaved(false), 3000);
+    }
+  };
+
+  const isConnected = hasMondayToken();
+
+  return (
+    <Card className={`border-2 ${isConnected ? 'border-green-200 bg-gradient-to-br from-green-50 to-emerald-50' : 'border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50'}`}>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${isConnected ? 'bg-green-100' : 'bg-amber-100'}`}>
+            <Settings className={`w-6 h-6 ${isConnected ? 'text-green-600' : 'text-amber-600'}`} />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold">
+              {isConnected ? 'Monday.com מחובר' : 'חיבור ל-Monday.com'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {isConnected ? 'ה-API Token שלך מוגדר ופעיל' : 'הזיני את ה-API Token שלך מ-Monday.com'}
+            </p>
+          </div>
+          {isConnected && (
+            <Badge className="bg-green-500 text-white mr-auto">
+              <CheckCircle className="w-3 h-3 ml-1" />
+              מחובר
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Input
+              type={showToken ? 'text' : 'password'}
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="eyJhbGciOiJIUzI1NiJ9..."
+              className="h-10 font-mono text-sm"
+              dir="ltr"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10"
+            onClick={() => setShowToken(!showToken)}
+          >
+            {showToken ? 'הסתר' : 'הצג'}
+          </Button>
+          <Button
+            onClick={handleSave}
+            className="h-10"
+            disabled={!token.trim()}
+          >
+            {saved ? (
+              <>
+                <CheckCircle className="w-4 h-4 ml-1" />
+                נשמר!
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 ml-1" />
+                שמור
+              </>
+            )}
+          </Button>
+        </div>
+
+        {!isConnected && (
+          <p className="text-xs text-amber-700 mt-2">
+            ניתן למצוא את ה-Token ב-Monday.com: הגדרות &gt; Developer &gt; My Access Tokens
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 // Component for selecting a board with search functionality
 const BoardSelector = ({ availableBoards, selectedBoardId, onBoardChange }) => {
@@ -1052,6 +1141,11 @@ export default function MondayIntegrationPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Token Configuration */}
+      <div className="max-w-3xl mx-auto w-full">
+        <TokenConfig onTokenSaved={() => loadPageData()} />
+      </div>
 
       {/* Summary Cards */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
