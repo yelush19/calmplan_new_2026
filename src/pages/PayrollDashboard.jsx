@@ -5,19 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
-import { BarChart3, Calendar, Filter, Loader, RefreshCw, Users, Briefcase } from 'lucide-react';
+import { Loader, RefreshCw, Users, Briefcase } from 'lucide-react';
 import ProcessStatusDashboard from '@/components/dashboards/ProcessStatusDashboard';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from '@/components/ui/badge';
 
+// Payroll processes ONLY - tax processes (VAT, tax advances) are in TaxReportsDashboard
 const processCategories = {
-  'work_vat_reporting': 'מע"מ',
-  'work_tax_advances': 'מקדמות מס',
-  'work_deductions': 'ניכויים',
+  'work_payroll': 'שכר',
   'work_social_security': 'ביטוח לאומי',
-  'work_payroll': 'שכר'
+  'work_deductions': 'ניכויים',
+  'שכר': 'שכר',
+  'ביטוח לאומי': 'ביטוח לאומי',
+  'ניכויים': 'ניכויים',
 };
 
 const statusTranslations = {
@@ -33,15 +35,15 @@ const statusTranslations = {
 };
 
 const statusColors = {
-  not_started: 'bg-gray-100 text-gray-800',
-  in_progress: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  waiting_for_approval: 'bg-yellow-100 text-yellow-800',
-  waiting_for_materials: 'bg-orange-100 text-orange-800',
-  issue: 'bg-red-100 text-red-800',
-  postponed: 'bg-neutral-100 text-neutral-800',
-  ready_for_reporting: 'bg-purple-100 text-purple-800',
-  reported_waiting_for_payment: 'bg-cyan-100 text-cyan-800',
+  not_started: 'bg-gray-100 text-gray-600',
+  in_progress: 'bg-emerald-50 text-emerald-700',
+  completed: 'bg-emerald-100 text-emerald-800',
+  waiting_for_approval: 'bg-amber-50 text-amber-700',
+  waiting_for_materials: 'bg-gray-200 text-gray-600',
+  issue: 'bg-amber-100 text-amber-800',
+  postponed: 'bg-gray-100 text-gray-500',
+  ready_for_reporting: 'bg-teal-50 text-teal-700',
+  reported_waiting_for_payment: 'bg-sky-50 text-sky-700',
 };
 
 
@@ -105,14 +107,14 @@ export default function PayrollDashboardPage() {
     <div className="p-4 md:p-6 space-y-6">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Briefcase className="w-6 h-6 text-blue-600" />
             </div>
             <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-neutral-dark">
-                    דשבורד תהליכי דיווח
+                    תהליכי שכר
                 </h1>
-                <p className="text-neutral-medium">מבט מקיף על כל תהליכי הדיווח התקופתיים</p>
+                <p className="text-neutral-medium">שכר, ביטוח לאומי וניכויים - לקוחות עם שירותי שכר</p>
             </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
