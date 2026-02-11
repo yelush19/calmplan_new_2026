@@ -314,6 +314,19 @@ export default function ClientManagementPage() {
 
       await Promise.all(updatePromises);
 
+      // Push status changes to Monday.com in background
+      const allClients = await Client.list();
+      for (const clientId of selectedClientIds) {
+        const client = allClients.find(c => c.id === clientId);
+        if (client?.monday_board_id && client?.monday_item_id) {
+          mondayApi({
+            action: 'pushClientToMonday',
+            clientId,
+            boardId: client.monday_board_id,
+          }).catch(err => console.warn('⚠️ סנכרון ל-Monday נכשל:', err.message));
+        }
+      }
+
       alert(`✅ עודכנו ${selectedClientIds.size} לקוחות לסטטוס "${statusLabels[bulkNewStatus]}"`);
       setSelectedClientIds(new Set());
       setShowBulkStatusDialog(false);
@@ -343,30 +356,52 @@ export default function ClientManagementPage() {
     const isNew = !selectedClient?.id;
     setIsSaving(true);
     setError(null);
-    
+
     try {
+      let savedClientId = selectedClient?.id;
       await retryWithBackoff(async () => {
         if (isNew) {
           const onboarding_link_id = crypto.randomUUID();
-          await Client.create({ ...clientData, status: 'potential', onboarding_link_id });
+          const created = await Client.create({ ...clientData, status: 'potential', onboarding_link_id });
+          savedClientId = created.id;
         } else {
           await Client.update(selectedClient.id, clientData);
         }
-      }, 3, 2000); // 3 retries, starting with 2s delay
-      
+      }, 3, 2000);
+
+      // Push to Monday.com in background (don't block UI)
+      if (savedClientId) {
+        const boardId = clientData.monday_board_id || selectedClient?.monday_board_id;
+        if (boardId) {
+          mondayApi({
+            action: 'pushClientToMonday',
+            clientId: savedClientId,
+            boardId,
+          }).then(res => {
+            if (res.data?.success) {
+              console.log('✅ סנכרון ל-Monday הצליח:', res.data.result?.action);
+            } else {
+              console.warn('⚠️ סנכרון ל-Monday נכשל:', res.data?.error);
+            }
+          }).catch(err => {
+            console.warn('⚠️ סנכרון ל-Monday נכשל:', err.message);
+          });
+        }
+      }
+
       setSelectedClient(null);
       setShowClientForm(false);
       await loadClients();
     } catch (error) {
       console.error("Error saving client:", error);
-      const isRateLimit = error?.response?.status === 429 || 
+      const isRateLimit = error?.response?.status === 429 ||
                          error?.message?.toLowerCase().includes('rate limit') ||
                          error?.message?.toLowerCase().includes('429');
-      
+
       const errorMsg = isRateLimit
         ? 'יותר מדי פעולות בזמן קצר. אנא המתן מספר שניות ונסה שוב.'
         : `שגיאה בשמירת לקוח: ${error?.message || 'שגיאה לא ידועה'}`;
-      
+
       setError(errorMsg);
       alert(errorMsg);
     } finally {
