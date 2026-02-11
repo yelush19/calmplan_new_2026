@@ -16,6 +16,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import TimeAwareness from "@/components/ui/TimeAwareness";
 
 const navigationGroups = [
   {
@@ -324,6 +325,9 @@ export default function Layout({ children, currentPageName }) {
         </div>
 
         <main className="flex-1 flex flex-col min-h-0">
+          {/* Time Awareness Bar - always visible */}
+          <TimeAwareness />
+
           <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-border">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-foreground">
