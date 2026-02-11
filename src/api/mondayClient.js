@@ -296,7 +296,20 @@ export function mapMondayItemToClient(item, boardId) {
         if (!client.email) client.email = col.text;
         break;
       case 'color': // status column type
-        if (!client.status) client.status = col.text;
+        if (!client.status && col.text) {
+          // Map Hebrew status labels to system values
+          const statusMap = {
+            'פעיל': 'active',
+            'לא פעיל': 'inactive',
+            'פוטנציאלי': 'potential',
+            'לקוח עבר': 'former',
+            'active': 'active',
+            'inactive': 'inactive',
+            'potential': 'potential',
+            'former': 'former',
+          };
+          client.status = statusMap[col.text] || 'active';
+        }
         break;
       case 'text':
         if (!client.notes && col.text) client.notes = (client.notes || '') + col.text + '\n';
@@ -323,6 +336,9 @@ export function mapMondayItemToClient(item, boardId) {
 
   // Store compact column data for reference
   client.monday_column_texts = columnTexts;
+
+  // Default to active if no status was found
+  if (!client.status) client.status = 'active';
 
   return client;
 }
