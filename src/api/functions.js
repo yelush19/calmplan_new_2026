@@ -103,46 +103,62 @@ export const mondayApi = async (params) => {
 
 // ===== Reports Automation =====
 
-// Israeli accounting process templates - matching ClientRecurringTasks.jsx
-// Each template has a base definition; actual frequency per client comes from client.reporting_info
+// ===== Israeli Accounting Process Definitions =====
+//
+// Process types and their frequencies (per client):
+//   מע"מ          - חודשי / דו-חודשי / לא רלוונטי (from vat_reporting_frequency)
+//   מקדמות מס     - חודשי / דו-חודשי / לא רלוונטי (from tax_advances_frequency)
+//   שכר           - חודשי / לא רלוונטי (from payroll_frequency)
+//   ביטוח לאומי   - רק ללקוחות עם שכר (payroll), חודשי
+//   ניכויים       - רק ללקוחות עם שכר (payroll), חודשי או דו-חודשי
+//   דוח שנתי      - שנתי, יעד 31 במאי
+//
+// Only active clients (status === 'active') get tasks.
+
 const PROCESS_TEMPLATES = {
   vat: {
     name: 'דיווח מע"מ',
     category: 'מע"מ',
-    frequencyField: 'vat_reporting_frequency', // client.reporting_info field
+    frequencyField: 'vat_reporting_frequency',
     dayOfMonth: 15,
+    requiresPayroll: false,
   },
   payroll: {
     name: 'דיווח שכר',
     category: 'שכר',
     frequencyField: 'payroll_frequency',
     dayOfMonth: 15,
+    requiresPayroll: true,
   },
   tax_advances: {
     name: 'מקדמות מס',
     category: 'מקדמות מס',
     frequencyField: 'tax_advances_frequency',
     dayOfMonth: 15,
+    requiresPayroll: false,
   },
   social_security: {
     name: 'ביטוח לאומי',
     category: 'ביטוח לאומי',
-    frequencyField: null, // always monthly (same as payroll)
+    frequencyField: null, // monthly when payroll exists
     dayOfMonth: 15,
+    requiresPayroll: true,
   },
   deductions: {
     name: 'ניכויים במקור',
     category: 'ניכויים',
-    frequencyField: null, // always monthly (same as payroll)
+    frequencyField: null, // monthly or bimonthly, follows payroll
     dayOfMonth: 15,
+    requiresPayroll: true,
   },
   annual_report: {
     name: 'דוח שנתי',
     category: 'דוח שנתי',
     frequencyField: null,
-    dayOfMonth: 31, // May 31
+    dayOfMonth: 31,
     dueMonth: 5,
     frequency: 'yearly',
+    requiresPayroll: false,
   },
 };
 
@@ -156,7 +172,7 @@ const SERVICE_TYPE_TO_TEMPLATES = {
   'full_service': ['vat', 'payroll', 'tax_advances', 'social_security', 'annual_report', 'deductions'],
 };
 
-// Bi-monthly VAT/tax advance period names
+// Bi-monthly period names (due month → period name)
 const BIMONTHLY_PERIOD_NAMES = {
   2: 'ינואר-פברואר',
   4: 'מרץ-אפריל',
@@ -166,40 +182,64 @@ const BIMONTHLY_PERIOD_NAMES = {
   12: 'נובמבר-דצמבר',
 };
 
-// Bi-monthly due months (report is due the month after the period ends)
 const BIMONTHLY_DUE_MONTHS = [2, 4, 6, 8, 10, 12];
-
-// Quarterly due months
-const QUARTERLY_DUE_MONTHS = [4, 7, 10, 1]; // Q1 due Apr, Q2 due Jul, Q3 due Oct, Q4 due Jan
 
 const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
 /**
+ * Check if client has payroll service active.
+ */
+function clientHasPayroll(client) {
+  const services = client.service_types || [];
+  const hasPayrollService = services.includes('payroll') || services.includes('full_service') || services.includes('bookkeeping');
+  const payrollFreq = client.reporting_info?.payroll_frequency;
+  return hasPayrollService && payrollFreq !== 'not_applicable';
+}
+
+/**
  * Get the templates applicable to a client based on service_types.
+ * Filters out payroll-dependent templates if client has no payroll.
  */
 function getClientTemplates(client) {
-  const serviceTypes = client.service_types || ['full_service'];
+  const serviceTypes = client.service_types || [];
+  if (serviceTypes.length === 0) return [];
+
   const templateKeys = new Set();
   serviceTypes.forEach(st => {
-    const templates = SERVICE_TYPE_TO_TEMPLATES[st] || SERVICE_TYPE_TO_TEMPLATES['full_service'];
+    const templates = SERVICE_TYPE_TO_TEMPLATES[st];
     if (templates) templates.forEach(t => templateKeys.add(t));
   });
+
+  // Remove payroll-dependent templates if client has no payroll
+  const hasPayroll = clientHasPayroll(client);
+  if (!hasPayroll) {
+    templateKeys.delete('payroll');
+    templateKeys.delete('social_security');
+    templateKeys.delete('deductions');
+  }
+
   return [...templateKeys];
 }
 
 /**
- * Get client frequency for a template, reading from client.reporting_info.
- * Returns: 'monthly' | 'bimonthly' | 'quarterly' | 'not_applicable' | 'yearly'
+ * Get client frequency for a template.
+ * Returns: 'monthly' | 'bimonthly' | 'not_applicable' | 'yearly'
  */
 function getClientFrequency(templateKey, client) {
   const template = PROCESS_TEMPLATES[templateKey];
   if (!template) return 'not_applicable';
   if (template.frequency === 'yearly') return 'yearly';
   if (template.frequencyField) {
-    return client.reporting_info?.[template.frequencyField] || 'monthly';
+    const freq = client.reporting_info?.[template.frequencyField] || 'monthly';
+    // No quarterly - only monthly or bimonthly
+    if (freq === 'quarterly') return 'bimonthly';
+    return freq;
   }
-  // social_security, deductions: follow payroll frequency
-  return client.reporting_info?.payroll_frequency || 'monthly';
+  // social_security: monthly (when payroll exists)
+  // deductions: monthly or bimonthly (follows payroll reporting)
+  if (templateKey === 'social_security') return 'monthly';
+  if (templateKey === 'deductions') return client.reporting_info?.payroll_frequency || 'monthly';
+  return 'monthly';
 }
 
 /**
@@ -210,7 +250,6 @@ function shouldRunForMonth(templateKey, month, client) {
   if (freq === 'not_applicable') return false;
   if (freq === 'yearly') return month === PROCESS_TEMPLATES[templateKey]?.dueMonth;
   if (freq === 'bimonthly') return BIMONTHLY_DUE_MONTHS.includes(month);
-  if (freq === 'quarterly') return QUARTERLY_DUE_MONTHS.includes(month);
   return true; // monthly
 }
 
@@ -227,11 +266,6 @@ function getReportDescription(templateKey, month, year, client) {
   if (freq === 'bimonthly') {
     const periodName = BIMONTHLY_PERIOD_NAMES[month] || '';
     return `${template.name} ${periodName} ${year}`;
-  }
-  if (freq === 'quarterly') {
-    const quarterMap = { 4: 'Q1', 7: 'Q2', 10: 'Q3', 1: 'Q4' };
-    const quarter = quarterMap[month] || '';
-    return `${template.name} ${quarter} ${month === 1 ? year - 1 : year}`;
   }
   // Monthly - report for previous month
   const reportMonthIdx = month - 2; // e.g. Feb(2) -> Jan index(0)
@@ -292,7 +326,7 @@ export const mondayReportsAutomation = async (params) => {
 
     // Get all active clients
     const allClients = await entities.Client.list();
-    const activeClients = allClients.filter(c => c.status === 'active' || !c.status);
+    const activeClients = allClients.filter(c => c.status === 'active');
 
     log.push(`${timestamp()} נמצאו ${activeClients.length} לקוחות פעילים`);
 
@@ -1216,7 +1250,7 @@ export const generateProcessTasks = async (params = {}) => {
 
   try {
     const allClients = await entities.Client.list();
-    const activeClients = allClients.filter(c => c.status === 'active' || !c.status);
+    const activeClients = allClients.filter(c => c.status === 'active');
     const existingTasks = await entities.Task.list();
 
     log.push(`${timestamp()} נמצאו ${activeClients.length} לקוחות פעילים, ${existingTasks.length} משימות קיימות`);
