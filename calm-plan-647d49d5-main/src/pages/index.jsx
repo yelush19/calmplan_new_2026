@@ -70,6 +70,10 @@ import WeeklyPlanningDashboard from "./WeeklyPlanningDashboard";
 
 import BalanceSheets from "./BalanceSheets";
 
+import WeeklySummary from "./WeeklySummary";
+
+import RecurringTasks from "./RecurringTasks";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -143,7 +147,11 @@ const PAGES = {
     WeeklyPlanningDashboard: WeeklyPlanningDashboard,
     
     BalanceSheets: BalanceSheets,
-    
+
+    WeeklySummary: WeeklySummary,
+
+    RecurringTasks: RecurringTasks,
+
 }
 
 function _getCurrentPage(url) {
@@ -240,7 +248,11 @@ function PagesContent() {
                 <Route path="/WeeklyPlanningDashboard" element={<WeeklyPlanningDashboard />} />
                 
                 <Route path="/BalanceSheets" element={<BalanceSheets />} />
-                
+
+                <Route path="/WeeklySummary" element={<WeeklySummary />} />
+
+                <Route path="/RecurringTasks" element={<RecurringTasks />} />
+
             </Routes>
         </Layout>
     );

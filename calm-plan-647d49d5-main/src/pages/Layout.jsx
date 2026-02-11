@@ -7,7 +7,7 @@ import {
   Home, Brain, Briefcase, CheckSquare, Target, BookCheck, DollarSign,
   LayoutGrid, BarChart3, Settings, Menu, X, Users, Monitor, Scaling,
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, FileText, UserPlus, RefreshCw, Database,
-  ArrowRight
+  ArrowRight, FileBarChart, AlertTriangle, Repeat
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import {
@@ -27,6 +27,7 @@ const navigationGroups = [
       { name: "לוח טיפולים", href: createPageUrl("WeeklyPlanning"), icon: Target },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanner"), icon: LayoutGrid },
       { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+      { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
     ],
   },
@@ -63,6 +64,7 @@ const navigationGroups = [
             { name: "מעקב מאזנים שנתיים", href: "#", icon: Scaling, external: true },
         ]
       },
+      { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
       { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
       {
         name: "Monday.com",
