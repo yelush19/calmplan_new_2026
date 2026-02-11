@@ -31,32 +31,27 @@ const navigationGroups = [
     ],
   },
   {
-    title: "העסק שלי",
+    title: "המשרד - LITAY",
     icon: Briefcase,
     items: [
-      { name: "מרכז העסק", href: createPageUrl("BusinessHub"), icon: Briefcase },
+      { name: "לוח לקוחות", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
       {
         name: "ניהול לקוחות",
         icon: Users,
         children: [
           { name: "כל הלקוחות", href: createPageUrl("ClientManagement"), icon: Users },
-        ]
-      },
-      {
-        name: "לקוחות חדשים",
-        icon: UserPlus,
-        children: [
           { name: "לידים", href: createPageUrl("Leads"), icon: Target },
           { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
         ]
       },
       {
         name: "תהליכים ודיווחים",
-        icon: BarChart3,
+        icon: Calculator,
         children: [
-            { name: "שכר ודיווחים", href: createPageUrl("PayrollDashboard"), icon: Calculator },
+            { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
+            { name: "תהליכי שכר", href: createPageUrl("PayrollDashboard"), icon: Calculator },
             { name: "לוח התאמות", href: createPageUrl("Reconciliations"), icon: BookCheck },
-            { name: "מעקב מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
+            { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
         ]
       },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
@@ -72,7 +67,7 @@ const navigationGroups = [
     ],
   },
   {
-    title: "הבית והמשפחה",
+    title: "LENA - בית וחיים",
     icon: Home,
     items: [
       { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },

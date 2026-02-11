@@ -42,6 +42,10 @@ import ClientOnboarding from "./ClientOnboarding";
 
 import PayrollDashboard from "./PayrollDashboard";
 
+import ClientsDashboard from "./ClientsDashboard";
+
+import TaxReportsDashboard from "./TaxReportsDashboard";
+
 import Leads from "./Leads";
 
 import ServiceProvidersPage from "./ServiceProvidersPage";
@@ -115,7 +119,11 @@ const PAGES = {
     ClientOnboarding: ClientOnboarding,
     
     PayrollDashboard: PayrollDashboard,
-    
+
+    ClientsDashboard: ClientsDashboard,
+
+    TaxReportsDashboard: TaxReportsDashboard,
+
     Leads: Leads,
     
     ServiceProvidersPage: ServiceProvidersPage,
@@ -212,7 +220,11 @@ function PagesContent() {
                 <Route path="/ClientOnboarding" element={<ClientOnboarding />} />
                 
                 <Route path="/PayrollDashboard" element={<PayrollDashboard />} />
-                
+
+                <Route path="/ClientsDashboard" element={<ClientsDashboard />} />
+
+                <Route path="/TaxReportsDashboard" element={<TaxReportsDashboard />} />
+
                 <Route path="/Leads" element={<Leads />} />
                 
                 <Route path="/ServiceProvidersPage" element={<ServiceProvidersPage />} />
