@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Task, Dashboard, Client, AccountReconciliation } from "@/api/entities"; // Added Client, AccountReconciliation
+import { Task, Dashboard } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -155,46 +155,6 @@ export default function TasksPage() {
       }, "-created_date", 2000);
       
       const validTasks = Array.isArray(fetchedTasks) ? fetchedTasks : [];
-
-      // === דיבאג מפורט של כל הסטטוסים במערכת ===
-      console.log('=== 📊 כל הסטטוסים במערכת ===');
-
-      // משימות
-      const allTasks = await Task.list(null, 5000);
-      const uniqueTaskStatuses = [...new Set(allTasks.map(t => t.status))].filter(Boolean);
-      console.log('🔹 סטטוסי משימות:', uniqueTaskStatuses);
-
-      // לקוחות  
-      const clients = await Client.list(null, 1000);
-      const uniqueClientStatuses = [...new Set(clients.map(c => c.status))].filter(Boolean);
-      console.log('🔹 סטטוסי לקוחות:', uniqueClientStatuses);
-
-      // התאמות
-      try {
-        const reconciliations = await AccountReconciliation.list(null, 1000);
-        const uniqueReconStatuses = [...new Set(reconciliations.map(r => r.status))].filter(Boolean);
-        console.log('🔹 סטטוסי התאמות:', uniqueReconStatuses);
-      } catch (e) {
-        console.log('🔹 התאמות: לא נמצאו או שגיאה בטעינה');
-      }
-
-      // דיבאג ספציפי למשימות הנוכחיות
-      console.log('\n=== 🎯 משימות בקונטקסט הנוכחי ===');
-      console.log('Context:', context);
-      console.log('Board IDs:', targetBoardIds);
-      console.log('Tasks loaded:', validTasks.length);
-      
-      if (validTasks.length > 0) {
-        console.log('דוגמת משימה מלאה:', validTasks[0]);
-        console.log('Monday board ID:', validTasks[0]?.monday_board_id);
-        
-        const currentContextStatuses = [...new Set(validTasks.map(t => t.status))].filter(Boolean);
-        console.log('סטטוסים בקונטקסט הנוכחי:', currentContextStatuses);
-      }
-
-      console.log('=== 📋 סיכום לBASE44 ===');
-      console.log('העתק את כל הסטטוסים למעלה ל-BASE44 כדי שיכין מיפוי מדויק');
-      console.log('===========================');
 
       // 5. תיקון וניקוי הסטטוסים
       const normalizedTasks = validTasks.map(task => {

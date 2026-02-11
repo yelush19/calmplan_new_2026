@@ -84,7 +84,7 @@ export const mondayApi = async (params) => {
         return await handleAddColumn(params);
 
       case 'createMonthlyBoards':
-        return { data: { success: false, error: 'יצירת לוחות חודשיים עדיין לא נתמכת במצב עצמאי' } };
+        return await handleCreateMonthlyBoards(params);
 
       default:
         return { data: { success: false, error: `Unknown action: ${params.action}` } };
@@ -572,6 +572,103 @@ async function handleAddColumn(params) {
   } catch (err) {
     return { data: { success: false, error: err.message } };
   }
+}
+
+// ===== Monthly Boards Creation =====
+
+const HEBREW_MONTHS = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+];
+
+const REPORT_COLUMNS = [
+  { title: 'סטטוס', type: 'status' },
+  { title: 'לקוח', type: 'text' },
+  { title: 'סוג דיווח', type: 'text' },
+  { title: 'תאריך יעד', type: 'date' },
+  { title: 'אחראי', type: 'people' },
+  { title: 'הערות', type: 'long_text' },
+];
+
+async function handleCreateMonthlyBoards(params) {
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  const year = params.year || new Date().getFullYear();
+
+  log.push(`${timestamp()} מתחיל יצירת 12 לוחות דיווח חודשיים לשנת ${year}...`);
+
+  const createdBoards = [];
+  const errors = [];
+
+  for (let month = 0; month < 12; month++) {
+    const monthName = HEBREW_MONTHS[month];
+    const boardName = `דיווחים ${monthName} ${year}`;
+    const monthNum = String(month + 1).padStart(2, '0');
+
+    try {
+      log.push(`${timestamp()} יוצר לוח: ${boardName}...`);
+
+      // Create the board in Monday.com
+      const board = await monday.createBoard(boardName, 'public');
+
+      if (!board || !board.id) {
+        errors.push(`שגיאה ביצירת לוח ${boardName}: לא התקבל ID`);
+        continue;
+      }
+
+      const boardId = String(board.id);
+
+      // Add columns to the board
+      for (const col of REPORT_COLUMNS) {
+        try {
+          await monday.addColumnToBoard(boardId, col.title, col.type);
+          // Small delay between column creations for rate limiting
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (colErr) {
+          log.push(`${timestamp()} אזהרה: לא הצלחתי להוסיף עמודה "${col.title}" ללוח ${boardName}: ${colErr.message}`);
+        }
+      }
+
+      // Save board config to Dashboard entity in CalmPlan
+      const boardType = `reports_${year}_${monthNum}`;
+      await entities.Dashboard.create({
+        type: boardType,
+        name: boardName,
+        monday_board_id: boardId,
+        year: year,
+        month: month + 1,
+        month_name: monthName,
+      });
+
+      createdBoards.push({
+        boardId,
+        month: month + 1,
+        monthName,
+        boardName,
+      });
+
+      log.push(`${timestamp()} נוצר בהצלחה: ${boardName} (ID: ${boardId})`);
+
+      // Rate limit protection between boards
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+    } catch (err) {
+      errors.push(`שגיאה בלוח ${boardName}: ${err.message}`);
+      log.push(`${timestamp()} שגיאה: ${boardName} - ${err.message}`);
+    }
+  }
+
+  log.push(`${timestamp()} סיום: נוצרו ${createdBoards.length}/12 לוחות. ${errors.length} שגיאות.`);
+
+  return {
+    data: {
+      success: createdBoards.length > 0,
+      year,
+      createdBoards,
+      errors,
+      log
+    }
+  };
 }
 
 // ===== Reverse Sync: CalmPlan → Monday =====

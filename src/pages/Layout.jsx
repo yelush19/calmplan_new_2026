@@ -40,7 +40,6 @@ const navigationGroups = [
         icon: Users,
         children: [
           { name: "כל הלקוחות", href: createPageUrl("ClientManagement"), icon: Users },
-          { name: "ניהול חוזים", href: createPageUrl("ClientContracts"), icon: FileText }
         ]
       },
       {
@@ -48,10 +47,7 @@ const navigationGroups = [
         icon: UserPlus,
         children: [
           { name: "לידים", href: createPageUrl("Leads"), icon: Target },
-          { name: "הצעות מחיר", href: createPageUrl("Quotes"), icon: Calculator },
-          { name: "חוזים והסכמים", href: createPageUrl("NewClientContracts"), icon: FileText },
           { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
-          { name: "PriceWise אינטגרציה", href: createPageUrl("PriceWiseIntegration"), icon: DollarSign },
         ]
       },
       {
@@ -60,7 +56,7 @@ const navigationGroups = [
         children: [
             { name: "שכר ודיווחים", href: createPageUrl("PayrollDashboard"), icon: Calculator },
             { name: "לוח התאמות", href: createPageUrl("Reconciliations"), icon: BookCheck },
-            { name: "מעקב מאזנים שנתיים", href: "#", icon: Scaling, external: true },
+            { name: "מעקב מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
         ]
       },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
@@ -91,7 +87,6 @@ const navigationGroups = [
         { name: "דשבורדים", href: createPageUrl("Dashboards"), icon: LayoutGrid },
         { name: "מפת דרכים", href: createPageUrl("Roadmap"), icon: Target },
         { name: "מטריצת משימות", href: createPageUrl("TaskMatrix"), icon: Eye },
-        { name: "יצירת נתוני דמו", href: createPageUrl("SeedData"), icon: Database },
         { name: "מנהל נתוני בדיקה", href: createPageUrl("TestDataManager"), icon: Database },
     ]
   }
