@@ -53,7 +53,7 @@ export default function TaxReportsDashboardPage() {
 
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to reporting month (previous)
   const [viewMode, setViewMode] = useState('process');
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function TaxReportsDashboardPage() {
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800">דיווחי מיסים</h1>
-            <p className="text-gray-500">מע"מ ומקדמות מס הכנסה - רשות המיסים</p>
+            <p className="text-gray-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | מע"מ ומקדמות מס הכנסה</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -165,9 +165,12 @@ export default function TaxReportsDashboardPage() {
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
               <ChevronRight className="w-4 h-4" />
             </Button>
-            <span className="font-semibold text-sm w-28 text-center text-gray-700">
-              {format(selectedMonth, 'MMMM yyyy', { locale: he })}
-            </span>
+            <div className="text-center w-32">
+              <div className="text-[10px] text-gray-400 leading-none">חודש דיווח</div>
+              <div className="font-semibold text-sm text-gray-700">
+                {format(selectedMonth, 'MMMM yyyy', { locale: he })}
+              </div>
+            </div>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('next')}>
               <ChevronLeft className="w-4 h-4" />
             </Button>

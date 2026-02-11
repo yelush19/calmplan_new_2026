@@ -113,7 +113,7 @@ export default function ClientsDashboardPage() {
   const [clients, setClients] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to reporting month (previous)
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -329,7 +329,7 @@ export default function ClientsDashboardPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">לוח לקוחות</h1>
-            <p className="text-sm text-gray-500">לחץ על תא לשינוי סטטוס | תא ריק = יצירת משימה</p>
+            <p className="text-sm text-gray-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | לחץ על תא לשינוי סטטוס</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -337,9 +337,12 @@ export default function ClientsDashboardPage() {
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
               <ChevronRight className="w-4 h-4" />
             </Button>
-            <span className="font-semibold text-sm w-28 text-center text-gray-700">
-              {format(selectedMonth, 'MMMM yyyy', { locale: he })}
-            </span>
+            <div className="text-center w-32">
+              <div className="text-[10px] text-gray-400 leading-none">חודש דיווח</div>
+              <div className="font-semibold text-sm text-gray-700">
+                {format(selectedMonth, 'MMMM yyyy', { locale: he })}
+              </div>
+            </div>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('next')}>
               <ChevronLeft className="w-4 h-4" />
             </Button>
