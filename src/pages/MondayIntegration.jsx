@@ -390,6 +390,7 @@ export default function MondayIntegrationPage() {
   const [monthlyBoardsResult, setMonthlyBoardsResult] = useState(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [addColumnResult, setAddColumnResult] = useState(null);
+  const [selectedProcessTypes, setSelectedProcessTypes] = useState(['reports']);
 
   const loadData = useCallback(async () => {
     try {
@@ -598,27 +599,36 @@ export default function MondayIntegrationPage() {
   };
 
   const handleCreateMonthlyBoards = async () => {
-    if (!window.confirm(`האם ליצור 12 לוחות דיווח חודשיים עבור שנת ${monthlyBoardsYear}?`)) {
+    if (selectedProcessTypes.length === 0) {
+      alert('יש לבחור לפחות סוג תהליך אחד');
+      return;
+    }
+    const typeLabels = { reports: 'דיווחים', reconciliations: 'התאמות', balance_sheets: 'מאזנים' };
+    const selectedLabels = selectedProcessTypes.map(t => typeLabels[t]).join(', ');
+    const totalBoards = selectedProcessTypes.length * 12;
+
+    if (!window.confirm(`האם ליצור ${totalBoards} לוחות חודשיים (${selectedLabels}) עבור שנת ${monthlyBoardsYear}?`)) {
       return;
     }
 
     setIsCreatingMonthlyBoards(true);
     setMonthlyBoardsResult(null);
-    
+
     try {
-      const response = await mondayApi({ 
-        action: 'createMonthlyBoards', 
-        year: monthlyBoardsYear 
+      const response = await mondayApi({
+        action: 'createMonthlyBoards',
+        year: monthlyBoardsYear,
+        processTypes: selectedProcessTypes
       });
-      
+
       if (response.data.success) {
         setMonthlyBoardsResult({
           type: 'success',
-          message: `✅ נוצרו ${response.data.createdBoards.length} לוחות חודשיים לשנת ${response.data.year}!`,
-          boards: response.data.createdBoards.map(b => ({ month: b.month, monthName: b.monthName }))
+          message: `נוצרו ${response.data.createdBoards.length} לוחות חודשיים לשנת ${response.data.year}!`,
+          boards: response.data.createdBoards.map(b => ({ month: b.month, monthName: b.monthName, processType: b.processType }))
         });
-        
-        await loadData(); // Reload all board configs and data
+
+        await loadData();
       } else {
         setMonthlyBoardsResult({
           type: 'error',
@@ -1346,15 +1356,15 @@ export default function MondayIntegrationPage() {
                 <Calendar className="w-6 h-6 text-indigo-600" />
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-indigo-900">יצירת לוחות דיווח חודשיים</h3>
-                <p className="text-sm text-indigo-700">צור 12 לוחות חדשים בפעולה אחת - אחד לכל חודש בשנה</p>
+                <h3 className="text-xl font-semibold text-indigo-900">יצירת לוחות חודשיים</h3>
+                <p className="text-sm text-indigo-700">צור 12 לוחות חדשים לכל סוג תהליך - אחד לכל חודש בשנה</p>
               </div>
             </div>
 
             {monthlyBoardsResult && (
               <div className={`p-4 rounded-lg border ${
-                monthlyBoardsResult.type === 'success' 
-                  ? 'bg-green-50 border-green-200 text-green-800' 
+                monthlyBoardsResult.type === 'success'
+                  ? 'bg-green-50 border-green-200 text-green-800'
                   : 'bg-red-50 border-red-200 text-red-800'
               }`}>
                 <div className="flex items-start gap-2">
@@ -1365,23 +1375,23 @@ export default function MondayIntegrationPage() {
                   )}
                   <div className="flex-1">
                     <p className="font-medium mb-2">{monthlyBoardsResult.message}</p>
-                    
+
                     {monthlyBoardsResult.boards && monthlyBoardsResult.boards.length > 0 && (
                       <div className="mt-3 space-y-1">
                         <p className="text-sm font-semibold">לוחות שנוצרו:</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
                           {monthlyBoardsResult.boards.map((board, index) => (
                             <div key={index} className="bg-white/50 p-2 rounded">
-                              {board.monthName}
+                              {board.monthName} {board.processType && board.processType !== 'reports' ? `(${board.processType === 'reconciliations' ? 'התאמות' : 'מאזנים'})` : ''}
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setMonthlyBoardsResult(null)}
                     className="flex-shrink-0"
                   >
@@ -1390,6 +1400,40 @@ export default function MondayIntegrationPage() {
                 </div>
               </div>
             )}
+
+            <div>
+              <label className="text-sm font-medium text-indigo-800 mb-2 block">סוגי תהליכים ליצירה</label>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { value: 'reports', label: 'דיווחים', desc: 'שכר, מע"מ, מקדמות' },
+                  { value: 'reconciliations', label: 'התאמות', desc: 'בנק וסליקה' },
+                  { value: 'balance_sheets', label: 'מאזנים', desc: 'דוחות שנתיים' },
+                ].map(pt => (
+                  <label key={pt.value} className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                    selectedProcessTypes.includes(pt.value)
+                      ? 'border-indigo-400 bg-indigo-100'
+                      : 'border-gray-200 bg-white hover:border-indigo-200'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedProcessTypes.includes(pt.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedProcessTypes(prev => [...prev, pt.value]);
+                        } else {
+                          setSelectedProcessTypes(prev => prev.filter(t => t !== pt.value));
+                        }
+                      }}
+                      className="w-4 h-4 text-indigo-600"
+                    />
+                    <div>
+                      <span className="font-medium text-sm">{pt.label}</span>
+                      <span className="text-xs text-gray-500 block">{pt.desc}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
               <div>
@@ -1407,7 +1451,7 @@ export default function MondayIntegrationPage() {
               </div>
               <Button
                 onClick={handleCreateMonthlyBoards}
-                disabled={isCreatingMonthlyBoards}
+                disabled={isCreatingMonthlyBoards || selectedProcessTypes.length === 0}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white h-10"
                 size="lg"
               >
@@ -1419,7 +1463,7 @@ export default function MondayIntegrationPage() {
                 ) : (
                   <>
                     <Plus className="w-5 h-5 ml-2" />
-                    צור 12 לוחות חדשים
+                    צור {selectedProcessTypes.length * 12} לוחות חדשים
                   </>
                 )}
               </Button>
@@ -1429,8 +1473,8 @@ export default function MondayIntegrationPage() {
               <p className="text-sm text-indigo-800 flex items-start gap-2">
                 <span className="font-bold text-lg">💡</span>
                 <span>
-                  פעולה זו תיצור 12 לוחות חדשים ב-Monday.com (ינואר-דצמבר {monthlyBoardsYear}), 
-                  כולל כל העמודות הנדרשות וקישור ללוח הלקוחות. 
+                  פעולה זו תיצור {selectedProcessTypes.length * 12} לוחות חדשים ב-Monday.com (ינואר-דצמבר {monthlyBoardsYear}),
+                  כולל כל העמודות הנדרשות לכל סוג תהליך.
                   הלוחות יישמרו אוטומטית במערכת CalmPlan.
                 </span>
               </p>
