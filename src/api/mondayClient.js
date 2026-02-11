@@ -304,11 +304,13 @@ export function mapMondayItemToClient(item, boardId) {
             'עבר': 'former',
             'פוטנציאלי': 'potential',
             'פיתוח': 'development',
+            'ממתין לקליטה': 'onboarding_pending',
             'active': 'active',
             'inactive': 'inactive',
             'former': 'former',
             'potential': 'potential',
             'development': 'development',
+            'onboarding_pending': 'onboarding_pending',
           };
           client.status = statusMap[col.text] || 'active';
         }
