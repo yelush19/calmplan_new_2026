@@ -103,8 +103,129 @@ export const mondayApi = async (params) => {
 
 // ===== Reports Automation =====
 
+/**
+ * Create monthly report items in the appropriate Monday board.
+ * Reads clients from local DB, finds the monthly board for the given month/year,
+ * and creates report items for each client that has relevant services.
+ */
 export const mondayReportsAutomation = async (params) => {
-  return { data: { success: false, error: 'יצירת דיווחים חודשיים עדיין לא נתמכת במצב עצמאי' } };
+  const { targetYear, targetMonth } = params;
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+
+  try {
+    if (!monday.hasMondayToken()) {
+      return { data: { success: false, error: 'לא הוגדר API Token של Monday.com' } };
+    }
+
+    const year = targetYear || new Date().getFullYear();
+    const month = targetMonth || (new Date().getMonth() + 1);
+    const monthNum = String(month).padStart(2, '0');
+
+    log.push(`${timestamp()} מתחיל יצירת דיווחים לחודש ${monthNum}.${year}...`);
+
+    // Find the monthly board from Dashboard entities
+    const dashboards = await entities.Dashboard.list();
+    const monthlyBoard = dashboards.find(d =>
+      d.type === `reports_${year}_${monthNum}` && d.monday_board_id
+    );
+
+    if (!monthlyBoard) {
+      return {
+        data: {
+          success: false,
+          error: `לא נמצא לוח דיווח לחודש ${monthNum}.${year}. יש ליצור קודם לוחות חודשיים בדף האינטגרציה.`,
+          log
+        }
+      };
+    }
+
+    const boardId = monthlyBoard.monday_board_id;
+    log.push(`${timestamp()} נמצא לוח: ${monthlyBoard.name} (ID: ${boardId})`);
+
+    // Get board columns to map our fields
+    const columns = await monday.getBoardColumns(boardId);
+    const colMap = {};
+    for (const col of columns) {
+      const titleLower = col.title.toLowerCase();
+      if (titleLower.includes('לקוח') || titleLower.includes('client')) colMap.client = col.id;
+      if (titleLower.includes('סוג') || titleLower.includes('type')) colMap.reportType = col.id;
+      if (titleLower.includes('תאריך') || titleLower.includes('date')) colMap.dueDate = col.id;
+      if (col.type === 'color') colMap.status = col.id;
+    }
+
+    // Get all active clients
+    const allClients = await entities.Client.list();
+    const activeClients = allClients.filter(c => c.status === 'active' || !c.status);
+
+    log.push(`${timestamp()} נמצאו ${activeClients.length} לקוחות פעילים`);
+
+    // Define report types per service
+    const SERVICE_REPORTS = [
+      { service: 'payroll', label: 'הכנת שכר', dayOfMonth: 9 },
+      { service: 'vat_reporting', label: 'דיווח מע״מ', dayOfMonth: 15 },
+      { service: 'tax_advances', label: 'מקדמות מס', dayOfMonth: 15 },
+      { service: 'bookkeeping', label: 'הנהלת חשבונות', dayOfMonth: 20 },
+      { service: 'reconciliation', label: 'התאמות חשבונות', dayOfMonth: 25 },
+    ];
+
+    let created = 0;
+    const errors = [];
+
+    for (const client of activeClients) {
+      const clientServices = client.service_types || [];
+
+      for (const report of SERVICE_REPORTS) {
+        // Check if client has this service
+        if (clientServices.length > 0 && !clientServices.includes(report.service)) continue;
+        // If no services defined, create payroll + vat by default
+        if (clientServices.length === 0 && report.service !== 'payroll' && report.service !== 'vat_reporting') continue;
+
+        // Check vat frequency
+        if (report.service === 'vat_reporting') {
+          const freq = client.reporting_info?.vat_reporting_frequency;
+          if (freq === 'not_applicable') continue;
+          if (freq === 'bimonthly' && month % 2 !== 0) continue;
+          if (freq === 'quarterly' && month % 3 !== 0) continue;
+        }
+
+        const itemName = `${client.name} - ${report.label}`;
+        const dueDay = Math.min(report.dayOfMonth, 28);
+        const dueDate = `${year}-${monthNum}-${String(dueDay).padStart(2, '0')}`;
+
+        const columnValues = {};
+        if (colMap.status) columnValues[colMap.status] = { label: 'ממתין' };
+        if (colMap.client) columnValues[colMap.client] = client.name;
+        if (colMap.reportType) columnValues[colMap.reportType] = report.label;
+        if (colMap.dueDate) columnValues[colMap.dueDate] = { date: dueDate };
+
+        try {
+          await monday.createMondayItem(boardId, itemName, columnValues);
+          created++;
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (err) {
+          errors.push(`${itemName}: ${err.message}`);
+        }
+      }
+    }
+
+    log.push(`${timestamp()} סיום: נוצרו ${created} דיווחים. ${errors.length} שגיאות.`);
+
+    return {
+      data: {
+        success: true,
+        message: `נוצרו ${created} דיווחים לחודש ${monthNum}.${year}`,
+        created,
+        errors,
+        log
+      }
+    };
+  } catch (error) {
+    if (error instanceof monday.MondayRateLimitError) {
+      return { data: { rate_limited: true, retry_after_seconds: error.retryAfter } };
+    }
+    return { data: { success: false, error: error.message, log } };
+  }
 };
 
 // ===== Sync Functions =====
@@ -581,91 +702,133 @@ const HEBREW_MONTHS = [
   'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
 ];
 
-const REPORT_COLUMNS = [
-  { title: 'סטטוס', type: 'status' },
-  { title: 'לקוח', type: 'text' },
-  { title: 'סוג דיווח', type: 'text' },
-  { title: 'תאריך יעד', type: 'date' },
-  { title: 'אחראי', type: 'people' },
-  { title: 'הערות', type: 'long_text' },
-];
+// Column definitions per board process type
+const BOARD_PROCESS_TYPES = {
+  reports: {
+    namePrefix: 'דיווחים',
+    dashboardPrefix: 'reports',
+    columns: [
+      { title: 'סטטוס', type: 'status' },
+      { title: 'לקוח', type: 'text' },
+      { title: 'סוג דיווח', type: 'text' },
+      { title: 'תאריך יעד', type: 'date' },
+      { title: 'אחראי', type: 'people' },
+      { title: 'הערות', type: 'long_text' },
+    ],
+  },
+  reconciliations: {
+    namePrefix: 'התאמות',
+    dashboardPrefix: 'reconciliations',
+    columns: [
+      { title: 'סטטוס', type: 'status' },
+      { title: 'לקוח', type: 'text' },
+      { title: 'חשבון בנק', type: 'text' },
+      { title: 'יתרה בנקאית', type: 'numeric' },
+      { title: 'יתרה ספרים', type: 'numeric' },
+      { title: 'הפרש', type: 'numeric' },
+      { title: 'תאריך התאמה', type: 'date' },
+      { title: 'הערות', type: 'long_text' },
+    ],
+  },
+  balance_sheets: {
+    namePrefix: 'מאזנים',
+    dashboardPrefix: 'balance_sheets',
+    columns: [
+      { title: 'סטטוס', type: 'status' },
+      { title: 'לקוח', type: 'text' },
+      { title: 'שנת מס', type: 'text' },
+      { title: 'סוג דוח', type: 'text' },
+      { title: 'תאריך יעד', type: 'date' },
+      { title: 'אחראי', type: 'people' },
+      { title: 'הערות', type: 'long_text' },
+    ],
+  },
+};
 
 async function handleCreateMonthlyBoards(params) {
   const log = [];
   const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
   const year = params.year || new Date().getFullYear();
+  const processTypes = params.processTypes || ['reports'];
 
-  log.push(`${timestamp()} מתחיל יצירת 12 לוחות דיווח חודשיים לשנת ${year}...`);
+  const allCreatedBoards = [];
+  const allErrors = [];
 
-  const createdBoards = [];
-  const errors = [];
+  for (const processType of processTypes) {
+    const config = BOARD_PROCESS_TYPES[processType];
+    if (!config) {
+      allErrors.push(`סוג תהליך לא מוכר: ${processType}`);
+      continue;
+    }
 
-  for (let month = 0; month < 12; month++) {
-    const monthName = HEBREW_MONTHS[month];
-    const boardName = `דיווחים ${monthName} ${year}`;
-    const monthNum = String(month + 1).padStart(2, '0');
+    log.push(`${timestamp()} מתחיל יצירת 12 לוחות ${config.namePrefix} חודשיים לשנת ${year}...`);
 
-    try {
-      log.push(`${timestamp()} יוצר לוח: ${boardName}...`);
+    for (let month = 0; month < 12; month++) {
+      const monthName = HEBREW_MONTHS[month];
+      const boardName = `${config.namePrefix} ${monthName} ${year}`;
+      const monthNum = String(month + 1).padStart(2, '0');
 
-      // Create the board in Monday.com
-      const board = await monday.createBoard(boardName, 'public');
+      try {
+        log.push(`${timestamp()} יוצר לוח: ${boardName}...`);
 
-      if (!board || !board.id) {
-        errors.push(`שגיאה ביצירת לוח ${boardName}: לא התקבל ID`);
-        continue;
-      }
+        const board = await monday.createBoard(boardName, 'public');
 
-      const boardId = String(board.id);
-
-      // Add columns to the board
-      for (const col of REPORT_COLUMNS) {
-        try {
-          await monday.addColumnToBoard(boardId, col.title, col.type);
-          // Small delay between column creations for rate limiting
-          await new Promise(resolve => setTimeout(resolve, 200));
-        } catch (colErr) {
-          log.push(`${timestamp()} אזהרה: לא הצלחתי להוסיף עמודה "${col.title}" ללוח ${boardName}: ${colErr.message}`);
+        if (!board || !board.id) {
+          allErrors.push(`שגיאה ביצירת לוח ${boardName}: לא התקבל ID`);
+          continue;
         }
+
+        const boardId = String(board.id);
+
+        // Add columns to the board
+        for (const col of config.columns) {
+          try {
+            await monday.addColumnToBoard(boardId, col.title, col.type);
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } catch (colErr) {
+            log.push(`${timestamp()} אזהרה: לא הצלחתי להוסיף עמודה "${col.title}" ללוח ${boardName}: ${colErr.message}`);
+          }
+        }
+
+        // Save board config to Dashboard entity
+        const boardType = `${config.dashboardPrefix}_${year}_${monthNum}`;
+        await entities.Dashboard.create({
+          type: boardType,
+          name: boardName,
+          monday_board_id: boardId,
+          year: year,
+          month: month + 1,
+          month_name: monthName,
+          process_type: processType,
+        });
+
+        allCreatedBoards.push({
+          boardId,
+          month: month + 1,
+          monthName,
+          boardName,
+          processType,
+        });
+
+        log.push(`${timestamp()} נוצר בהצלחה: ${boardName} (ID: ${boardId})`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+      } catch (err) {
+        allErrors.push(`שגיאה בלוח ${boardName}: ${err.message}`);
+        log.push(`${timestamp()} שגיאה: ${boardName} - ${err.message}`);
       }
-
-      // Save board config to Dashboard entity in CalmPlan
-      const boardType = `reports_${year}_${monthNum}`;
-      await entities.Dashboard.create({
-        type: boardType,
-        name: boardName,
-        monday_board_id: boardId,
-        year: year,
-        month: month + 1,
-        month_name: monthName,
-      });
-
-      createdBoards.push({
-        boardId,
-        month: month + 1,
-        monthName,
-        boardName,
-      });
-
-      log.push(`${timestamp()} נוצר בהצלחה: ${boardName} (ID: ${boardId})`);
-
-      // Rate limit protection between boards
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-    } catch (err) {
-      errors.push(`שגיאה בלוח ${boardName}: ${err.message}`);
-      log.push(`${timestamp()} שגיאה: ${boardName} - ${err.message}`);
     }
   }
 
-  log.push(`${timestamp()} סיום: נוצרו ${createdBoards.length}/12 לוחות. ${errors.length} שגיאות.`);
+  const totalExpected = processTypes.length * 12;
+  log.push(`${timestamp()} סיום: נוצרו ${allCreatedBoards.length}/${totalExpected} לוחות. ${allErrors.length} שגיאות.`);
 
   return {
     data: {
-      success: createdBoards.length > 0,
+      success: allCreatedBoards.length > 0,
       year,
-      createdBoards,
-      errors,
+      createdBoards: allCreatedBoards,
+      errors: allErrors,
       log
     }
   };
@@ -909,8 +1072,169 @@ export const createWeeklyPlan = async () => {
   return { data: { success: false, error: 'Not available in standalone mode' } };
 };
 
-export const generateProcessTasks = async () => {
-  return { data: { success: false, error: 'Not available in standalone mode' } };
+/**
+ * Generate process tasks for clients based on their services.
+ * Creates tasks in local DB (and optionally in Monday.com boards).
+ * taskType: 'all' | 'mondayReports' | 'balanceSheets' | 'reconciliations'
+ */
+export const generateProcessTasks = async (params = {}) => {
+  const { taskType = 'all' } = params;
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const monthNum = String(currentMonth).padStart(2, '0');
+
+  try {
+    const allClients = await entities.Client.list();
+    const activeClients = allClients.filter(c => c.status === 'active' || !c.status);
+    const existingTasks = await entities.Task.list();
+
+    log.push(`${timestamp()} נמצאו ${activeClients.length} לקוחות פעילים, ${existingTasks.length} משימות קיימות`);
+
+    const results = {
+      summary: { tasksCreated: 0, mondayTasksCreated: 0, errors: 0 },
+      details: []
+    };
+
+    // --- Monthly Reports ---
+    if (taskType === 'all' || taskType === 'mondayReports') {
+      log.push(`${timestamp()} יוצר משימות דיווח חודשיות...`);
+      const reportTypes = [
+        { service: 'payroll', label: 'הכנת שכר', category: 'work_payroll', dayOfMonth: 9 },
+        { service: 'vat_reporting', label: 'דיווח מע״מ', category: 'work_vat_reporting', dayOfMonth: 15 },
+        { service: 'tax_advances', label: 'מקדמות מס', category: 'work_authorities', dayOfMonth: 15 },
+      ];
+
+      for (const client of activeClients) {
+        const clientServices = client.service_types || [];
+
+        for (const report of reportTypes) {
+          if (clientServices.length > 0 && !clientServices.includes(report.service)) continue;
+          if (clientServices.length === 0 && report.service !== 'payroll' && report.service !== 'vat_reporting') continue;
+
+          if (report.service === 'vat_reporting') {
+            const freq = client.reporting_info?.vat_reporting_frequency;
+            if (freq === 'not_applicable') continue;
+            if (freq === 'bimonthly' && currentMonth % 2 !== 0) continue;
+            if (freq === 'quarterly' && currentMonth % 3 !== 0) continue;
+          }
+
+          const title = `${client.name} - ${report.label} ${monthNum}/${currentYear}`;
+
+          // Skip if similar task already exists
+          const exists = existingTasks.some(t =>
+            t.title === title || (t.client_name === client.name && t.category === report.category &&
+              t.due_date && t.due_date.startsWith(`${currentYear}-${monthNum}`))
+          );
+          if (exists) continue;
+
+          const dueDay = Math.min(report.dayOfMonth, 28);
+          try {
+            await entities.Task.create({
+              title,
+              category: report.category,
+              client_related: true,
+              client_name: client.name,
+              client_id: client.id,
+              status: 'not_started',
+              priority: report.service === 'payroll' ? 'high' : 'medium',
+              due_date: `${currentYear}-${monthNum}-${String(dueDay).padStart(2, '0')}`,
+            });
+            results.summary.tasksCreated++;
+          } catch (err) {
+            results.summary.errors++;
+          }
+        }
+      }
+
+      // Also push to Monday if token exists
+      if (monday.hasMondayToken()) {
+        try {
+          const reportResult = await mondayReportsAutomation({ targetYear: currentYear, targetMonth: currentMonth });
+          if (reportResult?.data?.created) {
+            results.summary.mondayTasksCreated = reportResult.data.created;
+          }
+        } catch (e) {
+          log.push(`${timestamp()} אזהרה: לא ניתן ליצור ב-Monday: ${e.message}`);
+        }
+      }
+    }
+
+    // --- Balance Sheets ---
+    if (taskType === 'all' || taskType === 'balanceSheets') {
+      log.push(`${timestamp()} יוצר משימות מאזנים...`);
+
+      for (const client of activeClients) {
+        const clientServices = client.service_types || [];
+        if (clientServices.length > 0 && !clientServices.includes('annual_reports')) continue;
+
+        const title = `${client.name} - מאזן שנתי ${currentYear - 1}`;
+        const exists = existingTasks.some(t => t.title === title);
+        if (exists) continue;
+
+        try {
+          await entities.Task.create({
+            title,
+            category: 'work_client_management',
+            client_related: true,
+            client_name: client.name,
+            client_id: client.id,
+            status: 'not_started',
+            priority: 'medium',
+            due_date: `${currentYear}-05-31`,
+          });
+          results.summary.tasksCreated++;
+        } catch (err) {
+          results.summary.errors++;
+        }
+      }
+    }
+
+    // --- Reconciliations ---
+    if (taskType === 'all' || taskType === 'reconciliations') {
+      log.push(`${timestamp()} יוצר משימות התאמות...`);
+
+      for (const client of activeClients) {
+        const clientServices = client.service_types || [];
+        if (clientServices.length > 0 && !clientServices.includes('reconciliation') && !clientServices.includes('bookkeeping')) continue;
+
+        const title = `${client.name} - התאמת חשבונות ${monthNum}/${currentYear}`;
+        const exists = existingTasks.some(t => t.title === title);
+        if (exists) continue;
+
+        try {
+          await entities.Task.create({
+            title,
+            category: 'work_reconciliation',
+            client_related: true,
+            client_name: client.name,
+            client_id: client.id,
+            status: 'not_started',
+            priority: 'medium',
+            due_date: `${currentYear}-${monthNum}-${String(Math.min(25, 28)).padStart(2, '0')}`,
+          });
+          results.summary.tasksCreated++;
+        } catch (err) {
+          results.summary.errors++;
+        }
+      }
+    }
+
+    log.push(`${timestamp()} סיום: נוצרו ${results.summary.tasksCreated} משימות מקומיות, ${results.summary.mondayTasksCreated} ב-Monday`);
+
+    return {
+      data: {
+        success: true,
+        message: `נוצרו ${results.summary.tasksCreated} משימות חדשות`,
+        results,
+        log
+      }
+    };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
 };
 
 // ===== Seed Data =====
