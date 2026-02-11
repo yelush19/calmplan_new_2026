@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TreatmentInput } from '@/components/scheduling/TreatmentInput';
+import TreatmentInput from '@/components/scheduling/TreatmentInput';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 
