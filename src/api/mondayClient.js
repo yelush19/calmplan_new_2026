@@ -301,12 +301,14 @@ export function mapMondayItemToClient(item, boardId) {
           const statusMap = {
             'פעיל': 'active',
             'לא פעיל': 'inactive',
+            'עבר': 'former',
             'פוטנציאלי': 'potential',
-            'לקוח עבר': 'former',
+            'פיתוח': 'development',
             'active': 'active',
             'inactive': 'inactive',
-            'potential': 'potential',
             'former': 'former',
+            'potential': 'potential',
+            'development': 'development',
           };
           client.status = statusMap[col.text] || 'active';
         }
