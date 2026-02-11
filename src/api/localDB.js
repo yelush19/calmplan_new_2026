@@ -109,6 +109,8 @@ function createEntity(collectionName) {
         for (const [key, condition] of Object.entries(filters)) {
           if (condition && typeof condition === 'object' && condition['$in']) {
             if (!condition['$in'].includes(item[key])) return false;
+          } else if (condition && typeof condition === 'object' && condition['$ne']) {
+            if (item[key] === condition['$ne']) return false;
           } else if (condition && typeof condition === 'object' && condition['$eq']) {
             if (item[key] !== condition['$eq']) return false;
           } else {

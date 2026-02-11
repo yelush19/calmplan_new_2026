@@ -74,14 +74,6 @@ export default function CalendarPage() {
       const fetchedEvents = eventsData || [];
       const fetchedTasks = tasksData || [];
       
-      // דיבאג - בדיקת מה הגיע
-      console.log('Calendar - Tasks loaded:', fetchedTasks.length);
-      console.log('Sample task:', fetchedTasks[0]);
-      
-      // בדיקה איזה תאריכים יש במשימות
-      const tasksWithDates = fetchedTasks.filter(task => task.due_date || task.scheduled_start);
-      console.log('Tasks with dates:', tasksWithDates.length);
-
       // Filter and validate tasks
       const openTasks = fetchedTasks.filter(task => {
         if (!task) return false;

@@ -48,13 +48,9 @@ import ServiceProvidersPage from "./ServiceProvidersPage";
 
 import Roadmap from "./Roadmap";
 
-import WeeklyPlanning from "./WeeklyPlanning";
-
 import HomeTaskGenerator from "./HomeTaskGenerator";
 
 import WeeklyPlanner from "./WeeklyPlanner";
-
-import TreatmentInput from "./TreatmentInput";
 
 import TestDataManager from "./TestDataManager";
 
@@ -126,13 +122,9 @@ const PAGES = {
     
     Roadmap: Roadmap,
     
-    WeeklyPlanning: WeeklyPlanning,
-    
     HomeTaskGenerator: HomeTaskGenerator,
-    
+
     WeeklyPlanner: WeeklyPlanner,
-    
-    TreatmentInput: TreatmentInput,
     
     TestDataManager: TestDataManager,
     
@@ -227,13 +219,9 @@ function PagesContent() {
                 
                 <Route path="/Roadmap" element={<Roadmap />} />
                 
-                <Route path="/WeeklyPlanning" element={<WeeklyPlanning />} />
-                
                 <Route path="/HomeTaskGenerator" element={<HomeTaskGenerator />} />
-                
+
                 <Route path="/WeeklyPlanner" element={<WeeklyPlanner />} />
-                
-                <Route path="/TreatmentInput" element={<TreatmentInput />} />
                 
                 <Route path="/TestDataManager" element={<TestDataManager />} />
                 

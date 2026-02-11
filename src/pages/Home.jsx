@@ -177,13 +177,6 @@ export default function HomePage() {
         upcoming: upcomingEvents
       });
 
-      // דיבאג לוודא שהספירה נכונה
-      console.log('🏠 HOME PAGE DEBUG:');
-      console.log('- Total tasks loaded:', totalTasks);
-      console.log('- Work tasks:', workTasks.length);
-      console.log('- Home tasks:', homeTasks.length);
-      console.log('- Tasks with Monday board ID:', allTasks.filter(t => t.monday_board_id).length);
-
 
     } catch (error) {
       console.error("Error loading home page data:", error);
@@ -471,12 +464,12 @@ export default function HomePage() {
         transition={{ delay: 0.4 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        <Link to={createPageUrl("TreatmentInput")}>
+        <Link to={createPageUrl("WeeklyPlanner")}>
           <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-6 text-center">
               <Target className="w-8 h-8 mx-auto mb-3 text-blue-600" />
               <h3 className="font-semibold text-blue-800 mb-2">תכנון שבועי</h3>
-              <p className="text-sm text-blue-600">הזן טיפולים ויצור תכנון</p>
+              <p className="text-sm text-blue-600">תכנן את השבוע שלך</p>
             </CardContent>
           </Card>
         </Link>

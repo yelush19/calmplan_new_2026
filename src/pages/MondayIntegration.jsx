@@ -178,9 +178,9 @@ const boardCategories = {
   reconciliations: { label: 'התאמות בנק וסליקה', icon: BookCheck, color: 'text-purple-600', description: 'נתונים כספיים מפורטים מלוח ההתאמות' },
   client_accounts: { label: 'חשבונות בנק וסליקה', icon: CreditCard, color: 'text-yellow-600', description: 'ניהול חשבונות בנק וכרטיסי אשראי של לקוחות' },
   family_tasks: { label: 'משימות משפחה', icon: Home, color: 'text-orange-600', description: 'משימות בית ומשפחה' },
-  weekly_planning: { label: 'לוח טיפולים', icon: Calendar, color: 'text-indigo-600', description: 'תכנון זמנים וטיפולים' },
+  weekly_planning: { label: 'תכנון שבועי', icon: Calendar, color: 'text-indigo-600', description: 'תכנון משימות שבועי' },
   wellbeing: { label: 'מעקב רווחה', icon: Heart, color: 'text-pink-600', description: 'מעקב אחר בריאות ומצב רוח' },
-  therapists: { label: 'לוח מטפלים', icon: BookUser, color: 'text-teal-600', description: 'ניהול וסנכרון רשימת המטפלים' }
+  therapists: { label: 'לוח מטפלים', icon: BookUser, color: 'text-teal-600', description: 'ניהול וסנכרון רשימת מטפלים' }
 };
 
 const IntegratedBoardCard = ({ board, data, onSync, onPurgeAndResync, onEdit, onSave, syncStatus, isEditing, availableBoards, onBoardIdChange, logs }) => {
