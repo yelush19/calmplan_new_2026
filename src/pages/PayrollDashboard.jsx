@@ -69,7 +69,7 @@ export default function PayrollDashboardPage() {
       const tasksData = await Task.filter({
         context: 'work',
         due_date: { '>=': format(start, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
-        category: { 'in': Object.keys(processCategories) }
+        category: { '$in': Object.keys(processCategories) }
       });
       setTasks(tasksData || []);
     } catch (error) {

@@ -50,14 +50,17 @@ export default function WeeklySummary() {
       const nextWeekEnd = new Date(weekEnd);
       nextWeekEnd.setDate(nextWeekEnd.getDate() + 7);
 
-      // All overdue tasks (not completed, past due date)
+      // All overdue tasks (not completed, past due date, max 180 days old)
+      const MAX_OVERDUE_DAYS = 180;
       const overdueTasks = allTasks.filter(task => {
         if (task.status === 'completed') return false;
         const dueStr = task.due_date || task.scheduled_start;
         if (!dueStr) return false;
         try {
           const dueDate = parseISO(dueStr);
-          return isValid(dueDate) && startOfDay(dueDate) < today;
+          if (!isValid(dueDate)) return false;
+          const daysPast = differenceInDays(today, startOfDay(dueDate));
+          return daysPast > 0 && daysPast <= MAX_OVERDUE_DAYS;
         } catch { return false; }
       }).sort((a, b) => {
         const dateA = new Date(a.due_date || a.scheduled_start);
