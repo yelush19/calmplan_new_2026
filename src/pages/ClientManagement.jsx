@@ -171,6 +171,7 @@ export default function ClientManagementPage() {
       inactive: clients.filter(c => c.status === 'inactive').length,
       potential: clients.filter(c => c.status === 'potential').length,
       former: clients.filter(c => c.status === 'former').length,
+      development: clients.filter(c => c.status === 'development').length,
       onboarding_pending: clients.filter(c => c.status === 'onboarding_pending').length,
     };
 
@@ -333,7 +334,8 @@ export default function ClientManagementPage() {
     active: 'פעיל',
     inactive: 'לא פעיל',
     potential: 'פוטנציאלי',
-    former: 'לקוח עבר',
+    former: 'עבר',
+    development: 'פיתוח',
     onboarding_pending: 'ממתין לקליטה'
   };
 
@@ -595,7 +597,8 @@ export default function ClientManagementPage() {
                 <SelectItem value="active">פעיל ({statusCounts.active})</SelectItem>
                 <SelectItem value="inactive">לא פעיל ({statusCounts.inactive})</SelectItem>
                 <SelectItem value="potential">פוטנציאלי ({statusCounts.potential})</SelectItem>
-                <SelectItem value="former">לקוח עבר ({statusCounts.former})</SelectItem>
+                <SelectItem value="former">עבר ({statusCounts.former})</SelectItem>
+                <SelectItem value="development">פיתוח ({statusCounts.development})</SelectItem>
                 <SelectItem value="onboarding_pending">ממתין לקליטה ({statusCounts.onboarding_pending})</SelectItem>
               </SelectContent>
             </Select>
@@ -733,7 +736,8 @@ export default function ClientManagementPage() {
                   <SelectItem value="active">פעיל</SelectItem>
                   <SelectItem value="inactive">לא פעיל</SelectItem>
                   <SelectItem value="potential">פוטנציאלי</SelectItem>
-                  <SelectItem value="former">לקוח עבר</SelectItem>
+                  <SelectItem value="former">עבר</SelectItem>
+                  <SelectItem value="development">פיתוח</SelectItem>
                   <SelectItem value="onboarding_pending">ממתין לקליטה</SelectItem>
                 </SelectContent>
               </Select>
