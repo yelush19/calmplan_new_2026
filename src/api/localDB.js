@@ -107,12 +107,30 @@ function createEntity(collectionName) {
 
       items = items.filter(item => {
         for (const [key, condition] of Object.entries(filters)) {
-          if (condition && typeof condition === 'object' && condition['$in']) {
-            if (!condition['$in'].includes(item[key])) return false;
-          } else if (condition && typeof condition === 'object' && condition['$ne']) {
-            if (item[key] === condition['$ne']) return false;
-          } else if (condition && typeof condition === 'object' && condition['$eq']) {
-            if (item[key] !== condition['$eq']) return false;
+          if (condition && typeof condition === 'object') {
+            // Operator-based filtering
+            if (condition['$in']) {
+              if (!condition['$in'].includes(item[key])) return false;
+            }
+            if (condition['$ne'] !== undefined) {
+              if (item[key] === condition['$ne']) return false;
+            }
+            if (condition['$eq'] !== undefined) {
+              if (item[key] !== condition['$eq']) return false;
+            }
+            // Range operators: >=, <=, >, <
+            if (condition['>='] !== undefined) {
+              if (!item[key] || item[key] < condition['>=']) return false;
+            }
+            if (condition['<='] !== undefined) {
+              if (!item[key] || item[key] > condition['<=']) return false;
+            }
+            if (condition['>'] !== undefined) {
+              if (!item[key] || item[key] <= condition['>']) return false;
+            }
+            if (condition['<'] !== undefined) {
+              if (!item[key] || item[key] >= condition['<']) return false;
+            }
           } else {
             if (item[key] !== condition) return false;
           }
