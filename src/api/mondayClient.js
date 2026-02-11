@@ -81,28 +81,19 @@ export class MondayForbiddenError extends Error {
 // ===== Board Operations =====
 
 export async function getAllBoards() {
-  // Fetch all board types (public, private, share)
-  const results = [];
-  for (const kind of ['public', 'private', 'share']) {
-    try {
-      const data = await mondayRequest(`{
-        boards(limit: 200, board_kind: ${kind}) {
-          id
-          name
-          board_folder_id
-          state
-          groups {
-            id
-            title
-          }
-        }
-      }`);
-      if (data.boards) results.push(...data.boards);
-    } catch (e) {
-      console.warn(`Could not fetch ${kind} boards:`, e.message);
+  // Fetch all boards without kind filter
+  const data = await mondayRequest(`{
+    boards(limit: 500) {
+      id
+      name
+      board_folder_id
+      state
+      groups {
+        id
+        title
+      }
     }
-  }
-  const data = { boards: results };
+  }`);
 
   return (data.boards || []).map(b => ({
     id: String(b.id),
