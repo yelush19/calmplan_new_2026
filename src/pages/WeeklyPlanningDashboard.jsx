@@ -38,7 +38,16 @@ export default function WeeklyPlanningDashboard() {
         Client.filter({ status: 'active' }).catch(() => [])
       ]);
 
-      const tasks = allTasks || [];
+      // סינון משימות ישנות: הושלמו 60+ יום או תקועות 180+ יום
+      const nowMs = Date.now();
+      const tasks = (allTasks || []).filter(task => {
+        const taskDate = task.due_date || task.created_date;
+        if (!taskDate) return true;
+        const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (task.status === 'completed' && daysSince > 60) return false;
+        if (task.status !== 'completed' && daysSince > 180) return false;
+        return true;
+      });
 
       // Filter tasks by week
       const thisWeekTasks = filterTasksByWeek(tasks, thisWeekStart);
