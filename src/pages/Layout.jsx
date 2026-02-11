@@ -24,7 +24,6 @@ const navigationGroups = [
     items: [
       { name: "בית", href: createPageUrl("Home"), icon: Home },
       { name: "דשבורד שבועי חכם", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
-      { name: "לוח טיפולים", href: createPageUrl("WeeklyPlanning"), icon: Target },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanner"), icon: LayoutGrid },
       { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },

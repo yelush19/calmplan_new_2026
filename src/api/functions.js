@@ -72,7 +72,13 @@ export const mondayApi = async (params) => {
         return await emergencyCleanup();
 
       case 'reverseSyncAllBoards':
-        return { data: { success: false, error: 'סנכרון הפוך עדיין לא נתמך במצב עצמאי' } };
+        return await reverseSyncAllBoards();
+
+      case 'pushClientToMonday':
+        return await handlePushClientToMonday(params);
+
+      case 'pushTaskToMonday':
+        return await handlePushTaskToMonday(params);
 
       case 'addColumnToBoard':
         return await handleAddColumn(params);
@@ -566,6 +572,183 @@ async function handleAddColumn(params) {
   } catch (err) {
     return { data: { success: false, error: err.message } };
   }
+}
+
+// ===== Reverse Sync: CalmPlan → Monday =====
+
+async function handlePushClientToMonday(params) {
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+
+  try {
+    const { clientId, boardId } = params;
+
+    // Get the client from local DB
+    const allClients = await entities.Client.list();
+    const client = allClients.find(c => c.id === clientId);
+    if (!client) {
+      return { data: { success: false, error: 'לקוח לא נמצא' } };
+    }
+
+    // Use provided boardId or client's stored board ID
+    const targetBoardId = boardId || client.monday_board_id;
+    if (!targetBoardId) {
+      return { data: { success: false, error: 'לא נמצא לוח Monday מקושר ללקוח' } };
+    }
+
+    log.push(`${timestamp()} מעדכן את "${client.name}" בלוח Monday ${targetBoardId}...`);
+
+    const result = await monday.pushClientToMonday(client, targetBoardId);
+
+    // If created new, save the monday_item_id back to local
+    if (result.action === 'created' && result.itemId) {
+      await entities.Client.update(clientId, {
+        monday_item_id: String(result.itemId),
+        monday_board_id: String(targetBoardId),
+      });
+      log.push(`${timestamp()} נוצר פריט חדש ב-Monday (ID: ${result.itemId})`);
+    } else {
+      log.push(`${timestamp()} עודכן פריט קיים ב-Monday (ID: ${result.itemId})`);
+    }
+
+    return { data: { success: true, result, log } };
+  } catch (error) {
+    log.push(`${timestamp()} שגיאה: ${error.message}`);
+    return { data: { success: false, error: error.message, log } };
+  }
+}
+
+async function handlePushTaskToMonday(params) {
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+
+  try {
+    const { taskId, boardId } = params;
+
+    const allTasks = await entities.Task.list();
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task) {
+      return { data: { success: false, error: 'משימה לא נמצאה' } };
+    }
+
+    const targetBoardId = boardId || task.monday_board_id;
+    if (!targetBoardId) {
+      return { data: { success: false, error: 'לא נמצא לוח Monday מקושר למשימה' } };
+    }
+
+    log.push(`${timestamp()} מעדכן את "${task.title}" בלוח Monday ${targetBoardId}...`);
+
+    const result = await monday.pushTaskToMonday(task, targetBoardId);
+
+    if (result.action === 'created' && result.itemId) {
+      await entities.Task.update(taskId, {
+        monday_item_id: String(result.itemId),
+        monday_board_id: String(targetBoardId),
+      });
+      log.push(`${timestamp()} נוצרה משימה חדשה ב-Monday (ID: ${result.itemId})`);
+    } else {
+      log.push(`${timestamp()} עודכנה משימה קיימת ב-Monday (ID: ${result.itemId})`);
+    }
+
+    return { data: { success: true, result, log } };
+  } catch (error) {
+    log.push(`${timestamp()} שגיאה: ${error.message}`);
+    return { data: { success: false, error: error.message, log } };
+  }
+}
+
+async function reverseSyncAllBoards() {
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+
+  log.push(`${timestamp()} מתחיל סנכרון הפוך (CalmPlan → Monday)...`);
+
+  // Load board configs
+  const dashboards = await entities.Dashboard.list();
+  const activeBoards = dashboards.filter(d => d.monday_board_id);
+
+  if (activeBoards.length === 0) {
+    return { data: { success: false, error: 'לא נמצאו לוחות מוגדרים', log } };
+  }
+
+  let totalUpdated = 0, totalCreated = 0;
+  const errors = [];
+
+  // Reverse sync clients
+  const clientBoards = activeBoards.filter(b => b.type === 'clients');
+  for (const board of clientBoards) {
+    log.push(`${timestamp()} מסנכרן לקוחות ללוח "${board.name || board.type}"...`);
+
+    const clients = await entities.Client.list();
+    const boardClients = clients.filter(c =>
+      String(c.monday_board_id) === String(board.monday_board_id)
+    );
+
+    for (const client of boardClients) {
+      try {
+        const result = await monday.pushClientToMonday(client, board.monday_board_id);
+        if (result.action === 'created') {
+          await entities.Client.update(client.id, {
+            monday_item_id: String(result.itemId),
+          });
+          totalCreated++;
+        } else {
+          totalUpdated++;
+        }
+      } catch (err) {
+        errors.push(`לקוח "${client.name}": ${err.message}`);
+      }
+
+      // Rate limit protection
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  }
+
+  // Reverse sync tasks
+  const taskBoardTypes = [
+    'reports_main', 'reports_126_856_2025', 'reports_126_856_2024',
+    'weekly_tasks', 'balance_sheets', 'family_tasks', 'wellbeing', 'weekly_planning'
+  ];
+  const taskBoards = activeBoards.filter(b => taskBoardTypes.includes(b.type));
+
+  for (const board of taskBoards) {
+    log.push(`${timestamp()} מסנכרן משימות ללוח "${board.name || board.type}"...`);
+
+    const tasks = await entities.Task.list();
+    const boardTasks = tasks.filter(t =>
+      String(t.monday_board_id) === String(board.monday_board_id)
+    );
+
+    for (const task of boardTasks) {
+      try {
+        const result = await monday.pushTaskToMonday(task, board.monday_board_id);
+        if (result.action === 'created') {
+          await entities.Task.update(task.id, {
+            monday_item_id: String(result.itemId),
+          });
+          totalCreated++;
+        } else {
+          totalUpdated++;
+        }
+      } catch (err) {
+        errors.push(`משימה "${task.title}": ${err.message}`);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  }
+
+  log.push(`${timestamp()} סנכרון הפוך הושלם: ${totalCreated} נוצרו, ${totalUpdated} עודכנו, ${errors.length} שגיאות`);
+
+  return {
+    data: {
+      success: true,
+      totalCreated,
+      totalUpdated,
+      errors,
+      log
+    }
+  };
 }
 
 // ===== Excel Import/Export (stubs) =====

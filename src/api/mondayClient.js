@@ -244,6 +244,131 @@ export async function createBoard(boardName, boardKind = 'public', folderId = nu
   return data.create_board;
 }
 
+// ===== Reverse Sync: CalmPlan → Monday =====
+
+// Reverse status map: internal status → Monday Hebrew label
+const CLIENT_STATUS_TO_MONDAY = {
+  'active': 'פעיל',
+  'inactive': 'לא פעיל',
+  'former': 'עבר',
+  'potential': 'פוטנציאלי',
+  'development': 'פיתוח',
+  'onboarding_pending': 'ממתין לקליטה',
+};
+
+const TASK_STATUS_TO_MONDAY = {
+  'completed': 'הושלם',
+  'in_progress': 'עובד על זה',
+  'stuck': 'תקוע',
+  'pending': 'ממתין',
+  'not_started': 'ממתין',
+};
+
+/**
+ * Create a new item in a Monday board
+ */
+export async function createMondayItem(boardId, itemName, columnValues = {}, groupId = null) {
+  const escapedName = itemName.replace(/"/g, '\\"');
+  const valuesStr = JSON.stringify(JSON.stringify(columnValues));
+
+  let mutation = `mutation {
+    create_item(
+      board_id: ${boardId},
+      item_name: "${escapedName}",
+      column_values: ${valuesStr}`;
+
+  if (groupId) {
+    mutation += `,\n      group_id: "${groupId}"`;
+  }
+
+  mutation += `\n    ) {\n      id\n    }\n  }`;
+
+  const data = await mondayRequest(mutation);
+  return data.create_item;
+}
+
+/**
+ * Find the status column ID in a board (first 'color' type column)
+ */
+export async function findStatusColumnId(boardId) {
+  const columns = await getBoardColumns(boardId);
+  const statusCol = columns.find(c => c.type === 'color');
+  return statusCol?.id || null;
+}
+
+/**
+ * Push a client's data back to Monday.com
+ * Updates existing item or creates new one
+ */
+export async function pushClientToMonday(client, boardId) {
+  const statusColumnId = await findStatusColumnId(boardId);
+
+  // Build column values
+  const columnValues = {};
+
+  if (statusColumnId && client.status) {
+    const mondayLabel = CLIENT_STATUS_TO_MONDAY[client.status];
+    if (mondayLabel) {
+      columnValues[statusColumnId] = { label: mondayLabel };
+    }
+  }
+
+  // Get board columns to find email/phone column IDs
+  const columns = await getBoardColumns(boardId);
+  for (const col of columns) {
+    if (col.type === 'email' && client.email) {
+      columnValues[col.id] = { email: client.email, text: client.email };
+    }
+    if (col.type === 'phone' && client.phone) {
+      columnValues[col.id] = { phone: client.phone, countryShortName: 'IL' };
+    }
+  }
+
+  if (client.monday_item_id) {
+    // Update existing Monday item
+    await updateItemColumnValues(boardId, client.monday_item_id, columnValues);
+    return { action: 'updated', itemId: client.monday_item_id };
+  } else {
+    // Create new Monday item
+    const result = await createMondayItem(
+      boardId,
+      client.name,
+      columnValues,
+      client.monday_group_id || null
+    );
+    return { action: 'created', itemId: result.id };
+  }
+}
+
+/**
+ * Push a task's data back to Monday.com
+ */
+export async function pushTaskToMonday(task, boardId) {
+  const statusColumnId = await findStatusColumnId(boardId);
+
+  const columnValues = {};
+
+  if (statusColumnId && task.status) {
+    const mondayLabel = TASK_STATUS_TO_MONDAY[task.status];
+    if (mondayLabel) {
+      columnValues[statusColumnId] = { label: mondayLabel };
+    }
+  }
+
+  if (task.monday_item_id) {
+    await updateItemColumnValues(boardId, task.monday_item_id, columnValues);
+    return { action: 'updated', itemId: task.monday_item_id };
+  } else {
+    const result = await createMondayItem(
+      boardId,
+      task.title,
+      columnValues,
+      task.monday_group_id || null
+    );
+    return { action: 'created', itemId: result.id };
+  }
+}
+
 // ===== Helpers: Parse & Map Monday Items =====
 
 /**
@@ -304,11 +429,13 @@ export function mapMondayItemToClient(item, boardId) {
             'עבר': 'former',
             'פוטנציאלי': 'potential',
             'פיתוח': 'development',
+            'ממתין לקליטה': 'onboarding_pending',
             'active': 'active',
             'inactive': 'inactive',
             'former': 'former',
             'potential': 'potential',
             'development': 'development',
+            'onboarding_pending': 'onboarding_pending',
           };
           client.status = statusMap[col.text] || 'active';
         }
