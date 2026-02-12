@@ -101,8 +101,8 @@ export default function BusinessHubPage() {
       setIsLoading(true);
       try {
         const [tasks, recons, dashboards] = await Promise.all([
-          Task.filter({ context: 'work', status_ne: 'completed' }).catch(() => []),
-          AccountReconciliation.filter({ status_ne: 'completed' }).catch(() => []),
+          Task.filter({ context: 'work', status: { '$ne': 'completed' } }).catch(() => []),
+          AccountReconciliation.filter({ status: { '$ne': 'completed' } }).catch(() => []),
           Dashboard.list().catch(() => [])
         ]);
         

@@ -102,11 +102,11 @@ export default function WeeklyPlannerPage() {
             const deadlineDate = addDays(new Date(startDate), 14);
 
             const [urgentPriorityTasks, upcomingDeadlineTasks] = await Promise.all([
-                Task.filter({ priority: 'urgent', status_ne: 'completed' }),
+                Task.filter({ priority: 'urgent', status: { '$ne': 'completed' } }),
                 Task.filter({
-                    category: { 'in': reportingCategories },
+                    category: { '$in': reportingCategories },
                     due_date: { '<=': format(deadlineDate, 'yyyy-MM-dd'), '>=': format(new Date(), 'yyyy-MM-dd') },
-                    status_ne: 'completed'
+                    status: { '$ne': 'completed' }
                 })
             ]);
 

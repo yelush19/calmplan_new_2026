@@ -82,7 +82,7 @@ export default function TaskMatrixPage() {
 
   const loadTasks = async () => {
     setIsLoading(true);
-    const allTasks = await Task.filter({ status_ne: 'completed' });
+    const allTasks = await Task.filter({ status: { '$ne': 'completed' } });
     setTasks(allTasks || []);
     setIsLoading(false);
   };

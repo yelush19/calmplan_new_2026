@@ -138,6 +138,7 @@ export default function AggressiveReminderSystem({ onTaskCount }) {
       const today = startOfDay(new Date());
       const reminderList = [];
 
+      const MAX_OVERDUE_DAYS = 180;
       (tasks || []).forEach(task => {
         if (task.status === 'completed') return;
 
@@ -153,6 +154,10 @@ export default function AggressiveReminderSystem({ onTaskCount }) {
         }
 
         const daysUntilDue = differenceInDays(startOfDay(dueDate), today);
+
+        // Skip tasks overdue by more than 180 days (stale/abandoned)
+        if (daysUntilDue < -MAX_OVERDUE_DAYS) return;
+
         const urgency = getUrgencyLevel(daysUntilDue);
 
         if (urgency === 'overdue' || REMINDER_THRESHOLDS.some(t => daysUntilDue <= t)) {
