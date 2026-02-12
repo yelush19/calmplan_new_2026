@@ -61,8 +61,11 @@ export default function MondayDataImport({ onComplete }) {
             },
           };
 
-          // Add deadlines info to notes if available
+          // Add deadlines info as structured data AND to notes
           const deadlines = importClient.deadlines || {};
+          if (Object.keys(deadlines).length > 0) {
+            updateData.deadlines = deadlines;
+          }
           const deadlineNotes = [];
           if (deadlines.vat) deadlineNotes.push(`יעד מע"מ: ${deadlines.vat}`);
           if (deadlines.tax_advances) deadlineNotes.push(`יעד מקדמות: ${deadlines.tax_advances}`);
