@@ -300,6 +300,60 @@ export default function ClientsDashboardPage() {
     setPopover(null);
   };
 
+  // === Bulk: generate all tasks for selected month ===
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateResult, setGenerateResult] = useState(null);
+
+  const handleBulkGenerate = async () => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+    setGenerateResult(null);
+
+    const end = endOfMonth(selectedMonth);
+    const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: he });
+    let created = 0, skipped = 0, errors = 0;
+
+    for (const client of clients) {
+      for (const group of COLUMN_GROUPS) {
+        // Skip payroll columns if client doesn't have payroll service
+        const isPayrollGroup = group.key === 'payroll';
+
+        for (const col of group.columns) {
+          try {
+            // Check if task already exists
+            const existing = clientDataMap[client.name]?.[col.key];
+            if (existing && existing.length > 0) {
+              skipped++;
+              continue;
+            }
+
+            // Check bimonthly off-month
+            const isOffMonth = isBimonthlyOffMonth(client, col.key, selectedMonth);
+            const taskStatus = isOffMonth ? 'not_relevant' : 'not_started';
+
+            await Task.create({
+              title: `${col.createTitle} - ${client.name} - ${monthLabel}`,
+              client_name: client.name,
+              client_id: client.id,
+              category: col.createCategory,
+              status: taskStatus,
+              due_date: format(end, 'yyyy-MM-dd'),
+            });
+            created++;
+          } catch (err) {
+            console.error(`Error creating task for ${client.name}/${col.key}:`, err);
+            errors++;
+          }
+        }
+      }
+    }
+
+    // Reload tasks
+    await loadData();
+    setGenerateResult({ created, skipped, errors });
+    setIsGenerating(false);
+  };
+
   // === Interactive: create task for empty cell ===
   const handleCreateTask = async (e, client, col, group) => {
     e.stopPropagation();
@@ -348,11 +402,40 @@ export default function ClientsDashboardPage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
+          <Button
+            onClick={handleBulkGenerate}
+            variant="default"
+            size="sm"
+            className="h-9 gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+            disabled={isLoading || isGenerating || clients.length === 0}
+          >
+            {isGenerating ? (
+              <><RefreshCw className="w-3.5 h-3.5 animate-spin" />יוצר...</>
+            ) : (
+              <><Plus className="w-3.5 h-3.5" />צור דיווחים לכל הלקוחות</>
+            )}
+          </Button>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </motion.div>
+
+      {/* Generation result banner */}
+      {generateResult && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-emerald-800">
+            <Check className="w-4 h-4" />
+            <span>נוצרו <strong>{generateResult.created}</strong> דיווחים חדשים</span>
+            {generateResult.skipped > 0 && <span className="text-gray-500">({generateResult.skipped} כבר קיימים)</span>}
+            {generateResult.errors > 0 && <span className="text-red-500">({generateResult.errors} שגיאות)</span>}
+          </div>
+          <button onClick={() => setGenerateResult(null)} className="text-gray-400 hover:text-gray-600">
+            <X className="w-4 h-4" />
+          </button>
+        </motion.div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
