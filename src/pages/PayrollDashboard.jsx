@@ -36,7 +36,7 @@ const statusColors = {
 };
 
 const statusLabels = {
-  not_started: 'ממתין',
+  not_started: 'נותרו השלמות',
   in_progress: 'בעבודה',
   completed: 'הושלם',
   postponed: 'נדחה',

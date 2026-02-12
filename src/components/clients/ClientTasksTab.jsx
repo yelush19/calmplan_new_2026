@@ -11,7 +11,7 @@ import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 const statusTranslations = {
-  not_started: 'ממתין לתחילת עבודה',
+  not_started: 'נותרו השלמות',
   in_progress: 'בעבודה',
   completed: 'דווח ושולם',
   postponed: 'נדחה',

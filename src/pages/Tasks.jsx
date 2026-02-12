@@ -18,7 +18,7 @@ import { he } from "date-fns/locale";
 import KanbanView from "../components/tasks/KanbanView";
 
 const statusConfig = {
-  not_started: { text: 'ממתין לתחילת עבודה', color: 'bg-gray-100 text-gray-800' },
+  not_started: { text: 'נותרו השלמות', color: 'bg-gray-100 text-gray-800' },
   in_progress: { text: 'בעבודה', color: 'bg-sky-100 text-sky-800' },
   completed: { text: 'דווח ושולם', color: 'bg-green-100 text-green-800' },
   postponed: { text: 'נדחה', color: 'bg-neutral-100 text-neutral-800' },

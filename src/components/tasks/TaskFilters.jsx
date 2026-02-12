@@ -46,7 +46,7 @@ export default function TaskFilters({ filters, setFilters, context, clients }) {
   const currentCategories = context === 'work' ? workCategories : homeCategories;
 
   const statusOptions = [
-    { value: 'not_started', label: 'ממתין לתחילת עבודה' },
+    { value: 'not_started', label: 'נותרו השלמות' },
     { value: 'waiting_for_materials', label: 'ממתין לחומרים' },
     { value: 'in_progress', label: 'בעבודה' },
     { value: 'issue', label: 'בעיה' },
