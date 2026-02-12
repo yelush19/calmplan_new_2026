@@ -183,6 +183,7 @@ export default function TaskCard({
     { value: 'reported_waiting_for_payment', label: 'ממתין לתשלום' },
     { value: 'completed', label: 'דווח ושולם' },
     { value: 'postponed', label: 'נדחה' },
+    { value: 'not_relevant', label: 'לא רלוונטי' },
   ];
 
   const priorityOptions = [

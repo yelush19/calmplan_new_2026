@@ -17,6 +17,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { isBimonthlyOffMonth } from '@/config/processTemplates';
 
 // === Column Groups ===
 const COLUMN_GROUPS = [
@@ -510,6 +511,16 @@ export default function ClientsDashboardPage() {
 
                             const bestTask = getCellStatus(client.name, col.key);
                             if (!bestTask) {
+                              // Check if bimonthly off-month → show "לא רלוונטי"
+                              if (isBimonthlyOffMonth(client, col.key, selectedMonth)) {
+                                return (
+                                  <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                                    <div className={`${STATUS_CONFIG.not_relevant.bg} text-gray-400 rounded py-1.5 text-xs font-bold mx-0.5`}>
+                                      דו-חודשי
+                                    </div>
+                                  </td>
+                                );
+                              }
                               // Empty cell - clickable to create task
                               return (
                                 <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
