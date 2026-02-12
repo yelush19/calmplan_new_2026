@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Plus, Calendar, Clock, User, AlertTriangle, CheckCircle, 
-  Filter, Search, BarChart3, Home, Briefcase, List, LayoutGrid
+import {
+  Plus, Calendar, Clock, User, AlertTriangle, CheckCircle,
+  Filter, Search, BarChart3, Home, Briefcase, List, LayoutGrid, Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -18,7 +18,7 @@ import { he } from "date-fns/locale";
 import KanbanView from "../components/tasks/KanbanView";
 
 const statusConfig = {
-  not_started: { text: 'ממתין לתחילת עבודה', color: 'bg-gray-100 text-gray-800' },
+  not_started: { text: 'נותרו השלמות', color: 'bg-gray-100 text-gray-800' },
   in_progress: { text: 'בעבודה', color: 'bg-sky-100 text-sky-800' },
   completed: { text: 'דווח ושולם', color: 'bg-green-100 text-green-800' },
   postponed: { text: 'נדחה', color: 'bg-neutral-100 text-neutral-800' },
@@ -78,8 +78,27 @@ export default function TasksPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   
+  const [isClearing, setIsClearing] = useState(false);
+
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleClearAllTasks = async () => {
+    const count = tasks.length;
+    if (!window.confirm(`האם למחוק את כל ${count} המשימות? פעולה זו בלתי הפיכה!`)) return;
+    if (!window.confirm('בטוח? כל המשימות יימחקו לצמיתות. לא ניתן לשחזר.')) return;
+    setIsClearing(true);
+    try {
+      await Task.deleteAll();
+      setTasks([]);
+      setFilteredTasks([]);
+      alert(`נמחקו ${count} משימות בהצלחה. המערכת נקייה.`);
+    } catch (error) {
+      console.error('Error clearing tasks:', error);
+      alert('שגיאה במחיקת משימות');
+    }
+    setIsClearing(false);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -344,6 +363,16 @@ export default function TasksPage() {
                   <LayoutGrid className="w-5 h-5" />
                 </Button>
               </div>
+
+              <Button
+                variant="outline"
+                onClick={handleClearAllTasks}
+                disabled={isClearing || tasks.length === 0}
+                className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4 ml-2" />
+                {isClearing ? 'מוחק...' : 'נקה הכל'}
+              </Button>
             </div>
           </div>
 

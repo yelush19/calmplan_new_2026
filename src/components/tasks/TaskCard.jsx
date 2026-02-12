@@ -24,7 +24,7 @@ import { he } from 'date-fns/locale';
 import OverdueTags from "./OverdueTags";
 
 const statusTranslations = {
-  not_started: 'ממתין לתחילת עבודה',
+  not_started: 'נותרו השלמות',
   in_progress: 'בעבודה',
   completed: 'דווח ושולם',
   postponed: 'נדחה',
@@ -174,7 +174,7 @@ export default function TaskCard({
   const isUrgent = task.due_date && differenceInDays(parseISO(task.due_date), new Date()) <= 3;
 
   const statusOptions = [
-    { value: 'not_started', label: 'ממתין לתחילת עבודה' },
+    { value: 'not_started', label: 'נותרו השלמות' },
     { value: 'waiting_for_materials', label: 'ממתין לחומרים' },
     { value: 'in_progress', label: 'בעבודה' },
     { value: 'issue', label: 'בעיה' },

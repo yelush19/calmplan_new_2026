@@ -53,7 +53,7 @@ const ALL_COLUMNS = COLUMN_GROUPS.flatMap(g => g.columns);
 
 // Status config
 const STATUS_CONFIG = {
-  not_started:                   { label: 'ממתין',          bg: 'bg-gray-200',       text: 'text-gray-700',     border: 'border-gray-300',    priority: 3 },
+  not_started:                   { label: 'נותרו השלמות',   bg: 'bg-gray-200',       text: 'text-gray-700',     border: 'border-gray-300',    priority: 3 },
   in_progress:                   { label: 'בעבודה',         bg: 'bg-emerald-200',    text: 'text-emerald-900',  border: 'border-emerald-300', priority: 2 },
   completed:                     { label: 'הושלם',          bg: 'bg-emerald-400',    text: 'text-white',        border: 'border-emerald-500', priority: 5 },
   postponed:                     { label: 'נדחה',           bg: 'bg-gray-300',       text: 'text-gray-600',     border: 'border-gray-400',    priority: 4 },
@@ -328,7 +328,7 @@ export default function ClientsDashboardPage() {
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">לוח לקוחות</h1>
+            <h1 className="text-2xl font-bold text-gray-800">לוח מעקב לקוחות</h1>
             <p className="text-sm text-gray-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | לחץ על תא לשינוי סטטוס</p>
           </div>
         </div>
@@ -403,7 +403,7 @@ export default function ClientsDashboardPage() {
             <SelectItem value="all">כל הלקוחות</SelectItem>
             <SelectItem value="has_issues">דורש טיפול</SelectItem>
             <SelectItem value="in_progress">בעבודה</SelectItem>
-            <SelectItem value="not_started">טרם התחיל</SelectItem>
+            <SelectItem value="not_started">נותרו השלמות</SelectItem>
             <SelectItem value="all_done">הכל הושלם</SelectItem>
           </SelectContent>
         </Select>
