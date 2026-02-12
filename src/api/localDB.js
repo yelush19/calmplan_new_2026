@@ -97,6 +97,14 @@ function createEntity(collectionName) {
     },
 
     /**
+     * Delete all items in this collection
+     */
+    async deleteAll() {
+      setCollection(collectionName, []);
+      return { success: true };
+    },
+
+    /**
      * Filter items by criteria
      * @param {Object} filters - Filter object (supports $in operator)
      * @param {string|null} sortField - Sort field
