@@ -35,16 +35,10 @@ const navigationGroups = [
     title: "המשרד - LITAY",
     icon: Briefcase,
     items: [
-      { name: "לוח לקוחות", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
-      {
-        name: "ניהול לקוחות",
-        icon: Users,
-        children: [
-          { name: "כל הלקוחות", href: createPageUrl("ClientManagement"), icon: Users },
-          { name: "לידים", href: createPageUrl("Leads"), icon: Target },
-          { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
-        ]
-      },
+      { name: "לוח מעקב לקוחות", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
+      { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+      { name: "לידים", href: createPageUrl("Leads"), icon: Target },
+      { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
       {
         name: "תהליכים ודיווחים",
         icon: Calculator,

@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,7 @@ async function retryWithBackoff(fn, maxRetries = 3, initialDelay = 1000) {
 }
 
 export default function ClientManagementPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -106,6 +108,19 @@ export default function ClientManagementPage() {
   useEffect(() => {
     loadClients();
   }, []);
+
+  // Auto-open client card from URL param (e.g. from ClientsDashboard link)
+  useEffect(() => {
+    const clientId = searchParams.get('clientId');
+    if (clientId && clients.length > 0 && !showClientForm) {
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+        setSelectedClient(client);
+        setShowClientForm(true);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [clients, searchParams]);
 
   useEffect(() => {
     console.log('🔍 FILTERING CLIENTS:', {

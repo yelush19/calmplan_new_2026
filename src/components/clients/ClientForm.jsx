@@ -34,6 +34,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       vat_file_number: '',
       tax_deduction_file_number: '',
       social_security_file_number: '',
+      direct_transmission: false,
       annual_tax_ids: {
         current_year: String(new Date().getFullYear()),
         social_security_id: '',
@@ -325,35 +326,53 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
 
   const validateForm = () => {
     const errors = [];
+    const warnings = [];
+    const isDirectTransmission = formData.tax_info?.direct_transmission;
 
     if (formData.service_types?.includes('tax_advances')) {
       if (!formData.tax_info?.annual_tax_ids?.tax_advances_id) {
-        errors.push('לקוח עם שירות מקדמות חייב להכיל מזהה מקדמות');
+        if (isDirectTransmission) {
+          warnings.push('שים לב: לקוח עם מקדמות ללא מזהה מקדמות (שידור ישיר)');
+        } else {
+          errors.push('לקוח עם שירות מקדמות חייב להכיל מזהה מקדמות');
+        }
       }
-      if (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null) {
+      if (!isDirectTransmission && (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null)) {
         errors.push('לקוח עם שירות מקדמות חייב להכיל אחוז מקדמות');
       }
     }
 
     if (formData.service_types?.includes('payroll')) {
       if (!formData.tax_info?.annual_tax_ids?.social_security_id) {
-        errors.push('לקוח עם שירות שכר חייב להכיל מזהה ביטוח לאומי');
+        if (isDirectTransmission) {
+          warnings.push('שים לב: לקוח עם שכר ללא מזהה ביטוח לאומי (שידור ישיר)');
+        } else {
+          errors.push('לקוח עם שירות שכר חייב להכיל מזהה ביטוח לאומי');
+        }
       }
       if (!formData.tax_info?.annual_tax_ids?.deductions_id) {
-        errors.push('לקוח עם שירות שכר חייב להכיל מזהה ניכויים');
+        if (isDirectTransmission) {
+          warnings.push('שים לב: לקוח עם שכר ללא מזהה ניכויים (שידור ישיר)');
+        } else {
+          errors.push('לקוח עם שירות שכר חייב להכיל מזהה ניכויים');
+        }
       }
     }
 
-    return errors;
+    return { errors, warnings };
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const validationErrors = validateForm();
+    const { errors: validationErrors, warnings: validationWarnings } = validateForm();
     if (validationErrors.length > 0) {
       alert('שגיאות בטופס:\n' + validationErrors.join('\n'));
       return;
+    }
+    if (validationWarnings.length > 0) {
+      const proceed = confirm('תזכורות:\n' + validationWarnings.join('\n') + '\n\nלהמשיך בשמירה?');
+      if (!proceed) return;
     }
 
     const cleanedData = {
@@ -700,20 +719,32 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                       type="number"
                     />
                   </div>
+                  <div className="flex items-center gap-3 mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <input
+                      type="checkbox"
+                      id="direct_transmission"
+                      checked={formData.tax_info?.direct_transmission || false}
+                      onChange={(e) => handleTaxInfoChange('direct_transmission', e.target.checked, 'tax_info')}
+                      className="w-4 h-4 rounded"
+                    />
+                    <label htmlFor="direct_transmission" className="text-sm font-medium text-blue-800 cursor-pointer">
+                      לקוח מחובר לשידורים ישירים (אין צורך במזהי פנקס)
+                    </label>
+                  </div>
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-800">מזהים שנתיים עדכניים</h4>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
-                        <Label>מזהה מקדמות {formData.service_types?.includes('tax_advances') && <span className="text-red-500">*</span>}</Label>
+                        <Label>מזהה מקדמות {formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && <span className="text-red-500">*</span>}</Label>
                         <Input
                           value={formData.tax_info?.annual_tax_ids?.tax_advances_id || ''}
                           onChange={(e) => handleTaxInfoChange('tax_advances_id', e.target.value, 'tax_info', 'annual_tax_ids')}
                           placeholder="מזהה מקדמות מס"
-                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.annual_tax_ids?.tax_advances_id ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.tax_advances_id ? 'border-red-300' : ''}
                         />
                       </div>
                       <div>
-                        <Label>אחוז מקדמות {formData.service_types?.includes('tax_advances') && <span className="text-red-500">*</span>}</Label>
+                        <Label>אחוז מקדמות {formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && <span className="text-red-500">*</span>}</Label>
                         <Input
                           type="number"
                           min="0"
@@ -722,25 +753,25 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                           value={formData.tax_info?.annual_tax_ids?.tax_advances_percentage || ''}
                           onChange={(e) => handleTaxInfoChange('tax_advances_percentage', parseFloat(e.target.value) || (e.target.value === '' ? '' : null), 'tax_info', 'annual_tax_ids')}
                           placeholder="אחוז מקדמות (0-100)"
-                          className={formData.service_types?.includes('tax_advances') && (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null) ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null) ? 'border-red-300' : ''}
                         />
                       </div>
                       <div>
-                        <Label>מזהה ביטוח לאומי {formData.service_types?.includes('payroll') && <span className="text-red-500">*</span>}</Label>
+                        <Label>מזהה ביטוח לאומי {formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && <span className="text-red-500">*</span>}</Label>
                         <Input
                           value={formData.tax_info?.annual_tax_ids?.social_security_id || ''}
                           onChange={(e) => handleTaxInfoChange('social_security_id', e.target.value, 'tax_info', 'annual_tax_ids')}
                           placeholder="מזהה ביטוח לאומי שנתי"
-                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.annual_tax_ids?.social_security_id ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.social_security_id ? 'border-red-300' : ''}
                         />
                       </div>
                       <div>
-                        <Label>מזהה ניכויים {formData.service_types?.includes('payroll') && <span className="text-red-500">*</span>}</Label>
+                        <Label>מזהה ניכויים {formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && <span className="text-red-500">*</span>}</Label>
                         <Input
                           value={formData.tax_info?.annual_tax_ids?.deductions_id || ''}
                           onChange={(e) => handleTaxInfoChange('deductions_id', e.target.value, 'tax_info', 'annual_tax_ids')}
                           placeholder="מזהה ניכויים שנתי"
-                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.annual_tax_ids?.deductions_id ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.deductions_id ? 'border-red-300' : ''}
                         />
                       </div>
                     </div>
