@@ -178,7 +178,7 @@ export default function PayrollDashboardPage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
-          <Button onClick={loadTasks} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
+          <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
