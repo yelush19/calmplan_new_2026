@@ -395,7 +395,13 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
   };
 
   const serviceTypes = [
-    { value: 'payroll', label: 'שכר' }, { value: 'vat_reporting', label: 'דיווחי מע״מ' }, { value: 'tax_advances', label: 'מקדמות מס' }, { value: 'bookkeeping', label: 'הנהלת חשבונות' }, { value: 'annual_reports', label: 'מאזנים שנתיים' }, { value: 'reconciliation', label: 'התאמות חשבונות' }, { value: 'consulting', label: 'ייעוץ' }
+    { value: 'bookkeeping', label: 'הנהלת חשבונות' },
+    { value: 'vat_reporting', label: 'דיווחי מע״מ' },
+    { value: 'tax_advances', label: 'מקדמות מס' },
+    { value: 'payroll', label: 'שכר (כולל ביט"ל וניכויים)' },
+    { value: 'annual_reports', label: 'מאזנים / דוחות שנתיים' },
+    { value: 'reconciliation', label: 'התאמות חשבונות' },
+    { value: 'consulting', label: 'ייעוץ' },
   ];
 
   const serviceProviderTypeLabels = {
