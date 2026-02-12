@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Client, ServiceCompany, ServiceProvider, ClientServiceProvider } from '@/api/entities';
+import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
 
 
 export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate }) {
@@ -551,10 +552,11 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="basic" className="space-y-6">
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-5 w-full">
               <TabsTrigger value="basic">פרטים בסיסיים</TabsTrigger>
               <TabsTrigger value="services">שירותים</TabsTrigger>
               <TabsTrigger value="tax">פרטי מס</TabsTrigger>
+              <TabsTrigger value="accounts">חשבונות בנק</TabsTrigger>
               <TabsTrigger value="integration">אינטגרציות</TabsTrigger>
             </TabsList>
 
@@ -813,6 +815,15 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               )}
               <div><Label htmlFor="preferred_method">אמצעי תקשורת מועדף</Label><Select value={formData.communication_preferences.preferred_method} onValueChange={(value) => handleInputChange('preferred_method', value, 'communication_preferences')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="email">אימייל</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem><SelectItem value="phone">טלפון</SelectItem><SelectItem value="teams">Teams</SelectItem></SelectContent></Select></div>
               <div><Label htmlFor="notes">הערות</Label><Textarea id="notes" value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} className="h-24" /></div>
+            </TabsContent>
+            <TabsContent value="accounts" className="space-y-4">
+              {client?.id ? (
+                <ClientAccountsManager clientId={client.id} clientName={client.name || formData.name} />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>יש לשמור את הלקוח תחילה כדי לנהל חשבונות בנק.</p>
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="integration" className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">

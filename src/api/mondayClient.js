@@ -572,6 +572,16 @@ export function mapMondayItemToClient(item, boardId, columnDefs = null) {
     client.integration_info = { calmplan_id: mapped._calmplan_id };
   }
 
+  // Deadlines (for determining client type: 874/regular/online)
+  const deadlines = {};
+  if (mapped._deadline_vat) deadlines.vat = mapped._deadline_vat;
+  if (mapped._deadline_tax_advances) deadlines.tax_advances = mapped._deadline_tax_advances;
+  if (mapped._deadline_deductions) deadlines.deductions = mapped._deadline_deductions;
+  if (mapped._deadline_social_security) deadlines.social_security = mapped._deadline_social_security;
+  if (Object.keys(deadlines).length > 0) {
+    client.deadlines = deadlines;
+  }
+
   client.monday_column_texts = columnTexts;
   if (!client.status) client.status = 'active';
 

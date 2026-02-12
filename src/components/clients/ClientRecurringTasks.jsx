@@ -16,6 +16,7 @@ import { Client, Task } from '@/api/entities';
 import { format, addMonths, setDate, startOfMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
+import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_NAMES } from '@/config/taxCalendar2026';
 
 // ============================================================
 // Category definitions with display order
@@ -131,7 +132,8 @@ function clientHasService(categoryKey, client) {
 }
 
 /**
- * Generate due dates for a given category and client
+ * Generate due dates for a given category and client.
+ * Uses the official 2026 tax calendar for accurate deadlines.
  */
 function generateDueDates(categoryKey, client, monthsAhead) {
   const frequency = getClientFrequency(categoryKey, client);
@@ -162,27 +164,33 @@ function generateDueDates(categoryKey, client, monthsAhead) {
     return dates;
   }
 
+  // Use the tax calendar for accurate due dates
+  const is874 = isClient874(client);
+
   if (frequency === 'bimonthly') {
-    // Bimonthly: report months are 2, 4, 6, 8, 10, 12
     const biMonths = [2, 4, 6, 8, 10, 12];
     for (const m of biMonths) {
-      const dueDate = new Date(year, m - 1, 15);
+      // Get official due date from tax calendar
+      const dueDateStr = getDueDateForCategory(categoryKey, client, m);
+      const dueDate = dueDateStr ? new Date(dueDateStr) : new Date(year, m, 15);
       if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
         dates.push({
           date: dueDate,
           period: BIMONTHLY_PERIOD_NAMES[m],
           description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${BIMONTHLY_PERIOD_NAMES[m]} ${year}`,
+          is874,
         });
       }
     }
-    // Next year if needed
+    // Next year
     for (const m of biMonths) {
-      const dueDate = new Date(year + 1, m - 1, 15);
+      const dueDate = new Date(year + 1, m, 19); // fallback for next year
       if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
         dates.push({
           date: dueDate,
           period: BIMONTHLY_PERIOD_NAMES[m],
           description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${BIMONTHLY_PERIOD_NAMES[m]} ${year + 1}`,
+          is874,
         });
       }
     }
@@ -192,37 +200,56 @@ function generateDueDates(categoryKey, client, monthsAhead) {
   if (frequency === 'quarterly') {
     const qMonths = [3, 6, 9, 12];
     for (const m of qMonths) {
-      const dueDate = new Date(year, m - 1, 15);
+      const dueDateStr = getDueDateForCategory(categoryKey, client, m);
+      const dueDate = dueDateStr ? new Date(dueDateStr) : new Date(year, m, 15);
       if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
         dates.push({
           date: dueDate,
           period: QUARTERLY_PERIOD_NAMES[m],
           description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${QUARTERLY_PERIOD_NAMES[m]} ${year}`,
+          is874,
         });
       }
     }
     for (const m of qMonths) {
-      const dueDate = new Date(year + 1, m - 1, 15);
+      const dueDate = new Date(year + 1, m, 19);
       if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
         dates.push({
           date: dueDate,
           period: QUARTERLY_PERIOD_NAMES[m],
           description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${QUARTERLY_PERIOD_NAMES[m]} ${year + 1}`,
+          is874,
         });
       }
     }
     return dates;
   }
 
-  // Monthly
+  // Monthly - use the tax calendar for each month
+  const currentMonth = now.getMonth() + 1; // 1-12
   for (let i = 0; i < monthsAhead; i++) {
-    const reportMonth = addMonths(now, i);
-    const dueDate = setDate(addMonths(reportMonth, 1), 15);
+    const reportMonthNum = ((currentMonth - 1 + i) % 12) + 1;
+    const reportYear = year + Math.floor((currentMonth - 1 + i) / 12);
+
+    // Get the official due date from the tax calendar
+    const dueDateStr = getDueDateForCategory(categoryKey, client, reportMonthNum);
+    let dueDate;
+    if (dueDateStr) {
+      dueDate = new Date(dueDateStr);
+    } else {
+      // Fallback: 19th of following month
+      const nextMonth = reportMonthNum === 12 ? 1 : reportMonthNum + 1;
+      const nextYear = reportMonthNum === 12 ? reportYear + 1 : reportYear;
+      dueDate = new Date(nextYear, nextMonth - 1, 19);
+    }
+
     if (dueDate >= now) {
+      const monthName = HEBREW_MONTH_NAMES[reportMonthNum - 1];
       dates.push({
         date: dueDate,
-        period: format(reportMonth, 'MMMM yyyy', { locale: he }),
-        description: `${REPORT_CATEGORIES[categoryKey].label} עבור חודש ${format(reportMonth, 'MMMM yyyy', { locale: he })}`,
+        period: `${monthName} ${reportYear}`,
+        description: `${REPORT_CATEGORIES[categoryKey].label} עבור חודש ${monthName} ${reportYear}`,
+        is874,
       });
     }
   }
@@ -289,10 +316,11 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
 
           if (!alreadyExists) {
             const taskId = `${client.id}_${categoryKey}_${dueDateStr}`;
+            const clientIs874 = isClient874(client);
             tasksToCreate.push({
               _previewId: taskId,
               title: taskTitle,
-              description: `${description}\nלקוח: ${client.name}`,
+              description: `${description}\nלקוח: ${client.name}${clientIs874 ? '\nסוג: מע"מ מפורט (874)' : ''}`,
               due_date: dueDateStr,
               client_name: client.name,
               client_id: client.id,
@@ -305,6 +333,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
               _categoryLabel: categoryDef.label,
               _categoryColor: categoryDef.color,
               _frequency: freq,
+              _is874: clientIs874,
               period,
             });
           }
@@ -633,6 +662,12 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                                   <span>יעד: {format(new Date(task.due_date), 'dd/MM/yyyy')}</span>
                                   <span>•</span>
                                   <span className="text-gray-400">{FREQUENCY_LABELS[task._frequency]}</span>
+                                  {task._is874 && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-purple-600 font-medium">874 מפורט</span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                               <Button

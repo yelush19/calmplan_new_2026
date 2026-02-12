@@ -5,6 +5,7 @@
 
 import * as monday from './mondayClient';
 import { entities, exportAllData, clearAllData } from './localDB';
+import { getDueDateForCategory, isClient874 } from '@/config/taxCalendar2026';
 
 // ===== Monday.com Board API =====
 // Used by MondayIntegration page to list available boards
@@ -342,8 +343,10 @@ export const mondayReportsAutomation = async (params) => {
         const template = PROCESS_TEMPLATES[templateKey];
         const description = getReportDescription(templateKey, month, year, client);
         const itemName = `${client.name} - ${description}`;
-        const dueDay = Math.min(template.dayOfMonth, 28);
-        const dueDate = `${year}-${monthNum}-${String(dueDay).padStart(2, '0')}`;
+        // Use tax calendar for the correct due date
+        const calendarCategory = template.category;
+        const calendarDueDate = getDueDateForCategory(calendarCategory, client, month === 12 ? 12 : month);
+        const dueDate = calendarDueDate || `${year}-${monthNum}-19`;
 
         const columnValues = {};
         if (colMap.status) columnValues[colMap.status] = { label: 'ממתין' };
@@ -1295,7 +1298,9 @@ export const generateProcessTasks = async (params = {}) => {
           );
           if (exists) continue;
 
-          const dueDay = Math.min(template.dayOfMonth, 28);
+          // Use tax calendar for accurate due dates
+          const calendarDueDate = getDueDateForCategory(template.category, client, currentMonth);
+          const taskDueDate = calendarDueDate || `${currentYear}-${monthNum}-19`;
           try {
             await entities.Task.create({
               title,
@@ -1305,7 +1310,7 @@ export const generateProcessTasks = async (params = {}) => {
               client_id: client.id,
               status: 'not_started',
               priority: 'high',
-              due_date: `${currentYear}-${monthNum}-${String(dueDay).padStart(2, '0')}`,
+              due_date: taskDueDate,
               is_recurring: true,
             });
             results.summary.tasksCreated++;
