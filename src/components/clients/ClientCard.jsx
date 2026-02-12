@@ -76,7 +76,20 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   };
   
   const services = client.service_types || [];
-  const displayedServices = isExpanded ? services : services.slice(0, 2);
+  const reportingInfo = client.reporting_info || {};
+
+  const frequencyLabels = {
+    monthly: 'חודשי',
+    bimonthly: 'דו-חודשי',
+    quarterly: 'רבעוני',
+    not_applicable: 'לא רלוונטי',
+  };
+
+  const reportingFields = [
+    { key: 'vat_reporting_frequency', label: 'מע"מ' },
+    { key: 'tax_advances_frequency', label: 'מקדמות' },
+    { key: 'payroll_frequency', label: 'שכר' },
+  ].filter(f => reportingInfo[f.key] && reportingInfo[f.key] !== 'not_applicable');
 
   return (
     <Card className={`w-full transform transition-all duration-300 shadow-sm hover:shadow-lg border flex flex-col group ${isSelected ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50/30' : 'border-neutral-light/80 bg-white'}`}>
@@ -138,33 +151,46 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         
         {services.length > 0 && (
           <div className="border-t border-gray-100 pt-3">
-            <div className="flex flex-wrap gap-1.5 mb-1">
-              {displayedServices.map(service => (
+            <div className="flex flex-wrap gap-1.5">
+              {services.map(service => (
                 <Badge key={service} className={`${serviceTypeColors[service] || 'bg-gray-50 text-gray-700 border-gray-200'} text-xs px-2 py-1 border`}>
                   {serviceTypeLabels[service] || service.replace(/_/g, ' ')}
                 </Badge>
               ))}
-              {!isExpanded && services.length > 2 && (
-                <Badge className="bg-gray-50 text-gray-600 text-xs px-2 py-1 border border-gray-200">
-                  +{services.length - 2}
-                </Badge>
+            </div>
+          </div>
+        )}
+
+        {reportingFields.length > 0 && (
+          <div className="border-t border-gray-100 pt-2 mt-2">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+              {reportingFields.map(f => (
+                <span key={f.key} className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-gray-400" />
+                  <span className="font-medium">{f.label}:</span>
+                  <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-semibold' : ''}>
+                    {frequencyLabels[reportingInfo[f.key]] || reportingInfo[f.key]}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tax IDs - quick reference */}
+        {(client.tax_info?.tax_deduction_file_number || client.tax_info?.annual_tax_ids?.tax_advances_id || client.entity_number) && (
+          <div className="border-t border-gray-100 pt-2 mt-2">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+              {client.entity_number && (
+                <span><span className="font-medium text-gray-600">ח"פ:</span> {client.entity_number}</span>
+              )}
+              {client.tax_info?.tax_deduction_file_number && (
+                <span><span className="font-medium text-gray-600">פנקס ניכויים:</span> {client.tax_info.tax_deduction_file_number}</span>
+              )}
+              {client.tax_info?.annual_tax_ids?.tax_advances_id && (
+                <span><span className="font-medium text-gray-600">פנקס מקדמות:</span> {client.tax_info.annual_tax_ids.tax_advances_id}</span>
               )}
             </div>
-            
-            {services.length > 2 && (
-              <Button 
-                variant="link" 
-                size="sm" 
-                className="h-6 p-0 text-xs text-blue-600 hover:text-blue-800"
-                onClick={handleToggleExpand}
-              >
-                {isExpanded ? (
-                  <>הצג פחות <ChevronUp className="w-3 h-3 mr-1" /></>
-                ) : (
-                  <>הצג הכל <ChevronDown className="w-3 h-3 mr-1" /></>
-                )}
-              </Button>
-            )}
           </div>
         )}
 
