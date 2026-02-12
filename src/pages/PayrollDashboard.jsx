@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Task } from '@/api/entities';
+import { Task, Client } from '@/api/entities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,26 +37,37 @@ export default function PayrollDashboardPage() {
   const clientFilter = searchParams.get('client') || '';
 
   const [tasks, setTasks] = useState([]);
+  const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1));
 
-  useEffect(() => { loadTasks(); }, [selectedMonth]);
+  useEffect(() => { loadData(); }, [selectedMonth]);
 
-  const loadTasks = async () => {
+  const loadData = async () => {
     setIsLoading(true);
     try {
       const start = startOfMonth(selectedMonth);
       const end = endOfMonth(selectedMonth);
-      const tasksData = await Task.filter({
-        context: 'work',
-        due_date: { '>=': format(start, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
-      });
+      const [tasksData, clientsData] = await Promise.all([
+        Task.filter({
+          context: 'work',
+          due_date: { '>=': format(start, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
+        }),
+        Client.list(null, 500).catch(() => []),
+      ]);
       setTasks((tasksData || []).filter(t => allPayrollCategories.includes(t.category)));
+      setClients(clientsData || []);
     } catch (error) {
       console.error("Error loading payroll tasks:", error);
     }
     setIsLoading(false);
   };
+
+  const clientByName = useMemo(() => {
+    const map = {};
+    clients.forEach(c => { map[c.name] = c; });
+    return map;
+  }, [clients]);
 
   const filteredTasks = useMemo(() => {
     if (!clientFilter) return tasks;
@@ -76,13 +87,17 @@ export default function PayrollDashboardPage() {
         result[service.key] = {
           service,
           clientRows: serviceTasks
-            .map(task => ({ clientName: task.client_name || 'ללא לקוח', task }))
+            .map(task => ({
+              clientName: task.client_name || 'ללא לקוח',
+              task,
+              client: clientByName[task.client_name] || null,
+            }))
             .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
         };
       }
     });
     return result;
-  }, [filteredTasks]);
+  }, [filteredTasks, clientByName]);
 
   const stats = useMemo(() => {
     const total = filteredTasks.length;
@@ -259,11 +274,12 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange }) {
             </tr>
           </thead>
           <tbody>
-            {clientRows.map(({ clientName, task }, idx) => (
+            {clientRows.map(({ clientName, task, client }, idx) => (
               <ClientRow
                 key={task.id}
                 clientName={clientName}
                 task={task}
+                client={client}
                 service={service}
                 isEven={idx % 2 === 0}
                 onToggleStep={onToggleStep}
@@ -277,15 +293,46 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange }) {
   );
 }
 
-function ClientRow({ clientName, task, service, isEven, onToggleStep, onDateChange }) {
+// Get relevant tax IDs for payroll services
+function getPayrollIds(client, serviceKey) {
+  if (!client) return [];
+  const ids = [];
+  const ti = client.tax_info || {};
+  const annual = ti.annual_tax_ids || {};
+
+  switch (serviceKey) {
+    case 'deductions':
+      if (ti.tax_deduction_file_number) ids.push({ label: 'פנקס', value: ti.tax_deduction_file_number });
+      if (annual.deductions_id) ids.push({ label: 'ניכויים', value: annual.deductions_id });
+      break;
+    case 'social_security':
+      if (ti.social_security_file_number) ids.push({ label: 'תיק ביט"ל', value: ti.social_security_file_number });
+      break;
+    default:
+      if (client.entity_number) ids.push({ label: 'ח"פ', value: client.entity_number });
+  }
+  return ids;
+}
+
+function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange }) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
+  const taxIds = getPayrollIds(client, service.key);
 
   return (
     <tr className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50/40' : isEven ? 'bg-white' : 'bg-gray-50/30'} hover:bg-gray-100/50`}>
-      <td className={`py-1.5 px-4 font-medium text-gray-800 text-xs sticky right-0 z-10 ${allDone ? 'bg-emerald-50/40' : isEven ? 'bg-white' : 'bg-gray-50/30'}`}>
-        <span className="truncate block max-w-[160px]">{clientName}</span>
+      <td className={`py-1.5 px-4 sticky right-0 z-10 ${allDone ? 'bg-emerald-50/40' : isEven ? 'bg-white' : 'bg-gray-50/30'}`}>
+        <span className="truncate block max-w-[200px] font-medium text-gray-800 text-xs">{clientName}</span>
+        {taxIds.length > 0 && (
+          <div className="flex gap-2 mt-0.5">
+            {taxIds.map(({ label, value }) => (
+              <span key={label} className="text-[10px] text-gray-400">
+                <span className="font-medium">{label}:</span> {value}
+              </span>
+            ))}
+          </div>
+        )}
       </td>
 
       {service.steps.map(stepDef => {
