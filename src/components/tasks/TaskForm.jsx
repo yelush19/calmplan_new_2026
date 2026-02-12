@@ -99,9 +99,18 @@ export default function TaskForm({ task, context, onSubmit, onCancel }) {
   const workCategories = [
     { value: "work_payroll", label: "הכנת שכר" },
     { value: "work_vat_reporting", label: "דיווח מע\"מ" },
+    { value: "work_tax_advances", label: "מקדמות מס הכנסה" },
+    { value: "work_social_security", label: "ביטוח לאומי" },
+    { value: "work_deductions", label: "ניכויים" },
     { value: "work_authorities", label: "דיווח רשויות" },
-    { value: "work_client_management", label: "ניהול לקוח" },
     { value: "work_reconciliation", label: "התאמות חשבונות" },
+    { value: "work_bookkeeping", label: "הנהלת חשבונות" },
+    { value: "work_annual_reports", label: "דוחות שנתיים" },
+    { value: "work_reserve_claims", label: "תביעות מילואים" },
+    { value: "work_social_benefits", label: "סוציאליות" },
+    { value: "work_masav", label: "מס\"ב עובדים" },
+    { value: "work_consulting", label: "ייעוץ" },
+    { value: "work_client_management", label: "ניהול לקוח" },
     { value: "work_admin", label: "אדמיניסטרציה" },
   ];
 
