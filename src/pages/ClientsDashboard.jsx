@@ -63,13 +63,13 @@ const STATUS_CONFIG = {
   issues:                        { label: 'דורש טיפול',     bg: 'bg-amber-300',      text: 'text-amber-900',    border: 'border-amber-400',   priority: 0 },
   ready_for_reporting:           { label: 'מוכן לדיווח',    bg: 'bg-teal-200',       text: 'text-teal-900',     border: 'border-teal-300',    priority: 3 },
   reported_waiting_for_payment:  { label: 'ממתין לתשלום',   bg: 'bg-sky-200',        text: 'text-sky-900',      border: 'border-sky-300',     priority: 4 },
+  not_relevant:                  { label: 'לא רלוונטי',     bg: 'bg-gray-100',       text: 'text-gray-400',     border: 'border-gray-200',    priority: 6 },
 };
 
 // Statuses available for quick-change (excluding 'issues' duplicate)
 const CHANGEABLE_STATUSES = Object.entries(STATUS_CONFIG).filter(([k]) => k !== 'issues');
 
 const EMPTY_STATUS = { label: '-', bg: 'bg-white', text: 'text-gray-300' };
-const NA_STATUS = { label: 'לא רלוונטי', bg: 'bg-gray-100', text: 'text-gray-400' };
 
 // Popover positioned near a cell
 function CellPopover({ anchorRect, onClose, children }) {
@@ -468,7 +468,13 @@ export default function ClientsDashboardPage() {
                           style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fafafa' }}>
                           <div className="flex items-center justify-between">
                             <div>
-                              <div className="font-semibold text-gray-800 text-sm">{client.name}</div>
+                              <Link
+                                to={createPageUrl('ClientManagement') + `?clientId=${client.id}`}
+                                className="font-semibold text-gray-800 text-sm hover:text-emerald-700 hover:underline transition-colors"
+                                title="פתח כרטיס לקוח"
+                              >
+                                {client.name}
+                              </Link>
                               {clientTotal > 0 && (
                                 <div className="text-[10px] text-gray-400 mt-0.5">
                                   {clientDone}/{clientTotal} הושלמו
@@ -495,8 +501,8 @@ export default function ClientsDashboardPage() {
                             if (group.key === 'payroll' && !clientHasPayroll) {
                               return (
                                 <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
-                                  <div className={`${NA_STATUS.bg} ${NA_STATUS.text} rounded py-1.5 text-xs font-medium mx-0.5`}>
-                                    {NA_STATUS.label}
+                                  <div className={`${STATUS_CONFIG.not_relevant.bg} text-gray-900 rounded py-1.5 text-xs font-bold mx-0.5`}>
+                                    {STATUS_CONFIG.not_relevant.label}
                                   </div>
                                 </td>
                               );
@@ -527,7 +533,7 @@ export default function ClientsDashboardPage() {
                               <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
                                 <button
                                   onClick={(e) => handleCellClick(e, client, col, group)}
-                                  className={`w-full ${config.bg} ${config.text} rounded py-1.5 text-xs font-semibold mx-0.5 hover:opacity-80 hover:shadow-sm transition-all cursor-pointer ${isActive ? 'ring-2 ring-emerald-500 ring-offset-1' : ''}`}
+                                  className={`w-full ${config.bg} text-gray-900 rounded py-1.5 text-xs font-bold mx-0.5 hover:opacity-80 hover:shadow-sm transition-all cursor-pointer ${isActive ? 'ring-2 ring-emerald-500 ring-offset-1' : ''}`}
                                   title={`${client.name} - ${col.label}: ${config.label} (לחץ לשינוי סטטוס)`}
                                 >
                                   {config.label}
@@ -601,11 +607,9 @@ export default function ClientsDashboardPage() {
                   key={statusKey}
                   onClick={() => handleStatusChange(statusKey)}
                   disabled={isUpdating}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded text-xs font-semibold transition-all
-                    ${isCurrent
-                      ? `${config.bg} ${config.text} ring-2 ${config.border}`
-                      : `hover:${config.bg} ${config.text} hover:opacity-90 bg-gray-50`
-                    }
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 rounded text-xs font-bold transition-all
+                    ${config.bg} text-gray-900
+                    ${isCurrent ? `ring-2 ring-offset-1 ${config.border}` : 'hover:opacity-80'}
                     ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                   `}
                 >
@@ -685,13 +689,10 @@ export default function ClientsDashboardPage() {
       {/* Legend */}
       <div className="flex flex-wrap gap-2 justify-center py-2">
         {CHANGEABLE_STATUSES.map(([key, config]) => (
-          <span key={key} className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-semibold ${config.bg} ${config.text}`}>
+          <span key={key} className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-bold ${config.bg} text-gray-900`}>
             {config.label}
           </span>
         ))}
-        <span className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-semibold ${NA_STATUS.bg} ${NA_STATUS.text}`}>
-          {NA_STATUS.label}
-        </span>
       </div>
     </div>
   );
