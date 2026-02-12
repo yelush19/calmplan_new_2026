@@ -54,6 +54,7 @@ import ClientListItem from '@/components/clients/ClientListItem';
 import ClientCollections from '@/components/clients/ClientCollections';
 import ClientContractsManager from '@/components/clients/ClientContractsManager';
 import ClientTasksTab from '@/components/clients/ClientTasksTab';
+import MondayDataImport from '@/components/clients/MondayDataImport';
 
 // Helper: retry with exponential backoff for rate limits
 async function retryWithBackoff(fn, maxRetries = 3, initialDelay = 1000) {
@@ -624,6 +625,8 @@ export default function ClientManagementPage() {
           </Button>
         </Alert>
       )}
+
+      <MondayDataImport onComplete={loadClients} />
 
       <Card>
         <CardHeader>

@@ -88,6 +88,8 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const reportingFields = [
     { key: 'vat_reporting_frequency', label: 'מע"מ' },
     { key: 'tax_advances_frequency', label: 'מקדמות' },
+    { key: 'deductions_frequency', label: 'ניכויים' },
+    { key: 'social_security_frequency', label: 'בל' },
     { key: 'payroll_frequency', label: 'שכר' },
   ].filter(f => reportingInfo[f.key] && reportingInfo[f.key] !== 'not_applicable');
 

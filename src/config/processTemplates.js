@@ -318,7 +318,8 @@ export function getStepCompletionPercent(task) {
 const FREQUENCY_FIELD_MAP = {
   vat: 'vat_reporting_frequency',
   tax_advances: 'tax_advances_frequency',
-  deductions: 'tax_advances_frequency', // follows tax advances schedule
+  deductions: 'deductions_frequency',
+  social_security: 'social_security_frequency',
 };
 
 /**
