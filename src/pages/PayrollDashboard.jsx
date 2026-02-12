@@ -159,8 +159,8 @@ export default function PayrollDashboardPage() {
             <Briefcase className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">תהליכי שכר</h1>
-            <p className="text-gray-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | שכר, ביט"ל, ניכויים ועוד</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">שכר ודיווחי רשויות</h1>
+            <p className="text-gray-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | שכר, ניכויים, ביטוח לאומי, מס"ב ועוד</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

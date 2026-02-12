@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle } from 'lucide-react';
+import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard } from 'lucide-react';
 
 const serviceTypeLabels = {
     bookkeeping: 'הנהלת חשבונות',
@@ -42,6 +42,26 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const [isExpanded, setIsExpanded] = useState(false);
   const [relatedTasks, setRelatedTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [accountsSummary, setAccountsSummary] = useState(null);
+
+  // Load accounts summary on mount
+  useEffect(() => {
+    const loadAccountsSummary = async () => {
+      try {
+        const { ClientAccount } = await import('@/api/entities');
+        const accounts = await ClientAccount.filter({ client_id: client.id }, null, 100);
+        if (accounts && accounts.length > 0) {
+          const banks = accounts.filter(a => a.account_type === 'bank').length;
+          const cards = accounts.filter(a => a.account_type === 'credit_card').length;
+          const other = accounts.length - banks - cards;
+          setAccountsSummary({ total: accounts.length, banks, cards, other });
+        }
+      } catch (error) {
+        // silently fail
+      }
+    };
+    loadAccountsSummary();
+  }, [client.id]);
 
   const uiProps = statusUI[client.status] || statusUI.inactive;
   const mainContact = client.contacts?.find(c => c.is_primary) || client.contacts?.[0] || { name: client.contact_person, email: client.email, phone: client.phone };
@@ -191,6 +211,32 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
               )}
               {client.tax_info?.annual_tax_ids?.tax_advances_id && (
                 <span><span className="font-medium text-gray-600">פנקס מקדמות:</span> {client.tax_info.annual_tax_ids.tax_advances_id}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Bank accounts summary */}
+        {accountsSummary && (
+          <div className="border-t border-gray-100 pt-2 mt-2">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">
+              {accountsSummary.banks > 0 && (
+                <span className="flex items-center gap-1">
+                  <Banknote className="w-3 h-3 text-blue-500" />
+                  {accountsSummary.banks} חשבונות בנק
+                </span>
+              )}
+              {accountsSummary.cards > 0 && (
+                <span className="flex items-center gap-1">
+                  <CreditCard className="w-3 h-3 text-purple-500" />
+                  {accountsSummary.cards} כרט' אשראי
+                </span>
+              )}
+              {accountsSummary.other > 0 && (
+                <span className="flex items-center gap-1">
+                  <Building className="w-3 h-3 text-gray-500" />
+                  {accountsSummary.other} נוספים
+                </span>
               )}
             </div>
           </div>

@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Client } from '@/api/entities';
-import { Upload, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Client, ClientAccount } from '@/api/entities';
+import { Upload, CheckCircle, AlertCircle, Loader2, Banknote } from 'lucide-react';
 import mondayClientsData from '@/data/monday_clients_import.json';
+import mondayAccountsData from '@/data/monday_accounts_import.json';
 
 export default function MondayDataImport({ onComplete }) {
   const [isImporting, setIsImporting] = useState(false);
@@ -14,6 +15,7 @@ export default function MondayDataImport({ onComplete }) {
     setIsImporting(true);
     const log = [];
     let updated = 0, created = 0, skipped = 0, errors = 0;
+    let accountsCreated = 0, accountsSkipped = 0;
 
     try {
       const existingClients = await Client.list(null, 500);
@@ -22,6 +24,7 @@ export default function MondayDataImport({ onComplete }) {
         clientsByName[c.name] = c;
       });
 
+      // ===== Import client data =====
       for (const importClient of mondayClientsData) {
         try {
           const existing = clientsByName[importClient.name];
@@ -127,9 +130,78 @@ export default function MondayDataImport({ onComplete }) {
         }
       }
 
-      setResult({ updated, created, skipped, errors, log });
+      // ===== Import bank accounts =====
+      // Re-fetch clients after updates (names might have been created)
+      const updatedClients = await Client.list(null, 500);
+      const clientsByNameUpdated = {};
+      updatedClients.forEach(c => {
+        clientsByNameUpdated[c.name] = c;
+      });
+
+      // Get existing accounts to avoid duplicates
+      const existingAccounts = await ClientAccount.list(null, 5000).catch(() => []);
+
+      log.push('--- ייבוא חשבונות בנק ---');
+
+      for (const acct of mondayAccountsData) {
+        try {
+          const client = clientsByNameUpdated[acct.client_name];
+          if (!client) {
+            log.push(`חשבון ${acct.name}: לקוח "${acct.client_name}" לא נמצא — דולג`);
+            accountsSkipped++;
+            continue;
+          }
+
+          // Check if account already exists
+          const exists = existingAccounts.some(ea =>
+            ea.client_id === client.id &&
+            ea.account_number === acct.account_number
+          );
+
+          if (exists) {
+            accountsSkipped++;
+            continue;
+          }
+
+          // Map account_type from Hebrew
+          let accountType = 'bank';
+          if (acct.account_type === 'כרטיס אשראי') accountType = 'credit_card';
+          else if (acct.account_type === 'סליקה') accountType = 'clearing';
+          else if (acct.account_type === 'הנהלת חשבונות') accountType = 'bookkeeping';
+
+          // Map reconciliation_frequency
+          let reconcFreq = 'monthly';
+          if (acct.reconciliation_frequency === 'דו-חודשי') reconcFreq = 'bimonthly';
+          else if (acct.reconciliation_frequency === 'חצי שנתי') reconcFreq = 'semi_annual';
+          else if (acct.reconciliation_frequency === 'רבעוני') reconcFreq = 'quarterly';
+          else if (acct.reconciliation_frequency === 'שנתי') reconcFreq = 'yearly';
+
+          await ClientAccount.create({
+            client_id: client.id,
+            account_type: accountType,
+            account_name: acct.name,
+            account_number: acct.account_number || '',
+            bank_name: acct.bank_name || '',
+            bookkeeping_card_number: acct.accounting_card || '',
+            reconciliation_frequency: reconcFreq,
+            loading_system: acct.reconciliation_system || '',
+            last_reconciliation_date: acct.last_reconciliation_date ? acct.last_reconciliation_date.split(' ')[0] : '',
+            next_reconciliation_due: acct.next_reconciliation_date ? acct.next_reconciliation_date.split(' ')[0] : '',
+            notes: acct.notes || '',
+            monday_status: acct.status || '',
+          });
+
+          accountsCreated++;
+        } catch (err) {
+          errors++;
+          log.push(`שגיאה בחשבון ${acct.name}: ${err.message}`);
+        }
+      }
+
+      log.push(`חשבונות: ${accountsCreated} נוצרו, ${accountsSkipped} דולגו (כבר קיימים)`);
+      setResult({ updated, created, skipped, errors, accountsCreated, accountsSkipped, log });
     } catch (err) {
-      setResult({ updated, created, skipped, errors: errors + 1, log: [...log, `שגיאה כללית: ${err.message}`] });
+      setResult({ updated, created, skipped, errors: errors + 1, accountsCreated, accountsSkipped, log: [...log, `שגיאה כללית: ${err.message}`] });
     }
 
     setIsImporting(false);
@@ -148,6 +220,11 @@ export default function MondayDataImport({ onComplete }) {
         <p className="text-sm text-gray-600 mb-3">
           יעדכן את כרטיסי הלקוחות עם: ח"פ, מספרי פנקס, תדירויות דיווח, סוגי שירות.
           <br />
+          <span className="flex items-center gap-1 mt-1">
+            <Banknote className="w-3.5 h-3.5" />
+            כולל ייבוא {mondayAccountsData.length} חשבונות בנק ואשראי לכרטיסי לקוח.
+          </span>
+          <br />
           מזהים שנתיים (מקדמות, ניכויים, בל) יאוחסנו כנתוני 2025. את 2026 תעדכני ידנית.
         </p>
 
@@ -160,17 +237,17 @@ export default function MondayDataImport({ onComplete }) {
             {isImporting ? (
               <><Loader2 className="w-4 h-4 ml-2 animate-spin" /> מייבא...</>
             ) : (
-              <><Upload className="w-4 h-4 ml-2" /> ייבא {mondayClientsData.length} לקוחות</>
+              <><Upload className="w-4 h-4 ml-2" /> ייבא {mondayClientsData.length} לקוחות + {mondayAccountsData.length} חשבונות</>
             )}
           </Button>
           <span className="text-xs text-gray-500">
-            {mondayClientsData.length} לקוחות בקובץ הייבוא
+            {mondayClientsData.length} לקוחות + {mondayAccountsData.length} חשבונות
           </span>
         </div>
 
         {result && (
           <div className="mt-4 p-3 rounded-lg bg-white border">
-            <div className="flex items-center gap-4 text-sm mb-2">
+            <div className="flex flex-wrap items-center gap-4 text-sm mb-2">
               {result.errors === 0 ? (
                 <span className="text-green-600 flex items-center gap-1">
                   <CheckCircle className="w-4 h-4" /> הושלם בהצלחה
@@ -180,8 +257,9 @@ export default function MondayDataImport({ onComplete }) {
                   <AlertCircle className="w-4 h-4" /> הושלם עם שגיאות
                 </span>
               )}
-              <span className="text-gray-600">{result.updated} עודכנו</span>
-              <span className="text-gray-600">{result.created} נוצרו</span>
+              <span className="text-gray-600">{result.updated} לקוחות עודכנו</span>
+              <span className="text-gray-600">{result.created} לקוחות נוצרו</span>
+              <span className="text-gray-600">{result.accountsCreated} חשבונות נוצרו</span>
               {result.errors > 0 && <span className="text-red-600">{result.errors} שגיאות</span>}
             </div>
             <details className="text-xs text-gray-500">
