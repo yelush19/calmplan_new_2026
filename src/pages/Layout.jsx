@@ -44,7 +44,7 @@ const navigationGroups = [
         icon: Calculator,
         children: [
             { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
-            { name: "תהליכי שכר", href: createPageUrl("PayrollDashboard"), icon: Calculator },
+            { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
             { name: "לוח התאמות", href: createPageUrl("Reconciliations"), icon: BookCheck },
             { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
         ]

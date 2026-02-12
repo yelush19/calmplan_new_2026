@@ -1,198 +1,233 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from '@/components/ui/dialog';
 import {
   RefreshCw, CheckCircle, AlertTriangle, Calendar, Plus,
-  Clock, Users, FileText, Calculator, Building
+  Clock, Users, FileText, Calculator, Building, Trash2,
+  ChevronDown, ChevronRight
 } from 'lucide-react';
 import { Client, Task } from '@/api/entities';
-import { format, addMonths, setDate, startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
+import { format, addMonths, setDate, startOfMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { Label } from '@/components/ui/label';
 
-// Accounting task templates - Israeli accounting calendar
-const RECURRING_TASK_TEMPLATES = {
-  vat_bimonthly: {
-    name: 'דיווח מע"מ דו-חודשי',
-    category: 'מע"מ',
+// ============================================================
+// Category definitions with display order
+// ============================================================
+const REPORT_CATEGORIES = {
+  'מע"מ': {
+    label: 'מע"מ',
     icon: Calculator,
     color: 'bg-purple-100 text-purple-800',
-    frequency: 'bi-monthly',
-    // VAT months: Jan-Feb, Mar-Apr, May-Jun, Jul-Aug, Sep-Oct, Nov-Dec
-    getNextDueDates: (fromDate) => {
-      const dates = [];
-      const vatMonths = [2, 4, 6, 8, 10, 12]; // Due months (report for prev 2 months)
-      const year = fromDate.getFullYear();
-
-      vatMonths.forEach(month => {
-        // Due by 15th of the month after the period
-        const dueDate = new Date(year, month - 1, 15);
-        if (dueDate >= fromDate) {
-          dates.push({
-            date: dueDate,
-            period: `${getPeriodName(month)}`,
-            description: `דיווח מע"מ עבור ${getPeriodName(month)} ${year}`
-          });
-        }
-      });
-
-      // Add first half of next year
-      vatMonths.slice(0, 3).forEach(month => {
-        const dueDate = new Date(year + 1, month - 1, 15);
-        dates.push({
-          date: dueDate,
-          period: `${getPeriodName(month)}`,
-          description: `דיווח מע"מ עבור ${getPeriodName(month)} ${year + 1}`
-        });
-      });
-
-      return dates;
-    }
+    frequencyField: 'vat_reporting_frequency',
+    serviceTypeRequired: ['bookkeeping', 'bookkeeping_full', 'vat_reporting', 'full_service'],
+    dayOfMonth: 15,
+    order: 1,
   },
-  payroll_monthly: {
-    name: 'דיווח שכר חודשי',
-    category: 'שכר',
-    icon: FileText,
-    color: 'bg-blue-100 text-blue-800',
-    frequency: 'monthly',
-    getNextDueDates: (fromDate) => {
-      const dates = [];
-      for (let i = 0; i < 12; i++) {
-        const reportMonth = addMonths(fromDate, i);
-        const dueDate = setDate(addMonths(reportMonth, 1), 15);
-        if (dueDate >= fromDate) {
-          dates.push({
-            date: dueDate,
-            period: format(reportMonth, 'MMMM yyyy', { locale: he }),
-            description: `דיווח שכר עבור חודש ${format(reportMonth, 'MMMM yyyy', { locale: he })}`
-          });
-        }
-      }
-      return dates;
-    }
-  },
-  tax_advances_monthly: {
-    name: 'מקדמות מס',
-    category: 'מקדמות מס',
+  'מקדמות מס': {
+    label: 'מקדמות מס',
     icon: Building,
     color: 'bg-teal-100 text-teal-800',
-    frequency: 'monthly',
-    getNextDueDates: (fromDate) => {
-      const dates = [];
-      for (let i = 0; i < 12; i++) {
-        const month = addMonths(fromDate, i);
-        const dueDate = setDate(addMonths(month, 1), 15);
-        if (dueDate >= fromDate) {
-          dates.push({
-            date: dueDate,
-            period: format(month, 'MMMM yyyy', { locale: he }),
-            description: `מקדמות מס עבור חודש ${format(month, 'MMMM yyyy', { locale: he })}`
-          });
-        }
-      }
-      return dates;
-    }
+    frequencyField: 'tax_advances_frequency',
+    serviceTypeRequired: ['bookkeeping', 'bookkeeping_full', 'tax_advances', 'tax_reports', 'full_service'],
+    dayOfMonth: 15,
+    order: 2,
   },
-  social_security_monthly: {
-    name: 'ביטוח לאומי',
-    category: 'ביטוח לאומי',
+  'ניכויים': {
+    label: 'ניכויים',
+    icon: Calculator,
+    color: 'bg-orange-100 text-orange-800',
+    frequencyField: 'deductions_frequency',
+    serviceTypeRequired: ['payroll', 'bookkeeping', 'bookkeeping_full', 'full_service'],
+    dayOfMonth: 15,
+    order: 3,
+  },
+  'ביטוח לאומי': {
+    label: 'ביטוח לאומי',
     icon: Users,
     color: 'bg-green-100 text-green-800',
-    frequency: 'monthly',
-    getNextDueDates: (fromDate) => {
-      const dates = [];
-      for (let i = 0; i < 12; i++) {
-        const month = addMonths(fromDate, i);
-        const dueDate = setDate(addMonths(month, 1), 15);
-        if (dueDate >= fromDate) {
-          dates.push({
-            date: dueDate,
-            period: format(month, 'MMMM yyyy', { locale: he }),
-            description: `דיווח ביטוח לאומי עבור ${format(month, 'MMMM yyyy', { locale: he })}`
-          });
-        }
-      }
-      return dates;
-    }
+    frequencyField: 'social_security_frequency',
+    serviceTypeRequired: ['payroll', 'bookkeeping', 'bookkeeping_full', 'full_service'],
+    dayOfMonth: 15,
+    order: 4,
   },
-  annual_report: {
-    name: 'דוח שנתי',
-    category: 'דוח שנתי',
+  'שכר': {
+    label: 'שכר',
+    icon: FileText,
+    color: 'bg-blue-100 text-blue-800',
+    frequencyField: 'payroll_frequency',
+    serviceTypeRequired: ['payroll', 'full_service'],
+    dayOfMonth: 15,
+    order: 5,
+  },
+  'דוח שנתי': {
+    label: 'דוח שנתי',
     icon: Calendar,
     color: 'bg-red-100 text-red-800',
-    frequency: 'yearly',
-    getNextDueDates: (fromDate) => {
-      const year = fromDate.getFullYear();
-      const dates = [];
-      // Annual report for previous year, due by end of May
-      const dueDate = new Date(year, 4, 31); // May 31
-      if (dueDate >= fromDate) {
-        dates.push({
-          date: dueDate,
-          period: `${year - 1}`,
-          description: `דוח שנתי לשנת ${year - 1}`
-        });
-      }
-      // Next year's report
+    frequencyField: null, // always yearly
+    serviceTypeRequired: ['annual_reports', 'tax_reports', 'bookkeeping', 'bookkeeping_full', 'full_service'],
+    dayOfMonth: null,
+    order: 6,
+  },
+};
+
+const BIMONTHLY_PERIOD_NAMES = {
+  2: 'ינואר-פברואר',
+  4: 'מרץ-אפריל',
+  6: 'מאי-יוני',
+  8: 'יולי-אוגוסט',
+  10: 'ספטמבר-אוקטובר',
+  12: 'נובמבר-דצמבר',
+};
+
+const QUARTERLY_PERIOD_NAMES = {
+  3: 'ינואר-מרץ (Q1)',
+  6: 'אפריל-יוני (Q2)',
+  9: 'יולי-ספטמבר (Q3)',
+  12: 'אוקטובר-דצמבר (Q4)',
+};
+
+const FREQUENCY_LABELS = {
+  monthly: 'חודשי',
+  bimonthly: 'דו-חודשי',
+  quarterly: 'רבעוני',
+  yearly: 'שנתי',
+};
+
+/**
+ * Get the client's frequency for a given category.
+ * Returns 'monthly' | 'bimonthly' | 'quarterly' | 'not_applicable' | 'yearly'
+ */
+function getClientFrequency(categoryKey, client) {
+  const cat = REPORT_CATEGORIES[categoryKey];
+  if (!cat) return 'monthly';
+
+  // Annual report is always yearly
+  if (categoryKey === 'דוח שנתי') return 'yearly';
+
+  const field = cat.frequencyField;
+  if (!field) return 'monthly';
+
+  const freq = client.reporting_info?.[field];
+  return freq || 'monthly';
+}
+
+/**
+ * Check if the client has a matching service type for this category
+ */
+function clientHasService(categoryKey, client) {
+  const cat = REPORT_CATEGORIES[categoryKey];
+  if (!cat) return false;
+
+  const services = client.service_types || [];
+  if (services.length === 0) return true; // If no services defined, include all
+  return cat.serviceTypeRequired.some(st => services.includes(st));
+}
+
+/**
+ * Generate due dates for a given category and client
+ */
+function generateDueDates(categoryKey, client, monthsAhead) {
+  const frequency = getClientFrequency(categoryKey, client);
+
+  if (frequency === 'not_applicable') return [];
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const dates = [];
+
+  if (frequency === 'yearly') {
+    // Annual report - due May 31
+    const dueDate = new Date(year, 4, 31);
+    if (dueDate >= now) {
+      dates.push({
+        date: dueDate,
+        period: `${year - 1}`,
+        description: `דוח שנתי לשנת ${year - 1}`,
+      });
+    }
+    if (monthsAhead > 6) {
       dates.push({
         date: new Date(year + 1, 4, 31),
         period: `${year}`,
-        description: `דוח שנתי לשנת ${year}`
+        description: `דוח שנתי לשנת ${year}`,
       });
-      return dates;
     }
-  },
-  deductions_monthly: {
-    name: 'ניכויים במקור',
-    category: 'ניכויים',
-    icon: Calculator,
-    color: 'bg-orange-100 text-orange-800',
-    frequency: 'monthly',
-    getNextDueDates: (fromDate) => {
-      const dates = [];
-      for (let i = 0; i < 12; i++) {
-        const month = addMonths(fromDate, i);
-        const dueDate = setDate(addMonths(month, 1), 15);
-        if (dueDate >= fromDate) {
-          dates.push({
-            date: dueDate,
-            period: format(month, 'MMMM yyyy', { locale: he }),
-            description: `דיווח ניכויים עבור ${format(month, 'MMMM yyyy', { locale: he })}`
-          });
-        }
+    return dates;
+  }
+
+  if (frequency === 'bimonthly') {
+    // Bimonthly: report months are 2, 4, 6, 8, 10, 12
+    const biMonths = [2, 4, 6, 8, 10, 12];
+    for (const m of biMonths) {
+      const dueDate = new Date(year, m - 1, 15);
+      if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
+        dates.push({
+          date: dueDate,
+          period: BIMONTHLY_PERIOD_NAMES[m],
+          description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${BIMONTHLY_PERIOD_NAMES[m]} ${year}`,
+        });
       }
-      return dates;
+    }
+    // Next year if needed
+    for (const m of biMonths) {
+      const dueDate = new Date(year + 1, m - 1, 15);
+      if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
+        dates.push({
+          date: dueDate,
+          period: BIMONTHLY_PERIOD_NAMES[m],
+          description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${BIMONTHLY_PERIOD_NAMES[m]} ${year + 1}`,
+        });
+      }
+    }
+    return dates;
+  }
+
+  if (frequency === 'quarterly') {
+    const qMonths = [3, 6, 9, 12];
+    for (const m of qMonths) {
+      const dueDate = new Date(year, m - 1, 15);
+      if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
+        dates.push({
+          date: dueDate,
+          period: QUARTERLY_PERIOD_NAMES[m],
+          description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${QUARTERLY_PERIOD_NAMES[m]} ${year}`,
+        });
+      }
+    }
+    for (const m of qMonths) {
+      const dueDate = new Date(year + 1, m - 1, 15);
+      if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
+        dates.push({
+          date: dueDate,
+          period: QUARTERLY_PERIOD_NAMES[m],
+          description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${QUARTERLY_PERIOD_NAMES[m]} ${year + 1}`,
+        });
+      }
+    }
+    return dates;
+  }
+
+  // Monthly
+  for (let i = 0; i < monthsAhead; i++) {
+    const reportMonth = addMonths(now, i);
+    const dueDate = setDate(addMonths(reportMonth, 1), 15);
+    if (dueDate >= now) {
+      dates.push({
+        date: dueDate,
+        period: format(reportMonth, 'MMMM yyyy', { locale: he }),
+        description: `${REPORT_CATEGORIES[categoryKey].label} עבור חודש ${format(reportMonth, 'MMMM yyyy', { locale: he })}`,
+      });
     }
   }
-};
-
-function getPeriodName(dueMonth) {
-  const periods = {
-    2: 'ינואר-פברואר',
-    4: 'מרץ-אפריל',
-    6: 'מאי-יוני',
-    8: 'יולי-אוגוסט',
-    10: 'ספטמבר-אוקטובר',
-    12: 'נובמבר-דצמבר'
-  };
-  return periods[dueMonth] || '';
+  return dates;
 }
-
-// Map client service_types to task templates
-const SERVICE_TYPE_TO_TEMPLATES = {
-  'bookkeeping': ['vat_bimonthly', 'payroll_monthly', 'tax_advances_monthly', 'social_security_monthly', 'deductions_monthly'],
-  'payroll': ['payroll_monthly', 'social_security_monthly', 'deductions_monthly'],
-  'tax_reports': ['annual_report', 'tax_advances_monthly'],
-  'vat': ['vat_bimonthly'],
-  'annual_reports': ['annual_report'],
-  'full_service': ['vat_bimonthly', 'payroll_monthly', 'tax_advances_monthly', 'social_security_monthly', 'annual_report', 'deductions_monthly'],
-};
 
 export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [clients, setClients] = useState([]);
@@ -201,8 +236,10 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewTasks, setPreviewTasks] = useState([]);
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [generateMonths, setGenerateMonths] = useState(3);
   const [results, setResults] = useState(null);
+  const [collapsedCategories, setCollapsedCategories] = useState(new Set());
 
   useEffect(() => {
     loadData();
@@ -224,71 +261,154 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   };
 
   const generateTasksPreview = () => {
-    const now = new Date();
     const tasksToCreate = [];
 
-    clients.forEach(client => {
-      // Determine which templates apply based on service_types
-      const serviceTypes = client.service_types || ['full_service'];
-      const templateKeys = new Set();
+    for (const client of clients) {
+      for (const [categoryKey, categoryDef] of Object.entries(REPORT_CATEGORIES)) {
+        // Check if client has matching service
+        if (!clientHasService(categoryKey, client)) continue;
 
-      serviceTypes.forEach(st => {
-        const templates = SERVICE_TYPE_TO_TEMPLATES[st] || SERVICE_TYPE_TO_TEMPLATES['full_service'];
-        templates.forEach(t => templateKeys.add(t));
-      });
+        // Check frequency
+        const freq = getClientFrequency(categoryKey, client);
+        if (freq === 'not_applicable') continue;
 
-      templateKeys.forEach(templateKey => {
-        const template = RECURRING_TASK_TEMPLATES[templateKey];
-        if (!template) return;
+        // Generate due dates
+        const dueDates = generateDueDates(categoryKey, client, generateMonths);
 
-        const dueDates = template.getNextDueDates(now);
-        const limitedDates = dueDates.slice(0, generateMonths);
-
-        limitedDates.forEach(({ date, period, description }) => {
+        for (const { date, period, description } of dueDates) {
           const taskTitle = `${client.name} - ${description}`;
+          const dueDateStr = format(date, 'yyyy-MM-dd');
 
           // Check if task already exists
           const alreadyExists = existingTasks.some(t =>
             t.title === taskTitle ||
             (t.client_name === client.name &&
-             t.category === template.category &&
-             t.due_date === format(date, 'yyyy-MM-dd'))
+             t.category === categoryKey &&
+             t.due_date === dueDateStr)
           );
 
           if (!alreadyExists) {
+            const taskId = `${client.id}_${categoryKey}_${dueDateStr}`;
             tasksToCreate.push({
+              _previewId: taskId,
               title: taskTitle,
               description: `${description}\nלקוח: ${client.name}`,
-              due_date: format(date, 'yyyy-MM-dd'),
+              due_date: dueDateStr,
               client_name: client.name,
               client_id: client.id,
-              category: template.category,
+              category: categoryKey,
+              context: 'work',
               priority: 'high',
               status: 'not_started',
               is_recurring: true,
-              templateKey,
-              templateName: template.name,
-              templateColor: template.color,
-              period
+              _categoryOrder: categoryDef.order,
+              _categoryLabel: categoryDef.label,
+              _categoryColor: categoryDef.color,
+              _frequency: freq,
+              period,
             });
           }
-        });
-      });
+        }
+      }
+    }
+
+    // Sort: by category order, then by client name A-Z, then by date
+    tasksToCreate.sort((a, b) => {
+      if (a._categoryOrder !== b._categoryOrder) return a._categoryOrder - b._categoryOrder;
+      const nameCompare = a.client_name.localeCompare(b.client_name, 'he');
+      if (nameCompare !== 0) return nameCompare;
+      return new Date(a.due_date) - new Date(b.due_date);
     });
 
-    tasksToCreate.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
     setPreviewTasks(tasksToCreate);
+    setSelectedTaskIds(new Set(tasksToCreate.map(t => t._previewId)));
     setShowPreview(true);
+    setCollapsedCategories(new Set());
   };
+
+  const toggleTask = (taskId) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const toggleCategoryAll = (categoryKey, tasks) => {
+    const catIds = tasks.map(t => t._previewId);
+    const allSelected = catIds.every(id => selectedTaskIds.has(id));
+
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      catIds.forEach(id => {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      });
+      return next;
+    });
+  };
+
+  const toggleCollapseCategory = (categoryKey) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryKey)) next.delete(categoryKey);
+      else next.add(categoryKey);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedTaskIds(new Set(previewTasks.map(t => t._previewId)));
+  };
+
+  const selectNone = () => {
+    setSelectedTaskIds(new Set());
+  };
+
+  const removeFromPreview = (taskId) => {
+    setPreviewTasks(prev => prev.filter(t => t._previewId !== taskId));
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      next.delete(taskId);
+      return next;
+    });
+  };
+
+  // Group tasks by category for display
+  const groupedTasks = useMemo(() => {
+    const groups = {};
+    for (const task of previewTasks) {
+      const key = task.category;
+      if (!groups[key]) {
+        groups[key] = {
+          categoryKey: key,
+          label: task._categoryLabel,
+          color: task._categoryColor,
+          order: task._categoryOrder,
+          tasks: [],
+        };
+      }
+      groups[key].tasks.push(task);
+    }
+    return Object.values(groups).sort((a, b) => a.order - b.order);
+  }, [previewTasks]);
+
+  const selectedCount = previewTasks.filter(t => selectedTaskIds.has(t._previewId)).length;
 
   const createTasks = async () => {
     setIsGenerating(true);
     let created = 0;
     let errors = 0;
 
-    for (const taskData of previewTasks) {
+    const tasksToCreate = previewTasks.filter(t => selectedTaskIds.has(t._previewId));
+
+    for (const taskData of tasksToCreate) {
       try {
-        const { templateKey, templateName, templateColor, period, ...taskFields } = taskData;
+        const {
+          _previewId, _categoryOrder, _categoryLabel, _categoryColor, _frequency, period,
+          ...taskFields
+        } = taskData;
         await Task.create(taskFields);
         created++;
       } catch (error) {
@@ -297,14 +417,44 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
       }
     }
 
-    setResults({ created, errors, total: previewTasks.length });
+    setResults({ created, errors, total: tasksToCreate.length });
     setIsGenerating(false);
     setShowPreview(false);
 
-    // Reload data
     await loadData();
     if (onGenerateComplete) onGenerateComplete();
   };
+
+  // Summary: how many tasks per category
+  const categorySummary = useMemo(() => {
+    const summary = {};
+    for (const [categoryKey, categoryDef] of Object.entries(REPORT_CATEGORIES)) {
+      let clientCount = 0;
+      for (const client of clients) {
+        if (!clientHasService(categoryKey, client)) continue;
+        const freq = getClientFrequency(categoryKey, client);
+        if (freq === 'not_applicable') continue;
+        clientCount++;
+      }
+      if (clientCount > 0) {
+        summary[categoryKey] = {
+          label: categoryDef.label,
+          color: categoryDef.color,
+          icon: categoryDef.icon,
+          clientCount,
+          frequencies: {},
+        };
+        // Count by frequency
+        for (const client of clients) {
+          if (!clientHasService(categoryKey, client)) continue;
+          const freq = getClientFrequency(categoryKey, client);
+          if (freq === 'not_applicable') continue;
+          summary[categoryKey].frequencies[freq] = (summary[categoryKey].frequencies[freq] || 0) + 1;
+        }
+      }
+    }
+    return summary;
+  }, [clients]);
 
   if (isLoading) {
     return (
@@ -328,27 +478,36 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             <div>
               <h3 className="text-lg font-bold">יצירת משימות חוזרות ללקוחות</h3>
               <p className="text-sm text-gray-500 font-normal">
-                {clients.length} לקוחות פעילים
+                {clients.length} לקוחות פעילים — לפי תדירות דיווח בכרטיס לקוח
               </p>
             </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Category summary cards with frequency breakdown */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {Object.entries(RECURRING_TASK_TEMPLATES).map(([key, template]) => {
-              const Icon = template.icon;
+            {Object.entries(categorySummary).map(([key, info]) => {
+              const Icon = info.icon;
               return (
-                <div key={key} className={`p-3 rounded-lg ${template.color} flex items-center gap-2`}>
-                  <Icon className="w-4 h-4" />
+                <div key={key} className={`p-3 rounded-lg ${info.color} flex items-start gap-2`}>
+                  <Icon className="w-4 h-4 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">{template.name}</p>
-                    <p className="text-xs opacity-70">{template.frequency === 'monthly' ? 'חודשי' : template.frequency === 'bi-monthly' ? 'דו-חודשי' : 'שנתי'}</p>
+                    <p className="text-sm font-medium">{info.label}</p>
+                    <p className="text-xs opacity-80">{info.clientCount} לקוחות</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {Object.entries(info.frequencies).map(([freq, count]) => (
+                        <span key={freq} className="text-xs bg-white/50 px-1.5 py-0.5 rounded">
+                          {FREQUENCY_LABELS[freq] || freq}: {count}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
 
+          {/* Period selector */}
           <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
             <Label className="font-medium">יצירה ל:</Label>
             <div className="flex gap-2">
@@ -394,14 +553,14 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
 
       {/* Preview Dialog */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="sm:max-w-[800px] h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
               תצוגה מקדימה - {previewTasks.length} משימות חדשות
             </DialogTitle>
             <DialogDescription>
-              בדוק את המשימות לפני יצירה. משימות שכבר קיימות לא ייווצרו שוב.
+              סמנו את המשימות שברצונכם ליצור. מסודר לפי סוג דיווח → לקוחות א-ב.
             </DialogDescription>
           </DialogHeader>
 
@@ -413,26 +572,91 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             </div>
           ) : (
             <>
-              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                {previewTasks.map((task, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
-                    <Badge className={task.templateColor + ' text-xs'}>
-                      {task.templateName}
-                    </Badge>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{task.title}</p>
-                      <p className="text-xs text-gray-500">
-                        יעד: {format(parseISO(task.due_date), 'dd/MM/yyyy', { locale: he })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              {/* Selection controls */}
+              <div className="flex items-center gap-3 py-2 border-b">
+                <Button variant="outline" size="sm" onClick={selectAll}>בחר הכל</Button>
+                <Button variant="outline" size="sm" onClick={selectNone}>בטל הכל</Button>
+                <span className="text-sm text-gray-600 mr-auto">
+                  {selectedCount} מתוך {previewTasks.length} נבחרו
+                </span>
               </div>
 
-              <div className="flex gap-3 mt-4">
+              {/* Grouped task list */}
+              <div className="flex-1 overflow-y-auto space-y-3 py-2">
+                {groupedTasks.map(group => {
+                  const isCollapsed = collapsedCategories.has(group.categoryKey);
+                  const groupSelectedCount = group.tasks.filter(t => selectedTaskIds.has(t._previewId)).length;
+                  const allGroupSelected = groupSelectedCount === group.tasks.length;
+
+                  return (
+                    <div key={group.categoryKey} className="border rounded-lg overflow-hidden">
+                      {/* Category header */}
+                      <div
+                        className={`flex items-center gap-2 p-3 cursor-pointer ${group.color} border-b`}
+                        onClick={() => toggleCollapseCategory(group.categoryKey)}
+                      >
+                        <Checkbox
+                          checked={allGroupSelected}
+                          onCheckedChange={() => toggleCategoryAll(group.categoryKey, group.tasks)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="bg-white"
+                        />
+                        {isCollapsed ?
+                          <ChevronRight className="w-4 h-4" /> :
+                          <ChevronDown className="w-4 h-4" />
+                        }
+                        <span className="font-semibold text-sm">{group.label}</span>
+                        <Badge variant="outline" className="mr-auto bg-white/60 text-xs">
+                          {groupSelectedCount}/{group.tasks.length} נבחרו
+                        </Badge>
+                      </div>
+
+                      {/* Tasks in category */}
+                      {!isCollapsed && (
+                        <div className="divide-y">
+                          {group.tasks.map(task => (
+                            <div
+                              key={task._previewId}
+                              className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
+                                selectedTaskIds.has(task._previewId) ? 'bg-white' : 'bg-gray-50/50 opacity-60'
+                              }`}
+                            >
+                              <Checkbox
+                                checked={selectedTaskIds.has(task._previewId)}
+                                onCheckedChange={() => toggleTask(task._previewId)}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">{task.client_name}</p>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <span>{task.period}</span>
+                                  <span>•</span>
+                                  <span>יעד: {format(new Date(task.due_date), 'dd/MM/yyyy')}</span>
+                                  <span>•</span>
+                                  <span className="text-gray-400">{FREQUENCY_LABELS[task._frequency]}</span>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-400 hover:text-red-500 h-7 w-7 p-0"
+                                onClick={() => removeFromPreview(task._previewId)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-3 border-t">
                 <Button
                   onClick={createTasks}
-                  disabled={isGenerating}
+                  disabled={isGenerating || selectedCount === 0}
                   className="flex-1"
                 >
                   {isGenerating ? (
@@ -443,7 +667,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4 ml-2" />
-                      צור {previewTasks.length} משימות
+                      צור {selectedCount} משימות
                     </>
                   )}
                 </Button>
