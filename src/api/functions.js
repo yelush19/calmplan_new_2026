@@ -388,6 +388,15 @@ async function syncClientsFromBoard(boardId) {
 
   log.push(`${timestamp()} מתחיל סנכרון לקוחות מלוח ${boardId}...`);
 
+  // Fetch column definitions for title-based mapping
+  let columnDefs = null;
+  try {
+    columnDefs = await monday.getBoardColumns(boardId);
+    log.push(`${timestamp()} נטענו ${columnDefs.length} הגדרות עמודות`);
+  } catch (err) {
+    log.push(`${timestamp()} אזהרה: לא ניתן לטעון הגדרות עמודות, ממשיך עם מיפוי בסיסי`);
+  }
+
   // Fetch items from Monday
   const items = await monday.getBoardItems(boardId);
   log.push(`${timestamp()} נטענו ${items.length} פריטים מ-Monday.com`);
@@ -406,7 +415,7 @@ async function syncClientsFromBoard(boardId) {
 
   for (const item of items) {
     try {
-      const clientData = monday.mapMondayItemToClient(item, boardId);
+      const clientData = monday.mapMondayItemToClient(item, boardId, columnDefs);
 
       const existing = clientsByMondayId[String(item.id)];
       if (existing) {

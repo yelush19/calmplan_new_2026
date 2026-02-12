@@ -48,6 +48,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     reporting_info: {
       vat_reporting_frequency: 'monthly',
       tax_advances_frequency: 'monthly',
+      deductions_frequency: 'monthly',
+      social_security_frequency: 'monthly',
       payroll_frequency: 'monthly'
     },
     business_info: {
@@ -395,7 +397,13 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
   };
 
   const serviceTypes = [
-    { value: 'payroll', label: 'שכר' }, { value: 'vat_reporting', label: 'דיווחי מע״מ' }, { value: 'tax_advances', label: 'מקדמות מס' }, { value: 'bookkeeping', label: 'הנהלת חשבונות' }, { value: 'annual_reports', label: 'מאזנים שנתיים' }, { value: 'reconciliation', label: 'התאמות חשבונות' }, { value: 'consulting', label: 'ייעוץ' }
+    { value: 'bookkeeping', label: 'הנהלת חשבונות' },
+    { value: 'vat_reporting', label: 'דיווחי מע״מ' },
+    { value: 'tax_advances', label: 'מקדמות מס' },
+    { value: 'payroll', label: 'שכר (כולל ביט"ל וניכויים)' },
+    { value: 'annual_reports', label: 'מאזנים / דוחות שנתיים' },
+    { value: 'reconciliation', label: 'התאמות חשבונות' },
+    { value: 'consulting', label: 'ייעוץ' },
   ];
 
   const serviceProviderTypeLabels = {
@@ -618,6 +626,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <div className="grid md:grid-cols-3 gap-4">
                 <div><Label>תדירות דיווח מע״מ</Label><Select value={formData.reporting_info.vat_reporting_frequency} onValueChange={(value) => handleInputChange('vat_reporting_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="quarterly">רבעוני</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
                 <div><Label>תדירות מקדמות מס</Label><Select value={formData.reporting_info.tax_advances_frequency} onValueChange={(value) => handleInputChange('tax_advances_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="quarterly">רבעוני</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
+                <div><Label>תדירות ניכויים</Label><Select value={formData.reporting_info.deductions_frequency} onValueChange={(value) => handleInputChange('deductions_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="semi_annual">חצי שנתי</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
+                <div><Label>תדירות ביטוח לאומי</Label><Select value={formData.reporting_info.social_security_frequency} onValueChange={(value) => handleInputChange('social_security_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
                 <div><Label>תדירות שכר</Label><Select value={formData.reporting_info.payroll_frequency} onValueChange={(value) => handleInputChange('payroll_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
               </div>
               <div>
@@ -779,6 +789,28 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                   {formData.tax_info.annual_tax_ids?.last_updated && (<div className="mt-3 text-sm text-gray-600">עודכן לאחרונה: {new Date(formData.tax_info.annual_tax_ids.last_updated).toLocaleDateString('he-IL')}</div>)}
                 </div>
               </div>
+              {/* 2025 Historical IDs */}
+              {formData.tax_info?.annual_tax_ids_history?.['2025'] && (
+                <div className="border-t pt-4 mt-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-600 mb-3">מזהים שנתיים 2025 (היסטוריה)</h4>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <Label className="text-gray-500">מזהה מקדמות 2025</Label>
+                        <Input value={formData.tax_info.annual_tax_ids_history['2025'].tax_advances_id || ''} readOnly className="bg-gray-100" />
+                      </div>
+                      <div>
+                        <Label className="text-gray-500">מזהה בל 2025</Label>
+                        <Input value={formData.tax_info.annual_tax_ids_history['2025'].social_security_id || ''} readOnly className="bg-gray-100" />
+                      </div>
+                      <div>
+                        <Label className="text-gray-500">מזהה ניכויים 2025</Label>
+                        <Input value={formData.tax_info.annual_tax_ids_history['2025'].deductions_id || ''} readOnly className="bg-gray-100" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div><Label htmlFor="preferred_method">אמצעי תקשורת מועדף</Label><Select value={formData.communication_preferences.preferred_method} onValueChange={(value) => handleInputChange('preferred_method', value, 'communication_preferences')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="email">אימייל</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem><SelectItem value="phone">טלפון</SelectItem><SelectItem value="teams">Teams</SelectItem></SelectContent></Select></div>
               <div><Label htmlFor="notes">הערות</Label><Textarea id="notes" value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} className="h-24" /></div>
             </TabsContent>

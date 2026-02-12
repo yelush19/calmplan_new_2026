@@ -7,27 +7,27 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle } from 'lucide-react';
 
 const serviceTypeLabels = {
+    bookkeeping: 'הנהלת חשבונות',
     bookkeeping_full: 'הנהלת חשבונות מלאה',
-    payroll: 'שכר',
-    annual_reports: 'מאזנים שנתיים',
-    special_reports: 'דוחות מיוחדים',
-    consulting: 'ייעוץ',
     vat_reporting: 'דיווחי מע״מ',
     tax_advances: 'מקדמות מס',
-    bookkeeping: 'הנהלת חשבונות',
-    reconciliation: 'התאמות חשבונות'
+    payroll: 'שכר',
+    annual_reports: 'מאזנים / דוחות שנתיים',
+    reconciliation: 'התאמות חשבונות',
+    consulting: 'ייעוץ',
+    special_reports: 'דוחות מיוחדים',
 };
 
 const serviceTypeColors = {
+    bookkeeping: 'bg-green-100 text-green-800 border-green-200',
     bookkeeping_full: 'bg-green-100 text-green-800 border-green-200',
-    payroll: 'bg-[#a8b396]/20 text-[#4a5f3a] border-[#a8b396]',
-    annual_reports: 'bg-[#8a9b7a]/20 text-[#4a5f3a] border-[#8a9b7a]',
-    special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    consulting: 'bg-gray-100 text-gray-800 border-gray-200',
     vat_reporting: 'bg-[#657453]/20 text-[#4a5f3a] border-[#657453]',
     tax_advances: 'bg-[#4a5f3a]/20 text-[#4a5f3a] border-[#4a5f3a]',
-    bookkeeping: 'bg-green-100 text-green-800 border-green-200',
-    reconciliation: 'bg-blue-100 text-blue-800 border-blue-200'
+    payroll: 'bg-[#a8b396]/20 text-[#4a5f3a] border-[#a8b396]',
+    annual_reports: 'bg-[#8a9b7a]/20 text-[#4a5f3a] border-[#8a9b7a]',
+    reconciliation: 'bg-blue-100 text-blue-800 border-blue-200',
+    consulting: 'bg-gray-100 text-gray-800 border-gray-200',
+    special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
 };
 
 const statusUI = {
@@ -88,6 +88,8 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const reportingFields = [
     { key: 'vat_reporting_frequency', label: 'מע"מ' },
     { key: 'tax_advances_frequency', label: 'מקדמות' },
+    { key: 'deductions_frequency', label: 'ניכויים' },
+    { key: 'social_security_frequency', label: 'בל' },
     { key: 'payroll_frequency', label: 'שכר' },
   ].filter(f => reportingInfo[f.key] && reportingInfo[f.key] !== 'not_applicable');
 

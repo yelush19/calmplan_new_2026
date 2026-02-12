@@ -403,10 +403,21 @@ export function parseColumnValues(columnValues) {
 }
 
 /**
- * Map a Monday item to a local Client entity
+ * Map a Monday item to a local Client entity.
+ * @param {Object} item - Monday board item
+ * @param {string} boardId - Board ID
+ * @param {Array} [columnDefs] - Column definitions from getBoardColumns() for title-based mapping
  */
-export function mapMondayItemToClient(item, boardId) {
+export function mapMondayItemToClient(item, boardId, columnDefs = null) {
   const cols = parseColumnValues(item.column_values);
+
+  // Build title lookup from column definitions (if available)
+  const titleMap = {};
+  if (columnDefs) {
+    for (const def of columnDefs) {
+      titleMap[def.id] = def.title;
+    }
+  }
 
   const client = {
     name: item.name,
@@ -416,11 +427,58 @@ export function mapMondayItemToClient(item, boardId) {
     monday_group_id: item.group?.id || '',
   };
 
-  // Map common column types
+  // Hebrew status labels → system values
+  const statusMap = {
+    'פעיל': 'active', 'לא פעיל': 'inactive', 'עבר': 'former',
+    'פוטנציאלי': 'potential', 'פיתוח': 'development', 'ממתין לקליטה': 'onboarding_pending',
+    'active': 'active', 'inactive': 'inactive', 'former': 'former',
+    'potential': 'potential', 'development': 'development', 'onboarding_pending': 'onboarding_pending',
+  };
+
+  // Title → field mapping for specific columns
+  const TITLE_FIELD_MAP = {
+    'ח"פ': 'entity_number',
+    'א מקדמות מה': '_tax_advances_id',
+    'תיק ניכויים': '_tax_deduction_file',
+    "מזהה ניכ' בל": '_social_security_id',
+    "מה מזהה ניכ'": '_deductions_id',
+    'תדירות_מעמ': '_freq_vat',
+    'תדירות_מקדמות': '_freq_tax_advances',
+    'תדירות_ניכויים': '_freq_deductions',
+    'תדירות_ביטוח_לאומי': '_freq_social_security',
+    'סוג לקוח': '_service_type',
+    'סוג שירות נוסף': '_extra_services',
+    'שם_רוח_ מלווה': '_auditor',
+    'הערות_מיוחדות': '_special_notes',
+    'איש_קשר_ראשי': '_primary_contact',
+    'ID CalmPlan': '_calmplan_id',
+    'תאריך_יעד_מעמ': '_deadline_vat',
+    'תאריך_יעד_מקדמות': '_deadline_tax_advances',
+    'תאריך_יעד_ניכויים': '_deadline_deductions',
+    'תאריך_יעד_ביטוח_לאומי': '_deadline_social_security',
+  };
+
+  const frequencyMap = {
+    'חודשי': 'monthly', 'דו-חודשי': 'bimonthly', 'דו חודשי': 'bimonthly',
+    'רבעוני': 'quarterly', 'חצי שנתי': 'semi_annual',
+    'לא רלוונטי': 'not_applicable', 'לבדוק קיום': 'check_needed',
+  };
+
+  // Temp storage for title-mapped fields
+  const mapped = {};
+
   const columnTexts = {};
   for (const [colId, col] of Object.entries(cols)) {
     columnTexts[colId] = col.text;
+    const title = titleMap[colId];
 
+    // Title-based mapping (preferred when columnDefs are available)
+    if (title && TITLE_FIELD_MAP[title] && col.text) {
+      mapped[TITLE_FIELD_MAP[title]] = col.text;
+      continue;
+    }
+
+    // Fallback: type-based mapping
     switch (col.type) {
       case 'phone':
         if (!client.phone) client.phone = col.text;
@@ -428,23 +486,8 @@ export function mapMondayItemToClient(item, boardId) {
       case 'email':
         if (!client.email) client.email = col.text;
         break;
-      case 'color': // status column type
+      case 'color':
         if (!client.status && col.text) {
-          // Map Hebrew status labels to system values
-          const statusMap = {
-            'פעיל': 'active',
-            'לא פעיל': 'inactive',
-            'עבר': 'former',
-            'פוטנציאלי': 'potential',
-            'פיתוח': 'development',
-            'ממתין לקליטה': 'onboarding_pending',
-            'active': 'active',
-            'inactive': 'inactive',
-            'former': 'former',
-            'potential': 'potential',
-            'development': 'development',
-            'onboarding_pending': 'onboarding_pending',
-          };
           client.status = statusMap[col.text] || 'active';
         }
         break;
@@ -471,10 +514,65 @@ export function mapMondayItemToClient(item, boardId) {
     }
   }
 
-  // Store compact column data for reference
-  client.monday_column_texts = columnTexts;
+  // Apply title-mapped fields to structured client object
+  if (mapped.entity_number) {
+    client.entity_number = mapped.entity_number;
+  }
 
-  // Default to active if no status was found
+  // Tax info
+  client.tax_info = {};
+  if (mapped.entity_number) {
+    client.tax_info.tax_id = mapped.entity_number;
+    client.tax_info.vat_file_number = mapped.entity_number;
+  }
+  if (mapped._tax_deduction_file) {
+    client.tax_info.tax_deduction_file_number = mapped._tax_deduction_file;
+    client.tax_info.social_security_file_number = mapped._tax_deduction_file + '00';
+  }
+
+  // Annual IDs (these are year-specific)
+  const annualIds = {};
+  if (mapped._tax_advances_id) annualIds.tax_advances_id = mapped._tax_advances_id;
+  if (mapped._social_security_id) annualIds.social_security_id = mapped._social_security_id;
+  if (mapped._deductions_id) annualIds.deductions_id = mapped._deductions_id;
+  if (Object.keys(annualIds).length > 0) {
+    client.tax_info.annual_tax_ids = annualIds;
+  }
+
+  // Reporting frequencies
+  client.reporting_info = {};
+  if (mapped._freq_vat) client.reporting_info.vat_reporting_frequency = frequencyMap[mapped._freq_vat] || mapped._freq_vat;
+  if (mapped._freq_tax_advances) client.reporting_info.tax_advances_frequency = frequencyMap[mapped._freq_tax_advances] || mapped._freq_tax_advances;
+  if (mapped._freq_deductions) client.reporting_info.deductions_frequency = frequencyMap[mapped._freq_deductions] || mapped._freq_deductions;
+  if (mapped._freq_social_security) client.reporting_info.social_security_frequency = frequencyMap[mapped._freq_social_security] || mapped._freq_social_security;
+
+  // Service types from סוג לקוח
+  if (mapped._service_type) {
+    const svc = mapped._service_type;
+    const types = [];
+    if (svc.includes('שכר')) types.push('payroll');
+    if (svc.includes('הנה"ח') || svc.includes('הנהח')) types.push('bookkeeping');
+    if (client.reporting_info.vat_reporting_frequency && client.reporting_info.vat_reporting_frequency !== 'not_applicable') types.push('vat_reporting');
+    if (client.reporting_info.tax_advances_frequency && client.reporting_info.tax_advances_frequency !== 'not_applicable' && client.reporting_info.tax_advances_frequency !== 'check_needed') types.push('tax_advances');
+    client.service_types = types;
+  }
+
+  // Extra services, auditor, contact, notes
+  if (mapped._extra_services) client.extra_services = mapped._extra_services;
+  if (mapped._auditor) client.auditor = mapped._auditor;
+  if (mapped._special_notes) {
+    client.notes = (client.notes || '') + mapped._special_notes;
+  }
+  if (mapped._primary_contact) {
+    const parts = mapped._primary_contact.split(',');
+    if (parts[0]) client.contact_person = parts[0].trim();
+    if (parts[1]) client.email = parts[1].trim();
+  }
+  if (mapped._calmplan_id) {
+    client.integration_info = { calmplan_id: mapped._calmplan_id };
+  }
+
+  client.monday_column_texts = columnTexts;
   if (!client.status) client.status = 'active';
 
   return client;
