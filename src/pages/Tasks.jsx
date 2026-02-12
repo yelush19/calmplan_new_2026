@@ -27,6 +27,7 @@ const statusConfig = {
   issue: { text: 'בעיה', color: 'bg-pink-100 text-pink-800' },
   ready_for_reporting: { text: 'מוכן לדיווח', color: 'bg-teal-100 text-teal-800' },
   reported_waiting_for_payment: { text: 'ממתין לתשלום', color: 'bg-yellow-100 text-yellow-800' },
+  not_relevant: { text: 'לא רלוונטי', color: 'bg-gray-50 text-gray-400' },
 };
 
 const priorityConfig = {

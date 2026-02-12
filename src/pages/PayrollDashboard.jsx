@@ -1,21 +1,19 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Task } from '@/api/entities';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import {
-  Loader, RefreshCw, Users, Briefcase, ChevronLeft, ChevronRight,
-  ArrowRight, X, Check, AlertTriangle, ChevronDown, ChevronUp
+  Loader, RefreshCw, Briefcase, ChevronLeft, ChevronRight,
+  ArrowRight, Users, X, Check
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   PAYROLL_SERVICES,
   ADDITIONAL_SERVICES,
@@ -23,10 +21,8 @@ import {
   getServiceForTask,
   getTaskProcessSteps,
   toggleStep,
-  getStepCompletionPercent,
 } from '@/config/processTemplates';
 
-// All services shown on the payroll dashboard
 const payrollDashboardServices = {
   ...PAYROLL_SERVICES,
   ...Object.fromEntries(
@@ -43,12 +39,8 @@ export default function PayrollDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1));
-  const [viewMode, setViewMode] = useState('steps');
-  const [expandedClients, setExpandedClients] = useState({});
 
-  useEffect(() => {
-    loadTasks();
-  }, [selectedMonth]);
+  useEffect(() => { loadTasks(); }, [selectedMonth]);
 
   const loadTasks = async () => {
     setIsLoading(true);
@@ -76,25 +68,26 @@ export default function PayrollDashboardPage() {
     setSearchParams(searchParams);
   };
 
-  // Group tasks by client
-  const clientGroups = useMemo(() => {
-    const groups = {};
-    filteredTasks.forEach(task => {
-      const clientName = task.client_name || 'ללא לקוח';
-      if (!groups[clientName]) groups[clientName] = [];
-      groups[clientName].push(task);
+  const serviceData = useMemo(() => {
+    const result = {};
+    Object.values(payrollDashboardServices).forEach(service => {
+      const serviceTasks = filteredTasks.filter(t => service.taskCategories.includes(t.category));
+      if (serviceTasks.length > 0) {
+        result[service.key] = {
+          service,
+          clientRows: serviceTasks
+            .map(task => ({ clientName: task.client_name || 'ללא לקוח', task }))
+            .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
+        };
+      }
     });
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b, 'he'));
+    return result;
   }, [filteredTasks]);
 
-  // Stats
   const stats = useMemo(() => {
     const total = filteredTasks.length;
     const completed = filteredTasks.filter(t => t.status === 'completed').length;
-    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    let totalSteps = 0;
-    let doneSteps = 0;
+    let totalSteps = 0, doneSteps = 0;
     filteredTasks.forEach(task => {
       const service = getServiceForTask(task);
       if (service) {
@@ -103,94 +96,47 @@ export default function PayrollDashboardPage() {
         doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
       }
     });
-    const stepsPct = totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
-
-    return { total, completed, pct, totalSteps, doneSteps, stepsPct };
+    return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0 };
   }, [filteredTasks]);
-
-  // Alerts
-  const alerts = useMemo(() => {
-    const result = [];
-    clientGroups.forEach(([clientName, clientTasks]) => {
-      clientTasks.forEach(task => {
-        const service = getServiceForTask(task);
-        if (!service || task.status === 'completed' || task.status === 'not_relevant') return;
-        const steps = task.process_steps || {};
-        service.steps.forEach(step => {
-          if (!steps[step.key]?.done) {
-            result.push({
-              clientName,
-              serviceName: service.label,
-              stepLabel: step.label,
-              taskId: task.id,
-              stepKey: step.key,
-            });
-          }
-        });
-      });
-    });
-    return result;
-  }, [clientGroups]);
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
     const currentSteps = getTaskProcessSteps(task);
     const updatedSteps = toggleStep(currentSteps, stepKey);
     try {
       await Task.update(task.id, { process_steps: updatedSteps });
-      setTasks(prev => prev.map(t =>
-        t.id === task.id ? { ...t, process_steps: updatedSteps } : t
-      ));
-    } catch (error) {
-      console.error("Error updating step:", error);
-    }
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
+    } catch (error) { console.error("Error updating step:", error); }
   }, []);
 
   const handleDateChange = useCallback(async (task, stepKey, newDate) => {
     const currentSteps = getTaskProcessSteps(task);
-    const updatedSteps = {
-      ...currentSteps,
-      [stepKey]: { ...currentSteps[stepKey], date: newDate },
-    };
+    const updatedSteps = { ...currentSteps, [stepKey]: { ...currentSteps[stepKey], date: newDate } };
     try {
       await Task.update(task.id, { process_steps: updatedSteps });
-      setTasks(prev => prev.map(t =>
-        t.id === task.id ? { ...t, process_steps: updatedSteps } : t
-      ));
-    } catch (error) {
-      console.error("Error updating date:", error);
-    }
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
+    } catch (error) { console.error("Error updating date:", error); }
   }, []);
 
-  const handleMonthChange = (direction) => {
-    setSelectedMonth(current => direction === 'prev' ? subMonths(current, 1) : addMonths(current, 1));
-  };
-
-  const toggleClientExpand = (clientName) => {
-    setExpandedClients(prev => ({ ...prev, [clientName]: !prev[clientName] }));
+  const handleMonthChange = (dir) => {
+    setSelectedMonth(c => dir === 'prev' ? subMonths(c, 1) : addMonths(c, 1));
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      {/* Back + Client filter */}
+    <div className="p-4 md:p-6 space-y-5">
       <div className="flex items-center gap-2 flex-wrap">
         <Link to={createPageUrl('ClientsDashboard')}>
           <Button variant="outline" size="sm" className="gap-2 text-gray-600 hover:text-emerald-700">
-            <ArrowRight className="w-4 h-4" />
-            חזור ללוח לקוחות
+            <ArrowRight className="w-4 h-4" />חזור ללוח לקוחות
           </Button>
         </Link>
         {clientFilter && (
           <Badge className="bg-gray-600 text-white text-sm px-3 py-1.5 gap-2">
-            <Users className="w-3.5 h-3.5" />
-            {clientFilter}
-            <button onClick={clearClientFilter} className="hover:bg-white/20 rounded-full p-0.5 ml-1">
-              <X className="w-3 h-3" />
-            </button>
+            <Users className="w-3.5 h-3.5" />{clientFilter}
+            <button onClick={clearClientFilter} className="hover:bg-white/20 rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
           </Badge>
         )}
       </div>
 
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -203,15 +149,6 @@ export default function PayrollDashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v)}
-            className="bg-white p-1 rounded-lg shadow-sm border border-gray-200">
-            <ToggleGroupItem value="steps" className="data-[state=on]:bg-gray-100 data-[state=on]:text-gray-700 text-xs px-2">
-              מעקב שלבים
-            </ToggleGroupItem>
-            <ToggleGroupItem value="client" className="data-[state=on]:bg-gray-100 data-[state=on]:text-gray-700 text-xs px-2">
-              לפי לקוח
-            </ToggleGroupItem>
-          </ToggleGroup>
           <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
               <ChevronRight className="w-4 h-4" />
@@ -232,7 +169,6 @@ export default function PayrollDashboardPage() {
         </div>
       </motion.div>
 
-      {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
           <CardContent className="p-3 text-center">
@@ -255,33 +191,27 @@ export default function PayrollDashboardPage() {
         <Card className="bg-gradient-to-br from-sky-50 to-white border-sky-200 shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-sky-700">{stats.stepsPct}%</div>
-            <div className="text-xs text-gray-500">שלבים שהושלמו ({stats.doneSteps}/{stats.totalSteps})</div>
+            <div className="text-xs text-gray-500">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Alerts */}
-      {alerts.length > 0 && viewMode === 'steps' && (
-        <AlertsSection alerts={alerts} />
-      )}
-
-      {/* Content */}
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
-      ) : clientGroups.length > 0 ? (
-        viewMode === 'steps' ? (
-          <StepsView
-            clientGroups={clientGroups}
-            expandedClients={expandedClients}
-            onToggleExpand={toggleClientExpand}
-            onToggleStep={handleToggleStep}
-            onDateChange={handleDateChange}
-          />
-        ) : (
-          <ClientListView clientGroups={clientGroups} />
-        )
+      ) : Object.keys(serviceData).length > 0 ? (
+        <div className="space-y-6">
+          {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => (
+            <ServiceTable
+              key={serviceKey}
+              service={service}
+              clientRows={clientRows}
+              onToggleStep={handleToggleStep}
+              onDateChange={handleDateChange}
+            />
+          ))}
+        </div>
       ) : (
         <Card className="p-12 text-center border-gray-200">
           <Briefcase className="w-16 h-16 mx-auto text-gray-300 mb-4" />
@@ -293,195 +223,94 @@ export default function PayrollDashboardPage() {
   );
 }
 
-// =====================================================
-// ALERTS SECTION
-// =====================================================
-
-function AlertsSection({ alerts }) {
-  const [showAll, setShowAll] = useState(false);
-
-  const alertsByStep = {};
-  alerts.forEach(a => {
-    const key = `${a.serviceName}: ${a.stepLabel}`;
-    if (!alertsByStep[key]) alertsByStep[key] = [];
-    alertsByStep[key].push(a.clientName);
-  });
-
-  const summaryAlerts = Object.entries(alertsByStep).slice(0, showAll ? undefined : 3);
+function ServiceTable({ service, clientRows, onToggleStep, onDateChange }) {
+  const completedCount = clientRows.filter(r => r.task.status === 'completed').length;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <Card className="border-amber-200 bg-amber-50/50">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
-            <h3 className="font-semibold text-amber-800">שלבים שטרם הושלמו</h3>
-            <Badge className="bg-amber-200 text-amber-800 text-xs">{alerts.length}</Badge>
-          </div>
-          <div className="space-y-2">
-            {summaryAlerts.map(([stepName, clients]) => (
-              <div key={stepName} className="flex items-start gap-2 text-sm">
-                <span className="font-medium text-amber-900 whitespace-nowrap">{stepName}:</span>
-                <span className="text-amber-700">{clients.join(', ')}</span>
-              </div>
-            ))}
-          </div>
-          {Object.keys(alertsByStep).length > 3 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 text-amber-700 hover:text-amber-900 text-xs"
-              onClick={() => setShowAll(!showAll)}
-            >
-              {showAll ? 'הצג פחות' : `הצג הכל (${Object.keys(alertsByStep).length})`}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-// =====================================================
-// STEPS VIEW
-// =====================================================
-
-function StepsView({ clientGroups, expandedClients, onToggleExpand, onToggleStep, onDateChange }) {
-  return (
-    <div className="space-y-3">
-      {clientGroups.map(([clientName, clientTasks], index) => (
-        <motion.div
-          key={clientName}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.03 }}
-        >
-          <ClientStepsCard
-            clientName={clientName}
-            tasks={clientTasks}
-            isExpanded={expandedClients[clientName] !== false}
-            onToggleExpand={() => onToggleExpand(clientName)}
-            onToggleStep={onToggleStep}
-            onDateChange={onDateChange}
+    <Card className="border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 className="font-bold text-gray-800">{service.label}</h2>
+          <span className="text-xs text-gray-500">{completedCount}/{clientRows.length} הושלמו</span>
+        </div>
+        <div className="w-24 bg-gray-200 rounded-full h-1.5">
+          <div
+            className="h-1.5 rounded-full bg-emerald-500 transition-all"
+            style={{ width: `${clientRows.length > 0 ? Math.round((completedCount / clientRows.length) * 100) : 0}%` }}
           />
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-function ClientStepsCard({ clientName, tasks, isExpanded, onToggleExpand, onToggleStep, onDateChange }) {
-  const tasksByService = {};
-  tasks.forEach(task => {
-    const service = getServiceForTask(task);
-    if (service) {
-      tasksByService[service.key] = { service, task };
-    }
-  });
-
-  let totalSteps = 0;
-  let doneSteps = 0;
-  Object.values(tasksByService).forEach(({ service, task }) => {
-    const steps = task.process_steps || {};
-    totalSteps += service.steps.length;
-    doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
-  });
-  const completionPct = totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
-  const allCompleted = tasks.every(t => t.status === 'completed');
-
-  return (
-    <Card className={`border shadow-sm transition-colors ${allCompleted ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-200'}`}>
-      <button
-        onClick={onToggleExpand}
-        className="w-full p-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors rounded-t-lg"
-      >
-        <div className="flex items-center gap-3">
-          <span className="font-semibold text-gray-800">{clientName}</span>
-          <div className="flex items-center gap-1.5">
-            {Object.values(tasksByService).map(({ service, task }) => {
-              const pct = getStepCompletionPercent(task);
-              const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
-              return (
-                <TooltipProvider key={service.key}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge className={`${statusCfg.bg} ${statusCfg.text} text-[10px] px-1.5 py-0.5`}>
-                        {service.label} {pct}%
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{service.label}: {statusCfg.label}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              );
-            })}
-          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 w-32">
-            <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-              <div
-                className={`h-1.5 rounded-full transition-all ${completionPct === 100 ? 'bg-emerald-500' : 'bg-sky-500'}`}
-                style={{ width: `${completionPct}%` }}
-              />
-            </div>
-            <span className="text-xs text-gray-500 w-8 text-left">{completionPct}%</span>
-          </div>
-          {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-        </div>
-      </button>
+      </div>
 
-      {isExpanded && (
-        <CardContent className="pt-0 pb-3 px-3">
-          <div className="border-t border-gray-100 pt-3 space-y-3">
-            {Object.values(tasksByService).map(({ service, task }) => (
-              <ServiceStepsRow
-                key={service.key}
-                service={service}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100">
+              <th className="text-right py-2 px-4 font-semibold text-gray-600 text-xs bg-gray-50/50 sticky right-0 z-10 min-w-[140px]">
+                לקוח
+              </th>
+              {service.steps.map(step => (
+                <th key={step.key} className="text-center py-2 px-2 font-medium text-gray-500 text-[11px] bg-gray-50/50 min-w-[80px]">
+                  {step.label}
+                </th>
+              ))}
+              <th className="text-center py-2 px-3 font-medium text-gray-500 text-[11px] bg-gray-50/50 min-w-[80px]">
+                סטטוס
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {clientRows.map(({ clientName, task }, idx) => (
+              <ClientRow
+                key={task.id}
+                clientName={clientName}
                 task={task}
+                service={service}
+                isEven={idx % 2 === 0}
                 onToggleStep={onToggleStep}
                 onDateChange={onDateChange}
               />
             ))}
-          </div>
-        </CardContent>
-      )}
+          </tbody>
+        </table>
+      </div>
     </Card>
   );
 }
 
-function ServiceStepsRow({ service, task, onToggleStep, onDateChange }) {
+function ClientRow({ clientName, task, service, isEven, onToggleStep, onDateChange }) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
+  const allDone = service.steps.every(s => steps[s.key]?.done);
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-700">{service.label}</span>
-        <Badge className={`${statusCfg.bg} ${statusCfg.text} text-[10px] px-1.5 py-0`}>
-          {statusCfg.label}
-        </Badge>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {service.steps.map(stepDef => {
-          const stepData = steps[stepDef.key] || { done: false, date: null };
-          return (
-            <StepChip
-              key={stepDef.key}
-              stepDef={stepDef}
+    <tr className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50/40' : isEven ? 'bg-white' : 'bg-gray-50/30'} hover:bg-gray-100/50`}>
+      <td className={`py-1.5 px-4 font-medium text-gray-800 text-xs sticky right-0 z-10 ${allDone ? 'bg-emerald-50/40' : isEven ? 'bg-white' : 'bg-gray-50/30'}`}>
+        <span className="truncate block max-w-[160px]">{clientName}</span>
+      </td>
+
+      {service.steps.map(stepDef => {
+        const stepData = steps[stepDef.key] || { done: false, date: null };
+        return (
+          <td key={stepDef.key} className="py-1.5 px-2 text-center">
+            <StepCell
               stepData={stepData}
               onToggle={() => onToggleStep(task, stepDef.key)}
               onDateChange={(date) => onDateChange(task, stepDef.key, date)}
             />
-          );
-        })}
-      </div>
-    </div>
+          </td>
+        );
+      })}
+
+      <td className="py-1.5 px-3 text-center">
+        <Badge className={`${statusCfg.bg} ${statusCfg.text} text-[10px] px-1.5 py-0.5 font-semibold`}>
+          {statusCfg.label}
+        </Badge>
+      </td>
+    </tr>
   );
 }
 
-function StepChip({ stepDef, stepData, onToggle, onDateChange }) {
+function StepCell({ stepData, onToggle, onDateChange }) {
   const [editingDate, setEditingDate] = useState(false);
 
   const formatDate = (dateStr) => {
@@ -490,105 +319,55 @@ function StepChip({ stepDef, stepData, onToggle, onDateChange }) {
     return `${d.getDate()}/${d.getMonth() + 1}`;
   };
 
-  return (
-    <div
-      className={`
-        inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-all cursor-pointer
-        ${stepData.done
-          ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-          : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-        }
-      `}
-    >
+  if (!stepData.done) {
+    return (
       <button
         onClick={onToggle}
-        className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors
-          ${stepData.done
-            ? 'bg-emerald-500 border-emerald-500'
-            : 'border-gray-300 hover:border-emerald-400'
-          }
-        `}
+        className="w-8 h-8 mx-auto rounded-md border-2 border-dashed border-gray-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all flex items-center justify-center group"
       >
-        {stepData.done && <Check className="w-3 h-3 text-white" />}
+        <Check className="w-3.5 h-3.5 text-gray-300 group-hover:text-emerald-400 transition-colors" />
       </button>
+    );
+  }
 
-      <span className={`text-xs font-medium ${stepData.done ? 'text-emerald-700' : 'text-gray-600'}`}>
-        {stepDef.label}
-      </span>
-
-      {stepData.done && stepData.date && (
-        <Popover open={editingDate} onOpenChange={setEditingDate}>
-          <PopoverTrigger asChild>
-            <button className="text-[10px] text-emerald-600 hover:text-emerald-800 bg-emerald-100 rounded px-1 py-0.5">
-              {formatDate(stepData.date)}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-3" align="start">
-            <div className="space-y-2">
-              <label className="text-xs text-gray-500">שנה תאריך:</label>
-              <input
-                type="date"
-                value={stepData.date || ''}
-                onChange={(e) => {
-                  onDateChange(e.target.value);
-                  setEditingDate(false);
-                }}
-                className="block w-full text-sm border border-gray-300 rounded px-2 py-1"
-              />
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
-    </div>
-  );
-}
-
-// =====================================================
-// CLIENT LIST VIEW
-// =====================================================
-
-function ClientListView({ clientGroups }) {
   return (
-    <div className="space-y-3">
-      {clientGroups.map(([clientName, clientTasks]) => (
-        <Card key={clientName} className="border-gray-200 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center justify-between">
-              <span>{clientName}</span>
-              <Link to={createPageUrl('ClientsDashboard')}>
-                <Button variant="ghost" size="sm" className="text-xs text-gray-400 hover:text-emerald-600 gap-1">
-                  <ArrowRight className="w-3 h-3" />
-                  לוח
-                </Button>
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {clientTasks.map(task => {
-                const service = getServiceForTask(task);
-                const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
-                const pct = getStepCompletionPercent(task);
-                return (
-                  <li key={task.id} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg">
-                    <span className="font-medium text-gray-700 text-sm">
-                      {service?.label || task.title}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {pct > 0 && pct < 100 && (
-                        <span className="text-xs text-gray-400">{pct}%</span>
-                      )}
-                      <Badge className={`${statusCfg.bg} ${statusCfg.text} text-xs font-semibold`}>
-                        {statusCfg.label}
-                      </Badge>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <Popover open={editingDate} onOpenChange={setEditingDate}>
+      <PopoverTrigger asChild>
+        <button className="w-full mx-auto flex flex-col items-center gap-0 group">
+          <div className="w-8 h-8 rounded-md bg-emerald-500 flex items-center justify-center shadow-sm group-hover:bg-emerald-600 transition-colors">
+            <Check className="w-4 h-4 text-white" />
+          </div>
+          {stepData.date && (
+            <span className="text-[9px] text-emerald-600 font-medium mt-0.5 leading-none">
+              {formatDate(stepData.date)}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3" align="center" side="top">
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-500 font-medium">תאריך ביצוע:</label>
+            <input
+              type="date"
+              value={stepData.date || ''}
+              onChange={(e) => {
+                onDateChange(e.target.value);
+                setEditingDate(false);
+              }}
+              className="block w-full text-sm border border-gray-300 rounded px-2 py-1.5"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs text-red-500 hover:text-red-700 hover:border-red-300"
+            onClick={() => { onToggle(); setEditingDate(false); }}
+          >
+            בטל סימון
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
