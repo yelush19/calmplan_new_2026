@@ -310,6 +310,40 @@ export function getStepCompletionPercent(task) {
   return Math.round((doneSteps / totalSteps) * 100);
 }
 
+// ============================================================
+// BIMONTHLY HELPERS
+// ============================================================
+
+// Map service/column keys to client reporting_info frequency fields
+const FREQUENCY_FIELD_MAP = {
+  vat: 'vat_reporting_frequency',
+  tax_advances: 'tax_advances_frequency',
+  deductions: 'tax_advances_frequency', // follows tax advances schedule
+};
+
+/**
+ * Check if a given month is an off-month for bimonthly reporting.
+ * Bimonthly reports cover pairs: Jan-Feb, Mar-Apr, May-Jun, etc.
+ * Reports are filed on even months (Feb, Apr, Jun, Aug, Oct, Dec).
+ * Odd months (Jan, Mar, May, Jul, Sep, Nov) are off-months → "לא רלוונטי".
+ *
+ * @param {Object} client - Client entity with reporting_info
+ * @param {string} serviceKey - Service key (vat, tax_advances, deductions)
+ * @param {Date|number} month - Date object or 0-indexed month number
+ * @returns {boolean} true if this is an off-month for the client's bimonthly reporting
+ */
+export function isBimonthlyOffMonth(client, serviceKey, month) {
+  const field = FREQUENCY_FIELD_MAP[serviceKey];
+  if (!field) return false;
+
+  const frequency = client?.reporting_info?.[field];
+  if (frequency !== 'bimonthly') return false;
+
+  const monthIndex = month instanceof Date ? month.getMonth() : month;
+  // Off months: Jan(0), Mar(2), May(4), Jul(6), Sep(8), Nov(10) = even 0-indexed
+  return monthIndex % 2 === 0;
+}
+
 // Status definitions shared across dashboards
 export const STATUS_CONFIG = {
   not_started:                   { label: 'נותרו השלמות',   bg: 'bg-gray-200',       text: 'text-gray-700',     border: 'border-gray-300',    priority: 3 },
