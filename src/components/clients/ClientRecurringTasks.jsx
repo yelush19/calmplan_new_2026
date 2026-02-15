@@ -138,86 +138,67 @@ function clientHasService(categoryKey, client) {
 }
 
 /**
- * Generate due dates for a given category and client.
- * Uses the official 2026 tax calendar for accurate deadlines.
+ * Generate tasks for SPECIFIC selected months.
+ * No filtering by "today" — the user decides which months to generate.
  */
-function generateDueDates(categoryKey, client, monthsAhead) {
+function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
   const frequency = getClientFrequency(categoryKey, client);
   if (frequency === 'not_applicable') return [];
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const dates = [];
+  const is874 = isClient874(client);
+  const tasks = [];
 
   if (frequency === 'yearly') {
-    const dueDate = new Date(year, 4, 31);
-    if (dueDate >= now) {
-      dates.push({ date: dueDate, period: `${year - 1}`, description: `דוח שנתי לשנת ${year - 1}` });
+    // Only show if a full year month is selected
+    if (selectedMonths.length > 0) {
+      tasks.push({
+        date: new Date(year, 4, 31),
+        period: `${year - 1}`,
+        description: `דוח שנתי לשנת ${year - 1}`,
+        reportMonth: null,
+        is874,
+      });
     }
-    if (monthsAhead > 6) {
-      dates.push({ date: new Date(year + 1, 4, 31), period: `${year}`, description: `דוח שנתי לשנת ${year}` });
-    }
-    return dates;
+    return tasks;
   }
 
-  const is874 = isClient874(client);
+  for (const reportMonth of selectedMonths) {
+    // Check frequency alignment
+    if (frequency === 'bimonthly') {
+      // Bimonthly: only even months
+      if (reportMonth % 2 !== 0) continue;
+    }
+    if (frequency === 'quarterly') {
+      // Quarterly: months 3, 6, 9, 12
+      if (![3, 6, 9, 12].includes(reportMonth)) continue;
+    }
 
-  if (frequency === 'bimonthly') {
-    const biMonths = [2, 4, 6, 8, 10, 12];
-    for (const m of biMonths) {
-      const dueDateStr = getDueDateForCategory(categoryKey, client, m);
-      const dueDate = dueDateStr ? new Date(dueDateStr) : new Date(year, m, 15);
-      if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
-        dates.push({ date: dueDate, period: BIMONTHLY_PERIOD_NAMES[m], description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${BIMONTHLY_PERIOD_NAMES[m]} ${year}`, is874 });
-      }
-    }
-    for (const m of biMonths) {
-      const dueDate = new Date(year + 1, m, 19);
-      if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
-        dates.push({ date: dueDate, period: BIMONTHLY_PERIOD_NAMES[m], description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${BIMONTHLY_PERIOD_NAMES[m]} ${year + 1}`, is874 });
-      }
-    }
-    return dates;
-  }
+    const dueDateStr = getDueDateForCategory(categoryKey, client, reportMonth);
+    const dueDate = dueDateStr ? new Date(dueDateStr) : new Date(year, reportMonth, 19);
 
-  if (frequency === 'quarterly') {
-    const qMonths = [3, 6, 9, 12];
-    for (const m of qMonths) {
-      const dueDateStr = getDueDateForCategory(categoryKey, client, m);
-      const dueDate = dueDateStr ? new Date(dueDateStr) : new Date(year, m, 15);
-      if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
-        dates.push({ date: dueDate, period: QUARTERLY_PERIOD_NAMES[m], description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${QUARTERLY_PERIOD_NAMES[m]} ${year}`, is874 });
-      }
-    }
-    for (const m of qMonths) {
-      const dueDate = new Date(year + 1, m, 19);
-      if (dueDate >= now && dueDate <= addMonths(now, monthsAhead)) {
-        dates.push({ date: dueDate, period: QUARTERLY_PERIOD_NAMES[m], description: `${REPORT_CATEGORIES[categoryKey].label} עבור ${QUARTERLY_PERIOD_NAMES[m]} ${year + 1}`, is874 });
-      }
-    }
-    return dates;
-  }
-
-  // Monthly
-  const currentMonth = now.getMonth() + 1;
-  for (let i = 0; i < monthsAhead; i++) {
-    const reportMonthNum = ((currentMonth - 1 + i) % 12) + 1;
-    const reportYear = year + Math.floor((currentMonth - 1 + i) / 12);
-    const dueDateStr = getDueDateForCategory(categoryKey, client, reportMonthNum);
-    let dueDate;
-    if (dueDateStr) {
-      dueDate = new Date(dueDateStr);
+    let period;
+    if (frequency === 'bimonthly') {
+      period = BIMONTHLY_PERIOD_NAMES[reportMonth] || HEBREW_MONTH_NAMES[reportMonth - 1];
+    } else if (frequency === 'quarterly') {
+      period = QUARTERLY_PERIOD_NAMES[reportMonth] || HEBREW_MONTH_NAMES[reportMonth - 1];
     } else {
-      const nextMonth = reportMonthNum === 12 ? 1 : reportMonthNum + 1;
-      const nextYear = reportMonthNum === 12 ? reportYear + 1 : reportYear;
-      dueDate = new Date(nextYear, nextMonth - 1, 19);
+      period = `${HEBREW_MONTH_NAMES[reportMonth - 1]} ${year}`;
     }
-    if (dueDate >= now) {
-      const monthName = HEBREW_MONTH_NAMES[reportMonthNum - 1];
-      dates.push({ date: dueDate, period: `${monthName} ${reportYear}`, description: `${REPORT_CATEGORIES[categoryKey].label} עבור חודש ${monthName} ${reportYear}`, is874 });
+
+    const catLabel = REPORT_CATEGORIES[categoryKey].label;
+    let description;
+    if (frequency === 'bimonthly') {
+      description = `${catLabel} עבור ${period} ${year}`;
+    } else if (frequency === 'quarterly') {
+      description = `${catLabel} עבור ${period} ${year}`;
+    } else {
+      description = `${catLabel} עבור חודש ${HEBREW_MONTH_NAMES[reportMonth - 1]} ${year}`;
     }
+
+    tasks.push({ date: dueDate, period, description, reportMonth, is874 });
   }
-  return dates;
+
+  return tasks;
 }
 
 // ============================================================
@@ -231,9 +212,14 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewTasks, setPreviewTasks] = useState([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
-  const [generateMonths, setGenerateMonths] = useState(3);
   const [results, setResults] = useState(null);
   const [collapsedCategories, setCollapsedCategories] = useState(new Set());
+
+  // Month selection state — user picks which report months to generate
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonths, setSelectedMonths] = useState(new Set([currentMonth]));
 
   useEffect(() => { loadData(); }, []);
 
@@ -252,17 +238,42 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setIsLoading(false);
   };
 
+  const toggleMonth = (month) => {
+    setSelectedMonths(prev => {
+      const next = new Set(prev);
+      if (next.has(month)) {
+        next.delete(month);
+      } else {
+        next.add(month);
+      }
+      return next;
+    });
+  };
+
+  const selectAllMonths = () => {
+    setSelectedMonths(new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]));
+  };
+
+  const selectCurrentMonth = () => {
+    setSelectedMonths(new Set([currentMonth]));
+  };
+
   const generateTasksPreview = () => {
+    const monthsArray = Array.from(selectedMonths).sort((a, b) => a - b);
+    if (monthsArray.length === 0) return;
+
     const tasksToCreate = [];
     for (const client of clients) {
       for (const [categoryKey, categoryDef] of Object.entries(REPORT_CATEGORIES)) {
         if (!clientHasService(categoryKey, client)) continue;
         const freq = getClientFrequency(categoryKey, client);
         if (freq === 'not_applicable') continue;
-        const dueDates = generateDueDates(categoryKey, client, generateMonths);
-        for (const { date, period, description } of dueDates) {
+
+        const dueDates = generateTasksForMonths(categoryKey, client, monthsArray, selectedYear);
+        for (const { date, period, description, reportMonth, is874 } of dueDates) {
           const taskTitle = `${client.name} - ${description}`;
           const dueDateStr = format(date, 'yyyy-MM-dd');
+          // Check for existing tasks (by exact title OR by client+category+date)
           const alreadyExists = existingTasks.some(t =>
             t.title === taskTitle ||
             (t.client_name === client.name && t.category === categoryKey && t.due_date === dueDateStr)
@@ -274,11 +285,13 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
               _previewId: taskId, title: taskTitle,
               description: `${description}\nלקוח: ${client.name}${clientIs874 ? '\nסוג: מע"מ מפורט (874)' : ''}`,
               due_date: dueDateStr, client_name: client.name, client_id: client.id,
-              category: categoryKey, context: 'work', priority: 'high', status: 'not_started', is_recurring: true,
+              category: categoryKey, context: 'work', priority: 'high', status: 'not_started',
+              is_recurring: true, source: 'recurring_tasks',
               _categoryOrder: categoryDef.order, _categoryLabel: categoryDef.label,
               _categoryColor: categoryDef.color, _categoryAccent: categoryDef.accent,
               _categoryBgSoft: categoryDef.bgSoft, _categoryDot: categoryDef.dot,
               _frequency: freq, _is874: clientIs874, period,
+              _reportMonth: reportMonth,
             });
           }
         }
@@ -354,7 +367,11 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     const tasksToCreate = previewTasks.filter(t => selectedTaskIds.has(t._previewId));
     for (const taskData of tasksToCreate) {
       try {
-        const { _previewId, _categoryOrder, _categoryLabel, _categoryColor, _categoryAccent, _categoryBgSoft, _categoryDot, _frequency, _is874, period, ...taskFields } = taskData;
+        const {
+          _previewId, _categoryOrder, _categoryLabel, _categoryColor,
+          _categoryAccent, _categoryBgSoft, _categoryDot, _frequency,
+          _is874, _reportMonth, period, ...taskFields
+        } = taskData;
         await Task.create(taskFields);
         created++;
       } catch (error) { console.error('Error creating task:', error); errors++; }
@@ -447,36 +464,99 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             })}
           </div>
 
-          {/* Period selector — big buttons */}
-          <div className="bg-gray-50 rounded-2xl p-5">
-            <p className="text-base font-bold text-gray-700 mb-3">תקופת יצירה:</p>
-            <div className="flex gap-3">
-              {[1, 3, 6, 12].map(months => (
+          {/* ============================================================ */}
+          {/* Month picker — user chooses which report months to generate */}
+          {/* ============================================================ */}
+          <div className="bg-gray-50 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-base font-bold text-gray-700">בחרי חודשי דיווח:</p>
+              <div className="flex items-center gap-2">
                 <Button
-                  key={months}
-                  variant={generateMonths === months ? 'default' : 'outline'}
-                  size="lg"
-                  onClick={() => setGenerateMonths(months)}
-                  className={`flex-1 text-base rounded-xl h-12 font-bold ${
-                    generateMonths === months
-                      ? 'bg-[#657453] hover:bg-[#4a5f3a] text-white shadow-md'
-                      : 'border-2 hover:border-[#657453]/30'
-                  }`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedYear(selectedYear - 1)}
+                  className="rounded-xl font-bold text-gray-500 hover:text-gray-700"
                 >
-                  {months} {months === 1 ? 'חודש' : 'חודשים'}
+                  &lt;
                 </Button>
-              ))}
+                <span className="text-lg font-black text-[#657453] min-w-[60px] text-center">{selectedYear}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedYear(selectedYear + 1)}
+                  className="rounded-xl font-bold text-gray-500 hover:text-gray-700"
+                >
+                  &gt;
+                </Button>
+              </div>
+            </div>
+
+            {/* Month grid */}
+            <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+              {HEBREW_MONTH_NAMES.map((name, idx) => {
+                const month = idx + 1;
+                const isSelected = selectedMonths.has(month);
+                const isCurrent = month === currentMonth && selectedYear === currentYear;
+                return (
+                  <Button
+                    key={month}
+                    variant={isSelected ? 'default' : 'outline'}
+                    onClick={() => toggleMonth(month)}
+                    className={`rounded-xl h-11 text-sm font-bold transition-all ${
+                      isSelected
+                        ? 'bg-[#657453] hover:bg-[#4a5f3a] text-white shadow-md'
+                        : isCurrent
+                          ? 'border-2 border-[#657453]/50 hover:border-[#657453] text-[#657453] font-black'
+                          : 'border-2 hover:border-[#657453]/30'
+                    }`}
+                  >
+                    {name}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {/* Quick selection buttons */}
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={selectCurrentMonth}
+                className="rounded-xl text-sm font-bold text-[#657453] hover:bg-[#657453]/10"
+              >
+                חודש נוכחי
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={selectAllMonths}
+                className="rounded-xl text-sm font-bold text-[#657453] hover:bg-[#657453]/10"
+              >
+                כל השנה
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedMonths(new Set())}
+                className="rounded-xl text-sm font-bold text-gray-400 hover:bg-gray-100"
+              >
+                נקה
+              </Button>
             </div>
           </div>
 
           {/* Generate button — prominent */}
           <Button
             onClick={generateTasksPreview}
-            className="w-full h-14 text-lg font-bold rounded-2xl bg-[#657453] hover:bg-[#4a5f3a] shadow-lg hover:shadow-xl transition-all"
+            disabled={selectedMonths.size === 0}
+            className="w-full h-14 text-lg font-bold rounded-2xl bg-[#657453] hover:bg-[#4a5f3a] shadow-lg hover:shadow-xl transition-all disabled:opacity-40"
             size="lg"
           >
             <Eye className="w-6 h-6 ml-3" />
-            תצוגה מקדימה
+            {selectedMonths.size === 0
+              ? 'בחרי לפחות חודש אחד'
+              : `טען משימות ל-${selectedMonths.size} ${selectedMonths.size === 1 ? 'חודש' : 'חודשים'} — להגהה ואישור`
+            }
           </Button>
 
           {/* Results */}
@@ -505,7 +585,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
       </Card>
 
       {/* ============================================================ */}
-      {/* Preview Dialog — ADHD-Friendly */}
+      {/* Preview Dialog — ADHD-Friendly — Review & Approve */}
       {/* ============================================================ */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
@@ -514,14 +594,28 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-gray-800">
                 {previewTasks.length > 0
-                  ? `${previewTasks.length} משימות חדשות`
+                  ? `${previewTasks.length} משימות חדשות להגהה`
                   : 'הכל מעודכן!'
                 }
               </DialogTitle>
               <DialogDescription className="text-base text-gray-600 mt-1">
-                סמני מה ליצור. אפשר לבטל פריטים בודדים.
+                {previewTasks.length > 0
+                  ? 'עברי על הרשימה, בטלי מה שלא צריך, ואשרי יצירה.'
+                  : 'כל המשימות לחודשים שנבחרו כבר קיימות.'
+                }
               </DialogDescription>
             </DialogHeader>
+
+            {/* Selected months summary */}
+            {previewTasks.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {Array.from(selectedMonths).sort((a, b) => a - b).map(m => (
+                  <span key={m} className="text-xs font-bold bg-[#657453]/15 text-[#657453] px-2.5 py-1 rounded-full">
+                    {HEBREW_MONTH_NAMES[m - 1]} {selectedYear}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Progress bar */}
             {previewTasks.length > 0 && (
@@ -553,7 +647,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                   <CheckCircle className="w-10 h-10 text-emerald-600" />
                 </div>
                 <h3 className="text-xl font-bold text-emerald-700 mb-2">הכל מעודכן!</h3>
-                <p className="text-gray-500 text-base">כל המשימות כבר קיימות</p>
+                <p className="text-gray-500 text-base">כל המשימות לחודשים שנבחרו כבר קיימות</p>
               </div>
             </div>
           ) : (
@@ -712,7 +806,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                     ) : (
                       <>
                         <CheckCircle className="w-5 h-5 ml-2" />
-                        צור {selectedCount} משימות
+                        אשרי יצירת {selectedCount} משימות
                       </>
                     )}
                   </Button>

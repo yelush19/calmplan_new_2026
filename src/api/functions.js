@@ -1290,10 +1290,12 @@ export const generateProcessTasks = async (params = {}) => {
           const title = `${client.name} - ${description}`;
           const workCategory = TEMPLATE_TO_WORK_CATEGORY[templateKey] || template.category;
 
-          // Skip if similar task already exists
+          // Skip if similar task already exists (check both work categories and Hebrew categories)
+          const hebrewCategory = template.category; // e.g. 'מע"מ'
           const exists = existingTasks.some(t =>
             t.title === title ||
-            (t.client_name === client.name && t.category === workCategory &&
+            (t.client_name === client.name &&
+              (t.category === workCategory || t.category === hebrewCategory) &&
               t.due_date && t.due_date.startsWith(`${currentYear}-${monthNum}`))
           );
           if (exists) continue;
