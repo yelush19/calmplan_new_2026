@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Task } from "@/api/entities";
+import { Task, Client } from "@/api/entities";
 import { createNoteFromTask } from "@/components/StickyNotes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2,
-  ChevronDown, ChevronRight, RefreshCw, Pin
+  ChevronDown, ChevronRight, RefreshCw, Pin, ExternalLink
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -71,6 +71,7 @@ export default function TasksPage() {
   const [view, setView] = useState("list");
   const [isClearing, setIsClearing] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+  const [clientMap, setClientMap] = useState({}); // name → id
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -83,7 +84,16 @@ export default function TasksPage() {
     if (priorityParam) setPriorityFilter(priorityParam);
   }, [location.search]);
 
-  useEffect(() => { loadTasks(); }, []);
+  useEffect(() => { loadTasks(); loadClients(); }, []);
+
+  const loadClients = async () => {
+    try {
+      const clients = await Client.list(null, 500);
+      const map = {};
+      (clients || []).forEach(c => { if (c.name) map[c.name] = c.id; });
+      setClientMap(map);
+    } catch { setClientMap({}); }
+  };
 
   const loadTasks = async () => {
     setIsLoading(true);
@@ -402,6 +412,18 @@ export default function TasksPage() {
                           : <ChevronDown className="w-4 h-4 text-gray-400" />
                         }
                         <span className="text-base font-bold text-gray-700">{clientName}</span>
+                        {clientMap[clientName] && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/ClientManagement?clientId=${clientMap[clientName]}`);
+                            }}
+                            className="p-1 rounded hover:bg-primary/10 transition-colors"
+                            title="פתח כרטיס לקוח"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                          </button>
+                        )}
                         <span className="text-sm text-gray-400">
                           {completedCount}/{clientTasks.length}
                         </span>
