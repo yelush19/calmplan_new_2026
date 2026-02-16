@@ -383,7 +383,7 @@ export default function ClientsDashboardPage() {
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">לוח מעקב לקוחות</h1>
+            <h1 className="text-2xl font-bold text-gray-800">תהליכי דיווח חודשיים</h1>
             <p className="text-sm text-gray-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | לחץ על תא לשינוי סטטוס</p>
           </div>
         </div>
