@@ -51,6 +51,7 @@ export const WeeklyTask = base44.entities.WeeklyTask;
 
 export const BalanceSheet = base44.entities.BalanceSheet;
 
+export const StickyNote = base44.entities.StickyNote;
 
 
 // auth sdk:

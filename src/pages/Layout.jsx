@@ -20,49 +20,47 @@ import TimeAwareness from "@/components/ui/TimeAwareness";
 
 const navigationGroups = [
   {
-    title: "ניהול יומי",
+    title: "בית",
     icon: Home,
     items: [
-      { name: "בית", href: createPageUrl("Home"), icon: Home },
-      { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
-      { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
-      { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
-      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
+      { name: "דף הבית", href: createPageUrl("Home"), icon: Home },
     ],
   },
   {
-    title: "המשרד - LITAY",
-    icon: Briefcase,
+    title: "עבודה שוטפת",
+    icon: CheckSquare,
+    items: [
+      { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+      { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
+      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
+      { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
+    ],
+  },
+  {
+    title: "דיווחים ותהליכים",
+    icon: Calculator,
     items: [
       { name: "תהליכי דיווח חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
+      { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
+      { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
+      { name: "לוח התאמות", href: createPageUrl("Reconciliations"), icon: BookCheck },
+      { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
+      { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
+    ],
+  },
+  {
+    title: "לקוחות",
+    icon: Users,
+    items: [
       { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
       { name: "לידים", href: createPageUrl("Leads"), icon: Target },
       { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
-      {
-        name: "תהליכים ודיווחים",
-        icon: Calculator,
-        children: [
-            { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
-            { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
-            { name: "לוח התאמות", href: createPageUrl("Reconciliations"), icon: BookCheck },
-            { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
-        ]
-      },
-      { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
       { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
-      {
-        name: "Monday.com",
-        icon: Monitor,
-        children: [
-            { name: "ניהול אינטגרציה", href: createPageUrl("MondayIntegration"), icon: Settings },
-            { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Database },
-        ]
-      },
     ],
   },
   {
     title: "LENA - בית וחיים",
-    icon: Home,
+    icon: BookHeart,
     items: [
       { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
       { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
@@ -70,15 +68,14 @@ const navigationGroups = [
     ],
   },
   {
-    title: "תובנות ופיתוח",
-    icon: Brain,
+    title: "הגדרות",
+    icon: Settings,
     items: [
-        { name: "דשבורדים", href: createPageUrl("Dashboards"), icon: LayoutGrid },
-        { name: "מפת דרכים", href: createPageUrl("Roadmap"), icon: Target },
-        { name: "מטריצת משימות", href: createPageUrl("TaskMatrix"), icon: Eye },
-        { name: "מנהל נתוני בדיקה", href: createPageUrl("TestDataManager"), icon: Database },
-    ]
-  }
+      { name: "Monday.com", href: createPageUrl("MondayIntegration"), icon: Monitor },
+      { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Database },
+      { name: "מנהל נתוני בדיקה", href: createPageUrl("TestDataManager"), icon: Database },
+    ],
+  },
 ];
 
 export default function Layout({ children, currentPageName }) {
