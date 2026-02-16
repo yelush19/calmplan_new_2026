@@ -116,6 +116,7 @@ const FREQUENCY_LABELS = {
   monthly: 'חודשי',
   bimonthly: 'דו-חודשי',
   quarterly: 'רבעוני',
+  semi_annual: 'חצי שנתי',
   yearly: 'שנתי',
 };
 
@@ -140,6 +141,15 @@ function clientHasService(categoryKey, client) {
 /**
  * Generate tasks for SPECIFIC selected months.
  * No filtering by "today" — the user decides which months to generate.
+ *
+ * Frequency logic:
+ *   monthly     → task every month (report month = selected month)
+ *   bimonthly   → tasks for even report months only (2,4,6,8,10,12)
+ *                  covers the previous 2 months (e.g., reportMonth 2 = Jan-Feb)
+ *   semi_annual → only for מ"ה ניכויים: reportMonth 6 (Jan-Jun) and 12 (Jul-Dec)
+ *                  task in month 07 for 01-06, month 01 for 07-12
+ *   quarterly   → report months 3, 6, 9, 12
+ *   yearly      → single annual report
  */
 function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
   const frequency = getClientFrequency(categoryKey, client);
@@ -147,9 +157,9 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
 
   const is874 = isClient874(client);
   const tasks = [];
+  const catLabel = REPORT_CATEGORIES[categoryKey].label;
 
   if (frequency === 'yearly') {
-    // Only show if a full year month is selected
     if (selectedMonths.length > 0) {
       tasks.push({
         date: new Date(year, 4, 31),
@@ -162,14 +172,35 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
     return tasks;
   }
 
+  // Semi-annual: only for ניכויים (מ"ה). Two periods per year.
+  if (frequency === 'semi_annual') {
+    const SEMI_ANNUAL_PERIODS = [
+      { reportMonth: 6, period: 'ינואר-יוני', dueMonth: 7, description: `${catLabel} עבור ינואר-יוני ${year}` },
+      { reportMonth: 12, period: 'יולי-דצמבר', dueMonth: 1, dueYear: year + 1, description: `${catLabel} עבור יולי-דצמבר ${year}` },
+    ];
+    for (const sp of SEMI_ANNUAL_PERIODS) {
+      // Show this period if the user selected any month within it
+      const monthsInPeriod = sp.reportMonth === 6
+        ? [1, 2, 3, 4, 5, 6]
+        : [7, 8, 9, 10, 11, 12];
+      const userSelectedAny = selectedMonths.some(m => monthsInPeriod.includes(m));
+      if (!userSelectedAny) continue;
+
+      const dueDateStr = getDueDateForCategory(categoryKey, client, sp.reportMonth);
+      const dy = sp.dueYear || year;
+      const dueDate = dueDateStr ? new Date(dueDateStr) : new Date(dy, (sp.dueMonth || 7) - 1, 19);
+      tasks.push({ date: dueDate, period: sp.period, description: sp.description, reportMonth: sp.reportMonth, is874 });
+    }
+    return tasks;
+  }
+
   for (const reportMonth of selectedMonths) {
-    // Check frequency alignment
+    // Bimonthly: only even report months
     if (frequency === 'bimonthly') {
-      // Bimonthly: only even months
       if (reportMonth % 2 !== 0) continue;
     }
+    // Quarterly: only 3, 6, 9, 12
     if (frequency === 'quarterly') {
-      // Quarterly: months 3, 6, 9, 12
       if (![3, 6, 9, 12].includes(reportMonth)) continue;
     }
 
@@ -185,7 +216,6 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
       period = `${HEBREW_MONTH_NAMES[reportMonth - 1]} ${year}`;
     }
 
-    const catLabel = REPORT_CATEGORIES[categoryKey].label;
     let description;
     if (frequency === 'bimonthly') {
       description = `${catLabel} עבור ${period} ${year}`;

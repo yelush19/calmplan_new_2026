@@ -552,9 +552,10 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="basic" className="space-y-6">
-            <TabsList className="grid grid-cols-5 w-full">
+            <TabsList className="grid grid-cols-6 w-full">
               <TabsTrigger value="basic">פרטים בסיסיים</TabsTrigger>
               <TabsTrigger value="services">שירותים</TabsTrigger>
+              <TabsTrigger value="reporting">תדירות דיווח</TabsTrigger>
               <TabsTrigger value="tax">פרטי מס</TabsTrigger>
               <TabsTrigger value="accounts">חשבונות בנק</TabsTrigger>
               <TabsTrigger value="integration">אינטגרציות</TabsTrigger>
@@ -625,13 +626,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                   <div className="flex items-center space-x-2 space-x-reverse md:col-span-2 pt-2 border-t border-gray-200"><Checkbox id="select-all-services" onCheckedChange={handleSelectAllServices} checked={formData.service_types.length === serviceTypes.length && serviceTypes.length > 0} /><Label htmlFor="select-all-services" className="font-medium text-blue-600">בחר הכל</Label></div>
                 </div>
               </div>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div><Label>תדירות דיווח מע״מ</Label><Select value={formData.reporting_info.vat_reporting_frequency} onValueChange={(value) => handleInputChange('vat_reporting_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="quarterly">רבעוני</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
-                <div><Label>תדירות מקדמות מס</Label><Select value={formData.reporting_info.tax_advances_frequency} onValueChange={(value) => handleInputChange('tax_advances_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="quarterly">רבעוני</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
-                <div><Label>תדירות ניכויים</Label><Select value={formData.reporting_info.deductions_frequency} onValueChange={(value) => handleInputChange('deductions_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="semi_annual">חצי שנתי</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
-                <div><Label>תדירות ביטוח לאומי</Label><Select value={formData.reporting_info.social_security_frequency} onValueChange={(value) => handleInputChange('social_security_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
-                <div><Label>תדירות שכר</Label><Select value={formData.reporting_info.payroll_frequency} onValueChange={(value) => handleInputChange('payroll_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
-              </div>
+              {/* Reporting frequencies moved to dedicated "תדירות דיווח" tab */}
               <div>
                 <Label>שעות עבודה חודשיות משוערות</Label>
                 <div className="grid md:grid-cols-4 gap-4 mt-2">
@@ -684,6 +679,78 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                     />
                   </div>
                 </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="reporting" className="space-y-5">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                הגדירי תדירות דיווח לכל סוג. הגדרה זו משפיעה על הפקת משימות חוזרות.
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                {/* מע"מ */}
+                <div className="border rounded-xl p-4 space-y-2">
+                  <Label className="text-base font-bold">מע״מ</Label>
+                  <p className="text-xs text-gray-500">דיווח מע״מ תקופתי</p>
+                  <Select value={formData.reporting_info.vat_reporting_frequency} onValueChange={(value) => handleInputChange('vat_reporting_frequency', value, 'reporting_info')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* מקדמות מס */}
+                <div className="border rounded-xl p-4 space-y-2">
+                  <Label className="text-base font-bold">מקדמות מס</Label>
+                  <p className="text-xs text-gray-500">מקדמות מס הכנסה</p>
+                  <Select value={formData.reporting_info.tax_advances_frequency} onValueChange={(value) => handleInputChange('tax_advances_frequency', value, 'reporting_info')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* מ"ה ניכויים */}
+                <div className="border rounded-xl p-4 space-y-2">
+                  <Label className="text-base font-bold">מ״ה ניכויים</Label>
+                  <p className="text-xs text-gray-500">ניכויי מס הכנסה — כולל אפשרות חצי שנתי</p>
+                  <Select value={formData.reporting_info.deductions_frequency} onValueChange={(value) => handleInputChange('deductions_frequency', value, 'reporting_info')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="semi_annual">חצי שנתי</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* ב"ל ניכויים */}
+                <div className="border rounded-xl p-4 space-y-2">
+                  <Label className="text-base font-bold">ב״ל ניכויים</Label>
+                  <p className="text-xs text-gray-500">ביטוח לאומי</p>
+                  <Select value={formData.reporting_info.social_security_frequency} onValueChange={(value) => handleInputChange('social_security_frequency', value, 'reporting_info')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {/* שכר - remains separate */}
+              <div className="border rounded-xl p-4 space-y-2 md:w-1/2">
+                <Label className="text-base font-bold">שכר</Label>
+                <p className="text-xs text-gray-500">תדירות עיבוד שכר</p>
+                <Select value={formData.reporting_info.payroll_frequency} onValueChange={(value) => handleInputChange('payroll_frequency', value, 'reporting_info')}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">חודשי</SelectItem>
+                    <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </TabsContent>
             <TabsContent value="tax" className="space-y-4">
