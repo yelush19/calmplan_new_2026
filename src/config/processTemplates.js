@@ -53,13 +53,12 @@ export const PAYROLL_SERVICES = {
     taskCategories: ['שכר', 'work_payroll'],
     createCategory: 'שכר',
     steps: [
-      { key: 'receive_materials', label: 'קבלת חומרים',          icon: 'inbox' },
-      { key: 'payroll_calc',      label: 'חישוב שכר',            icon: 'calculator' },
-      { key: 'review',            label: 'העברה לעיון',          icon: 'eye' },
-      { key: 'corrections',       label: 'תיקונים ואישור',       icon: 'check-circle' },
-      { key: 'masav',             label: 'מס"ב עובדים',          icon: 'landmark' },
-      { key: 'payslips',          label: 'הפקת תלושים',          icon: 'file-output' },
-      { key: 'send_to_client',    label: 'שליחה ללקוח',          icon: 'send' },
+      { key: 'receive_data',            label: 'קבלת נתונים',              icon: 'inbox' },
+      { key: 'prepare_payslips',        label: 'הכנת תלושים',              icon: 'file-text' },
+      { key: 'proofreading',            label: 'הגהה',                     icon: 'eye' },
+      { key: 'salary_entry',            label: 'קליטת פקודת שכר',          icon: 'calculator' },
+      { key: 'employee_payments',       label: 'רישום תשלומי עובדים',      icon: 'landmark' },
+      { key: 'authority_payments',      label: 'רישום תשלומי רשויות שכר',  icon: 'send' },
     ],
   },
 
@@ -133,15 +132,15 @@ export const ADDITIONAL_SERVICES = {
     ],
   },
 
-  authorities: {
-    key: 'authorities',
-    label: 'דיווח רשויות',
-    dashboard: 'tax',
-    taskCategories: ['דיווח רשויות', 'work_authorities'],
-    createCategory: 'דיווח רשויות',
+  authorities_payment: {
+    key: 'authorities_payment',
+    label: 'תשלום רשויות',
+    dashboard: 'payroll',
+    taskCategories: ['תשלום רשויות', 'work_authorities_payment'],
+    createCategory: 'תשלום רשויות',
     steps: [
       { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
-      { key: 'submission',   label: 'הגשה',        icon: 'send' },
+      { key: 'payment',      label: 'תשלום',       icon: 'landmark' },
     ],
   },
 
@@ -180,17 +179,6 @@ export const ADDITIONAL_SERVICES = {
       { key: 'file_prep',    label: 'הכנת קובץ',   icon: 'file-text' },
       { key: 'upload',       label: 'העלאה',        icon: 'upload' },
       { key: 'confirmation', label: 'אישור ביצוע',  icon: 'check-circle' },
-    ],
-  },
-
-  client_management: {
-    key: 'client_management',
-    label: 'ניהול לקוח',
-    dashboard: 'tax',
-    taskCategories: ['ניהול לקוח', 'work_client_management'],
-    createCategory: 'ניהול לקוח',
-    steps: [
-      { key: 'task',  label: 'ביצוע',  icon: 'check-circle' },
     ],
   },
 
