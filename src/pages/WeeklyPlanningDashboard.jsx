@@ -1,46 +1,55 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Calendar, Clock, AlertTriangle, CheckCircle, Target,
-  Brain, TrendingUp, Users, Home, Briefcase
+  Brain, TrendingUp, Users, Briefcase, ChevronLeft, ChevronRight,
+  Sparkles, ArrowRight
 } from 'lucide-react';
-import { Task, Client, Dashboard } from '@/api/entities';
+import { Task, Client } from '@/api/entities';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { format, addDays, startOfWeek, parseISO, isValid, startOfDay } from 'date-fns';
+import {
+  format, addDays, startOfWeek, endOfWeek, parseISO, isValid,
+  startOfDay, isSameDay
+} from 'date-fns';
 import { he } from 'date-fns/locale';
 
+// Israeli work days: Sun(0)=ראשון through Thu(4)=חמישי
+const WORK_DAYS = [
+  { dayIndex: 0, name: 'ראשון', short: 'א' },
+  { dayIndex: 1, name: 'שני', short: 'ב' },
+  { dayIndex: 2, name: 'שלישי', short: 'ג' },
+  { dayIndex: 3, name: 'רביעי', short: 'ד' },
+  { dayIndex: 4, name: 'חמישי', short: 'ה' },
+];
+
+const MAX_DAILY_TASKS = 5; // ADHD recommendation: no more than 5 tasks/day
+
+const PRIORITY_CONFIG = {
+  urgent: { label: 'דחוף', color: 'bg-red-500 text-white', dot: 'bg-red-500', order: 0 },
+  high: { label: 'גבוה', color: 'bg-orange-400 text-white', dot: 'bg-orange-400', order: 1 },
+  medium: { label: 'בינוני', color: 'bg-yellow-400 text-gray-800', dot: 'bg-yellow-400', order: 2 },
+  low: { label: 'נמוך', color: 'bg-blue-300 text-white', dot: 'bg-blue-300', order: 3 },
+};
+
 export default function WeeklyPlanningDashboard() {
-  const [thisWeekData, setThisWeekData] = useState({});
-  const [nextWeekData, setNextWeekData] = useState({});
-  const [overdueCount, setOverdueCount] = useState(0);
-  const [recommendations, setRecommendations] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [weekOffset, setWeekOffset] = useState(0); // 0=this week, 1=next, -1=prev
 
-  useEffect(() => {
-    loadWeeklyData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  const loadWeeklyData = async () => {
+  const loadData = async () => {
     setIsLoading(true);
-
-    const today = new Date();
-    const todayStart = startOfDay(today);
-    const thisWeekStart = startOfWeek(today, { weekStartsOn: 0 });
-    const nextWeekStart = addDays(thisWeekStart, 7);
-
     try {
-      const [allTasks, clients] = await Promise.all([
-        Task.list(null, 5000).catch(() => []),
-        Client.filter({ status: 'active' }).catch(() => [])
-      ]);
-
-      // סינון משימות ישנות: הושלמו 60+ יום או תקועות 180+ יום
+      const allTasks = await Task.list(null, 5000).catch(() => []);
+      // Filter out old completed tasks
       const nowMs = Date.now();
-      const tasks = (allTasks || []).filter(task => {
+      const filtered = (allTasks || []).filter(task => {
         const taskDate = task.due_date || task.created_date;
         if (!taskDate) return true;
         const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -48,331 +57,359 @@ export default function WeeklyPlanningDashboard() {
         if (task.status !== 'completed' && daysSince > 180) return false;
         return true;
       });
-
-      // Filter tasks by week
-      const thisWeekTasks = filterTasksByWeek(tasks, thisWeekStart);
-      const nextWeekTasks = filterTasksByWeek(tasks, nextWeekStart);
-
-      // Overdue tasks
-      const overdue = tasks.filter(t => {
-        if (t.status === 'completed') return false;
-        const dateStr = t.due_date || t.scheduled_start;
-        if (!dateStr) return false;
-        try {
-          const d = parseISO(dateStr);
-          return isValid(d) && startOfDay(d) < todayStart;
-        } catch { return false; }
-      });
-      setOverdueCount(overdue.length);
-
-      const completedThisWeek = thisWeekTasks.filter(t => t.status === 'completed').length;
-
-      setThisWeekData({
-        start: thisWeekStart,
-        tasks: thisWeekTasks,
-        completed: completedThisWeek,
-        workload: calculateWorkload(thisWeekTasks)
-      });
-
-      setNextWeekData({
-        start: nextWeekStart,
-        tasks: nextWeekTasks,
-        completed: nextWeekTasks.filter(t => t.status === 'completed').length,
-        workload: calculateWorkload(nextWeekTasks)
-      });
-
-      setRecommendations(generateSmartRecommendations(thisWeekTasks, nextWeekTasks, clients || [], overdue));
-
+      setTasks(filtered);
     } catch (error) {
-      console.error('Error loading weekly data:', error);
+      console.error('Error loading tasks:', error);
     }
-
     setIsLoading(false);
   };
 
-  const filterTasksByWeek = (tasks, weekStart) => {
-    const weekEnd = addDays(weekStart, 6);
+  const today = useMemo(() => startOfDay(new Date()), []);
+
+  const weekStart = useMemo(() => {
+    const base = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
+    return addDays(base, weekOffset * 7);
+  }, [today, weekOffset]);
+
+  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
+
+  // Tasks grouped by day
+  const { dailyTasks, weekTasks, overdueTasks, stats } = useMemo(() => {
     const weekStartStr = format(weekStart, 'yyyy-MM-dd');
     const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
+    const todayStr = format(today, 'yyyy-MM-dd');
 
-    return tasks.filter(t => {
-      const dateStr = t.due_date || t.scheduled_start;
-      if (!dateStr) return false;
-      return dateStr >= weekStartStr && dateStr <= weekEndStr;
+    const weekTasks = tasks.filter(t => {
+      const d = t.due_date;
+      return d && d >= weekStartStr && d <= weekEndStr;
     });
-  };
 
-  const calculateWorkload = (tasks) => {
-    const urgentTasks = tasks.filter(t => t.priority === 'urgent' || t.status === 'overdue').length;
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.status === 'completed').length;
+    const overdueTasks = tasks.filter(t => {
+      if (t.status === 'completed') return false;
+      const d = t.due_date;
+      return d && d < todayStr;
+    });
 
-    let level = 'light';
-    if (urgentTasks > 5 || totalTasks > 20) level = 'heavy';
-    else if (urgentTasks > 2 || totalTasks > 10) level = 'moderate';
+    // Group by day of week
+    const daily = {};
+    for (const wd of WORK_DAYS) {
+      const dayDate = addDays(weekStart, wd.dayIndex);
+      const dayStr = format(dayDate, 'yyyy-MM-dd');
+      daily[wd.dayIndex] = {
+        ...wd,
+        date: dayDate,
+        dateStr: dayStr,
+        isToday: isSameDay(dayDate, today),
+        isPast: dayDate < today,
+        tasks: weekTasks
+          .filter(t => t.due_date === dayStr)
+          .sort((a, b) => {
+            const pa = PRIORITY_CONFIG[a.priority]?.order ?? 9;
+            const pb = PRIORITY_CONFIG[b.priority]?.order ?? 9;
+            return pa - pb;
+          }),
+      };
+    }
 
-    return { level, urgentTasks, totalTasks, completedTasks };
-  };
+    const completed = weekTasks.filter(t => t.status === 'completed').length;
+    const total = weekTasks.length;
 
-  const generateSmartRecommendations = (thisWeek, nextWeek, clients, overdue) => {
-    const recommendations = [];
+    return {
+      dailyTasks: daily,
+      weekTasks,
+      overdueTasks,
+      stats: { total, completed, remaining: total - completed, overdue: overdueTasks.length }
+    };
+  }, [tasks, weekStart, weekEnd, today]);
 
-    // Overdue tasks warning
-    if (overdue.length > 0) {
-      recommendations.push({
-        type: 'overdue',
-        priority: 'high',
-        title: 'משימות באיחור',
-        message: `${overdue.length} משימות עברו את תאריך היעד. טפל בהן או עדכן תאריכים.`,
-        icon: AlertTriangle
+  // Smart recommendations
+  const recommendations = useMemo(() => {
+    const recs = [];
+
+    // Overdue
+    if (stats.overdue > 0) {
+      recs.push({
+        type: 'warning',
+        icon: AlertTriangle,
+        text: `${stats.overdue} משימות באיחור — כדאי לטפל או לעדכן תאריכים`,
       });
     }
 
-    // Tasks without deadline
-    const noDeadlineTasks = [...thisWeek, ...nextWeek].filter(t => !t.due_date);
-    if (noDeadlineTasks.length > 0) {
-      recommendations.push({
-        type: 'deadline',
-        priority: 'high',
-        title: 'הוסף תאריכי יעד',
-        message: `${noDeadlineTasks.length} משימות ללא תאריך יעד. הוסף תאריכים ספציפיים.`,
-        icon: Target
-      });
-    }
-
-    // Heavy workload
-    const thisWeekUrgent = thisWeek.filter(t => t.priority === 'urgent').length;
-    if (thisWeekUrgent > 3) {
-      recommendations.push({
-        type: 'workload',
-        priority: 'high',
-        title: 'עומס דחוף גבוה',
-        message: `${thisWeekUrgent} משימות דחופות השבוע. שקול לדחות משימות פחות חשובות.`,
-        icon: AlertTriangle
-      });
-    }
-
-    // Achievability check
-    const workDays = 5;
-    const avgTasksPerDay = thisWeek.length / workDays;
-    if (avgTasksPerDay > 4) {
-      recommendations.push({
+    // Overloaded days
+    const overloadedDays = WORK_DAYS.filter(wd => dailyTasks[wd.dayIndex]?.tasks.length > MAX_DAILY_TASKS);
+    if (overloadedDays.length > 0) {
+      const dayNames = overloadedDays.map(d => d.name).join(', ');
+      recs.push({
         type: 'balance',
-        priority: 'medium',
-        title: 'חלוקה מחדש מומלצת',
-        message: `ממוצע ${Math.round(avgTasksPerDay)} משימות ליום. שקול חלוקה מחדש.`,
-        icon: TrendingUp
+        icon: TrendingUp,
+        text: `ימים עמוסים מדי (${dayNames}) — מומלץ לפזר עד ${MAX_DAILY_TASKS} משימות ליום`,
       });
     }
 
-    // Seasonal planning
-    const currentMonth = new Date().getMonth();
-    if ([11, 0, 1].includes(currentMonth)) {
-      recommendations.push({
-        type: 'seasonal',
-        priority: 'low',
-        title: 'תכנון חורפי',
-        message: 'חורף = זמן מאזנים שנתיים ותכנון לשנה הבאה.',
-        icon: Brain
+    // Empty days with tasks that could be moved
+    const emptyWorkDays = WORK_DAYS.filter(wd => {
+      const dt = dailyTasks[wd.dayIndex];
+      return dt && !dt.isPast && dt.tasks.length === 0;
+    });
+    const busyWorkDays = WORK_DAYS.filter(wd => {
+      const dt = dailyTasks[wd.dayIndex];
+      return dt && !dt.isPast && dt.tasks.length > MAX_DAILY_TASKS;
+    });
+    if (emptyWorkDays.length > 0 && busyWorkDays.length > 0) {
+      recs.push({
+        type: 'tip',
+        icon: Sparkles,
+        text: `יום ${emptyWorkDays[0].name} פנוי — אפשר להעביר אליו משימות מימים עמוסים`,
       });
     }
 
-    return recommendations;
-  };
+    // Good progress
+    if (stats.total > 0 && stats.completed / stats.total >= 0.7 && weekOffset === 0) {
+      recs.push({
+        type: 'success',
+        icon: CheckCircle,
+        text: `${Math.round((stats.completed / stats.total) * 100)}% מהמשימות הושלמו! כל הכבוד`,
+      });
+    }
 
-  const WorkloadIndicator = ({ workload }) => {
-    const colors = {
-      light: 'bg-green-100 text-green-800',
-      moderate: 'bg-yellow-100 text-yellow-800',
-      heavy: 'bg-red-100 text-red-800'
-    };
-
-    const labels = {
-      light: 'נמוך',
-      moderate: 'בינוני',
-      heavy: 'גבוה'
-    };
-
-    return (
-      <Badge className={colors[workload.level]}>
-        עומס {labels[workload.level]}
-      </Badge>
-    );
-  };
+    return recs;
+  }, [stats, dailyTasks, weekOffset]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
-          <Brain className="w-12 h-12 animate-pulse text-primary mx-auto mb-4" />
-          <p className="text-lg text-gray-600">מכין תכנון שבועי חכם...</p>
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#657453]/10 flex items-center justify-center mb-4">
+            <Brain className="w-8 h-8 animate-pulse text-[#657453]" />
+          </div>
+          <p className="text-lg text-gray-500">טוען תכנון שבועי...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          דשבורד תכנון שבועי חכם
-        </h1>
-        <p className="text-gray-600">
-          תצוגה מרוכזת של השבוע הנוכחי והבא עם המלצות S.M.A.R.T
-        </p>
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Header — with week navigation */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">תכנון שבועי</h1>
+          <p className="text-base text-gray-500 mt-1">
+            {format(weekStart, 'dd/MM')} — {format(weekEnd, 'dd/MM/yyyy', { locale: he })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeekOffset(p => p - 1)}
+            className="rounded-xl"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={weekOffset === 0 ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setWeekOffset(0)}
+            className={`rounded-xl font-bold ${weekOffset === 0 ? 'bg-[#657453] hover:bg-[#4a5f3a]' : ''}`}
+          >
+            השבוע
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeekOffset(p => p + 1)}
+            className="rounded-xl"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
-      {/* Overdue Alert */}
-      {overdueCount > 0 && (
-        <Alert className="border-red-300 bg-red-50">
-          <AlertTriangle className="w-4 h-4 text-red-600" />
-          <AlertDescription className="text-red-800">
-            <strong>{overdueCount} משימות באיחור!</strong>{' '}
-            <Link to={createPageUrl("Tasks")} className="underline">
-              עבור לעמוד המשימות לטיפול
-            </Link>
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Stats row — big numbers */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-black text-gray-800">{stats.total}</p>
+            <p className="text-sm text-gray-500 mt-1">סה"כ משימות</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-black text-emerald-600">{stats.completed}</p>
+            <p className="text-sm text-gray-500 mt-1">הושלמו</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-black text-blue-600">{stats.remaining}</p>
+            <p className="text-sm text-gray-500 mt-1">נותרו</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <p className={`text-3xl font-black ${stats.overdue > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+              {stats.overdue}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">באיחור</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* SMART Recommendations */}
+      {/* Recommendations */}
       {recommendations.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-800">
-              <Brain className="w-5 h-5" />
-              המלצות S.M.A.R.T לשבוע
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {recommendations.map((rec, i) => (
-              <Alert key={i} className="border-amber-200">
-                <rec.icon className="w-4 h-4" />
-                <AlertDescription>
-                  <strong>{rec.title}:</strong> {rec.message}
-                </AlertDescription>
-              </Alert>
-            ))}
+        <div className="space-y-2">
+          {recommendations.map((rec, i) => {
+            const Icon = rec.icon;
+            const bg = rec.type === 'warning' ? 'bg-red-50 border-red-200'
+              : rec.type === 'success' ? 'bg-emerald-50 border-emerald-200'
+              : 'bg-amber-50 border-amber-200';
+            const textColor = rec.type === 'warning' ? 'text-red-800'
+              : rec.type === 'success' ? 'text-emerald-800'
+              : 'text-amber-800';
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className={`flex items-center gap-3 p-3 rounded-xl border ${bg}`}
+              >
+                <Icon className={`w-5 h-5 flex-shrink-0 ${textColor}`} />
+                <p className={`text-sm font-medium ${textColor}`}>{rec.text}</p>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Daily breakdown */}
+      <div className="space-y-4">
+        {WORK_DAYS.map((wd, idx) => {
+          const day = dailyTasks[wd.dayIndex];
+          if (!day) return null;
+          const taskCount = day.tasks.length;
+          const isOverloaded = taskCount > MAX_DAILY_TASKS;
+          const completedCount = day.tasks.filter(t => t.status === 'completed').length;
+
+          return (
+            <motion.div
+              key={wd.dayIndex}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+            >
+              <Card className={`border-0 shadow-sm overflow-hidden ${day.isToday ? 'ring-2 ring-[#657453]/50' : ''}`}>
+                {/* Day header */}
+                <div className={`flex items-center justify-between px-5 py-3 ${
+                  day.isToday
+                    ? 'bg-[#657453]/10'
+                    : day.isPast
+                      ? 'bg-gray-50'
+                      : 'bg-white'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-lg font-black ${day.isToday ? 'text-[#657453]' : 'text-gray-700'}`}>
+                      יום {wd.name}
+                    </span>
+                    <span className="text-sm text-gray-400">
+                      {format(day.date, 'dd/MM')}
+                    </span>
+                    {day.isToday && (
+                      <Badge className="bg-[#657453] text-white text-xs">היום</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Capacity indicator */}
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: MAX_DAILY_TASKS }, (_, i) => (
+                        <div
+                          key={i}
+                          className={`w-2 h-5 rounded-full ${
+                            i < taskCount
+                              ? isOverloaded ? 'bg-red-400' : 'bg-[#657453]'
+                              : 'bg-gray-200'
+                          }`}
+                        />
+                      ))}
+                      {taskCount > MAX_DAILY_TASKS &&
+                        Array.from({ length: taskCount - MAX_DAILY_TASKS }, (_, i) => (
+                          <div key={`over-${i}`} className="w-2 h-5 rounded-full bg-red-400" />
+                        ))
+                      }
+                    </div>
+                    <span className={`text-sm font-bold ${isOverloaded ? 'text-red-600' : 'text-gray-500'}`}>
+                      {taskCount}/{MAX_DAILY_TASKS}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tasks */}
+                <CardContent className={`px-5 py-3 ${taskCount === 0 ? 'py-4' : ''}`}>
+                  {taskCount === 0 ? (
+                    <p className="text-sm text-gray-400 text-center">
+                      {day.isPast ? 'לא היו משימות' : 'יום פנוי'}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {day.tasks.map(task => {
+                        const pri = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
+                        const isCompleted = task.status === 'completed';
+                        return (
+                          <div
+                            key={task.id}
+                            className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                              isCompleted
+                                ? 'bg-gray-50 opacity-50'
+                                : 'bg-white border border-gray-100'
+                            }`}
+                          >
+                            <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${pri.dot}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-bold truncate ${isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                {task.title}
+                              </p>
+                              {task.client_name && (
+                                <p className="text-xs text-gray-400 truncate">{task.client_name}</p>
+                              )}
+                            </div>
+                            <Badge className={`text-xs ${pri.color}`}>{pri.label}</Badge>
+                            {isCompleted && (
+                              <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Progress bar for the week */}
+      {stats.total > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-gray-600">התקדמות השבוע</span>
+              <span className="text-sm text-gray-400">
+                {stats.completed}/{stats.total} ({Math.round((stats.completed / stats.total) * 100)}%)
+              </span>
+            </div>
+            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-[#657453] rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${(stats.completed / stats.total) * 100}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
           </CardContent>
         </Card>
       )}
-
-      {/* Weekly Comparison */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* This Week */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                השבוע הנוכחי
-              </div>
-              <WorkloadIndicator workload={thisWeekData.workload} />
-            </CardTitle>
-            <p className="text-sm text-gray-500">
-              {format(thisWeekData.start, 'dd/MM')} - {format(addDays(thisWeekData.start, 6), 'dd/MM')}
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">סה"כ משימות</p>
-                <p className="text-2xl font-bold">{thisWeekData.tasks?.length || 0}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">הושלמו</p>
-                <p className="text-2xl font-bold text-green-600">{thisWeekData.completed || 0}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">דחופות</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {thisWeekData.workload?.urgentTasks || 0}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500">באיחור</p>
-                <p className="text-2xl font-bold text-orange-600">{overdueCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Next Week */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-green-600" />
-                השבוע הבא
-              </div>
-              <WorkloadIndicator workload={nextWeekData.workload} />
-            </CardTitle>
-            <p className="text-sm text-gray-500">
-              {format(nextWeekData.start, 'dd/MM')} - {format(addDays(nextWeekData.start, 6), 'dd/MM')}
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">סה"כ משימות</p>
-                <p className="text-2xl font-bold">{nextWeekData.tasks?.length || 0}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">הושלמו</p>
-                <p className="text-2xl font-bold text-green-600">{nextWeekData.completed || 0}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">דחופות</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {nextWeekData.workload?.urgentTasks || 0}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500">ממתינות</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {(nextWeekData.tasks?.length || 0) - (nextWeekData.completed || 0)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>פעולות מהירות</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-3">
-            <Link to={createPageUrl("Tasks")}>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Briefcase className="w-4 h-4" />
-                כל המשימות
-              </Button>
-            </Link>
-            <Link to={createPageUrl("ClientManagement")}>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                ניהול לקוחות
-              </Button>
-            </Link>
-            <Link to={createPageUrl("Calendar")}>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                לוח שנה
-              </Button>
-            </Link>
-            <Link to={createPageUrl("WeeklySummary")}>
-              <Button variant="outline" className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4" />
-                סיכום שבועי
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

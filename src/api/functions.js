@@ -232,14 +232,14 @@ function getClientFrequency(templateKey, client) {
   if (template.frequency === 'yearly') return 'yearly';
   if (template.frequencyField) {
     const freq = client.reporting_info?.[template.frequencyField] || 'monthly';
-    // No quarterly - only monthly or bimonthly
+    // No quarterly - only monthly or bimonthly (except semi_annual for deductions)
     if (freq === 'quarterly') return 'bimonthly';
     return freq;
   }
   // social_security: monthly (when payroll exists)
-  // deductions: monthly or bimonthly (follows payroll reporting)
-  if (templateKey === 'social_security') return 'monthly';
-  if (templateKey === 'deductions') return client.reporting_info?.payroll_frequency || 'monthly';
+  // deductions: use client's deductions_frequency setting
+  if (templateKey === 'social_security') return client.reporting_info?.social_security_frequency || 'monthly';
+  if (templateKey === 'deductions') return client.reporting_info?.deductions_frequency || 'monthly';
   return 'monthly';
 }
 
@@ -251,6 +251,8 @@ function shouldRunForMonth(templateKey, month, client) {
   if (freq === 'not_applicable') return false;
   if (freq === 'yearly') return month === PROCESS_TEMPLATES[templateKey]?.dueMonth;
   if (freq === 'bimonthly') return BIMONTHLY_DUE_MONTHS.includes(month);
+  // Semi-annual: task in month 7 (for Jan-Jun) and month 1 (for Jul-Dec)
+  if (freq === 'semi_annual') return month === 7 || month === 1;
   return true; // monthly
 }
 
@@ -263,6 +265,12 @@ function getReportDescription(templateKey, month, year, client) {
 
   if (freq === 'yearly') {
     return `דוח שנתי לשנת ${year - 1}`;
+  }
+  if (freq === 'semi_annual') {
+    // Month 7 = report for Jan-Jun, Month 1 = report for Jul-Dec (previous year)
+    if (month === 7) return `${template.name} עבור ינואר-יוני ${year}`;
+    if (month === 1) return `${template.name} עבור יולי-דצמבר ${year - 1}`;
+    return `${template.name} חצי שנתי ${year}`;
   }
   if (freq === 'bimonthly') {
     const periodName = BIMONTHLY_PERIOD_NAMES[month] || '';
