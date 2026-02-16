@@ -57,7 +57,11 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       tax_advances_frequency: 'monthly',
       deductions_frequency: 'monthly',
       social_security_frequency: 'monthly',
-      payroll_frequency: 'monthly'
+      payroll_frequency: 'monthly',
+      pnl_frequency: 'not_applicable',
+      pnl_target_day: '',
+      masav_suppliers_cycles: 0,
+      masav_suppliers_cycle_dates: []
     },
     business_info: {
       business_size: 'small',
@@ -455,6 +459,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     {
       group: 'דיווחים ודוחות',
       services: [
+        { value: 'pnl_reports', label: 'דוחות רווח והפסד (PNL)' },
         { value: 'annual_reports', label: 'מאזנים / דוחות שנתיים' },
         { value: 'reconciliation', label: 'התאמות חשבונות' },
         { value: 'authorities', label: 'דיווח רשויות' },
@@ -466,7 +471,6 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       group: 'שירותים נוספים',
       services: [
         { value: 'payslip_sending', label: 'משלוח תלושים' },
-        { value: 'social_benefits', label: 'סוציאליות' },
         { value: 'reserve_claims', label: 'תביעות מילואים' },
         { value: 'consulting', label: 'ייעוץ' },
         { value: 'client_management', label: 'ניהול לקוח' },
@@ -591,7 +595,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-3">
               <Building className="w-6 h-6 text-blue-600" />
-              {client?.id ? 'עריכת לקוח' : 'לקוח חדש'}
+              {client?.id ? `עריכת לקוח: ${client.name || formData.name || ''}` : 'לקוח חדש'}
             </CardTitle>
             {client?.id && (
               <Popover>
@@ -874,7 +878,87 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                     </SelectContent>
                   </Select>
                 </div>
+                {/* דוחות רווח והפסד PNL */}
+                <div className="border rounded-xl p-4 space-y-2">
+                  <Label className="text-base font-bold">דוחות רווח והפסד (PNL)</Label>
+                  <p className="text-xs text-gray-500">תדירות הפקת דוח PNL</p>
+                  <Select value={formData.reporting_info.pnl_frequency || 'not_applicable'} onValueChange={(value) => handleInputChange('pnl_frequency', value, 'reporting_info')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="quarterly">רבעוני</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formData.reporting_info.pnl_frequency && formData.reporting_info.pnl_frequency !== 'not_applicable' && (
+                    <div className="pt-2 border-t mt-2">
+                      <Label className="text-sm font-semibold">יום יעד בחודש</Label>
+                      <p className="text-xs text-gray-500 mb-1">באיזה יום בחודש צריך להיות מוכן הדוח</p>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="28"
+                        value={formData.reporting_info.pnl_target_day || ''}
+                        onChange={(e) => handleInputChange('pnl_target_day', parseInt(e.target.value) || '', 'reporting_info')}
+                        placeholder="לדוגמה: 15"
+                        className="w-32"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* מס"ב ספקים - סייקלים */}
+              {(formData.service_types || []).includes('masav_suppliers') && (
+                <div className="border-2 border-purple-200 rounded-xl p-4 space-y-3 bg-purple-50/30">
+                  <Label className="text-base font-bold">מס״ב ספקים - סייקלים</Label>
+                  <p className="text-xs text-gray-500">כמה סייקלים בחודש ובאילו תאריכים</p>
+                  <div className="flex items-center gap-3">
+                    <Label className="text-sm whitespace-nowrap">מספר סייקלים בחודש</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={formData.reporting_info.masav_suppliers_cycles || 0}
+                      onChange={(e) => {
+                        const numCycles = parseInt(e.target.value) || 0;
+                        handleInputChange('masav_suppliers_cycles', numCycles, 'reporting_info');
+                        const currentDates = formData.reporting_info.masav_suppliers_cycle_dates || [];
+                        if (numCycles > currentDates.length) {
+                          const newDates = [...currentDates, ...Array(numCycles - currentDates.length).fill('')];
+                          handleInputChange('masav_suppliers_cycle_dates', newDates, 'reporting_info');
+                        } else {
+                          handleInputChange('masav_suppliers_cycle_dates', currentDates.slice(0, numCycles), 'reporting_info');
+                        }
+                      }}
+                      className="w-20"
+                    />
+                  </div>
+                  {(formData.reporting_info.masav_suppliers_cycles || 0) > 0 && (
+                    <div className="grid md:grid-cols-3 gap-3 mt-2">
+                      {Array.from({ length: formData.reporting_info.masav_suppliers_cycles }).map((_, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Label className="text-sm whitespace-nowrap">סייקל {idx + 1} - יום</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="28"
+                            value={(formData.reporting_info.masav_suppliers_cycle_dates || [])[idx] || ''}
+                            onChange={(e) => {
+                              const dates = [...(formData.reporting_info.masav_suppliers_cycle_dates || [])];
+                              dates[idx] = parseInt(e.target.value) || '';
+                              handleInputChange('masav_suppliers_cycle_dates', dates, 'reporting_info');
+                            }}
+                            placeholder="יום בחודש"
+                            className="w-24"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="tax" className="space-y-4">
               <h3 className="text-lg font-semibold mb-4">פרטי מס בסיסיים</h3>

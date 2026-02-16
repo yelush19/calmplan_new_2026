@@ -27,14 +27,23 @@ const navigationGroups = [
     ],
   },
   {
-    title: "מרכז בקרה",
+    title: "מידע ותכנון",
     icon: LayoutGrid,
     items: [
       { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
-      { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
+      {
+        name: "לקוחות וספקים",
+        icon: Users,
+        children: [
+          { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+          { name: "לידים", href: createPageUrl("Leads"), icon: Target },
+          { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
+          { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
+        ],
+      },
     ],
   },
   {
@@ -47,15 +56,6 @@ const navigationGroups = [
       { name: "לוח התאמות", href: createPageUrl("Reconciliations"), icon: BookCheck },
       { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
-    ],
-  },
-  {
-    title: "לקוחות וספקים",
-    icon: Users,
-    items: [
-      { name: "לידים", href: createPageUrl("Leads"), icon: Target },
-      { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
-      { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
     ],
   },
   {
