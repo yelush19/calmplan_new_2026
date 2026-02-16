@@ -20,10 +20,11 @@ import TimeAwareness from "@/components/ui/TimeAwareness";
 
 const navigationGroups = [
   {
-    title: "בית",
+    title: "מבט על",
     icon: Home,
     items: [
-      { name: "דף הבית", href: createPageUrl("Home"), icon: Home },
+      { name: "סקירה כללית", href: createPageUrl("Home"), icon: Home },
+      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
     ],
   },
   {
@@ -32,7 +33,6 @@ const navigationGroups = [
     items: [
       { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
-      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
     ],
   },

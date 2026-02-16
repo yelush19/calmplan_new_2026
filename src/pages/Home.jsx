@@ -283,16 +283,16 @@ export default function HomePage() {
           </Card>
         </Link>
 
-        <Card className={`border-2 ${tasks.overdue.length > 0 ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+        <Card className={`border-2 ${tasks.overdue.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}>
           <CardContent className="p-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <AlertTriangle className={`w-6 h-6 ${tasks.overdue.length > 0 ? 'text-red-600' : 'text-gray-400'}`} />
-              <span className={`text-2xl font-bold ${tasks.overdue.length > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+              <Clock className={`w-6 h-6 ${tasks.overdue.length > 0 ? 'text-amber-600' : 'text-gray-400'}`} />
+              <span className={`text-2xl font-bold ${tasks.overdue.length > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
                 {tasks.overdue.length}
               </span>
             </div>
-            <p className={`font-medium ${tasks.overdue.length > 0 ? 'text-red-800' : 'text-gray-600'}`}>
-              משימות באיחור
+            <p className={`font-medium ${tasks.overdue.length > 0 ? 'text-amber-800' : 'text-gray-600'}`}>
+              ממתינות לטיפול
             </p>
           </CardContent>
         </Card>
@@ -410,36 +410,36 @@ export default function HomePage() {
           <Card className="h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-xl">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
-                משימות באיחור
+                <Clock className="w-6 h-6 text-amber-600" />
+                ממתינות לטיפול
                 {tasks.overdue.length > 0 && (
-                  <Badge variant="destructive">{tasks.overdue.length}</Badge>
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-200">{tasks.overdue.length}</Badge>
                 )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {tasks.overdue.length === 0 ? (
                 <div className="text-center py-8">
-                  <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-green-700 mb-2">
+                  <CheckCircle className="w-16 h-16 mx-auto text-emerald-500 mb-4" />
+                  <h3 className="text-lg font-semibold text-emerald-700 mb-2">
                     כל כך נחמד! 👏
                   </h3>
-                  <p className="text-green-600">
-                    אין לך משימות באיחור
+                  <p className="text-emerald-600">
+                    אין משימות ממתינות
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {tasks.overdue.slice(0, 5).map((task) => (
-                    <div key={task.id} className="p-3 border rounded-lg bg-red-50 border-red-200">
+                    <div key={task.id} className="p-3 border rounded-lg bg-amber-50 border-amber-200">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-red-800">{task.title}</h4>
+                          <h4 className="font-semibold text-amber-800">{task.title}</h4>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="destructive" className="text-xs">
-                              איחור {Math.ceil((new Date() - parseISO(task.due_date || task.scheduled_start)) / (1000 * 60 * 60 * 24))} ימים
+                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">
+                              {Math.ceil((new Date() - parseISO(task.due_date || task.scheduled_start)) / (1000 * 60 * 60 * 24))} ימים
                             </Badge>
-                            <div className="flex items-center gap-1 text-xs text-red-600">
+                            <div className="flex items-center gap-1 text-xs text-amber-600">
                               <UserIcon className="w-3 h-3" />
                               {task.monday_board_id && workBoardIds.includes(task.monday_board_id) ? 'עבודה' :
                                task.monday_board_id && homeBoardIds.includes(task.monday_board_id) ? 'בית' : 'כללי'}
@@ -451,15 +451,15 @@ export default function HomePage() {
                   ))}
 
                   {tasks.overdue.length > 5 && (
-                    <p className="text-sm text-red-600 text-center">
-                      ועוד {tasks.overdue.length - 5} משימות באיחור...
+                    <p className="text-sm text-amber-600 text-center">
+                      ועוד {tasks.overdue.length - 5} משימות ממתינות...
                     </p>
                   )}
 
                   <Link to={createPageUrl("Tasks")}>
-                    <Button variant="destructive" className="w-full mt-4">
-                      <AlertTriangle className="w-4 h-4 ml-2" />
-                      טפל במשימות באיחור
+                    <Button variant="outline" className="w-full mt-4 border-amber-200 text-amber-700 hover:bg-amber-50">
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                      צפה במשימות
                     </Button>
                   </Link>
                 </div>
