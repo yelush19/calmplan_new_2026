@@ -36,7 +36,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       vat_file_number: '',
       tax_deduction_file_number: '',
       social_security_file_number: '',
-      direct_transmission: false,
+      direct_transmission: true,
       annual_tax_ids: {
         current_year: String(new Date().getFullYear()),
         social_security_id: '',
@@ -246,6 +246,12 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         if (newReportingInfo.deductions_frequency === 'not_applicable') newReportingInfo.deductions_frequency = 'monthly';
       }
 
+      // Auto-link: bookkeeping + company → annual_reports + reconciliation
+      if (serviceType === 'bookkeeping' && checked && prev.business_info?.business_type === 'company') {
+        if (!newServiceTypes.includes('annual_reports')) newServiceTypes.push('annual_reports');
+        if (!newServiceTypes.includes('reconciliation')) newServiceTypes.push('reconciliation');
+      }
+
       return {
         ...prev,
         service_types: newServiceTypes,
@@ -449,12 +455,12 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       ]
     },
     {
-      group: 'מס"בים',
+      group: 'מס"בים ותשלומים',
       services: [
         { value: 'masav_employees', label: 'מס״ב עובדים' },
         { value: 'masav_social', label: 'מס״ב סוציאליות' },
-        { value: 'masav_authorities', label: 'מס״ב רשויות' },
         { value: 'masav_suppliers', label: 'מס״ב ספקים' },
+        { value: 'authorities_payment', label: 'תשלום רשויות' },
       ]
     },
     {
@@ -463,7 +469,6 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         { value: 'pnl_reports', label: 'דוחות רווח והפסד (PNL)' },
         { value: 'annual_reports', label: 'מאזנים / דוחות שנתיים' },
         { value: 'reconciliation', label: 'התאמות חשבונות' },
-        { value: 'authorities', label: 'דיווח רשויות' },
         { value: 'operator_reporting', label: 'דיווח למתפעל' },
         { value: 'taml_reporting', label: 'דיווח לטמל' },
       ]
@@ -474,7 +479,6 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         { value: 'payslip_sending', label: 'משלוח תלושים' },
         { value: 'reserve_claims', label: 'תביעות מילואים' },
         { value: 'consulting', label: 'ייעוץ' },
-        { value: 'client_management', label: 'ניהול לקוח' },
         { value: 'admin', label: 'אדמיניסטרציה' },
       ]
     },
@@ -634,7 +638,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <TabsTrigger value="reporting">תדירות דיווח</TabsTrigger>
               <TabsTrigger value="tax">פרטי מס</TabsTrigger>
               <TabsTrigger value="accounts">חשבונות בנק</TabsTrigger>
-              <TabsTrigger value="integration">אינטגרציות</TabsTrigger>
+              <TabsTrigger value="integration">מזהים ואינטגרציות</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4">
@@ -671,7 +675,18 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
 
               <div className="grid md:grid-cols-3 gap-4 pt-4 border-t">
                 <div><Label htmlFor="business_size">גודל העסק</Label><Select value={formData.business_info?.business_size} onValueChange={(value) => handleInputChange('business_size', value, 'business_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="small">קטן</SelectItem><SelectItem value="medium">בינוני</SelectItem><SelectItem value="large">גדול</SelectItem></SelectContent></Select></div>
-                <div><Label htmlFor="business_type">סוג העסק</Label><Select value={formData.business_info?.business_type} onValueChange={(value) => handleInputChange('business_type', value, 'business_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="company">חברה</SelectItem><SelectItem value="freelancer">עצמאי</SelectItem><SelectItem value="nonprofit">עמותה</SelectItem><SelectItem value="partnership">שותפות</SelectItem></SelectContent></Select></div>
+                <div><Label htmlFor="business_type">סוג העסק</Label><Select value={formData.business_info?.business_type} onValueChange={(value) => {
+                  handleInputChange('business_type', value, 'business_info');
+                  // Auto-link: when changing to company and bookkeeping exists → add annual_reports + reconciliation
+                  if (value === 'company' && (formData.service_types || []).includes('bookkeeping')) {
+                    setFormData(prev => {
+                      const st = [...(prev.service_types || [])];
+                      if (!st.includes('annual_reports')) st.push('annual_reports');
+                      if (!st.includes('reconciliation')) st.push('reconciliation');
+                      return { ...prev, service_types: st };
+                    });
+                  }
+                }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="company">חברה</SelectItem><SelectItem value="freelancer">עצמאי</SelectItem><SelectItem value="nonprofit">עמותה</SelectItem><SelectItem value="partnership">שותפות</SelectItem></SelectContent></Select></div>
                 <div><Label htmlFor="status">סטטוס</Label><Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">פעיל</SelectItem><SelectItem value="inactive">לא פעיל</SelectItem><SelectItem value="potential">פוטנציאלי</SelectItem><SelectItem value="former">לקוח עבר</SelectItem><SelectItem value="onboarding_pending">ממתין לבדיקה</SelectItem><SelectItem value="balance_sheet_only">סגירת מאזן בלבד</SelectItem></SelectContent></Select></div>
               </div>
 
@@ -720,8 +735,27 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                     <Label htmlFor="select-all-services" className="font-medium text-blue-600">בחר הכל</Label>
                   </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                    סימון/ביטול "שכר" יעדכן אוטומטית גם את "ביטוח לאומי" ו"מ״ה ניכויים"
+                    סימון "שכר" → אוטומטית מוסיף "ביטוח לאומי" ו"מ״ה ניכויים"
+                    <br />
+                    סימון "הנה״ח" + סוג עסק "חברה" → אוטומטית מוסיף "מאזנים/דוחות שנתיים" ו"התאמות חשבונות"
                   </div>
+                  {/* אמצעי תשלום רשויות */}
+                  {(formData.service_types || []).includes('authorities_payment') && (
+                    <div className="border-2 border-orange-200 rounded-lg p-3 bg-orange-50/30 space-y-2">
+                      <Label className="font-bold">אמצעי תשלום רשויות</Label>
+                      <Select
+                        value={formData.authorities_payment_method || 'masav'}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, authorities_payment_method: value }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="masav">מס״ב</SelectItem>
+                          <SelectItem value="standing_order">כתב אישור (כ״א)</SelectItem>
+                          <SelectItem value="check">המחאה</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Reporting frequencies moved to dedicated "תדירות דיווח" tab */}
@@ -1144,21 +1178,17 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
             </TabsContent>
             <TabsContent value="integration" className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
-                <div><Label htmlFor="monday_board_id">מזהה לוח Monday.com</Label><Input id="monday_board_id" value={formData.integration_info.monday_board_id} onChange={(e) => handleInputChange('monday_board_id', e.target.value, 'integration_info')} placeholder="123456789" /></div>
-                <div><Label htmlFor="monday_group_id">מזהה קבוצה Monday.com</Label><Input id="monday_group_id" value={formData.integration_info.monday_group_id} onChange={(e) => handleInputChange('monday_group_id', e.target.value, 'integration_info')} placeholder="group123" /></div>
-                <div><Label htmlFor="annual_reports_client_id">מזהה מערכת מאזנים</Label><Input id="annual_reports_client_id" value={formData.integration_info.annual_reports_client_id} onChange={(e) => handleInputChange('annual_reports_client_id', e.target.value, 'integration_info')} /></div>
                 <div>
-                  <Label htmlFor="calmplan_id">מזהה CalmPlan (נוצר אוטומטית)</Label>
-                  <Input 
-                    id="calmplan_id" 
-                    value={formData.integration_info.calmplan_id || (client?.id ? client.id : 'ייווצר לאחר שמירה')} 
-                    readOnly 
-                    className="bg-gray-50" 
-                    placeholder="מזהה ייווצר אוטומטית לאחר יצירת הלקוח"
+                  <Label htmlFor="calmplan_id">מזהה CalmPlan</Label>
+                  <Input
+                    id="calmplan_id"
+                    value={client?.id || 'ייווצר לאחר שמירה'}
+                    readOnly
+                    className="bg-gray-50"
                   />
-                  <p className="text-xs text-gray-500 mt-1">מזהה זה מסונכרן אוטומטית ל-Monday.com בעמודת "ID CalmPlan"</p>
                 </div>
-                <div><Label htmlFor="lastpass_payment_entry_id">מזהה רשומת תשלומים LastPass (אופציונלי)</Label><Input id="lastpass_payment_entry_id" value={formData.integration_info.lastpass_payment_entry_id} onChange={(e) => handleInputChange('lastpass_payment_entry_id', e.target.value, 'integration_info')} placeholder="entry_id_123" /><p className="text-xs text-gray-500 mt-1">לקישור נוח לפרטי תשלום ברשויות. כרגע זהו רק שדה להתמצאות - לא נעשה שימוש אוטומטי בו.</p></div>
+                <div><Label htmlFor="annual_reports_client_id">מזהה מערכת מאזנים</Label><Input id="annual_reports_client_id" value={formData.integration_info.annual_reports_client_id} onChange={(e) => handleInputChange('annual_reports_client_id', e.target.value, 'integration_info')} /></div>
+                <div><Label htmlFor="lastpass_payment_entry_id">מזהה רשומת תשלומים (אופציונלי)</Label><Input id="lastpass_payment_entry_id" value={formData.integration_info.lastpass_payment_entry_id} onChange={(e) => handleInputChange('lastpass_payment_entry_id', e.target.value, 'integration_info')} placeholder="לקישור נוח לפרטי תשלום ברשויות" /></div>
               </div>
             </TabsContent>
           </Tabs>

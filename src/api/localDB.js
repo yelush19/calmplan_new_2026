@@ -209,6 +209,7 @@ export const entities = {
   BalanceSheet: createEntity('balance_sheets'),
   StickyNote: createEntity('sticky_notes'),
   Project: createEntity('projects'),
+  SystemConfig: createEntity('system_config'),
 };
 
 export { auth };

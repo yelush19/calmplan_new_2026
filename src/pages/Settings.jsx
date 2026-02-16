@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { DaySchedule, WeeklyRecommendation } from '@/api/entities';
-import { Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle, Plus, X, Download, Upload, Database, Cloud, AlertTriangle } from 'lucide-react';
+import { DaySchedule, WeeklyRecommendation, SystemConfig } from '@/api/entities';
+import { Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle, Plus, X, Download, Upload, Database, Cloud, AlertTriangle, Settings, Trash2 } from 'lucide-react';
 import { exportAllData, importAllData } from '@/api/base44Client';
 import { isSupabaseConfigured } from '@/api/supabaseClient';
 
@@ -247,9 +247,136 @@ export default function SettingsPage() {
         </Card>
       </motion.div>
 
+      {/* הגדרות פרמטרים */}
+      <SystemParametersSection />
+
       {/* גיבוי ושחזור נתונים */}
       <DataBackupSection />
     </div>
+  );
+}
+
+const PARAM_CATEGORIES = [
+  { key: 'service_types', label: 'סוגי שירותים', placeholder: 'הוסף סוג שירות חדש...', description: 'שירותים שניתן לשייך ללקוח' },
+  { key: 'report_types', label: 'סוגי דיווח', placeholder: 'הוסף סוג דיווח...', description: 'סוגי דוחות ודיווחים' },
+  { key: 'reporting_frequencies', label: 'תדירויות דיווח', placeholder: 'הוסף תדירות...', description: 'אפשרויות תדירות (חודשי, דו-חודשי וכו\')' },
+  { key: 'balance_processes', label: 'תהליכי מאזן', placeholder: 'הוסף שלב תהליך...', description: 'שלבי הכנת מאזן שנתי' },
+];
+
+function SystemParametersSection() {
+  const [params, setParams] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [configId, setConfigId] = useState(null);
+  const [newValues, setNewValues] = useState({});
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  useEffect(() => {
+    loadParams();
+  }, []);
+
+  const loadParams = async () => {
+    setIsLoading(true);
+    try {
+      const configs = await SystemConfig.list(null, 10);
+      const config = configs.find(c => c.config_key === 'system_parameters');
+      if (config) {
+        setParams(config.data || {});
+        setConfigId(config.id);
+      } else {
+        // Initialize with defaults
+        const defaults = {
+          service_types: ['הנהלת חשבונות', 'דיווחי מע"מ', 'מקדמות מס', 'שכר', 'ביטוח לאומי', 'מ"ה ניכויים', 'מס"ב עובדים', 'מס"ב סוציאליות', 'מס"ב ספקים', 'תשלום רשויות', 'דוחות רווח והפסד', 'מאזנים / דוחות שנתיים', 'התאמות חשבונות', 'דיווח למתפעל', 'דיווח לטמל', 'משלוח תלושים', 'תביעות מילואים', 'ייעוץ', 'אדמיניסטרציה'],
+          report_types: ['מע"מ תקופתי', '874 מפורט', 'מקדמות מס הכנסה', 'ביטוח לאומי', 'ניכויים', 'דוח שנתי'],
+          reporting_frequencies: ['חודשי', 'דו-חודשי', 'רבעוני', 'חצי שנתי', 'שנתי', 'לא רלוונטי'],
+          balance_processes: ['פעולות סגירה', 'עריכה לביקורת', 'שליחה לרו"ח', 'שאלות רו"ח - סבב 1', 'שאלות רו"ח - סבב 2', 'חתימה'],
+        };
+        const newConfig = await SystemConfig.create({ config_key: 'system_parameters', data: defaults });
+        setParams(defaults);
+        setConfigId(newConfig.id);
+      }
+    } catch (e) {
+      console.error('Error loading system params:', e);
+    }
+    setIsLoading(false);
+  };
+
+  const saveParams = async (updatedParams) => {
+    try {
+      if (configId) {
+        await SystemConfig.update(configId, { data: updatedParams });
+      }
+      setParams(updatedParams);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (e) {
+      console.error('Error saving params:', e);
+      setSaveStatus('error');
+    }
+  };
+
+  const addItem = async (category) => {
+    const value = (newValues[category] || '').trim();
+    if (!value) return;
+    const current = params[category] || [];
+    if (current.includes(value)) return;
+    const updated = { ...params, [category]: [...current, value] };
+    await saveParams(updated);
+    setNewValues(prev => ({ ...prev, [category]: '' }));
+  };
+
+  const removeItem = async (category, index) => {
+    const current = [...(params[category] || [])];
+    current.splice(index, 1);
+    await saveParams({ ...params, [category]: current });
+  };
+
+  if (isLoading) return <div className="text-center py-4 text-gray-500">טוען הגדרות פרמטרים...</div>;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <Settings className="w-6 h-6 text-purple-600" />
+            הגדרות פרמטרים
+            {saveStatus === 'saved' && <span className="text-sm font-normal text-green-600 mr-auto">נשמר!</span>}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">הוסף וערוך סוגי שירותים, דיווחים, תדירויות ותהליכי מאזן. השינויים נשמרים אוטומטית.</p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {PARAM_CATEGORIES.map(cat => (
+            <div key={cat.key} className="border rounded-lg p-4 space-y-3">
+              <div>
+                <Label className="font-bold text-base">{cat.label}</Label>
+                <p className="text-xs text-muted-foreground">{cat.description}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(params[cat.key] || []).map((item, idx) => (
+                  <span key={idx} className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm group">
+                    {item}
+                    <button onClick={() => removeItem(cat.key, idx)} className="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={newValues[cat.key] || ''}
+                  onChange={(e) => setNewValues(prev => ({ ...prev, [cat.key]: e.target.value }))}
+                  placeholder={cat.placeholder}
+                  className="flex-1"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(cat.key); } }}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={() => addItem(cat.key)}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 

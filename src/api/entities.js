@@ -55,6 +55,7 @@ export const StickyNote = base44.entities.StickyNote;
 
 export const Project = base44.entities.Project;
 
+export const SystemConfig = base44.entities.SystemConfig;
 
 // auth sdk:
 export const User = base44.auth;
