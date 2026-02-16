@@ -121,7 +121,7 @@ const PROCESS_TEMPLATES = {
     name: 'דיווח מע"מ',
     category: 'מע"מ',
     frequencyField: 'vat_reporting_frequency',
-    dayOfMonth: 15,
+    dayOfMonth: 19, // online filing; 874 clients get 23 via taxCalendar
     requiresPayroll: false,
   },
   payroll: {
@@ -135,7 +135,7 @@ const PROCESS_TEMPLATES = {
     name: 'מקדמות מס',
     category: 'מקדמות מס',
     frequencyField: 'tax_advances_frequency',
-    dayOfMonth: 15,
+    dayOfMonth: 19, // online filing deadline
     requiresPayroll: false,
   },
   social_security: {
@@ -149,7 +149,7 @@ const PROCESS_TEMPLATES = {
     name: 'ניכויים במקור',
     category: 'ניכויים',
     frequencyField: null, // monthly or bimonthly, follows payroll
-    dayOfMonth: 15,
+    dayOfMonth: 19, // online filing deadline
     requiresPayroll: true,
   },
   annual_report: {

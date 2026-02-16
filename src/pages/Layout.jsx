@@ -24,14 +24,14 @@ const navigationGroups = [
     icon: Home,
     items: [
       { name: "סקירה כללית", href: createPageUrl("Home"), icon: Home },
-      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
     ],
   },
   {
-    title: "עבודה שוטפת",
-    icon: CheckSquare,
+    title: "מרכז בקרה",
+    icon: LayoutGrid,
     items: [
       { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
     ],

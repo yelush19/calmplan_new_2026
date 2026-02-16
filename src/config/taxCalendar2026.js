@@ -1,14 +1,15 @@
 /**
  * Israeli Tax Calendar for 2026
  * ==============================
- * Official dates based on Israeli Tax Authority (רשות המסים) rules:
+ * Practical deadlines (online filing, used by most clients):
  *
- * Standard deadlines (per law):
- *   - VAT & Tax Advances (מע"מ ומקדמות): 15th of following month
- *   - Income Tax Deductions (ניכויים): 16th of following month
- *   - Detailed VAT Report (דוח מפורט 874): 23rd of following month
- *   - Online filing (דיווח מקוון): 19th of following month
- *   - National Insurance (ביטוח לאומי): 15th, or 16th if Saturday
+ *   - ביטוח לאומי (National Insurance): 15th of following month
+ *   - מע"מ תקופתי / ניכויים / מקדמות (VAT/Deductions/Advances): 19th of following month
+ *   - מע"מ 874 מפורט (Detailed VAT Report): 23rd of following month
+ *
+ * Legacy base deadlines (mail filers):
+ *   - VAT & Tax Advances: 15th
+ *   - Income Tax Deductions: 16th
  *
  * If a deadline falls on a religious rest day (Fri/Sat/Sun),
  * it is pushed to the next Monday.
@@ -160,6 +161,10 @@ export function getDueDateForCategory(category, client, reportMonth) {
  * This is determined by the deadlines.vat field from Monday containing "874".
  */
 export function isClient874(client) {
+  // Check explicit vat_report_type field (set in client form)
+  if (client?.reporting_info?.vat_report_type === '874') {
+    return true;
+  }
   // Check deadlines.vat field (from Monday import)
   if (client?.deadlines?.vat && String(client.deadlines.vat).includes('874')) {
     return true;

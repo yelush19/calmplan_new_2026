@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StickyNote } from '@/api/entities';
+import { StickyNote, Client } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Pin, PinOff, Trash2, Link2, Edit3, Check } from 'lucide-react';
+import { Plus, X, Pin, PinOff, Trash2, Link2, Edit3, Check, User, Calendar, Tag } from 'lucide-react';
 
 const NOTE_COLORS = [
   { key: 'yellow', bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-900', hover: 'hover:bg-amber-200', ring: 'ring-amber-400' },
@@ -18,19 +20,50 @@ function getColorConfig(colorKey) {
   return NOTE_COLORS.find(c => c.key === colorKey) || NOTE_COLORS[0];
 }
 
+const URGENCY_OPTIONS = [
+  { value: 'none', label: 'ללא', color: 'bg-gray-100 text-gray-600' },
+  { value: 'low', label: 'נמוך', color: 'bg-blue-100 text-blue-700' },
+  { value: 'medium', label: 'בינוני', color: 'bg-amber-100 text-amber-700' },
+  { value: 'high', label: 'גבוה', color: 'bg-orange-100 text-orange-700' },
+  { value: 'urgent', label: 'דחוף', color: 'bg-rose-100 text-rose-700' },
+];
+
+const CATEGORY_OPTIONS = [
+  { value: '', label: 'ללא' },
+  { value: 'admin', label: 'אדמיניסטרציה' },
+  { value: 'marketing', label: 'שיווק' },
+  { value: 'personal', label: 'אישי' },
+  { value: 'client_work', label: 'עבודה ללקוח' },
+];
+
 export default function StickyNotes({ compact = false, onTaskLink }) {
   const [notes, setNotes] = useState([]);
+  const [clients, setClients] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [newColor, setNewColor] = useState('yellow');
+  const [newClientName, setNewClientName] = useState('');
+  const [newUrgency, setNewUrgency] = useState('none');
+  const [newDueDate, setNewDueDate] = useState('');
+  const [newCategory, setNewCategory] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
 
   useEffect(() => {
     loadNotes();
+    loadClients();
   }, []);
+
+  const loadClients = async () => {
+    try {
+      const allClients = await Client.list(null, 500);
+      setClients((allClients || []).filter(c => c.status === 'active').sort((a, b) => a.name?.localeCompare(b.name, 'he')));
+    } catch {
+      setClients([]);
+    }
+  };
 
   const loadNotes = async () => {
     try {
@@ -56,11 +89,19 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
       pinned: false,
       linked_task_id: null,
       linked_task_title: null,
+      client_name: newClientName || null,
+      urgency: newUrgency !== 'none' ? newUrgency : null,
+      due_date: newDueDate || null,
+      category: newCategory || null,
       order: Date.now(),
     });
     setNewTitle('');
     setNewContent('');
     setNewColor('yellow');
+    setNewClientName('');
+    setNewUrgency('none');
+    setNewDueDate('');
+    setNewCategory('');
     setIsAdding(false);
     loadNotes();
   };
@@ -137,6 +178,49 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                 className="bg-white/80 border-amber-200 text-sm min-h-[60px]"
                 rows={2}
               />
+              {/* Extra fields row */}
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={newClientName || '__none__'} onValueChange={(v) => setNewClientName(v === '__none__' ? '' : v)}>
+                  <SelectTrigger className="bg-white/80 border-amber-200 text-sm h-9">
+                    <SelectValue placeholder="לקוח (אופציונלי)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">ללא לקוח</SelectItem>
+                    {clients.map(c => (
+                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={newCategory || '__none__'} onValueChange={(v) => setNewCategory(v === '__none__' ? '' : v)}>
+                  <SelectTrigger className="bg-white/80 border-amber-200 text-sm h-9">
+                    <SelectValue placeholder="קטגוריה" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORY_OPTIONS.map(c => (
+                      <SelectItem key={c.value || '__none__'} value={c.value || '__none__'}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={newUrgency} onValueChange={setNewUrgency}>
+                  <SelectTrigger className="bg-white/80 border-amber-200 text-sm h-9">
+                    <SelectValue placeholder="דחיפות" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {URGENCY_OPTIONS.map(u => (
+                      <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="date"
+                  value={newDueDate}
+                  onChange={(e) => setNewDueDate(e.target.value)}
+                  className="bg-white/80 border-amber-200 text-sm h-9"
+                  placeholder="תאריך יעד"
+                />
+              </div>
               {/* Color picker */}
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">צבע:</span>
@@ -221,8 +305,34 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                     {note.content && (
                       <p className="text-xs mt-1 opacity-80 leading-relaxed line-clamp-3">{note.content}</p>
                     )}
+                    {/* Extra fields */}
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {note.client_name && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] opacity-70">
+                          <User className="w-2.5 h-2.5" />
+                          {note.client_name}
+                        </span>
+                      )}
+                      {note.category && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] opacity-70">
+                          <Tag className="w-2.5 h-2.5" />
+                          {CATEGORY_OPTIONS.find(c => c.value === note.category)?.label || note.category}
+                        </span>
+                      )}
+                      {note.due_date && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] opacity-70">
+                          <Calendar className="w-2.5 h-2.5" />
+                          {note.due_date}
+                        </span>
+                      )}
+                      {note.urgency && note.urgency !== 'none' && (
+                        <Badge className={`text-[10px] px-1 py-0 h-4 ${URGENCY_OPTIONS.find(u => u.value === note.urgency)?.color || ''}`}>
+                          {URGENCY_OPTIONS.find(u => u.value === note.urgency)?.label}
+                        </Badge>
+                      )}
+                    </div>
                     {note.linked_task_title && (
-                      <div className="flex items-center gap-1 mt-2 text-xs opacity-70">
+                      <div className="flex items-center gap-1 mt-1 text-xs opacity-70">
                         <Link2 className="w-3 h-3" />
                         <span className="truncate">{note.linked_task_title}</span>
                       </div>

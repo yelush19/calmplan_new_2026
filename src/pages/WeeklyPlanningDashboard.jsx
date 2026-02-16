@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Calendar, Clock, AlertTriangle, CheckCircle, Target,
+  Calendar, Clock, CheckCircle, Target,
   Brain, TrendingUp, Users, Briefcase, ChevronLeft, ChevronRight,
-  Sparkles, ArrowRight
+  Sparkles, ArrowRight, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Task, Client } from '@/api/entities';
 import { Link } from 'react-router-dom';
@@ -30,11 +30,80 @@ const WORK_DAYS = [
 const MAX_DAILY_TASKS = 5; // ADHD recommendation: no more than 5 tasks/day
 
 const PRIORITY_CONFIG = {
-  urgent: { label: 'דחוף', color: 'bg-red-500 text-white', dot: 'bg-red-500', order: 0 },
+  urgent: { label: 'דחוף', color: 'bg-amber-500 text-white', dot: 'bg-amber-500', order: 0 },
   high: { label: 'גבוה', color: 'bg-orange-400 text-white', dot: 'bg-orange-400', order: 1 },
   medium: { label: 'בינוני', color: 'bg-yellow-400 text-gray-800', dot: 'bg-yellow-400', order: 2 },
   low: { label: 'נמוך', color: 'bg-blue-300 text-white', dot: 'bg-blue-300', order: 3 },
 };
+
+function OverdueSection({ tasks }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const displayTasks = isExpanded ? tasks : tasks.slice(0, 5);
+
+  return (
+    <Card className="border-2 border-amber-200 bg-amber-50/50">
+      <div
+        className="flex items-center justify-between px-5 py-4 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3">
+          <Clock className="w-5 h-5 text-amber-600" />
+          <h3 className="font-bold text-amber-800">
+            {tasks.length} משימות ממתינות לטיפול
+          </h3>
+          <Badge className="bg-amber-200 text-amber-800 text-xs">כדאי לטפל</Badge>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-5 h-5 text-amber-500" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-amber-500" />
+        )}
+      </div>
+      <CardContent className="px-5 pb-4 pt-0">
+        <div className="space-y-2">
+          {displayTasks.map(task => {
+            const pri = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
+            return (
+              <div
+                key={task.id}
+                className="flex items-center gap-3 p-3 rounded-xl bg-white border border-amber-100"
+              >
+                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${pri.dot}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-800 truncate">{task.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {task.client_name && (
+                      <span className="text-xs text-gray-400">{task.client_name}</span>
+                    )}
+                    {task.due_date && (
+                      <span className="text-xs text-amber-600">
+                        יעד: {format(parseISO(task.due_date), 'dd/MM', { locale: he })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Badge className={`text-xs ${pri.color}`}>{pri.label}</Badge>
+              </div>
+            );
+          })}
+        </div>
+        {tasks.length > 5 && !isExpanded && (
+          <p className="text-center text-xs text-amber-600 mt-3 cursor-pointer" onClick={() => setIsExpanded(true)}>
+            +{tasks.length - 5} נוספות...
+          </p>
+        )}
+        <div className="mt-3 flex justify-center">
+          <Link to={`${createPageUrl("Tasks")}?status=not_started`}>
+            <Button variant="outline" size="sm" className="text-amber-700 border-amber-200 hover:bg-amber-100">
+              <ArrowRight className="w-4 h-4 ml-1" />
+              צפה בכל המשימות
+            </Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function WeeklyPlanningDashboard() {
   const [tasks, setTasks] = useState([]);
@@ -130,8 +199,8 @@ export default function WeeklyPlanningDashboard() {
     if (stats.overdue > 0) {
       recs.push({
         type: 'warning',
-        icon: AlertTriangle,
-        text: `${stats.overdue} משימות באיחור — כדאי לטפל או לעדכן תאריכים`,
+        icon: Clock,
+        text: `${stats.overdue} משימות ממתינות לטיפול — כדאי לטפל או לעדכן תאריכים`,
       });
     }
 
@@ -180,7 +249,7 @@ export default function WeeklyPlanningDashboard() {
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-[#657453]/10 flex items-center justify-center mb-4">
-            <Brain className="w-8 h-8 animate-pulse text-[#657453]" />
+            <Brain className="w-8 h-8 text-[#657453]" />
           </div>
           <p className="text-lg text-gray-500">טוען תכנון שבועי...</p>
         </div>
@@ -246,12 +315,12 @@ export default function WeeklyPlanningDashboard() {
             <p className="text-sm text-gray-500 mt-1">נותרו</p>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-sm">
+        <Card className={`border-0 shadow-sm ${stats.overdue > 0 ? 'bg-amber-50' : ''}`}>
           <CardContent className="p-4 text-center">
-            <p className={`text-3xl font-black ${stats.overdue > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+            <p className={`text-3xl font-black ${stats.overdue > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
               {stats.overdue}
             </p>
-            <p className="text-sm text-gray-500 mt-1">באיחור</p>
+            <p className="text-sm text-gray-500 mt-1">ממתינים לטיפול</p>
           </CardContent>
         </Card>
       </div>
@@ -261,12 +330,12 @@ export default function WeeklyPlanningDashboard() {
         <div className="space-y-2">
           {recommendations.map((rec, i) => {
             const Icon = rec.icon;
-            const bg = rec.type === 'warning' ? 'bg-red-50 border-red-200'
+            const bg = rec.type === 'warning' ? 'bg-amber-50 border-amber-200'
               : rec.type === 'success' ? 'bg-emerald-50 border-emerald-200'
-              : 'bg-amber-50 border-amber-200';
-            const textColor = rec.type === 'warning' ? 'text-red-800'
+              : 'bg-sky-50 border-sky-200';
+            const textColor = rec.type === 'warning' ? 'text-amber-800'
               : rec.type === 'success' ? 'text-emerald-800'
-              : 'text-amber-800';
+              : 'text-sky-800';
             return (
               <motion.div
                 key={i}
@@ -281,6 +350,11 @@ export default function WeeklyPlanningDashboard() {
             );
           })}
         </div>
+      )}
+
+      {/* Overdue tasks drill-down */}
+      {overdueTasks.length > 0 && (
+        <OverdueSection tasks={overdueTasks} />
       )}
 
       {/* Daily breakdown */}
@@ -327,18 +401,18 @@ export default function WeeklyPlanningDashboard() {
                           key={i}
                           className={`w-2 h-5 rounded-full ${
                             i < taskCount
-                              ? isOverloaded ? 'bg-red-400' : 'bg-[#657453]'
+                              ? isOverloaded ? 'bg-amber-400' : 'bg-[#657453]'
                               : 'bg-gray-200'
                           }`}
                         />
                       ))}
                       {taskCount > MAX_DAILY_TASKS &&
                         Array.from({ length: taskCount - MAX_DAILY_TASKS }, (_, i) => (
-                          <div key={`over-${i}`} className="w-2 h-5 rounded-full bg-red-400" />
+                          <div key={`over-${i}`} className="w-2 h-5 rounded-full bg-amber-400" />
                         ))
                       }
                     </div>
-                    <span className={`text-sm font-bold ${isOverloaded ? 'text-red-600' : 'text-gray-500'}`}>
+                    <span className={`text-sm font-bold ${isOverloaded ? 'text-amber-600' : 'text-gray-500'}`}>
                       {taskCount}/{MAX_DAILY_TASKS}
                     </span>
                   </div>
