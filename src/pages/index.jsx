@@ -76,6 +76,10 @@ import RecurringTasks from "./RecurringTasks";
 
 import DataImportTool from "./DataImportTool";
 
+import FeeManagement from "./FeeManagement";
+
+import Projects from "./Projects";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -155,6 +159,10 @@ const PAGES = {
     RecurringTasks: RecurringTasks,
 
     DataImportTool: DataImportTool,
+
+    FeeManagement: FeeManagement,
+
+    Projects: Projects,
 
 }
 
@@ -258,6 +266,10 @@ function PagesContent() {
                 <Route path="/RecurringTasks" element={<RecurringTasks />} />
 
                 <Route path="/DataImportTool" element={<DataImportTool />} />
+
+                <Route path="/FeeManagement" element={<FeeManagement />} />
+
+                <Route path="/Projects" element={<Projects />} />
 
             </Routes>
         </Layout>

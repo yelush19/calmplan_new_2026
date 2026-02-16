@@ -49,7 +49,7 @@ export default function WeeklySummary() {
       const nextWeekEnd = new Date(weekEnd);
       nextWeekEnd.setDate(nextWeekEnd.getDate() + 7);
 
-      const MAX_OVERDUE_DAYS = 180;
+      const MAX_OVERDUE_DAYS = 21;
       const overdueTasks = allTasks.filter(task => {
         if (task.status === 'completed') return false;
         const dueStr = task.due_date || task.scheduled_start;

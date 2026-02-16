@@ -7,7 +7,7 @@ import {
   Home, Brain, Briefcase, CheckSquare, Target, BookCheck, DollarSign,
   LayoutGrid, BarChart3, Settings, Menu, X, Users, Monitor, Scaling,
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, FileText, UserPlus, RefreshCw, Database,
-  ArrowRight, FileBarChart, AlertTriangle, Repeat
+  ArrowRight, FileBarChart, AlertTriangle, Repeat, FolderKanban
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import {
@@ -34,6 +34,7 @@ const navigationGroups = [
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
+      { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
       {
         name: "לקוחות וספקים",
         icon: Users,
@@ -44,18 +45,25 @@ const navigationGroups = [
           { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
         ],
       },
+      {
+        name: "פרויקטים",
+        icon: FolderKanban,
+        children: [
+          { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
+        ],
+      },
     ],
   },
   {
     title: "דיווחים ותהליכים",
     icon: Calculator,
     items: [
+      { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
       { name: "תהליכי דיווח חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
       { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
       { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
       { name: "לוח התאמות", href: createPageUrl("Reconciliations"), icon: BookCheck },
       { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
-      { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
     ],
   },
   {
