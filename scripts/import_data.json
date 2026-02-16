@@ -1,0 +1,3770 @@
+{
+  "clients": [
+    {
+      "name": "אורי סאן בע\"מ",
+      "monday_id": "687e3bbdbfeddeaaf105f980",
+      "entity_number": "515961571",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "payslip_sending"
+      ],
+      "tax_info": {
+        "tax_id": "515961571",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "923819353",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "052063",
+          "tax_advances_percentage": "",
+          "social_security_id": "160910",
+          "deductions_id": "165023",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "052063",
+          "tax_advances_percentage": "",
+          "social_security_id": "160910",
+          "deductions_id": "165023"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "monthly",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "משלוח תלושים",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "19_לחודש (דיגיטלי)",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "אנתין ילנה-ע.מורשה",
+      "monday_id": "687e3bbdd3e9347d3341c4ad",
+      "entity_number": "314580036",
+      "status": "active",
+      "service_types": [
+        "bookkeeping"
+      ],
+      "tax_info": {
+        "tax_id": "314580036",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "116926",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "116926",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "bimonthly",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "not_applicable",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "ניר כהן",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "19_לחודש (דיגיטלי)",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "monday_id": "687e3bbecb741c9317d797ab",
+      "entity_number": "513464735",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "operator_reporting"
+      ],
+      "tax_info": {
+        "tax_id": "513464735",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "925236382",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "114015",
+          "tax_advances_percentage": "",
+          "social_security_id": "550765",
+          "deductions_id": "194455",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "114015",
+          "tax_advances_percentage": "",
+          "social_security_id": "550765",
+          "deductions_id": "194455"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "monthly",
+        "deductions_frequency": "monthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "דיווח למתפעל",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "15_לחודש (רגיל)",
+        "deductions": "15_לחודש (רגיל)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "אר.אס סולישנס בע\"מ",
+      "monday_id": "687e3bc20a4c0f9ed946acce",
+      "entity_number": "516939428",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "516939428",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "936487974",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "001684",
+          "tax_advances_percentage": "",
+          "social_security_id": "690419",
+          "deductions_id": "432384",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "001684",
+          "tax_advances_percentage": "",
+          "social_security_id": "690419",
+          "deductions_id": "432384"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "monthly",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "19_לחודש (דיגיטלי)",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "בראנדלייט בינה מלאכותית בעמ",
+      "monday_id": "68b6827ed0b2727066402b16",
+      "entity_number": "517057576",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "payslip_sending",
+        "operator_reporting",
+        "masav"
+      ],
+      "tax_info": {
+        "tax_id": "517057576",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "936481167",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "324299",
+          "deductions_id": "420136",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "324299",
+          "deductions_id": "420136"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "לאנקרי שרון",
+      "extra_services": "דיווח למתפעל, מס\"ב סוציאליות, מס\"ב עובדים, מס\"ב רשויות, משלוח תלושים",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "ד\"ר וון דייק בע\"מ",
+      "monday_id": "687e3bbe273fea034ed40083",
+      "entity_number": "513381780",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "payslip_sending",
+        "tamal_reporting"
+      ],
+      "tax_info": {
+        "tax_id": "513381780",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "924322530",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "094935",
+          "tax_advances_percentage": "",
+          "social_security_id": "145738",
+          "deductions_id": "173129",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "094935",
+          "tax_advances_percentage": "",
+          "social_security_id": "145738",
+          "deductions_id": "173129"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "monthly",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "דיווח לטמל, משלוח תלושים",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "15_לחודש (רגיל)",
+        "deductions": "15_לחודש (רגיל)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "השחקן מס' 1 בעמ",
+      "monday_id": "687e3bc2bfeddeaaf105f988",
+      "entity_number": "516936838",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "516936838",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "936456490",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "364101",
+          "deductions_id": "294156",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "364101",
+          "deductions_id": "294156"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "השחקן-עמרי דנאור- עוסק-317500270",
+      "monday_id": "687e3bc36120762e78df5dd9",
+      "entity_number": "317500270",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "317500270",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "936321686",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "116742",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "116742",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "19_לחודש (דיגיטלי)",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "ליתאי ניהול שירותים בע\"מ",
+      "monday_id": "687e3bbf6120762e78df5dd3",
+      "entity_number": "516004264",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "516004264",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "925487597",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "104267",
+          "tax_advances_percentage": "",
+          "social_security_id": "968209",
+          "deductions_id": "203451",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "104267",
+          "tax_advances_percentage": "",
+          "social_security_id": "968209",
+          "deductions_id": "203451"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "monthly",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "ניר כהן",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "19_לחודש (דיגיטלי)",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "מאי הירש-ע.מורשה",
+      "monday_id": "687e3bbfbfeddeaaf105f985",
+      "entity_number": "66585381",
+      "status": "active",
+      "service_types": [
+        "bookkeeping"
+      ],
+      "tax_info": {
+        "tax_id": "66585381",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "022608",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "022608",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "bimonthly",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "not_applicable",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "sole_proprietor",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "גליצר ארי",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "19_לחודש (דיגיטלי)",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "מאי רוקה פרוג'קט בע\"מ",
+      "monday_id": "687e3bbf1194f30490cfd003",
+      "entity_number": "515198992",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "515198992",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "952562775",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "052063",
+          "tax_advances_percentage": "",
+          "social_security_id": "813671",
+          "deductions_id": "401570",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "052063",
+          "tax_advances_percentage": "",
+          "social_security_id": "813671",
+          "deductions_id": "401570"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "semi_annual",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שמעון אבנעים",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "מודיבודי ישראל בעמ",
+      "monday_id": "687e3bc63d8a72a9bab46748",
+      "entity_number": "516220365",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "payslip_sending"
+      ],
+      "tax_info": {
+        "tax_id": "516220365",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "921658688",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "535099",
+          "deductions_id": "145470",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "535099",
+          "deductions_id": "145470"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "monthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "ניר כהן",
+      "extra_services": "משלוח תלושים",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "סמארט קליק טכנולוגיס בעמ",
+      "monday_id": "687e3bc7925b34bb9d46b745",
+      "entity_number": "516968021",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "operator_reporting",
+        "masav"
+      ],
+      "tax_info": {
+        "tax_id": "516968021",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "911022564",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "monthly",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "ניר כהן",
+      "extra_services": "דיווח למתפעל, מס\"ב סוציאליות, מס\"ב עובדים",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "19_לחודש (דיגיטלי)",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "פומט בע\"מ",
+      "monday_id": "687e3bc1ce67a9cb6504b310",
+      "entity_number": "510297179",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "tamal_reporting"
+      ],
+      "tax_info": {
+        "tax_id": "510297179",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "930211388",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "114474",
+          "deductions_id": "237009",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "114474",
+          "deductions_id": "237009"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "monthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "דיווח לטמל",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "לא רלוונטי",
+        "deductions": "15_לחודש (רגיל)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "פנדה טק בע\"מ",
+      "monday_id": "687e3bc19ad971203c39b98a",
+      "entity_number": "513707026",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "payslip_sending",
+        "operator_reporting"
+      ],
+      "tax_info": {
+        "tax_id": "513707026",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "924375868",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "858022",
+          "deductions_id": "174205",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "858022",
+          "deductions_id": "174205"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "monthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "דיווח למתפעל, משלוח תלושים",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "רחל מור -עוסק- מעמ נסגר",
+      "monday_id": "687e3bc3dea3624fea70f5a3",
+      "entity_number": "37218658",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "37218658",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "918012543",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "not_applicable",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "sole_proprietor",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "לא רלוונטי",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "רחל מור בע\"מ",
+      "monday_id": "687e3bc3d16cd58b7c531a6e",
+      "entity_number": "516983103",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "516983103",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "918175647",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "028163",
+          "tax_advances_percentage": "",
+          "social_security_id": "500482",
+          "deductions_id": "133561",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "028163",
+          "tax_advances_percentage": "",
+          "social_security_id": "500482",
+          "deductions_id": "133561"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "monthly",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "19_לחודש (דיגיטלי)",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "ד.מ פוסט בע\"מ",
+      "monday_id": "690715567dffdbca021579f8",
+      "entity_number": "516686086",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "operator_reporting",
+        "masav"
+      ],
+      "tax_info": {
+        "tax_id": "516686086",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "936436492",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "358261",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "358261",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "monthly",
+        "deductions_frequency": "monthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "ניר כהן",
+      "extra_services": "דיווח למתפעל, מס\"ב סוציאליות, מס\"ב עובדים, מס\"ב רשויות, מס\"ב ספקים",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "א.מ לוג שרמן בע\"מ",
+      "monday_id": "687e3bbdbfeddeaaf105f98082",
+      "entity_number": "516892387",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "516892387",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "907592067",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "ניר כהן",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "אמוביז בעמ",
+      "monday_id": "687e3bbdbfeddeaaf105f98083",
+      "entity_number": "516516838",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll",
+        "payslip_sending",
+        "operator_reporting",
+        "masav"
+      ],
+      "tax_info": {
+        "tax_id": "516516838",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "923865661",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "monthly",
+        "deductions_frequency": "monthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "ניר כהן",
+      "extra_services": "דיווח למתפעל, מס\"ב סוציאליות, מס\"ב ספקים, מס\"ב עובדים, מס\"ב רשויות, משלוח תלושים",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "19_לחודש (דיגיטלי)",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "הקהילה הפתוחה",
+      "monday_id": "687e3bbdbfeddeaaf105f98084",
+      "entity_number": "",
+      "status": "active",
+      "service_types": [
+        "bookkeeping"
+      ],
+      "tax_info": {
+        "tax_id": "",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "not_applicable",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "sole_proprietor",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "ניר כהן",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "לא רלוונטי",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "אנארמד בעמ",
+      "monday_id": null,
+      "entity_number": "",
+      "status": "inactive",
+      "service_types": [
+        "bookkeeping"
+      ],
+      "tax_info": {
+        "tax_id": "",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "not_applicable",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "not_applicable",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "sole_proprietor",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "לא רלוונטי",
+        "advances": "לא רלוונטי",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "זהר דיאלוג בעמ",
+      "monday_id": null,
+      "entity_number": "",
+      "status": "inactive",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "921486718",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "not_applicable",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "sole_proprietor",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "לא רלוונטי",
+        "advances": "לא רלוונטי",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "מאיה וון דייק",
+      "monday_id": null,
+      "entity_number": "",
+      "status": "inactive",
+      "service_types": [
+        "bookkeeping"
+      ],
+      "tax_info": {
+        "tax_id": "",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "not_applicable",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "not_applicable",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "sole_proprietor",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "לא רלוונטי",
+        "advances": "לא רלוונטי",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "סקארה בעמ",
+      "monday_id": null,
+      "entity_number": "",
+      "status": "inactive",
+      "service_types": [
+        "bookkeeping"
+      ],
+      "tax_info": {
+        "tax_id": "",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "not_applicable",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "not_applicable",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "sole_proprietor",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "לא רלוונטי",
+        "advances": "לא רלוונטי",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "פרשהאב בעמ",
+      "monday_id": null,
+      "entity_number": "",
+      "status": "inactive",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "924474752",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "not_applicable",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "sole_proprietor",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "לא רלוונטי",
+        "advances": "לא רלוונטי",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "י.אראל הנדסה בע\"מ",
+      "monday_id": "687e3bbe767103c85af7b05b",
+      "entity_number": "514085943",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "514085943",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "923576623",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "446339",
+          "deductions_id": "159560",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "446339",
+          "deductions_id": "159560"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "monthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "874"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "23_לחודש (874)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "עוזי רוזן ניהול ושיווק בע\"מ",
+      "monday_id": "687e3bc0500357f817dc41ed",
+      "entity_number": "514821768",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "514821768",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "926607482",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "722897",
+          "deductions_id": "220973",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "722897",
+          "deductions_id": "220973"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    },
+    {
+      "name": "פיץ ניהול ואחזקות",
+      "monday_id": null,
+      "entity_number": "",
+      "status": "active",
+      "service_types": [
+        "bookkeeping"
+      ],
+      "tax_info": {
+        "tax_id": "",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "not_applicable",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "not_applicable",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "sole_proprietor",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "לא רלוונטי",
+        "advances": "לא רלוונטי",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "רייזמן יזמות בע\"מ",
+      "monday_id": "687e3bc64faec0416bcf8443",
+      "entity_number": "516502671",
+      "status": "active",
+      "service_types": [
+        "bookkeeping"
+      ],
+      "tax_info": {
+        "tax_id": "516502671",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": "",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "",
+          "deductions_id": ""
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "not_applicable",
+        "social_security_frequency": "not_applicable",
+        "payroll_frequency": "not_applicable",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "לא רלוונטי",
+        "deductions": "לא רלוונטי",
+        "social_security": "לא רלוונטי"
+      }
+    },
+    {
+      "name": "רייזמן יעוץ ומיקור בע\"מ",
+      "monday_id": null,
+      "entity_number": "516179397",
+      "status": "active",
+      "service_types": [
+        "bookkeeping",
+        "payroll"
+      ],
+      "tax_info": {
+        "tax_id": "516179397",
+        "vat_file_number": "",
+        "tax_deduction_file_number": "923840284",
+        "social_security_file_number": "",
+        "direct_transmission": false,
+        "annual_tax_ids": {
+          "current_year": "2026",
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "369300",
+          "deductions_id": "165719",
+          "last_updated": "2026-02-16T11:17:49.310Z",
+          "updated_by": "Monday Import"
+        },
+        "prev_year_ids": {
+          "tax_advances_id": "",
+          "tax_advances_percentage": "",
+          "social_security_id": "369300",
+          "deductions_id": "165719"
+        }
+      },
+      "reporting_info": {
+        "vat_reporting_frequency": "bimonthly",
+        "tax_advances_frequency": "not_applicable",
+        "deductions_frequency": "bimonthly",
+        "social_security_frequency": "monthly",
+        "payroll_frequency": "monthly",
+        "vat_report_type": "periodic"
+      },
+      "business_info": {
+        "business_size": "small",
+        "business_type": "company",
+        "estimated_monthly_hours": {}
+      },
+      "integration_info": {
+        "monday_board_id": "",
+        "monday_item_id": ""
+      },
+      "communication_preferences": {
+        "preferred_method": "whatsapp"
+      },
+      "billing_info": {},
+      "contacts": [],
+      "notes": "",
+      "accountant": "שטיינמץ ושות'",
+      "extra_services": "",
+      "deadlines": {
+        "vat": "19_לחודש (דיגיטלי)",
+        "advances": "לא רלוונטי",
+        "deductions": "19_לחודש (דיגיטלי)",
+        "social_security": "15_לחודש (רגיל)"
+      }
+    }
+  ],
+  "bankAccounts": [
+    {
+      "name": "בנק לאומי 886-734700/75",
+      "client_name": "פיץ ניהול ואחזקות",
+      "calmplan_client_id": "",
+      "account_type": "בנק",
+      "account_number": "886-734700/75",
+      "bank_name": "2001",
+      "reconciliation_system": "תוכנת הנהלת חשבונות",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "לא פעיל",
+      "notes": "נשלחה פניה לBIZI להקפאה- 11.09.25"
+    },
+    {
+      "name": "מזרחי 511-284082",
+      "client_name": "עוזי רוזן ניהול ושיווק בע\"מ",
+      "calmplan_client_id": "687e3bc0500357f817dc41ed",
+      "account_type": "בנק",
+      "account_number": "511-284082",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "תוכנת הנהלת חשבונות",
+      "bookkeeping_card_number": "בנקמזרחי",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": "2025-05-01",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה-3187",
+      "client_name": "ליתאי ניהול שירותים בע\"מ",
+      "calmplan_client_id": "687e3bbf6120762e78df5dd3",
+      "account_type": "כרטיס אשראי",
+      "account_number": "3187",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "3187",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "מושהה",
+      "notes": ""
+    },
+    {
+      "name": "ויזה-3693",
+      "client_name": "ליתאי ניהול שירותים בע\"מ",
+      "calmplan_client_id": "687e3bbf6120762e78df5dd3",
+      "account_type": "כרטיס אשראי",
+      "account_number": "3693",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "3693",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "דיינרס-9726",
+      "client_name": "ליתאי ניהול שירותים בע\"מ",
+      "calmplan_client_id": "687e3bbf6120762e78df5dd3",
+      "account_type": "כרטיס אשראי",
+      "account_number": "9726",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "9726",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה-4172",
+      "client_name": "ליתאי ניהול שירותים בע\"מ",
+      "calmplan_client_id": "687e3bbf6120762e78df5dd3",
+      "account_type": "כרטיס אשראי",
+      "account_number": "4172",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "4172",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה-2505",
+      "client_name": "ליתאי ניהול שירותים בע\"מ",
+      "calmplan_client_id": "687e3bbf6120762e78df5dd3",
+      "account_type": "כרטיס אשראי",
+      "account_number": "2505",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "2505",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "מושהה",
+      "notes": ""
+    },
+    {
+      "name": "מזרחי 262004",
+      "client_name": "ליתאי ניהול שירותים בע\"מ",
+      "calmplan_client_id": "687e3bbf6120762e78df5dd3",
+      "account_type": "בנק",
+      "account_number": "262004",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1250",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "דיסקונט+ 159171247",
+      "client_name": "ליתאי ניהול שירותים בע\"מ",
+      "calmplan_client_id": "687e3bbf6120762e78df5dd3",
+      "account_type": "בנק",
+      "account_number": "159171247",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1200",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בינלאומי 331791 -94",
+      "client_name": "י.אראל הנדסה בע\"מ",
+      "calmplan_client_id": "687e3bbe767103c85af7b05b",
+      "account_type": "בנק",
+      "account_number": "331791 -94",
+      "bank_name": "הבינלאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1251",
+      "reconciliation_frequency": "דו-חודשי, חצי שנתי",
+      "last_reconciliation_date": "2024-01-31",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה-6534",
+      "client_name": "י.אראל הנדסה בע\"מ",
+      "calmplan_client_id": "687e3bbe767103c85af7b05b",
+      "account_type": "כרטיס אשראי",
+      "account_number": "6534",
+      "bank_name": "הבינלאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1110",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2024-01-01",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בינלאומי 318642 -94",
+      "client_name": "י.אראל הנדסה בע\"מ",
+      "calmplan_client_id": "687e3bbe767103c85af7b05b",
+      "account_type": "בנק",
+      "account_number": "318642 -94",
+      "bank_name": "הבינלאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1250",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2024-12-23",
+      "next_target_date": "2025-10-30",
+      "status": "בעיה-BIZI",
+      "notes": "נפתחה קריאה BIZI-תנועות לא עוברות לחשבשבת מ23.12.2024"
+    },
+    {
+      "name": "אמריקן אקספרס 1540- מזרחי",
+      "client_name": "י.אראל הנדסה בע\"מ",
+      "calmplan_client_id": "687e3bbe767103c85af7b05b",
+      "account_type": "כרטיס אשראי",
+      "account_number": "1540",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1108",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2024-01-01",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": "קלוט עד 15.06.25- נשלחה הודעה לצחי- סיסמה למזרחי"
+    },
+    {
+      "name": "ויזה-1688",
+      "client_name": "י.אראל הנדסה בע\"מ",
+      "calmplan_client_id": "687e3bbe767103c85af7b05b",
+      "account_type": "כרטיס אשראי",
+      "account_number": "1688",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1109",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2023-10-15",
+      "next_target_date": "2025-10-15",
+      "status": "פעיל",
+      "notes": "קלוט עד 15.06.25- נשלחה הודעה לצחי- סיסמה למזרחי"
+    },
+    {
+      "name": "מזרחי 455352 -431",
+      "client_name": "י.אראל הנדסה בע\"מ",
+      "calmplan_client_id": "687e3bbe767103c85af7b05b",
+      "account_type": "בנק",
+      "account_number": "455352",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1280",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2024-10-17",
+      "next_target_date": "2025-10-15",
+      "status": "פעיל",
+      "notes": "נקלט עד 06.2025- נשלחה הודעה לצחי- סיסמה עדכנית -11.09.25"
+    },
+    {
+      "name": "ויזה-4779",
+      "client_name": "השחקן מס' 1 בעמ",
+      "calmplan_client_id": "687e3bc2bfeddeaaf105f988",
+      "account_type": "כרטיס אשראי",
+      "account_number": "4779",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "תוכנת הנהלת חשבונות",
+      "bookkeeping_card_number": "000004779",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "מושהה",
+      "notes": "11.09.25- רווחית- מנוי לא פעיל- הודעתי לאלונה"
+    },
+    {
+      "name": "דיינרס-8066",
+      "client_name": "השחקן מס' 1 בעמ",
+      "calmplan_client_id": "687e3bc2bfeddeaaf105f988",
+      "account_type": "כרטיס אשראי",
+      "account_number": "8066",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "תוכנת הנהלת חשבונות",
+      "bookkeeping_card_number": "000008066",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "מושהה",
+      "notes": "11.09.25- רווחית- מנוי לא פעיל- הודעתי לאלונה"
+    },
+    {
+      "name": "דיסקונט+ 207394069",
+      "client_name": "השחקן מס' 1 בעמ",
+      "calmplan_client_id": "687e3bc2bfeddeaaf105f988",
+      "account_type": "בנק",
+      "account_number": "207394069",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "תוכנת הנהלת חשבונות",
+      "bookkeeping_card_number": "41",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "מושהה",
+      "notes": "11.09.25- רווחית- מנוי לא פעיל- הודעתי לאלונה"
+    },
+    {
+      "name": "ויזה ................6521",
+      "client_name": "ד\"ר וון דייק בע\"מ",
+      "calmplan_client_id": "687e3bbe273fea034ed40083",
+      "account_type": "כרטיס אשראי",
+      "account_number": "6521",
+      "bank_name": "לאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "2003",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-11-16",
+      "next_target_date": "2026-01-15",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה-7425",
+      "client_name": "ד\"ר וון דייק בע\"מ",
+      "calmplan_client_id": "687e3bbe273fea034ed40083",
+      "account_type": "כרטיס אשראי",
+      "account_number": "7425",
+      "bank_name": "לאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "2002",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-11-16",
+      "next_target_date": "2026-01-22",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "לאומי 2033783 -843",
+      "client_name": "ד\"ר וון דייק בע\"מ",
+      "calmplan_client_id": "687e3bbe273fea034ed40083",
+      "account_type": "בנק",
+      "account_number": "2033783",
+      "bank_name": "לאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "2001",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-12-01",
+      "next_target_date": "2026-01-22",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה 4030 מזרחי ש\"ח",
+      "client_name": "אורי סאן בע\"מ",
+      "calmplan_client_id": "687e3bbdbfeddeaaf105f980",
+      "account_type": "כרטיס אשראי",
+      "account_number": "4030",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "4030",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2026-01-04",
+      "next_target_date": "2026-03-26",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק מזרחי מזרחי-אירו-39106-209",
+      "client_name": "אורי סאן בע\"מ",
+      "calmplan_client_id": "687e3bbdbfeddeaaf105f980",
+      "account_type": "בנק",
+      "account_number": "39106",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1203",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": "2025-09-11",
+      "next_target_date": "2026-03-26",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "מזרחי-דולר ארה\"ב-39106-209",
+      "client_name": "אורי סאן בע\"מ",
+      "calmplan_client_id": "687e3bbdbfeddeaaf105f980",
+      "account_type": "בנק",
+      "account_number": "39106",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1204",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-09-01",
+      "next_target_date": "2026-03-26",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "מזרחי 39106-571",
+      "client_name": "אורי סאן בע\"מ",
+      "calmplan_client_id": "687e3bbdbfeddeaaf105f980",
+      "account_type": "בנק",
+      "account_number": "39106",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1202",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2026-01-20",
+      "next_target_date": "2026-03-26",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק  פועלים 754-555224 עו\"ש ש\"ח",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "בנק",
+      "account_number": "555224",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1200",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-05",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק דולר ארה\"ב  107324 CITI - USD $$$",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "CITI",
+      "account_number": "107324",
+      "bank_name": "דולר ארה\"ב",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1202",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק פועלים ארו-&&&&- 754-555224",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "בנק",
+      "account_number": "555224",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1206",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-05",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ\"א 5264-פועלים 754-555224- שקלי",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "כרטיס אשראי",
+      "account_number": "555224",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1208",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-11",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק הפועלים ליש\"ט-754-555224",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "בנק",
+      "account_number": "555224",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1212",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-09-11",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק CITI 124845",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "CITI",
+      "account_number": "124845",
+      "bank_name": "CITI",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1214",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-04-17",
+      "next_target_date": "2025-08-28",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ\"א פועלים 4105 שקלי",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "כרטיס אשראי",
+      "account_number": "4105",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1219",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-12",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ\"א פועלים -7862- 754-555224 שקלי",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "כרטיס אשראי",
+      "account_number": "7862",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1222",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-12",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ\"א -5264- USD $$$$",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "כרטיס אשראי",
+      "account_number": "5264",
+      "bank_name": "פועלים USD",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1225",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-09-02",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק פועלים PLN-זלוטי פולני-754-555224",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "בנק",
+      "account_number": "555224",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1227",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-09-11",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ\"א פועלים- ארו  7862 EURO",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "כרטיס אשראי",
+      "account_number": "555224",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1228",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-11-11",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ\"א 1021 פועלים -אמירקן שקלי",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "כרטיס אשראי",
+      "account_number": "555224",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1229",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-11",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ\"א  פועלים- 7862-$$$$$$ USD",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "כרטיס אשראי",
+      "account_number": "555224",
+      "bank_name": "פועלים USD",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1223",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-11",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק פועלים $USD-754-555224",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "בנק",
+      "account_number": "555224",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1207",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-09-11",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "התאמת חוז לקוחות",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": "2025-06-30",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "התאמת חוז  ספקים ורשימת השלמות",
+      "client_name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+      "calmplan_client_id": "687e3bbecb741c9317d797ab",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": "2025-06-30",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק דיסקונט עוש שח 059-207014940",
+      "client_name": "אר.אס סולישנס בע\"מ",
+      "calmplan_client_id": "687e3bc20a4c0f9ed946acce",
+      "account_type": "בנק",
+      "account_number": "207014940",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-06-30",
+      "next_target_date": "2025-08-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 7131",
+      "client_name": "אר.אס סולישנס בע\"מ",
+      "calmplan_client_id": "687e3bc20a4c0f9ed946acce",
+      "account_type": "כרטיס אשראי",
+      "account_number": "7131",
+      "bank_name": "כרטיס אשראי 7131",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "71310",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-07-15",
+      "next_target_date": "2025-09-18",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 0042",
+      "client_name": "אר.אס סולישנס בע\"מ",
+      "calmplan_client_id": "687e3bc20a4c0f9ed946acce",
+      "account_type": "כרטיס אשראי",
+      "account_number": "0042",
+      "bank_name": "0042",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "00042",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-07-10",
+      "next_target_date": "2025-09-18",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק לאומי שח 864-3482048",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "בנק",
+      "account_number": "864-3482048",
+      "bank_name": "בנק לאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "100000",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-10-21",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק  לאומי דולרי 864-3482048 USD$",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "בנק",
+      "account_number": "864-3482048",
+      "bank_name": "לאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "100001",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-10-12",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 7576 שקל",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "כרטיס אשראי",
+      "account_number": "3482048",
+      "bank_name": "כרטיס אשראי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "502020",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-10-02",
+      "next_target_date": "2025-11-02",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 7576 יורו",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "כרטיס אשראי",
+      "account_number": "No result",
+      "bank_name": "כרטיס אשראי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "502022",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "לא פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 7576 דולר",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "כרטיס אשראי",
+      "account_number": "No result",
+      "bank_name": "7576",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "502021",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-10-02",
+      "next_target_date": "2025-11-02",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 6645 שקל",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "כרטיס אשראי",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "502030",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-10-02",
+      "next_target_date": "2025-11-02",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 6645 יורו",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "כרטיס אשראי",
+      "account_number": "No result",
+      "bank_name": "כרטיס אשראי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "502032",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-01-01",
+      "next_target_date": "2025-08-31",
+      "status": "לא פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 6645 דולר",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "כרטיס אשראי",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "502031",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-08-03",
+      "next_target_date": "2025-10-02",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 7584 שקל",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "כרטיס אשראי",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "502010",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-10-02",
+      "next_target_date": "2025-11-02",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 7584 יורו",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "כרטיס אשראי",
+      "account_number": "No result",
+      "bank_name": "כרטיס אשראי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "502012",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-01-01",
+      "next_target_date": "2025-08-31",
+      "status": "לא פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיס אשראי 7584 דולר",
+      "client_name": "בראנדלייט בינה מלאכותית בעמ",
+      "calmplan_client_id": "68b6827ed0b2727066402b16",
+      "account_type": "כרטיס אשראי",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "502011",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-10-02",
+      "next_target_date": "2025-11-02",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק מזרחי 20-410-544544",
+      "client_name": "מאי רוקה פרוג'קט בע\"מ",
+      "calmplan_client_id": "687e3bbf1194f30490cfd003",
+      "account_type": "בנק",
+      "account_number": "544544",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "הוספה- בטיפול BIZI",
+      "bookkeeping_card_number": "1200",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-11-18",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": "נשלח לצח לחדש סיסמה 04.08.25"
+    },
+    {
+      "name": "כ\"א מזרחי 5027",
+      "client_name": "מאי רוקה פרוג'קט בע\"מ",
+      "calmplan_client_id": "687e3bbf1194f30490cfd003",
+      "account_type": "כרטיס אשראי",
+      "account_number": "5027",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "הוספה- בטיפול BIZI",
+      "bookkeeping_card_number": "5027",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-11-02",
+      "next_target_date": "2026-01-04",
+      "status": "פעיל",
+      "notes": "נשלח לצח לחדש סיסמה 04.08.25"
+    },
+    {
+      "name": "בנק הפועלים -584 130114",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "בנק",
+      "account_number": "130114",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "10000",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-13",
+      "next_target_date": "2025-11-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "$-130114 - 584 | 142 עו\"ש בנק פועלים מטח USD",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "בנק",
+      "account_number": "130114",
+      "bank_name": "פועלים USD",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "10003",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-13",
+      "next_target_date": "2025-11-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ.א. 1383",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "כרטיס אשראי",
+      "account_number": "130114",
+      "bank_name": "כ.א. 1383",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "10015",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-10-30",
+      "next_target_date": "2025-11-19",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ.א. 845",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "כרטיס אשראי",
+      "account_number": "130114",
+      "bank_name": "כ.א. 0845",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "10006",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-10-01",
+      "next_target_date": "2025-10-28",
+      "status": "בעיה-BIZI",
+      "notes": "נפתחה קריאה- אין ירידת תנועות מ26.09.25"
+    },
+    {
+      "name": "קופת נסיעות לחול",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "13000",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": "2025-01-30",
+      "next_target_date": "2025-07-15",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כרטיסי אשראי איזימאץ'-צמרת",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "סליקה",
+      "account_number": "No result",
+      "bank_name": "איזימאץ-צמרת",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "11007",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "לא פעיל",
+      "notes": "איחוד עם 11014/11007/30720/ אולי גם 11008- לבדיקה"
+    },
+    {
+      "name": "קופת ביט- תשלומי GROW",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "סליקה",
+      "account_number": "No result",
+      "bank_name": "קופת ביט- תשלומי GROW",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "11008",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-07-22",
+      "next_target_date": "2025-07-31",
+      "status": "פעיל",
+      "notes": "משולם מדי שבוע - יצוא מGROW+ התאמה לפי ת.ערך"
+    },
+    {
+      "name": "קופת דיינרס",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "סליקה",
+      "account_number": "No result",
+      "bank_name": "דיינרס",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "11013",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2024-12-31",
+      "next_target_date": null,
+      "status": "לא פעיל",
+      "notes": "איחוד עם37023-דיינרס מעבר -  מ2025"
+    },
+    {
+      "name": "קופת הכנסות מאשראי- PAYPLUS למעט דיינרס, ביימי, GROW",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "סליקה",
+      "account_number": "No result",
+      "bank_name": "PAYPLUS",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "11014",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-06-30",
+      "next_target_date": "2025-08-14",
+      "status": "פעיל",
+      "notes": "אוחד לראשי- קופת \"קרדיטמאטש\" - יש להריץ התאמה אוטומטית - לפי אסמ' 1+ לפי אסמכ'-2 , כל חודש , ציון פרטים 0- התאמה לפי 4 ספרות, רק אחת [ לא רבות ]"
+    },
+    {
+      "name": "פאיימי-סופרפארם",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "20160",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-01-01",
+      "next_target_date": "2025-07-31",
+      "status": "פעיל",
+      "notes": "אוחד + מול 20203- לוודא?"
+    },
+    {
+      "name": "גרואו פיימנסט בעמ",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "גרואו פיימנסט בעמ",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "37142",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": "2025-06-30",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": "חן ספק גרואו משולם"
+    },
+    {
+      "name": "סופרפארם-לקוח",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "20230",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-05-29",
+      "next_target_date": "2025-07-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "סופרפארם-ספק",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "30696",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-05-29",
+      "next_target_date": "2025-07-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "MODIBOSI UK",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "25002",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": "2025-04-30",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "MODIBODI PTY LTD",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "25000",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-05-29",
+      "next_target_date": "2025-07-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "קופת ביי מי",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "סליקה",
+      "account_number": "No result",
+      "bank_name": "קופת ביי מי",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "37024",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-07-08",
+      "next_target_date": "2025-08-10",
+      "status": "פעיל",
+      "notes": "הורדת קובץ מאתר ביי מי + התאמה לפי תאריך ערך ל08 לכל חודש- משולם ש+60 יום."
+    },
+    {
+      "name": "קופת דיינרס / מעבר",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "סליקה",
+      "account_number": "No result",
+      "bank_name": "דיינרס",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "37023",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-06-30",
+      "next_target_date": "2025-08-31",
+      "status": "פעיל",
+      "notes": "איחוד עם קופת דיינרס -  מ01.01.2025- פעיל של קרדיטמאטש"
+    },
+    {
+      "name": "משולם חן מעבר- ראה 11008",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "סליקה",
+      "account_number": "11008",
+      "bank_name": "משולם חן",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "37022",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "לא פעיל",
+      "notes": "אוחד עם  11008- קופת ביט-תשלומי גרואו פאימנטס-משולם מעבר 37142/37022"
+    },
+    {
+      "name": "פאיימי חן מעבר",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "סליקה",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "37021",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-01-01",
+      "next_target_date": "2025-07-31",
+      "status": "לא פעיל",
+      "notes": "אוחד ל20160 מ01.01.2025- בדיקה מול 20203"
+    },
+    {
+      "name": "צמרת חן מעבר",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "סליקה",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "30720",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "לא פעיל",
+      "notes": "אוחד ל-11008- לבדיקה"
+    },
+    {
+      "name": "ביימי טגנולוגיות בע\"מ- ספק",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "20105",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2024-01-01",
+      "next_target_date": "2025-07-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "התאמת חוז  ספקים ורשימת השלמות",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-07-31",
+      "next_target_date": "2025-09-18",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק הפועלים עו\"ש 791-232321",
+      "client_name": "סמארט קליק טכנולוגיס בעמ",
+      "calmplan_client_id": "687e3bc7925b34bb9d46b745",
+      "account_type": "בנק",
+      "account_number": "791-232321",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1200",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-10-23",
+      "next_target_date": "2025-12-01",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק הפועלים מט\"ח יורו 323232 81",
+      "client_name": "סמארט קליק טכנולוגיס בעמ",
+      "calmplan_client_id": "687e3bc7925b34bb9d46b745",
+      "account_type": "בנק",
+      "account_number": "323232 81",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1202",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-10-23",
+      "next_target_date": "2025-12-01",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק לאומי עו\"ש 891-54500037",
+      "client_name": "סמארט קליק טכנולוגיס בעמ",
+      "calmplan_client_id": "687e3bc7925b34bb9d46b745",
+      "account_type": "בנק",
+      "account_number": "891-54500037",
+      "bank_name": "לאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1201",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-10-23",
+      "next_target_date": "2025-12-01",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה 1329- בנק לאומי",
+      "client_name": "סמארט קליק טכנולוגיס בעמ",
+      "calmplan_client_id": "687e3bc7925b34bb9d46b745",
+      "account_type": "כרטיס אשראי",
+      "account_number": "1329",
+      "bank_name": "לאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "87",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-10-23",
+      "next_target_date": "2025-12-01",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה 0823 לאומי",
+      "client_name": "סמארט קליק טכנולוגיס בעמ",
+      "calmplan_client_id": "687e3bc7925b34bb9d46b745",
+      "account_type": "כרטיס אשראי",
+      "account_number": "0823",
+      "bank_name": "לאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "89",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-10-23",
+      "next_target_date": "2025-12-01",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "התאמת חוז  ספקים ורשימת השלמות",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "רבעוני",
+      "last_reconciliation_date": "2025-05-29",
+      "next_target_date": "2025-09-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק דיסקונט 4294 - עו\"ש",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "בנק",
+      "account_number": "4294",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "41750",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-30",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק דיסקונט 18600-עו\"ש-החזרים +נייר 15018603",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "בנק",
+      "account_number": "15018603",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "41751",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-30",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה של פומט בע\"מ 4125",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "כרטיס אשראי",
+      "account_number": "4125",
+      "bank_name": "ויזה",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "41767",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-02",
+      "next_target_date": "2025-12-10",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק דיסקונט - חן מט\"ח-4294",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "בנק",
+      "account_number": "4294",
+      "bank_name": "דיסקונט",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "41752",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-11-30",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "קופת העברות לקוחות אייל",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "41008",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-07-31",
+      "next_target_date": "2025-09-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "קופת שיקים",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "41002",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-07-31",
+      "next_target_date": "2025-09-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "קופה כללית-מזומנים מאוטומטים",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "קופה כללית",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "41000",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": "2025-09-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "יציל חו\"ז ספק [ קופת אשראי]",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "קופת אשראי",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "41006/7",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-07-31",
+      "next_target_date": "2025-09-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "קופת כורסאות מעבר",
+      "client_name": "פומט בע\"מ",
+      "calmplan_client_id": "687e3bc1ce67a9cb6504b310",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "41010",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-07-31",
+      "next_target_date": "2025-09-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק מזרחי טפחות     251897/467",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "בנק",
+      "account_number": "251897",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1000",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-09-11",
+      "next_target_date": "2025-10-20",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "413113",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "בנק",
+      "account_number": "413113",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1500",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-07-15",
+      "next_target_date": "2025-10-20",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "319076-קרן הלוואה לעסקים",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "בנק",
+      "account_number": "319076",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1002",
+      "reconciliation_frequency": "חצי שנתי",
+      "last_reconciliation_date": "2025-06-30",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "403247-קרן הלוואה לעסקים",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "בנק",
+      "account_number": "403247",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1210",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-09-11",
+      "next_target_date": "2025-09-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה אבישי-4532",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "כרטיס אשראי",
+      "account_number": "251897",
+      "bank_name": "4532",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "33008",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-09-10",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "3527-מאסטרקארד",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "כרטיס אשראי",
+      "account_number": "251897",
+      "bank_name": "3527",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "3527",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-07-15",
+      "next_target_date": "2025-08-28",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "552-מאסטרקארד",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "כרטיס אשראי",
+      "account_number": "251897",
+      "bank_name": "0552",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "552",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2024-11-14",
+      "next_target_date": null,
+      "status": "לא פעיל",
+      "notes": ""
+    },
+    {
+      "name": "ויזה בני-0299",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "כרטיס אשראי",
+      "account_number": "251897",
+      "bank_name": "0299",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "299",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-09-10",
+      "next_target_date": "2025-10-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "אמריקן-9217",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "כרטיס אשראי",
+      "account_number": "413113",
+      "bank_name": "9217",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "9217",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-06-19",
+      "next_target_date": "2025-08-28",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "אמריקן-4711",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "כרטיס אשראי",
+      "account_number": "413113",
+      "bank_name": "4711",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "9191",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-05-20",
+      "next_target_date": "2025-08-28",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "אמריקן אקספרס - 3517",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "כרטיס אשראי",
+      "account_number": "413113",
+      "bank_name": "3517",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "3517",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": null,
+      "next_target_date": null,
+      "status": "פעיל",
+      "notes": "הגדדרות אם לא ירד בחיוב הבא"
+    },
+    {
+      "name": "התאמת חוז  ספקים ורשימת השלמות",
+      "client_name": "פנדה טק בע\"מ",
+      "calmplan_client_id": "687e3bc19ad971203c39b98a",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "רבעוני",
+      "last_reconciliation_date": "2025-06-30",
+      "next_target_date": "2025-09-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק עו\"ש הפועלים 12-680-280008",
+      "client_name": "רחל מור בע\"מ",
+      "calmplan_client_id": "687e3bc3d16cd58b7c531a6e",
+      "account_type": "בנק",
+      "account_number": "280008",
+      "bank_name": "פועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "680",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-10-29",
+      "next_target_date": "2025-11-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כא דיינרס 8818 בנק הפועלים",
+      "client_name": "רחל מור בע\"מ",
+      "calmplan_client_id": "687e3bc3d16cd58b7c531a6e",
+      "account_type": "כרטיס אשראי",
+      "account_number": "8818",
+      "bank_name": "בנק הפועלים",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-10-09",
+      "next_target_date": "2025-11-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "כ\"א אמקס 5010",
+      "client_name": "רחל מור בע\"מ",
+      "calmplan_client_id": "687e3bc3d16cd58b7c531a6e",
+      "account_type": "כרטיס אשראי",
+      "account_number": "5010",
+      "bank_name": "כ\"א אמקס 5010",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-10-02",
+      "next_target_date": "2025-11-30",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "בנק מזרחי ש\"ח ח-ן 475-685436",
+      "client_name": "ד.מ פוסט בע\"מ",
+      "calmplan_client_id": "690715567dffdbca021579f8",
+      "account_type": "בנק",
+      "account_number": "475-685436",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1003",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2026-01-06",
+      "next_target_date": "2026-01-29",
+      "status": "פעיל",
+      "notes": "לבדוק ולסגור התאמות אחורה- נסגר"
+    },
+    {
+      "name": "בנק מזרחי מט\"ח דולר ח-ן",
+      "client_name": "ד.מ פוסט בע\"מ",
+      "calmplan_client_id": "690715567dffdbca021579f8",
+      "account_type": "בנק",
+      "account_number": "475-685436",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1004",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2026-01-06",
+      "next_target_date": "2026-01-29",
+      "status": "פעיל",
+      "notes": "אין התאמות מ10.07.25-נסגר"
+    },
+    {
+      "name": "בנק מזרחי מט\"ח אירו ח-ן",
+      "client_name": "ד.מ פוסט בע\"מ",
+      "calmplan_client_id": "690715567dffdbca021579f8",
+      "account_type": "בנק",
+      "account_number": "475-685436",
+      "bank_name": "",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1005",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-12-22",
+      "next_target_date": null,
+      "status": "לא פעיל",
+      "notes": "נפתחה קריאה לBIZI לטיפול בתקלת נתוני בנק נתוני בנק מ17.01.2025- 17.11.2025"
+    },
+    {
+      "name": "כ\"א 0728",
+      "client_name": "ד.מ פוסט בע\"מ",
+      "calmplan_client_id": "690715567dffdbca021579f8",
+      "account_type": "כרטיס אשראי",
+      "account_number": "0728",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1033",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2026-01-01",
+      "next_target_date": "2026-02-02",
+      "status": "פעיל",
+      "notes": "לסגור בBIZI"
+    },
+    {
+      "name": "כ\"א 5857",
+      "client_name": "ד.מ פוסט בע\"מ",
+      "calmplan_client_id": "690715567dffdbca021579f8",
+      "account_type": "כרטיס אשראי",
+      "account_number": "כ\"א 5857",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1032",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-12-02",
+      "next_target_date": "2026-02-02",
+      "status": "בעיה-BIZI",
+      "notes": "דף פירוט של כרטיס 5857- חשבון הנה\"ח 1032- לא ירד אחרי חיוב של 02.12.2025 - נא טיפולכם הדחוף"
+    },
+    {
+      "name": "כ\"א 6539",
+      "client_name": "ד.מ פוסט בע\"מ",
+      "calmplan_client_id": "690715567dffdbca021579f8",
+      "account_type": "כרטיס אשראי",
+      "account_number": "כ\"א 6539",
+      "bank_name": "מזרחי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "1035",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2026-02-02",
+      "next_target_date": "2026-02-02",
+      "status": "פעיל",
+      "notes": "לסגור בBIZI"
+    },
+    {
+      "name": "קופת אשראי",
+      "client_name": "ד.מ פוסט בע\"מ",
+      "calmplan_client_id": "690715567dffdbca021579f8",
+      "account_type": "סליקה",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "תוכנת הנהלת חשבונות",
+      "bookkeeping_card_number": "1015",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-12-02",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": "לבדוק מדוע יש יתרה פתוחה"
+    },
+    {
+      "name": "קופת העברות הבנקאיות",
+      "client_name": "ד.מ פוסט בע\"מ",
+      "calmplan_client_id": "690715567dffdbca021579f8",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "תוכנת הנהלת חשבונות",
+      "bookkeeping_card_number": "1010",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2025-11-30",
+      "next_target_date": "2025-12-31",
+      "status": "פעיל",
+      "notes": "לבדוק כמה פתוחות ל30.11.2025"
+    },
+    {
+      "name": "התאמת חוז ספקים ודרישת השלמות",
+      "client_name": "ד.מ פוסט בע\"מ",
+      "calmplan_client_id": "690715567dffdbca021579f8",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "דו-חודשי",
+      "last_reconciliation_date": "2026-12-31",
+      "next_target_date": "2026-02-26",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "התאמת חוז ספקים ודרישת השלמות",
+      "client_name": "מודיבודי ישראל בעמ",
+      "calmplan_client_id": "687e3bc63d8a72a9bab46748",
+      "account_type": "הנהלת חשבונות",
+      "account_number": "No result",
+      "bank_name": "No result",
+      "reconciliation_system": "לא רלוונטי",
+      "bookkeeping_card_number": "",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2026-11-30",
+      "next_target_date": "2026-01-29",
+      "status": "פעיל",
+      "notes": ""
+    },
+    {
+      "name": "לאומי 60240012",
+      "client_name": "א.מ לוג שרמן בע\"מ",
+      "calmplan_client_id": "687e3bbdbfeddeaaf105f98082",
+      "account_type": "בנק",
+      "account_number": "60240012",
+      "bank_name": "לאומי",
+      "reconciliation_system": "אוטומטי- BIZI",
+      "bookkeeping_card_number": "לא",
+      "reconciliation_frequency": "חודשי",
+      "last_reconciliation_date": "2025-01-01",
+      "next_target_date": null,
+      "status": "בעיה-BIZI",
+      "notes": ""
+    }
+  ],
+  "generated": "2026-02-16T11:17:49.339Z"
+}

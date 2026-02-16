@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
-import { Task, Event, User, Dashboard } from "@/api/entities";
-import { isToday, isPast, parseISO, format } from "date-fns";
+import { Task, Event, User } from "@/api/entities";
+import { parseISO, format } from "date-fns";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,8 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
-  AlertTriangle, Plus, ArrowRight, Sparkles, Target, User as UserIcon,
-  FileBarChart, RefreshCw
+  Plus, ArrowRight, Target, User as UserIcon,
+  FileBarChart
 } from "lucide-react";
 import AggressiveReminderSystem from "@/components/notifications/AggressiveReminderSystem";
 import StickyNotes from "@/components/StickyNotes";
@@ -23,69 +23,43 @@ const getGreeting = () => {
   return "ערב טוב";
 };
 
-export default function HomePage() {
-  // New state variables for consolidated tasks and events
-  const [tasks, setTasks] = useState({ today: [], overdue: [], upcoming: [], total: 0, completed: 0, completionRate: 0 });
-  const [events, setEvents] = useState({ today: [], upcoming: [] });
+// Detect task context by category
+function getTaskContext(task) {
+  const cat = task.category || '';
+  if (cat.startsWith('work_') || ['מע"מ','מקדמות מס','ניכויים','ביטוח לאומי','שכר'].includes(cat)) return 'work';
+  if (cat === 'home' || cat === 'personal' || cat.startsWith('home_')) return 'home';
+  if (task.client_name) return 'work';
+  return 'other';
+}
 
-  // Existing state variables preserved for Quick Stats section
+export default function HomePage() {
+  const [tasks, setTasks] = useState({ today: [], overdue: [], upcoming: [], total: 0, completed: 0 });
+  const [events, setEvents] = useState({ today: [], upcoming: [] });
   const [workTasksCount, setWorkTasksCount] = useState(0);
   const [homeTasksCount, setHomeTasksCount] = useState(0);
-
-  // הוספת משתני State כדי שיהיו זמינים בכל הדף
-  const [workBoardIds, setWorkBoardIds] = useState([]);
-  const [homeBoardIds, setHomeBoardIds] = useState([]);
-
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("משתמש");
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Get user info
       try {
         const user = await User.me();
-        if (user && user.full_name) {
-          setUserName(user.full_name.split(" ")[0]);
-        }
-      } catch (error) {
-        console.log("No user data available");
-      }
+        if (user?.full_name) setUserName(user.full_name.split(" ")[0]);
+      } catch { /* no user */ }
 
-      // 1. קריאת הגדרות הלוחות, בדיוק כמו בדף המשימות
-      const boardConfigs = await Dashboard.list() || [];
-      const workBoardTypes = ['reports', 'reconciliations', 'client_accounts', 'payroll', 'clients'];
-      const homeBoardTypes = ['family_tasks', 'wellbeing'];
-
-      // 2. איסוף כל ה-IDs של הלוחות הרלוונטיים ושמירה ב-State
-      const currentWorkBoardIds = boardConfigs
-        .filter(config => workBoardTypes.includes(config.type) && config.monday_board_id)
-        .map(config => config.monday_board_id);
-      setWorkBoardIds(currentWorkBoardIds); // Update state
-
-      const currentHomeBoardIds = boardConfigs
-        .filter(config => homeBoardTypes.includes(config.type) && config.monday_board_id)
-        .map(config => config.monday_board_id);
-      setHomeBoardIds(currentHomeBoardIds); // Update state
-
-      const allRelevantBoardIds = [...currentWorkBoardIds, ...currentHomeBoardIds];
-
-      // 3. קריאה למשימות ולאירועים - סינון מראש לפי monday_board_id
+      // Load ALL tasks and events directly
       const [tasksData, eventsData] = await Promise.all([
-        allRelevantBoardIds.length > 0 ? Task.filter({
-          'monday_board_id': { '$in': allRelevantBoardIds }
-        }, "-created_date", 2000).catch(() => []) : Promise.resolve([]),
+        Task.list("-due_date", 5000).catch(() => []),
         Event.list("-start_date", 1000).catch(() => []),
       ]);
 
       const rawTasks = Array.isArray(tasksData) ? tasksData : [];
-
-      // סינון משימות ישנות: הושלמו לפני 60+ יום או תקועות 180+ יום
       const nowMs = Date.now();
+
+      // Filter stale tasks
       const allTasks = rawTasks.filter(task => {
         const taskDate = task.due_date || task.created_date;
         if (!taskDate) return true;
@@ -95,34 +69,26 @@ export default function HomePage() {
         return true;
       });
 
-      // 4. חלוקת המשימות לפי קונטקסט לספירה נכונה - שימוש במשתנים המקומיים
-      const workTasks = allTasks.filter(task => task.monday_board_id && currentWorkBoardIds.includes(task.monday_board_id));
-      const homeTasks = allTasks.filter(task => task.monday_board_id && currentHomeBoardIds.includes(task.monday_board_id));
+      // Count by context
+      const activeTasks = allTasks.filter(t => t.status !== 'completed');
+      setWorkTasksCount(activeTasks.filter(t => getTaskContext(t) === 'work').length);
+      setHomeTasksCount(activeTasks.filter(t => getTaskContext(t) === 'home').length);
 
-      setWorkTasksCount(workTasks.length);
-      setHomeTasksCount(homeTasks.length);
-
-      // --- המשך הלוגיקה הקיימת לעיבוד התאריכים ---
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-
       const nextWeek = new Date(today);
       nextWeek.setDate(nextWeek.getDate() + 7);
 
       const todayTasks = allTasks.filter(task => {
-        // 🔧 תיקון: בודק גם due_date וגם scheduled_start
         const dateString = task.due_date || task.scheduled_start;
         if (!dateString) return false;
         try {
-            const taskDate = parseISO(dateString);
-            taskDate.setHours(0, 0, 0, 0);
-            return taskDate.getTime() === today.getTime();
-        } catch(e) {
-            return false;
-        }
+          const taskDate = parseISO(dateString);
+          taskDate.setHours(0, 0, 0, 0);
+          return taskDate.getTime() === today.getTime();
+        } catch { return false; }
       });
 
       const overdueTasksList = allTasks.filter(task => {
@@ -130,12 +96,10 @@ export default function HomePage() {
         const dateString = task.due_date || task.scheduled_start;
         if (!dateString) return false;
         try {
-            const taskDate = parseISO(dateString);
-            taskDate.setHours(23, 59, 59, 999); // Compare against end of day for overdue
-            return taskDate < today;
-        } catch(e) {
-            return false;
-        }
+          const taskDate = parseISO(dateString);
+          taskDate.setHours(23, 59, 59, 999);
+          return taskDate < today;
+        } catch { return false; }
       });
 
       const upcomingTasks = allTasks.filter(task => {
@@ -143,17 +107,11 @@ export default function HomePage() {
         const dateString = task.due_date || task.scheduled_start;
         if (!dateString) return false;
         try {
-            const taskDate = parseISO(dateString);
-            taskDate.setHours(0, 0, 0, 0);
-            return taskDate >= tomorrow && taskDate <= nextWeek;
-        } catch(e) {
-            return false;
-        }
-      }).sort((a, b) => {
-          const dateA = new Date(a.due_date || a.scheduled_start);
-          const dateB = new Date(b.due_date || b.scheduled_start);
-          return dateA - dateB;
-      });
+          const taskDate = parseISO(dateString);
+          taskDate.setHours(0, 0, 0, 0);
+          return taskDate >= tomorrow && taskDate <= nextWeek;
+        } catch { return false; }
+      }).sort((a, b) => new Date(a.due_date || a.scheduled_start) - new Date(b.due_date || b.scheduled_start));
 
       const allEvents = Array.isArray(eventsData) ? eventsData : [];
 
@@ -171,24 +129,15 @@ export default function HomePage() {
         return eventDate >= tomorrow && eventDate <= nextWeek;
       }).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
-      const totalTasks = allTasks.length;
-      const completedTasks = allTasks.filter(t => t.status === 'completed').length;
-      const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
       setTasks({
         today: todayTasks,
         overdue: overdueTasksList,
         upcoming: upcomingTasks,
-        total: totalTasks,
-        completed: completedTasks,
-        completionRate
+        total: allTasks.length,
+        completed: allTasks.filter(t => t.status === 'completed').length,
       });
 
-      setEvents({
-        today: todayEvents,
-        upcoming: upcomingEvents
-      });
-
+      setEvents({ today: todayEvents, upcoming: upcomingEvents });
 
     } catch (error) {
       console.error("Error loading home page data:", error);
@@ -350,44 +299,38 @@ export default function HomePage() {
                   ))}
 
                   {/* Today's Tasks */}
-                  {tasks.today.map((task) => (
-                    <div key={task.id} className={`p-3 border rounded-lg ${
-                      task.monday_board_id && workBoardIds.includes(task.monday_board_id) ? 'bg-blue-50 border-blue-200' :
-                      task.monday_board_id && homeBoardIds.includes(task.monday_board_id) ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
-                    }`}>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className={`font-semibold ${
-                            task.monday_board_id && workBoardIds.includes(task.monday_board_id) ? 'text-blue-800' :
-                            task.monday_board_id && homeBoardIds.includes(task.monday_board_id) ? 'text-green-800' : 'text-gray-800'
-                          }`}>
-                            {task.title}
-                          </h4>
-                          {task.description && (
-                            <p className={`text-sm mt-1 ${
-                              task.monday_board_id && workBoardIds.includes(task.monday_board_id) ? 'text-blue-600' :
-                              task.monday_board_id && homeBoardIds.includes(task.monday_board_id) ? 'text-green-600' : 'text-gray-600'
-                            }`}>
-                              {task.description}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="text-xs">
-                              {task.priority === 'urgent' ? 'דחוף' :
-                               task.priority === 'high' ? 'גבוה' :
-                               task.priority === 'medium' ? 'בינוני' : 'נמוך'}
-                            </Badge>
-                            {task.estimated_duration && (
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <Clock className="w-3 h-3" />
-                                {task.estimated_duration} דק'
-                              </div>
+                  {tasks.today.map((task) => {
+                    const ctx = getTaskContext(task);
+                    const ctxColors = ctx === 'work' ? 'bg-blue-50 border-blue-200 text-blue-800' :
+                      ctx === 'home' ? 'bg-green-50 border-green-200 text-green-800' :
+                      'bg-gray-50 border-gray-200 text-gray-800';
+                    return (
+                      <div key={task.id} className={`p-3 border rounded-lg ${ctxColors.split(' ').slice(0,2).join(' ')}`}>
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className={`font-semibold ${ctxColors.split(' ').pop()}`}>
+                              {task.title}
+                            </h4>
+                            {task.client_name && (
+                              <p className="text-xs text-gray-500 mt-0.5">{task.client_name}</p>
                             )}
+                            <div className="flex items-center gap-2 mt-2">
+                              {task.category && (
+                                <Badge variant="outline" className="text-xs">{task.category}</Badge>
+                              )}
+                              {task.priority && (
+                                <Badge variant="outline" className="text-xs">
+                                  {task.priority === 'urgent' ? 'דחוף' :
+                                   task.priority === 'high' ? 'גבוה' :
+                                   task.priority === 'medium' ? 'בינוני' : 'נמוך'}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   <Link to={createPageUrl("Tasks")}>
                     <Button variant="outline" className="w-full mt-4">
@@ -439,11 +382,12 @@ export default function HomePage() {
                             <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">
                               {Math.ceil((new Date() - parseISO(task.due_date || task.scheduled_start)) / (1000 * 60 * 60 * 24))} ימים
                             </Badge>
-                            <div className="flex items-center gap-1 text-xs text-amber-600">
-                              <UserIcon className="w-3 h-3" />
-                              {task.monday_board_id && workBoardIds.includes(task.monday_board_id) ? 'עבודה' :
-                               task.monday_board_id && homeBoardIds.includes(task.monday_board_id) ? 'בית' : 'כללי'}
-                            </div>
+                            {task.client_name && (
+                              <span className="text-xs text-gray-500">{task.client_name}</span>
+                            )}
+                            {task.category && (
+                              <span className="text-xs text-amber-600">{task.category}</span>
+                            )}
                           </div>
                         </div>
                       </div>

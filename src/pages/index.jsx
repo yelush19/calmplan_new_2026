@@ -74,6 +74,8 @@ import WeeklySummary from "./WeeklySummary";
 
 import RecurringTasks from "./RecurringTasks";
 
+import DataImportTool from "./DataImportTool";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -151,6 +153,8 @@ const PAGES = {
     WeeklySummary: WeeklySummary,
 
     RecurringTasks: RecurringTasks,
+
+    DataImportTool: DataImportTool,
 
 }
 
@@ -252,6 +256,8 @@ function PagesContent() {
                 <Route path="/WeeklySummary" element={<WeeklySummary />} />
 
                 <Route path="/RecurringTasks" element={<RecurringTasks />} />
+
+                <Route path="/DataImportTool" element={<DataImportTool />} />
 
             </Routes>
         </Layout>
