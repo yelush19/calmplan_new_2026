@@ -108,16 +108,38 @@ export default function WeeklySummary() {
         if (c.monday_id) clientMap[c.monday_id] = c.name;
       });
 
+      const getCategoryLabel = (cat) => {
+        const labels = {
+          'work_vat_reporting': 'מע"מ',
+          'work_tax_advances': 'מקדמות',
+          'work_deductions': 'ניכויים',
+          'work_social_security': 'ב"ל',
+          'work_payroll': 'שכר',
+          'work_client_management': 'ניהול',
+          'מע"מ': 'מע"מ',
+          'מקדמות מס': 'מקדמות',
+          'ניכויים': 'ניכויים',
+          'ביטוח לאומי': 'ב"ל',
+          'שכר': 'שכר',
+        };
+        return labels[cat] || cat || '';
+      };
+
       const clientOverdue = {};
       overdueTasks.forEach(task => {
-        const clientName = task.client_name ||
-          (task.client_id && clientMap[task.client_id]) ||
-          'ללא לקוח';
+        let clientName = task.client_name ||
+          (task.client_id && clientMap[task.client_id]);
+        // If no client name but has category, group by category
+        if (!clientName && task.category) {
+          clientName = getCategoryLabel(task.category);
+        }
+        if (!clientName) clientName = 'לא מסווג';
+
         if (!clientOverdue[clientName]) {
           clientOverdue[clientName] = { name: clientName, tasks: [], maxDaysOverdue: 0 };
         }
         const daysOverdue = differenceInDays(today, parseISO(task.due_date || task.scheduled_start));
-        clientOverdue[clientName].tasks.push({ ...task, daysOverdue });
+        clientOverdue[clientName].tasks.push({ ...task, daysOverdue, categoryLabel: getCategoryLabel(task.category) });
         clientOverdue[clientName].maxDaysOverdue = Math.max(clientOverdue[clientName].maxDaysOverdue, daysOverdue);
       });
 
@@ -250,6 +272,9 @@ export default function WeeklySummary() {
                         'bg-amber-400'
                       }`} />
                       <span className="flex-1 text-sm font-medium">{task.title}</span>
+                      {task.categoryLabel && (
+                        <Badge variant="outline" className="text-xs border-gray-200 text-gray-500">{task.categoryLabel}</Badge>
+                      )}
                       <span className="text-xs text-stone-500">
                         {task.daysOverdue} ימים
                       </span>
@@ -297,6 +322,9 @@ export default function WeeklySummary() {
                     <span className="font-medium text-sm">{task.title}</span>
                     {task.client_name && (
                       <span className="text-xs text-gray-500 mr-2">({task.client_name})</span>
+                    )}
+                    {task.category && !task.client_name && (
+                      <span className="text-xs text-gray-400 mr-2">{task.category}</span>
                     )}
                   </div>
                   {task.due_date && (

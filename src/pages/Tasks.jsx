@@ -183,15 +183,28 @@ export default function TasksPage() {
     return result;
   }, [tasks, searchTerm, statusFilter, priorityFilter, categoryFilter]);
 
-  // Group by client name
+  // Group by client name — detect "zombie" tasks (no client, no category, title looks like a client name)
   const groupedByClient = useMemo(() => {
     const groups = {};
     for (const task of filteredTasks) {
-      const key = task.client_name || 'ללא לקוח';
+      let key = task.client_name;
+      // If no client_name but has category, group by category
+      if (!key && task.category) {
+        key = getCategoryLabel(task.category);
+      }
+      // If still no key, it's unclassified
+      if (!key) {
+        key = 'לא מסווג';
+      }
       if (!groups[key]) groups[key] = [];
       groups[key].push(task);
     }
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b, 'he'));
+    return Object.entries(groups).sort(([a], [b]) => {
+      // "לא מסווג" always last
+      if (a === 'לא מסווג') return 1;
+      if (b === 'לא מסווג') return -1;
+      return a.localeCompare(b, 'he');
+    });
   }, [filteredTasks]);
 
   // Stats
@@ -446,9 +459,19 @@ export default function TasksPage() {
                                           {getCategoryLabel(task.category)}
                                         </span>
                                       )}
+                                      {!task.category && !task.client_name && (
+                                        <span className="text-xs text-amber-500">
+                                          לא מסווג
+                                        </span>
+                                      )}
                                       {task.due_date && (
                                         <span className="text-xs text-[#657453] font-medium">
                                           {formatDate(task.due_date)}
+                                        </span>
+                                      )}
+                                      {task.description && (
+                                        <span className="text-xs text-gray-400 truncate max-w-[200px]">
+                                          {task.description.slice(0, 40)}{task.description.length > 40 ? '...' : ''}
                                         </span>
                                       )}
                                     </div>

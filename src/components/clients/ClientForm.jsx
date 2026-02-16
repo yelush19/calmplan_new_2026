@@ -44,6 +44,12 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         tax_advances_percentage: '',
         last_updated: '',
         updated_by: ''
+      },
+      prev_year_ids: {
+        tax_advances_id: '',
+        tax_advances_percentage: '',
+        social_security_id: '',
+        deductions_id: ''
       }
     },
     reporting_info: {
@@ -111,6 +117,10 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
             annual_tax_ids: {
               ...prev.tax_info.annual_tax_ids,
               ...(client.tax_info?.annual_tax_ids || {})
+            },
+            prev_year_ids: {
+              ...prev.tax_info.prev_year_ids,
+              ...(client.tax_info?.prev_year_ids || {})
             }
           },
           reporting_info: { ...prev.reporting_info, ...client.reporting_info },
@@ -698,6 +708,17 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                       <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
                     </SelectContent>
                   </Select>
+                  <div className="pt-2 border-t mt-2">
+                    <Label className="text-sm font-semibold">סוג דוח מע״מ</Label>
+                    <p className="text-xs text-gray-500 mb-1">משפיע על תאריך היעד: תקופתי=19, מפורט 874=23</p>
+                    <Select value={formData.reporting_info.vat_report_type || 'periodic'} onValueChange={(value) => handleInputChange('vat_report_type', value, 'reporting_info')}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="periodic">תקופתי (יעד 19 לחודש)</SelectItem>
+                        <SelectItem value="874">874 מפורט (יעד 23 לחודש)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 {/* מקדמות מס */}
                 <div className="border rounded-xl p-4 space-y-2">
@@ -858,28 +879,53 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                   {formData.tax_info.annual_tax_ids?.last_updated && (<div className="mt-3 text-sm text-gray-600">עודכן לאחרונה: {new Date(formData.tax_info.annual_tax_ids.last_updated).toLocaleDateString('he-IL')}</div>)}
                 </div>
               </div>
-              {/* 2025 Historical IDs */}
-              {formData.tax_info?.annual_tax_ids_history?.['2025'] && (
-                <div className="border-t pt-4 mt-4">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-600 mb-3">מזהים שנתיים 2025 (היסטוריה)</h4>
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div>
-                        <Label className="text-gray-500">מזהה מקדמות 2025</Label>
-                        <Input value={formData.tax_info.annual_tax_ids_history['2025'].tax_advances_id || ''} readOnly className="bg-gray-100" />
-                      </div>
-                      <div>
-                        <Label className="text-gray-500">מזהה בל 2025</Label>
-                        <Input value={formData.tax_info.annual_tax_ids_history['2025'].social_security_id || ''} readOnly className="bg-gray-100" />
-                      </div>
-                      <div>
-                        <Label className="text-gray-500">מזהה ניכויים 2025</Label>
-                        <Input value={formData.tax_info.annual_tax_ids_history['2025'].deductions_id || ''} readOnly className="bg-gray-100" />
-                      </div>
+              {/* Previous year IDs */}
+              <div className="border-t pt-4 mt-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-semibold text-gray-600">מזהים שנה קודמת ({Number(formData.tax_info.annual_tax_ids?.current_year || new Date().getFullYear()) - 1})</h4>
+                    <p className="text-xs text-gray-400">לשימוש בדיווחים מאוחרים של השנה הקודמת</p>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-gray-600">מזהה מקדמות (שנה קודמת)</Label>
+                      <Input
+                        value={formData.tax_info?.prev_year_ids?.tax_advances_id || formData.tax_info?.annual_tax_ids_history?.[String(Number(formData.tax_info.annual_tax_ids?.current_year || new Date().getFullYear()) - 1)]?.tax_advances_id || ''}
+                        onChange={(e) => handleTaxInfoChange('tax_advances_id', e.target.value, 'tax_info', 'prev_year_ids')}
+                        placeholder="מזהה מקדמות שנה קודמת"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-600">אחוז מקדמות (שנה קודמת)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={formData.tax_info?.prev_year_ids?.tax_advances_percentage || ''}
+                        onChange={(e) => handleTaxInfoChange('tax_advances_percentage', e.target.value, 'tax_info', 'prev_year_ids')}
+                        placeholder="אחוז מקדמות שנה קודמת"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-600">מזהה ביטוח לאומי (שנה קודמת)</Label>
+                      <Input
+                        value={formData.tax_info?.prev_year_ids?.social_security_id || formData.tax_info?.annual_tax_ids_history?.[String(Number(formData.tax_info.annual_tax_ids?.current_year || new Date().getFullYear()) - 1)]?.social_security_id || ''}
+                        onChange={(e) => handleTaxInfoChange('social_security_id', e.target.value, 'tax_info', 'prev_year_ids')}
+                        placeholder="מזהה בל שנה קודמת"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-600">מזהה ניכויים (שנה קודמת)</Label>
+                      <Input
+                        value={formData.tax_info?.prev_year_ids?.deductions_id || formData.tax_info?.annual_tax_ids_history?.[String(Number(formData.tax_info.annual_tax_ids?.current_year || new Date().getFullYear()) - 1)]?.deductions_id || ''}
+                        onChange={(e) => handleTaxInfoChange('deductions_id', e.target.value, 'tax_info', 'prev_year_ids')}
+                        placeholder="מזהה ניכויים שנה קודמת"
+                      />
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
               <div><Label htmlFor="preferred_method">אמצעי תקשורת מועדף</Label><Select value={formData.communication_preferences.preferred_method} onValueChange={(value) => handleInputChange('preferred_method', value, 'communication_preferences')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="email">אימייל</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem><SelectItem value="phone">טלפון</SelectItem><SelectItem value="teams">Teams</SelectItem></SelectContent></Select></div>
               <div><Label htmlFor="notes">הערות</Label><Textarea id="notes" value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} className="h-24" /></div>
             </TabsContent>

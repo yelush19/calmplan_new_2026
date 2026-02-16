@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { format, differenceInCalendarDays, endOfMonth, getDay, addDays, startOfMonth, startOfWeek, endOfWeek, isSameDay, isSameMonth, addMonths, subMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Clock, Calendar, AlertTriangle, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { Clock, Calendar, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 const REPORTING_DEADLINES = [
-  { day: 15, label: 'מע"מ + ביט"ל', color: 'slate' },
-  { day: 19, label: 'ניכויים', color: 'gray' },
-  { day: 23, label: 'מקדמות מ"ה', color: 'gray' },
+  { day: 15, label: 'ביטוח לאומי', color: 'slate' },
+  { day: 19, label: 'מע"מ / ניכויים / מקדמות', color: 'gray' },
+  { day: 23, label: '874 מפורט', color: 'gray' },
 ];
 
 function getWorkDaysUntil(targetDate) {
@@ -31,8 +31,8 @@ function getWorkDaysUntil(targetDate) {
 
 function getDeadlineStyle(calendarDays) {
   if (calendarDays <= 0) return 'bg-gray-200 text-gray-400 line-through';
-  if (calendarDays <= 2) return 'bg-red-200 text-red-800 font-bold animate-pulse';
-  if (calendarDays <= 5) return 'bg-amber-200 text-amber-800 font-bold';
+  if (calendarDays <= 2) return 'bg-amber-200 text-amber-800 font-bold';
+  if (calendarDays <= 5) return 'bg-amber-100 text-amber-700 font-semibold';
   return 'bg-emerald-100 text-emerald-700 font-semibold';
 }
 
@@ -102,7 +102,7 @@ function MiniCalendar({ now, onClose }) {
                   <td key={di} className="py-0.5">
                     <div className={`w-8 h-8 mx-auto flex items-center justify-center rounded-full text-xs
                       ${isToday ? 'bg-emerald-500 text-white font-bold' : ''}
-                      ${!isToday && isDeadline ? 'bg-red-100 text-red-700 font-bold ring-1 ring-red-300' : ''}
+                      ${!isToday && isDeadline ? 'bg-amber-100 text-amber-700 font-bold ring-1 ring-amber-300' : ''}
                       ${!isToday && !isDeadline && inMonth ? 'text-gray-700' : ''}
                       ${!inMonth ? 'text-gray-300' : ''}
                       ${isShabbat && inMonth && !isToday ? 'text-gray-400' : ''}
@@ -131,7 +131,7 @@ function MiniCalendar({ now, onClose }) {
 
       <div className="flex gap-2 mt-2 text-[10px] text-gray-400 justify-center">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> היום</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-200 ring-1 ring-red-300 inline-block" /> דדליין</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-200 ring-1 ring-amber-300 inline-block" /> דדליין</span>
       </div>
     </div>
   );
@@ -167,7 +167,7 @@ export default function TimeAwareness() {
   const isUrgent = nearestDeadline && nearestDeadline.calendarDays <= 2;
 
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-xl mb-4 shadow-sm ${isUrgent ? 'bg-red-50 border-2 border-red-300' : 'bg-white border border-gray-200'}`}>
+    <div className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-xl mb-4 shadow-sm ${isUrgent ? 'bg-amber-50 border-2 border-amber-200' : 'bg-white border border-gray-200'}`}>
       {/* Date & Time - bigger text */}
       <div className="flex items-center gap-4 relative">
         <button
@@ -204,7 +204,7 @@ export default function TimeAwareness() {
               key={d.day}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap text-sm ${getDeadlineStyle(d.calendarDays)}`}
             >
-              {d.calendarDays <= 2 && <AlertTriangle className="w-4 h-4" />}
+              {d.calendarDays <= 2 && <Clock className="w-4 h-4" />}
               {d.calendarDays === 0 ? (
                 <span>היום! {d.label} (ה-{d.day})</span>
               ) : (
