@@ -208,6 +208,7 @@ export const entities = {
   WeeklyTask: createEntity('weekly_tasks'),
   BalanceSheet: createEntity('balance_sheets'),
   StickyNote: createEntity('sticky_notes'),
+  Project: createEntity('projects'),
 };
 
 export { auth };

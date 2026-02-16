@@ -64,8 +64,8 @@ export default function HomePage() {
         const taskDate = task.due_date || task.created_date;
         if (!taskDate) return true;
         const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
-        if (task.status === 'completed' && daysSince > 60) return false;
-        if (task.status !== 'completed' && daysSince > 180) return false;
+        if (task.status === 'completed' && daysSince > 14) return false;
+        if (task.status !== 'completed' && daysSince > 21) return false;
         return true;
       });
 

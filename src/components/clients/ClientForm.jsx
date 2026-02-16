@@ -29,6 +29,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     company: '',
     status: 'active',
     entity_number: '',
+    monthly_fee: '',
     service_types: [],
     tax_info: {
       tax_id: '',
@@ -773,6 +774,23 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                       value={formData.business_info.estimated_monthly_hours.reports}
                       onChange={(e) => handleInputChange('estimated_monthly_hours', { ...formData.business_info.estimated_monthly_hours, reports: parseFloat(e.target.value) || 0 }, 'business_info')}
                       placeholder="0.75"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <Label className="text-lg font-bold">שכ״ט חודשי</Label>
+                <div className="grid md:grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <Label htmlFor="monthly_fee">סכום שכ״ט חודשי (₪)</Label>
+                    <Input
+                      id="monthly_fee"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={formData.monthly_fee || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, monthly_fee: parseFloat(e.target.value) || '' }))}
+                      placeholder="0"
                     />
                   </div>
                 </div>
