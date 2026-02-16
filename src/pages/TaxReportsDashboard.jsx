@@ -326,10 +326,6 @@ function getTaxIds(client, serviceKey) {
       if (annual.tax_advances_id) ids.push({ label: 'מקדמות', value: annual.tax_advances_id });
       if (annual.tax_advances_percentage) ids.push({ label: '%', value: annual.tax_advances_percentage });
       break;
-    case 'deductions':
-      if (ti.tax_deduction_file_number) ids.push({ label: 'פנקס', value: ti.tax_deduction_file_number });
-      if (annual.deductions_id) ids.push({ label: 'ניכויים', value: annual.deductions_id });
-      break;
     default:
       if (client.entity_number) ids.push({ label: 'ח"פ', value: client.entity_number });
   }
