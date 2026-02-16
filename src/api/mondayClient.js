@@ -254,6 +254,7 @@ const CLIENT_STATUS_TO_MONDAY = {
   'potential': 'פוטנציאלי',
   'development': 'פיתוח',
   'onboarding_pending': 'ממתין לקליטה',
+  'balance_sheet_only': 'סגירת מאזן בלבד',
 };
 
 const TASK_STATUS_TO_MONDAY = {
@@ -431,8 +432,10 @@ export function mapMondayItemToClient(item, boardId, columnDefs = null) {
   const statusMap = {
     'פעיל': 'active', 'לא פעיל': 'inactive', 'עבר': 'former',
     'פוטנציאלי': 'potential', 'פיתוח': 'development', 'ממתין לקליטה': 'onboarding_pending',
+    'סגירת מאזן בלבד': 'balance_sheet_only',
     'active': 'active', 'inactive': 'inactive', 'former': 'former',
     'potential': 'potential', 'development': 'development', 'onboarding_pending': 'onboarding_pending',
+    'balance_sheet_only': 'balance_sheet_only',
   };
 
   // Title → field mapping for specific columns

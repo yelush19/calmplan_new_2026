@@ -12,10 +12,24 @@ const serviceTypeLabels = {
     vat_reporting: 'דיווחי מע״מ',
     tax_advances: 'מקדמות מס',
     payroll: 'שכר',
+    social_security: 'ביטוח לאומי',
+    deductions: 'מ״ה ניכויים',
     annual_reports: 'מאזנים / דוחות שנתיים',
     reconciliation: 'התאמות חשבונות',
     consulting: 'ייעוץ',
     special_reports: 'דוחות מיוחדים',
+    masav_employees: 'מס״ב עובדים',
+    masav_social: 'מס״ב סוציאליות',
+    masav_authorities: 'מס״ב רשויות',
+    masav_suppliers: 'מס״ב ספקים',
+    authorities: 'דיווח רשויות',
+    operator_reporting: 'דיווח למתפעל',
+    taml_reporting: 'דיווח לטמל',
+    payslip_sending: 'משלוח תלושים',
+    social_benefits: 'סוציאליות',
+    reserve_claims: 'תביעות מילואים',
+    client_management: 'ניהול לקוח',
+    admin: 'אדמיניסטרציה',
 };
 
 const serviceTypeColors = {
@@ -24,10 +38,24 @@ const serviceTypeColors = {
     vat_reporting: 'bg-[#657453]/20 text-[#4a5f3a] border-[#657453]',
     tax_advances: 'bg-[#4a5f3a]/20 text-[#4a5f3a] border-[#4a5f3a]',
     payroll: 'bg-[#a8b396]/20 text-[#4a5f3a] border-[#a8b396]',
+    social_security: 'bg-[#a8b396]/20 text-[#4a5f3a] border-[#a8b396]',
+    deductions: 'bg-[#a8b396]/20 text-[#4a5f3a] border-[#a8b396]',
     annual_reports: 'bg-[#8a9b7a]/20 text-[#4a5f3a] border-[#8a9b7a]',
     reconciliation: 'bg-blue-100 text-blue-800 border-blue-200',
     consulting: 'bg-gray-100 text-gray-800 border-gray-200',
     special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    masav_employees: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    masav_social: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    masav_authorities: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    authorities: 'bg-teal-100 text-teal-800 border-teal-200',
+    operator_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
+    taml_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
+    payslip_sending: 'bg-purple-100 text-purple-800 border-purple-200',
+    social_benefits: 'bg-purple-100 text-purple-800 border-purple-200',
+    reserve_claims: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    client_management: 'bg-gray-100 text-gray-800 border-gray-200',
+    admin: 'bg-gray-100 text-gray-800 border-gray-200',
 };
 
 const statusUI = {
@@ -36,6 +64,7 @@ const statusUI = {
   potential: { label: 'פוטנציאלי', icon: Heart, color: 'text-gray-500', badge: 'bg-gray-100 text-gray-800 border-gray-200' },
   former: { label: 'לקוח עבר', icon: Trash2, color: 'text-red-600', badge: 'bg-red-100 text-red-800 border-red-200' },
   onboarding_pending: { label: 'ממתין לקליטה', icon: UserCheck, color: 'text-purple-600', badge: 'bg-purple-100 text-purple-800 border-purple-200' },
+  balance_sheet_only: { label: 'סגירת מאזן בלבד', icon: FileText, color: 'text-cyan-600', badge: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
 };
 
 export default function ClientCard({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks }) {

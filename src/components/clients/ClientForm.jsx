@@ -217,12 +217,36 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
   };
 
   const handleServiceTypeChange = (serviceType, checked) => {
-    setFormData(prev => ({
-      ...prev,
-      service_types: checked
+    setFormData(prev => {
+      let newServiceTypes = checked
         ? [...(prev.service_types || []), serviceType]
-        : (prev.service_types || []).filter(s => s !== serviceType)
-    }));
+        : (prev.service_types || []).filter(s => s !== serviceType);
+
+      let newReportingInfo = { ...prev.reporting_info };
+
+      // Auto-link: if payroll is unchecked, also remove social_security and deductions
+      if (serviceType === 'payroll' && !checked) {
+        newServiceTypes = newServiceTypes.filter(s => s !== 'social_security' && s !== 'deductions');
+        newReportingInfo.payroll_frequency = 'not_applicable';
+        newReportingInfo.social_security_frequency = 'not_applicable';
+        newReportingInfo.deductions_frequency = 'not_applicable';
+      }
+
+      // If payroll is checked, also add social_security and deductions
+      if (serviceType === 'payroll' && checked) {
+        if (!newServiceTypes.includes('social_security')) newServiceTypes.push('social_security');
+        if (!newServiceTypes.includes('deductions')) newServiceTypes.push('deductions');
+        if (newReportingInfo.payroll_frequency === 'not_applicable') newReportingInfo.payroll_frequency = 'monthly';
+        if (newReportingInfo.social_security_frequency === 'not_applicable') newReportingInfo.social_security_frequency = 'monthly';
+        if (newReportingInfo.deductions_frequency === 'not_applicable') newReportingInfo.deductions_frequency = 'monthly';
+      }
+
+      return {
+        ...prev,
+        service_types: newServiceTypes,
+        reporting_info: newReportingInfo
+      };
+    });
   };
 
   const handleSelectAllServices = (checked) => {
@@ -407,15 +431,52 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     onSubmit(cleanedData);
   };
 
-  const serviceTypes = [
-    { value: 'bookkeeping', label: 'הנהלת חשבונות' },
-    { value: 'vat_reporting', label: 'דיווחי מע״מ' },
-    { value: 'tax_advances', label: 'מקדמות מס' },
-    { value: 'payroll', label: 'שכר (כולל ביט"ל וניכויים)' },
-    { value: 'annual_reports', label: 'מאזנים / דוחות שנתיים' },
-    { value: 'reconciliation', label: 'התאמות חשבונות' },
-    { value: 'consulting', label: 'ייעוץ' },
+  const serviceTypeGroups = [
+    {
+      group: 'שירותי ליבה',
+      services: [
+        { value: 'bookkeeping', label: 'הנהלת חשבונות' },
+        { value: 'vat_reporting', label: 'דיווחי מע״מ' },
+        { value: 'tax_advances', label: 'מקדמות מס' },
+        { value: 'payroll', label: 'שכר' },
+        { value: 'social_security', label: 'ביטוח לאומי' },
+        { value: 'deductions', label: 'מ״ה ניכויים' },
+      ]
+    },
+    {
+      group: 'מס"בים',
+      services: [
+        { value: 'masav_employees', label: 'מס״ב עובדים' },
+        { value: 'masav_social', label: 'מס״ב סוציאליות' },
+        { value: 'masav_authorities', label: 'מס״ב רשויות' },
+        { value: 'masav_suppliers', label: 'מס״ב ספקים' },
+      ]
+    },
+    {
+      group: 'דיווחים ודוחות',
+      services: [
+        { value: 'annual_reports', label: 'מאזנים / דוחות שנתיים' },
+        { value: 'reconciliation', label: 'התאמות חשבונות' },
+        { value: 'authorities', label: 'דיווח רשויות' },
+        { value: 'operator_reporting', label: 'דיווח למתפעל' },
+        { value: 'taml_reporting', label: 'דיווח לטמל' },
+      ]
+    },
+    {
+      group: 'שירותים נוספים',
+      services: [
+        { value: 'payslip_sending', label: 'משלוח תלושים' },
+        { value: 'social_benefits', label: 'סוציאליות' },
+        { value: 'reserve_claims', label: 'תביעות מילואים' },
+        { value: 'consulting', label: 'ייעוץ' },
+        { value: 'client_management', label: 'ניהול לקוח' },
+        { value: 'admin', label: 'אדמיניסטרציה' },
+      ]
+    },
   ];
+
+  // Flat list for backward compatibility
+  const serviceTypes = serviceTypeGroups.flatMap(g => g.services);
 
   const serviceProviderTypeLabels = {
     cpa: "רו\"ח",
@@ -606,7 +667,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <div className="grid md:grid-cols-3 gap-4 pt-4 border-t">
                 <div><Label htmlFor="business_size">גודל העסק</Label><Select value={formData.business_info?.business_size} onValueChange={(value) => handleInputChange('business_size', value, 'business_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="small">קטן</SelectItem><SelectItem value="medium">בינוני</SelectItem><SelectItem value="large">גדול</SelectItem></SelectContent></Select></div>
                 <div><Label htmlFor="business_type">סוג העסק</Label><Select value={formData.business_info?.business_type} onValueChange={(value) => handleInputChange('business_type', value, 'business_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="company">חברה</SelectItem><SelectItem value="freelancer">עצמאי</SelectItem><SelectItem value="nonprofit">עמותה</SelectItem><SelectItem value="partnership">שותפות</SelectItem></SelectContent></Select></div>
-                <div><Label htmlFor="status">סטטוס</Label><Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">פעיל</SelectItem><SelectItem value="inactive">לא פעיל</SelectItem><SelectItem value="potential">פוטנציאלי</SelectItem><SelectItem value="former">לקוח עבר</SelectItem><SelectItem value="onboarding_pending">ממתין לבדיקה</SelectItem></SelectContent></Select></div>
+                <div><Label htmlFor="status">סטטוס</Label><Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">פעיל</SelectItem><SelectItem value="inactive">לא פעיל</SelectItem><SelectItem value="potential">פוטנציאלי</SelectItem><SelectItem value="former">לקוח עבר</SelectItem><SelectItem value="onboarding_pending">ממתין לבדיקה</SelectItem><SelectItem value="balance_sheet_only">סגירת מאזן בלבד</SelectItem></SelectContent></Select></div>
               </div>
 
               <div className="border-t pt-4 mt-6">
@@ -630,10 +691,32 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
             </TabsContent>
             <TabsContent value="services" className="space-y-4">
               <div>
-                <Label>סוגי שירותים</Label>
-                <div className="grid md:grid-cols-2 gap-3 mt-2">
-                  {serviceTypes.map((service) => (<div key={service.value} className="flex items-center space-x-2 space-x-reverse"><Checkbox id={service.value} checked={formData.service_types.includes(service.value)} onCheckedChange={(checked) => handleServiceTypeChange(service.value, checked)} /><Label htmlFor={service.value}>{service.label}</Label></div>))}
-                  <div className="flex items-center space-x-2 space-x-reverse md:col-span-2 pt-2 border-t border-gray-200"><Checkbox id="select-all-services" onCheckedChange={handleSelectAllServices} checked={formData.service_types.length === serviceTypes.length && serviceTypes.length > 0} /><Label htmlFor="select-all-services" className="font-medium text-blue-600">בחר הכל</Label></div>
+                <Label className="text-lg font-bold">סוגי שירותים</Label>
+                <div className="space-y-4 mt-3">
+                  {serviceTypeGroups.map((group) => (
+                    <div key={group.group} className="border rounded-lg p-3">
+                      <h4 className="font-semibold text-sm text-gray-600 mb-2">{group.group}</h4>
+                      <div className="grid md:grid-cols-3 gap-2">
+                        {group.services.map((service) => (
+                          <div key={service.value} className="flex items-center space-x-2 space-x-reverse">
+                            <Checkbox
+                              id={service.value}
+                              checked={(formData.service_types || []).includes(service.value)}
+                              onCheckedChange={(checked) => handleServiceTypeChange(service.value, checked)}
+                            />
+                            <Label htmlFor={service.value} className="text-sm">{service.label}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex items-center space-x-2 space-x-reverse pt-2 border-t border-gray-200">
+                    <Checkbox id="select-all-services" onCheckedChange={handleSelectAllServices} checked={formData.service_types.length === serviceTypes.length && serviceTypes.length > 0} />
+                    <Label htmlFor="select-all-services" className="font-medium text-blue-600">בחר הכל</Label>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                    סימון/ביטול "שכר" יעדכן אוטומטית גם את "ביטוח לאומי" ו"מ״ה ניכויים"
+                  </div>
                 </div>
               </div>
               {/* Reporting frequencies moved to dedicated "תדירות דיווח" tab */}
@@ -694,7 +777,30 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
             <TabsContent value="reporting" className="space-y-5">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
                 הגדירי תדירות דיווח לכל סוג. הגדרה זו משפיעה על הפקת משימות חוזרות.
+                <br />
+                שינוי שכר ל"לא רלוונטי" יעדכן אוטומטית גם את ביטוח לאומי וניכויים.
               </div>
+
+              {/* שכר - FIRST, because it controls social security and deductions */}
+              <div className="border-2 border-blue-200 rounded-xl p-4 space-y-2 bg-blue-50/30">
+                <Label className="text-base font-bold">שכר</Label>
+                <p className="text-xs text-gray-500">תדירות עיבוד שכר — שולט גם על ביטוח לאומי ומ״ה ניכויים</p>
+                <Select value={formData.reporting_info.payroll_frequency} onValueChange={(value) => {
+                  handleInputChange('payroll_frequency', value, 'reporting_info');
+                  // Auto-link: if payroll becomes not_applicable, also set social_security and deductions
+                  if (value === 'not_applicable') {
+                    handleInputChange('social_security_frequency', 'not_applicable', 'reporting_info');
+                    handleInputChange('deductions_frequency', 'not_applicable', 'reporting_info');
+                  }
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">חודשי</SelectItem>
+                    <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-5">
                 {/* מע"מ */}
                 <div className="border rounded-xl p-4 space-y-2">
@@ -733,11 +839,32 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                     </SelectContent>
                   </Select>
                 </div>
+                {/* ב"ל - ביטוח לאומי */}
+                <div className={`border rounded-xl p-4 space-y-2 ${formData.reporting_info.payroll_frequency === 'not_applicable' ? 'opacity-50' : ''}`}>
+                  <Label className="text-base font-bold">ב״ל ניכויים</Label>
+                  <p className="text-xs text-gray-500">ביטוח לאומי {formData.reporting_info.payroll_frequency === 'not_applicable' && '(נשלט ע"י שכר)'}</p>
+                  <Select
+                    value={formData.reporting_info.social_security_frequency}
+                    onValueChange={(value) => handleInputChange('social_security_frequency', value, 'reporting_info')}
+                    disabled={formData.reporting_info.payroll_frequency === 'not_applicable'}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 {/* מ"ה ניכויים */}
-                <div className="border rounded-xl p-4 space-y-2">
+                <div className={`border rounded-xl p-4 space-y-2 ${formData.reporting_info.payroll_frequency === 'not_applicable' ? 'opacity-50' : ''}`}>
                   <Label className="text-base font-bold">מ״ה ניכויים</Label>
-                  <p className="text-xs text-gray-500">ניכויי מס הכנסה — כולל אפשרות חצי שנתי</p>
-                  <Select value={formData.reporting_info.deductions_frequency} onValueChange={(value) => handleInputChange('deductions_frequency', value, 'reporting_info')}>
+                  <p className="text-xs text-gray-500">ניכויי מס הכנסה {formData.reporting_info.payroll_frequency === 'not_applicable' && '(נשלט ע"י שכר)'}</p>
+                  <Select
+                    value={formData.reporting_info.deductions_frequency}
+                    onValueChange={(value) => handleInputChange('deductions_frequency', value, 'reporting_info')}
+                    disabled={formData.reporting_info.payroll_frequency === 'not_applicable'}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="monthly">חודשי</SelectItem>
@@ -747,31 +874,6 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                     </SelectContent>
                   </Select>
                 </div>
-                {/* ב"ל ניכויים */}
-                <div className="border rounded-xl p-4 space-y-2">
-                  <Label className="text-base font-bold">ב״ל ניכויים</Label>
-                  <p className="text-xs text-gray-500">ביטוח לאומי</p>
-                  <Select value={formData.reporting_info.social_security_frequency} onValueChange={(value) => handleInputChange('social_security_frequency', value, 'reporting_info')}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">חודשי</SelectItem>
-                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
-                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {/* שכר - remains separate */}
-              <div className="border rounded-xl p-4 space-y-2 md:w-1/2">
-                <Label className="text-base font-bold">שכר</Label>
-                <p className="text-xs text-gray-500">תדירות עיבוד שכר</p>
-                <Select value={formData.reporting_info.payroll_frequency} onValueChange={(value) => handleInputChange('payroll_frequency', value, 'reporting_info')}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">חודשי</SelectItem>
-                    <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </TabsContent>
             <TabsContent value="tax" className="space-y-4">

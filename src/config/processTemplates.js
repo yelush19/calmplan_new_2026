@@ -216,6 +216,81 @@ export const ADDITIONAL_SERVICES = {
       { key: 'task',  label: 'ביצוע',  icon: 'check-circle' },
     ],
   },
+
+  masav_social: {
+    key: 'masav_social',
+    label: 'מס"ב סוציאליות',
+    dashboard: 'payroll',
+    taskCategories: ['מס"ב סוציאליות', 'work_masav_social'],
+    createCategory: 'מס"ב סוציאליות',
+    steps: [
+      { key: 'file_prep',    label: 'הכנת קובץ',   icon: 'file-text' },
+      { key: 'upload',       label: 'העלאה',        icon: 'upload' },
+      { key: 'confirmation', label: 'אישור ביצוע',  icon: 'check-circle' },
+    ],
+  },
+
+  masav_authorities: {
+    key: 'masav_authorities',
+    label: 'מס"ב רשויות',
+    dashboard: 'payroll',
+    taskCategories: ['מס"ב רשויות', 'work_masav_authorities'],
+    createCategory: 'מס"ב רשויות',
+    steps: [
+      { key: 'file_prep',    label: 'הכנת קובץ',   icon: 'file-text' },
+      { key: 'upload',       label: 'העלאה',        icon: 'upload' },
+      { key: 'confirmation', label: 'אישור ביצוע',  icon: 'check-circle' },
+    ],
+  },
+
+  masav_suppliers: {
+    key: 'masav_suppliers',
+    label: 'מס"ב ספקים',
+    dashboard: 'payroll',
+    taskCategories: ['מס"ב ספקים', 'work_masav_suppliers'],
+    createCategory: 'מס"ב ספקים',
+    steps: [
+      { key: 'file_prep',    label: 'הכנת קובץ',   icon: 'file-text' },
+      { key: 'upload',       label: 'העלאה',        icon: 'upload' },
+      { key: 'confirmation', label: 'אישור ביצוע',  icon: 'check-circle' },
+    ],
+  },
+
+  operator_reporting: {
+    key: 'operator_reporting',
+    label: 'דיווח למתפעל',
+    dashboard: 'tax',
+    taskCategories: ['דיווח למתפעל', 'work_operator_reporting'],
+    createCategory: 'דיווח למתפעל',
+    steps: [
+      { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
+      { key: 'submission',   label: 'שליחה',       icon: 'send' },
+    ],
+  },
+
+  taml_reporting: {
+    key: 'taml_reporting',
+    label: 'דיווח לטמל',
+    dashboard: 'tax',
+    taskCategories: ['דיווח לטמל', 'work_taml_reporting'],
+    createCategory: 'דיווח לטמל',
+    steps: [
+      { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
+      { key: 'submission',   label: 'שליחה',       icon: 'send' },
+    ],
+  },
+
+  payslip_sending: {
+    key: 'payslip_sending',
+    label: 'משלוח תלושים',
+    dashboard: 'payroll',
+    taskCategories: ['משלוח תלושים', 'work_payslip_sending'],
+    createCategory: 'משלוח תלושים',
+    steps: [
+      { key: 'generate',  label: 'הפקת תלושים',  icon: 'file-output' },
+      { key: 'send',      label: 'שליחה',         icon: 'send' },
+    ],
+  },
 };
 
 // ============================================================
