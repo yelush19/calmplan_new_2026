@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { DaySchedule, WeeklyRecommendation } from '@/api/entities';
-import { Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle, Plus, X } from 'lucide-react';
+import { Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle, Plus, X, Download, Upload, Database, Cloud, AlertTriangle } from 'lucide-react';
+import { exportAllData, importAllData } from '@/api/base44Client';
+import { isSupabaseConfigured } from '@/api/supabaseClient';
 
 export default function SettingsPage() {
   const [schedule, setSchedule] = useState(null);
@@ -243,7 +246,151 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* גיבוי ושחזור נתונים */}
+      <DataBackupSection />
     </div>
+  );
+}
+
+function DataBackupSection() {
+  const [backupStatus, setBackupStatus] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationResult, setMigrationResult] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const data = await exportAllData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `calmplan_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setBackupStatus({ type: 'success', message: 'גיבוי הורד בהצלחה!' });
+    } catch (e) {
+      setBackupStatus({ type: 'error', message: 'שגיאה בגיבוי: ' + e.message });
+    }
+    setIsExporting(false);
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await importAllData(data);
+      setBackupStatus({ type: 'success', message: 'נתונים שוחזרו בהצלחה! רענן את הדף.' });
+    } catch (e) {
+      setBackupStatus({ type: 'error', message: 'שגיאה בשחזור: ' + e.message });
+    }
+    setIsImporting(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleMigrateToSupabase = async () => {
+    if (!isSupabaseConfigured) {
+      setMigrationResult({ type: 'error', message: 'Supabase לא מוגדר. הוסף VITE_SUPABASE_URL ו-VITE_SUPABASE_ANON_KEY לקובץ .env' });
+      return;
+    }
+    setIsMigrating(true);
+    try {
+      const { migrateFromLocalStorage } = await import('@/api/supabaseDB');
+      const result = await migrateFromLocalStorage();
+      setMigrationResult({
+        type: 'success',
+        message: `הועברו ${result.migrated} אוספים, דולגו ${result.skipped}, שגיאות ${result.errors}`,
+        details: result.collections
+      });
+    } catch (e) {
+      setMigrationResult({ type: 'error', message: 'שגיאה במיגרציה: ' + e.message });
+    }
+    setIsMigrating(false);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <Database className="w-6 h-6 text-blue-600" />
+            גיבוי ושחזור נתונים
+            <Badge variant={isSupabaseConfigured ? "default" : "outline"} className={isSupabaseConfigured ? "bg-green-100 text-green-800 mr-auto" : "bg-yellow-100 text-yellow-800 mr-auto"}>
+              {isSupabaseConfigured ? (
+                <><Cloud className="w-3 h-3 ml-1" /> Supabase מחובר</>
+              ) : (
+                <><AlertTriangle className="w-3 h-3 ml-1" /> localStorage בלבד</>
+              )}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!isSupabaseConfigured && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+              <strong>שים לב:</strong> הנתונים שלך נשמרים רק בדפדפן (localStorage).
+              מחיקת cookies או נתוני אתר תמחק הכל.
+              מומלץ מאוד לגבות ולהתחבר ל-Supabase.
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={handleExport} disabled={isExporting} className="bg-blue-600 hover:bg-blue-700">
+              <Download className="w-4 h-4 ml-2" />
+              {isExporting ? 'מייצא...' : 'ייצוא גיבוי (JSON)'}
+            </Button>
+
+            <Button onClick={() => fileInputRef.current?.click()} disabled={isImporting} variant="outline">
+              <Upload className="w-4 h-4 ml-2" />
+              {isImporting ? 'מייבא...' : 'ייבוא מגיבוי'}
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+
+            {!isSupabaseConfigured ? null : (
+              <Button onClick={handleMigrateToSupabase} disabled={isMigrating} variant="outline"
+                className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
+                <Cloud className="w-4 h-4 ml-2" />
+                {isMigrating ? 'מעביר...' : 'העבר מ-localStorage ל-Supabase'}
+              </Button>
+            )}
+          </div>
+
+          {backupStatus && (
+            <div className={`p-3 rounded-lg text-sm ${
+              backupStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
+            }`}>
+              {backupStatus.message}
+            </div>
+          )}
+
+          {migrationResult && (
+            <div className={`p-3 rounded-lg text-sm ${
+              migrationResult.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
+            }`}>
+              <p className="font-medium">{migrationResult.message}</p>
+              {migrationResult.details && (
+                <ul className="mt-2 space-y-1">
+                  {migrationResult.details.map((c, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <span className={c.status === 'migrated' ? 'text-green-600' : c.status === 'skipped' ? 'text-gray-500' : 'text-red-600'}>
+                        {c.status === 'migrated' ? '✓' : c.status === 'skipped' ? '−' : '✗'}
+                      </span>
+                      {c.name} {c.count ? `(${c.count} רשומות)` : ''} {c.reason || ''}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 
