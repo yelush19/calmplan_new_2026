@@ -591,7 +591,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-3">
               <Building className="w-6 h-6 text-blue-600" />
-              {client?.id ? 'עריכת לקוח' : 'לקוח חדש'}
+              {client?.id ? `עריכת לקוח: ${client.name || formData.name || ''}` : 'לקוח חדש'}
             </CardTitle>
             {client?.id && (
               <Popover>
