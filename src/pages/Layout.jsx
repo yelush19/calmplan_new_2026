@@ -32,6 +32,7 @@ const navigationGroups = [
     items: [
       { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
+      { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
     ],
@@ -49,10 +50,9 @@ const navigationGroups = [
     ],
   },
   {
-    title: "לקוחות",
+    title: "לקוחות וספקים",
     icon: Users,
     items: [
-      { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
       { name: "לידים", href: createPageUrl("Leads"), icon: Target },
       { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
       { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
@@ -72,6 +72,7 @@ const navigationGroups = [
     icon: Settings,
     items: [
       { name: "Monday.com", href: createPageUrl("MondayIntegration"), icon: Monitor },
+      { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
       { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Database },
       { name: "מנהל נתוני בדיקה", href: createPageUrl("TestDataManager"), icon: Database },
     ],

@@ -12,14 +12,40 @@ import { X } from 'lucide-react';
 import { ServiceCompany, ServiceProvider } from '@/api/entities';
 
 const serviceProviderTypes = {
-  cpa: "רו\"ח", attorney: "עו\"ד", auditor: "מבקר", bookkeeper: "מנה\"ח",
-  partner: "שותף", consultant: "יועץ", other: "אחר"
+  cpa: "רו\"ח",
+  cpa_representative: "רו\"ח מייצג",
+  attorney: "עו\"ד",
+  auditor: "מבקר",
+  bookkeeper: "מנה\"ח",
+  payroll_specialist: "חשב/ת שכר",
+  tax_consultant: "יועץ מס",
+  insurance_agent: "סוכן ביטוח",
+  insurance_operator: "סוכן ביטוח מתפעל",
+  pension_advisor: "יועץ פנסיוני",
+  partner: "שותף",
+  consultant: "יועץ",
+  it_support: "תמיכת IT/מערכות",
+  bank_contact: "איש קשר בנק",
+  other: "אחר"
 };
 
 const specialtiesTypes = {
-  tax_planning: "תכנון מס", auditing: "ביקורת", legal_consulting: "ייעוץ משפטי",
-  bookkeeping: "הנהלת חשבונות", business_consulting: "ייעוץ עסקי",
-  international_tax: "מיסוי בינלאומי", mergers_acquisitions: "מיזוגים ורכישות"
+  tax_planning: "תכנון מס",
+  auditing: "ביקורת",
+  legal_consulting: "ייעוץ משפטי",
+  bookkeeping: "הנהלת חשבונות",
+  payroll: "שכר ונלוות",
+  business_consulting: "ייעוץ עסקי",
+  international_tax: "מיסוי בינלאומי",
+  mergers_acquisitions: "מיזוגים ורכישות",
+  vat_reporting: "דיווחי מע\"מ",
+  social_security: "ביטוח לאומי",
+  pension_insurance: "פנסיה וביטוח",
+  operator_reporting: "דיווח למתפעל",
+  tamal_reporting: "דיווח לטמל",
+  masav: "מס\"ב",
+  financial_statements: "דוחות כספיים",
+  company_registration: "רישום חברות"
 };
 
 const getInitialFormData = (provider, serviceCompanyId) => {
