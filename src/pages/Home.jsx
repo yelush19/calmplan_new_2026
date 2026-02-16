@@ -14,6 +14,7 @@ import {
   FileBarChart, RefreshCw
 } from "lucide-react";
 import AggressiveReminderSystem from "@/components/notifications/AggressiveReminderSystem";
+import StickyNotes from "@/components/StickyNotes";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -468,6 +469,19 @@ export default function HomePage() {
         </motion.div>
       </div>
 
+      {/* Sticky Notes */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.35 }}
+      >
+        <Card className="shadow-sm border-amber-200/50 bg-amber-50/20">
+          <CardContent className="p-4">
+            <StickyNotes compact={true} />
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Quick Actions */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
@@ -475,7 +489,7 @@ export default function HomePage() {
         transition={{ delay: 0.4 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        <Link to={createPageUrl("WeeklyPlanner")}>
+        <Link to={createPageUrl("WeeklyPlanningDashboard")}>
           <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-6 text-center">
               <Target className="w-8 h-8 mx-auto mb-3 text-blue-600" />

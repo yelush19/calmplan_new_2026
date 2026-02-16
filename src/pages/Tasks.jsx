@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { Task } from "@/api/entities";
+import { createNoteFromTask } from "@/components/StickyNotes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2,
-  ChevronDown, ChevronRight, RefreshCw
+  ChevronDown, ChevronRight, RefreshCw, Pin
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -475,6 +476,15 @@ export default function TasksPage() {
                                       ))}
                                     </SelectContent>
                                   </Select>
+
+                                  {/* Pin to sticky note */}
+                                  <button
+                                    onClick={() => createNoteFromTask(task)}
+                                    className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
+                                    title="העבר לפתק"
+                                  >
+                                    <Pin className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
                               );
                             })}

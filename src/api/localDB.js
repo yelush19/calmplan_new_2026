@@ -207,6 +207,7 @@ export const entities = {
   TaxReport2024: createEntity('tax_reports_2024'),
   WeeklyTask: createEntity('weekly_tasks'),
   BalanceSheet: createEntity('balance_sheets'),
+  StickyNote: createEntity('sticky_notes'),
 };
 
 export { auth };
