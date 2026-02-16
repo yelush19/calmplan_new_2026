@@ -1,47 +1,45 @@
 
-import React, { useState, useEffect } from "react";
-import { Task, Dashboard } from "@/api/entities";
+import React, { useState, useEffect, useMemo } from "react";
+import { Task } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Plus, Calendar, Clock, User, AlertTriangle, CheckCircle,
-  Filter, Search, BarChart3, Home, Briefcase, List, LayoutGrid, Trash2
+  Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2,
+  ChevronDown, ChevronRight, RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { format, parseISO, isValid } from "date-fns";
+import { format, parseISO, isValid, startOfDay } from "date-fns";
 import { he } from "date-fns/locale";
 import KanbanView from "../components/tasks/KanbanView";
 
 const statusConfig = {
-  not_started: { text: 'נותרו השלמות', color: 'bg-gray-100 text-gray-800' },
-  in_progress: { text: 'בעבודה', color: 'bg-sky-100 text-sky-800' },
-  completed: { text: 'דווח ושולם', color: 'bg-green-100 text-green-800' },
-  postponed: { text: 'נדחה', color: 'bg-neutral-100 text-neutral-800' },
-  waiting_for_approval: { text: 'לבדיקה', color: 'bg-purple-100 text-purple-800' },
-  waiting_for_materials: { text: 'ממתין לחומרים', color: 'bg-orange-100 text-orange-800' },
-  issue: { text: 'בעיה', color: 'bg-pink-100 text-pink-800' },
-  ready_for_reporting: { text: 'מוכן לדיווח', color: 'bg-teal-100 text-teal-800' },
-  reported_waiting_for_payment: { text: 'ממתין לתשלום', color: 'bg-yellow-100 text-yellow-800' },
-  not_relevant: { text: 'לא רלוונטי', color: 'bg-gray-50 text-gray-400' },
+  not_started: { text: 'לביצוע', color: 'bg-gray-100 text-gray-700', dot: 'bg-gray-400' },
+  in_progress: { text: 'בעבודה', color: 'bg-sky-100 text-sky-700', dot: 'bg-sky-500' },
+  completed: { text: 'הושלם', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
+  postponed: { text: 'נדחה', color: 'bg-neutral-100 text-neutral-600', dot: 'bg-neutral-400' },
+  waiting_for_approval: { text: 'לבדיקה', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
+  waiting_for_materials: { text: 'ממתין לחומרים', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
+  issue: { text: 'בעיה', color: 'bg-pink-100 text-pink-700', dot: 'bg-pink-500' },
+  ready_for_reporting: { text: 'מוכן לדיווח', color: 'bg-teal-100 text-teal-700', dot: 'bg-teal-500' },
+  reported_waiting_for_payment: { text: 'ממתין לתשלום', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
+  not_relevant: { text: 'לא רלוונטי', color: 'bg-gray-50 text-gray-400', dot: 'bg-gray-300' },
 };
 
 const priorityConfig = {
-    low: { text: 'נמוכה', color: 'bg-gray-100 text-gray-800' },
-    medium: { text: 'בינונית', color: 'bg-yellow-100 text-yellow-800' },
-    high: { text: 'גבוהה', color: 'bg-orange-100 text-orange-800' },
-    urgent: { text: 'דחוף', color: 'bg-red-100 text-red-800' }
+  low: { text: 'נמוך', color: 'bg-blue-50 text-blue-700', dot: 'bg-blue-400', order: 3 },
+  medium: { text: 'בינוני', color: 'bg-amber-50 text-amber-700', dot: 'bg-amber-400', order: 2 },
+  high: { text: 'גבוה', color: 'bg-orange-50 text-orange-700', dot: 'bg-orange-400', order: 1 },
+  urgent: { text: 'דחוף', color: 'bg-rose-50 text-rose-700', dot: 'bg-rose-500', order: 0 },
 };
 
-// מיפוי הסטטוסים מ-Monday לסטטוסים פנימיים - מורחב ומשופר
+// Monday status mapping
 const mondayStatusMapping = {
-  // וריאציות עם רווחים
   'ממתין לחומרים': 'waiting_for_materials',
-  'בעבודה': 'in_progress', 
+  'בעבודה': 'in_progress',
   'ממתין לתחילת העבודה': 'not_started',
   'לבדיקה': 'waiting_for_approval',
   'מוכן לדיווח': 'ready_for_reporting',
@@ -49,476 +47,475 @@ const mondayStatusMapping = {
   'דווח ושולם': 'completed',
   'בעיה': 'issue',
   'נדחה': 'postponed',
-  
-  // וריאציות עם קווים תחתונים (מה שהיה במקור)
   'ממתין_לחומרים': 'waiting_for_materials',
   'ממתין_לתחילת_העבודה': 'not_started',
   'מוכן_לדיווח': 'ready_for_reporting',
   'דיווח_ממתין_לתשלום': 'reported_waiting_for_payment',
   'דווח_ושולם': 'completed',
-
-  // וריאציות נוספות אפשריות
   'בוצע': 'completed',
   'הושלם': 'completed',
   'סיום': 'completed',
   'ביצוע': 'in_progress',
-  'ממתין לתשלום': 'reported_waiting_for_payment', // Added based on statusConfig
-  'ממתין לאישור': 'waiting_for_approval', // Added based on statusConfig
+  'ממתין לתשלום': 'reported_waiting_for_payment',
+  'ממתין לאישור': 'waiting_for_approval',
 };
-
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
-  const [filteredTasks, setFilteredTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [context, setContext] = useState("work");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [view, setView] = useState("list");
-  const [showForm, setShowForm] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
-  
   const [isClearing, setIsClearing] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleClearAllTasks = async () => {
-    const count = tasks.length;
-    if (!window.confirm(`האם למחוק את כל ${count} המשימות? פעולה זו בלתי הפיכה!`)) return;
-    if (!window.confirm('בטוח? כל המשימות יימחקו לצמיתות. לא ניתן לשחזר.')) return;
-    setIsClearing(true);
-    try {
-      await Task.deleteAll();
-      setTasks([]);
-      setFilteredTasks([]);
-      alert(`נמחקו ${count} משימות בהצלחה. המערכת נקייה.`);
-    } catch (error) {
-      console.error('Error clearing tasks:', error);
-      alert('שגיאה במחיקת משימות');
-    }
-    setIsClearing(false);
-  };
-
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const contextParam = params.get('context');
-    if (contextParam && ['work', 'home'].includes(contextParam)) {
-      setContext(contextParam);
-    }
+    const statusParam = params.get('status');
+    const priorityParam = params.get('priority');
+    if (statusParam) setStatusFilter(statusParam);
+    if (priorityParam) setPriorityFilter(priorityParam);
   }, [location.search]);
 
-  useEffect(() => {
-    loadTasks();
-  }, [context]);
-
-  useEffect(() => {
-    if (!Array.isArray(tasks)) {
-      setFilteredTasks([]);
-      return;
-    }
-    
-    // הסינון לפי context כבר מתבצע ב-loadTasks,
-    // לכן כאן אנחנו רק מסננים לפי חיפוש וסטטוס
-    let filtered = [...tasks];
-    
-    if (searchTerm) {
-      filtered = filtered.filter(task => 
-        task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(task => task.status === statusFilter);
-    }
-    
-    if (priorityFilter !== "all") {
-      filtered = filtered.filter(task => task.priority === priorityFilter);
-    }
-    
-    setFilteredTasks(filtered);
-  }, [tasks, searchTerm, statusFilter, priorityFilter]); // הורדנו את context מהתלויות
+  useEffect(() => { loadTasks(); }, []);
 
   const loadTasks = async () => {
     setIsLoading(true);
     try {
-      // 1. קריאת הגדרות הלוחות
-      const boardConfigs = await Dashboard.list() || [];
+      // Load ALL tasks — unified view
+      const allTasks = await Task.list("-due_date", 5000).catch(() => []);
+      const validTasks = Array.isArray(allTasks) ? allTasks : [];
 
-      // 2. הגדרת סוגי הלוחות לכל קונטקסט
-      const workBoardTypes = ['reports', 'reconciliations', 'client_accounts', 'payroll', 'clients'];
-      const homeBoardTypes = ['family_tasks', 'wellbeing'];
-
-      // 3. איסוף ה-IDs של הלוחות הרלוונטיים
-      let targetBoardIds = [];
-      if (context === 'work') {
-        targetBoardIds = boardConfigs
-          .filter(config => workBoardTypes.includes(config.type) && config.monday_board_id)
-          .map(config => config.monday_board_id);
-      } else { // context === 'home'
-        targetBoardIds = boardConfigs
-          .filter(config => homeBoardTypes.includes(config.type) && config.monday_board_id)
-          .map(config => config.monday_board_id);
-      }
-      
-      if (targetBoardIds.length === 0) {
-        setTasks([]);
-        setIsLoading(false);
-        return;
-      }
-      
-      // 4. סינון המשימות לפי רשימת ה-IDs
-      const fetchedTasks = await Task.filter({
-        'monday_board_id': { '$in': targetBoardIds }
-      }, "-created_date", 2000);
-      
-      const validTasks = Array.isArray(fetchedTasks) ? fetchedTasks : [];
-
-      // 5. תיקון וניקוי הסטטוסים
-      const normalizedTasks = validTasks.map(task => {
-        let normalizedStatus = task.status;
-        
-        // אם יש מיפוי לסטטוס הזה
-        if (task.status && mondayStatusMapping[task.status]) {
-          normalizedStatus = mondayStatusMapping[task.status];
-          // console.log(`מיפוי סטטוס: "${task.status}" → "${normalizedStatus}"`); // Optional: for detailed debug
-        } 
-        // אם אין סטטוס כלל
-        else if (!task.status) {
-          normalizedStatus = 'not_started';
-          console.log(`משימה ללא סטטוס: "${task.title}" - הוגדר כ-not_started`);
-        }
-        // אם יש סטטוס שלא מוכר
-        else {
-          console.warn(`סטטוס לא מוכר: "${task.status}" במשימה "${task.title}" - הוגדר כ-not_started`);
-          normalizedStatus = 'not_started'; // ברירת מחדל
-        }
-
-        return {
-          ...task,
-          status: normalizedStatus,
-          isFromMonday: true // Mark tasks loaded from Monday as such
-        };
-      });
-
-      // 6. סינון משימות ישנות - משימות שהושלמו לפני יותר מ-60 יום לא רלוונטיות
-      // משימות לא-הושלמו שעברו יותר מ-180 יום - כנראה תקועות ולא רלוונטיות
-      const MAX_COMPLETED_AGE_DAYS = 60;
-      const MAX_STALE_AGE_DAYS = 180;
+      // Normalize statuses and filter stale
       const now = Date.now();
+      const processed = validTasks
+        .map(task => {
+          let normalizedStatus = task.status;
+          if (task.status && mondayStatusMapping[task.status]) {
+            normalizedStatus = mondayStatusMapping[task.status];
+          } else if (!task.status || !statusConfig[task.status]) {
+            normalizedStatus = 'not_started';
+          }
+          return { ...task, status: normalizedStatus };
+        })
+        .filter(task => {
+          const taskDate = task.due_date || task.created_date;
+          if (!taskDate) return true;
+          const daysSince = Math.floor((now - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
+          if (task.status === 'completed' && daysSince > 60) return false;
+          if (task.status !== 'completed' && daysSince > 180) return false;
+          return true;
+        });
 
-      const freshTasks = normalizedTasks.filter(task => {
-        const taskDate = task.due_date || task.created_date;
-        if (!taskDate) return true;
-        const daysSince = Math.floor((now - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
-
-        // משימות שהושלמו לפני יותר מ-60 יום - הסתר
-        if (task.status === 'completed' && daysSince > MAX_COMPLETED_AGE_DAYS) return false;
-        // משימות תקועות מעל 180 יום - הסתר
-        if (task.status !== 'completed' && daysSince > MAX_STALE_AGE_DAYS) return false;
-        return true;
-      });
-
-      setTasks(freshTasks);
+      setTasks(processed);
     } catch (error) {
-      console.error("שגיאה בטעינת משימות:", error);
+      console.error("Error loading tasks:", error);
       setTasks([]);
     }
     setIsLoading(false);
   };
 
-  const handleContextChange = (newContext) => {
-    setContext(newContext);
-    navigate(`/Tasks?context=${newContext}`);
+  // Extract unique categories for filter
+  const categories = useMemo(() => {
+    const cats = new Set();
+    tasks.forEach(t => { if (t.category) cats.add(t.category); });
+    return Array.from(cats).sort();
+  }, [tasks]);
+
+  // Category display names
+  const getCategoryLabel = (cat) => {
+    const labels = {
+      'מע"מ': 'מע"מ',
+      'מקדמות מס': 'מקדמות',
+      'ניכויים': 'ניכויים',
+      'ביטוח לאומי': 'ב"ל',
+      'שכר': 'שכר',
+      'דוח שנתי': 'שנתי',
+      'work_vat_reporting': 'מע"מ',
+      'work_tax_advances': 'מקדמות',
+      'work_deductions': 'ניכויים',
+      'work_social_security': 'ב"ל',
+      'work_payroll': 'שכר',
+      'work_client_management': 'ניהול',
+    };
+    return labels[cat] || cat;
+  };
+
+  // Filtered tasks
+  const filteredTasks = useMemo(() => {
+    let result = [...tasks];
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(t =>
+        t.title?.toLowerCase().includes(term) ||
+        t.client_name?.toLowerCase().includes(term) ||
+        t.description?.toLowerCase().includes(term)
+      );
+    }
+
+    if (statusFilter !== "all") {
+      result = result.filter(t => t.status === statusFilter);
+    }
+
+    if (priorityFilter !== "all") {
+      result = result.filter(t => t.priority === priorityFilter);
+    }
+
+    if (categoryFilter !== "all") {
+      result = result.filter(t => t.category === categoryFilter);
+    }
+
+    // Sort: priority first, then due date
+    result.sort((a, b) => {
+      const pa = priorityConfig[a.priority]?.order ?? 9;
+      const pb = priorityConfig[b.priority]?.order ?? 9;
+      if (pa !== pb) return pa - pb;
+      return (a.due_date || '9999').localeCompare(b.due_date || '9999');
+    });
+
+    return result;
+  }, [tasks, searchTerm, statusFilter, priorityFilter, categoryFilter]);
+
+  // Group by client name
+  const groupedByClient = useMemo(() => {
+    const groups = {};
+    for (const task of filteredTasks) {
+      const key = task.client_name || 'ללא לקוח';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(task);
+    }
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b, 'he'));
+  }, [filteredTasks]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const total = filteredTasks.length;
+    const completed = filteredTasks.filter(t => t.status === 'completed').length;
+    const inProgress = filteredTasks.filter(t => t.status === 'in_progress').length;
+    const waiting = filteredTasks.filter(t =>
+      ['waiting_for_materials', 'waiting_for_approval', 'ready_for_reporting'].includes(t.status)
+    ).length;
+    return { total, completed, inProgress, waiting };
+  }, [filteredTasks]);
+
+  const handleStatusChange = async (task, newStatus) => {
+    try {
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+      await Task.update(task.id, { ...task, status: newStatus });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      loadTasks();
+    }
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (window.confirm("האם אתה בטוח שברצונך למחוק משימה זו?")) {
+    if (window.confirm("למחוק משימה זו?")) {
       try {
         await Task.delete(taskId);
-        loadTasks();
+        setTasks(prev => prev.filter(t => t.id !== taskId));
       } catch (error) {
-        console.error("שגיאה במחיקת משימה:", error);
+        console.error("Error deleting task:", error);
       }
     }
   };
 
-  const handleStatusChange = async (task, newStatus) => {
+  const handleClearAllTasks = async () => {
+    const count = tasks.length;
+    if (!window.confirm(`למחוק את כל ${count} המשימות? פעולה בלתי הפיכה!`)) return;
+    if (!window.confirm('בטוח? לא ניתן לשחזר.')) return;
+    setIsClearing(true);
     try {
-      const currentTasks = Array.isArray(tasks) ? tasks : [];
-      const updatedTasks = currentTasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
-      setTasks(updatedTasks);
-      await Task.update(task.id, { ...task, status: newStatus });
+      await Task.deleteAll();
+      setTasks([]);
     } catch (error) {
-        console.error("שגיאה בעדכון סטטוס:", error);
-        loadTasks(); 
+      console.error('Error clearing tasks:', error);
     }
+    setIsClearing(false);
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
     try {
       const date = parseISO(dateString);
-      return isValid(date) ? format(date, "dd/MM/yyyy", { locale: he }) : dateString;
-    } catch {
-      return dateString;
-    }
+      return isValid(date) ? format(date, "dd/MM", { locale: he }) : dateString;
+    } catch { return dateString; }
   };
 
-  const getPriorityColor = (priority) => {
-    return priorityConfig[priority]?.color || priorityConfig.medium.color;
+  const toggleGroup = (key) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
   };
 
-  const getStatusColor = (status) => {
-    return statusConfig[status]?.color || statusConfig.not_started.color;
-  };
-
-  const getStatusText = (status) => {
-    return statusConfig[status]?.text || status;
-  };
-
-  const getPriorityText = (priority) => {
-    return priorityConfig[priority]?.text || priority;
-  };
-
-  const getTaskSource = (task) => {
-    if (task.is_auto_generated && task.related_entity_type) {
-      switch (task.related_entity_type) {
-        case 'ClientAccount':
-          return { icon: '🏦', text: 'נוצר אוטומטית מחשבון בנק', color: 'text-blue-600' };
-        case 'BalanceSheet':
-          return { icon: '📊', text: 'נוצר אוטומטית ממאזן', color: 'text-purple-600' };
-        case 'AccountReconciliation':
-          return { icon: '📋', text: 'נוצר אוטומטית מהתאמה', color: 'text-teal-600' };
-        default:
-          return { icon: '🤖', text: 'נוצר אוטומטית', color: 'text-gray-600' };
-      }
-    }
-    
-    if (task.isFromMonday) {
-      return { icon: '📅', text: 'מסונכרן מ-Monday.com', color: 'text-indigo-600' };
-    }
-    
-    return null;
-  };
+  const getPriorityColor = (priority) => priorityConfig[priority]?.color || priorityConfig.medium.color;
+  const getStatusColor = (status) => statusConfig[status]?.color || statusConfig.not_started.color;
+  const getStatusText = (status) => statusConfig[status]?.text || status;
+  const getPriorityText = (priority) => priorityConfig[priority]?.text || priority;
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-gray-600">טוען משימות מ-Monday...</div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#657453]/10 flex items-center justify-center mb-4">
+            <RefreshCw className="w-8 h-8 animate-spin text-[#657453]" />
+          </div>
+          <p className="text-lg text-gray-500">טוען משימות...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-            <div className="flex items-center gap-4 mb-4 md:mb-0">
-              <h1 className="text-3xl font-bold text-gray-900">משימות מ-Monday</h1>
-              <Badge className="bg-blue-500 text-white text-lg px-3 py-1 rounded-full">
-                {filteredTasks.length}
-              </Badge>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex bg-white rounded-xl p-1 shadow-sm border">
-                <Button
-                  variant={context === "work" ? "default" : "ghost"}
-                  onClick={() => handleContextChange("work")}
-                  className={`px-4 py-2 rounded-lg transition-all ${
-                    context === "work" 
-                      ? "bg-blue-500 text-white shadow-md" 
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  <Briefcase className="w-4 h-4 ml-2" />
-                  עבודה
-                </Button>
-                <Button
-                  variant={context === "home" ? "default" : "ghost"}
-                  onClick={() => handleContextChange("home")}
-                  className={`px-4 py-2 rounded-lg transition-all ${
-                    context === "home" 
-                      ? "bg-green-500 text-white shadow-md" 
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  <Home className="w-4 h-4 ml-2" />
-                  בית
-                </Button>
-              </div>
-
-              <div className="flex bg-white rounded-xl p-1 shadow-sm border">
-                <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')}>
-                  <List className="w-5 h-5" />
-                </Button>
-                <Button variant={view === 'kanban' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('kanban')}>
-                  <LayoutGrid className="w-5 h-5" />
-                </Button>
-              </div>
-
-              <Button
-                variant="outline"
-                onClick={handleClearAllTasks}
-                disabled={isClearing || tasks.length === 0}
-                className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
-              >
-                <Trash2 className="w-4 h-4 ml-2" />
-                {isClearing ? 'מוחק...' : 'נקה הכל'}
-              </Button>
-            </div>
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">כל המשימות</h1>
+          <p className="text-base text-gray-500 mt-1">
+            {stats.total} משימות | {stats.completed} הושלמו | {stats.inProgress} בעבודה
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-white rounded-xl p-1 shadow-sm border">
+            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')}>
+              <List className="w-5 h-5" />
+            </Button>
+            <Button variant={view === 'kanban' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('kanban')}>
+              <LayoutGrid className="w-5 h-5" />
+            </Button>
           </div>
-
-          <Card className="bg-white shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <Input
-                    placeholder="חיפוש משימות..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="סטטוס" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">כל הסטטוסים</SelectItem>
-                    {Object.entries(statusConfig).map(([statusKey, { text }]) => (
-                      <SelectItem key={statusKey} value={statusKey}>{text}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="עדיפות" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">כל העדיפויות</SelectItem>
-                    {Object.entries(priorityConfig).map(([priorityKey, { text }]) => (
-                        <SelectItem key={priorityKey} value={priorityKey}>{text}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {view === 'list' ? (
-          <div className="space-y-4">
-            {!Array.isArray(filteredTasks) || filteredTasks.length === 0 ? (
-              <Card className="bg-white">
-                <CardContent className="p-8 text-center">
-                  <div className="text-gray-500 mb-4">
-                    {isLoading ? "טוען משימות..." : `אין משימות ${context === "work" ? "עבודה" : "בית"} מ-Monday`}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <AnimatePresence>
-                {filteredTasks.map((task, index) => (
-                  task && task.id ? (
-                    <motion.div
-                      key={task.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <Card className="bg-white hover:shadow-md transition-shadow">
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                  {task.title}
-                                </h3>
-                                <Badge className={getPriorityColor(task.priority)}>
-                                  {getPriorityText(task.priority)}
-                                </Badge>
-                                <Badge className={getStatusColor(task.status)}>
-                                  {getStatusText(task.status)}
-                                </Badge>
-                              </div>
-                              
-                              {/* הצגת מקור המשימה */}
-                              {getTaskSource(task) && (
-                                <div className={`flex items-center gap-2 mb-2 text-sm ${getTaskSource(task).color}`}>
-                                  <span>{getTaskSource(task).icon}</span>
-                                  <span>{getTaskSource(task).text}</span>
-                                </div>
-                              )}
-                              
-                              {task.description && (
-                                <p className="text-gray-600 mb-3">{task.description}</p>
-                              )}
-                              
-                              <div className="flex items-center gap-4 text-sm text-gray-500">
-                                {task.due_date && (
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>יעד: {formatDate(task.due_date)}</span>
-                                  </div>
-                                )}
-                                {task.client_name && (
-                                  <div className="flex items-center gap-1">
-                                    <User className="w-4 h-4" />
-                                    <span>{task.client_name}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <Select
-                                value={task.status}
-                                onValueChange={(newStatus) => handleStatusChange(task, newStatus)}
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Object.entries(statusConfig).map(([statusKey, { text }]) => (
-                                    <SelectItem key={statusKey} value={statusKey}>{text}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ) : null
-                ))}
-              </AnimatePresence>
-            )}
-          </div>
-        ) : (
-          <KanbanView 
-            tasks={Array.isArray(filteredTasks) ? filteredTasks : []} 
-            onTaskStatusChange={handleStatusChange} 
-            onDeleteTask={handleDeleteTask} 
-            formatDate={formatDate}
-            getPriorityColor={getPriorityColor}
-            getStatusColor={getStatusColor}
-            getStatusText={getStatusText}
-            getPriorityText={getPriorityText}
-          />
-        )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={loadTasks}
+            className="rounded-xl"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
+
+      {/* Filters — clean, compact */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="חיפוש לפי שם משימה, לקוח..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10 rounded-xl"
+              />
+            </div>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-40 rounded-xl">
+                <SelectValue placeholder="סטטוס" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">כל הסטטוסים</SelectItem>
+                {Object.entries(statusConfig).map(([key, { text }]) => (
+                  <SelectItem key={key} value={key}>{text}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-full md:w-36 rounded-xl">
+                <SelectValue placeholder="עדיפות" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">כל העדיפויות</SelectItem>
+                {Object.entries(priorityConfig).map(([key, { text }]) => (
+                  <SelectItem key={key} value={key}>{text}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full md:w-36 rounded-xl">
+                <SelectValue placeholder="סוג" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">כל הסוגים</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{getCategoryLabel(cat)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Task list */}
+      {view === 'list' ? (
+        <div className="space-y-4">
+          {filteredTasks.length === 0 ? (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-12 text-center">
+                <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-400 text-lg">אין משימות</p>
+              </CardContent>
+            </Card>
+          ) : (
+            groupedByClient.map(([clientName, clientTasks]) => {
+              const isCollapsed = collapsedGroups.has(clientName);
+              const completedCount = clientTasks.filter(t => t.status === 'completed').length;
+              return (
+                <motion.div
+                  key={clientName}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <Card className="border-0 shadow-sm overflow-hidden">
+                    {/* Client group header */}
+                    <div
+                      className="flex items-center justify-between px-5 py-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => toggleGroup(clientName)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isCollapsed
+                          ? <ChevronRight className="w-4 h-4 text-gray-400" />
+                          : <ChevronDown className="w-4 h-4 text-gray-400" />
+                        }
+                        <span className="text-base font-bold text-gray-700">{clientName}</span>
+                        <span className="text-sm text-gray-400">
+                          {completedCount}/{clientTasks.length}
+                        </span>
+                      </div>
+                      {/* Mini capacity bar */}
+                      <div className="flex gap-0.5">
+                        {clientTasks.map((t, i) => (
+                          <div
+                            key={i}
+                            className={`w-1.5 h-4 rounded-full ${
+                              t.status === 'completed' ? 'bg-emerald-400'
+                              : t.status === 'in_progress' ? 'bg-sky-400'
+                              : 'bg-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tasks in group */}
+                    <AnimatePresence>
+                      {!isCollapsed && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="divide-y divide-gray-50">
+                            {clientTasks.map(task => {
+                              const pri = priorityConfig[task.priority] || priorityConfig.medium;
+                              const sts = statusConfig[task.status] || statusConfig.not_started;
+                              const isCompleted = task.status === 'completed';
+                              return (
+                                <div
+                                  key={task.id}
+                                  className={`flex items-center gap-4 px-5 py-3 transition-all ${
+                                    isCompleted ? 'opacity-40' : ''
+                                  }`}
+                                >
+                                  {/* Priority dot */}
+                                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${pri.dot}`} />
+
+                                  {/* Task info */}
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`text-sm font-bold truncate ${
+                                      isCompleted ? 'line-through text-gray-400' : 'text-gray-800'
+                                    }`}>
+                                      {task.title}
+                                    </p>
+                                    <div className="flex items-center gap-3 mt-0.5">
+                                      {task.category && (
+                                        <span className="text-xs text-gray-400">
+                                          {getCategoryLabel(task.category)}
+                                        </span>
+                                      )}
+                                      {task.due_date && (
+                                        <span className="text-xs text-[#657453] font-medium">
+                                          {formatDate(task.due_date)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Status selector */}
+                                  <Select
+                                    value={task.status}
+                                    onValueChange={(newStatus) => handleStatusChange(task, newStatus)}
+                                  >
+                                    <SelectTrigger className="w-32 h-8 rounded-lg text-xs border-0 bg-gray-50">
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${sts.dot}`} />
+                                        <SelectValue />
+                                      </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Object.entries(statusConfig).map(([key, { text, dot }]) => (
+                                        <SelectItem key={key} value={key}>
+                                          <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${dot}`} />
+                                            {text}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </Card>
+                </motion.div>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        <KanbanView
+          tasks={filteredTasks}
+          onTaskStatusChange={handleStatusChange}
+          onDeleteTask={handleDeleteTask}
+          formatDate={formatDate}
+          getPriorityColor={getPriorityColor}
+          getStatusColor={getStatusColor}
+          getStatusText={getStatusText}
+          getPriorityText={getPriorityText}
+        />
+      )}
+
+      {/* Bottom: clear all (hidden in corner) */}
+      {tasks.length > 0 && (
+        <div className="flex justify-end pt-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearAllTasks}
+            disabled={isClearing}
+            className="text-xs text-gray-400 hover:text-red-500"
+          >
+            <Trash2 className="w-3 h-3 ml-1" />
+            {isClearing ? 'מוחק...' : 'מחק הכל'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
