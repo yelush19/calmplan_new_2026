@@ -189,6 +189,7 @@ export default function ClientManagementPage() {
       former: clients.filter(c => c.status === 'former').length,
       development: clients.filter(c => c.status === 'development').length,
       onboarding_pending: clients.filter(c => c.status === 'onboarding_pending').length,
+      balance_sheet_only: clients.filter(c => c.status === 'balance_sheet_only').length,
     };
 
     console.log('📊 STATUS COUNTS:', counts);
@@ -365,7 +366,8 @@ export default function ClientManagementPage() {
     potential: 'פוטנציאלי',
     former: 'עבר',
     development: 'פיתוח',
-    onboarding_pending: 'ממתין לקליטה'
+    onboarding_pending: 'ממתין לקליטה',
+    balance_sheet_only: 'סגירת מאזן בלבד'
   };
 
   const handleSaveClient = async (clientData) => {
@@ -653,6 +655,7 @@ export default function ClientManagementPage() {
                 <SelectItem value="former">עבר ({statusCounts.former})</SelectItem>
                 <SelectItem value="development">פיתוח ({statusCounts.development})</SelectItem>
                 <SelectItem value="onboarding_pending">ממתין לקליטה ({statusCounts.onboarding_pending})</SelectItem>
+                <SelectItem value="balance_sheet_only">סגירת מאזן בלבד ({statusCounts.balance_sheet_only})</SelectItem>
               </SelectContent>
             </Select>
 
@@ -792,6 +795,7 @@ export default function ClientManagementPage() {
                   <SelectItem value="former">עבר</SelectItem>
                   <SelectItem value="development">פיתוח</SelectItem>
                   <SelectItem value="onboarding_pending">ממתין לקליטה</SelectItem>
+                  <SelectItem value="balance_sheet_only">סגירת מאזן בלבד</SelectItem>
                 </SelectContent>
               </Select>
             </div>

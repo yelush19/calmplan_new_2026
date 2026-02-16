@@ -889,44 +889,6 @@
     }
   },
   {
-    "name": "ליתאי פיתוח מערכות ושירות",
-    "status": "active",
-    "entity_number": "",
-    "service_types": [],
-    "extra_services": "",
-    "tax_info": {
-      "tax_id": "",
-      "vat_file_number": "",
-      "tax_deduction_file_number": "",
-      "social_security_file_number": "",
-      "annual_tax_ids_2025": {
-        "tax_advances_id": "",
-        "social_security_id": "",
-        "deductions_id": ""
-      }
-    },
-    "reporting_info": {
-      "vat_reporting_frequency": "not_applicable",
-      "tax_advances_frequency": "not_applicable",
-      "deductions_frequency": "not_applicable",
-      "social_security_frequency": "not_applicable",
-      "payroll_frequency": "not_applicable"
-    },
-    "deadlines": {
-      "vat": "",
-      "tax_advances": "",
-      "deductions": "",
-      "social_security": ""
-    },
-    "auditor": "",
-    "contact_person": "",
-    "contact_email": "",
-    "notes": "",
-    "integration_info": {
-      "calmplan_id": ""
-    }
-  },
-  {
     "name": "ליתאי -שיפורים וסיום PRICEWISE",
     "status": "development",
     "entity_number": "",
@@ -1080,10 +1042,12 @@
   },
   {
     "name": "לקוחות 2024",
-    "status": "active",
+    "status": "former",
+    "is_group": true,
     "entity_number": "",
     "service_types": [],
     "extra_services": "",
+    "notes": "קבוצה - לקוחות שסיימו ב-2024",
     "tax_info": {
       "tax_id": "",
       "vat_file_number": "",

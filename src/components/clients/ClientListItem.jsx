@@ -10,6 +10,7 @@ const statusUI = {
   potential: { label: 'פוטנציאלי', badge: 'bg-gray-100 text-gray-800 border-gray-200' },
   former: { label: 'לקוח עבר', badge: 'bg-red-100 text-red-800 border-red-200' },
   onboarding_pending: { label: 'ממתין לקליטה', badge: 'bg-purple-100 text-purple-800 border-purple-200' },
+  balance_sheet_only: { label: 'סגירת מאזן בלבד', badge: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
 };
 
 
