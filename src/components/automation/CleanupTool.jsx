@@ -179,16 +179,19 @@ export default function CleanupTool({ rules = [] }) {
         }
 
         // Check 4: Task missing reporting_month field - needs tagging
-        if (!reason && task.due_date && !task.reporting_month) {
-          const parsed = getTaskReportingMonth(task);
-          const dueDateMonth = task.due_date.substring(0, 7);
-          // If parsed reporting month differs from due_date month, it means the task
-          // has M+1 due_date but no reporting_month tag
-          if (parsed && parsed !== dueDateMonth) {
-            reason = 'missing_reporting_month';
-            const reportName = new Date(parsed + '-01').toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-            detail = `חסר תיוג חודש דיווח - זוהה מהכותרת: ${reportName}`;
-          }
+        // Due dates are in the DEADLINE month (M+1). Reporting month = due_date month - 1.
+        if (!reason && task.due_date && !task.reporting_month && task.context === 'work') {
+          const dueDate = new Date(task.due_date);
+          // Calculate reporting month = due_date month - 1
+          const reportMonth = dueDate.getMonth() === 0 ? 11 : dueDate.getMonth() - 1;
+          const reportYear = dueDate.getMonth() === 0 ? dueDate.getFullYear() - 1 : dueDate.getFullYear();
+          const suggestedReportingMonth = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}`;
+
+          reason = 'missing_reporting_month';
+          const reportName = new Date(reportYear, reportMonth, 1).toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+          detail = `חסר תיוג חודש דיווח - חודש מוצע: ${reportName}`;
+          // Store suggested month on the item for the fix action
+          task._suggestedReportingMonth = suggestedReportingMonth;
         }
 
         if (reason) {
@@ -268,10 +271,10 @@ export default function CleanupTool({ rules = [] }) {
             reporting_month: reportingMonth,
           });
         } else if (item.reason === 'missing_reporting_month') {
-          // Tag with reporting_month without changing due_date
-          const parsed = getTaskReportingMonth(item.task);
-          if (parsed) {
-            await Task.update(item.task.id, { reporting_month: parsed });
+          // Tag with reporting_month (due_date month - 1) without changing due_date
+          const reportingMonth = item.task._suggestedReportingMonth;
+          if (reportingMonth) {
+            await Task.update(item.task.id, { reporting_month: reportingMonth });
           }
         } else {
           await Task.update(item.task.id, { status: 'not_relevant' });
