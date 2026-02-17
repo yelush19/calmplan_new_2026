@@ -29,10 +29,10 @@ const navigationGroups = [
         children: [
           { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
           { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+          { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
           { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
           { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
           { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
-          { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
         ],
       },
       {
@@ -59,6 +59,14 @@ const navigationGroups = [
         ],
       },
       {
+        name: "אוטומציות ויצירת משימות חוזרות",
+        icon: Zap,
+        children: [
+          { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
+          { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
+        ],
+      },
+      {
         name: "מרכז לקוחות",
         icon: Users,
         children: [
@@ -73,14 +81,6 @@ const navigationGroups = [
         icon: BookUser,
         children: [
           { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
-        ],
-      },
-      {
-        name: "אוטומציות ומשימות",
-        icon: Zap,
-        children: [
-          { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
-          { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
         ],
       },
       { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },

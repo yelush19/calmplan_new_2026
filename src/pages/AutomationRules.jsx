@@ -547,6 +547,7 @@ export default function AutomationRules() {
                     title: `${category} - ${client.name} - ${monthLabel}`,
                     client_name: client.name, client_id: client.id,
                     category, status: 'not_started', due_date: dueDateStr,
+                    context: 'work', process_steps: {},
                   },
                 });
               }

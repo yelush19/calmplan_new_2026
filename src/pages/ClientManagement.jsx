@@ -500,6 +500,8 @@ export default function ClientManagementPage() {
                 category: category,
                 status: 'not_started',
                 due_date: dueDateStr,
+                context: 'work',
+                process_steps: {},
               });
             }
           }
