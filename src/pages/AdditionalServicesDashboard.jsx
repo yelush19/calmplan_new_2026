@@ -7,12 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight,
-  ArrowRight, Users, X, Check, Settings2, Plus, ChevronDown, Trash2
+  ArrowRight, Users, X, Check, Settings2, Plus, ChevronDown, Trash2, List, LayoutGrid
 } from 'lucide-react';
+import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ResizableTable from '@/components/ui/ResizableTable';
 import {
@@ -54,6 +56,7 @@ export default function AdditionalServicesDashboardPage() {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
+  const [viewMode, setViewMode] = useState('table');
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
@@ -193,6 +196,10 @@ export default function AdditionalServicesDashboardPage() {
     } catch (error) { console.error("Error updating sub-tasks:", error); }
   }, []);
 
+  const handleAttachmentUpdate = useCallback((task, attachments) => {
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, attachments } : t));
+  }, []);
+
   const handleMonthChange = (dir) => {
     setSelectedMonth(c => dir === 'prev' ? subMonths(c, 1) : addMonths(c, 1));
   };
@@ -239,6 +246,14 @@ export default function AdditionalServicesDashboardPage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
+          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-gray-200 p-0.5">
+            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')}>
+              <List className="w-4 h-4" />
+            </Button>
+            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')}>
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+          </div>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -277,20 +292,25 @@ export default function AdditionalServicesDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : Object.keys(serviceData).length > 0 ? (
-        <div className="space-y-6">
-          {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => (
-            <ServiceTable
-              key={serviceKey}
-              service={service}
-              clientRows={clientRows}
-              onToggleStep={handleToggleStep}
-              onDateChange={handleDateChange}
-              onStatusChange={handleStatusChange}
-              onPaymentDateChange={handlePaymentDateChange}
-              onSubTaskChange={handleSubTaskChange}
-            />
-          ))}
-        </div>
+        viewMode === 'kanban' ? (
+          <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} />
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => (
+              <ServiceTable
+                key={serviceKey}
+                service={service}
+                clientRows={clientRows}
+                onToggleStep={handleToggleStep}
+                onDateChange={handleDateChange}
+                onStatusChange={handleStatusChange}
+                onPaymentDateChange={handlePaymentDateChange}
+                onSubTaskChange={handleSubTaskChange}
+                onAttachmentUpdate={handleAttachmentUpdate}
+              />
+            ))}
+          </div>
+        )
       ) : (
         <Card className="p-12 text-center border-gray-200">
           <Settings2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
@@ -308,7 +328,7 @@ export default function AdditionalServicesDashboardPage() {
   );
 }
 
-function ServiceTable({ service, clientRows, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange }) {
+function ServiceTable({ service, clientRows, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate }) {
   const completedCount = clientRows.filter(r => r.task.status === 'completed').length;
 
   return (
@@ -357,6 +377,7 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange, onStatu
                 onStatusChange={onStatusChange}
                 onPaymentDateChange={onPaymentDateChange}
                 onSubTaskChange={onSubTaskChange}
+                onAttachmentUpdate={onAttachmentUpdate}
               />
             ))}
           </tbody>
@@ -366,7 +387,7 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange, onStatu
   );
 }
 
-function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange }) {
+function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate }) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
@@ -493,6 +514,13 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                 <input value={newSubTitle} onChange={(e) => setNewSubTitle(e.target.value)} placeholder="תת משימה חדשה..." className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 bg-white" onKeyDown={(e) => e.key === 'Enter' && handleAddSubTask()} />
                 <input type="date" value={newSubDue} onChange={(e) => setNewSubDue(e.target.value)} className="text-xs border border-gray-200 rounded px-1.5 py-1 w-[100px] bg-white" />
                 <button onClick={handleAddSubTask} disabled={!newSubTitle.trim()} className="text-indigo-500 hover:text-indigo-700 disabled:text-gray-300"><Plus className="w-4 h-4" /></button>
+              </div>
+              <div className="mt-3 pt-2 border-t border-indigo-100">
+                <TaskFileAttachments
+                  taskId={task.id}
+                  attachments={task.attachments || []}
+                  onUpdate={(updated) => onAttachmentUpdate(task, updated)}
+                />
               </div>
             </div>
           </td>
