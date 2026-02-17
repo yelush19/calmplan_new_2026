@@ -53,6 +53,7 @@ import ClientCard from '@/components/clients/ClientCard';
 import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
 import ClientListItem from '@/components/clients/ClientListItem';
 import { loadAutomationRules, getReportAutoCreateRules } from '@/config/automationRules';
+import { ALL_SERVICES } from '@/config/processTemplates';
 import ClientCollections from '@/components/clients/ClientCollections';
 import ClientContractsManager from '@/components/clients/ClientContractsManager';
 import ClientTasksTab from '@/components/clients/ClientTasksTab';
@@ -491,6 +492,13 @@ export default function ClientManagementPage() {
           }).catch(() => []);
           const clientTasks = existingTasks.filter(t => t.client_id === clientId);
 
+          // Calculate due date from rule's due_day_of_month or fall back to end of month
+          let taskDueDate = dueDateStr;
+          if (rule.due_day_of_month) {
+            const dueDay = Math.min(rule.due_day_of_month, currentMonthEnd.getDate());
+            taskDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay).toISOString().split('T')[0];
+          }
+
           for (const category of rule.task_categories) {
             const exists = clientTasks.some(t => t.category === category);
             if (!exists) {
@@ -500,7 +508,7 @@ export default function ClientManagementPage() {
                 client_id: clientId,
                 category: category,
                 status: 'not_started',
-                due_date: dueDateStr,
+                due_date: taskDueDate,
                 context: 'work',
                 process_steps: {},
               });
@@ -592,21 +600,102 @@ export default function ClientManagementPage() {
     }
   };
 
-  // Auto-create a Lead + marketing follow-up task for potential clients
-  const autoCreateLeadForPotentialClient = async (clientData) => {
+  // ============================================================
+  // Clean up / create tasks when service types change
+  // e.g., payroll removed → mark all payroll tasks as not_relevant
+  //        payroll added → autoCreateReportsForClient handles creation
+  // ============================================================
+
+  // Map client service_types to processTemplate service keys
+  const CLIENT_SERVICE_TO_TEMPLATE_KEY = {
+    vat_reporting: 'vat',
+    bookkeeping: 'bookkeeping',
+    tax_advances: 'tax_advances',
+    payroll: 'payroll',
+    social_security: 'social_security',
+    deductions: 'deductions',
+    reconciliation: 'reconciliation',
+    annual_reports: 'annual_reports',
+    authorities_payment: 'authorities_payment',
+    reserve_claims: 'reserve_claims',
+    social_benefits: 'social_benefits',
+    masav_employees: 'masav_employees',
+    masav_social: 'masav_social',
+    masav_suppliers: 'masav_suppliers',
+    masav_authorities: 'masav_authorities',
+    consulting: 'consulting',
+    admin: 'admin',
+    operator_reporting: 'operator_reporting',
+    taml_reporting: 'taml_reporting',
+    payslip_sending: 'payslip_sending',
+  };
+
+  const cleanupTasksForServiceChange = async (clientId, clientName, oldServiceTypes, newServiceTypes) => {
     try {
-      // Check if lead already exists for this client
+      const removed = (oldServiceTypes || []).filter(s => !(newServiceTypes || []).includes(s));
+      if (removed.length === 0) return;
+
+      // Collect all task categories for removed services
+      const removedCategories = [];
+      for (const svcType of removed) {
+        const templateKey = CLIENT_SERVICE_TO_TEMPLATE_KEY[svcType];
+        if (templateKey && ALL_SERVICES[templateKey]) {
+          removedCategories.push(...ALL_SERVICES[templateKey].taskCategories);
+        }
+      }
+      if (removedCategories.length === 0) return;
+
+      // Load all tasks for this client
+      const allTasks = await Task.list(null, 5000).catch(() => []);
+      const clientTasks = allTasks.filter(t =>
+        (t.client_id === clientId || t.client_name === clientName) &&
+        t.status !== 'completed' &&
+        t.status !== 'not_relevant'
+      );
+
+      let markedCount = 0;
+      for (const task of clientTasks) {
+        if (removedCategories.includes(task.category)) {
+          await Task.update(task.id, { status: 'not_relevant' });
+          markedCount++;
+        }
+      }
+
+      if (markedCount > 0) {
+        const removedLabels = removed.map(s => {
+          const tKey = CLIENT_SERVICE_TO_TEMPLATE_KEY[s];
+          return (tKey && ALL_SERVICES[tKey]?.label) || s;
+        }).join(', ');
+        console.log(`✅ סומנו ${markedCount} משימות כ"לא רלוונטי" עקב הסרת שירותים (${removedLabels}) של ${clientName}`);
+      }
+    } catch (err) {
+      console.warn('⚠️ שגיאה בניקוי משימות עקב שינוי שירותים:', err.message);
+    }
+  };
+
+  // Auto-create or update a Lead + marketing follow-up task for potential clients
+  const autoCreateLeadForPotentialClient = async (clientData, isUpdate = false) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
       const existingLeads = await Lead.list(null, 500).catch(() => []);
-      const alreadyExists = existingLeads.some(l =>
+      const existingLead = existingLeads.find(l =>
         l.company_name === clientData.name && l.status !== 'closed_lost'
       );
-      if (alreadyExists) {
-        console.log('ליד כבר קיים עבור:', clientData.name);
+
+      if (existingLead) {
+        // Update existing lead with latest client info
+        await Lead.update(existingLead.id, {
+          contact_person: clientData.contact_person || existingLead.contact_person,
+          email: clientData.email || existingLead.email,
+          phone: clientData.phone || existingLead.phone,
+          quote_amount: parseFloat(clientData.monthly_fee) || existingLead.quote_amount,
+          last_contact_date: today,
+        });
+        console.log('✅ עודכן ליד קיים עבור:', clientData.name);
         return;
       }
 
-      // Create lead
-      const today = new Date().toISOString().split('T')[0];
+      // Create new lead
       await Lead.create({
         company_name: clientData.name,
         contact_person: clientData.contact_person || '',
@@ -622,7 +711,7 @@ export default function ClientManagementPage() {
 
       // Create marketing follow-up task
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 3); // follow-up in 3 days
+      dueDate.setDate(dueDate.getDate() + 3);
       await Task.create({
         title: `מעקב שיווק - ${clientData.name}`,
         client_name: clientData.name,
@@ -635,7 +724,7 @@ export default function ClientManagementPage() {
       });
       console.log('✅ נוצרה משימת מעקב שיווק עבור:', clientData.name);
     } catch (err) {
-      console.warn('⚠️ שגיאה ביצירת ליד/משימת שיווק:', err.message);
+      console.warn('⚠️ שגיאה ביצירת/עדכון ליד:', err.message);
     }
   };
 
@@ -663,14 +752,19 @@ export default function ClientManagementPage() {
         autoCreateReportsForClient(savedClientId, clientData.name, clientData);
       }
 
-      // Auto-create lead + marketing task for potential clients
-      if (isPotentialNow && (isNew || !wasPotential)) {
-        autoCreateLeadForPotentialClient(clientData);
+      // Auto-create or update lead for potential clients (including edits)
+      if (isPotentialNow) {
+        autoCreateLeadForPotentialClient(clientData, !isNew);
       }
 
       // Clean up tasks when reporting frequency changes (e.g., monthly → bimonthly)
       if (!isNew && selectedClient?.reporting_info) {
         cleanupTasksForFrequencyChange(savedClientId, clientData.name, selectedClient.reporting_info, clientData.reporting_info);
+      }
+
+      // Clean up tasks when services are removed (mark as not_relevant)
+      if (!isNew && selectedClient?.service_types) {
+        cleanupTasksForServiceChange(savedClientId, clientData.name, selectedClient.service_types, clientData.service_types);
       }
 
       // Push to Monday.com in background (don't block UI)
