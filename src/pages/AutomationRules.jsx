@@ -358,6 +358,8 @@ export default function AutomationRules() {
   const [runningRuleId, setRunningRuleId] = useState(null);
   const [startMonth, setStartMonth] = useState(new Date().getMonth()); // 0-based (0=Jan)
   const [startYear, setStartYear] = useState(new Date().getFullYear());
+  const [cleanupScanning, setCleanupScanning] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState(null);
 
   useEffect(() => {
     loadRules();
@@ -412,6 +414,72 @@ export default function AutomationRules() {
   const handleResetDefaults = async () => {
     if (!window.confirm('לאפס את כל החוקים לברירת המחדל? חוקים מותאמים אישית יימחקו.')) return;
     await handleSave([...DEFAULT_RULES]);
+  };
+
+  // Bulk cleanup: scan all clients and mark tasks for removed services as not_relevant
+  const handleBulkCleanup = async () => {
+    if (!window.confirm('לסרוק את כל הלקוחות ולנקות משימות של שירותים שהוסרו?')) return;
+    setCleanupScanning(true);
+    setCleanupResult(null);
+    try {
+      const [allClients, allTasks] = await Promise.all([
+        Client.list(null, 5000),
+        Task.list(null, 10000),
+      ]);
+
+      // Build mapping: service_type → task categories
+      const serviceToCategories = {};
+      ALL_SERVICES.forEach(svc => {
+        serviceToCategories[svc.key] = svc.taskCategories || [];
+      });
+
+      let cleanedCount = 0;
+      const details = [];
+
+      for (const client of allClients) {
+        const clientServices = client.service_types || [];
+        const clientTasks = allTasks.filter(t =>
+          t.client_name === client.name &&
+          t.status !== 'completed' &&
+          t.status !== 'not_relevant'
+        );
+
+        if (clientTasks.length === 0) continue;
+
+        // Find all valid categories for this client's active services
+        const validCategories = new Set();
+        clientServices.forEach(svc => {
+          (serviceToCategories[svc] || []).forEach(cat => validCategories.add(cat));
+        });
+
+        // Find tasks whose category doesn't match any active service
+        for (const task of clientTasks) {
+          if (!task.category) continue;
+          // Check if this task's category belongs to a service the client no longer has
+          const taskBelongsToRemovedService = ALL_SERVICES.some(svc => {
+            const cats = svc.taskCategories || [];
+            return cats.includes(task.category) && !clientServices.includes(svc.key);
+          });
+
+          if (taskBelongsToRemovedService) {
+            await Task.update(task.id, { status: 'not_relevant' });
+            cleanedCount++;
+            details.push({
+              clientName: client.name,
+              taskTitle: task.title,
+              category: task.category,
+            });
+          }
+        }
+      }
+
+      setCleanupResult({ cleaned: cleanedCount, details });
+    } catch (err) {
+      console.error('Cleanup error:', err);
+      setCleanupResult({ error: err.message });
+    } finally {
+      setCleanupScanning(false);
+    }
   };
 
   // Open rule picker before scanning
@@ -818,6 +886,16 @@ export default function AutomationRules() {
           </Button>
           <Button
             size="sm"
+            variant="outline"
+            onClick={handleBulkCleanup}
+            disabled={cleanupScanning}
+            className="gap-1 border-red-300 text-red-600 hover:bg-red-50"
+          >
+            {cleanupScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            {cleanupScanning ? 'מנקה...' : 'ניקוי משימות שירותים שהוסרו'}
+          </Button>
+          <Button
+            size="sm"
             onClick={handleOpenRulePicker}
             disabled={bulkScanning}
             className="gap-1 bg-yellow-500 hover:bg-yellow-600 text-white"
@@ -827,6 +905,40 @@ export default function AutomationRules() {
           </Button>
         </div>
       </div>
+
+      {/* Cleanup result */}
+      {cleanupResult && (
+        <Card className={`mb-4 ${cleanupResult.error ? 'border-red-300' : 'border-teal-300'}`}>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              {cleanupResult.error ? <AlertTriangle className="w-5 h-5 text-red-500" /> : <CheckCircle className="w-5 h-5 text-teal-600" />}
+              תוצאות ניקוי משימות
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setCleanupResult(null)}><X className="w-4 h-4" /></Button>
+          </CardHeader>
+          <CardContent>
+            {cleanupResult.error ? (
+              <p className="text-red-700">שגיאה: {cleanupResult.error}</p>
+            ) : cleanupResult.cleaned === 0 ? (
+              <p className="text-teal-700 font-medium">לא נמצאו משימות לניקוי - הכל תקין!</p>
+            ) : (
+              <>
+                <p className="text-teal-700 font-medium mb-2">סומנו {cleanupResult.cleaned} משימות כ"לא רלוונטי"</p>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {cleanupResult.details.map((d, i) => (
+                    <div key={i} className="text-xs flex items-center gap-2 p-1.5 rounded bg-gray-50">
+                      <span className="font-medium text-gray-700">{d.clientName}</span>
+                      <span className="text-gray-400">-</span>
+                      <span className="text-gray-500">{d.taskTitle}</span>
+                      <Badge variant="outline" className="text-[9px] px-1 py-0">{d.category}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Bulk execution result with verification details */}
       {bulkResult && (

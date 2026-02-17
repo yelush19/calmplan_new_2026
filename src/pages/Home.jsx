@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Task, Event, User } from "@/api/entities";
 import { parseISO, format, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,7 @@ import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   ArrowRight, Target, AlertTriangle, ChevronDown, Sparkles,
-  FileBarChart, Brain, Zap, Plus
+  FileBarChart, Brain, Zap, Plus, CreditCard
 } from "lucide-react";
 import StickyNotes from "@/components/StickyNotes";
 
@@ -48,7 +48,7 @@ function sortByPriority(tasks) {
 }
 
 const statusConfig = {
-  not_started: { text: 'לביצוע', color: 'bg-gray-100 text-gray-700' },
+  not_started: { text: 'לביצוע', color: 'bg-cyan-100 text-cyan-700' },
   in_progress: { text: 'בעבודה', color: 'bg-sky-100 text-sky-700' },
   completed: { text: 'הושלם', color: 'bg-emerald-100 text-emerald-700' },
   waiting_for_materials: { text: 'ממתין לחומרים', color: 'bg-amber-100 text-amber-700' },
@@ -60,11 +60,19 @@ const statusConfig = {
   not_relevant: { text: 'לא רלוונטי', color: 'bg-gray-50 text-gray-400' },
 };
 
+const FOCUS_TABS = [
+  { key: 'overdue', label: 'באיחור', icon: AlertTriangle, color: 'text-red-600', activeBg: 'bg-red-50 border-red-300 text-red-700', badgeColor: 'bg-red-100 text-red-700' },
+  { key: 'today', label: 'היום', icon: Target, color: 'text-sky-600', activeBg: 'bg-sky-50 border-sky-300 text-sky-700', badgeColor: 'bg-sky-100 text-sky-700' },
+  { key: 'upcoming', label: '3 ימים', icon: Clock, color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-300 text-gray-700', badgeColor: 'bg-gray-100 text-gray-700' },
+  { key: 'events', label: 'אירועים', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
+  { key: 'payment', label: 'ממתין לתשלום', icon: CreditCard, color: 'text-yellow-600', activeBg: 'bg-yellow-50 border-yellow-300 text-yellow-700', badgeColor: 'bg-yellow-100 text-yellow-700' },
+];
+
 export default function HomePage() {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("");
-  const [showAllFocus, setShowAllFocus] = useState(false);
+  const [activeTab, setActiveTab] = useState('overdue');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [quickTaskDue, setQuickTaskDue] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -106,7 +114,6 @@ export default function HomePage() {
 
       const activeTasks = allTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
 
-      // Overdue
       const overdue = activeTasks.filter(task => {
         const d = task.due_date;
         if (!d) return false;
@@ -115,7 +122,6 @@ export default function HomePage() {
         return taskDate < today;
       });
 
-      // Today
       const todayTasks = activeTasks.filter(task => {
         const d = task.due_date;
         if (!d) return false;
@@ -124,7 +130,6 @@ export default function HomePage() {
         return taskDate.getTime() === today.getTime();
       });
 
-      // Next 3 days
       const upcoming = activeTasks.filter(task => {
         const d = task.due_date;
         if (!d) return false;
@@ -133,7 +138,9 @@ export default function HomePage() {
         return taskDate >= tomorrow && taskDate <= in3Days;
       });
 
-      // Events
+      // Tasks waiting for payment
+      const waitingPayment = activeTasks.filter(t => t.status === 'reported_waiting_for_payment');
+
       const allEvents = Array.isArray(eventsData) ? eventsData : [];
       const todayEvents = allEvents.filter(event => {
         if (!event.start_date) return false;
@@ -149,6 +156,7 @@ export default function HomePage() {
         overdue: sortByPriority(overdue),
         today: sortByPriority(todayTasks),
         upcoming: sortByPriority(upcoming),
+        payment: sortByPriority(waitingPayment),
         todayEvents,
         workCount,
         homeCount,
@@ -160,6 +168,13 @@ export default function HomePage() {
           try { return isToday(parseISO(d)); } catch { return false; }
         }).length,
       });
+
+      // Auto-select first tab with content
+      if (overdue.length > 0) setActiveTab('overdue');
+      else if (todayTasks.length > 0) setActiveTab('today');
+      else if (upcoming.length > 0) setActiveTab('upcoming');
+      else if (todayEvents.length > 0) setActiveTab('events');
+      else setActiveTab('today');
     } catch (error) {
       console.error("Error loading home page data:", error);
     } finally {
@@ -169,8 +184,8 @@ export default function HomePage() {
 
   const handleStatusChange = async (task, newStatus) => {
     try {
-      await Task.update(task.id, { ...task, status: newStatus });
-      // Update local data immediately
+      const updatePayload = { status: newStatus };
+      await Task.update(task.id, updatePayload);
       setData(prev => {
         if (!prev) return prev;
         const updateInList = (list) => list.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
@@ -180,11 +195,27 @@ export default function HomePage() {
           overdue: filterCompleted(updateInList(prev.overdue)),
           today: filterCompleted(updateInList(prev.today)),
           upcoming: filterCompleted(updateInList(prev.upcoming)),
+          payment: newStatus === 'reported_waiting_for_payment'
+            ? [...prev.payment, { ...task, status: newStatus }]
+            : prev.payment.filter(t => t.id !== task.id),
           completedToday: newStatus === 'completed' ? prev.completedToday + 1 : prev.completedToday,
         };
       });
     } catch (err) {
       console.error('שגיאה בעדכון סטטוס:', err);
+    }
+  };
+
+  const handlePaymentDateChange = async (task, paymentDate) => {
+    try {
+      await Task.update(task.id, { payment_due_date: paymentDate });
+      setData(prev => {
+        if (!prev) return prev;
+        const updateDate = (list) => list.map(t => t.id === task.id ? { ...t, payment_due_date: paymentDate } : t);
+        return { ...prev, overdue: updateDate(prev.overdue), today: updateDate(prev.today), upcoming: updateDate(prev.upcoming), payment: updateDate(prev.payment) };
+      });
+    } catch (err) {
+      console.error('שגיאה בעדכון תאריך תשלום:', err);
     }
   };
 
@@ -222,8 +253,59 @@ export default function HomePage() {
     );
   }
 
-  // Focus tasks = overdue + today combined
-  const focusTasks = sortByPriority([...data.overdue, ...data.today]);
+  const getTabCount = (tabKey) => {
+    if (tabKey === 'events') return data.todayEvents.length;
+    return (data[tabKey] || []).length;
+  };
+
+  const getTabContent = () => {
+    switch (activeTab) {
+      case 'overdue':
+        return data.overdue.length === 0 ? (
+          <EmptyState icon={<CheckCircle className="w-10 h-10 text-emerald-400" />} text="אין משימות באיחור" />
+        ) : (
+          <TaskList tasks={data.overdue} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDeadlineContext />
+        );
+      case 'today':
+        return data.today.length === 0 ? (
+          <EmptyState icon={<Sparkles className="w-10 h-10 text-emerald-400" />} text="אין משימות להיום - כל הכבוד!" />
+        ) : (
+          <TaskList tasks={data.today} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDeadlineContext />
+        );
+      case 'upcoming':
+        return data.upcoming.length === 0 ? (
+          <EmptyState icon={<Clock className="w-10 h-10 text-gray-300" />} text="אין משימות ל-3 ימים הקרובים" />
+        ) : (
+          <TaskList tasks={data.upcoming} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDate />
+        );
+      case 'events':
+        return data.todayEvents.length === 0 ? (
+          <EmptyState icon={<Calendar className="w-10 h-10 text-purple-300" />} text="אין אירועים היום" />
+        ) : (
+          <div className="space-y-2">
+            {data.todayEvents.map(event => (
+              <div key={event.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-purple-50 border border-purple-100">
+                <div className="text-sm font-mono font-semibold text-purple-700 min-w-[50px]">
+                  {format(parseISO(event.start_date), 'HH:mm')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm text-purple-900 truncate">{event.title}</div>
+                  {event.description && <div className="text-xs text-purple-600 truncate">{event.description}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      case 'payment':
+        return data.payment.length === 0 ? (
+          <EmptyState icon={<CreditCard className="w-10 h-10 text-yellow-300" />} text="אין משימות ממתינות לתשלום" />
+        ) : (
+          <TaskList tasks={data.payment} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showPaymentDate />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <motion.div
@@ -233,11 +315,7 @@ export default function HomePage() {
       transition={{ duration: 0.4 }}
     >
       {/* Greeting */}
-      <motion.div
-        initial={{ y: -10, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="flex items-center justify-between"
-      >
+      <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
             {getGreeting()}{userName ? `, ${userName}` : ''}
@@ -253,11 +331,7 @@ export default function HomePage() {
               {data.completedToday} הושלמו היום
             </Badge>
           )}
-          <Button
-            size="sm"
-            onClick={() => setShowQuickAdd(true)}
-            className="bg-primary hover:bg-accent text-white gap-1"
-          >
+          <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-primary hover:bg-accent text-white gap-1">
             <Plus className="w-4 h-4" />
             משימה מהירה
           </Button>
@@ -306,59 +380,20 @@ export default function HomePage() {
               <div className={`text-xl font-bold ${data.overdue.length > 0 ? 'text-amber-700' : 'text-gray-400'}`}>
                 {data.overdue.length}
               </div>
-              <div className={`text-[11px] ${data.overdue.length > 0 ? 'text-amber-600' : 'text-gray-500'}`}>
-                באיחור
-              </div>
+              <div className={`text-[11px] ${data.overdue.length > 0 ? 'text-amber-600' : 'text-gray-500'}`}>באיחור</div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* TODAY'S EVENTS */}
-      {data.todayEvents.length > 0 && (
-        <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
-          <Card className="border-purple-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Calendar className="w-5 h-5 text-purple-600" />
-                <span>אירועים היום</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {data.todayEvents.map(event => (
-                <div key={event.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-purple-50 border border-purple-100">
-                  <div className="text-sm font-mono font-semibold text-purple-700 min-w-[50px]">
-                    {format(parseISO(event.start_date), 'HH:mm')}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-purple-900 truncate">{event.title}</div>
-                    {event.description && (
-                      <div className="text-xs text-purple-600 truncate">{event.description}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* DAILY FOCUS: overdue + today combined with status update */}
+      {/* FOCUS AREA: Horizontal Tabs */}
       <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-        <Card className={data.overdue.length > 0 ? 'border-amber-200' : ''}>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
+        <Card>
+          <CardHeader className="pb-0">
+            <div className="flex items-center justify-between mb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Target className="w-5 h-5 text-blue-600" />
-                <span>הפוקוס להיום</span>
-                {focusTasks.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">{focusTasks.length}</Badge>
-                )}
-                {data.overdue.length > 0 && (
-                  <Badge className="bg-amber-100 text-amber-700 text-xs">
-                    {data.overdue.length} באיחור
-                  </Badge>
-                )}
+                <span>הפוקוס שלי</span>
               </CardTitle>
               <Link to={createPageUrl("Tasks")}>
                 <Button variant="ghost" size="sm" className="text-xs text-gray-500 gap-1">
@@ -366,61 +401,49 @@ export default function HomePage() {
                 </Button>
               </Link>
             </div>
-          </CardHeader>
-          <CardContent>
-            {focusTasks.length === 0 ? (
-              <div className="text-center py-6">
-                <Sparkles className="w-10 h-10 mx-auto text-emerald-400 mb-2" />
-                <p className="text-sm text-gray-500">אין משימות דחופות להיום - כל הכבוד!</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {(showAllFocus ? focusTasks : focusTasks.slice(0, 10)).map(task => (
-                  <TaskRow key={task.id} task={task} onStatusChange={handleStatusChange} showDeadlineContext />
-                ))}
-                {focusTasks.length > 10 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-gray-500"
-                    onClick={() => setShowAllFocus(!showAllFocus)}
+            {/* Horizontal Tab Bar */}
+            <div className="flex gap-1.5 overflow-x-auto pb-2 border-b border-gray-100">
+              {FOCUS_TABS.map(tab => {
+                const count = getTabCount(tab.key);
+                const isActive = activeTab === tab.key;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-sm font-medium transition-all whitespace-nowrap border-b-2 ${
+                      isActive
+                        ? `${tab.activeBg} border-current`
+                        : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    }`}
                   >
-                    <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showAllFocus ? 'rotate-180' : ''}`} />
-                    {showAllFocus ? 'הצג פחות' : `עוד ${focusTasks.length - 10} משימות`}
-                  </Button>
-                )}
-              </div>
-            )}
+                    <Icon className={`w-4 h-4 ${isActive ? '' : tab.color}`} />
+                    <span>{tab.label}</span>
+                    {count > 0 && (
+                      <Badge className={`text-[10px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>
+                        {count}
+                      </Badge>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
+              >
+                {getTabContent()}
+              </motion.div>
+            </AnimatePresence>
           </CardContent>
         </Card>
       </motion.div>
-
-      {/* UPCOMING 3 DAYS */}
-      {data.upcoming.length > 0 && (
-        <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
-          <Card className="border-gray-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Clock className="w-5 h-5 text-gray-500" />
-                <span>3 ימים הקרובים</span>
-                <Badge variant="secondary" className="text-xs">{data.upcoming.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {data.upcoming.slice(0, 5).map(task => (
-                <TaskRow key={task.id} task={task} onStatusChange={handleStatusChange} showDate />
-              ))}
-              {data.upcoming.length > 5 && (
-                <Link to={createPageUrl("Tasks")}>
-                  <Button variant="ghost" size="sm" className="w-full text-gray-500">
-                    עוד {data.upcoming.length - 5} משימות...
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
 
       {/* Sticky Notes */}
       <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
@@ -496,19 +519,12 @@ export default function HomePage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="quick-due">תאריך יעד</Label>
-                <Input
-                  id="quick-due"
-                  type="date"
-                  value={quickTaskDue}
-                  onChange={(e) => setQuickTaskDue(e.target.value)}
-                />
+                <Input id="quick-due" type="date" value={quickTaskDue} onChange={(e) => setQuickTaskDue(e.target.value)} />
               </div>
               <div>
                 <Label htmlFor="quick-context">הקשר</Label>
                 <Select value={quickTaskContext} onValueChange={setQuickTaskContext}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="work">עבודה</SelectItem>
                     <SelectItem value="home">בית</SelectItem>
@@ -516,18 +532,14 @@ export default function HomePage() {
                 </Select>
               </div>
             </div>
-            <Button
-              onClick={handleQuickAddTask}
-              disabled={!quickTaskTitle.trim() || isSavingQuickTask}
-              className="w-full"
-            >
+            <Button onClick={handleQuickAddTask} disabled={!quickTaskTitle.trim() || isSavingQuickTask} className="w-full">
               {isSavingQuickTask ? 'שומר...' : 'הוסף משימה'}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* FAB - Floating Quick Add Button */}
+      {/* FAB */}
       <button
         onClick={() => setShowQuickAdd(true)}
         className="fixed bottom-6 left-6 w-14 h-14 bg-primary hover:bg-accent text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40"
@@ -539,7 +551,43 @@ export default function HomePage() {
   );
 }
 
-function TaskRow({ task, onStatusChange, showDeadlineContext, showDate }) {
+function EmptyState({ icon, text }) {
+  return (
+    <div className="text-center py-8">
+      <div className="mb-2">{icon}</div>
+      <p className="text-sm text-gray-500">{text}</p>
+    </div>
+  );
+}
+
+function TaskList({ tasks, onStatusChange, onPaymentDateChange, showDeadlineContext, showDate, showPaymentDate }) {
+  const [showAll, setShowAll] = useState(false);
+  const visibleTasks = showAll ? tasks : tasks.slice(0, 15);
+
+  return (
+    <div className="space-y-2">
+      {visibleTasks.map(task => (
+        <TaskRow
+          key={task.id}
+          task={task}
+          onStatusChange={onStatusChange}
+          onPaymentDateChange={onPaymentDateChange}
+          showDeadlineContext={showDeadlineContext}
+          showDate={showDate}
+          showPaymentDate={showPaymentDate}
+        />
+      ))}
+      {tasks.length > 15 && (
+        <Button variant="ghost" size="sm" className="w-full text-gray-500" onClick={() => setShowAll(!showAll)}>
+          <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showAll ? 'rotate-180' : ''}`} />
+          {showAll ? 'הצג פחות' : `עוד ${tasks.length - 15} משימות`}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function TaskRow({ task, onStatusChange, onPaymentDateChange, showDeadlineContext, showDate, showPaymentDate }) {
   const ctx = getTaskContext(task);
   const isWork = ctx === 'work';
   const isHome = ctx === 'home';
@@ -553,12 +601,15 @@ function TaskRow({ task, onStatusChange, showDeadlineContext, showDate }) {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const daysFromDue = task.due_date
-    ? differenceInDays(today, parseISO(task.due_date))
-    : 0;
+  const daysFromDue = task.due_date ? differenceInDays(today, parseISO(task.due_date)) : 0;
   const isOverdue = daysFromDue > 0;
 
   const statusCfg = statusConfig[task.status] || statusConfig.not_started;
+
+  // Payment date tracking
+  const paymentDaysLeft = task.payment_due_date
+    ? differenceInDays(parseISO(task.payment_due_date), today)
+    : null;
 
   return (
     <div className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-amber-50/30' : ''}`}>
@@ -582,24 +633,34 @@ function TaskRow({ task, onStatusChange, showDeadlineContext, showDate }) {
             </Badge>
           )}
           {showDeadlineContext && !isOverdue && task.due_date && (
-            <span className="text-[10px] text-gray-400">
-              היום - {format(parseISO(task.due_date), 'd/M')}
-            </span>
+            <span className="text-[10px] text-gray-400">היום - {format(parseISO(task.due_date), 'd/M')}</span>
           )}
           {showDate && task.due_date && (
             <span className="text-[10px] text-gray-400">
               {isTomorrow(parseISO(task.due_date)) ? 'מחר' : format(parseISO(task.due_date), 'd/M')}
             </span>
           )}
+          {/* Payment date info */}
+          {showPaymentDate && task.payment_due_date && (
+            <Badge className={`text-[10px] px-1.5 py-0 ${paymentDaysLeft <= 0 ? 'bg-red-100 text-red-700' : paymentDaysLeft <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-yellow-100 text-yellow-700'}`}>
+              {paymentDaysLeft < 0 ? `${Math.abs(paymentDaysLeft)} ימים באיחור תשלום` : paymentDaysLeft === 0 ? 'תשלום היום' : `${paymentDaysLeft} ימים לתשלום`}
+            </Badge>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        {/* Status dropdown */}
+        {/* Payment due date input - shows for reported_waiting_for_payment */}
+        {task.status === 'reported_waiting_for_payment' && onPaymentDateChange && (
+          <input
+            type="date"
+            value={task.payment_due_date || ''}
+            onChange={(e) => onPaymentDateChange(task, e.target.value)}
+            className="h-7 text-[10px] px-1.5 w-[110px] border border-yellow-300 rounded bg-yellow-50 text-yellow-800"
+            title="תאריך יעד לתשלום"
+          />
+        )}
         {onStatusChange && (
-          <Select
-            value={task.status || 'not_started'}
-            onValueChange={(newStatus) => onStatusChange(task, newStatus)}
-          >
+          <Select value={task.status || 'not_started'} onValueChange={(newStatus) => onStatusChange(task, newStatus)}>
             <SelectTrigger className={`h-7 text-[10px] px-2 w-auto min-w-[90px] border-0 ${statusCfg.color}`}>
               <SelectValue />
             </SelectTrigger>
