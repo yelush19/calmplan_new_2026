@@ -298,6 +298,102 @@ export async function exportAllData() {
 }
 
 /**
+ * Save a daily backup snapshot to Supabase (backup_snapshots collection).
+ * Keeps last 7 snapshots, auto-deletes older ones.
+ * Returns { saved: boolean, date: string } or throws on error.
+ */
+export async function saveDailyBackupToSupabase() {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  // Check if today's backup already exists
+  const { data: existing } = await supabase
+    .from('app_data')
+    .select('id')
+    .eq('collection', 'backup_snapshots')
+    .eq('id', `backup_${today}`)
+    .maybeSingle();
+
+  if (existing) {
+    return { saved: false, date: today, reason: 'already_exists' };
+  }
+
+  // Export all data
+  const allData = await exportAllData();
+  const summary = {};
+  for (const [collection, items] of Object.entries(allData)) {
+    summary[collection] = items.length;
+  }
+
+  // Save snapshot
+  const { error } = await supabase.from('app_data').upsert({
+    id: `backup_${today}`,
+    collection: 'backup_snapshots',
+    data: { date: today, summary, snapshot: allData, total_records: Object.values(summary).reduce((a, b) => a + b, 0) },
+    created_date: new Date().toISOString(),
+    updated_date: new Date().toISOString(),
+  }, { onConflict: 'collection,id' });
+
+  if (error) throw error;
+
+  // Cleanup: keep only last 7 backups
+  const { data: allBackups } = await supabase
+    .from('app_data')
+    .select('id, created_date')
+    .eq('collection', 'backup_snapshots')
+    .order('created_date', { ascending: false });
+
+  if (allBackups && allBackups.length > 7) {
+    const toDelete = allBackups.slice(7).map(b => b.id);
+    await supabase
+      .from('app_data')
+      .delete()
+      .eq('collection', 'backup_snapshots')
+      .in('id', toDelete);
+  }
+
+  return { saved: true, date: today, summary };
+}
+
+/**
+ * List available backup snapshots
+ */
+export async function listBackupSnapshots() {
+  const { data, error } = await supabase
+    .from('app_data')
+    .select('id, data, created_date')
+    .eq('collection', 'backup_snapshots')
+    .order('created_date', { ascending: false })
+    .limit(10);
+
+  if (error) throw error;
+  return (data || []).map(row => ({
+    id: row.id,
+    date: row.data?.date,
+    summary: row.data?.summary,
+    total_records: row.data?.total_records,
+    created_date: row.created_date,
+  }));
+}
+
+/**
+ * Restore from a specific backup snapshot
+ */
+export async function restoreFromBackupSnapshot(backupId) {
+  const { data, error } = await supabase
+    .from('app_data')
+    .select('data')
+    .eq('collection', 'backup_snapshots')
+    .eq('id', backupId)
+    .single();
+
+  if (error) throw error;
+  if (!data?.data?.snapshot) throw new Error('Backup snapshot not found or empty');
+
+  await importAllData(data.data.snapshot);
+  return { restored: true, date: data.data.date };
+}
+
+/**
  * Import data from JSON backup to Supabase
  */
 export async function importAllData(allData) {

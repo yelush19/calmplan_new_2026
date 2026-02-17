@@ -19,7 +19,7 @@ import {
 import {
   BarChart3, Plus, Filter, RefreshCw, CheckCircle, AlertCircle, Clock,
   FileText, Building2, Calendar, User, ExternalLink, FolderOpen, ChevronDown,
-  ChevronUp, Pencil, Save, X, ListChecks, Wand2, Settings2, Trash2, Check
+  ChevronUp, ChevronRight, Pencil, Save, X, ListChecks, Wand2, Settings2, Trash2, Check
 } from 'lucide-react';
 import { generateProcessTasks } from '@/api/functions';
 import { loadBalanceSheetTemplates, saveBalanceSheetTemplates, DEFAULT_STAGE_TEMPLATES } from '@/config/balanceSheetTemplates';
@@ -197,6 +197,9 @@ export default function BalanceSheetsPage() {
   const [generationResult, setGenerationResult] = useState(null);
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear() - 1));
+
+  // Collapsible stages
+  const [collapsedStages, setCollapsedStages] = useState(new Set());
 
   // Template state
   const [templates, setTemplates] = useState(DEFAULT_STAGE_TEMPLATES);
@@ -562,34 +565,59 @@ export default function BalanceSheetsPage() {
         </div>
       )}
 
-      {/* Balance Sheets Grid */}
+      {/* Balance Sheets - Collapsible by Stage */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array(6).fill(0).map((_, i) => (
             <Card key={i} className="h-48 animate-pulse bg-gray-100" />
           ))}
         </div>
+      ) : filteredBalances.length === 0 ? (
+        <div className="text-center py-12">
+          <BarChart3 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <p className="text-gray-500 text-lg">לא נמצאו מאזנים</p>
+          <p className="text-gray-400 text-sm">לחצי על "צור מאזנים ללקוחות" כדי להתחיל</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredBalances.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <BarChart3 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500 text-lg">לא נמצאו מאזנים</p>
-              <p className="text-gray-400 text-sm">לחצי על "צור מאזנים ללקוחות" כדי להתחיל</p>
-            </div>
-          ) : (
-            <AnimatePresence>
-              {filteredBalances.map(balance => (
-                <BalanceSheetCard
-                  key={balance.id}
-                  balance={balance}
-                  onStageChange={handleStageChange}
-                  onUpdate={handleUpdate}
-                  onGenerateFromTemplate={(id) => setShowGenerateDialog(id)}
-                />
-              ))}
-            </AnimatePresence>
-          )}
+        <div className="space-y-3">
+          {WORKFLOW_STAGES.map(stage => {
+            const stageBalances = filteredBalances.filter(b => (b.current_stage || 'closing_operations') === stage.key);
+            if (stageBalances.length === 0) return null;
+            const isOpen = !collapsedStages.has(stage.key);
+            return (
+              <div key={stage.key} className="border rounded-lg overflow-hidden">
+                <button
+                  className={`w-full flex items-center gap-3 px-4 py-3 ${stage.color} hover:opacity-90 transition-all text-right`}
+                  onClick={() => setCollapsedStages(prev => {
+                    const next = new Set(prev);
+                    if (next.has(stage.key)) next.delete(stage.key); else next.add(stage.key);
+                    return next;
+                  })}
+                >
+                  {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  <span className="font-semibold">{stage.label}</span>
+                  <Badge variant="outline" className="text-xs">{stageBalances.length}</Badge>
+                </button>
+                {isOpen && (
+                  <div className="p-4 bg-white">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <AnimatePresence>
+                        {stageBalances.map(balance => (
+                          <BalanceSheetCard
+                            key={balance.id}
+                            balance={balance}
+                            onStageChange={handleStageChange}
+                            onUpdate={handleUpdate}
+                            onGenerateFromTemplate={(id) => setShowGenerateDialog(id)}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

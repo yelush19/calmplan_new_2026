@@ -206,11 +206,12 @@ export default function ClientsDashboardPage() {
       result = result.filter(client => {
         const data = clientDataMap[client.name] || {};
         const allTasks = Object.values(data).flat();
+        const relevant = allTasks.filter(t => t.status !== 'not_relevant');
         const checks = {
-          has_issues: allTasks.some(t => t.status === 'issue' || t.status === 'issues' || t.status === 'waiting_for_materials'),
-          all_done: allTasks.length > 0 && allTasks.every(t => t.status === 'completed'),
-          in_progress: allTasks.some(t => t.status !== 'completed' && t.status !== 'not_started'),
-          not_started: allTasks.some(t => t.status === 'not_started') || allTasks.length === 0,
+          has_issues: relevant.some(t => t.status === 'issue' || t.status === 'issues' || t.status === 'waiting_for_materials'),
+          all_done: relevant.length > 0 && relevant.every(t => t.status === 'completed'),
+          in_progress: relevant.some(t => t.status !== 'completed' && t.status !== 'not_started'),
+          not_started: relevant.some(t => t.status === 'not_started') || relevant.length === 0,
         };
         return statusFilter.some(f => checks[f]);
       });
@@ -226,8 +227,10 @@ export default function ClientsDashboardPage() {
       ALL_COLUMNS.forEach(col => {
         const items = data[col.key];
         if (items && items.length > 0) {
-          total++;
           const best = getCellStatus(client.name, col.key);
+          // Skip not_relevant tasks - they shouldn't count in progress
+          if (best?.status === 'not_relevant') return;
+          total++;
           if (best?.status === 'completed') completed++;
           else if (best?.status === 'issue' || best?.status === 'issues' || best?.status === 'waiting_for_materials') issues++;
           else if (best?.status !== 'not_started') inProgress++;
@@ -247,14 +250,15 @@ export default function ClientsDashboardPage() {
     navigate(url);
   };
 
-  // Column completion stats
+  // Column completion stats (excludes not_relevant)
   const getColumnStats = (colKey) => {
     let total = 0, done = 0;
     clients.forEach(c => {
       const items = clientDataMap[c.name]?.[colKey];
       if (items && items.length > 0) {
-        total++;
         const best = getCellStatus(c.name, colKey);
+        if (best?.status === 'not_relevant') return; // Skip not_relevant
+        total++;
         if (best?.status === 'completed') done++;
       }
     });
@@ -560,8 +564,9 @@ export default function ClientsDashboardPage() {
                     const clientHasPayroll = hasPayroll(client);
                     const data = clientDataMap[client.name] || {};
                     const allClientTasks = Object.values(data).flat();
-                    const clientDone = allClientTasks.filter(t => t.status === 'completed').length;
-                    const clientTotal = allClientTasks.length;
+                    const relevantTasks = allClientTasks.filter(t => t.status !== 'not_relevant');
+                    const clientDone = relevantTasks.filter(t => t.status === 'completed').length;
+                    const clientTotal = relevantTasks.length;
 
                     return (
                       <tr key={client.id}
