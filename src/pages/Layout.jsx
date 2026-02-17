@@ -23,11 +23,17 @@ const navigationGroups = [
     title: "LitayHub",
     icon: Home,
     items: [
-      { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
-      { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
-      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
-      { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
-      { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
+      {
+        name: "ניהול זמן וריכוז",
+        icon: Eye,
+        children: [
+          { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
+          { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+          { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
+          { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
+          { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
+        ],
+      },
       { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
       {
         name: "לקוחות",
@@ -89,9 +95,6 @@ const navigationGroups = [
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
       { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
-      { name: "Monday.com", href: createPageUrl("MondayIntegration"), icon: Monitor },
-      { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Database },
-      { name: "מנהל נתוני בדיקה", href: createPageUrl("TestDataManager"), icon: Database },
     ],
   },
 ];
