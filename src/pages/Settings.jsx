@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { DaySchedule, WeeklyRecommendation, SystemConfig } from '@/api/entities';
-import { Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle, Plus, X, Download, Upload, Database, Cloud, AlertTriangle, Settings, Trash2 } from 'lucide-react';
+import { Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle, Plus, X, Download, Upload, Database, Cloud, AlertTriangle, Settings, Trash2, Server, Pencil } from 'lucide-react';
 import { exportAllData, importAllData } from '@/api/base44Client';
 import { isSupabaseConfigured } from '@/api/supabaseClient';
+import { loadPlatformConfig, savePlatformConfig, DEFAULT_PLATFORMS } from '@/config/platformConfig';
 
 export default function SettingsPage() {
   const [schedule, setSchedule] = useState(null);
@@ -250,6 +251,9 @@ export default function SettingsPage() {
       {/* הגדרות פרמטרים */}
       <SystemParametersSection />
 
+      {/* ניהול פלטפורמות */}
+      <PlatformManagementSection />
+
       {/* גיבוי ושחזור נתונים */}
       <DataBackupSection />
     </div>
@@ -374,6 +378,228 @@ function SystemParametersSection() {
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+function PlatformManagementSection() {
+  const [platforms, setPlatforms] = useState([]);
+  const [configId, setConfigId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState(null);
+  const [editingPlatform, setEditingPlatform] = useState(null);
+  const [newField, setNewField] = useState({ key: '', label: '', placeholder: '', type: 'text' });
+
+  useEffect(() => {
+    loadPlatforms();
+  }, []);
+
+  const loadPlatforms = async () => {
+    setIsLoading(true);
+    try {
+      const { platforms: loaded, configId: id } = await loadPlatformConfig();
+      setPlatforms(loaded);
+      setConfigId(id);
+    } catch (e) {
+      console.error('Error loading platforms:', e);
+    }
+    setIsLoading(false);
+  };
+
+  const handleSave = async (updatedPlatforms) => {
+    try {
+      const newId = await savePlatformConfig(configId, updatedPlatforms);
+      if (newId) setConfigId(newId);
+      setPlatforms(updatedPlatforms);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+  };
+
+  const togglePlatform = async (platId) => {
+    const updated = platforms.map(p => p.id === platId ? { ...p, enabled: !p.enabled } : p);
+    await handleSave(updated);
+  };
+
+  const deletePlatform = async (platId) => {
+    if (!window.confirm('למחוק את הפלטפורמה?')) return;
+    const updated = platforms.filter(p => p.id !== platId);
+    await handleSave(updated);
+  };
+
+  const addNewPlatform = () => {
+    setEditingPlatform({
+      id: `platform_${Date.now()}`,
+      name: '',
+      icon: 'server',
+      color: 'bg-blue-500 text-white',
+      enabled: true,
+      fields: [],
+      isNew: true,
+    });
+  };
+
+  const saveEditingPlatform = async () => {
+    if (!editingPlatform || !editingPlatform.name.trim()) return;
+    const { isNew, ...platData } = editingPlatform;
+    let updated;
+    if (isNew) {
+      updated = [...platforms, platData];
+    } else {
+      updated = platforms.map(p => p.id === platData.id ? platData : p);
+    }
+    await handleSave(updated);
+    setEditingPlatform(null);
+  };
+
+  const addFieldToEditing = () => {
+    if (!newField.key.trim() || !newField.label.trim()) return;
+    setEditingPlatform(prev => ({
+      ...prev,
+      fields: [...prev.fields, { ...newField }],
+    }));
+    setNewField({ key: '', label: '', placeholder: '', type: 'text' });
+  };
+
+  const removeFieldFromEditing = (idx) => {
+    setEditingPlatform(prev => ({
+      ...prev,
+      fields: prev.fields.filter((_, i) => i !== idx),
+    }));
+  };
+
+  const resetToDefaults = async () => {
+    if (!window.confirm('לאפס לברירת מחדל? פלטפורמות מותאמות יימחקו.')) return;
+    await handleSave([...DEFAULT_PLATFORMS]);
+  };
+
+  const ICON_OPTIONS = [
+    { value: 'server', label: 'Server' },
+    { value: 'bar-chart', label: 'Chart' },
+    { value: 'globe', label: 'Globe' },
+    { value: 'hard-drive', label: 'HardDrive' },
+    { value: 'train-front', label: 'Train' },
+  ];
+
+  const COLOR_OPTIONS = [
+    { value: 'bg-black text-white', label: 'שחור' },
+    { value: 'bg-red-500 text-white', label: 'אדום' },
+    { value: 'bg-blue-500 text-white', label: 'כחול' },
+    { value: 'bg-green-500 text-white', label: 'ירוק' },
+    { value: 'bg-purple-600 text-white', label: 'סגול' },
+    { value: 'bg-teal-500 text-white', label: 'טורקיז' },
+    { value: 'bg-orange-500 text-white', label: 'כתום' },
+    { value: 'bg-gray-600 text-white', label: 'אפור' },
+  ];
+
+  if (isLoading) return <div className="text-center py-4 text-gray-500">טוען פלטפורמות...</div>;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.47 }}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 justify-between">
+            <div className="flex items-center gap-3">
+              <Server className="w-6 h-6 text-blue-600" />
+              פלטפורמות פרויקטים
+              {saveStatus === 'saved' && <span className="text-sm font-normal text-green-600">נשמר!</span>}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={resetToDefaults}>איפוס</Button>
+              <Button size="sm" onClick={addNewPlatform}><Plus className="w-4 h-4 ml-1" /> פלטפורמה חדשה</Button>
+            </div>
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">הגדר פלטפורמות הרצה (Vercel, Streamlit וכו') עם שדות מותאמים אישית לכל אחת</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {platforms.map(plat => (
+            <div key={plat.id} className={`flex items-center gap-3 p-3 rounded-lg border ${plat.enabled ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
+              <Switch checked={plat.enabled} onCheckedChange={() => togglePlatform(plat.id)} />
+              <Badge className={`${plat.color} text-xs`}>{plat.name}</Badge>
+              <span className="text-xs text-gray-500 flex-1">
+                {plat.fields.length} שדות: {plat.fields.map(f => f.label).join(', ') || 'ללא'}
+              </span>
+              <Button variant="ghost" size="icon" onClick={() => setEditingPlatform({ ...plat })}><Pencil className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => deletePlatform(plat.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          ))}
+
+          {platforms.length === 0 && (
+            <p className="text-center text-gray-400 py-4">אין פלטפורמות. לחצי על "פלטפורמה חדשה" או "איפוס".</p>
+          )}
+
+          {/* Edit/Create dialog inline */}
+          {editingPlatform && (
+            <div className="border-2 border-blue-300 rounded-lg p-4 bg-blue-50 space-y-4 mt-4">
+              <h4 className="font-semibold">{editingPlatform.isNew ? 'פלטפורמה חדשה' : `עריכה: ${editingPlatform.name}`}</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <Label className="text-xs">שם</Label>
+                  <Input value={editingPlatform.name} onChange={e => setEditingPlatform(p => ({ ...p, name: e.target.value }))} placeholder="Vercel" />
+                </div>
+                <div>
+                  <Label className="text-xs">אייקון</Label>
+                  <select
+                    value={editingPlatform.icon}
+                    onChange={e => setEditingPlatform(p => ({ ...p, icon: e.target.value }))}
+                    className="w-full border rounded-md px-3 py-2 text-sm"
+                  >
+                    {ICON_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs">צבע</Label>
+                  <select
+                    value={editingPlatform.color}
+                    onChange={e => setEditingPlatform(p => ({ ...p, color: e.target.value }))}
+                    className="w-full border rounded-md px-3 py-2 text-sm"
+                  >
+                    {COLOR_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Badge className={`${editingPlatform.color} px-3 py-1.5`}>{editingPlatform.name || '...'}</Badge>
+                </div>
+              </div>
+
+              {/* Fields */}
+              <div>
+                <Label className="text-xs font-semibold">שדות הפלטפורמה</Label>
+                <div className="space-y-2 mt-2">
+                  {editingPlatform.fields.map((field, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm bg-white p-2 rounded border">
+                      <span className="font-mono text-xs text-gray-500 w-28 truncate">{field.key}</span>
+                      <span className="flex-1">{field.label}</span>
+                      <Badge variant="outline" className="text-[10px]">{field.type}</Badge>
+                      <Button variant="ghost" size="sm" onClick={() => removeFieldFromEditing(idx)} className="text-red-500 h-6 w-6 p-0"><X className="w-3 h-3" /></Button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add field */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-3">
+                  <Input value={newField.key} onChange={e => setNewField(p => ({ ...p, key: e.target.value.replace(/\s/g, '_') }))} placeholder="מפתח (key)" className="text-xs" dir="ltr" />
+                  <Input value={newField.label} onChange={e => setNewField(p => ({ ...p, label: e.target.value }))} placeholder="תווית (label)" className="text-xs" />
+                  <Input value={newField.placeholder} onChange={e => setNewField(p => ({ ...p, placeholder: e.target.value }))} placeholder="placeholder" className="text-xs" dir="ltr" />
+                  <select value={newField.type} onChange={e => setNewField(p => ({ ...p, type: e.target.value }))} className="border rounded-md px-2 text-xs">
+                    <option value="text">טקסט</option>
+                    <option value="url">URL</option>
+                  </select>
+                  <Button variant="outline" size="sm" onClick={addFieldToEditing} disabled={!newField.key || !newField.label}><Plus className="w-3 h-3" /></Button>
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setEditingPlatform(null)}>ביטול</Button>
+                <Button size="sm" onClick={saveEditingPlatform} disabled={!editingPlatform.name.trim()}>שמור</Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </motion.div>
