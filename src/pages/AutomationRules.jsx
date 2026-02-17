@@ -427,18 +427,26 @@ export default function AutomationRules() {
         Task.list(null, 10000),
       ]);
 
-      // Build mapping: service_type → task categories
+      // Build mapping: service_key → task categories from automation rules
       const serviceToCategories = {};
-      ALL_SERVICES.forEach(svc => {
-        serviceToCategories[svc.key] = svc.taskCategories || [];
-      });
+      for (const rule of rules) {
+        if (rule.type !== 'report_auto_create' || !rule.target_entity?.startsWith('Task_')) continue;
+        for (const svc of (rule.trigger_services || [])) {
+          if (!serviceToCategories[svc]) serviceToCategories[svc] = new Set();
+          for (const cat of (rule.task_categories || [])) {
+            serviceToCategories[svc].add(cat);
+          }
+        }
+      }
 
       let cleanedCount = 0;
       const details = [];
+      const clientsArr = Array.isArray(allClients) ? allClients : [];
+      const tasksArr = Array.isArray(allTasks) ? allTasks : [];
 
-      for (const client of allClients) {
+      for (const client of clientsArr) {
         const clientServices = client.service_types || [];
-        const clientTasks = allTasks.filter(t =>
+        const clientTasks = tasksArr.filter(t =>
           t.client_name === client.name &&
           t.status !== 'completed' &&
           t.status !== 'not_relevant'
@@ -448,20 +456,29 @@ export default function AutomationRules() {
 
         // Find all valid categories for this client's active services
         const validCategories = new Set();
-        clientServices.forEach(svc => {
-          (serviceToCategories[svc] || []).forEach(cat => validCategories.add(cat));
-        });
+        for (const svc of clientServices) {
+          const cats = serviceToCategories[svc];
+          if (cats) cats.forEach(cat => validCategories.add(cat));
+        }
 
-        // Find tasks whose category doesn't match any active service
+        // Find tasks whose category belongs to a removed service
         for (const task of clientTasks) {
           if (!task.category) continue;
-          // Check if this task's category belongs to a service the client no longer has
-          const taskBelongsToRemovedService = ALL_SERVICES.some(svc => {
-            const cats = svc.taskCategories || [];
-            return cats.includes(task.category) && !clientServices.includes(svc.key);
-          });
 
-          if (taskBelongsToRemovedService) {
+          let categoryLinkedToService = false;
+          let linkedServiceActive = false;
+
+          for (const [svc, cats] of Object.entries(serviceToCategories)) {
+            if (cats.has(task.category)) {
+              categoryLinkedToService = true;
+              if (clientServices.includes(svc)) {
+                linkedServiceActive = true;
+                break;
+              }
+            }
+          }
+
+          if (categoryLinkedToService && !linkedServiceActive) {
             await Task.update(task.id, { status: 'not_relevant' });
             cleanedCount++;
             details.push({

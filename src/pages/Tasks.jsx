@@ -9,17 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2,
-  ChevronDown, ChevronRight, RefreshCw, Pin, ExternalLink
+  ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink,
+  ArrowUpDown, Clock, AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { format, parseISO, isValid, startOfDay } from "date-fns";
+import { format, parseISO, isValid, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { he } from "date-fns/locale";
 import KanbanView from "../components/tasks/KanbanView";
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
+import ResizableTable from '@/components/ui/ResizableTable';
 
 const statusConfig = {
-  not_started: { text: 'לביצוע', color: 'bg-gray-100 text-gray-700', dot: 'bg-gray-400' },
+  not_started: { text: 'לביצוע', color: 'bg-cyan-100 text-cyan-700', dot: 'bg-cyan-400' },
   in_progress: { text: 'בעבודה', color: 'bg-sky-100 text-sky-700', dot: 'bg-sky-500' },
   completed: { text: 'הושלם', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
   postponed: { text: 'נדחה', color: 'bg-neutral-100 text-neutral-600', dot: 'bg-neutral-400' },
@@ -38,7 +40,6 @@ const priorityConfig = {
   urgent: { text: 'דחוף', color: 'bg-rose-50 text-rose-700', dot: 'bg-rose-500', order: 0 },
 };
 
-// Monday status mapping
 const mondayStatusMapping = {
   'ממתין לחומרים': 'waiting_for_materials',
   'בעבודה': 'in_progress',
@@ -62,6 +63,32 @@ const mondayStatusMapping = {
   'ממתין לאישור': 'waiting_for_approval',
 };
 
+// Time period tabs
+const now = new Date();
+const prevMonthStart = startOfMonth(subMonths(now, 1));
+const prevMonthEnd = endOfMonth(subMonths(now, 1));
+const currMonthStart = startOfMonth(now);
+const currMonthEnd = endOfMonth(now);
+
+const TIME_TABS = [
+  { key: 'prev_month', label: format(subMonths(now, 1), 'MMMM', { locale: he }), icon: Calendar },
+  { key: 'curr_month', label: format(now, 'MMMM', { locale: he }), icon: Clock },
+  { key: 'active', label: 'פעילות', icon: AlertTriangle },
+  { key: 'completed', label: 'הושלמו', icon: CheckCircle },
+  { key: 'all', label: 'הכל', icon: List },
+];
+
+const getCategoryLabel = (cat) => {
+  const labels = {
+    'מע"מ': 'מע"מ', 'מקדמות מס': 'מקדמות', 'ניכויים': 'ניכויים',
+    'ביטוח לאומי': 'ב"ל', 'שכר': 'שכר', 'דוח שנתי': 'שנתי',
+    'work_vat_reporting': 'מע"מ', 'work_tax_advances': 'מקדמות',
+    'work_deductions': 'ניכויים', 'work_social_security': 'ב"ל',
+    'work_payroll': 'שכר', 'work_client_management': 'ניהול',
+  };
+  return labels[cat] || cat;
+};
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,8 +98,10 @@ export default function TasksPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [view, setView] = useState("list");
   const [isClearing, setIsClearing] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
-  const [clientMap, setClientMap] = useState({}); // name → id
+  const [clientMap, setClientMap] = useState({});
+  const [timeTab, setTimeTab] = useState('prev_month');
+  const [sortField, setSortField] = useState('due_date');
+  const [sortDir, setSortDir] = useState('asc');
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -99,31 +128,17 @@ export default function TasksPage() {
   const loadTasks = async () => {
     setIsLoading(true);
     try {
-      // Load ALL tasks — unified view
       const allTasks = await Task.list("-due_date", 5000).catch(() => []);
       const validTasks = Array.isArray(allTasks) ? allTasks : [];
-
-      // Normalize statuses and filter stale
-      const now = Date.now();
-      const processed = validTasks
-        .map(task => {
-          let normalizedStatus = task.status;
-          if (task.status && mondayStatusMapping[task.status]) {
-            normalizedStatus = mondayStatusMapping[task.status];
-          } else if (!task.status || !statusConfig[task.status]) {
-            normalizedStatus = 'not_started';
-          }
-          return { ...task, status: normalizedStatus };
-        })
-        .filter(task => {
-          const taskDate = task.due_date || task.created_date;
-          if (!taskDate) return true;
-          const daysSince = Math.floor((now - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
-          if (task.status === 'completed' && daysSince > 60) return false;
-          if (task.status !== 'completed' && daysSince > 180) return false;
-          return true;
-        });
-
+      const processed = validTasks.map(task => {
+        let normalizedStatus = task.status;
+        if (task.status && mondayStatusMapping[task.status]) {
+          normalizedStatus = mondayStatusMapping[task.status];
+        } else if (!task.status || !statusConfig[task.status]) {
+          normalizedStatus = 'not_started';
+        }
+        return { ...task, status: normalizedStatus };
+      });
       setTasks(processed);
     } catch (error) {
       console.error("Error loading tasks:", error);
@@ -132,35 +147,35 @@ export default function TasksPage() {
     setIsLoading(false);
   };
 
-  // Extract unique categories for filter
   const categories = useMemo(() => {
     const cats = new Set();
     tasks.forEach(t => { if (t.category) cats.add(t.category); });
     return Array.from(cats).sort();
   }, [tasks]);
 
-  // Category display names
-  const getCategoryLabel = (cat) => {
-    const labels = {
-      'מע"מ': 'מע"מ',
-      'מקדמות מס': 'מקדמות',
-      'ניכויים': 'ניכויים',
-      'ביטוח לאומי': 'ב"ל',
-      'שכר': 'שכר',
-      'דוח שנתי': 'שנתי',
-      'work_vat_reporting': 'מע"מ',
-      'work_tax_advances': 'מקדמות',
-      'work_deductions': 'ניכויים',
-      'work_social_security': 'ב"ל',
-      'work_payroll': 'שכר',
-      'work_client_management': 'ניהול',
-    };
-    return labels[cat] || cat;
-  };
+  // Time-based filtering
+  const timeFilteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const dueDate = task.due_date ? parseISO(task.due_date) : null;
+      switch (timeTab) {
+        case 'prev_month':
+          return dueDate && dueDate >= prevMonthStart && dueDate <= prevMonthEnd;
+        case 'curr_month':
+          return dueDate && dueDate >= currMonthStart && dueDate <= currMonthEnd;
+        case 'active':
+          return task.status !== 'completed' && task.status !== 'not_relevant';
+        case 'completed':
+          return task.status === 'completed';
+        case 'all':
+        default:
+          return true;
+      }
+    });
+  }, [tasks, timeTab]);
 
-  // Filtered tasks
+  // Search + status + priority + category filtering
   const filteredTasks = useMemo(() => {
-    let result = [...tasks];
+    let result = [...timeFilteredTasks];
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -170,64 +185,67 @@ export default function TasksPage() {
         t.description?.toLowerCase().includes(term)
       );
     }
-
     if (statusFilter.length > 0) {
       result = result.filter(t => statusFilter.includes(t.status));
     }
-
     if (priorityFilter !== "all") {
       result = result.filter(t => t.priority === priorityFilter);
     }
-
     if (categoryFilter !== "all") {
       result = result.filter(t => t.category === categoryFilter);
     }
-
-    // Sort: priority first, then due date
-    result.sort((a, b) => {
-      const pa = priorityConfig[a.priority]?.order ?? 9;
-      const pb = priorityConfig[b.priority]?.order ?? 9;
-      if (pa !== pb) return pa - pb;
-      return (a.due_date || '9999').localeCompare(b.due_date || '9999');
-    });
-
     return result;
-  }, [tasks, searchTerm, statusFilter, priorityFilter, categoryFilter]);
+  }, [timeFilteredTasks, searchTerm, statusFilter, priorityFilter, categoryFilter]);
 
-  // Group by client name — detect "zombie" tasks (no client, no category, title looks like a client name)
-  const groupedByClient = useMemo(() => {
-    const groups = {};
-    for (const task of filteredTasks) {
-      let key = task.client_name;
-      // If no client_name but has category, group by category
-      if (!key && task.category) {
-        key = getCategoryLabel(task.category);
+  // Sorting
+  const sortedTasks = useMemo(() => {
+    const sorted = [...filteredTasks];
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'client_name':
+          cmp = (a.client_name || '').localeCompare(b.client_name || '', 'he');
+          break;
+        case 'category':
+          cmp = (getCategoryLabel(a.category || '')).localeCompare(getCategoryLabel(b.category || ''), 'he');
+          break;
+        case 'due_date':
+          cmp = (a.due_date || '9999').localeCompare(b.due_date || '9999');
+          break;
+        case 'status': {
+          const statusOrder = ['not_started','in_progress','waiting_for_materials','waiting_for_approval','ready_for_reporting','reported_waiting_for_payment','issue','postponed','completed','not_relevant'];
+          cmp = statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
+          break;
+        }
+        case 'priority': {
+          const pa = priorityConfig[a.priority]?.order ?? 9;
+          const pb = priorityConfig[b.priority]?.order ?? 9;
+          cmp = pa - pb;
+          break;
+        }
+        default:
+          cmp = (a.title || '').localeCompare(b.title || '', 'he');
       }
-      // If still no key, it's unclassified
-      if (!key) {
-        key = 'לא מסווג';
-      }
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(task);
-    }
-    return Object.entries(groups).sort(([a], [b]) => {
-      // "לא מסווג" always last
-      if (a === 'לא מסווג') return 1;
-      if (b === 'לא מסווג') return -1;
-      return a.localeCompare(b, 'he');
+      return sortDir === 'asc' ? cmp : -cmp;
     });
-  }, [filteredTasks]);
+    return sorted;
+  }, [filteredTasks, sortField, sortDir]);
 
-  // Stats
   const stats = useMemo(() => {
     const total = filteredTasks.length;
     const completed = filteredTasks.filter(t => t.status === 'completed').length;
     const inProgress = filteredTasks.filter(t => t.status === 'in_progress').length;
-    const waiting = filteredTasks.filter(t =>
-      ['waiting_for_materials', 'waiting_for_approval', 'ready_for_reporting'].includes(t.status)
-    ).length;
-    return { total, completed, inProgress, waiting };
+    return { total, completed, inProgress };
   }, [filteredTasks]);
+
+  const toggleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
 
   const handleStatusChange = async (task, newStatus) => {
     try {
@@ -272,18 +290,24 @@ export default function TasksPage() {
     } catch { return dateString; }
   };
 
-  const toggleGroup = (key) => {
-    setCollapsedGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
+  const SortHeader = ({ field, children }) => {
+    const isActive = sortField === field;
+    return (
+      <th
+        onClick={() => toggleSort(field)}
+        className="px-3 py-2.5 text-right text-xs font-bold text-gray-600 cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap bg-white"
+      >
+        <div className="flex items-center gap-1">
+          {children}
+          {isActive ? (
+            sortDir === 'asc' ? <ChevronUp className="w-3 h-3 text-primary" /> : <ChevronDown className="w-3 h-3 text-primary" />
+          ) : (
+            <ArrowUpDown className="w-3 h-3 text-gray-300" />
+          )}
+        </div>
+      </th>
+    );
   };
-
-  const getPriorityColor = (priority) => priorityConfig[priority]?.color || priorityConfig.medium.color;
-  const getStatusColor = (status) => statusConfig[status]?.color || statusConfig.not_started.color;
-  const getStatusText = (status) => statusConfig[status]?.text || status;
-  const getPriorityText = (priority) => priorityConfig[priority]?.text || priority;
 
   if (isLoading) {
     return (
@@ -299,7 +323,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-4 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -317,20 +341,51 @@ export default function TasksPage() {
               <LayoutGrid className="w-5 h-5" />
             </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={loadTasks}
-            className="rounded-xl"
-          >
+          <Button variant="ghost" size="sm" onClick={loadTasks} className="rounded-xl">
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* Filters — clean, compact */}
+      {/* Time Period Tabs */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {TIME_TABS.map(tab => {
+          const Icon = tab.icon;
+          const isActive = timeTab === tab.key;
+          const count = tasks.filter(t => {
+            const d = t.due_date ? parseISO(t.due_date) : null;
+            switch (tab.key) {
+              case 'prev_month': return d && d >= prevMonthStart && d <= prevMonthEnd;
+              case 'curr_month': return d && d >= currMonthStart && d <= currMonthEnd;
+              case 'active': return t.status !== 'completed' && t.status !== 'not_relevant';
+              case 'completed': return t.status === 'completed';
+              case 'all': return true;
+              default: return true;
+            }
+          }).length;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setTimeTab(tab.key)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap border ${
+                isActive
+                  ? 'bg-primary text-white border-primary shadow-md'
+                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+              <Badge className={`text-[10px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                {count}
+              </Badge>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filters */}
       <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -341,18 +396,15 @@ export default function TasksPage() {
                 className="pr-10 rounded-xl"
               />
             </div>
-
             <MultiStatusFilter
               options={Object.entries(statusConfig).map(([key, { text }]) => ({
-                value: key,
-                label: text,
-                count: tasks.filter(t => t.status === key).length,
+                value: key, label: text,
+                count: timeFilteredTasks.filter(t => t.status === key).length,
               }))}
               selected={statusFilter}
               onChange={setStatusFilter}
               label="סטטוס"
             />
-
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
               <SelectTrigger className="w-full md:w-36 rounded-xl">
                 <SelectValue placeholder="עדיפות" />
@@ -364,7 +416,6 @@ export default function TasksPage() {
                 ))}
               </SelectContent>
             </Select>
-
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-full md:w-36 rounded-xl">
                 <SelectValue placeholder="סוג" />
@@ -380,183 +431,148 @@ export default function TasksPage() {
         </CardContent>
       </Card>
 
-      {/* Task list */}
+      {/* Content */}
       {view === 'list' ? (
-        <div className="space-y-4">
-          {filteredTasks.length === 0 ? (
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-12 text-center">
-                <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-400 text-lg">אין משימות</p>
-              </CardContent>
-            </Card>
-          ) : (
-            groupedByClient.map(([clientName, clientTasks]) => {
-              const isCollapsed = collapsedGroups.has(clientName);
-              const completedCount = clientTasks.filter(t => t.status === 'completed').length;
-              return (
-                <motion.div
-                  key={clientName}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <Card className="border-0 shadow-sm overflow-hidden">
-                    {/* Client group header */}
-                    <div
-                      className="flex items-center justify-between px-5 py-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => toggleGroup(clientName)}
+        sortedTasks.length === 0 ? (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-12 text-center">
+              <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-400 text-lg">אין משימות</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-0 shadow-sm overflow-hidden">
+            <ResizableTable
+              className="w-full text-sm"
+              stickyHeader
+              maxHeight="70vh"
+            >
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <SortHeader field="client_name">לקוח</SortHeader>
+                  <SortHeader field="category">סוג דיווח</SortHeader>
+                  <th className="px-3 py-2.5 text-right text-xs font-bold text-gray-600 bg-white">תיאור</th>
+                  <SortHeader field="due_date">תאריך יעד</SortHeader>
+                  <SortHeader field="status">סטטוס</SortHeader>
+                  <SortHeader field="priority">עדיפות</SortHeader>
+                  <th className="px-3 py-2.5 text-right text-xs font-bold text-gray-600 bg-white w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedTasks.map(task => {
+                  const sts = statusConfig[task.status] || statusConfig.not_started;
+                  const pri = priorityConfig[task.priority] || priorityConfig.medium;
+                  const isCompleted = task.status === 'completed';
+                  return (
+                    <tr
+                      key={task.id}
+                      className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isCompleted ? 'opacity-50' : ''}`}
                     >
-                      <div className="flex items-center gap-3">
-                        {isCollapsed
-                          ? <ChevronRight className="w-4 h-4 text-gray-400" />
-                          : <ChevronDown className="w-4 h-4 text-gray-400" />
-                        }
-                        <span className="text-base font-bold text-gray-700">{clientName}</span>
-                        {clientMap[clientName] && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/ClientManagement?clientId=${clientMap[clientName]}`);
-                            }}
-                            className="p-1 rounded hover:bg-primary/10 transition-colors"
-                            title="פתח כרטיס לקוח"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5 text-primary" />
-                          </button>
+                      {/* Client */}
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium text-gray-800 truncate max-w-[150px]">
+                            {task.client_name || '-'}
+                          </span>
+                          {clientMap[task.client_name] && (
+                            <button
+                              onClick={() => navigate(`/ClientManagement?clientId=${clientMap[task.client_name]}`)}
+                              className="p-0.5 rounded hover:bg-primary/10 transition-colors shrink-0"
+                              title="פתח כרטיס לקוח"
+                            >
+                              <ExternalLink className="w-3 h-3 text-primary" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      {/* Category */}
+                      <td className="px-3 py-2">
+                        {task.category ? (
+                          <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                            {getCategoryLabel(task.category)}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-gray-300">-</span>
                         )}
-                        <span className="text-sm text-gray-400">
-                          {completedCount}/{clientTasks.length}
+                      </td>
+                      {/* Title / description */}
+                      <td className="px-3 py-2">
+                        <p className={`text-sm truncate max-w-[250px] ${isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                          {task.title}
+                        </p>
+                        {task.description && (
+                          <p className="text-[10px] text-gray-400 truncate max-w-[250px]">
+                            {task.description.slice(0, 50)}
+                          </p>
+                        )}
+                      </td>
+                      {/* Due date */}
+                      <td className="px-3 py-2">
+                        <span className="text-xs font-mono text-gray-600">
+                          {formatDate(task.due_date) || '-'}
                         </span>
-                      </div>
-                      {/* Mini capacity bar */}
-                      <div className="flex gap-0.5">
-                        {clientTasks.map((t, i) => (
-                          <div
-                            key={i}
-                            className={`w-1.5 h-4 rounded-full ${
-                              t.status === 'completed' ? 'bg-emerald-400'
-                              : t.status === 'in_progress' ? 'bg-sky-400'
-                              : 'bg-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Tasks in group */}
-                    <AnimatePresence>
-                      {!isCollapsed && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
+                      </td>
+                      {/* Status */}
+                      <td className="px-3 py-2">
+                        <Select
+                          value={task.status}
+                          onValueChange={(newStatus) => handleStatusChange(task, newStatus)}
                         >
-                          <div className="divide-y divide-gray-50">
-                            {clientTasks.map(task => {
-                              const pri = priorityConfig[task.priority] || priorityConfig.medium;
-                              const sts = statusConfig[task.status] || statusConfig.not_started;
-                              const isCompleted = task.status === 'completed';
-                              return (
-                                <div
-                                  key={task.id}
-                                  className={`flex items-center gap-4 px-5 py-3 transition-all ${
-                                    isCompleted ? 'opacity-40' : ''
-                                  }`}
-                                >
-                                  {/* Priority dot */}
-                                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${pri.dot}`} />
-
-                                  {/* Task info */}
-                                  <div className="flex-1 min-w-0">
-                                    <p className={`text-sm font-bold truncate ${
-                                      isCompleted ? 'line-through text-gray-400' : 'text-gray-800'
-                                    }`}>
-                                      {task.title}
-                                    </p>
-                                    <div className="flex items-center gap-3 mt-0.5">
-                                      {task.category && (
-                                        <span className="text-xs text-gray-400">
-                                          {getCategoryLabel(task.category)}
-                                        </span>
-                                      )}
-                                      {!task.category && !task.client_name && (
-                                        <span className="text-xs text-amber-500">
-                                          לא מסווג
-                                        </span>
-                                      )}
-                                      {task.due_date && (
-                                        <span className="text-xs text-emerald-600 font-medium">
-                                          {formatDate(task.due_date)}
-                                        </span>
-                                      )}
-                                      {task.description && (
-                                        <span className="text-xs text-gray-400 truncate max-w-[200px]">
-                                          {task.description.slice(0, 40)}{task.description.length > 40 ? '...' : ''}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Status selector */}
-                                  <Select
-                                    value={task.status}
-                                    onValueChange={(newStatus) => handleStatusChange(task, newStatus)}
-                                  >
-                                    <SelectTrigger className="w-32 h-8 rounded-lg text-xs border-0 bg-gray-50">
-                                      <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${sts.dot}`} />
-                                        <SelectValue />
-                                      </div>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Object.entries(statusConfig).map(([key, { text, dot }]) => (
-                                        <SelectItem key={key} value={key}>
-                                          <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${dot}`} />
-                                            {text}
-                                          </div>
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-
-                                  {/* Pin to sticky note */}
-                                  <button
-                                    onClick={() => createNoteFromTask(task)}
-                                    className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
-                                    title="העבר לפתק"
-                                  >
-                                    <Pin className="w-3.5 h-3.5" />
-                                  </button>
+                          <SelectTrigger className="w-28 h-7 rounded-lg text-[10px] border-0 bg-gray-50">
+                            <div className="flex items-center gap-1.5">
+                              <div className={`w-2 h-2 rounded-full ${sts.dot}`} />
+                              <SelectValue />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(statusConfig).map(([key, { text, dot }]) => (
+                              <SelectItem key={key} value={key}>
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${dot}`} />
+                                  {text}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </Card>
-                </motion.div>
-              );
-            })
-          )}
-        </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      {/* Priority */}
+                      <td className="px-3 py-2">
+                        <Badge className={`text-[10px] px-2 py-0.5 ${pri.color}`}>
+                          {pri.text}
+                        </Badge>
+                      </td>
+                      {/* Actions */}
+                      <td className="px-2 py-2">
+                        <button
+                          onClick={() => createNoteFromTask(task)}
+                          className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
+                          title="העבר לפתק"
+                        >
+                          <Pin className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </ResizableTable>
+          </Card>
+        )
       ) : (
         <KanbanView
           tasks={filteredTasks}
           onTaskStatusChange={handleStatusChange}
           onDeleteTask={handleDeleteTask}
           formatDate={formatDate}
-          getPriorityColor={getPriorityColor}
-          getStatusColor={getStatusColor}
-          getStatusText={getStatusText}
-          getPriorityText={getPriorityText}
+          getPriorityColor={(p) => priorityConfig[p]?.color || priorityConfig.medium.color}
+          getStatusColor={(s) => statusConfig[s]?.color || statusConfig.not_started.color}
+          getStatusText={(s) => statusConfig[s]?.text || s}
+          getPriorityText={(p) => priorityConfig[p]?.text || p}
         />
       )}
 
-      {/* Bottom: clear all (hidden in corner) */}
+      {/* Bottom: clear all */}
       {tasks.length > 0 && (
         <div className="flex justify-end pt-4">
           <Button

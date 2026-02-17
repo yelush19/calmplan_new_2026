@@ -243,6 +243,7 @@ function LitaySettings() {
 // =====================================================
 
 function LenaSettings() {
+  const [displayName, setDisplayName] = useState(() => localStorage.getItem('calmplan_display_name') || 'לנה');
   const [schedule, setSchedule] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -307,6 +308,25 @@ function LenaSettings() {
         <Heart className="w-5 h-5 text-pink-600" />
         <h2 className="text-lg font-bold text-gray-800">הגדרות אישיות - LENA</h2>
       </div>
+
+      {/* Display Name */}
+      <Card className="border-pink-200 bg-pink-50/30">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">שם תצוגה</Label>
+            <Input
+              value={displayName}
+              onChange={(e) => {
+                setDisplayName(e.target.value);
+                localStorage.setItem('calmplan_display_name', e.target.value);
+              }}
+              placeholder="הכנס את השם שלך..."
+              className="flex-1 h-9 text-sm max-w-[200px]"
+            />
+            <span className="text-xs text-gray-400">שם זה יוצג בברכה בדף הבית</span>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Daily Schedule */}
@@ -614,7 +634,49 @@ function DataBackupSection() {
   const [isImporting, setIsImporting] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationResult, setMigrationResult] = useState(null);
+  const [autoBackupEnabled, setAutoBackupEnabled] = useState(() => localStorage.getItem('calmplan_auto_backup') === 'true');
+  const [lastAutoBackup, setLastAutoBackup] = useState(() => localStorage.getItem('calmplan_last_auto_backup'));
   const fileInputRef = useRef(null);
+
+  // Auto-backup: save snapshot to localStorage every 2 hours
+  useEffect(() => {
+    if (!autoBackupEnabled) return;
+    const runAutoBackup = async () => {
+      try {
+        const data = await exportAllData();
+        const snapshot = JSON.stringify(data);
+        localStorage.setItem('calmplan_auto_backup_data', snapshot);
+        const now = new Date().toISOString();
+        localStorage.setItem('calmplan_last_auto_backup', now);
+        setLastAutoBackup(now);
+      } catch (e) {
+        console.error('Auto-backup failed:', e);
+      }
+    };
+    // Run immediately on enable
+    runAutoBackup();
+    // Then every 2 hours
+    const interval = setInterval(runAutoBackup, 2 * 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [autoBackupEnabled]);
+
+  const toggleAutoBackup = (enabled) => {
+    setAutoBackupEnabled(enabled);
+    localStorage.setItem('calmplan_auto_backup', enabled ? 'true' : 'false');
+  };
+
+  const downloadAutoBackup = () => {
+    const data = localStorage.getItem('calmplan_auto_backup_data');
+    if (!data) { setBackupStatus({ type: 'error', message: 'אין גיבוי אוטומטי זמין' }); return; }
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `calmplan_auto_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setBackupStatus({ type: 'success', message: 'גיבוי אוטומטי הורד!' });
+  };
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -683,6 +745,31 @@ function DataBackupSection() {
             הנתונים נשמרים רק בדפדפן. מחיקת cookies תמחק הכל. מומלץ לגבות.
           </div>
         )}
+
+        {/* Auto-backup */}
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-800">גיבוי אוטומטי</span>
+            </div>
+            <Switch checked={autoBackupEnabled} onCheckedChange={toggleAutoBackup} />
+          </div>
+          {autoBackupEnabled && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-blue-600">
+                {lastAutoBackup
+                  ? `גיבוי אחרון: ${new Date(lastAutoBackup).toLocaleString('he-IL')}`
+                  : 'טרם בוצע גיבוי'}
+              </span>
+              <Button onClick={downloadAutoBackup} variant="outline" size="sm" className="h-6 text-[10px] border-blue-300 text-blue-700">
+                <Download className="w-3 h-3 ml-1" /> הורד גיבוי אוטומטי
+              </Button>
+            </div>
+          )}
+          <p className="text-[10px] text-blue-600/70">שומר snapshot כל 2 שעות בדפדפן. מומלץ להפעיל תמיד.</p>
+        </div>
+
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleExport} disabled={isExporting} size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs gap-1">
             <Download className="w-3.5 h-3.5" /> {isExporting ? 'מייצא...' : 'ייצוא גיבוי'}

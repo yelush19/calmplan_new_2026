@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Task, Event, User } from "@/api/entities";
+import { Task, Event } from "@/api/entities";
 import { parseISO, format, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,9 +16,10 @@ import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   ArrowRight, Target, AlertTriangle, ChevronDown, Sparkles,
-  FileBarChart, Brain, Zap, Plus, CreditCard
+  FileBarChart, Brain, Zap, Plus, CreditCard, List, LayoutGrid
 } from "lucide-react";
 import StickyNotes from "@/components/StickyNotes";
+import KanbanView from "../components/tasks/KanbanView";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -78,6 +79,7 @@ export default function HomePage() {
   const [quickTaskDue, setQuickTaskDue] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [quickTaskContext, setQuickTaskContext] = useState('work');
   const [isSavingQuickTask, setIsSavingQuickTask] = useState(false);
+  const [focusView, setFocusView] = useState('list');
 
   useEffect(() => { loadData(); }, []);
 
@@ -85,9 +87,13 @@ export default function HomePage() {
     setIsLoading(true);
     try {
       try {
-        const user = await User.me();
-        if (user?.full_name) setUserName(user.full_name.split(" ")[0]);
-      } catch { /* no user */ }
+        const displayName = localStorage.getItem('calmplan_display_name');
+        if (displayName) {
+          setUserName(displayName);
+        } else {
+          setUserName('לנה');
+        }
+      } catch { setUserName('לנה'); }
 
       const [tasksData, eventsData] = await Promise.all([
         Task.list("-due_date", 5000).catch(() => []),
@@ -395,11 +401,21 @@ export default function HomePage() {
                 <Target className="w-5 h-5 text-blue-600" />
                 <span>הפוקוס שלי</span>
               </CardTitle>
-              <Link to={createPageUrl("Tasks")}>
-                <Button variant="ghost" size="sm" className="text-xs text-gray-500 gap-1">
-                  כל המשימות <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <div className="flex bg-gray-100 rounded-lg p-0.5">
+                  <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('list')}>
+                    <List className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('kanban')}>
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+                <Link to={createPageUrl("Tasks")}>
+                  <Button variant="ghost" size="sm" className="text-xs text-gray-500 gap-1">
+                    כל המשימות <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+              </div>
             </div>
             {/* Horizontal Tab Bar */}
             <div className="flex gap-1.5 overflow-x-auto pb-2 border-b border-gray-100">
@@ -430,26 +446,24 @@ export default function HomePage() {
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15 }}
-              >
-                {getTabContent()}
-              </motion.div>
-            </AnimatePresence>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Sticky Notes */}
-      <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
-        <Card className="border-amber-200/50 bg-amber-50/20">
-          <CardContent className="p-4">
-            <StickyNotes compact={true} />
+            {focusView === 'kanban' ? (
+              <KanbanView
+                tasks={[...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])]}
+                onTaskStatusChange={handleStatusChange}
+              />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {getTabContent()}
+                </motion.div>
+              </AnimatePresence>
+            )}
           </CardContent>
         </Card>
       </motion.div>

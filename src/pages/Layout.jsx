@@ -7,7 +7,7 @@ import {
   Home, Brain, Briefcase, CheckSquare, Target, BookCheck, DollarSign,
   BarChart3, Settings, Menu, X, Users, Monitor, Scaling,
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, Database,
-  ArrowRight, FileBarChart, Repeat, FolderKanban, Zap
+  ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import {
@@ -17,6 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import TimeAwareness from "@/components/ui/TimeAwareness";
+import StickyNotes from "@/components/StickyNotes";
 
 const navigationGroups = [
   {
@@ -110,6 +111,7 @@ export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   useEffect(() => {
     if (location.pathname === "/") {
@@ -389,47 +391,66 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
 
-        <main className="flex-1 flex flex-col min-h-0">
-          <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-border">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-foreground">
-                {getPageTitle()}
-              </h2>
-              {!isHomePage && (
-                <Link to={createPageUrl("Home")}>
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <ArrowRight className="w-4 h-4" />
-                    חזור לבית
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* Desktop Back Button */}
-          <div className="hidden md:block">
-            {!isHomePage && (
-              <div className="p-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
-                <div className="max-w-full mx-auto flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-foreground">
-                    {getPageTitle()}
-                  </h2>
+        <main className="flex-1 flex min-h-0">
+          {/* Main content column */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-border">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-foreground">
+                  {getPageTitle()}
+                </h2>
+                {!isHomePage && (
                   <Link to={createPageUrl("Home")}>
-                    <Button variant="outline" className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
                       <ArrowRight className="w-4 h-4" />
-                      חזור לדף הבית
+                      חזור לבית
                     </Button>
                   </Link>
-                </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Desktop Back Button */}
+            <div className="hidden md:block">
+              {!isHomePage && (
+                <div className="p-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
+                  <div className="max-w-full mx-auto flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-foreground">
+                      {getPageTitle()}
+                    </h2>
+                    <Link to={createPageUrl("Home")}>
+                      <Button variant="outline" className="flex items-center gap-2">
+                        <ArrowRight className="w-4 h-4" />
+                        חזור לדף הבית
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-auto p-3 md:p-6 lg:p-8 bg-neutral-bg/30">
+              <div className="max-w-full mx-auto">
+                <TimeAwareness />
+                {children}
+              </div>
+            </div>
           </div>
 
-          <div className="flex-1 overflow-auto p-3 md:p-6 lg:p-8 bg-neutral-bg/30">
-            <div className="max-w-full mx-auto">
-              <TimeAwareness />
-              {children}
-            </div>
+          {/* Sticky Notes Left Side Panel */}
+          <div className={`hidden md:flex flex-col border-r border-border bg-amber-50/30 transition-all duration-300 shrink-0 ${notesOpen ? 'w-72' : 'w-10'}`}>
+            <button
+              onClick={() => setNotesOpen(!notesOpen)}
+              className="flex items-center justify-center gap-1 p-2 border-b border-amber-200/50 hover:bg-amber-100/50 transition-colors"
+              title={notesOpen ? 'סגור פתקים' : 'פתח פתקים'}
+            >
+              {notesOpen ? <ChevronLeft className="w-4 h-4 text-amber-600" /> : <StickyNote className="w-4 h-4 text-amber-600" />}
+            </button>
+            {notesOpen && (
+              <div className="flex-1 overflow-y-auto p-2">
+                <StickyNotes compact={true} />
+              </div>
+            )}
           </div>
         </main>
       </div>
