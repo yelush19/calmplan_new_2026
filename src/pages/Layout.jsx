@@ -5,9 +5,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Home, Brain, Briefcase, CheckSquare, Target, BookCheck, DollarSign,
-  LayoutGrid, BarChart3, Settings, Menu, X, Users, Monitor, Scaling,
-  Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, FileText, UserPlus, RefreshCw, Database,
-  ArrowRight, FileBarChart, AlertTriangle, Repeat, FolderKanban
+  BarChart3, Settings, Menu, X, Users, Monitor, Scaling,
+  Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, Database,
+  ArrowRight, FileBarChart, Repeat, FolderKanban
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import {
@@ -24,46 +24,58 @@ const navigationGroups = [
     icon: Home,
     items: [
       { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
-    ],
-  },
-  {
-    title: "מידע ותכנון",
-    icon: LayoutGrid,
-    items: [
-      { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+      { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
-      { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
+      { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
+    ],
+  },
+  {
+    title: "לקוחות ונותני שירותים",
+    icon: Users,
+    items: [
       {
-        name: "לקוחות וספקים",
+        name: "לקוחות",
         icon: Users,
         children: [
           { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
           { name: "לידים", href: createPageUrl("Leads"), icon: Target },
           { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
-          { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
+          { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
         ],
       },
       {
-        name: "פרויקטים",
-        icon: FolderKanban,
+        name: "ספקים ונותני שירותים",
+        icon: BookUser,
         children: [
-          { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
+          { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
         ],
       },
     ],
   },
   {
-    title: "דיווחים ותהליכים",
-    icon: Calculator,
+    title: "ניהול מקצועי",
+    icon: Briefcase,
     items: [
-      { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
-      { name: "תהליכי דיווח חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
-      { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
-      { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
-      { name: "לוח התאמות", href: createPageUrl("Reconciliations"), icon: BookCheck },
-      { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
+      {
+        name: "הנהלת חשבונות",
+        icon: BookCheck,
+        children: [
+          { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
+          { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
+        ],
+      },
+      {
+        name: "דיווחים ושכר",
+        icon: BarChart3,
+        children: [
+          { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
+          { name: "תהליכי דיווח חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
+          { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
+          { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
+        ],
+      },
     ],
   },
   {
@@ -76,11 +88,12 @@ const navigationGroups = [
     ],
   },
   {
-    title: "הגדרות",
+    title: "מערכת",
     icon: Settings,
     items: [
-      { name: "Monday.com", href: createPageUrl("MondayIntegration"), icon: Monitor },
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
+      { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
+      { name: "Monday.com", href: createPageUrl("MondayIntegration"), icon: Monitor },
       { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Database },
       { name: "מנהל נתוני בדיקה", href: createPageUrl("TestDataManager"), icon: Database },
     ],
