@@ -34,6 +34,12 @@ const navigationGroups = [
         icon: Users,
         children: [
           { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+        ],
+      },
+      {
+        name: "שיווק וכספים",
+        icon: DollarSign,
+        children: [
           { name: "לידים", href: createPageUrl("Leads"), icon: Target },
           { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
           { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
