@@ -27,6 +27,7 @@ import {
   markAllStepsUndone,
   areAllStepsDone,
 } from '@/config/processTemplates';
+import { getTaskReportingMonth } from '@/config/automationRules';
 
 // Services shown on this dashboard - all additional services
 const additionalDashboardServices = Object.fromEntries(
@@ -75,7 +76,12 @@ export default function AdditionalServicesDashboardPage() {
         }),
         Client.list(null, 500).catch(() => []),
       ]);
-      const filtered = (tasksData || []).filter(t => allAdditionalCategories.includes(t.category));
+      // Post-filter: only show tasks belonging to the selected reporting month
+      const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
+      const filtered = (tasksData || []).filter(t => {
+        if (!allAdditionalCategories.includes(t.category)) return false;
+        return getTaskReportingMonth(t) === selectedMonthStr;
+      });
       setTasks(filtered);
       setClients(clientsData || []);
       syncCompletedTaskSteps(filtered);

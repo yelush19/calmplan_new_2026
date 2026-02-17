@@ -260,7 +260,7 @@ export const ADDITIONAL_SERVICES = {
   operator_reporting: {
     key: 'operator_reporting',
     label: 'דיווח למתפעל',
-    dashboard: 'tax',
+    dashboard: 'additional',
     taskCategories: ['דיווח למתפעל', 'work_operator_reporting'],
     createCategory: 'דיווח למתפעל',
     steps: [
@@ -272,7 +272,7 @@ export const ADDITIONAL_SERVICES = {
   taml_reporting: {
     key: 'taml_reporting',
     label: 'דיווח לטמל',
-    dashboard: 'tax',
+    dashboard: 'additional',
     taskCategories: ['דיווח לטמל', 'work_taml_reporting'],
     createCategory: 'דיווח לטמל',
     steps: [

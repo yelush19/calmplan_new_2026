@@ -28,6 +28,7 @@ import {
   markAllStepsUndone,
   areAllStepsDone,
 } from '@/config/processTemplates';
+import { getTaskReportingMonth } from '@/config/automationRules';
 
 const payrollDashboardServices = {
   ...PAYROLL_SERVICES,
@@ -65,7 +66,12 @@ export default function PayrollDashboardPage() {
         }),
         Client.list(null, 500).catch(() => []),
       ]);
-      const filtered = (tasksData || []).filter(t => allPayrollCategories.includes(t.category));
+      // Post-filter: only show tasks belonging to the selected reporting month
+      const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
+      const filtered = (tasksData || []).filter(t => {
+        if (!allPayrollCategories.includes(t.category)) return false;
+        return getTaskReportingMonth(t) === selectedMonthStr;
+      });
       setTasks(filtered);
       setClients(clientsData || []);
       syncCompletedTaskSteps(filtered);
