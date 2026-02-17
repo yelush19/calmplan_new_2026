@@ -29,12 +29,6 @@ const navigationGroups = [
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
       { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
-    ],
-  },
-  {
-    title: "לקוחות ונותני שירותים",
-    icon: Users,
-    items: [
       {
         name: "לקוחות",
         icon: Users,
@@ -52,12 +46,6 @@ const navigationGroups = [
           { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
         ],
       },
-    ],
-  },
-  {
-    title: "ניהול מקצועי",
-    icon: Briefcase,
-    items: [
       {
         name: "הנהלת חשבונות",
         icon: BookCheck,
