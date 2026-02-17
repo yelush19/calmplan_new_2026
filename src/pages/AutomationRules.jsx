@@ -356,8 +356,15 @@ export default function AutomationRules() {
   const [showRulePicker, setShowRulePicker] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState([]);
   const [runningRuleId, setRunningRuleId] = useState(null);
-  const [startMonth, setStartMonth] = useState(new Date().getMonth()); // 0-based (0=Jan)
-  const [startYear, setStartYear] = useState(new Date().getFullYear());
+  // Default to previous month (the system always works on previous month)
+  const [startMonth, setStartMonth] = useState(() => {
+    const d = new Date();
+    return d.getMonth() === 0 ? 11 : d.getMonth() - 1;
+  });
+  const [startYear, setStartYear] = useState(() => {
+    const d = new Date();
+    return d.getMonth() === 0 ? d.getFullYear() - 1 : d.getFullYear();
+  });
   const [cleanupScanning, setCleanupScanning] = useState(false);
   const [cleanupResult, setCleanupResult] = useState(null);
 
@@ -644,11 +651,13 @@ export default function AutomationRules() {
       const year = String(new Date().getFullYear() - 1);
       const now = new Date();
 
-      // Build month range from startMonth/startYear to current month
+      // Build month range from startMonth/startYear to previous month (system works on prev month)
+      const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const prevMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
       const months = [];
       let iterYear = startYear;
       let iterMonth = startMonth;
-      while (iterYear < now.getFullYear() || (iterYear === now.getFullYear() && iterMonth <= now.getMonth())) {
+      while (iterYear < prevMonthYear || (iterYear === prevMonthYear && iterMonth <= prevMonth)) {
         const monthEnd = new Date(iterYear, iterMonth + 1, 0);
         const monthLabel = monthEnd.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
         months.push({ year: iterYear, month: iterMonth, monthEnd, monthLabel, dueDateStr: monthEnd.toISOString().split('T')[0] });
