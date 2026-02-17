@@ -34,29 +34,36 @@ const serviceTypeLabels = {
 };
 
 const serviceTypeColors = {
+    // קבוצה 1 (ירוק): הנה"ח, התאמות, מאזנים, PNL
     bookkeeping: 'bg-green-100 text-green-800 border-green-200',
     bookkeeping_full: 'bg-green-100 text-green-800 border-green-200',
+    reconciliation: 'bg-green-100 text-green-800 border-green-200',
+    annual_reports: 'bg-green-100 text-green-800 border-green-200',
+    pnl_reports: 'bg-green-100 text-green-800 border-green-200',
+    // מע"מ ומקדמות
     vat_reporting: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     tax_advances: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    payroll: 'bg-teal-100 text-teal-800 border-teal-200',
-    social_security: 'bg-teal-100 text-teal-800 border-teal-200',
-    deductions: 'bg-teal-100 text-teal-800 border-teal-200',
-    annual_reports: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-    reconciliation: 'bg-blue-100 text-blue-800 border-blue-200',
+    // קבוצה 2 (כחול): שכר, ביטוח לאומי, ניכויים
+    payroll: 'bg-blue-100 text-blue-800 border-blue-200',
+    social_security: 'bg-blue-100 text-blue-800 border-blue-200',
+    deductions: 'bg-blue-100 text-blue-800 border-blue-200',
+    authorities: 'bg-blue-100 text-blue-800 border-blue-200',
+    authorities_payment: 'bg-blue-100 text-blue-800 border-blue-200',
+    social_benefits: 'bg-blue-100 text-blue-800 border-blue-200',
+    // קבוצה 3 (סגול): תלושים, מס"ב עובדים
+    payslip_sending: 'bg-purple-100 text-purple-800 border-purple-200',
+    masav_employees: 'bg-purple-100 text-purple-800 border-purple-200',
+    // קבוצה 4 (כתום): מס"ב סוציאליות, מתפעל, טמל
+    masav_social: 'bg-amber-100 text-amber-800 border-amber-200',
+    masav_authorities: 'bg-amber-100 text-amber-800 border-amber-200',
+    operator_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
+    taml_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
+    // קבוצה 5 (אינדיגו): מס"ב ספקים
+    masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    // כללי
     consulting: 'bg-gray-100 text-gray-800 border-gray-200',
     special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    masav_employees: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    masav_social: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    masav_authorities: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    authorities: 'bg-teal-100 text-teal-800 border-teal-200',
-    authorities_payment: 'bg-teal-100 text-teal-800 border-teal-200',
-    operator_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
-    taml_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
-    payslip_sending: 'bg-purple-100 text-purple-800 border-purple-200',
-    social_benefits: 'bg-purple-100 text-purple-800 border-purple-200',
     reserve_claims: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    pnl_reports: 'bg-orange-100 text-orange-800 border-orange-200',
     admin: 'bg-gray-100 text-gray-800 border-gray-200',
 };
 
