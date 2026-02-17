@@ -465,7 +465,9 @@ const HEB_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מא�
 
 /**
  * Get the reporting month (YYYY-MM) for a task.
- * Priority: 1) reporting_month field, 2) parse Hebrew month from title, 3) due_date month
+ * Priority: 1) reporting_month field, 2) parse Hebrew month from title,
+ * 3) for work tasks: due_date month - 1 (due dates are in deadline month = M+1)
+ * 4) for other tasks: due_date month
  */
 export function getTaskReportingMonth(task) {
   if (task.reporting_month) return task.reporting_month;
@@ -475,11 +477,23 @@ export function getTaskReportingMonth(task) {
       const regex = new RegExp(HEB_MONTHS[i] + '\\s+(\\d{4})');
       const match = task.title.match(regex);
       if (match) {
-        return `${match[1]}-${String(i + 1).padStart(2, '0')}`;
+        const titleMonth = `${match[1]}-${String(i + 1).padStart(2, '0')}`;
+        const dueDateMonth = task.due_date ? task.due_date.substring(0, 7) : null;
+        // If title month differs from due_date month, trust the title
+        if (titleMonth !== dueDateMonth) return titleMonth;
+        // If same, for work tasks due_date is in deadline month (M+1)
+        // so reporting month = due_date month - 1
       }
     }
   }
-  // Fallback: use due_date month
+  // For work tasks: due_date is in the DEADLINE month (M+1), reporting = M
+  if (task.context === 'work' && task.due_date) {
+    const d = new Date(task.due_date);
+    const m = d.getMonth() === 0 ? 11 : d.getMonth() - 1;
+    const y = d.getMonth() === 0 ? d.getFullYear() - 1 : d.getFullYear();
+    return `${y}-${String(m + 1).padStart(2, '0')}`;
+  }
+  // Fallback for non-work tasks: use due_date month directly
   return task.due_date ? task.due_date.substring(0, 7) : null;
 }
 
