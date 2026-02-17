@@ -29,17 +29,17 @@ const navigationGroups = [
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
       { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
-    ],
-  },
-  {
-    title: "לקוחות ונותני שירותים",
-    icon: Users,
-    items: [
       {
         name: "לקוחות",
         icon: Users,
         children: [
           { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+        ],
+      },
+      {
+        name: "שיווק וכספים",
+        icon: DollarSign,
+        children: [
           { name: "לידים", href: createPageUrl("Leads"), icon: Target },
           { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
           { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
@@ -52,12 +52,6 @@ const navigationGroups = [
           { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
         ],
       },
-    ],
-  },
-  {
-    title: "ניהול מקצועי",
-    icon: Briefcase,
-    items: [
       {
         name: "הנהלת חשבונות",
         icon: BookCheck,
