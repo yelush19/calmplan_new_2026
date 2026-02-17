@@ -233,13 +233,14 @@ export default function BalanceSheetsPage() {
 
   const handleCreateForClients = async () => {
     try {
+      const defaultTargetDate = `${parseInt(selectedYear) + 1}-05-31`;
       for (const client of clientsWithoutBalance) {
         await BalanceSheet.create({
           client_name: client.name,
           client_id: client.id,
           tax_year: selectedYear,
           current_stage: 'closing_operations',
-          target_date: '',
+          target_date: defaultTargetDate,
           folder_link: '',
           notes: '',
         });
