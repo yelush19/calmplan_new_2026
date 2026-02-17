@@ -247,10 +247,12 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         if (newReportingInfo.deductions_frequency === 'not_applicable') newReportingInfo.deductions_frequency = 'monthly';
       }
 
-      // Auto-link: bookkeeping + company → annual_reports + reconciliation
-      if (serviceType === 'bookkeeping' && checked && prev.business_info?.business_type === 'company') {
+      // Auto-link: bookkeeping/bookkeeping_full → annual_reports (always) + reconciliation (if company)
+      if ((serviceType === 'bookkeeping' || serviceType === 'bookkeeping_full') && checked) {
         if (!newServiceTypes.includes('annual_reports')) newServiceTypes.push('annual_reports');
-        if (!newServiceTypes.includes('reconciliation')) newServiceTypes.push('reconciliation');
+        if (prev.business_info?.business_type === 'company') {
+          if (!newServiceTypes.includes('reconciliation')) newServiceTypes.push('reconciliation');
+        }
       }
 
       return {
@@ -678,7 +680,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 <div><Label htmlFor="business_type">סוג העסק</Label><Select value={formData.business_info?.business_type} onValueChange={(value) => {
                   handleInputChange('business_type', value, 'business_info');
                   // Auto-link: when changing to company and bookkeeping exists → add annual_reports + reconciliation
-                  if (value === 'company' && (formData.service_types || []).includes('bookkeeping')) {
+                  const hasBookkeeping = (formData.service_types || []).some(s => s === 'bookkeeping' || s === 'bookkeeping_full');
+                  if (value === 'company' && hasBookkeeping) {
                     setFormData(prev => {
                       const st = [...(prev.service_types || [])];
                       if (!st.includes('annual_reports')) st.push('annual_reports');
