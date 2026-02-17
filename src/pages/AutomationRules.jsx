@@ -10,22 +10,23 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog';
-import { Zap, Plus, Pencil, Trash2, Save, AlertTriangle, CheckCircle, ArrowLeft, Settings } from 'lucide-react';
+import { Zap, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Settings } from 'lucide-react';
 import {
   loadAutomationRules, saveAutomationRules,
   ALL_SERVICES, BUSINESS_TYPES, REPORT_ENTITIES,
   PERIODIC_REPORT_TYPES, PERIODIC_REPORT_PERIODS,
+  TASK_BOARD_CATEGORIES, RECONCILIATION_TYPES,
   DEFAULT_RULES,
 } from '@/config/automationRules';
 
-const RULE_TYPES = {
-  service_auto_link: 'סימון שירות אוטומטי',
-  report_auto_create: 'יצירת דיווח אוטומטית',
-};
-
-const ruleTypeColors = {
-  service_auto_link: 'bg-blue-100 text-blue-800',
-  report_auto_create: 'bg-green-100 text-green-800',
+// Icons/colors per target entity for display
+const entityDisplayConfig = {
+  PeriodicReport: { color: 'bg-purple-100 text-purple-800', label: 'דיווחים מרכזים' },
+  BalanceSheet: { color: 'bg-amber-100 text-amber-800', label: 'מאזנים' },
+  AccountReconciliation: { color: 'bg-cyan-100 text-cyan-800', label: 'התאמות' },
+  Task_monthly_reports: { color: 'bg-slate-100 text-slate-800', label: 'ריכוז חודשי' },
+  Task_tax_reports: { color: 'bg-orange-100 text-orange-800', label: 'דיווחי מיסים' },
+  Task_payroll: { color: 'bg-pink-100 text-pink-800', label: 'שכר' },
 };
 
 function getEmptyRule(type) {
@@ -50,6 +51,8 @@ function getEmptyRule(type) {
     trigger_services: [],
     target_entity: 'PeriodicReport',
     report_types: {},
+    task_categories: [],
+    condition: null,
   };
 }
 
@@ -69,22 +72,12 @@ function RuleEditor({ rule, onSave, onCancel }) {
     }
   };
 
-  const handleReportTypeToggle = (typeKey, period) => {
-    setEditRule(prev => {
-      const rt = { ...(prev.report_types || {}) };
-      const periods = rt[typeKey] || [];
-      if (periods.includes(period)) {
-        rt[typeKey] = periods.filter(p => p !== period);
-        if (rt[typeKey].length === 0) delete rt[typeKey];
-      } else {
-        rt[typeKey] = [...periods, period];
-      }
-      return { ...prev, report_types: rt };
-    });
-  };
+  const isTaskBoard = editRule.target_entity?.startsWith('Task_');
+  const taskCategories = isTaskBoard ? (TASK_BOARD_CATEGORIES[editRule.target_entity] || []) : [];
 
   const isValid = editRule.name.trim() &&
-    (isServiceLink ? editRule.trigger_service && editRule.auto_add_services.length > 0
+    (isServiceLink
+      ? editRule.trigger_service && editRule.auto_add_services.length > 0
       : (editRule.trigger_services || []).length > 0);
 
   return (
@@ -92,7 +85,7 @@ function RuleEditor({ rule, onSave, onCancel }) {
       <DialogHeader>
         <DialogTitle>{rule.name ? 'עריכת חוק' : 'חוק חדש'}</DialogTitle>
         <DialogDescription>
-          {isServiceLink ? 'כשנבחר שירות ללקוח, סמן אוטומטית שירותים נוספים' : 'כששומרים לקוח עם שירותים מסוימים, צור דיווחים אוטומטית'}
+          {isServiceLink ? 'כשנבחר שירות ללקוח, סמן אוטומטית שירותים נוספים' : 'כששומרים לקוח עם שירותים מסוימים, צור רשומות אוטומטית בלוח הנבחר'}
         </DialogDescription>
       </DialogHeader>
 
@@ -152,9 +145,14 @@ function RuleEditor({ rule, onSave, onCancel }) {
                 ))}
               </ToggleGroup>
             </div>
+
             <div>
-              <Label>ישות ליצירה</Label>
-              <Select value={editRule.target_entity} onValueChange={(v) => handleChange('target_entity', v)}>
+              <Label>לוח יעד</Label>
+              <Select value={editRule.target_entity} onValueChange={(v) => {
+                handleChange('target_entity', v);
+                // Reset entity-specific fields when changing target
+                setEditRule(prev => ({ ...prev, target_entity: v, report_types: {}, task_categories: [] }));
+              }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-white">
                   {Object.entries(REPORT_ENTITIES).map(([k, v]) => (
@@ -163,6 +161,8 @@ function RuleEditor({ rule, onSave, onCancel }) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* PeriodicReport config */}
             {editRule.target_entity === 'PeriodicReport' && (
               <div>
                 <Label>סוגי דיווח ותקופות</Label>
@@ -195,6 +195,53 @@ function RuleEditor({ rule, onSave, onCancel }) {
                 </div>
               </div>
             )}
+
+            {/* Task board config - select categories */}
+            {isTaskBoard && taskCategories.length > 0 && (
+              <div>
+                <Label>קטגוריות משימה ליצירה</Label>
+                <ToggleGroup
+                  type="multiple"
+                  value={editRule.task_categories || []}
+                  onValueChange={(v) => handleChange('task_categories', v)}
+                  className="flex-wrap justify-start mt-2"
+                >
+                  {taskCategories.map(cat => (
+                    <ToggleGroupItem key={cat.key} value={cat.key} className="text-xs">{cat.label}</ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
+            )}
+
+            {/* AccountReconciliation info */}
+            {editRule.target_entity === 'AccountReconciliation' && (
+              <div className="border rounded p-3 bg-cyan-50 text-sm text-cyan-800">
+                ייצור שורות התאמה לכל חשבונות הלקוח (בנקים/אשראי) עבור החודש הנוכחי
+              </div>
+            )}
+
+            {/* BalanceSheet info */}
+            {editRule.target_entity === 'BalanceSheet' && (
+              <div className="border rounded p-3 bg-amber-50 text-sm text-amber-800">
+                ייצור שורת מאזן שנתי ללקוח עבור שנת המס הקודמת
+              </div>
+            )}
+
+            {/* Condition (business type) */}
+            <div className="flex items-center gap-3 pt-2">
+              <Switch checked={!!editRule.condition} onCheckedChange={handleConditionToggle} />
+              <Label>רק אם סוג עסק מסוים</Label>
+            </div>
+            {editRule.condition && (
+              <Select value={editRule.condition.value} onValueChange={(v) => setEditRule(prev => ({ ...prev, condition: { ...prev.condition, value: v } }))}>
+                <SelectTrigger><SelectValue placeholder="בחר סוג עסק" /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  {Object.entries(BUSINESS_TYPES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </>
         )}
       </div>
@@ -204,6 +251,54 @@ function RuleEditor({ rule, onSave, onCancel }) {
         <Button onClick={() => onSave(editRule)} disabled={!isValid}>שמור חוק</Button>
       </DialogFooter>
     </DialogContent>
+  );
+}
+
+function RuleRow({ rule, onToggle, onEdit, onDelete }) {
+  const entityCfg = entityDisplayConfig[rule.target_entity] || {};
+  return (
+    <div className={`flex items-center justify-between p-3 rounded-lg border ${rule.enabled ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
+      <div className="flex items-center gap-3 flex-1">
+        <Switch checked={rule.enabled} onCheckedChange={() => onToggle(rule.id)} />
+        <div>
+          <div className="font-medium text-sm">{rule.name}</div>
+          <div className="text-xs text-gray-500">{rule.description}</div>
+          <div className="flex gap-1 mt-1 flex-wrap">
+            {rule.type === 'service_auto_link' && rule.condition && (
+              <Badge variant="outline" className="text-xs">
+                תנאי: {BUSINESS_TYPES[rule.condition.value] || rule.condition.value}
+              </Badge>
+            )}
+            {rule.type === 'report_auto_create' && (
+              <>
+                <Badge className={`text-xs ${entityCfg.color || 'bg-gray-100 text-gray-800'}`}>
+                  {REPORT_ENTITIES[rule.target_entity] || rule.target_entity}
+                </Badge>
+                {rule.condition && (
+                  <Badge variant="outline" className="text-xs">
+                    תנאי: {BUSINESS_TYPES[rule.condition.value] || rule.condition.value}
+                  </Badge>
+                )}
+                {rule.report_types && Object.keys(rule.report_types).map(tk => (
+                  <Badge key={tk} variant="secondary" className="text-xs">
+                    {PERIODIC_REPORT_TYPES[tk] || tk}: {(rule.report_types[tk] || []).map(p => PERIODIC_REPORT_PERIODS[p] || p).join(', ')}
+                  </Badge>
+                ))}
+                {rule.task_categories?.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {rule.task_categories.join(', ')}
+                  </Badge>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" onClick={() => onEdit(rule)}><Pencil className="w-4 h-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => onDelete(rule.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>
+      </div>
+    </div>
   );
 }
 
@@ -273,6 +368,14 @@ export default function AutomationRules() {
   const serviceAutoLinkRules = rules.filter(r => r.type === 'service_auto_link');
   const reportAutoCreateRules = rules.filter(r => r.type === 'report_auto_create');
 
+  // Group report rules by target entity
+  const reportRulesByEntity = {};
+  for (const r of reportAutoCreateRules) {
+    const entity = r.target_entity || 'other';
+    if (!reportRulesByEntity[entity]) reportRulesByEntity[entity] = [];
+    reportRulesByEntity[entity].push(r);
+  }
+
   return (
     <div className="p-6 max-w-5xl mx-auto" dir="rtl">
       <div className="flex items-center justify-between mb-6">
@@ -314,72 +417,48 @@ export default function AutomationRules() {
           ) : (
             <div className="space-y-2">
               {serviceAutoLinkRules.map(rule => (
-                <div key={rule.id} className={`flex items-center justify-between p-3 rounded-lg border ${rule.enabled ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
-                  <div className="flex items-center gap-3 flex-1">
-                    <Switch checked={rule.enabled} onCheckedChange={() => handleToggleRule(rule.id)} />
-                    <div>
-                      <div className="font-medium text-sm">{rule.name}</div>
-                      <div className="text-xs text-gray-500">{rule.description}</div>
-                      {rule.condition && (
-                        <Badge variant="outline" className="mt-1 text-xs">
-                          תנאי: {BUSINESS_TYPES[rule.condition.value] || rule.condition.value}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => setEditingRule(rule)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(rule.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>
-                  </div>
-                </div>
+                <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Report Auto-Create Rules */}
+      {/* Report Auto-Create Rules - grouped by board */}
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Badge className="bg-green-100 text-green-800">דיווחים</Badge>
-            יצירת דיווח אוטומטית
+            <Badge className="bg-green-100 text-green-800">לוחות</Badge>
+            יצירה אוטומטית בלוחות
           </CardTitle>
           <Button size="sm" onClick={() => { setNewRuleType('report_auto_create'); setEditingRule(getEmptyRule('report_auto_create')); }} className="gap-1">
             <Plus className="w-4 h-4" /> חוק חדש
           </Button>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-500 text-sm mb-4">כששומרים לקוח פעיל עם שירותים מסוימים, נוצרים דיווחים או מאזנים אוטומטית</p>
-          {reportAutoCreateRules.length === 0 ? (
-            <p className="text-gray-400 text-center py-4">אין חוקים מסוג זה</p>
-          ) : (
-            <div className="space-y-2">
-              {reportAutoCreateRules.map(rule => (
-                <div key={rule.id} className={`flex items-center justify-between p-3 rounded-lg border ${rule.enabled ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
-                  <div className="flex items-center gap-3 flex-1">
-                    <Switch checked={rule.enabled} onCheckedChange={() => handleToggleRule(rule.id)} />
-                    <div>
-                      <div className="font-medium text-sm">{rule.name}</div>
-                      <div className="text-xs text-gray-500">{rule.description}</div>
-                      <div className="flex gap-1 mt-1 flex-wrap">
-                        <Badge variant="outline" className="text-xs">{REPORT_ENTITIES[rule.target_entity] || rule.target_entity}</Badge>
-                        {rule.report_types && Object.keys(rule.report_types).map(tk => (
-                          <Badge key={tk} variant="secondary" className="text-xs">
-                            {PERIODIC_REPORT_TYPES[tk] || tk}: {(rule.report_types[tk] || []).map(p => PERIODIC_REPORT_PERIODS[p] || p).join(', ')}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => setEditingRule(rule)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(rule.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>
-                  </div>
+          <p className="text-gray-500 text-sm mb-4">כששומרים לקוח פעיל עם שירותים מסוימים, נוצרות רשומות אוטומטית בלוחות הרלוונטיים</p>
+
+          {Object.keys(REPORT_ENTITIES).map(entityKey => {
+            const entityRules = reportRulesByEntity[entityKey] || [];
+            const cfg = entityDisplayConfig[entityKey] || {};
+            return (
+              <div key={entityKey} className="mb-4 last:mb-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className={`text-xs ${cfg.color || 'bg-gray-100'}`}>{REPORT_ENTITIES[entityKey]}</Badge>
+                  <span className="text-xs text-gray-400">{entityRules.length} חוקים</span>
                 </div>
-              ))}
-            </div>
-          )}
+                {entityRules.length === 0 ? (
+                  <p className="text-gray-400 text-xs mr-4 mb-2">אין חוקים ללוח זה</p>
+                ) : (
+                  <div className="space-y-2 mr-2">
+                    {entityRules.map(rule => (
+                      <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -390,7 +469,15 @@ export default function AutomationRules() {
         </CardHeader>
         <CardContent className="text-sm text-gray-600 space-y-2">
           <p><strong>חוקי סימון שירות:</strong> כשאת בוחרת שירות בכרטיס לקוח, שירותים קשורים יסומנו אוטומטית. למשל: בחירת "שכר" תסמן גם "ביטוח לאומי" ו"ניכויים".</p>
-          <p><strong>חוקי יצירת דיווח:</strong> כששומרים לקוח פעיל עם שירותים מסוימים, נוצרים דיווחים מרכזים ו/או מאזנים אוטומטית לשנת הדיווח.</p>
+          <p><strong>חוקי יצירה בלוחות:</strong> כששומרים לקוח פעיל עם שירותים מסוימים, נוצרות רשומות אוטומטית:</p>
+          <ul className="list-disc mr-6 space-y-1">
+            <li><strong>דיווחים מרכזים:</strong> שורות 126 (ביטוח לאומי, ניכויים) לפי תקופות</li>
+            <li><strong>מאזנים:</strong> שורת מאזן שנתי ללקוח</li>
+            <li><strong>התאמות:</strong> שורות התאמה לחשבונות הלקוח</li>
+            <li><strong>ריכוז חודשי:</strong> משימות דיווח חודשי (מע"מ, מקדמות, שכר וכו')</li>
+            <li><strong>דיווחי מיסים:</strong> משימות דיווחי מיסים חודשיים</li>
+            <li><strong>שכר:</strong> משימות שכר ודיווחי רשויות</li>
+          </ul>
           <p><strong>תנאים:</strong> ניתן להגביל חוק לסוג עסק מסוים (למשל: רק חברות בע"מ).</p>
           <p><strong>הפעלה/כיבוי:</strong> כל חוק ניתן להפעלה או כיבוי בלחיצה בלי למחוק אותו.</p>
         </CardContent>

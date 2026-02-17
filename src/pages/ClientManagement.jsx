@@ -42,7 +42,7 @@ import {
   Square, // Added
   FolderKanban
 } from 'lucide-react';
-import { Client, Project, PeriodicReport, BalanceSheet } from '@/api/entities';
+import { Client, Project, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount } from '@/api/entities';
 import { mondayApi } from '@/api/functions';
 import { exportClientsToExcel } from '@/api/functions';
 import { importClientsFromExcel } from '@/api/functions';
@@ -416,11 +416,16 @@ export default function ClientManagementPage() {
   const autoCreateReportsForClient = async (clientId, clientName, clientData) => {
     const services = clientData.service_types || [];
     const year = String(new Date().getFullYear() - 1);
+    const now = new Date();
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const monthLabel = currentMonthEnd.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+    const dueDateStr = currentMonthEnd.toISOString().split('T')[0];
 
     try {
-      const matchingRules = getReportAutoCreateRules(automationRules, services);
+      const matchingRules = getReportAutoCreateRules(automationRules, services, clientData);
 
       for (const rule of matchingRules) {
+        // --- PeriodicReport ---
         if (rule.target_entity === 'PeriodicReport' && rule.report_types) {
           const existingReports = await PeriodicReport.list(null, 2000).catch(() => []);
           const clientReports = existingReports.filter(r => r.client_id === clientId && r.report_year === year);
@@ -442,6 +447,7 @@ export default function ClientManagementPage() {
           }
         }
 
+        // --- BalanceSheet ---
         if (rule.target_entity === 'BalanceSheet') {
           const existingBS = await BalanceSheet.list(null, 2000).catch(() => []);
           const clientBS = existingBS.filter(b => b.client_id === clientId && b.tax_year === year);
@@ -454,6 +460,50 @@ export default function ClientManagementPage() {
             });
             console.log(`✅ נוצר מאזן ל-${clientName} לשנת ${year}`);
           }
+        }
+
+        // --- AccountReconciliation ---
+        if (rule.target_entity === 'AccountReconciliation') {
+          const clientAccounts = await ClientAccount.filter({ client_id: clientId }).catch(() => []);
+          if (clientAccounts.length > 0) {
+            const existingRecs = await AccountReconciliation.list(null, 2000).catch(() => []);
+            const period = now.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+            for (const account of clientAccounts) {
+              const exists = existingRecs.some(r => r.client_id === clientId && r.client_account_id === account.id && r.period === period);
+              if (!exists) {
+                await AccountReconciliation.create({
+                  client_id: clientId, client_name: clientName,
+                  client_account_id: account.id, account_name: account.account_name || account.bank_name || '',
+                  period, reconciliation_type: 'bank_credit',
+                  status: 'not_started', due_date: dueDateStr, notes: '',
+                });
+              }
+            }
+            console.log(`✅ נוצרו התאמות ל-${clientName}`);
+          }
+        }
+
+        // --- Task-based boards (monthly reports, tax reports, payroll) ---
+        if (rule.target_entity?.startsWith('Task_') && rule.task_categories?.length > 0) {
+          const existingTasks = await Task.filter({
+            due_date: { '>=': new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0], '<=': dueDateStr },
+          }).catch(() => []);
+          const clientTasks = existingTasks.filter(t => t.client_id === clientId);
+
+          for (const category of rule.task_categories) {
+            const exists = clientTasks.some(t => t.category === category);
+            if (!exists) {
+              await Task.create({
+                title: `${category} - ${clientName} - ${monthLabel}`,
+                client_name: clientName,
+                client_id: clientId,
+                category: category,
+                status: 'not_started',
+                due_date: dueDateStr,
+              });
+            }
+          }
+          console.log(`✅ נוצרו משימות ${rule.task_categories.join(', ')} ל-${clientName}`);
         }
       }
     } catch (err) {
