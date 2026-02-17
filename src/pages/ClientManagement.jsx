@@ -492,6 +492,13 @@ export default function ClientManagementPage() {
           }).catch(() => []);
           const clientTasks = existingTasks.filter(t => t.client_id === clientId);
 
+          // Calculate due date from rule's due_day_of_month or fall back to end of month
+          let taskDueDate = dueDateStr;
+          if (rule.due_day_of_month) {
+            const dueDay = Math.min(rule.due_day_of_month, currentMonthEnd.getDate());
+            taskDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay).toISOString().split('T')[0];
+          }
+
           for (const category of rule.task_categories) {
             const exists = clientTasks.some(t => t.category === category);
             if (!exists) {
@@ -501,7 +508,7 @@ export default function ClientManagementPage() {
                 client_id: clientId,
                 category: category,
                 status: 'not_started',
-                due_date: dueDateStr,
+                due_date: taskDueDate,
                 context: 'work',
                 process_steps: {},
               });

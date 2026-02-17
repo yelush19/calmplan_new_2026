@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Zap, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Settings, Play, Loader2, X, CheckSquare, Square } from 'lucide-react';
+import { Zap, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Settings, Play, Loader2, X, CheckSquare, Square, CalendarDays } from 'lucide-react';
 import {
   loadAutomationRules, saveAutomationRules,
   ALL_SERVICES, BUSINESS_TYPES, REPORT_ENTITIES,
@@ -56,6 +56,7 @@ function getEmptyRule(type) {
     report_types: {},
     task_categories: [],
     condition: null,
+    due_day_of_month: null,
   };
 }
 
@@ -216,6 +217,25 @@ function RuleEditor({ rule, onSave, onCancel }) {
               </div>
             )}
 
+            {/* Due date (day of month) for Task-based boards */}
+            {isTaskBoard && (
+              <div>
+                <Label>תאריך יעד (יום בחודש)</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={editRule.due_day_of_month || ''}
+                    onChange={(e) => handleChange('due_day_of_month', e.target.value ? parseInt(e.target.value) : null)}
+                    placeholder="לדוגמה: 19"
+                    className="w-24 text-sm"
+                  />
+                  <span className="text-xs text-gray-500">לחודש (ברירת מחדל: יום אחרון בחודש)</span>
+                </div>
+              </div>
+            )}
+
             {/* AccountReconciliation info */}
             {editRule.target_entity === 'AccountReconciliation' && (
               <div className="border rounded p-3 bg-cyan-50 text-sm text-cyan-800">
@@ -292,6 +312,11 @@ function RuleRow({ rule, onToggle, onEdit, onDelete, onRun, isRunning }) {
                     {rule.task_categories.join(', ')}
                   </Badge>
                 )}
+                {rule.due_day_of_month && (
+                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">
+                    יעד: {rule.due_day_of_month} לחודש
+                  </Badge>
+                )}
               </>
             )}
           </div>
@@ -331,6 +356,8 @@ export default function AutomationRules() {
   const [showRulePicker, setShowRulePicker] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState([]);
   const [runningRuleId, setRunningRuleId] = useState(null);
+  const [startMonth, setStartMonth] = useState(new Date().getMonth()); // 0-based (0=Jan)
+  const [startYear, setStartYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     loadRules();
@@ -498,15 +525,28 @@ export default function AutomationRules() {
 
       const year = String(new Date().getFullYear() - 1);
       const now = new Date();
+
+      // Build month range from startMonth/startYear to current month
+      const months = [];
+      let iterYear = startYear;
+      let iterMonth = startMonth;
+      while (iterYear < now.getFullYear() || (iterYear === now.getFullYear() && iterMonth <= now.getMonth())) {
+        const monthEnd = new Date(iterYear, iterMonth + 1, 0);
+        const monthLabel = monthEnd.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+        months.push({ year: iterYear, month: iterMonth, monthEnd, monthLabel, dueDateStr: monthEnd.toISOString().split('T')[0] });
+        iterMonth++;
+        if (iterMonth > 11) { iterMonth = 0; iterYear++; }
+      }
+
+      // Use last month for default due date
       const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      const monthLabel = currentMonthEnd.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
       const dueDateStr = currentMonthEnd.toISOString().split('T')[0];
 
       const [existingReports, existingBS, existingRecs, existingTasks, allAccounts] = await Promise.all([
         PeriodicReport.list(null, 5000).catch(() => []),
         BalanceSheet.list(null, 5000).catch(() => []),
         AccountReconciliation.list(null, 5000).catch(() => []),
-        Task.list(null, 5000).catch(() => []),
+        Task.list(null, 10000).catch(() => []),
         ClientAccount.list(null, 5000).catch(() => []),
       ]);
 
@@ -576,55 +616,71 @@ export default function AutomationRules() {
           if (rule.target_entity === 'AccountReconciliation') {
             const clientAccounts = allAccounts.filter(a => a.client_id === client.id);
             if (clientAccounts.length > 0) {
-              const period = now.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-              for (const account of clientAccounts) {
-                const exists = existingRecs.some(r => r.client_id === client.id && r.client_account_id === account.id && r.period === period);
-                if (!exists) {
-                  previewItems.push({
-                    ...ruleInfo,
-                    id: `${client.id}_rec_${account.id}`,
-                    checked: true,
-                    clientId: client.id,
-                    clientName: client.name,
-                    entity: 'AccountReconciliation',
-                    entityLabel: 'התאמת חשבון',
-                    description: `${account.account_name || account.bank_name || 'חשבון'} - ${period}`,
-                    createData: {
-                      client_id: client.id, client_name: client.name,
-                      client_account_id: account.id, account_name: account.account_name || account.bank_name || '',
-                      period, reconciliation_type: 'bank_credit',
-                      status: 'not_started', due_date: dueDateStr, notes: '',
-                    },
-                  });
+              for (const m of months) {
+                const period = m.monthLabel;
+                for (const account of clientAccounts) {
+                  const exists = existingRecs.some(r => r.client_id === client.id && r.client_account_id === account.id && r.period === period);
+                  if (!exists) {
+                    previewItems.push({
+                      ...ruleInfo,
+                      id: `${client.id}_rec_${account.id}_${m.year}_${m.month}`,
+                      checked: true,
+                      clientId: client.id,
+                      clientName: client.name,
+                      entity: 'AccountReconciliation',
+                      entityLabel: 'התאמת חשבון',
+                      description: `${account.account_name || account.bank_name || 'חשבון'} - ${period}`,
+                      createData: {
+                        client_id: client.id, client_name: client.name,
+                        client_account_id: account.id, account_name: account.account_name || account.bank_name || '',
+                        period, reconciliation_type: 'bank_credit',
+                        status: 'not_started', due_date: m.dueDateStr, notes: '',
+                      },
+                    });
+                  }
                 }
               }
             }
           }
 
+          // Task-based boards: generate for EACH month in the range
           if (rule.target_entity?.startsWith('Task_') && rule.task_categories?.length > 0) {
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-            const clientTasks = existingTasks.filter(t =>
-              t.client_id === client.id && t.due_date >= monthStart && t.due_date <= dueDateStr
-            );
-            for (const category of rule.task_categories) {
-              const exists = clientTasks.some(t => t.category === category);
-              if (!exists) {
-                previewItems.push({
-                  ...ruleInfo,
-                  id: `${client.id}_task_${category}`,
-                  checked: true,
-                  clientId: client.id,
-                  clientName: client.name,
-                  entity: rule.target_entity,
-                  entityLabel: REPORT_ENTITIES[rule.target_entity] || 'משימה',
-                  description: `${category} - ${monthLabel}`,
-                  createData: {
-                    title: `${category} - ${client.name} - ${monthLabel}`,
-                    client_name: client.name, client_id: client.id,
-                    category, status: 'not_started', due_date: dueDateStr,
-                    context: 'work', process_steps: {},
-                  },
-                });
+            for (const m of months) {
+              const mStart = new Date(m.year, m.month, 1).toISOString().split('T')[0];
+              const mEnd = m.dueDateStr;
+
+              // Calculate due date: use rule's due_day_of_month or end of month
+              let taskDueDate;
+              if (rule.due_day_of_month) {
+                const dueDay = Math.min(rule.due_day_of_month, m.monthEnd.getDate());
+                taskDueDate = new Date(m.year, m.month, dueDay).toISOString().split('T')[0];
+              } else {
+                taskDueDate = mEnd;
+              }
+
+              const clientTasks = existingTasks.filter(t =>
+                t.client_id === client.id && t.due_date >= mStart && t.due_date <= mEnd
+              );
+              for (const category of rule.task_categories) {
+                const exists = clientTasks.some(t => t.category === category);
+                if (!exists) {
+                  previewItems.push({
+                    ...ruleInfo,
+                    id: `${client.id}_task_${category}_${m.year}_${m.month}`,
+                    checked: true,
+                    clientId: client.id,
+                    clientName: client.name,
+                    entity: rule.target_entity,
+                    entityLabel: REPORT_ENTITIES[rule.target_entity] || 'משימה',
+                    description: `${category} - ${m.monthLabel}`,
+                    createData: {
+                      title: `${category} - ${client.name} - ${m.monthLabel}`,
+                      client_name: client.name, client_id: client.id,
+                      category, status: 'not_started', due_date: taskDueDate,
+                      context: 'work', process_steps: {},
+                    },
+                  });
+                }
               }
             }
           }
@@ -964,6 +1020,34 @@ export default function AutomationRules() {
                 </div>
               );
             })}
+          </div>
+
+          {/* Starting from month/year */}
+          <div className="border-t pt-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-gray-500" />
+              <Label className="text-sm font-medium">החל מחודש:</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={String(startMonth)} onValueChange={(v) => setStartMonth(parseInt(v))}>
+                <SelectTrigger className="w-32 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  {['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'].map((m, i) => (
+                    <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={String(startYear)} onValueChange={(v) => setStartYear(parseInt(v))}>
+                <SelectTrigger className="w-24 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  {[...Array(3)].map((_, i) => {
+                    const y = new Date().getFullYear() - 1 + i;
+                    return <SelectItem key={y} value={String(y)}>{y}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-gray-400">עד החודש הנוכחי</span>
+            </div>
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t">
