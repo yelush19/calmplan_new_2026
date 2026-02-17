@@ -16,7 +16,6 @@ const serviceTypeLabels = {
     deductions: 'מ״ה ניכויים',
     annual_reports: 'מאזנים / דוחות שנתיים',
     reconciliation: 'התאמות חשבונות',
-    consulting: 'ייעוץ',
     special_reports: 'דוחות מיוחדים',
     masav_employees: 'מס״ב עובדים',
     masav_social: 'מס״ב סוציאליות',
@@ -60,11 +59,28 @@ const serviceTypeColors = {
     taml_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
     // קבוצה 5 (אינדיגו): מס"ב ספקים
     masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    // כללי
-    consulting: 'bg-gray-100 text-gray-800 border-gray-200',
-    special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    reserve_claims: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    admin: 'bg-gray-100 text-gray-800 border-gray-200',
+    // שייכויות נוספות
+    reserve_claims: 'bg-blue-100 text-blue-800 border-blue-200',
+    admin: 'bg-green-100 text-green-800 border-green-200',
+    special_reports: 'bg-green-100 text-green-800 border-green-200',
+};
+
+// סדר מיון לפי קבוצת צבעים - אותה קטגוריה באותה שורה
+const serviceGroupOrder = {
+    // קבוצה 1 (ירוק): הנה"ח
+    bookkeeping: 1, bookkeeping_full: 1, reconciliation: 1,
+    annual_reports: 1, pnl_reports: 1, admin: 1, special_reports: 1,
+    // מע"מ ומקדמות (אמרלד)
+    vat_reporting: 2, tax_advances: 2,
+    // קבוצה 2 (כחול): שכר
+    payroll: 3, social_security: 3, deductions: 3,
+    authorities: 3, authorities_payment: 3, social_benefits: 3, reserve_claims: 3,
+    // קבוצה 3 (סגול): תלושים
+    payslip_sending: 4, masav_employees: 4,
+    // קבוצה 4 (כתום): מס"ב סוציאליות
+    masav_social: 5, masav_authorities: 5, operator_reporting: 5, taml_reporting: 5,
+    // קבוצה 5 (אינדיגו): מס"ב ספקים
+    masav_suppliers: 6,
 };
 
 const statusUI = {
@@ -133,7 +149,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
     }
   };
   
-  const services = client.service_types || [];
+  const services = [...(client.service_types || [])].sort((a, b) => (serviceGroupOrder[a] || 99) - (serviceGroupOrder[b] || 99));
   const reportingInfo = client.reporting_info || {};
 
   const frequencyLabels = {

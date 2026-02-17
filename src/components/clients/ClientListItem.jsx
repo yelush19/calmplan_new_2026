@@ -23,7 +23,6 @@ const serviceTypeLabels = {
   deductions: 'ניכויים',
   annual_reports: 'מאזנים',
   reconciliation: 'התאמות',
-  consulting: 'ייעוץ',
   special_reports: 'דוחות מיוחדים',
   masav_employees: 'מס״ב עובדים',
   masav_social: 'מס״ב סוציאליות',
@@ -67,20 +66,30 @@ const serviceTypeColors = {
   taml_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
   // קבוצה 5 (אינדיגו): מס"ב ספקים
   masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  // כללי
-  consulting: 'bg-gray-100 text-gray-800 border-gray-200',
-  special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  reserve_claims: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  admin: 'bg-gray-100 text-gray-800 border-gray-200',
+  // שייכויות נוספות
+  reserve_claims: 'bg-blue-100 text-blue-800 border-blue-200',
+  admin: 'bg-green-100 text-green-800 border-green-200',
+  special_reports: 'bg-green-100 text-green-800 border-green-200',
 };
 
+// סדר מיון לפי קבוצת צבעים
+const serviceGroupOrder = {
+  bookkeeping: 1, bookkeeping_full: 1, reconciliation: 1,
+  annual_reports: 1, pnl_reports: 1, admin: 1, special_reports: 1,
+  vat_reporting: 2, tax_advances: 2,
+  payroll: 3, social_security: 3, deductions: 3,
+  authorities: 3, authorities_payment: 3, social_benefits: 3, reserve_claims: 3,
+  payslip_sending: 4, masav_employees: 4,
+  masav_social: 5, masav_authorities: 5, operator_reporting: 5, taml_reporting: 5,
+  masav_suppliers: 6,
+};
 
 export default function ClientListItem({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete }) {
     const uiProps = statusUI[client.status] || statusUI.inactive;
     const mainContact = client.contacts?.find(c => c.is_primary) || client.contacts?.[0] || { name: client.contact_person, email: client.email, phone: client.phone };
 
     return (
-        <div className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 hover:bg-neutral-bg transition-colors duration-200 border-b border-neutral-light/50 ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}>
+        <div className={`group flex flex-col md:flex-row items-start md:items-center justify-between p-4 hover:bg-neutral-bg transition-colors duration-200 border-b border-neutral-light/50 ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}>
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 {/* Selection Checkbox */}
                 <div onClick={(e) => e.stopPropagation()}>
@@ -90,15 +99,15 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
                     className="w-5 h-5"
                   />
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-neutral-dark truncate">{client.name}</h3>
+                      <h3 className="text-lg font-semibold text-neutral-dark group-hover:text-emerald-600 transition-colors truncate">{client.name}</h3>
                   </div>
                   <div className="text-sm text-neutral-medium mt-1">{mainContact?.name || ''}</div>
                   {client.service_types?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
-                      {client.service_types.map(st => (
+                      {[...client.service_types].sort((a, b) => (serviceGroupOrder[a] || 99) - (serviceGroupOrder[b] || 99)).map(st => (
                         <Badge key={st} className={`${serviceTypeColors[st] || 'bg-gray-50 text-gray-700 border-gray-200'} text-[10px] px-1.5 py-0 border`}>
                           {serviceTypeLabels[st] || st}
                         </Badge>
