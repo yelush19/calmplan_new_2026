@@ -7,7 +7,7 @@ import {
   Home, Brain, Briefcase, CheckSquare, Target, BookCheck, DollarSign,
   BarChart3, Settings, Menu, X, Users, Monitor, Scaling,
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, Database,
-  ArrowRight, FileBarChart, Repeat, FolderKanban
+  ArrowRight, FileBarChart, Repeat, FolderKanban, Zap
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import {
@@ -88,6 +88,7 @@ const navigationGroups = [
     items: [
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
+      { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
       { name: "Monday.com", href: createPageUrl("MondayIntegration"), icon: Monitor },
       { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Database },
       { name: "מנהל נתוני בדיקה", href: createPageUrl("TestDataManager"), icon: Database },

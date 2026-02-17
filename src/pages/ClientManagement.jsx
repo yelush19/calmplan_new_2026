@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +52,7 @@ import ClientForm from '@/components/clients/ClientForm';
 import ClientCard from '@/components/clients/ClientCard';
 import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
 import ClientListItem from '@/components/clients/ClientListItem';
+import { loadAutomationRules, getReportAutoCreateRules } from '@/config/automationRules';
 import ClientCollections from '@/components/clients/ClientCollections';
 import ClientContractsManager from '@/components/clients/ClientContractsManager';
 import ClientTasksTab from '@/components/clients/ClientTasksTab';
@@ -108,12 +109,14 @@ export default function ClientManagementPage() {
   const [bulkNewStatus, setBulkNewStatus] = useState('active');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [isMigratingDev, setIsMigratingDev] = useState(false);
+  const devMigrationDone = useRef(false);
+  const [automationRules, setAutomationRules] = useState([]);
 
-  const handleMigrateDevToProjects = async () => {
-    if (!window.confirm('להעביר את כל כרטיסי הפיתוח כפרויקטים ולמחוק אותם מהלקוחות?')) return;
+  const handleMigrateDevToProjects = async (clientsList) => {
+    const devClients = (clientsList || clients).filter(c => c.status === 'development');
+    if (devClients.length === 0) return;
     setIsMigratingDev(true);
     try {
-      const devClients = clients.filter(c => c.status === 'development');
       const existingProjects = await Project.list(null, 500);
       const existingNames = new Set(existingProjects.map(p => p.name));
 
@@ -138,6 +141,7 @@ export default function ClientManagementPage() {
 
   useEffect(() => {
     loadClients();
+    loadAutomationRules().then(({ rules }) => setAutomationRules(rules));
   }, []);
 
   // Auto-open client card from URL param (e.g. from ClientsDashboard link)
@@ -199,9 +203,17 @@ export default function ClientManagementPage() {
       });
       setClients(clientsData || []);
       setSelectedClientIds(new Set()); // Clear selection on reload
+      // Auto-migrate development clients to projects (one-time)
+      if (!devMigrationDone.current) {
+        const devClients = (clientsData || []).filter(c => c.status === 'development');
+        if (devClients.length > 0) {
+          devMigrationDone.current = true;
+          handleMigrateDevToProjects(clientsData);
+        }
+      }
     } catch (error) {
       console.error("Error loading clients:", error);
-      const errorMsg = error?.response?.status === 429 
+      const errorMsg = error?.response?.status === 429
         ? 'יותר מדי בקשות - המערכת עמוסה. אנא נסה שוב בעוד מספר שניות.'
         : 'שגיאה בטעינת לקוחות';
       setError(errorMsg);
@@ -403,52 +415,45 @@ export default function ClientManagementPage() {
   // Auto-create periodic reports and balance sheets for new/updated active clients
   const autoCreateReportsForClient = async (clientId, clientName, clientData) => {
     const services = clientData.service_types || [];
-    const year = String(new Date().getFullYear() - 1); // Report year (previous year)
-    const currentYear = String(new Date().getFullYear());
+    const year = String(new Date().getFullYear() - 1);
 
     try {
-      // Auto-create periodic reports (126 forms) if client has payroll services
-      const hasPayroll = services.some(s => ['payroll', 'deductions', 'social_security'].includes(s));
-      if (hasPayroll) {
-        const existingReports = await PeriodicReport.list(null, 2000).catch(() => []);
-        const clientReports = existingReports.filter(r => r.client_id === clientId && r.report_year === year);
+      const matchingRules = getReportAutoCreateRules(automationRules, services);
 
-        if (clientReports.length === 0) {
-          const reportTypes = {
-            bituach_leumi_126: ['h1', 'h2', 'annual'],
-            deductions_126_wage: ['annual'],
-          };
-          for (const [typeKey, periods] of Object.entries(reportTypes)) {
-            for (const period of periods) {
-              const y = parseInt(year);
-              const targetDate = period === 'h1' ? `${y}-07-18` : period === 'h2' ? `${y + 1}-01-18` : `${y + 1}-04-30`;
-              await PeriodicReport.create({
-                client_id: clientId, client_name: clientName,
-                report_year: year, report_type: typeKey, period,
-                target_date: targetDate, status: 'not_started',
-                reconciliation_steps: { payroll_vs_bookkeeping: false, periodic_vs_annual: false },
-                submission_date: '', notes: '',
-              });
+      for (const rule of matchingRules) {
+        if (rule.target_entity === 'PeriodicReport' && rule.report_types) {
+          const existingReports = await PeriodicReport.list(null, 2000).catch(() => []);
+          const clientReports = existingReports.filter(r => r.client_id === clientId && r.report_year === year);
+          if (clientReports.length === 0) {
+            for (const [typeKey, periods] of Object.entries(rule.report_types)) {
+              for (const period of periods) {
+                const y = parseInt(year);
+                const targetDate = period === 'h1' ? `${y}-07-18` : period === 'h2' ? `${y + 1}-01-18` : `${y + 1}-04-30`;
+                await PeriodicReport.create({
+                  client_id: clientId, client_name: clientName,
+                  report_year: year, report_type: typeKey, period,
+                  target_date: targetDate, status: 'not_started',
+                  reconciliation_steps: { payroll_vs_bookkeeping: false, periodic_vs_annual: false },
+                  submission_date: '', notes: '',
+                });
+              }
             }
+            console.log(`✅ נוצרו דיווחים מרכזים ל-${clientName} לשנת ${year}`);
           }
-          console.log(`✅ נוצרו דיווחים מרכזים ל-${clientName} לשנת ${year}`);
         }
-      }
 
-      // Auto-create balance sheet if client has bookkeeping
-      const hasBookkeeping = services.some(s => ['bookkeeping', 'bookkeeping_full'].includes(s));
-      if (hasBookkeeping) {
-        const existingBS = await BalanceSheet.list(null, 2000).catch(() => []);
-        const clientBS = existingBS.filter(b => b.client_id === clientId && b.tax_year === year);
-
-        if (clientBS.length === 0) {
-          await BalanceSheet.create({
-            client_name: clientName, client_id: clientId,
-            tax_year: year, current_stage: 'closing_operations',
-            target_date: `${parseInt(year) + 1}-05-31`,
-            folder_link: '', notes: '',
-          });
-          console.log(`✅ נוצר מאזן ל-${clientName} לשנת ${year}`);
+        if (rule.target_entity === 'BalanceSheet') {
+          const existingBS = await BalanceSheet.list(null, 2000).catch(() => []);
+          const clientBS = existingBS.filter(b => b.client_id === clientId && b.tax_year === year);
+          if (clientBS.length === 0) {
+            await BalanceSheet.create({
+              client_name: clientName, client_id: clientId,
+              tax_year: year, current_stage: 'closing_operations',
+              target_date: `${parseInt(year) + 1}-05-31`,
+              folder_link: '', notes: '',
+            });
+            console.log(`✅ נוצר מאזן ל-${clientName} לשנת ${year}`);
+          }
         }
       }
     } catch (err) {
@@ -760,18 +765,12 @@ export default function ClientManagementPage() {
               </ToggleGroupItem>
             </ToggleGroup>
 
-            {/* Migrate dev clients to projects */}
-            {statusFilter === 'development' && filteredClients.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleMigrateDevToProjects}
-                disabled={isMigratingDev}
-                className="gap-2 text-purple-700 border-purple-300 hover:bg-purple-50"
-              >
-                <FolderKanban className="w-4 h-4" />
-                {isMigratingDev ? 'מעביר...' : 'העבר לפרויקטים'}
-              </Button>
+            {/* Auto-migration indicator */}
+            {isMigratingDev && (
+              <span className="text-sm text-purple-600 flex items-center gap-2">
+                <FolderKanban className="w-4 h-4 animate-pulse" />
+                מעביר לקוחות פיתוח לפרויקטים...
+              </span>
             )}
 
             {/* Select All Checkbox */}
