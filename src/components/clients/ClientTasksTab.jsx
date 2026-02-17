@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Calendar, Clock, CheckCircle, AlertCircle, Search, Filter } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
+import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 const statusTranslations = {
   not_started: 'נותרו השלמות',
@@ -51,7 +52,7 @@ const statusColors = {
 export default function ClientTasksTab({ clientId, clientName }) {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -72,7 +73,7 @@ export default function ClientTasksTab({ clientId, clientName }) {
   };
 
   const filteredTasks = tasks.filter(task => {
-    const statusMatch = statusFilter === 'all' || task.status === statusFilter;
+    const statusMatch = statusFilter.length === 0 || statusFilter.includes(task.status);
     const searchMatch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
     return statusMatch && searchMatch;
@@ -149,17 +150,15 @@ export default function ClientTasksTab({ clientId, clientName }) {
                 className="pr-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="סנן לפי סטטוס" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">כל הסטטוסים</SelectItem>
-                {Object.entries(statusTranslations).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiStatusFilter
+              options={Object.entries(statusTranslations).map(([key, label]) => ({
+                value: key, label,
+                count: tasks.filter(t => t.status === key).length,
+              }))}
+              selected={statusFilter}
+              onChange={setStatusFilter}
+              label="סנן לפי סטטוס"
+            />
           </div>
         </CardContent>
       </Card>

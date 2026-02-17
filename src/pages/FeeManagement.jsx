@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  DollarSign, TrendingUp, TrendingDown, Users, Search, ArrowUpDown
+  DollarSign, TrendingUp, TrendingDown, Users, Search, ArrowUpDown,
+  Star, Link2, UserX
 } from 'lucide-react';
 import ResizableTable from '@/components/ui/ResizableTable';
 
@@ -36,60 +38,64 @@ const serviceTypeLabels = {
 };
 
 const serviceTypeColors = {
-  // קבוצה 1 (ירוק): הנה"ח, התאמות, מאזנים, PNL
   bookkeeping: 'bg-green-100 text-green-800 border-green-200',
   bookkeeping_full: 'bg-green-100 text-green-800 border-green-200',
   reconciliation: 'bg-green-100 text-green-800 border-green-200',
   annual_reports: 'bg-green-100 text-green-800 border-green-200',
   pnl_reports: 'bg-green-100 text-green-800 border-green-200',
-  // מע"מ ומקדמות
   vat_reporting: 'bg-emerald-100 text-emerald-800 border-emerald-200',
   tax_advances: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  // קבוצה 2 (כחול): שכר, ביטוח לאומי, ניכויים
   payroll: 'bg-blue-100 text-blue-800 border-blue-200',
   social_security: 'bg-blue-100 text-blue-800 border-blue-200',
   deductions: 'bg-blue-100 text-blue-800 border-blue-200',
   authorities: 'bg-blue-100 text-blue-800 border-blue-200',
   authorities_payment: 'bg-blue-100 text-blue-800 border-blue-200',
   social_benefits: 'bg-blue-100 text-blue-800 border-blue-200',
-  // קבוצה 3 (סגול): תלושים, מס"ב עובדים
   payslip_sending: 'bg-purple-100 text-purple-800 border-purple-200',
   masav_employees: 'bg-purple-100 text-purple-800 border-purple-200',
-  // קבוצה 4 (כתום): מס"ב סוציאליות, מתפעל, טמל
   masav_social: 'bg-amber-100 text-amber-800 border-amber-200',
   masav_authorities: 'bg-amber-100 text-amber-800 border-amber-200',
   operator_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
   taml_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
-  // קבוצה 5 (אינדיגו): מס"ב ספקים
   masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  // שייכויות נוספות
   reserve_claims: 'bg-blue-100 text-blue-800 border-blue-200',
   admin: 'bg-green-100 text-green-800 border-green-200',
   special_reports: 'bg-green-100 text-green-800 border-green-200',
 };
 
-export default function FeeManagement() {
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+const feeStatusLabels = {
+  oth: 'תיק עצמי (OTH)',
+  linked_to_parent: 'מתומחר עם לקוח ראשי',
+};
 
-  useEffect(() => {
-    loadClients();
-  }, []);
+function FeeStatusBadge({ client, allClients }) {
+  const feeStatus = client.fee_status;
+  if (!feeStatus || feeStatus === 'normal') return null;
 
-  const loadClients = async () => {
-    setLoading(true);
-    try {
-      const data = await Client.list(null, 500);
-      setClients(data.filter(c => c.status === 'active'));
-    } catch (e) {
-      console.error('Failed to load clients:', e);
-    }
-    setLoading(false);
-  };
+  if (feeStatus === 'oth') {
+    return (
+      <Badge className="bg-gray-100 text-gray-700 border-gray-300 text-xs border">
+        <UserX className="w-3 h-3 ml-1" />
+        תיק עצמי
+      </Badge>
+    );
+  }
 
-  const filteredClients = useMemo(() => {
+  if (feeStatus === 'linked_to_parent') {
+    const parent = allClients.find(c => c.id === client.paying_client_id);
+    return (
+      <Badge className="bg-violet-100 text-violet-700 border-violet-300 text-xs border">
+        <Link2 className="w-3 h-3 ml-1" />
+        {parent ? `מתומחר עם ${parent.name}` : 'מקושר ללקוח ראשי'}
+      </Badge>
+    );
+  }
+
+  return null;
+}
+
+function ClientFeeTable({ clients, allClients, search, sortBy, title, showFeeStatus = false }) {
+  const filtered = useMemo(() => {
     let result = clients.filter(c =>
       !search || c.name?.toLowerCase().includes(search.toLowerCase())
     );
@@ -104,22 +110,167 @@ export default function FeeManagement() {
     return result;
   }, [clients, search, sortBy]);
 
+  if (filtered.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <ResizableTable className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="text-right p-3 font-semibold">לקוח</th>
+                <th className="text-right p-3 font-semibold">שירותים</th>
+                {showFeeStatus && <th className="text-right p-3 font-semibold">סטטוס שכ״ט</th>}
+                <th className="text-right p-3 font-semibold">שכ״ט חודשי</th>
+                <th className="text-right p-3 font-semibold">שכ״ט שנתי</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((client) => {
+                const fee = parseFloat(client.monthly_fee) || 0;
+                const isOth = client.fee_status === 'oth';
+                const isLinked = client.fee_status === 'linked_to_parent';
+                const hasSpecialStatus = isOth || isLinked;
+                return (
+                  <tr key={client.id} className={`border-b hover:bg-muted/30 transition-colors ${hasSpecialStatus ? 'bg-gray-50/50' : ''}`}>
+                    <td className="p-3 font-medium">{client.name}</td>
+                    <td className="p-3">
+                      <div className="flex flex-wrap gap-1">
+                        {(client.service_types || []).slice(0, 3).map(st => (
+                          <Badge key={st} className={`${serviceTypeColors[st] || 'bg-gray-50 text-gray-700 border-gray-200'} text-xs px-2 py-0.5 border`}>
+                            {serviceTypeLabels[st] || st}
+                          </Badge>
+                        ))}
+                        {(client.service_types || []).length > 3 && (
+                          <Badge variant="outline" className="text-xs">+{client.service_types.length - 3}</Badge>
+                        )}
+                      </div>
+                    </td>
+                    {showFeeStatus && (
+                      <td className="p-3">
+                        {fee === 0 && hasSpecialStatus ? (
+                          <FeeStatusBadge client={client} allClients={allClients} />
+                        ) : fee === 0 ? (
+                          <span className="text-yellow-600 text-xs">לא מוגדר</span>
+                        ) : null}
+                      </td>
+                    )}
+                    <td className="p-3">
+                      {fee > 0 ? (
+                        <span className="font-semibold text-green-700">₪{fee.toLocaleString()}</span>
+                      ) : hasSpecialStatus ? (
+                        <span className="text-gray-400">—</span>
+                      ) : (
+                        <span className="text-muted-foreground">לא הוגדר</span>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      {fee > 0 ? (
+                        <span className="text-muted-foreground">₪{(fee * 12).toLocaleString()}</span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bg-muted/50 font-bold">
+                <td className="p-3">סה״כ ({filtered.length})</td>
+                <td className="p-3"></td>
+                {showFeeStatus && <td className="p-3"></td>}
+                <td className="p-3 text-green-700">
+                  ₪{filtered.reduce((s, c) => s + (parseFloat(c.monthly_fee) || 0), 0).toLocaleString()}
+                </td>
+                <td className="p-3 text-muted-foreground">
+                  ₪{(filtered.reduce((s, c) => s + (parseFloat(c.monthly_fee) || 0), 0) * 12).toLocaleString()}
+                </td>
+              </tr>
+            </tfoot>
+          </ResizableTable>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function FeeManagement() {
+  const [allClients, setAllClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [activeTab, setActiveTab] = useState('active');
+
+  useEffect(() => {
+    loadClients();
+  }, []);
+
+  const loadClients = async () => {
+    setLoading(true);
+    try {
+      const data = await Client.list(null, 500);
+      setAllClients(data);
+    } catch (e) {
+      console.error('Failed to load clients:', e);
+    }
+    setLoading(false);
+  };
+
+  // Active clients - regular fee payers
+  const activeClients = useMemo(() =>
+    allClients.filter(c => c.status === 'active'),
+    [allClients]
+  );
+
+  // Potential clients
+  const potentialClients = useMemo(() =>
+    allClients.filter(c => c.status === 'potential'),
+    [allClients]
+  );
+
+  // Active without fee and without special status
+  const activeWithoutFee = useMemo(() =>
+    activeClients.filter(c => {
+      const fee = parseFloat(c.monthly_fee) || 0;
+      return fee === 0 && !c.fee_status;
+    }).length,
+    [activeClients]
+  );
+
+  // Active with OTH or linked
+  const activeOthCount = useMemo(() =>
+    activeClients.filter(c => c.fee_status === 'oth').length,
+    [activeClients]
+  );
+
+  const activeLinkedCount = useMemo(() =>
+    activeClients.filter(c => c.fee_status === 'linked_to_parent').length,
+    [activeClients]
+  );
+
+  // Stats for active
   const totalMonthlyFees = useMemo(() =>
-    clients.reduce((sum, c) => sum + (parseFloat(c.monthly_fee) || 0), 0),
-    [clients]
+    activeClients.reduce((sum, c) => sum + (parseFloat(c.monthly_fee) || 0), 0),
+    [activeClients]
   );
 
   const clientsWithFee = useMemo(() =>
-    clients.filter(c => c.monthly_fee && parseFloat(c.monthly_fee) > 0).length,
-    [clients]
-  );
-
-  const clientsWithoutFee = useMemo(() =>
-    clients.filter(c => !c.monthly_fee || parseFloat(c.monthly_fee) === 0).length,
-    [clients]
+    activeClients.filter(c => c.monthly_fee && parseFloat(c.monthly_fee) > 0).length,
+    [activeClients]
   );
 
   const avgFee = clientsWithFee > 0 ? totalMonthlyFees / clientsWithFee : 0;
+
+  // Stats for potential (expected)
+  const potentialMonthlyFees = useMemo(() =>
+    potentialClients.reduce((sum, c) => sum + (parseFloat(c.monthly_fee) || 0), 0),
+    [potentialClients]
+  );
 
   if (loading) {
     return (
@@ -134,7 +285,7 @@ export default function FeeManagement() {
       <h1 className="text-2xl font-bold">מרכז נתוני שכ״ט</h1>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <DollarSign className="w-6 h-6 text-green-600 mx-auto mb-1" />
@@ -153,7 +304,7 @@ export default function FeeManagement() {
           <CardContent className="p-4 text-center">
             <Users className="w-6 h-6 text-purple-600 mx-auto mb-1" />
             <p className="text-sm text-muted-foreground">לקוחות עם שכ״ט</p>
-            <p className="text-2xl font-bold">{clientsWithFee} <span className="text-sm text-muted-foreground">/ {clients.length}</span></p>
+            <p className="text-2xl font-bold">{clientsWithFee} <span className="text-sm text-muted-foreground">/ {activeClients.length}</span></p>
           </CardContent>
         </Card>
         <Card>
@@ -163,11 +314,39 @@ export default function FeeManagement() {
             <p className="text-2xl font-bold">₪{Math.round(avgFee).toLocaleString()}</p>
           </CardContent>
         </Card>
+        <Card className="border-dashed border-2 border-amber-300 bg-amber-50/30">
+          <CardContent className="p-4 text-center">
+            <Star className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+            <p className="text-sm text-amber-700">הכנסה צפויה (פוטנציאליים)</p>
+            <p className="text-2xl font-bold text-amber-600">
+              ₪{potentialMonthlyFees.toLocaleString()}
+              <span className="text-sm font-normal text-muted-foreground"> / חודש</span>
+            </p>
+            <p className="text-xs text-amber-600 mt-1">{potentialClients.length} לקוחות פוטנציאליים</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {clientsWithoutFee > 0 && (
+      {/* Warnings */}
+      {activeWithoutFee > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-          {clientsWithoutFee} לקוחות פעילים ללא שכ״ט מוגדר
+          {activeWithoutFee} לקוחות פעילים ללא שכ״ט מוגדר (ללא סטטוס מיוחד)
+        </div>
+      )}
+      {(activeOthCount > 0 || activeLinkedCount > 0) && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600 flex gap-4">
+          {activeOthCount > 0 && (
+            <span className="flex items-center gap-1">
+              <UserX className="w-4 h-4" />
+              {activeOthCount} תיקים עצמיים (OTH)
+            </span>
+          )}
+          {activeLinkedCount > 0 && (
+            <span className="flex items-center gap-1">
+              <Link2 className="w-4 h-4" />
+              {activeLinkedCount} מתומחרים עם לקוח ראשי
+            </span>
+          )}
         </div>
       )}
 
@@ -195,74 +374,54 @@ export default function FeeManagement() {
         </Select>
       </div>
 
-      {/* Client Fee Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">פירוט שכ״ט לפי לקוח</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <ResizableTable className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-right p-3 font-semibold">לקוח</th>
-                  <th className="text-right p-3 font-semibold">שירותים</th>
-                  <th className="text-right p-3 font-semibold">שכ״ט חודשי</th>
-                  <th className="text-right p-3 font-semibold">שכ״ט שנתי</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredClients.map((client) => {
-                  const fee = parseFloat(client.monthly_fee) || 0;
-                  return (
-                    <tr key={client.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="p-3 font-medium">{client.name}</td>
-                      <td className="p-3">
-                        <div className="flex flex-wrap gap-1">
-                          {(client.service_types || []).slice(0, 3).map(st => (
-                            <Badge key={st} className={`${serviceTypeColors[st] || 'bg-gray-50 text-gray-700 border-gray-200'} text-xs px-2 py-0.5 border`}>
-                              {serviceTypeLabels[st] || st}
-                            </Badge>
-                          ))}
-                          {(client.service_types || []).length > 3 && (
-                            <Badge variant="outline" className="text-xs">+{client.service_types.length - 3}</Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        {fee > 0 ? (
-                          <span className="font-semibold text-green-700">₪{fee.toLocaleString()}</span>
-                        ) : (
-                          <span className="text-muted-foreground">לא הוגדר</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {fee > 0 ? (
-                          <span className="text-muted-foreground">₪{(fee * 12).toLocaleString()}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="bg-muted/50 font-bold">
-                  <td className="p-3">סה״כ ({filteredClients.length} לקוחות)</td>
-                  <td className="p-3"></td>
-                  <td className="p-3 text-green-700">
-                    ₪{filteredClients.reduce((s, c) => s + (parseFloat(c.monthly_fee) || 0), 0).toLocaleString()}
-                  </td>
-                  <td className="p-3 text-muted-foreground">
-                    ₪{(filteredClients.reduce((s, c) => s + (parseFloat(c.monthly_fee) || 0), 0) * 12).toLocaleString()}
-                  </td>
-                </tr>
-              </tfoot>
-            </ResizableTable>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tabs: Active vs Potential */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="active" className="gap-2">
+            <Users className="w-4 h-4" />
+            לקוחות פעילים ({activeClients.length})
+          </TabsTrigger>
+          <TabsTrigger value="potential" className="gap-2">
+            <Star className="w-4 h-4" />
+            לקוחות פוטנציאליים - צפוי ({potentialClients.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="space-y-4 mt-4">
+          <ClientFeeTable
+            clients={activeClients}
+            allClients={allClients}
+            search={search}
+            sortBy={sortBy}
+            title="פירוט שכ״ט - לקוחות פעילים"
+            showFeeStatus={true}
+          />
+        </TabsContent>
+
+        <TabsContent value="potential" className="space-y-4 mt-4">
+          {potentialClients.length === 0 ? (
+            <Card className="p-8 text-center">
+              <Star className="w-12 h-12 mx-auto text-amber-300 mb-3" />
+              <p className="text-lg font-semibold text-gray-600">אין לקוחות פוטנציאליים</p>
+              <p className="text-sm text-gray-500 mt-1">הוסף לקוח עם סטטוס "פוטנציאלי" כדי לראות הכנסה צפויה</p>
+            </Card>
+          ) : (
+            <ClientFeeTable
+              clients={potentialClients}
+              allClients={allClients}
+              search={search}
+              sortBy={sortBy}
+              title={
+                <span className="flex items-center gap-2">
+                  פירוט שכ״ט צפוי - לקוחות פוטנציאליים
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-300 text-xs border">צפוי</Badge>
+                </span>
+              }
+              showFeeStatus={false}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

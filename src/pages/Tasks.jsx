@@ -16,6 +16,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { format, parseISO, isValid, startOfDay } from "date-fns";
 import { he } from "date-fns/locale";
 import KanbanView from "../components/tasks/KanbanView";
+import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 const statusConfig = {
   not_started: { text: 'לביצוע', color: 'bg-gray-100 text-gray-700', dot: 'bg-gray-400' },
@@ -65,7 +66,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState([]);
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [view, setView] = useState("list");
@@ -80,7 +81,7 @@ export default function TasksPage() {
     const params = new URLSearchParams(location.search);
     const statusParam = params.get('status');
     const priorityParam = params.get('priority');
-    if (statusParam) setStatusFilter(statusParam);
+    if (statusParam) setStatusFilter([statusParam]);
     if (priorityParam) setPriorityFilter(priorityParam);
   }, [location.search]);
 
@@ -170,8 +171,8 @@ export default function TasksPage() {
       );
     }
 
-    if (statusFilter !== "all") {
-      result = result.filter(t => t.status === statusFilter);
+    if (statusFilter.length > 0) {
+      result = result.filter(t => statusFilter.includes(t.status));
     }
 
     if (priorityFilter !== "all") {
@@ -341,17 +342,16 @@ export default function TasksPage() {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-40 rounded-xl">
-                <SelectValue placeholder="סטטוס" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">כל הסטטוסים</SelectItem>
-                {Object.entries(statusConfig).map(([key, { text }]) => (
-                  <SelectItem key={key} value={key}>{text}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiStatusFilter
+              options={Object.entries(statusConfig).map(([key, { text }]) => ({
+                value: key,
+                label: text,
+                count: tasks.filter(t => t.status === key).length,
+              }))}
+              selected={statusFilter}
+              onChange={setStatusFilter}
+              label="סטטוס"
+            />
 
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
               <SelectTrigger className="w-full md:w-36 rounded-xl">
