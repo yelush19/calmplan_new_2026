@@ -78,7 +78,7 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
     const mainContact = client.contacts?.find(c => c.is_primary) || client.contacts?.[0] || { name: client.contact_person, email: client.email, phone: client.phone };
 
     return (
-        <div className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 hover:bg-neutral-bg transition-colors duration-200 border-b border-neutral-light/50 ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}>
+        <div className={`group flex flex-col md:flex-row items-start md:items-center justify-between p-4 hover:bg-neutral-bg transition-colors duration-200 border-b border-neutral-light/50 ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}>
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 {/* Selection Checkbox */}
                 <div onClick={(e) => e.stopPropagation()}>
@@ -88,10 +88,10 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
                     className="w-5 h-5"
                   />
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-neutral-dark truncate">{client.name}</h3>
+                      <h3 className="text-lg font-semibold text-neutral-dark group-hover:text-emerald-600 transition-colors truncate">{client.name}</h3>
                   </div>
                   <div className="text-sm text-neutral-medium mt-1">{mainContact?.name || ''}</div>
                   {client.service_types?.length > 0 && (
