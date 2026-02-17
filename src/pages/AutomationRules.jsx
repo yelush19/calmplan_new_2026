@@ -299,14 +299,14 @@ function RuleRow({ rule, onToggle, onEdit, onDelete, onRun, isRunning }) {
       <div className="flex items-center gap-1">
         {rule.type === 'report_auto_create' && onRun && (
           <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onRun(rule.id)}
+            variant="outline"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onRun(rule.id); }}
             disabled={isRunning || !rule.enabled}
-            className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-            title="הפעל חוק זה על לקוחות קיימים"
+            className="gap-1 text-yellow-700 border-yellow-400 hover:bg-yellow-50 hover:text-yellow-800 h-8 px-3"
           >
-            {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+            <span className="text-xs">{isRunning ? 'סורק...' : 'הפעל'}</span>
           </Button>
         )}
         <Button variant="ghost" size="icon" onClick={() => onEdit(rule)}><Pencil className="w-4 h-4" /></Button>
@@ -903,7 +903,7 @@ export default function AutomationRules() {
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowRulePicker(false)}>ביטול</Button>
               <Button
-                onClick={handleBulkScan}
+                onClick={() => handleBulkScan()}
                 disabled={selectedRuleIds.length === 0}
                 className="gap-1 bg-yellow-500 hover:bg-yellow-600 text-white"
               >
