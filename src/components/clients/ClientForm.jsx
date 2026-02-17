@@ -764,6 +764,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="masav">מס״ב</SelectItem>
+                          <SelectItem value="credit_card">כרטיס אשראי</SelectItem>
+                          <SelectItem value="bank_standing_order">הו״ק בנקאית</SelectItem>
                           <SelectItem value="standing_order">כתב אישור (כ״א)</SelectItem>
                           <SelectItem value="check">המחאה</SelectItem>
                         </SelectContent>

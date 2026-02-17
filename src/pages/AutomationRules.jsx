@@ -29,6 +29,7 @@ const entityDisplayConfig = {
   Task_monthly_reports: { color: 'bg-slate-100 text-slate-800', label: 'ריכוז חודשי' },
   Task_tax_reports: { color: 'bg-orange-100 text-orange-800', label: 'דיווחי מיסים' },
   Task_payroll: { color: 'bg-pink-100 text-pink-800', label: 'שכר' },
+  Task_additional_services: { color: 'bg-indigo-100 text-indigo-800', label: 'שירותים נוספים' },
 };
 
 function getEmptyRule(type) {
