@@ -468,7 +468,7 @@ export function areAllStepsDone(task) {
 
 // Status definitions shared across dashboards
 export const STATUS_CONFIG = {
-  not_started:                   { label: 'נותרו השלמות',   bg: 'bg-gray-200',       text: 'text-gray-700',     border: 'border-gray-300',    priority: 3 },
+  not_started:                   { label: 'נותרו השלמות',   bg: 'bg-cyan-200',       text: 'text-cyan-800',     border: 'border-cyan-300',    priority: 3 },
   in_progress:                   { label: 'בעבודה',         bg: 'bg-emerald-200',    text: 'text-emerald-900',  border: 'border-emerald-300', priority: 2 },
   completed:                     { label: 'הושלם',          bg: 'bg-emerald-400',    text: 'text-white',        border: 'border-emerald-500', priority: 5 },
   postponed:                     { label: 'נדחה',           bg: 'bg-gray-300',       text: 'text-gray-600',     border: 'border-gray-400',    priority: 4 },
