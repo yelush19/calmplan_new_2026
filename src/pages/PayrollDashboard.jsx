@@ -40,7 +40,7 @@ export default function PayrollDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1));
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date());
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 

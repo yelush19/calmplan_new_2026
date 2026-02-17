@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Task, Event, User } from "@/api/entities";
-import { parseISO, format } from "date-fns";
+import { parseISO, format, isToday, isTomorrow, differenceInDays } from "date-fns";
+import { he } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,10 +11,9 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
-  Plus, ArrowRight, Target, User as UserIcon,
-  FileBarChart
+  ArrowRight, Target, AlertTriangle, ChevronDown, Sparkles,
+  FileBarChart, Brain, Zap
 } from "lucide-react";
-import AggressiveReminderSystem from "@/components/notifications/AggressiveReminderSystem";
 import StickyNotes from "@/components/StickyNotes";
 
 const getGreeting = () => {
@@ -23,22 +23,31 @@ const getGreeting = () => {
   return "ערב טוב";
 };
 
-// Detect task context by category
 function getTaskContext(task) {
+  if (task.context === 'work' || task.context === 'home') return task.context;
   const cat = task.category || '';
-  if (cat.startsWith('work_') || ['מע"מ','מקדמות מס','ניכויים','ביטוח לאומי','שכר'].includes(cat)) return 'work';
-  if (cat === 'home' || cat === 'personal' || cat.startsWith('home_')) return 'home';
+  if (['מע"מ','מקדמות מס','ניכויים','ביטוח לאומי','שכר'].includes(cat)) return 'work';
+  if (cat === 'home' || cat === 'personal') return 'home';
   if (task.client_name) return 'work';
   return 'other';
 }
 
+const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+function sortByPriority(tasks) {
+  return [...tasks].sort((a, b) => {
+    const pa = PRIORITY_ORDER[a.priority] ?? 2;
+    const pb = PRIORITY_ORDER[b.priority] ?? 2;
+    if (pa !== pb) return pa - pb;
+    return new Date(a.due_date || 0) - new Date(b.due_date || 0);
+  });
+}
+
 export default function HomePage() {
-  const [tasks, setTasks] = useState({ today: [], overdue: [], upcoming: [], total: 0, completed: 0 });
-  const [events, setEvents] = useState({ today: [], upcoming: [] });
-  const [workTasksCount, setWorkTasksCount] = useState(0);
-  const [homeTasksCount, setHomeTasksCount] = useState(0);
+  const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [userName, setUserName] = useState("משתמש");
+  const [userName, setUserName] = useState("");
+  const [showAllOverdue, setShowAllOverdue] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -50,71 +59,61 @@ export default function HomePage() {
         if (user?.full_name) setUserName(user.full_name.split(" ")[0]);
       } catch { /* no user */ }
 
-      // Load ALL tasks and events directly
       const [tasksData, eventsData] = await Promise.all([
         Task.list("-due_date", 5000).catch(() => []),
-        Event.list("-start_date", 1000).catch(() => []),
+        Event.list("-start_date", 500).catch(() => []),
       ]);
 
       const rawTasks = Array.isArray(tasksData) ? tasksData : [];
       const nowMs = Date.now();
-
-      // Filter stale tasks
-      const allTasks = rawTasks.filter(task => {
-        const taskDate = task.due_date || task.created_date;
-        if (!taskDate) return true;
-        const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
-        if (task.status === 'completed' && daysSince > 14) return false;
-        if (task.status !== 'completed' && daysSince > 21) return false;
-        return true;
-      });
-
-      // Count by context
-      const activeTasks = allTasks.filter(t => t.status !== 'completed');
-      setWorkTasksCount(activeTasks.filter(t => getTaskContext(t) === 'work').length);
-      setHomeTasksCount(activeTasks.filter(t => getTaskContext(t) === 'home').length);
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const nextWeek = new Date(today);
-      nextWeek.setDate(nextWeek.getDate() + 7);
+      const in3Days = new Date(today);
+      in3Days.setDate(in3Days.getDate() + 3);
 
-      const todayTasks = allTasks.filter(task => {
-        const dateString = task.due_date || task.scheduled_start;
-        if (!dateString) return false;
-        try {
-          const taskDate = parseISO(dateString);
-          taskDate.setHours(0, 0, 0, 0);
-          return taskDate.getTime() === today.getTime();
-        } catch { return false; }
+      // Filter out very old tasks
+      const allTasks = rawTasks.filter(task => {
+        const taskDate = task.due_date || task.created_date;
+        if (!taskDate) return true;
+        const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (task.status === 'completed' && daysSince > 7) return false;
+        if (task.status !== 'completed' && daysSince > 30) return false;
+        return true;
       });
 
-      const overdueTasksList = allTasks.filter(task => {
-        if (task.status === 'completed') return false;
-        const dateString = task.due_date || task.scheduled_start;
-        if (!dateString) return false;
-        try {
-          const taskDate = parseISO(dateString);
-          taskDate.setHours(23, 59, 59, 999);
-          return taskDate < today;
-        } catch { return false; }
+      const activeTasks = allTasks.filter(t => t.status !== 'completed');
+
+      // Overdue
+      const overdue = activeTasks.filter(task => {
+        const d = task.due_date;
+        if (!d) return false;
+        const taskDate = parseISO(d);
+        taskDate.setHours(23, 59, 59, 999);
+        return taskDate < today;
       });
 
-      const upcomingTasks = allTasks.filter(task => {
-        if (task.status === 'completed') return false;
-        const dateString = task.due_date || task.scheduled_start;
-        if (!dateString) return false;
-        try {
-          const taskDate = parseISO(dateString);
-          taskDate.setHours(0, 0, 0, 0);
-          return taskDate >= tomorrow && taskDate <= nextWeek;
-        } catch { return false; }
-      }).sort((a, b) => new Date(a.due_date || a.scheduled_start) - new Date(b.due_date || b.scheduled_start));
+      // Today
+      const todayTasks = activeTasks.filter(task => {
+        const d = task.due_date;
+        if (!d) return false;
+        const taskDate = parseISO(d);
+        taskDate.setHours(0, 0, 0, 0);
+        return taskDate.getTime() === today.getTime();
+      });
 
+      // Next 3 days
+      const upcoming = activeTasks.filter(task => {
+        const d = task.due_date;
+        if (!d) return false;
+        const taskDate = parseISO(d);
+        taskDate.setHours(0, 0, 0, 0);
+        return taskDate >= tomorrow && taskDate <= in3Days;
+      });
+
+      // Events
       const allEvents = Array.isArray(eventsData) ? eventsData : [];
-
       const todayEvents = allEvents.filter(event => {
         if (!event.start_date) return false;
         const eventDate = parseISO(event.start_date);
@@ -122,23 +121,25 @@ export default function HomePage() {
         return eventDate.getTime() === today.getTime();
       });
 
-      const upcomingEvents = allEvents.filter(event => {
-        if (!event.start_date) return false;
-        const eventDate = parseISO(event.start_date);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= tomorrow && eventDate <= nextWeek;
-      }).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+      // Counts
+      const workCount = activeTasks.filter(t => getTaskContext(t) === 'work').length;
+      const homeCount = activeTasks.filter(t => getTaskContext(t) === 'home').length;
 
-      setTasks({
-        today: todayTasks,
-        overdue: overdueTasksList,
-        upcoming: upcomingTasks,
-        total: allTasks.length,
-        completed: allTasks.filter(t => t.status === 'completed').length,
+      setData({
+        overdue: sortByPriority(overdue),
+        today: sortByPriority(todayTasks),
+        upcoming: sortByPriority(upcoming),
+        todayEvents,
+        workCount,
+        homeCount,
+        totalActive: activeTasks.length,
+        completedToday: allTasks.filter(t => {
+          if (t.status !== 'completed') return false;
+          const d = t.updated_date || t.due_date;
+          if (!d) return false;
+          try { return isToday(parseISO(d)); } catch { return false; }
+        }).length,
       });
-
-      setEvents({ today: todayEvents, upcoming: upcomingEvents });
-
     } catch (error) {
       console.error("Error loading home page data:", error);
     } finally {
@@ -146,333 +147,333 @@ export default function HomePage() {
     }
   };
 
-  const LoadingSkeleton = () => (
-    <div className="space-y-6">
-      <div className="h-12 bg-gray-200 rounded-lg animate-pulse" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-24 bg-gray-200 rounded-lg animate-pulse" />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        <div className="h-64 bg-gray-200 rounded-lg animate-pulse" />
+  if (isLoading || !data) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="h-16 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-gray-200 rounded-lg animate-pulse" />)}
+        </div>
         <div className="h-64 bg-gray-200 rounded-lg animate-pulse" />
       </div>
-    </div>
-  );
-
-  if (isLoading) {
-    return <LoadingSkeleton />;
+    );
   }
+
+  const hasUrgent = data.overdue.length > 0 || data.today.some(t => t.priority === 'urgent');
 
   return (
     <motion.div
-      className="space-y-8"
+      className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.4 }}
     >
-      {/* Greeting */}
+      {/* Greeting - compact */}
       <motion.div
-        initial={{ y: -20, opacity: 0 }}
+        initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="text-center space-y-2"
+        className="flex items-center justify-between"
       >
-        <h1 className="text-4xl font-bold text-gray-800">
-          {getGreeting()}, {userName}!
-        </h1>
-        <p className="text-xl text-gray-600">
-          {format(new Date(), 'EEEE, d בMMMM yyyy')}
-        </p>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {getGreeting()}{userName ? `, ${userName}` : ''}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {format(new Date(), 'EEEE, d בMMMM', { locale: he })}
+          </p>
+        </div>
+        {data.completedToday > 0 && (
+          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1">
+            <CheckCircle className="w-3.5 h-3.5" />
+            {data.completedToday} הושלמו היום
+          </Badge>
+        )}
       </motion.div>
 
-      {/* Aggressive Reminder System - Safety Net */}
-      <AggressiveReminderSystem />
-
-      {/* Quick Stats */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-4 gap-4"
-      >
+      {/* Quick counters */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Link to={createPageUrl("Tasks?context=work")}>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-blue-200 bg-blue-50">
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Briefcase className="w-6 h-6 text-blue-600" />
-                <span className="text-2xl font-bold text-blue-600">{workTasksCount}</span>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200 bg-blue-50/70">
+            <CardContent className="p-3 flex items-center gap-3">
+              <Briefcase className="w-5 h-5 text-blue-600" />
+              <div>
+                <div className="text-xl font-bold text-blue-700">{data.workCount}</div>
+                <div className="text-[11px] text-blue-600">משימות עבודה</div>
               </div>
-              <p className="text-blue-800 font-medium">משימות עבודה</p>
             </CardContent>
           </Card>
         </Link>
-
         <Link to={createPageUrl("Tasks?context=home")}>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-green-200 bg-green-50">
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <HomeIcon className="w-6 h-6 text-green-600" />
-                <span className="text-2xl font-bold text-green-600">{homeTasksCount}</span>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200 bg-green-50/70">
+            <CardContent className="p-3 flex items-center gap-3">
+              <HomeIcon className="w-5 h-5 text-green-600" />
+              <div>
+                <div className="text-xl font-bold text-green-700">{data.homeCount}</div>
+                <div className="text-[11px] text-green-600">משימות בית</div>
               </div>
-              <p className="text-green-800 font-medium">משימות בית</p>
             </CardContent>
           </Card>
         </Link>
-
         <Link to={createPageUrl("Calendar")}>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-purple-200 bg-purple-50">
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Calendar className="w-6 h-6 text-purple-600" />
-                <span className="text-2xl font-bold text-purple-600">{events.today.length}</span>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200 bg-purple-50/70">
+            <CardContent className="p-3 flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-purple-600" />
+              <div>
+                <div className="text-xl font-bold text-purple-700">{data.todayEvents.length}</div>
+                <div className="text-[11px] text-purple-600">אירועים היום</div>
               </div>
-              <p className="text-purple-800 font-medium">אירועים היום</p>
             </CardContent>
           </Card>
         </Link>
-
-        <Card className={`border-2 ${tasks.overdue.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}>
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Clock className={`w-6 h-6 ${tasks.overdue.length > 0 ? 'text-amber-600' : 'text-gray-400'}`} />
-              <span className={`text-2xl font-bold ${tasks.overdue.length > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
-                {tasks.overdue.length}
-              </span>
+        <Card className={`border-2 ${data.overdue.length > 0 ? 'border-amber-300 bg-amber-50/70' : 'border-gray-200 bg-gray-50/70'}`}>
+          <CardContent className="p-3 flex items-center gap-3">
+            <Clock className={`w-5 h-5 ${data.overdue.length > 0 ? 'text-amber-600' : 'text-gray-400'}`} />
+            <div>
+              <div className={`text-xl font-bold ${data.overdue.length > 0 ? 'text-amber-700' : 'text-gray-400'}`}>
+                {data.overdue.length}
+              </div>
+              <div className={`text-[11px] ${data.overdue.length > 0 ? 'text-amber-600' : 'text-gray-500'}`}>
+                באיחור
+              </div>
             </div>
-            <p className={`font-medium ${tasks.overdue.length > 0 ? 'text-amber-800' : 'text-gray-600'}`}>
-              ממתינות לטיפול
-            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* OVERDUE - alert style, max 3 visible */}
+      {data.overdue.length > 0 && (
+        <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
+          <Card className="border-amber-300 bg-amber-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <span className="text-amber-800">משימות באיחור</span>
+                <Badge className="bg-amber-200 text-amber-800 text-xs">{data.overdue.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(showAllOverdue ? data.overdue : data.overdue.slice(0, 3)).map(task => (
+                <TaskRow key={task.id} task={task} showDaysOverdue />
+              ))}
+              {data.overdue.length > 3 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                  onClick={() => setShowAllOverdue(!showAllOverdue)}
+                >
+                  <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showAllOverdue ? 'rotate-180' : ''}`} />
+                  {showAllOverdue ? 'הצג פחות' : `עוד ${data.overdue.length - 3} משימות`}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* TODAY'S EVENTS */}
+      {data.todayEvents.length > 0 && (
+        <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
+          <Card className="border-purple-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Calendar className="w-5 h-5 text-purple-600" />
+                <span>אירועים היום</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {data.todayEvents.map(event => (
+                <div key={event.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-purple-50 border border-purple-100">
+                  <div className="text-sm font-mono font-semibold text-purple-700 min-w-[50px]">
+                    {format(parseISO(event.start_date), 'HH:mm')}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-purple-900 truncate">{event.title}</div>
+                    {event.description && (
+                      <div className="text-xs text-purple-600 truncate">{event.description}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* TODAY'S FOCUS - tasks for today */}
+      <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Target className="w-5 h-5 text-blue-600" />
+                <span>הפוקוס להיום</span>
+                {data.today.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">{data.today.length}</Badge>
+                )}
+              </CardTitle>
+              <Link to={createPageUrl("Tasks")}>
+                <Button variant="ghost" size="sm" className="text-xs text-gray-500 gap-1">
+                  כל המשימות <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {data.today.length === 0 ? (
+              <div className="text-center py-6">
+                <Sparkles className="w-10 h-10 mx-auto text-emerald-400 mb-2" />
+                <p className="text-sm text-gray-500">אין משימות מתוכננות להיום</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {data.today.slice(0, 7).map(task => (
+                  <TaskRow key={task.id} task={task} />
+                ))}
+                {data.today.length > 7 && (
+                  <Link to={createPageUrl("Tasks")}>
+                    <Button variant="ghost" size="sm" className="w-full text-gray-500">
+                      עוד {data.today.length - 7} משימות...
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
-        {/* Today's Focus */}
-        <motion.div
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Target className="w-6 h-6 text-blue-600" />
-                הפוקוס שלך להיום
+      {/* UPCOMING 3 DAYS */}
+      {data.upcoming.length > 0 && (
+        <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
+          <Card className="border-gray-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="w-5 h-5 text-gray-500" />
+                <span>3 ימים הקרובים</span>
+                <Badge variant="secondary" className="text-xs">{data.upcoming.length}</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {tasks.today.length === 0 && events.today.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                    יום פנוי! 🎉
-                  </h3>
-                  <p className="text-gray-500 mb-4">
-                    אין משימות או אירועים מתוכננים להיום
-                  </p>
-                  <Link to={createPageUrl("Tasks")}>
-                    <Button>
-                      <Plus className="w-4 h-4 ml-2" />
-                      הוסף משימה חדשה
-                    </Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Today's Events */}
-                  {events.today.map((event) => (
-                    <div key={event.id} className="p-3 border rounded-lg bg-purple-50 border-purple-200">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold text-purple-800">{event.title}</h4>
-                          {event.description && (
-                            <p className="text-sm text-purple-600 mt-1">{event.description}</p>
-                          )}
-                        </div>
-                        <div className="text-sm text-purple-700">
-                          {format(parseISO(event.start_date), 'HH:mm')}
-                          {event.end_date && ` - ${format(parseISO(event.end_date), 'HH:mm')}`}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Today's Tasks */}
-                  {tasks.today.map((task) => {
-                    const ctx = getTaskContext(task);
-                    const ctxColors = ctx === 'work' ? 'bg-blue-50 border-blue-200 text-blue-800' :
-                      ctx === 'home' ? 'bg-green-50 border-green-200 text-green-800' :
-                      'bg-gray-50 border-gray-200 text-gray-800';
-                    return (
-                      <div key={task.id} className={`p-3 border rounded-lg ${ctxColors.split(' ').slice(0,2).join(' ')}`}>
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h4 className={`font-semibold ${ctxColors.split(' ').pop()}`}>
-                              {task.title}
-                            </h4>
-                            {task.client_name && (
-                              <p className="text-xs text-gray-500 mt-0.5">{task.client_name}</p>
-                            )}
-                            <div className="flex items-center gap-2 mt-2">
-                              {task.category && (
-                                <Badge variant="outline" className="text-xs">{task.category}</Badge>
-                              )}
-                              {task.priority && (
-                                <Badge variant="outline" className="text-xs">
-                                  {task.priority === 'urgent' ? 'דחוף' :
-                                   task.priority === 'high' ? 'גבוה' :
-                                   task.priority === 'medium' ? 'בינוני' : 'נמוך'}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  <Link to={createPageUrl("Tasks")}>
-                    <Button variant="outline" className="w-full mt-4">
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                      ראה את כל המשימות
-                    </Button>
-                  </Link>
-                </div>
+            <CardContent className="space-y-2">
+              {data.upcoming.slice(0, 5).map(task => (
+                <TaskRow key={task.id} task={task} showDate />
+              ))}
+              {data.upcoming.length > 5 && (
+                <Link to={createPageUrl("Tasks")}>
+                  <Button variant="ghost" size="sm" className="w-full text-gray-500">
+                    עוד {data.upcoming.length - 5} משימות...
+                  </Button>
+                </Link>
               )}
             </CardContent>
           </Card>
         </motion.div>
+      )}
 
-        {/* Overdue Tasks */}
-        <motion.div
-          initial={{ x: 20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Clock className="w-6 h-6 text-amber-600" />
-                ממתינות לטיפול
-                {tasks.overdue.length > 0 && (
-                  <Badge className="bg-amber-100 text-amber-700 border-amber-200">{tasks.overdue.length}</Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {tasks.overdue.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="w-16 h-16 mx-auto text-emerald-500 mb-4" />
-                  <h3 className="text-lg font-semibold text-emerald-700 mb-2">
-                    כל כך נחמד! 👏
-                  </h3>
-                  <p className="text-emerald-600">
-                    אין משימות ממתינות
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {tasks.overdue.slice(0, 5).map((task) => (
-                    <div key={task.id} className="p-3 border rounded-lg bg-amber-50 border-amber-200">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-amber-800">{task.title}</h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">
-                              {Math.ceil((new Date() - parseISO(task.due_date || task.scheduled_start)) / (1000 * 60 * 60 * 24))} ימים
-                            </Badge>
-                            {task.client_name && (
-                              <span className="text-xs text-gray-500">{task.client_name}</span>
-                            )}
-                            {task.category && (
-                              <span className="text-xs text-amber-600">{task.category}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {tasks.overdue.length > 5 && (
-                    <p className="text-sm text-amber-600 text-center">
-                      ועוד {tasks.overdue.length - 5} משימות ממתינות...
-                    </p>
-                  )}
-
-                  <Link to={createPageUrl("Tasks")}>
-                    <Button variant="outline" className="w-full mt-4 border-amber-200 text-amber-700 hover:bg-amber-50">
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                      צפה במשימות
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Sticky Notes */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.35 }}
-      >
-        <Card className="shadow-sm border-amber-200/50 bg-amber-50/20">
+      {/* Sticky Notes - compact */}
+      <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
+        <Card className="border-amber-200/50 bg-amber-50/20">
           <CardContent className="p-4">
             <StickyNotes compact={true} />
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - compact grid */}
       <motion.div
-        initial={{ y: 20, opacity: 0 }}
+        initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        transition={{ delay: 0.35 }}
+        className="grid grid-cols-2 md:grid-cols-4 gap-3"
       >
         <Link to={createPageUrl("WeeklyPlanningDashboard")}>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6 text-center">
-              <Target className="w-8 h-8 mx-auto mb-3 text-blue-600" />
-              <h3 className="font-semibold text-blue-800 mb-2">תכנון שבועי</h3>
-              <p className="text-sm text-blue-600">תכנן את השבוע שלך</p>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200 bg-blue-50/50 h-full">
+            <CardContent className="p-4 text-center">
+              <Brain className="w-6 h-6 mx-auto mb-2 text-blue-600" />
+              <h3 className="font-medium text-sm text-blue-800">תכנון שבועי</h3>
             </CardContent>
           </Card>
         </Link>
-
-        <Link to={createPageUrl("ClientManagement")}>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6 text-center">
-              <UserIcon className="w-8 h-8 mx-auto mb-3 text-green-600" />
-              <h3 className="font-semibold text-green-800 mb-2">ניהול לקוחות</h3>
-              <p className="text-sm text-green-600">הוסף ונהל לקוחות</p>
+        <Link to={createPageUrl("PayrollDashboard")}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-gray-200 bg-gray-50/50 h-full">
+            <CardContent className="p-4 text-center">
+              <Briefcase className="w-6 h-6 mx-auto mb-2 text-gray-600" />
+              <h3 className="font-medium text-sm text-gray-800">שכר ודיווחים</h3>
             </CardContent>
           </Card>
         </Link>
-
-        <Link to={createPageUrl("Calendar")}>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-6 text-center">
-              <Calendar className="w-8 h-8 mx-auto mb-3 text-purple-600" />
-              <h3 className="font-semibold text-purple-800 mb-2">לוח שנה</h3>
-              <p className="text-sm text-purple-600">ראה כל הפגישות</p>
+        <Link to={createPageUrl("AutomationRules")}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-yellow-200 bg-yellow-50/50 h-full">
+            <CardContent className="p-4 text-center">
+              <Zap className="w-6 h-6 mx-auto mb-2 text-yellow-600" />
+              <h3 className="font-medium text-sm text-yellow-800">אוטומציות</h3>
             </CardContent>
           </Card>
         </Link>
-
         <Link to={createPageUrl("WeeklySummary")}>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-6 text-center">
-              <FileBarChart className="w-8 h-8 mx-auto mb-3 text-orange-600" />
-              <h3 className="font-semibold text-orange-800 mb-2">סיכום שבועי</h3>
-              <p className="text-sm text-orange-600">מה נפל? מה הושלם?</p>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200 bg-orange-50/50 h-full">
+            <CardContent className="p-4 text-center">
+              <FileBarChart className="w-6 h-6 mx-auto mb-2 text-orange-600" />
+              <h3 className="font-medium text-sm text-orange-800">סיכום שבועי</h3>
             </CardContent>
           </Card>
         </Link>
       </motion.div>
     </motion.div>
+  );
+}
+
+function TaskRow({ task, showDaysOverdue, showDate }) {
+  const ctx = getTaskContext(task);
+  const isWork = ctx === 'work';
+  const isHome = ctx === 'home';
+
+  const priorityStyles = {
+    urgent: 'border-r-4 border-r-red-500',
+    high: 'border-r-4 border-r-orange-400',
+    medium: 'border-r-4 border-r-yellow-400',
+    low: 'border-r-4 border-r-gray-300',
+  };
+
+  const daysOverdue = task.due_date
+    ? differenceInDays(new Date(), parseISO(task.due_date))
+    : 0;
+
+  return (
+    <div className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'}`}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm text-gray-800 truncate">{task.title}</span>
+          {task.priority === 'urgent' && (
+            <Badge className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0">דחוף</Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2 mt-0.5">
+          {task.client_name && (
+            <span className="text-[11px] text-gray-500 truncate max-w-[150px]">{task.client_name}</span>
+          )}
+          {task.category && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{task.category}</Badge>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {showDaysOverdue && daysOverdue > 0 && (
+          <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0">
+            {daysOverdue} ימים
+          </Badge>
+        )}
+        {showDate && task.due_date && (
+          <span className="text-[11px] text-gray-400">
+            {isTomorrow(parseISO(task.due_date)) ? 'מחר' : format(parseISO(task.due_date), 'd/M')}
+          </span>
+        )}
+        {isWork ? (
+          <Briefcase className="w-3.5 h-3.5 text-blue-500" />
+        ) : isHome ? (
+          <HomeIcon className="w-3.5 h-3.5 text-green-500" />
+        ) : null}
+      </div>
+    </div>
   );
 }
