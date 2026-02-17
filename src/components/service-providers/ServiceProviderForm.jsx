@@ -101,9 +101,18 @@ export default function ServiceProviderForm({ provider, serviceCompanyId, onSubm
   }, []);
 
   const handleCreateCompany = async () => {
-    if (!newCompanyName.trim()) return;
+    if (!newCompanyName.trim() || isSavingCompany) return;
     setIsSavingCompany(true);
     try {
+      // Check for existing company with same name to prevent duplicates
+      const existing = companies.find(c => c.name.trim().toLowerCase() === newCompanyName.trim().toLowerCase());
+      if (existing) {
+        handleChange('service_company_id', existing.id);
+        setNewCompanyName('');
+        setIsCreatingCompany(false);
+        setIsSavingCompany(false);
+        return;
+      }
       const newCompany = await ServiceCompany.create({ name: newCompanyName.trim() });
       await fetchCompanies();
       handleChange('service_company_id', newCompany.id);
