@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Client, Task } from '@/api/entities';
-import { TASK_BOARD_CATEGORIES } from '@/config/automationRules';
+import { TASK_BOARD_CATEGORIES, getTaskReportingMonth } from '@/config/automationRules';
 import {
   Trash2, Search, CheckCircle, AlertTriangle, Loader2,
   ChevronDown, ChevronRight, User, Tag, Calendar, XCircle
@@ -44,6 +44,7 @@ const REASON_COLORS = {
   orphan_service: 'bg-orange-100 text-orange-700 border-orange-200',
   wrong_month: 'bg-amber-100 text-amber-700 border-amber-200',
   wrong_month_current: 'bg-blue-100 text-blue-700 border-blue-200',
+  missing_reporting_month: 'bg-purple-100 text-purple-700 border-purple-200',
   freq_na: 'bg-gray-100 text-gray-600 border-gray-200',
 };
 
@@ -52,6 +53,7 @@ const REASON_LABELS = {
   orphan_service: 'שירות יתום (שכר הוסר)',
   wrong_month: 'חודש לא רלוונטי (דו-חודשי)',
   wrong_month_current: 'יעד בחודש דיווח (צריך חודש מועד)',
+  missing_reporting_month: 'חסר תיוג חודש דיווח',
   freq_na: 'תדירות לא רלוונטית',
 };
 
@@ -176,6 +178,19 @@ export default function CleanupTool({ rules = [] }) {
           } catch { /* skip */ }
         }
 
+        // Check 4: Task missing reporting_month field - needs tagging
+        if (!reason && task.due_date && !task.reporting_month) {
+          const parsed = getTaskReportingMonth(task);
+          const dueDateMonth = task.due_date.substring(0, 7);
+          // If parsed reporting month differs from due_date month, it means the task
+          // has M+1 due_date but no reporting_month tag
+          if (parsed && parsed !== dueDateMonth) {
+            reason = 'missing_reporting_month';
+            const reportName = new Date(parsed + '-01').toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+            detail = `חסר תיוג חודש דיווח - זוהה מהכותרת: ${reportName}`;
+          }
+        }
+
         if (reason) {
           const key = client.name || task.client_name || 'לא ידוע';
           if (!byClient[key]) byClient[key] = { client, items: [] };
@@ -221,12 +236,14 @@ export default function CleanupTool({ rules = [] }) {
     if (toClean.length === 0) return;
 
     const wrongMonthCount = toClean.filter(i => i.reason === 'wrong_month_current').length;
-    const notRelevantCount = toClean.length - wrongMonthCount;
-    const confirmMsg = wrongMonthCount > 0 && notRelevantCount > 0
-      ? `לתקן ${wrongMonthCount} תאריכי יעד (להזיז לחודש המועד) ולסמן ${notRelevantCount} כ"לא רלוונטי"?`
-      : wrongMonthCount > 0
-      ? `לתקן ${wrongMonthCount} תאריכי יעד (להזיז מחודש דיווח לחודש מועד)?`
-      : `לסמן ${toClean.length} משימות כ"לא רלוונטי"?`;
+    const missingTagCount = toClean.filter(i => i.reason === 'missing_reporting_month').length;
+    const fixCount = wrongMonthCount + missingTagCount;
+    const notRelevantCount = toClean.length - fixCount;
+    const parts = [];
+    if (wrongMonthCount > 0) parts.push(`לתקן ${wrongMonthCount} תאריכי יעד`);
+    if (missingTagCount > 0) parts.push(`לתייג ${missingTagCount} משימות עם חודש דיווח`);
+    if (notRelevantCount > 0) parts.push(`לסמן ${notRelevantCount} כ"לא רלוונטי"`);
+    const confirmMsg = parts.join(' + ') + '?';
     if (!window.confirm(confirmMsg)) return;
 
     setExecuting(true);
@@ -250,6 +267,12 @@ export default function CleanupTool({ rules = [] }) {
             due_date: fixedDateStr,
             reporting_month: reportingMonth,
           });
+        } else if (item.reason === 'missing_reporting_month') {
+          // Tag with reporting_month without changing due_date
+          const parsed = getTaskReportingMonth(item.task);
+          if (parsed) {
+            await Task.update(item.task.id, { reporting_month: parsed });
+          }
         } else {
           await Task.update(item.task.id, { status: 'not_relevant' });
         }
@@ -454,22 +477,24 @@ export default function CleanupTool({ rules = [] }) {
                   const allItems = Object.values(findings.byClient).flatMap(g => g.items);
                   const selectedItemsArr = allItems.filter(i => selectedArr.includes(i.id));
                   const fixMonthCount = selectedItemsArr.filter(i => i.reason === 'wrong_month_current').length;
-                  const markNrCount = selectedCount - fixMonthCount;
-                  const label = fixMonthCount > 0 && markNrCount > 0
-                    ? `תקן ${fixMonthCount} יעדים + סמן ${markNrCount} לא-רלוונטי`
-                    : fixMonthCount > 0
-                    ? `תקן ${fixMonthCount} תאריכי יעד (→ חודש מועד)`
-                    : `סמן ${selectedCount} כ"לא רלוונטי"`;
+                  const tagCount = selectedItemsArr.filter(i => i.reason === 'missing_reporting_month').length;
+                  const totalFixCount = fixMonthCount + tagCount;
+                  const markNrCount = selectedCount - totalFixCount;
+                  const labelParts = [];
+                  if (fixMonthCount > 0) labelParts.push(`תקן ${fixMonthCount} יעדים`);
+                  if (tagCount > 0) labelParts.push(`תייג ${tagCount} חודש דיווח`);
+                  if (markNrCount > 0) labelParts.push(`סמן ${markNrCount} לא-רלוונטי`);
+                  const label = labelParts.join(' + ') || `סמן ${selectedCount} כ"לא רלוונטי"`;
                   return (
                     <div className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-teal-200">
                       <div className="text-sm text-gray-600">
                         נבחרו <strong className="text-teal-700">{selectedCount}</strong> מתוך {findings.total} משימות
-                        {fixMonthCount > 0 && <span className="text-blue-600 text-xs mr-2">({fixMonthCount} תיקון חודש)</span>}
+                        {totalFixCount > 0 && <span className="text-blue-600 text-xs mr-2">({totalFixCount} תיקונים)</span>}
                       </div>
                       <Button
                         onClick={handleExecute}
                         disabled={executing || selectedCount === 0}
-                        className={`gap-1 text-white ${fixMonthCount > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}
+                        className={`gap-1 text-white ${totalFixCount > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}
                         size="sm"
                       >
                         {executing ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
