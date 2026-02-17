@@ -34,49 +34,56 @@ const navigationGroups = [
           { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
         ],
       },
-      { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
       {
-        name: "לקוחות",
-        icon: Users,
+        name: "חשבות שכר והנה\"ח",
+        icon: Calculator,
         children: [
-          { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+          {
+            name: "שכר ודיווחי שכר",
+            icon: Calculator,
+            children: [
+              { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
+              { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
+              { name: "דיווחים מרכזים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
+            ],
+          },
+          {
+            name: "הנה\"ח ודיווחי מיסים",
+            icon: BookCheck,
+            children: [
+              { name: "דיווחי מיסים חודשיים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
+              { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
+              { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
+            ],
+          },
         ],
       },
       {
-        name: "שיווק וכספים",
-        icon: DollarSign,
+        name: "מרכז לקוחות",
+        icon: Users,
         children: [
+          { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
           { name: "לידים", href: createPageUrl("Leads"), icon: Target },
           { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
           { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
         ],
       },
       {
-        name: "ספקים ונותני שירותים",
+        name: "ספקים ונותני שירות",
         icon: BookUser,
         children: [
           { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
         ],
       },
       {
-        name: "הנהלת חשבונות",
-        icon: BookCheck,
+        name: "אוטומציות ומשימות",
+        icon: Zap,
         children: [
-          { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
-          { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
-        ],
-      },
-      {
-        name: "דיווחים ושכר",
-        icon: BarChart3,
-        children: [
+          { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
           { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
-          { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
-          { name: "דיווחי מיסים חודשיים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
-          { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
-          { name: "דיווחים מרכזים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
         ],
       },
+      { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
     ],
   },
   {
@@ -94,7 +101,6 @@ const navigationGroups = [
     items: [
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
-      { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
     ],
   },
 ];
@@ -110,27 +116,34 @@ export default function Layout({ children, currentPageName }) {
     }
   }, [location.pathname, navigate]);
 
+  const isNavItemActive = (item) => {
+    if (item.href) return location.pathname.startsWith(item.href);
+    if (item.children) return item.children.some(child => isNavItemActive(child));
+    return false;
+  };
+
+  const findPageTitle = (items) => {
+    for (const item of items) {
+      if (item.href && location.pathname.startsWith(item.href)) return item.name;
+      if (item.children) {
+        const title = findPageTitle(item.children);
+        if (title) return title;
+      }
+    }
+    return null;
+  };
+
   const getPageTitle = () => {
     if (location.pathname === createPageUrl("Home")) return 'פוקוס יומי';
     for (const group of navigationGroups) {
-      for (const item of group.items) {
-        if (item.children) {
-          for (const childItem of item.children) {
-            if (location.pathname.startsWith(childItem.href)) return childItem.name;
-          }
-        } else {
-          if (location.pathname.startsWith(item.href)) return item.name;
-        }
-      }
+      const title = findPageTitle(group.items);
+      if (title) return title;
     }
     return 'LitayCalmPlan';
   };
 
   const activeGroupTitle = navigationGroups.find(group =>
-    group.items.some(item =>
-      (item.children && item.children.some(child => location.pathname.startsWith(child.href))) ||
-      (!item.children && location.pathname.startsWith(item.href))
-    )
+    group.items.some(item => isNavItemActive(item))
   )?.title;
 
   const isHomePage = location.pathname === createPageUrl("Home");
@@ -237,7 +250,7 @@ export default function Layout({ children, currentPageName }) {
                     </AccordionTrigger>
                     <AccordionContent className="pt-2 pb-1 px-1 space-y-1 bg-card">
                       {group.items.map((item) => {
-                        const hasActiveChild = item.children && item.children.some(child => location.pathname.startsWith(child.href));
+                        const hasActiveChild = isNavItemActive(item);
 
                         if (item.children) {
                           return (
@@ -257,6 +270,46 @@ export default function Layout({ children, currentPageName }) {
                                 </AccordionTrigger>
                                 <AccordionContent className="pt-2 pb-1 px-1 space-y-1 bg-card">
                                   {item.children.map((childItem) => {
+                                    if (childItem.children) {
+                                      const hasActiveSubChild = isNavItemActive(childItem);
+                                      return (
+                                        <Accordion
+                                          type="single"
+                                          collapsible
+                                          className="w-full pr-1"
+                                          defaultValue={hasActiveSubChild ? childItem.name : undefined}
+                                          key={childItem.name}
+                                        >
+                                          <AccordionItem value={childItem.name} className="border-none rounded-lg overflow-hidden bg-muted/10">
+                                            <AccordionTrigger className="p-2.5 pr-4 text-sm font-semibold text-foreground hover:no-underline hover:bg-muted/40 rounded-lg">
+                                              <div className="flex items-center gap-2">
+                                                <childItem.icon className="w-4 h-4 text-primary/70" />
+                                                <span>{childItem.name}</span>
+                                              </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="pt-1 pb-1 px-1 space-y-0.5">
+                                              {childItem.children.map((subItem) => {
+                                                const isActive = location.pathname.startsWith(subItem.href);
+                                                const subClasses = `group flex items-center pr-8 pl-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'text-foreground hover:bg-primary/10'}`;
+                                                const subIconClasses = `ml-2 h-3.5 w-3.5 ${isActive ? 'text-primary-foreground' : 'text-primary/70'}`;
+                                                return (
+                                                  <Link
+                                                    key={subItem.name}
+                                                    to={subItem.href}
+                                                    onClick={() => setIsMobileMenuOpen(false)}
+                                                    className={subClasses}
+                                                  >
+                                                    <subItem.icon className={subIconClasses} />
+                                                    {subItem.name}
+                                                  </Link>
+                                                );
+                                              })}
+                                            </AccordionContent>
+                                          </AccordionItem>
+                                        </Accordion>
+                                      );
+                                    }
+
                                     const isActive = location.pathname.startsWith(childItem.href);
                                     const itemClasses = `group flex items-center pr-6 pl-3 py-2.5 text-base font-medium rounded-lg transition-all duration-300 ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'text-foreground hover:bg-primary/10'}`;
                                     const iconClasses = `ml-3 h-4 w-4 ${isActive ? 'text-primary-foreground' : 'text-primary/80'}`;
