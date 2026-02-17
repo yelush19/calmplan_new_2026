@@ -37,6 +37,36 @@ export const BUSINESS_TYPES = {
 export const REPORT_ENTITIES = {
   PeriodicReport: 'דיווחים מרכזים תקופתיים',
   BalanceSheet: 'מאזנים שנתיים',
+  AccountReconciliation: 'התאמות חשבונות',
+  Task_monthly_reports: 'ריכוז דיווחים חודשיים',
+  Task_tax_reports: 'דיווחי מיסים חודשיים',
+  Task_payroll: 'שכר ודיווחי רשויות',
+};
+
+// Task categories per board (for Task-based boards)
+export const TASK_BOARD_CATEGORIES = {
+  Task_monthly_reports: [
+    { key: 'מע"מ', label: 'מע"מ', service: 'vat_reporting' },
+    { key: 'מקדמות מס', label: 'מקדמות מס', service: 'tax_advances' },
+    { key: 'שכר', label: 'שכר', service: 'payroll' },
+    { key: 'ביטוח לאומי', label: 'ביטוח לאומי', service: 'social_security' },
+    { key: 'ניכויים', label: 'ניכויים', service: 'deductions' },
+  ],
+  Task_tax_reports: [
+    { key: 'מע"מ', label: 'מע"מ', service: 'vat_reporting' },
+    { key: 'מקדמות מס', label: 'מקדמות מס', service: 'tax_advances' },
+  ],
+  Task_payroll: [
+    { key: 'שכר', label: 'שכר', service: 'payroll' },
+    { key: 'ביטוח לאומי', label: 'ביטוח לאומי', service: 'social_security' },
+    { key: 'ניכויים', label: 'ניכויים', service: 'deductions' },
+  ],
+};
+
+// Reconciliation types
+export const RECONCILIATION_TYPES = {
+  bank_credit: 'בנקים/אשראי',
+  internal: 'פנימי',
 };
 
 export const PERIODIC_REPORT_TYPES = {
@@ -125,6 +155,50 @@ export const DEFAULT_RULES = [
     target_entity: 'BalanceSheet',
     report_types: null,
   },
+  {
+    id: 'bookkeeping_reconciliation',
+    name: 'הנה"ח + חברה → שורות התאמה',
+    description: 'שמירת לקוח חברה עם הנה"ח → יצירת שורות התאמות חשבונות',
+    type: 'report_auto_create',
+    enabled: true,
+    trigger_services: ['bookkeeping', 'bookkeeping_full'],
+    target_entity: 'AccountReconciliation',
+    report_types: null,
+    condition: { field: 'business_type', value: 'company' },
+  },
+  {
+    id: 'vat_monthly_task',
+    name: 'מע"מ → משימת דיווח חודשי',
+    description: 'שמירת לקוח עם מע"מ → יצירת משימת דיווח חודשי',
+    type: 'report_auto_create',
+    enabled: true,
+    trigger_services: ['vat_reporting'],
+    target_entity: 'Task_monthly_reports',
+    task_categories: ['מע"מ'],
+    report_types: null,
+  },
+  {
+    id: 'tax_advances_monthly_task',
+    name: 'מקדמות מס → משימת דיווח חודשי',
+    description: 'שמירת לקוח עם מקדמות מס → יצירת משימת דיווח חודשי',
+    type: 'report_auto_create',
+    enabled: true,
+    trigger_services: ['tax_advances'],
+    target_entity: 'Task_monthly_reports',
+    task_categories: ['מקדמות מס'],
+    report_types: null,
+  },
+  {
+    id: 'payroll_monthly_task',
+    name: 'שכר → משימות דיווח חודשי',
+    description: 'שמירת לקוח עם שכר → יצירת משימות שכר, ביט"ל, ניכויים',
+    type: 'report_auto_create',
+    enabled: true,
+    trigger_services: ['payroll', 'social_security', 'deductions'],
+    target_entity: 'Task_monthly_reports',
+    task_categories: ['שכר', 'ביטוח לאומי', 'ניכויים'],
+    report_types: null,
+  },
 ];
 
 // Load rules from SystemConfig (or return defaults)
@@ -194,14 +268,23 @@ export function getAutoLinkedServices(rules, triggerService, clientData) {
 }
 
 /**
- * Get report auto-create rules that match the client's services.
+ * Get report auto-create rules that match the client's services and conditions.
  * Returns matching rules with target entity and config.
  */
-export function getReportAutoCreateRules(rules, clientServices) {
+export function getReportAutoCreateRules(rules, clientServices, clientData) {
   if (!rules || !Array.isArray(rules) || !clientServices?.length) return [];
+
+  const businessType = clientData?.business_info?.business_type || clientData?.business_type || '';
 
   return rules.filter(rule => {
     if (!rule.enabled || rule.type !== 'report_auto_create') return false;
-    return (rule.trigger_services || []).some(s => clientServices.includes(s));
+    if (!(rule.trigger_services || []).some(s => clientServices.includes(s))) return false;
+    // Check condition
+    if (rule.condition) {
+      if (rule.condition.field === 'business_type' && businessType !== rule.condition.value) {
+        return false;
+      }
+    }
+    return true;
   });
 }
