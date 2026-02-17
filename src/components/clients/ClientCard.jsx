@@ -133,16 +133,25 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
     monthly: 'חודשי',
     bimonthly: 'דו-חודשי',
     quarterly: 'רבעוני',
+    semi_annual: 'חצי שנתי',
+    check_needed: 'לבדיקה',
     not_applicable: 'לא רלוונטי',
   };
 
-  const reportingFields = [
+  // Row 1: מע"מ ומקדמות
+  const reportingRow1 = [
     { key: 'vat_reporting_frequency', label: 'מע"מ' },
     { key: 'tax_advances_frequency', label: 'מקדמות' },
-    { key: 'deductions_frequency', label: 'ניכויים' },
-    { key: 'social_security_frequency', label: 'בל' },
-    { key: 'payroll_frequency', label: 'שכר' },
   ].filter(f => reportingInfo[f.key] && reportingInfo[f.key] !== 'not_applicable');
+
+  // Row 2: שכר, ב"ל וניכויים (ללקוחות עם שכר)
+  const reportingRow2 = [
+    { key: 'payroll_frequency', label: 'שכר' },
+    { key: 'social_security_frequency', label: 'ב"ל' },
+    { key: 'deductions_frequency', label: 'ניכויים' },
+  ].filter(f => reportingInfo[f.key] && reportingInfo[f.key] !== 'not_applicable');
+
+  const hasReporting = reportingRow1.length > 0 || reportingRow2.length > 0;
 
   return (
     <Card className={`w-full transform transition-all duration-300 shadow-sm hover:shadow-lg border flex flex-col group ${isSelected ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50/30' : 'border-neutral-light/80 bg-white'}`}>
@@ -202,29 +211,46 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
           </div>
         )}
         
+        {/* תדירויות דיווח - שורה 1: מע"מ ומקדמות, שורה 2: שכר ב"ל וניכויים */}
+        {hasReporting && (
+          <div className="border-t border-gray-100 pt-2 min-h-[3rem]">
+            {reportingRow1.length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                {reportingRow1.map(f => (
+                  <span key={f.key} className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-gray-400" />
+                    <span className="font-medium">{f.label}:</span>
+                    <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-semibold' : ''}>
+                      {frequencyLabels[reportingInfo[f.key]] || reportingInfo[f.key]}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
+            {reportingRow2.length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 mt-1">
+                {reportingRow2.map(f => (
+                  <span key={f.key} className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-gray-400" />
+                    <span className="font-medium">{f.label}:</span>
+                    <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-semibold' : ''}>
+                      {frequencyLabels[reportingInfo[f.key]] || reportingInfo[f.key]}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* שירותים */}
         {services.length > 0 && (
-          <div className="border-t border-gray-100 pt-3">
+          <div className="border-t border-gray-100 pt-3 mt-2">
             <div className="flex flex-wrap gap-1.5">
               {services.map(service => (
                 <Badge key={service} className={`${serviceTypeColors[service] || 'bg-gray-50 text-gray-700 border-gray-200'} text-xs px-2 py-1 border`}>
                   {serviceTypeLabels[service] || service.replace(/_/g, ' ')}
                 </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {reportingFields.length > 0 && (
-          <div className="border-t border-gray-100 pt-2 mt-2">
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-              {reportingFields.map(f => (
-                <span key={f.key} className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-gray-400" />
-                  <span className="font-medium">{f.label}:</span>
-                  <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-semibold' : ''}>
-                    {frequencyLabels[reportingInfo[f.key]] || reportingInfo[f.key]}
-                  </span>
-                </span>
               ))}
             </div>
           </div>
