@@ -80,6 +80,8 @@ import FeeManagement from "./FeeManagement";
 
 import Projects from "./Projects";
 
+import PeriodicSummaryReports from "./PeriodicSummaryReports";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -163,6 +165,8 @@ const PAGES = {
     FeeManagement: FeeManagement,
 
     Projects: Projects,
+
+    PeriodicSummaryReports: PeriodicSummaryReports,
 
 }
 
@@ -270,6 +274,8 @@ function PagesContent() {
                 <Route path="/FeeManagement" element={<FeeManagement />} />
 
                 <Route path="/Projects" element={<Projects />} />
+
+                <Route path="/PeriodicSummaryReports" element={<PeriodicSummaryReports />} />
 
             </Routes>
         </Layout>

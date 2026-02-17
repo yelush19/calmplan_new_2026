@@ -210,6 +210,7 @@ export const entities = {
   StickyNote: createEntity('sticky_notes'),
   Project: createEntity('projects'),
   SystemConfig: createEntity('system_config'),
+  PeriodicReport: createEntity('periodic_reports'),
 };
 
 export { auth };

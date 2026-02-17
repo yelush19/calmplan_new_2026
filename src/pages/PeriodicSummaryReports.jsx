@@ -1,0 +1,550 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { PeriodicReport, Client } from '@/api/entities';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle
+} from '@/components/ui/dialog';
+import {
+  Plus, RefreshCw, CheckCircle, AlertCircle, Clock, Calendar,
+  ChevronLeft, ChevronRight, FileText, Search, Pencil, Save, X,
+  AlertTriangle, Check
+} from 'lucide-react';
+import ResizableTable from '@/components/ui/ResizableTable';
+
+// ============================================================
+// Report definitions
+// ============================================================
+
+const REPORT_TYPES = {
+  bituach_leumi_126: {
+    key: 'bituach_leumi_126',
+    label: '126 - ביטוח לאומי',
+    shortLabel: 'בל 126',
+    periods: ['h1', 'h2', 'annual'],
+  },
+  deductions_126_wage: {
+    key: 'deductions_126_wage',
+    label: '126 - מרכז שכר עבודה (מ"ה ניכויים)',
+    shortLabel: 'מ"ה 126',
+    periods: ['annual'],
+  },
+};
+
+const PERIOD_CONFIG = {
+  h1: { label: 'מחצית 1', shortLabel: 'מח׳ 1', monthRange: 'ינואר-יוני' },
+  h2: { label: 'מחצית 2', shortLabel: 'מח׳ 2', monthRange: 'יולי-דצמבר' },
+  annual: { label: 'שנתי', shortLabel: 'שנתי', monthRange: 'שנתי' },
+};
+
+const STATUS_OPTIONS = [
+  { value: 'not_started', label: 'טרם התחיל', color: 'bg-gray-200 text-gray-700', dot: 'bg-gray-400' },
+  { value: 'reconciling', label: 'בהתאמות', color: 'bg-amber-200 text-amber-800', dot: 'bg-amber-500' },
+  { value: 'ready_to_submit', label: 'מוכן לשידור', color: 'bg-blue-200 text-blue-800', dot: 'bg-blue-500' },
+  { value: 'submitted', label: 'שודר', color: 'bg-green-200 text-green-800', dot: 'bg-green-500' },
+];
+
+const RECONCILIATION_STEPS = [
+  { key: 'payroll_vs_bookkeeping', label: 'התאמה: שכר מול הנהלת חשבונות' },
+  { key: 'periodic_vs_annual', label: 'התאמה: דיווחים תקופתיים מול שנתי' },
+];
+
+function getDefaultTargetDate(year, period) {
+  const y = parseInt(year);
+  if (period === 'h1') return `${y}-07-18`;
+  if (period === 'h2') return `${y + 1}-01-18`;
+  if (period === 'annual') return `${y + 1}-04-30`;
+  return '';
+}
+
+function getStatusConfig(status) {
+  return STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
+}
+
+// ============================================================
+// Report Cell Component — clickable status cell in the table
+// ============================================================
+function ReportCell({ report, onEdit }) {
+  if (!report) {
+    return <td className="p-2 text-center text-muted-foreground text-xs">—</td>;
+  }
+
+  const statusConfig = getStatusConfig(report.status);
+  const targetDate = report.target_date ? new Date(report.target_date) : null;
+  const daysLeft = targetDate ? Math.ceil((targetDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
+  const isOverdue = daysLeft !== null && daysLeft < 0 && report.status !== 'submitted';
+
+  return (
+    <td className="p-1.5 text-center">
+      <button
+        onClick={() => onEdit(report)}
+        className={`w-full p-2 rounded-lg border transition-all hover:shadow-sm text-xs ${
+          isOverdue ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+        }`}
+      >
+        <Badge className={`${statusConfig.color} text-[10px] px-1.5 py-0`}>
+          {statusConfig.label}
+        </Badge>
+        {targetDate && (
+          <div className={`text-[10px] mt-1 ${isOverdue ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
+            {targetDate.toLocaleDateString('he-IL')}
+          </div>
+        )}
+        {report.reconciliation_steps && (
+          <div className="flex justify-center gap-0.5 mt-1">
+            {RECONCILIATION_STEPS.map(step => (
+              <div
+                key={step.key}
+                className={`w-2 h-2 rounded-full ${
+                  report.reconciliation_steps?.[step.key] ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+                title={step.label}
+              />
+            ))}
+          </div>
+        )}
+      </button>
+    </td>
+  );
+}
+
+// ============================================================
+// Edit Dialog
+// ============================================================
+function EditReportDialog({ report, open, onClose, onSave }) {
+  const [editData, setEditData] = useState({});
+
+  useEffect(() => {
+    if (report) {
+      setEditData({
+        status: report.status || 'not_started',
+        target_date: report.target_date || '',
+        submission_date: report.submission_date || '',
+        notes: report.notes || '',
+        reconciliation_steps: report.reconciliation_steps || {
+          payroll_vs_bookkeeping: false,
+          periodic_vs_annual: false,
+        },
+      });
+    }
+  }, [report]);
+
+  if (!report) return null;
+
+  const periodConfig = PERIOD_CONFIG[report.period];
+  const reportType = REPORT_TYPES[report.report_type];
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="text-lg">
+            {report.client_name} — {reportType?.shortLabel} {periodConfig?.label}
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">שנת {report.report_year}</p>
+        </DialogHeader>
+
+        <div className="space-y-4 mt-2">
+          {/* Status */}
+          <div>
+            <Label className="text-sm font-semibold">סטטוס</Label>
+            <Select value={editData.status} onValueChange={(v) => setEditData(p => ({ ...p, status: v }))}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map(s => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Target date */}
+          <div>
+            <Label className="text-sm font-semibold">תאריך יעד</Label>
+            <Input
+              type="date"
+              value={editData.target_date}
+              onChange={(e) => setEditData(p => ({ ...p, target_date: e.target.value }))}
+              className="mt-1"
+            />
+          </div>
+
+          {/* Submission date */}
+          {editData.status === 'submitted' && (
+            <div>
+              <Label className="text-sm font-semibold">תאריך שידור</Label>
+              <Input
+                type="date"
+                value={editData.submission_date}
+                onChange={(e) => setEditData(p => ({ ...p, submission_date: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+          )}
+
+          {/* Reconciliation steps */}
+          <div>
+            <Label className="text-sm font-semibold mb-2 block">שלבי התאמה</Label>
+            <div className="space-y-2">
+              {RECONCILIATION_STEPS.map(step => (
+                <label key={step.key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <Checkbox
+                    checked={editData.reconciliation_steps?.[step.key] || false}
+                    onCheckedChange={(checked) => setEditData(p => ({
+                      ...p,
+                      reconciliation_steps: { ...p.reconciliation_steps, [step.key]: checked }
+                    }))}
+                  />
+                  <span className="text-sm">{step.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <Label className="text-sm font-semibold">הערות</Label>
+            <Input
+              value={editData.notes}
+              onChange={(e) => setEditData(p => ({ ...p, notes: e.target.value }))}
+              placeholder="הערות, ארכות..."
+              className="mt-1"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" onClick={onClose}>
+              <X className="w-4 h-4 ml-1" /> ביטול
+            </Button>
+            <Button onClick={() => { onSave(report.id, editData); onClose(); }}>
+              <Save className="w-4 h-4 ml-1" /> שמור
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============================================================
+// Main Page
+// ============================================================
+export default function PeriodicSummaryReports() {
+  const [reports, setReports] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear() - 1));
+  const [editingReport, setEditingReport] = useState(null);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => { loadData(); }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [reportsData, clientsData] = await Promise.all([
+        PeriodicReport.list(null, 2000).catch(() => []),
+        Client.list(null, 500).catch(() => []),
+      ]);
+      setReports(reportsData || []);
+      setClients(clientsData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+    setIsLoading(false);
+  };
+
+  // Active clients with payroll or deductions services
+  const eligibleClients = useMemo(() =>
+    clients.filter(c =>
+      c.status === 'active' &&
+      (c.service_types || []).some(st =>
+        ['payroll', 'deductions', 'social_security', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
+      )
+    ).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')),
+    [clients]
+  );
+
+  // Reports for selected year
+  const yearReports = useMemo(() =>
+    reports.filter(r => r.report_year === selectedYear),
+    [reports, selectedYear]
+  );
+
+  // Build a lookup: client_id -> report_type -> period -> report
+  const reportLookup = useMemo(() => {
+    const lookup = {};
+    yearReports.forEach(r => {
+      if (!lookup[r.client_id]) lookup[r.client_id] = {};
+      if (!lookup[r.client_id][r.report_type]) lookup[r.client_id][r.report_type] = {};
+      lookup[r.client_id][r.report_type][r.period] = r;
+    });
+    return lookup;
+  }, [yearReports]);
+
+  // Clients without reports for selected year
+  const clientsWithoutReports = useMemo(() => {
+    return eligibleClients.filter(c => !reportLookup[c.id]);
+  }, [eligibleClients, reportLookup]);
+
+  // Filtered clients
+  const filteredClients = useMemo(() => {
+    if (!search) return eligibleClients;
+    return eligibleClients.filter(c =>
+      c.name?.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [eligibleClients, search]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const total = yearReports.length;
+    const submitted = yearReports.filter(r => r.status === 'submitted').length;
+    const reconciling = yearReports.filter(r => r.status === 'reconciling').length;
+    const overdue = yearReports.filter(r =>
+      r.target_date && new Date(r.target_date) < new Date() && r.status !== 'submitted'
+    ).length;
+    return { total, submitted, reconciling, overdue };
+  }, [yearReports]);
+
+  const handleCreateForAllClients = async () => {
+    try {
+      for (const client of clientsWithoutReports) {
+        // Create all report types and periods
+        for (const [typeKey, typeDef] of Object.entries(REPORT_TYPES)) {
+          for (const period of typeDef.periods) {
+            await PeriodicReport.create({
+              client_id: client.id,
+              client_name: client.name,
+              report_year: selectedYear,
+              report_type: typeKey,
+              period,
+              target_date: getDefaultTargetDate(selectedYear, period),
+              status: 'not_started',
+              reconciliation_steps: {
+                payroll_vs_bookkeeping: false,
+                periodic_vs_annual: false,
+              },
+              submission_date: '',
+              notes: '',
+            });
+          }
+        }
+      }
+      await loadData();
+    } catch (error) {
+      console.error('Error creating reports:', error);
+    }
+  };
+
+  const handleUpdateReport = async (id, data) => {
+    try {
+      await PeriodicReport.update(id, data);
+      await loadData();
+    } catch (error) {
+      console.error('Error updating report:', error);
+    }
+  };
+
+  // Column definitions for the table
+  const columns = [];
+  for (const [typeKey, typeDef] of Object.entries(REPORT_TYPES)) {
+    for (const period of typeDef.periods) {
+      columns.push({
+        typeKey,
+        period,
+        label: `${typeDef.shortLabel} - ${PERIOD_CONFIG[period].shortLabel}`,
+        targetLabel: period === 'h1'
+          ? `18/07/${selectedYear}`
+          : period === 'h2'
+            ? `18/01/${parseInt(selectedYear) + 1}`
+            : `30/04/${parseInt(selectedYear) + 1}`,
+      });
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-gray-500">טוען נתונים...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-indigo-100 rounded-full">
+            <FileText className="w-8 h-8 text-indigo-700" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">דיווחים מרכזים תקופתיים</h1>
+            <p className="text-sm text-gray-600">מעקב טפסי 126 — ביטוח לאומי ומ"ה ניכויים</p>
+          </div>
+        </div>
+
+        {/* Year selector */}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={() => setSelectedYear(String(parseInt(selectedYear) - 1))}>
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+          <span className="text-xl font-bold min-w-[60px] text-center">{selectedYear}</span>
+          <Button variant="outline" size="icon" onClick={() => setSelectedYear(String(parseInt(selectedYear) + 1))}>
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-sm text-muted-foreground">סה״כ דיווחים</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-sm text-muted-foreground">שודרו</p>
+            <p className="text-2xl font-bold text-green-600">{stats.submitted}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-sm text-muted-foreground">בהתאמות</p>
+            <p className="text-2xl font-bold text-amber-600">{stats.reconciling}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 text-center">
+            <p className="text-sm text-muted-foreground">באיחור</p>
+            <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Progress */}
+      {stats.total > 0 && (
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-600">התקדמות:</span>
+          <Progress value={stats.total > 0 ? (stats.submitted / stats.total) * 100 : 0} className="flex-1 h-2" />
+          <span className="text-sm font-semibold">{Math.round(stats.total > 0 ? (stats.submitted / stats.total) * 100 : 0)}%</span>
+        </div>
+      )}
+
+      {/* Create button */}
+      {clientsWithoutReports.length > 0 && (
+        <Card className="border-2 border-primary/20 bg-primary/5">
+          <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold">{clientsWithoutReports.length} לקוחות ללא דיווחים לשנת {selectedYear}</p>
+              <p className="text-sm text-muted-foreground">
+                ייווצרו: 126 בל (מחצית 1, מחצית 2, שנתי) + 126 מ"ה (שנתי) לכל לקוח
+              </p>
+            </div>
+            <Button onClick={handleCreateForAllClients} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              צור דיווחים ל-{clientsWithoutReports.length} לקוחות
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="חיפוש לקוח..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pr-10"
+        />
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <ResizableTable className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-right p-3 font-semibold sticky right-0 bg-muted/50 z-10 min-w-[160px]">
+                    לקוח
+                  </th>
+                  {columns.map(col => (
+                    <th key={`${col.typeKey}_${col.period}`} className="text-center p-2 font-semibold min-w-[110px]">
+                      <div className="text-xs">{col.label}</div>
+                      <div className="text-[10px] text-muted-foreground font-normal">יעד: {col.targetLabel}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClients.map((client, idx) => {
+                  const clientReports = reportLookup[client.id] || {};
+                  return (
+                    <tr key={client.id} className={`border-b ${idx % 2 === 0 ? '' : 'bg-muted/20'} hover:bg-muted/30`}>
+                      <td className="p-3 font-medium sticky right-0 bg-white z-10 border-l">
+                        {client.name}
+                      </td>
+                      {columns.map(col => (
+                        <ReportCell
+                          key={`${col.typeKey}_${col.period}`}
+                          report={clientReports[col.typeKey]?.[col.period]}
+                          onEdit={setEditingReport}
+                        />
+                      ))}
+                    </tr>
+                  );
+                })}
+                {filteredClients.length === 0 && (
+                  <tr>
+                    <td colSpan={columns.length + 1} className="p-8 text-center text-muted-foreground">
+                      {search ? 'לא נמצאו לקוחות' : 'אין לקוחות עם שירותי שכר/ניכויים'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </ResizableTable>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Status legend */}
+      <div className="flex flex-wrap gap-3 text-xs">
+        {STATUS_OPTIONS.map(s => (
+          <div key={s.value} className="flex items-center gap-1.5">
+            <div className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
+            <span className="text-gray-600">{s.label}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-1.5 mr-4">
+          <div className="flex gap-0.5">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
+            <div className="w-2 h-2 rounded-full bg-gray-300" />
+          </div>
+          <span className="text-gray-600">שלבי התאמה (ירוק = בוצע)</span>
+        </div>
+      </div>
+
+      {/* Edit Dialog */}
+      <EditReportDialog
+        report={editingReport}
+        open={!!editingReport}
+        onClose={() => setEditingReport(null)}
+        onSave={handleUpdateReport}
+      />
+    </div>
+  );
+}

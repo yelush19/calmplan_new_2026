@@ -57,5 +57,7 @@ export const Project = base44.entities.Project;
 
 export const SystemConfig = base44.entities.SystemConfig;
 
+export const PeriodicReport = base44.entities.PeriodicReport;
+
 // auth sdk:
 export const User = base44.auth;
