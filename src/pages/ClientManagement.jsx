@@ -99,6 +99,7 @@ export default function ClientManagementPage() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [showMondayImport, setShowMondayImport] = useState(false);
 
   // Bulk selection state
   const [selectedClientIds, setSelectedClientIds] = useState(new Set());
@@ -533,13 +534,16 @@ export default function ClientManagementPage() {
                   />
                 </label>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowMondayImport(true)}>
+                <Upload className="w-4 h-4 ml-2" />
+                ייבוא נתוני Monday
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSync} disabled={isSyncing}>
+                <RefreshCw className={`w-4 h-4 ml-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                סנכרון Monday
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
-            <RefreshCw className={`w-4 h-4 ml-2 ${isSyncing ? 'animate-spin' : ''}`} />
-            סנכרן Monday
-          </Button>
           <Button size="sm" onClick={handleAddNewClient} className="bg-primary hover:bg-accent text-white" disabled={isSaving}>
             <Plus className="w-4 h-4 ml-2" />
             הוסף לקוח
@@ -627,8 +631,6 @@ export default function ClientManagementPage() {
           </Button>
         </Alert>
       )}
-
-      <MondayDataImport onComplete={loadClients} />
 
       <Card>
         <CardHeader>
@@ -915,6 +917,17 @@ export default function ClientManagementPage() {
             <DialogDescription>ניהול משימות הקשורות ללקוח.</DialogDescription>
           </DialogHeader>
           {selectedTasksClient && <ClientTasksTab clientId={selectedTasksClient.id} clientName={selectedTasksClient.name} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Monday Data Import Dialog */}
+      <Dialog open={showMondayImport} onOpenChange={setShowMondayImport}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>ייבוא נתוני Monday.com</DialogTitle>
+            <DialogDescription>ייבוא נתוני לקוחות וחשבונות בנק מ-Monday.com</DialogDescription>
+          </DialogHeader>
+          <MondayDataImport onComplete={() => { setShowMondayImport(false); loadClients(); }} />
         </DialogContent>
       </Dialog>
     </div>

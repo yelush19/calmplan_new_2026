@@ -19,7 +19,6 @@ const serviceTypeLabels = {
   deductions: 'מ״ה ניכויים',
   annual_reports: 'מאזנים / דוחות שנתיים',
   reconciliation: 'התאמות חשבונות',
-  consulting: 'ייעוץ',
   special_reports: 'דוחות מיוחדים',
   masav_employees: 'מס״ב עובדים',
   masav_social: 'מס״ב סוציאליות',
@@ -63,11 +62,10 @@ const serviceTypeColors = {
   taml_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
   // קבוצה 5 (אינדיגו): מס"ב ספקים
   masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  // כללי
-  consulting: 'bg-gray-100 text-gray-800 border-gray-200',
-  special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  reserve_claims: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  admin: 'bg-gray-100 text-gray-800 border-gray-200',
+  // שייכויות נוספות
+  reserve_claims: 'bg-blue-100 text-blue-800 border-blue-200',
+  admin: 'bg-green-100 text-green-800 border-green-200',
+  special_reports: 'bg-green-100 text-green-800 border-green-200',
 };
 
 export default function FeeManagement() {

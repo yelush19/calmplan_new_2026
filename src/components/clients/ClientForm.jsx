@@ -478,7 +478,6 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       services: [
         { value: 'payslip_sending', label: 'משלוח תלושים' },
         { value: 'reserve_claims', label: 'תביעות מילואים' },
-        { value: 'consulting', label: 'ייעוץ' },
         { value: 'admin', label: 'אדמיניסטרציה' },
       ]
     },
