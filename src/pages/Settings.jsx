@@ -636,9 +636,11 @@ function DataBackupSection() {
   const [migrationResult, setMigrationResult] = useState(null);
   const [autoBackupEnabled, setAutoBackupEnabled] = useState(() => localStorage.getItem('calmplan_auto_backup') === 'true');
   const [lastAutoBackup, setLastAutoBackup] = useState(() => localStorage.getItem('calmplan_last_auto_backup'));
+  const [lastSupaBackup, setLastSupaBackup] = useState(() => localStorage.getItem('calmplan_last_supa_backup'));
+  const [isSavingToSupa, setIsSavingToSupa] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Auto-backup: save snapshot to localStorage every 2 hours
+  // Auto-backup: save snapshot to localStorage every 2 hours + daily to Supabase
   useEffect(() => {
     if (!autoBackupEnabled) return;
     const runAutoBackup = async () => {
@@ -653,12 +655,53 @@ function DataBackupSection() {
         console.error('Auto-backup failed:', e);
       }
     };
+
+    // Daily Supabase backup - check on load and every hour
+    const runDailySupaBackup = async () => {
+      if (!isSupabaseConfigured) return;
+      try {
+        const lastSupa = localStorage.getItem('calmplan_last_supa_backup');
+        const today = new Date().toISOString().split('T')[0];
+        if (lastSupa === today) return; // Already backed up today
+
+        const { saveDailyBackupToSupabase } = await import('@/api/supabaseDB');
+        const result = await saveDailyBackupToSupabase();
+        if (result.saved) {
+          localStorage.setItem('calmplan_last_supa_backup', today);
+          setLastSupaBackup(today);
+          console.log('Daily Supabase backup saved:', result.summary);
+        } else {
+          localStorage.setItem('calmplan_last_supa_backup', today);
+          setLastSupaBackup(today);
+        }
+      } catch (e) {
+        console.error('Daily Supabase backup failed:', e);
+      }
+    };
+
     // Run immediately on enable
     runAutoBackup();
-    // Then every 2 hours
-    const interval = setInterval(runAutoBackup, 2 * 60 * 60 * 1000);
-    return () => clearInterval(interval);
+    runDailySupaBackup();
+    // localStorage backup every 2 hours, Supabase check every hour
+    const localInterval = setInterval(runAutoBackup, 2 * 60 * 60 * 1000);
+    const supaInterval = setInterval(runDailySupaBackup, 60 * 60 * 1000);
+    return () => { clearInterval(localInterval); clearInterval(supaInterval); };
   }, [autoBackupEnabled]);
+
+  const handleManualSupaBackup = async () => {
+    setIsSavingToSupa(true);
+    try {
+      const { saveDailyBackupToSupabase } = await import('@/api/supabaseDB');
+      const result = await saveDailyBackupToSupabase();
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('calmplan_last_supa_backup', today);
+      setLastSupaBackup(today);
+      setBackupStatus({ type: 'success', message: result.saved ? `גיבוי יומי נשמר ב-Supabase (${result.date})` : `גיבוי להיום כבר קיים ב-Supabase` });
+    } catch (e) {
+      setBackupStatus({ type: 'error', message: 'שגיאה בגיבוי ל-Supabase: ' + e.message });
+    }
+    setIsSavingToSupa(false);
+  };
 
   const toggleAutoBackup = (enabled) => {
     setAutoBackupEnabled(enabled);
@@ -767,8 +810,34 @@ function DataBackupSection() {
               </Button>
             </div>
           )}
-          <p className="text-[10px] text-blue-600/70">שומר snapshot כל 2 שעות בדפדפן. מומלץ להפעיל תמיד.</p>
+          <p className="text-[10px] text-blue-600/70">שומר snapshot כל 2 שעות בדפדפן + גיבוי יומי אוטומטי ל-Supabase.</p>
         </div>
+
+        {/* Daily Supabase backup */}
+        {isSupabaseConfigured && (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cloud className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-green-800">גיבוי יומי ל-Supabase</span>
+              </div>
+              <Badge className="bg-green-100 text-green-800 text-[10px]">
+                {lastSupaBackup ? `${lastSupaBackup}` : 'טרם בוצע'}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-green-600">
+                {lastSupaBackup
+                  ? `גיבוי אחרון: ${lastSupaBackup}`
+                  : 'טרם בוצע גיבוי ל-Supabase'}
+              </span>
+              <Button onClick={handleManualSupaBackup} disabled={isSavingToSupa} variant="outline" size="sm" className="h-6 text-[10px] border-green-300 text-green-700">
+                <Cloud className="w-3 h-3 ml-1" /> {isSavingToSupa ? 'שומר...' : 'גבה עכשיו'}
+              </Button>
+            </div>
+            <p className="text-[10px] text-green-600/70">נשמר אוטומטית פעם ביום. שומר 7 גיבויים אחרונים.</p>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleExport} disabled={isExporting} size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs gap-1">

@@ -44,10 +44,10 @@ const PERIOD_CONFIG = {
 };
 
 const STATUS_OPTIONS = [
-  { value: 'not_started', label: 'טרם התחיל', color: 'bg-gray-200 text-gray-700', dot: 'bg-gray-400' },
+  { value: 'not_started', label: 'נותרו השלמות', color: 'bg-cyan-200 text-cyan-700', dot: 'bg-cyan-400' },
   { value: 'reconciling', label: 'בהתאמות', color: 'bg-amber-200 text-amber-800', dot: 'bg-amber-500' },
-  { value: 'ready_to_submit', label: 'מוכן לשידור', color: 'bg-blue-200 text-blue-800', dot: 'bg-blue-500' },
-  { value: 'submitted', label: 'שודר', color: 'bg-green-200 text-green-800', dot: 'bg-green-500' },
+  { value: 'ready_to_submit', label: 'מוכן לשידור', color: 'bg-teal-200 text-teal-800', dot: 'bg-teal-500' },
+  { value: 'submitted', label: 'שודר', color: 'bg-emerald-400 text-white', dot: 'bg-emerald-500' },
 ];
 
 const RECONCILIATION_STEPS = [
@@ -685,20 +685,20 @@ export default function PeriodicSummaryReports() {
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <ResizableTable className="w-full text-sm">
+            <ResizableTable className="w-full text-sm" stickyHeader maxHeight="70vh">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-center p-2 w-10 sticky right-0 bg-muted/50 z-10">
+                  <th className="text-center p-2 w-10 sticky right-0 bg-gray-100 z-30">
                     <Checkbox
                       checked={filteredClients.length > 0 && selectedClientIds.size === filteredClients.length}
                       onCheckedChange={handleToggleAll}
                     />
                   </th>
-                  <th className="text-right p-3 font-semibold sticky right-10 bg-muted/50 z-10 min-w-[160px]">
+                  <th className="text-right p-3 font-semibold sticky right-10 bg-gray-100 z-30 min-w-[160px] border-l">
                     לקוח
                   </th>
                   {columns.map(col => (
-                    <th key={`${col.typeKey}_${col.period}`} className="text-center p-2 font-semibold min-w-[110px]">
+                    <th key={`${col.typeKey}_${col.period}`} className="text-center p-2 font-semibold min-w-[110px] bg-gray-100">
                       <div className="text-xs">{col.label}</div>
                       <div className="text-[10px] text-muted-foreground font-normal">יעד: {col.targetLabel}</div>
                     </th>

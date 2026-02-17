@@ -141,12 +141,13 @@ export default function TaxReportsDashboardPage() {
     return result;
   }, [filteredTasks, clientByName]);
 
-  // Stats
+  // Stats (excludes not_relevant tasks)
   const stats = useMemo(() => {
-    const total = filteredTasks.length;
-    const completed = filteredTasks.filter(t => t.status === 'completed').length;
+    const relevant = filteredTasks.filter(t => t.status !== 'not_relevant');
+    const total = relevant.length;
+    const completed = relevant.filter(t => t.status === 'completed').length;
     let totalSteps = 0, doneSteps = 0;
-    filteredTasks.forEach(task => {
+    relevant.forEach(task => {
       const service = getServiceForTask(task);
       if (service) {
         const steps = task.process_steps || {};
@@ -345,7 +346,8 @@ export default function TaxReportsDashboardPage() {
 // =====================================================
 
 function ServiceTable({ service, clientRows, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate }) {
-  const completedCount = clientRows.filter(r => r.task.status === 'completed').length;
+  const relevantRows = clientRows.filter(r => r.task.status !== 'not_relevant');
+  const completedCount = relevantRows.filter(r => r.task.status === 'completed').length;
 
   return (
     <Card className="border-gray-200 shadow-sm overflow-hidden">
@@ -353,12 +355,12 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange, onStatu
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h2 className="font-bold text-gray-800">{service.label}</h2>
-          <span className="text-xs text-gray-500">{completedCount}/{clientRows.length} הושלמו</span>
+          <span className="text-xs text-gray-500">{completedCount}/{relevantRows.length} הושלמו</span>
         </div>
         <div className="w-24 bg-gray-200 rounded-full h-1.5">
           <div
             className="h-1.5 rounded-full bg-emerald-500 transition-all"
-            style={{ width: `${clientRows.length > 0 ? Math.round((completedCount / clientRows.length) * 100) : 0}%` }}
+            style={{ width: `${relevantRows.length > 0 ? Math.round((completedCount / relevantRows.length) * 100) : 0}%` }}
           />
         </div>
       </div>
