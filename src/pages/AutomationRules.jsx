@@ -256,7 +256,7 @@ function RuleEditor({ rule, onSave, onCancel }) {
   );
 }
 
-function RuleRow({ rule, onToggle, onEdit, onDelete }) {
+function RuleRow({ rule, onToggle, onEdit, onDelete, onRun, isRunning }) {
   const entityCfg = entityDisplayConfig[rule.target_entity] || {};
   return (
     <div className={`flex items-center justify-between p-3 rounded-lg border ${rule.enabled ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
@@ -297,6 +297,18 @@ function RuleRow({ rule, onToggle, onEdit, onDelete }) {
         </div>
       </div>
       <div className="flex items-center gap-1">
+        {rule.type === 'report_auto_create' && onRun && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onRun(rule.id)}
+            disabled={isRunning || !rule.enabled}
+            className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+            title="הפעל חוק זה על לקוחות קיימים"
+          >
+            {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+          </Button>
+        )}
         <Button variant="ghost" size="icon" onClick={() => onEdit(rule)}><Pencil className="w-4 h-4" /></Button>
         <Button variant="ghost" size="icon" onClick={() => onDelete(rule.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>
       </div>
@@ -317,6 +329,7 @@ export default function AutomationRules() {
   const [bulkResult, setBulkResult] = useState(null);
   const [showRulePicker, setShowRulePicker] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState([]);
+  const [runningRuleId, setRunningRuleId] = useState(null);
 
   useEffect(() => {
     loadRules();
@@ -387,14 +400,22 @@ export default function AutomationRules() {
     );
   };
 
+  // Run a single rule directly (per-rule Play button)
+  const handleRunSingleRule = (ruleId) => {
+    setRunningRuleId(ruleId);
+    setSelectedRuleIds([ruleId]);
+    handleBulkScan([ruleId]);
+  };
+
   // STEP 1: Scan existing clients using SELECTED rules only
-  const handleBulkScan = async () => {
+  const handleBulkScan = async (overrideRuleIds) => {
     setShowRulePicker(false);
     setBulkScanning(true);
     setBulkResult(null);
     setBulkPreview(null);
 
-    const selectedRules = rules.filter(r => selectedRuleIds.includes(r.id));
+    const ruleIdsToUse = overrideRuleIds || selectedRuleIds;
+    const selectedRules = rules.filter(r => ruleIdsToUse.includes(r.id));
 
     try {
       const allClients = await Client.list(null, 5000);
@@ -544,6 +565,7 @@ export default function AutomationRules() {
       setBulkResult({ error: err.message });
     } finally {
       setBulkScanning(false);
+      setRunningRuleId(null);
     }
   };
 
@@ -746,7 +768,7 @@ export default function AutomationRules() {
           ) : (
             <div className="space-y-2">
               {serviceAutoLinkRules.map(rule => (
-                <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} />
+                <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
               ))}
             </div>
           )}
@@ -781,7 +803,7 @@ export default function AutomationRules() {
                 ) : (
                   <div className="space-y-2 mr-2">
                     {entityRules.map(rule => (
-                      <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} />
+                      <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
                     ))}
                   </div>
                 )}
