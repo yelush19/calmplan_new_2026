@@ -58,12 +58,26 @@ export default function PayrollDashboardPage() {
         }),
         Client.list(null, 500).catch(() => []),
       ]);
-      setTasks((tasksData || []).filter(t => allPayrollCategories.includes(t.category)));
+      const filtered = (tasksData || []).filter(t => allPayrollCategories.includes(t.category));
+      setTasks(filtered);
       setClients(clientsData || []);
+      syncCompletedTaskSteps(filtered);
     } catch (error) {
       console.error("Error loading payroll tasks:", error);
     }
     setIsLoading(false);
+  };
+
+  const syncCompletedTaskSteps = async (tasksList) => {
+    for (const task of tasksList) {
+      if (task.status === 'completed' && !areAllStepsDone(task)) {
+        const updatedSteps = markAllStepsDone(task);
+        if (Object.keys(updatedSteps).length > 0) {
+          await Task.update(task.id, { process_steps: updatedSteps });
+          setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
+        }
+      }
+    }
   };
 
   const clientByName = useMemo(() => {

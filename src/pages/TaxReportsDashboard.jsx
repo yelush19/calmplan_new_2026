@@ -63,12 +63,29 @@ export default function TaxReportsDashboardPage() {
         }),
         Client.list(null, 500).catch(() => []),
       ]);
-      setTasks((tasksData || []).filter(t => allTaxCategories.includes(t.category)));
+      const filtered = (tasksData || []).filter(t => allTaxCategories.includes(t.category));
+      setTasks(filtered);
       setClients(clientsData || []);
+
+      // Sync: fix completed tasks with unchecked steps
+      syncCompletedTaskSteps(filtered);
     } catch (error) {
       console.error("Error loading tax tasks:", error);
     }
     setIsLoading(false);
+  };
+
+  // Auto-fix: completed tasks should have all steps marked done
+  const syncCompletedTaskSteps = async (tasksList) => {
+    for (const task of tasksList) {
+      if (task.status === 'completed' && !areAllStepsDone(task)) {
+        const updatedSteps = markAllStepsDone(task);
+        if (Object.keys(updatedSteps).length > 0) {
+          await Task.update(task.id, { process_steps: updatedSteps });
+          setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
+        }
+      }
+    }
   };
 
   // Lookup client by name for tax IDs
