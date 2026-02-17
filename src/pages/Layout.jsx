@@ -59,6 +59,14 @@ const navigationGroups = [
         ],
       },
       {
+        name: "אוטומציות ויצירת משימות חוזרות",
+        icon: Zap,
+        children: [
+          { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
+          { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
+        ],
+      },
+      {
         name: "מרכז לקוחות",
         icon: Users,
         children: [
@@ -73,14 +81,6 @@ const navigationGroups = [
         icon: BookUser,
         children: [
           { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
-        ],
-      },
-      {
-        name: "אוטומציות ומשימות",
-        icon: Zap,
-        children: [
-          { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
-          { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
         ],
       },
       { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
