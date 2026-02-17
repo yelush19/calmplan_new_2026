@@ -51,6 +51,7 @@ const specialtiesTypes = {
 const getInitialFormData = (provider, serviceCompanyId) => {
     const emptyForm = {
         name: '',
+        company_name: '',
         type: 'cpa',
         service_company_id: serviceCompanyId || '',
         license_number: '',
@@ -155,8 +156,21 @@ export default function ServiceProviderForm({ provider, serviceCompanyId, onSubm
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-               <div>
-                <Label htmlFor="company">שיוך לחברה</Label>
+              <div>
+                <Label htmlFor="name">שם איש קשר</Label>
+                <Input id="name" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} required />
+              </div>
+              <div>
+                <Label htmlFor="company_name">שם חברה</Label>
+                <Input
+                  id="company_name"
+                  value={formData.company_name || ''}
+                  onChange={(e) => handleChange('company_name', e.target.value)}
+                  placeholder="הקלד שם חברה"
+                />
+              </div>
+              <div>
+                <Label htmlFor="company">שיוך לחברת שירות (אופציונלי)</Label>
                 {isCreatingCompany ? (
                   <div className="flex gap-2">
                     <Input
@@ -175,9 +189,10 @@ export default function ServiceProviderForm({ provider, serviceCompanyId, onSubm
                   </div>
                 ) : (
                   <div className="flex gap-2">
-                    <Select value={formData.service_company_id} onValueChange={(value) => handleChange('service_company_id', value)} required>
+                    <Select value={formData.service_company_id || 'none'} onValueChange={(value) => handleChange('service_company_id', value === 'none' ? '' : value)}>
                       <SelectTrigger><SelectValue placeholder="בחר חברה"/></SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">ללא שיוך</SelectItem>
                         {companies.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
@@ -188,10 +203,6 @@ export default function ServiceProviderForm({ provider, serviceCompanyId, onSubm
                     </Button>
                   </div>
                 )}
-              </div>
-              <div>
-                <Label htmlFor="name">שם</Label>
-                <Input id="name" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} required />
               </div>
               <div>
                 <Label htmlFor="type">סוג</Label>

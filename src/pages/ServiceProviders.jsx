@@ -254,8 +254,11 @@ export default function ServiceProvidersPage() {
                           </div>
                           <div>
                             <p className="font-semibold">{provider.name}</p>
+                            {provider.company_name && <p className="text-sm text-gray-700 font-medium">{provider.company_name}</p>}
                             <p className="text-sm text-gray-500">{provider.role}</p>
-                            <p className="text-sm text-gray-500">{getCompanyName(provider.service_company_id)}</p>
+                            {provider.service_company_id && (
+                              <p className="text-xs text-gray-400">{getCompanyName(provider.service_company_id)}</p>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2">
