@@ -13,6 +13,7 @@ import {
   ExternalLink, Calculator, Briefcase,
   Plus, Check, X, ArrowLeft
 } from 'lucide-react';
+import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -116,7 +117,7 @@ export default function ClientsDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to reporting month (previous)
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState([]);
 
   // Popover state for inline editing
   const [popover, setPopover] = useState(null); // { anchorRect, clientName, clientId, colKey, group, task }
@@ -189,15 +190,17 @@ export default function ClientsDashboardPage() {
       const term = searchTerm.toLowerCase();
       result = result.filter(c => c.name?.toLowerCase().includes(term));
     }
-    if (statusFilter !== 'all') {
+    if (statusFilter.length > 0) {
       result = result.filter(client => {
         const data = clientDataMap[client.name] || {};
         const allTasks = Object.values(data).flat();
-        if (statusFilter === 'has_issues') return allTasks.some(t => t.status === 'issue' || t.status === 'issues' || t.status === 'waiting_for_materials');
-        if (statusFilter === 'all_done') return allTasks.length > 0 && allTasks.every(t => t.status === 'completed');
-        if (statusFilter === 'in_progress') return allTasks.some(t => t.status !== 'completed' && t.status !== 'not_started');
-        if (statusFilter === 'not_started') return allTasks.some(t => t.status === 'not_started') || allTasks.length === 0;
-        return true;
+        const checks = {
+          has_issues: allTasks.some(t => t.status === 'issue' || t.status === 'issues' || t.status === 'waiting_for_materials'),
+          all_done: allTasks.length > 0 && allTasks.every(t => t.status === 'completed'),
+          in_progress: allTasks.some(t => t.status !== 'completed' && t.status !== 'not_started'),
+          not_started: allTasks.some(t => t.status === 'not_started') || allTasks.length === 0,
+        };
+        return statusFilter.some(f => checks[f]);
       });
     }
     return result;
@@ -479,18 +482,17 @@ export default function ClientsDashboardPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pr-10 h-9 text-sm border-gray-200 bg-white" />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-44 h-9 text-sm border-gray-200 bg-white">
-            <SelectValue placeholder="סנן לפי סטטוס" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">כל הלקוחות</SelectItem>
-            <SelectItem value="has_issues">דורש טיפול</SelectItem>
-            <SelectItem value="in_progress">בעבודה</SelectItem>
-            <SelectItem value="not_started">נותרו השלמות</SelectItem>
-            <SelectItem value="all_done">הכל הושלם</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiStatusFilter
+          options={[
+            { value: 'has_issues', label: 'דורש טיפול' },
+            { value: 'in_progress', label: 'בעבודה' },
+            { value: 'not_started', label: 'נותרו השלמות' },
+            { value: 'all_done', label: 'הכל הושלם' },
+          ]}
+          selected={statusFilter}
+          onChange={setStatusFilter}
+          label="סנן לפי סטטוס"
+        />
       </div>
 
       {/* === THE BOARD === */}

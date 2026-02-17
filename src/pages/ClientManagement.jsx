@@ -42,7 +42,7 @@ import {
   Square, // Added
   FolderKanban
 } from 'lucide-react';
-import { Client, Project, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount } from '@/api/entities';
+import { Client, Project, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount, Lead } from '@/api/entities';
 import { mondayApi } from '@/api/functions';
 import { exportClientsToExcel } from '@/api/functions';
 import { importClientsFromExcel } from '@/api/functions';
@@ -57,6 +57,7 @@ import ClientCollections from '@/components/clients/ClientCollections';
 import ClientContractsManager from '@/components/clients/ClientContractsManager';
 import ClientTasksTab from '@/components/clients/ClientTasksTab';
 import MondayDataImport from '@/components/clients/MondayDataImport';
+import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 // Helper: retry with exponential backoff for rate limits
 async function retryWithBackoff(fn, maxRetries = 3, initialDelay = 1000) {
@@ -84,7 +85,7 @@ export default function ClientManagementPage() {
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
+  const [statusFilter, setStatusFilter] = useState(['active']);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState(null);
@@ -166,9 +167,9 @@ export default function ClientManagementPage() {
 
     let tempClients = [...clients];
 
-    if (statusFilter !== 'all') {
-      tempClients = tempClients.filter(client => client.status === statusFilter);
-      console.log(`📊 After status filter (${statusFilter}):`, tempClients.length);
+    if (statusFilter.length > 0) {
+      tempClients = tempClients.filter(client => statusFilter.includes(client.status));
+      console.log(`📊 After status filter (${statusFilter.join(',')}):`, tempClients.length);
     }
 
     if (searchTerm) {
@@ -513,8 +514,57 @@ export default function ClientManagementPage() {
     }
   };
 
+  // Auto-create a Lead + marketing follow-up task for potential clients
+  const autoCreateLeadForPotentialClient = async (clientData) => {
+    try {
+      // Check if lead already exists for this client
+      const existingLeads = await Lead.list(null, 500).catch(() => []);
+      const alreadyExists = existingLeads.some(l =>
+        l.company_name === clientData.name && l.status !== 'closed_lost'
+      );
+      if (alreadyExists) {
+        console.log('ליד כבר קיים עבור:', clientData.name);
+        return;
+      }
+
+      // Create lead
+      const today = new Date().toISOString().split('T')[0];
+      await Lead.create({
+        company_name: clientData.name,
+        contact_person: clientData.contact_person || '',
+        email: clientData.email || '',
+        phone: clientData.phone || '',
+        source: 'לקוח פוטנציאלי',
+        status: 'new_lead',
+        created_date: today,
+        last_contact_date: today,
+        quote_amount: parseFloat(clientData.monthly_fee) || null,
+      });
+      console.log('✅ נוצר ליד עבור לקוח פוטנציאלי:', clientData.name);
+
+      // Create marketing follow-up task
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 3); // follow-up in 3 days
+      await Task.create({
+        title: `מעקב שיווק - ${clientData.name}`,
+        client_name: clientData.name,
+        category: 'מעקב שיווק',
+        status: 'not_started',
+        due_date: dueDate.toISOString().split('T')[0],
+        context: 'work',
+        notes: `לקוח פוטנציאלי חדש. שכ״ט צפוי: ₪${clientData.monthly_fee || 0}. ליצור קשר ולעקוב.`,
+        process_steps: {},
+      });
+      console.log('✅ נוצרה משימת מעקב שיווק עבור:', clientData.name);
+    } catch (err) {
+      console.warn('⚠️ שגיאה ביצירת ליד/משימת שיווק:', err.message);
+    }
+  };
+
   const handleSaveClient = async (clientData) => {
     const isNew = !selectedClient?.id;
+    const wasPotential = selectedClient?.status === 'potential';
+    const isPotentialNow = clientData.status === 'potential';
     setIsSaving(true);
     setError(null);
 
@@ -523,7 +573,7 @@ export default function ClientManagementPage() {
       await retryWithBackoff(async () => {
         if (isNew) {
           const onboarding_link_id = crypto.randomUUID();
-          const created = await Client.create({ ...clientData, status: 'potential', onboarding_link_id });
+          const created = await Client.create({ ...clientData, status: clientData.status || 'potential', onboarding_link_id });
           savedClientId = created.id;
         } else {
           await Client.update(selectedClient.id, clientData);
@@ -533,6 +583,11 @@ export default function ClientManagementPage() {
       // Auto-create reports in background for active clients with relevant services
       if (savedClientId && (clientData.status === 'active' || (!isNew && selectedClient?.status === 'active'))) {
         autoCreateReportsForClient(savedClientId, clientData.name, clientData);
+      }
+
+      // Auto-create lead + marketing task for potential clients
+      if (isPotentialNow && (isNew || !wasPotential)) {
+        autoCreateLeadForPotentialClient(clientData);
       }
 
       // Push to Monday.com in background (don't block UI)
@@ -792,21 +847,18 @@ export default function ClientManagementPage() {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="סנן לפי סטטוס" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">כל הסטטוסים ({statusCounts.all})</SelectItem>
-                <SelectItem value="active">פעיל ({statusCounts.active})</SelectItem>
-                <SelectItem value="inactive">לא פעיל ({statusCounts.inactive})</SelectItem>
-                <SelectItem value="potential">פוטנציאלי ({statusCounts.potential})</SelectItem>
-                <SelectItem value="former">עבר ({statusCounts.former})</SelectItem>
-                <SelectItem value="development">פיתוח ({statusCounts.development})</SelectItem>
-                <SelectItem value="onboarding_pending">ממתין לקליטה ({statusCounts.onboarding_pending})</SelectItem>
-                <SelectItem value="balance_sheet_only">סגירת מאזן בלבד ({statusCounts.balance_sheet_only})</SelectItem>
-              </SelectContent>
-            </Select>
+            <MultiStatusFilter
+              options={[
+                { value: 'active', label: 'פעיל', count: statusCounts.active },
+                { value: 'inactive', label: 'לא פעיל', count: statusCounts.inactive },
+                { value: 'potential', label: 'פוטנציאלי', count: statusCounts.potential },
+                { value: 'former', label: 'עבר', count: statusCounts.former },
+                { value: 'onboarding_pending', label: 'ממתין לקליטה', count: statusCounts.onboarding_pending },
+                { value: 'balance_sheet_only', label: 'סגירת מאזן בלבד', count: statusCounts.balance_sheet_only },
+              ]}
+              selected={statusFilter}
+              onChange={setStatusFilter}
+            />
 
             <ToggleGroup type="single" value={view} onValueChange={(value) => value && setView(value)} className="hidden md:flex">
               <ToggleGroupItem value="grid" aria-label="תצוגת רשת">

@@ -93,6 +93,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       fixed_retainer: '',
       billing_notes: ''
     },
+    fee_status: '',
+    paying_client_id: '',
     tags: [],
     notes: ''
   });
@@ -110,6 +112,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
   const [selectedCompanyToLink, setSelectedCompanyToLink] = useState(null);
   const [selectedProvidersToLink, setSelectedProvidersToLink] = useState([]);
   const [automationRules, setAutomationRules] = useState([]);
+  const [allClientsForLinking, setAllClientsForLinking] = useState([]);
 
   const isNewClient = !client?.id;
 
@@ -186,6 +189,13 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
   useEffect(() => {
     loadAutomationRules().then(({ rules }) => setAutomationRules(rules));
   }, []);
+
+  useEffect(() => {
+    Client.list(null, 500).then(data => {
+      const filtered = (data || []).filter(c => c.status === 'active' && c.id !== client?.id);
+      setAllClientsForLinking(filtered);
+    }).catch(() => {});
+  }, [client?.id]);
 
   const handleInputChange = (field, value, section = null, subSection = null) => {
     setFormData(prev => {
@@ -843,7 +853,51 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                       placeholder="0"
                     />
                   </div>
+                  <div>
+                    <Label htmlFor="fee_status">סטטוס שכ״ט</Label>
+                    <Select
+                      value={formData.fee_status || 'normal'}
+                      onValueChange={(value) => setFormData(prev => ({
+                        ...prev,
+                        fee_status: value === 'normal' ? '' : value,
+                        paying_client_id: value !== 'linked_to_parent' ? '' : prev.paying_client_id
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="normal">רגיל - שכ״ט עצמאי</SelectItem>
+                        <SelectItem value="oth">תיק עצמי (OTH) - ללא חיוב</SelectItem>
+                        <SelectItem value="linked_to_parent">מתומחר עם לקוח ראשי</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      OTH = תיק שלך/עצמי. מתומחר = נכלל בשכ״ט של לקוח אחר
+                    </p>
+                  </div>
                 </div>
+                {formData.fee_status === 'linked_to_parent' && (
+                  <div className="mt-3 p-3 bg-violet-50 border border-violet-200 rounded-lg">
+                    <Label htmlFor="paying_client_id">לקוח משלם (ראשי)</Label>
+                    <Select
+                      value={formData.paying_client_id || ''}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, paying_client_id: value }))}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="בחר לקוח ראשי..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allClientsForLinking.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      שכ״ט של לקוח זה נכלל בחיוב הלקוח הראשי
+                    </p>
+                  </div>
+                )}
               </div>
             </TabsContent>
             <TabsContent value="reporting" className="space-y-5">

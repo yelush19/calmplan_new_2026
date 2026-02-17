@@ -21,6 +21,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 const statusConfig = {
   not_started: { label: 'לא התחיל', color: 'bg-gray-200 text-gray-800', icon: Clock },
@@ -125,9 +126,10 @@ function StatusTable({ accounts, clients, reconciliations, onUpdateAccount, sear
         };
       })
       .filter(row => {
-        if (statusFilter === 'overdue') return row.daysOverdue > 0;
-        if (statusFilter === 'all') return true;
-        return row.latestStatus === statusFilter;
+        if (statusFilter.length === 0) return true;
+        if (statusFilter.includes('overdue') && row.daysOverdue > 0) return true;
+        if (statusFilter.some(f => f !== 'overdue' && row.latestStatus === f)) return true;
+        return false;
       })
       .sort((a, b) => {
         // Overdue first, then by next date
@@ -415,7 +417,7 @@ export default function ReconciliationsPage() {
   const [allAccounts, setAllAccounts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState([]);
   const [editingRec, setEditingRec] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('status_table');
@@ -545,18 +547,17 @@ export default function ReconciliationsPage() {
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input placeholder="חיפוש לקוח או חשבון..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pr-10" />
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="סנן סטטוס" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="all">הכל</SelectItem>
-                    <SelectItem value="overdue">בפיגור בלבד</SelectItem>
-                    {Object.entries(statusConfig).map(([k, c]) => (
-                      <SelectItem key={k} value={k}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiStatusFilter
+                  options={[
+                    { value: 'overdue', label: 'בפיגור בלבד' },
+                    ...Object.entries(statusConfig).map(([k, c]) => ({
+                      value: k, label: c.label,
+                    })),
+                  ]}
+                  selected={statusFilter}
+                  onChange={setStatusFilter}
+                  label="סנן סטטוס"
+                />
               </div>
             </CardHeader>
             <CardContent>

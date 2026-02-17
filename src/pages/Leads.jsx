@@ -27,6 +27,7 @@ import {
 import { Lead, Client } from '@/api/entities';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
+import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 const statusLabels = {
   new_lead: 'ליד חדש',
@@ -51,7 +52,7 @@ export default function LeadsPage() {
   const [filteredLeads, setFilteredLeads] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
   const [isConverting, setIsConverting] = useState(false);
 
@@ -70,8 +71,8 @@ export default function LeadsPage() {
       );
     }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(lead => lead.status === statusFilter);
+    if (statusFilter.length > 0) {
+      filtered = filtered.filter(lead => statusFilter.includes(lead.status));
     }
 
     // מיון לפי תאריך יצירה (החדשים ראשונים)
@@ -305,17 +306,16 @@ export default function LeadsPage() {
                 className="pr-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="סנן לפי סטטוס" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">כל הסטטוסים</SelectItem>
-                {Object.entries(statusLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiStatusFilter
+              options={Object.entries(statusLabels).map(([key, label]) => ({
+                value: key,
+                label,
+                count: leads.filter(l => l.status === key).length,
+              }))}
+              selected={statusFilter}
+              onChange={setStatusFilter}
+              label="סנן לפי סטטוס"
+            />
           </div>
         </CardContent>
       </Card>
