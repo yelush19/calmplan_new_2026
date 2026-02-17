@@ -427,15 +427,22 @@ export default function AutomationRules() {
         Task.list(null, 10000),
       ]);
 
-      // Build mapping: service_key → task categories from automation rules
-      const serviceToCategories = {};
-      for (const rule of rules) {
-        if (rule.type !== 'report_auto_create' || !rule.target_entity?.startsWith('Task_')) continue;
-        for (const svc of (rule.trigger_services || [])) {
-          if (!serviceToCategories[svc]) serviceToCategories[svc] = new Set();
-          for (const cat of (rule.task_categories || [])) {
-            serviceToCategories[svc].add(cat);
+      // Build PRECISE category → service mapping from TASK_BOARD_CATEGORIES (1:1)
+      const categoryToService = {};
+      for (const [boardKey, categories] of Object.entries(TASK_BOARD_CATEGORIES)) {
+        for (const cat of categories) {
+          if (cat.key && cat.service) {
+            categoryToService[cat.key] = cat.service;
           }
+        }
+      }
+
+      // Build auto-link dependencies: if parent removed → children are "orphan"
+      const autoLinkParents = {}; // child_service → parent_service
+      for (const rule of rules) {
+        if (rule.type !== 'service_auto_link' || !rule.enabled) continue;
+        for (const child of (rule.auto_add_services || [])) {
+          autoLinkParents[child] = rule.trigger_service;
         }
       }
 
@@ -454,31 +461,23 @@ export default function AutomationRules() {
 
         if (clientTasks.length === 0) continue;
 
-        // Find all valid categories for this client's active services
-        const validCategories = new Set();
+        // Check which services are truly active (including auto-link parent check)
+        const effectiveServices = new Set(clientServices);
+        // If a service's parent (from auto-link) is missing, consider it orphaned
         for (const svc of clientServices) {
-          const cats = serviceToCategories[svc];
-          if (cats) cats.forEach(cat => validCategories.add(cat));
+          const parent = autoLinkParents[svc];
+          if (parent && !clientServices.includes(parent)) {
+            effectiveServices.delete(svc);
+          }
         }
 
-        // Find tasks whose category belongs to a removed service
         for (const task of clientTasks) {
           if (!task.category) continue;
 
-          let categoryLinkedToService = false;
-          let linkedServiceActive = false;
+          const requiredService = categoryToService[task.category];
+          if (!requiredService) continue; // unknown category, skip
 
-          for (const [svc, cats] of Object.entries(serviceToCategories)) {
-            if (cats.has(task.category)) {
-              categoryLinkedToService = true;
-              if (clientServices.includes(svc)) {
-                linkedServiceActive = true;
-                break;
-              }
-            }
-          }
-
-          if (categoryLinkedToService && !linkedServiceActive) {
+          if (!effectiveServices.has(requiredService)) {
             await Task.update(task.id, { status: 'not_relevant' });
             cleanedCount++;
             details.push({
@@ -730,6 +729,18 @@ export default function AutomationRules() {
 
           // Task-based boards: generate for EACH month in the range
           if (rule.target_entity?.startsWith('Task_') && rule.task_categories?.length > 0) {
+            // Get client reporting frequencies for bi-monthly check
+            const reportingInfo = client.reporting_info || {};
+            const categoryFrequency = {};
+            // Map category → relevant frequency field
+            const catFreqMap = {
+              'מע"מ': reportingInfo.vat_reporting_frequency,
+              'מקדמות מס': reportingInfo.tax_advances_frequency,
+              'שכר': reportingInfo.payroll_frequency,
+              'ביטוח לאומי': reportingInfo.social_security_frequency,
+              'ניכויים': reportingInfo.deductions_frequency,
+            };
+
             for (const m of months) {
               const mStart = new Date(m.year, m.month, 1).toISOString().split('T')[0];
               const mEnd = m.dueDateStr;
@@ -747,7 +758,14 @@ export default function AutomationRules() {
                 t.client_id === client.id && t.due_date >= mStart && t.due_date <= mEnd
               );
               for (const category of rule.task_categories) {
-                const exists = clientTasks.some(t => t.category === category);
+                // Skip bi-monthly clients on odd months (0-based: Jan=0, Feb=1...)
+                const freq = catFreqMap[category];
+                if (freq === 'bimonthly' && m.month % 2 !== 0) continue;
+                // Skip not_applicable
+                if (freq === 'not_applicable') continue;
+
+                // Only count active tasks as existing (not not_relevant)
+                const exists = clientTasks.some(t => t.category === category && t.status !== 'not_relevant');
                 if (!exists) {
                   previewItems.push({
                     ...ruleInfo,
