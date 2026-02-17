@@ -315,6 +315,8 @@ export default function AutomationRules() {
   const [bulkExecuting, setBulkExecuting] = useState(false);
   const [bulkPreview, setBulkPreview] = useState(null); // { items: [...], stats }
   const [bulkResult, setBulkResult] = useState(null);
+  const [showRulePicker, setShowRulePicker] = useState(false);
+  const [selectedRuleIds, setSelectedRuleIds] = useState([]);
 
   useEffect(() => {
     loadRules();
@@ -371,11 +373,28 @@ export default function AutomationRules() {
     await handleSave([...DEFAULT_RULES]);
   };
 
-  // STEP 1: Scan existing clients and build preview of what will be created
+  // Open rule picker before scanning
+  const handleOpenRulePicker = () => {
+    const enabledReportRules = rules.filter(r => r.type === 'report_auto_create' && r.enabled);
+    setSelectedRuleIds(enabledReportRules.map(r => r.id));
+    setShowRulePicker(true);
+    setBulkResult(null);
+  };
+
+  const handleToggleRuleSelection = (ruleId) => {
+    setSelectedRuleIds(prev =>
+      prev.includes(ruleId) ? prev.filter(id => id !== ruleId) : [...prev, ruleId]
+    );
+  };
+
+  // STEP 1: Scan existing clients using SELECTED rules only
   const handleBulkScan = async () => {
+    setShowRulePicker(false);
     setBulkScanning(true);
     setBulkResult(null);
     setBulkPreview(null);
+
+    const selectedRules = rules.filter(r => selectedRuleIds.includes(r.id));
 
     try {
       const allClients = await Client.list(null, 5000);
@@ -401,10 +420,12 @@ export default function AutomationRules() {
         const services = client.service_types || [];
         if (services.length === 0) continue;
 
-        const matchingRules = getReportAutoCreateRules(rules, services, client);
+        const matchingRules = getReportAutoCreateRules(selectedRules, services, client);
         if (matchingRules.length === 0) continue;
 
         for (const rule of matchingRules) {
+          const ruleInfo = { ruleId: rule.id, ruleName: rule.name };
+
           if (rule.target_entity === 'PeriodicReport' && rule.report_types) {
             const clientReports = existingReports.filter(r => r.client_id === client.id && r.report_year === year);
             if (clientReports.length === 0) {
@@ -413,6 +434,7 @@ export default function AutomationRules() {
                   const y = parseInt(year);
                   const targetDate = period === 'h1' ? `${y}-07-18` : period === 'h2' ? `${y + 1}-01-18` : `${y + 1}-04-30`;
                   previewItems.push({
+                    ...ruleInfo,
                     id: `${client.id}_pr_${typeKey}_${period}`,
                     checked: true,
                     clientId: client.id,
@@ -437,6 +459,7 @@ export default function AutomationRules() {
             const clientBS = existingBS.filter(b => b.client_id === client.id && b.tax_year === year);
             if (clientBS.length === 0) {
               previewItems.push({
+                ...ruleInfo,
                 id: `${client.id}_bs`,
                 checked: true,
                 clientId: client.id,
@@ -462,6 +485,7 @@ export default function AutomationRules() {
                 const exists = existingRecs.some(r => r.client_id === client.id && r.client_account_id === account.id && r.period === period);
                 if (!exists) {
                   previewItems.push({
+                    ...ruleInfo,
                     id: `${client.id}_rec_${account.id}`,
                     checked: true,
                     clientId: client.id,
@@ -490,6 +514,7 @@ export default function AutomationRules() {
               const exists = clientTasks.some(t => t.category === category);
               if (!exists) {
                 previewItems.push({
+                  ...ruleInfo,
                   id: `${client.id}_task_${category}`,
                   checked: true,
                   clientId: client.id,
@@ -639,7 +664,7 @@ export default function AutomationRules() {
           </Button>
           <Button
             size="sm"
-            onClick={handleBulkScan}
+            onClick={handleOpenRulePicker}
             disabled={bulkScanning}
             className="gap-1 bg-yellow-500 hover:bg-yellow-600 text-white"
           >
@@ -798,6 +823,75 @@ export default function AutomationRules() {
         )}
       </Dialog>
 
+      {/* Rule Picker Dialog - Step 0: Choose which rules to run */}
+      <Dialog open={showRulePicker} onOpenChange={(open) => { if (!open) setShowRulePicker(false); }}>
+        <DialogContent className="bg-white max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-yellow-500" />
+              בחירת אוטומציות להפעלה
+            </DialogTitle>
+            <DialogDescription>
+              סמני אילו חוקים להריץ על הלקוחות הפעילים. רק חוקי יצירת רשומות (לא חוקי סימון שירות).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {rules.filter(r => r.type === 'report_auto_create').map(rule => {
+              const isSelected = selectedRuleIds.includes(rule.id);
+              const cfg = entityDisplayConfig[rule.target_entity] || {};
+              return (
+                <div
+                  key={rule.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    isSelected ? 'bg-yellow-50 border-yellow-300' : 'bg-white border-gray-200 hover:bg-gray-50'
+                  } ${!rule.enabled ? 'opacity-50' : ''}`}
+                  onClick={() => handleToggleRuleSelection(rule.id)}
+                >
+                  {isSelected ? (
+                    <CheckSquare className="w-5 h-5 text-yellow-600 shrink-0" />
+                  ) : (
+                    <Square className="w-5 h-5 text-gray-300 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{rule.name}</span>
+                      {!rule.enabled && <Badge variant="outline" className="text-[10px] text-orange-600">מושבת</Badge>}
+                    </div>
+                    <p className="text-xs text-gray-500 truncate">{rule.description}</p>
+                  </div>
+                  <Badge className={`text-[10px] shrink-0 ${cfg.color || 'bg-gray-100'}`}>
+                    {cfg.label || rule.target_entity}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between pt-3 border-t">
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedRuleIds(rules.filter(r => r.type === 'report_auto_create').map(r => r.id))}>
+                סמן הכל
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedRuleIds([])}>
+                נקה הכל
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowRulePicker(false)}>ביטול</Button>
+              <Button
+                onClick={handleBulkScan}
+                disabled={selectedRuleIds.length === 0}
+                className="gap-1 bg-yellow-500 hover:bg-yellow-600 text-white"
+              >
+                <Play className="w-4 h-4" />
+                סרוק ({selectedRuleIds.length} חוקים)
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Bulk Preview Dialog */}
       <Dialog open={!!bulkPreview} onOpenChange={(open) => { if (!open && !bulkExecuting) setBulkPreview(null); }}>
         <DialogContent className="bg-white max-w-3xl max-h-[85vh] overflow-hidden flex flex-col" dir="rtl">
@@ -877,6 +971,7 @@ export default function AutomationRules() {
                                 {item.entityLabel}
                               </Badge>
                               <span className="truncate">{item.description}</span>
+                              {item.ruleName && <span className="text-[10px] text-gray-400 shrink-0">({item.ruleName})</span>}
                             </div>
                           ))}
                         </div>
