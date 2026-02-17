@@ -100,8 +100,8 @@ const navigationGroups = [
     title: "מערכת",
     icon: Settings,
     items: [
-      { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
+      { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
     ],
   },
 ];
