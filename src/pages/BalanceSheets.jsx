@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BalanceSheet, Client } from '@/api/entities';
+import { BalanceSheet, Client, Task } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,12 +8,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   BarChart3, Plus, Filter, RefreshCw, CheckCircle, AlertCircle, Clock,
   FileText, Building2, Calendar, User, ExternalLink, FolderOpen, ChevronDown,
-  ChevronUp, Pencil, Save, X
+  ChevronUp, Pencil, Save, X, ListChecks, Wand2, Settings2, Trash2, Check
 } from 'lucide-react';
 import { generateProcessTasks } from '@/api/functions';
+import { loadBalanceSheetTemplates, saveBalanceSheetTemplates, DEFAULT_STAGE_TEMPLATES } from '@/config/balanceSheetTemplates';
 
 // שלבי תהליך מאזן
 const WORKFLOW_STAGES = [
@@ -50,7 +59,7 @@ const WorkflowProgress = ({ currentStage }) => {
   );
 };
 
-const BalanceSheetCard = ({ balance, onUpdate, onStageChange }) => {
+const BalanceSheetCard = ({ balance, onUpdate, onStageChange, onGenerateFromTemplate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const stage = getStageConfig(balance.current_stage);
@@ -125,8 +134,8 @@ const BalanceSheetCard = ({ balance, onUpdate, onStageChange }) => {
             <p className="text-xs text-muted-foreground border-t pt-2">{balance.notes}</p>
           )}
 
-          {/* Stage selector */}
-          <div className="mt-auto pt-2">
+          {/* Stage selector + generate from template */}
+          <div className="mt-auto pt-2 space-y-2">
             <Select value={balance.current_stage || 'closing_operations'} onValueChange={(val) => onStageChange(balance.id, val)}>
               <SelectTrigger className="w-full text-sm">
                 <SelectValue placeholder="שלב נוכחי" />
@@ -137,6 +146,15 @@ const BalanceSheetCard = ({ balance, onUpdate, onStageChange }) => {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs gap-1 border-purple-200 text-purple-700 hover:bg-purple-50"
+              onClick={() => onGenerateFromTemplate(balance.id)}
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              צור משימות מתבנית
+            </Button>
           </div>
 
           {/* Edit form */}
@@ -180,8 +198,20 @@ export default function BalanceSheetsPage() {
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear() - 1));
 
+  // Template state
+  const [templates, setTemplates] = useState(DEFAULT_STAGE_TEMPLATES);
+  const [templateConfigId, setTemplateConfigId] = useState(null);
+  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(null); // balance sheet id
+  const [isGeneratingFromTemplate, setIsGeneratingFromTemplate] = useState(false);
+  const [templateGenResult, setTemplateGenResult] = useState(null);
+
   useEffect(() => {
     loadData();
+    loadBalanceSheetTemplates().then(({ templates: t, configId }) => {
+      setTemplates(t);
+      setTemplateConfigId(configId);
+    });
   }, []);
 
   const loadData = async () => {
@@ -271,6 +301,76 @@ export default function BalanceSheetsPage() {
     }
   };
 
+  // Generate tasks from template for a specific balance sheet
+  const handleGenerateFromTemplate = async (balanceId) => {
+    const balance = balanceSheets.find(b => b.id === balanceId);
+    if (!balance) return;
+
+    setIsGeneratingFromTemplate(true);
+    setTemplateGenResult(null);
+
+    try {
+      // Load existing tasks for this client + balance sheet year
+      const allTasks = await Task.list(null, 5000).catch(() => []);
+      const existingClientTasks = allTasks.filter(t =>
+        (t.client_id === balance.client_id || t.client_name === balance.client_name) &&
+        t.category === 'מאזן' &&
+        t.title?.includes(balance.tax_year)
+      );
+      const existingTitles = new Set(existingClientTasks.map(t => t.title));
+
+      let createdCount = 0;
+      const targetDate = balance.target_date || `${parseInt(balance.tax_year) + 1}-05-31`;
+
+      for (const [stageKey, stageTemplate] of Object.entries(templates)) {
+        for (const taskTemplate of stageTemplate.tasks) {
+          const taskTitle = `${taskTemplate.title} - ${balance.client_name} - ${balance.tax_year}`;
+
+          if (existingTitles.has(taskTitle)) continue;
+
+          await Task.create({
+            title: taskTitle,
+            client_name: balance.client_name,
+            client_id: balance.client_id || '',
+            category: 'מאזן',
+            status: 'not_started',
+            due_date: targetDate,
+            context: 'work',
+            notes: `${taskTemplate.description || ''}\nשלב: ${stageTemplate.label}`,
+            process_steps: {},
+            balance_stage: stageKey,
+            balance_sheet_id: balanceId,
+          });
+          createdCount++;
+        }
+      }
+
+      setTemplateGenResult({
+        type: 'success',
+        message: createdCount > 0
+          ? `נוצרו ${createdCount} משימות עבור ${balance.client_name} - ${balance.tax_year}`
+          : `כל המשימות כבר קיימות עבור ${balance.client_name}`,
+      });
+      setShowGenerateDialog(null);
+    } catch (err) {
+      console.error('Error generating from template:', err);
+      setTemplateGenResult({ type: 'error', message: 'שגיאה ביצירת משימות מתבנית' });
+    } finally {
+      setIsGeneratingFromTemplate(false);
+    }
+  };
+
+  // Save updated templates
+  const handleSaveTemplates = async (updatedTemplates) => {
+    try {
+      const newId = await saveBalanceSheetTemplates(templateConfigId, updatedTemplates);
+      setTemplates(updatedTemplates);
+      if (newId) setTemplateConfigId(newId);
+    } catch (err) {
+      console.error('Error saving templates:', err);
+    }
+  };
+
   const filteredBalances = useMemo(() => {
     return balanceSheets.filter(balance =>
       (filters.stage === 'all' || balance.current_stage === filters.stage) &&
@@ -318,6 +418,10 @@ export default function BalanceSheetsPage() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setShowTemplateEditor(true)} className="flex items-center gap-1">
+            <Settings2 className="w-4 h-4" />
+            תבניות מאזן
+          </Button>
           <Button variant="outline" onClick={() => setShowCreatePanel(!showCreatePanel)} className="flex items-center gap-1">
             <Plus className="w-4 h-4" />
             צור מאזנים ללקוחות
@@ -445,6 +549,19 @@ export default function BalanceSheetsPage() {
         </Select>
       </div>
 
+      {/* Template generation result */}
+      {templateGenResult && (
+        <div className={`p-4 rounded-lg border ${
+          templateGenResult.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+          <div className="flex items-center gap-2">
+            {templateGenResult.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <span className="font-medium">{templateGenResult.message}</span>
+            <Button variant="ghost" size="sm" onClick={() => setTemplateGenResult(null)} className="mr-auto">סגור</Button>
+          </div>
+        </div>
+      )}
+
       {/* Balance Sheets Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -468,12 +585,188 @@ export default function BalanceSheetsPage() {
                   balance={balance}
                   onStageChange={handleStageChange}
                   onUpdate={handleUpdate}
+                  onGenerateFromTemplate={(id) => setShowGenerateDialog(id)}
                 />
               ))}
             </AnimatePresence>
           )}
         </div>
       )}
+
+      {/* Generate from template confirmation dialog */}
+      <Dialog open={!!showGenerateDialog} onOpenChange={(open) => !open && setShowGenerateDialog(null)}>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>יצירת משימות מתבנית מאזן</DialogTitle>
+            <DialogDescription>
+              {showGenerateDialog && (() => {
+                const b = balanceSheets.find(x => x.id === showGenerateDialog);
+                return b ? `${b.client_name} - שנת מס ${b.tax_year}` : '';
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">יווצרו המשימות הבאות מהתבנית (משימות קיימות לא יכפלו):</p>
+            {Object.entries(templates).map(([stageKey, stageData]) => (
+              <div key={stageKey} className="border rounded-lg p-3">
+                <h4 className="font-semibold text-sm text-gray-800 mb-2">{stageData.label}</h4>
+                <div className="space-y-1">
+                  {stageData.tasks.map(t => (
+                    <div key={t.key} className="flex items-center gap-2 text-xs text-gray-600">
+                      <ListChecks className="w-3 h-3 text-purple-500" />
+                      <span>{t.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowGenerateDialog(null)}>ביטול</Button>
+              <Button
+                onClick={() => handleGenerateFromTemplate(showGenerateDialog)}
+                disabled={isGeneratingFromTemplate}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {isGeneratingFromTemplate ? (
+                  <><RefreshCw className="w-4 h-4 ml-1 animate-spin" /> יוצר...</>
+                ) : (
+                  <><Wand2 className="w-4 h-4 ml-1" /> צור משימות</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template editor dialog */}
+      <Dialog open={showTemplateEditor} onOpenChange={setShowTemplateEditor}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ניהול תבניות מאזן</DialogTitle>
+            <DialogDescription>
+              ערכי את המשימות הקבועות לכל שלב במאזן. משימות אלו ייווצרו אוטומטית עבור כל לקוח.
+            </DialogDescription>
+          </DialogHeader>
+          <TemplateEditor
+            templates={templates}
+            onSave={(updated) => { handleSaveTemplates(updated); setShowTemplateEditor(false); }}
+            onCancel={() => setShowTemplateEditor(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// =====================================================
+// TEMPLATE EDITOR COMPONENT
+// =====================================================
+
+function TemplateEditor({ templates, onSave, onCancel }) {
+  const [editTemplates, setEditTemplates] = useState(() => JSON.parse(JSON.stringify(templates)));
+  const [expandedStage, setExpandedStage] = useState(null);
+
+  const handleAddTask = (stageKey) => {
+    const updated = { ...editTemplates };
+    updated[stageKey] = {
+      ...updated[stageKey],
+      tasks: [...updated[stageKey].tasks, { key: `custom_${Date.now()}`, title: '', description: '' }],
+    };
+    setEditTemplates(updated);
+  };
+
+  const handleRemoveTask = (stageKey, taskIdx) => {
+    const updated = { ...editTemplates };
+    updated[stageKey] = {
+      ...updated[stageKey],
+      tasks: updated[stageKey].tasks.filter((_, i) => i !== taskIdx),
+    };
+    setEditTemplates(updated);
+  };
+
+  const handleUpdateTask = (stageKey, taskIdx, field, value) => {
+    const updated = { ...editTemplates };
+    updated[stageKey] = {
+      ...updated[stageKey],
+      tasks: updated[stageKey].tasks.map((t, i) =>
+        i === taskIdx ? { ...t, [field]: value } : t
+      ),
+    };
+    setEditTemplates(updated);
+  };
+
+  const totalTasks = Object.values(editTemplates).reduce((sum, s) => sum + s.tasks.length, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
+        <span className="font-medium">{totalTasks}</span> משימות קבועות בסה"כ, ב-{Object.keys(editTemplates).length} שלבים.
+        עריכת התבנית תשפיע על יצירות עתידיות בלבד.
+      </div>
+
+      {Object.entries(editTemplates).map(([stageKey, stageData]) => {
+        const isExpanded = expandedStage === stageKey;
+        return (
+          <Card key={stageKey} className="border-gray-200">
+            <button
+              onClick={() => setExpandedStage(isExpanded ? null : stageKey)}
+              className="w-full text-right px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-gray-800">{stageData.label}</h3>
+                <Badge variant="outline" className="text-xs">{stageData.tasks.length} משימות</Badge>
+              </div>
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {isExpanded && (
+              <CardContent className="pt-0 space-y-3">
+                {stageData.tasks.map((task, idx) => (
+                  <div key={task.key || idx} className="flex gap-2 items-start bg-gray-50 rounded-lg p-2">
+                    <div className="flex-1 space-y-1">
+                      <Input
+                        value={task.title}
+                        onChange={(e) => handleUpdateTask(stageKey, idx, 'title', e.target.value)}
+                        placeholder="שם המשימה"
+                        className="text-sm h-8"
+                      />
+                      <Input
+                        value={task.description || ''}
+                        onChange={(e) => handleUpdateTask(stageKey, idx, 'description', e.target.value)}
+                        placeholder="תיאור (אופציונלי)"
+                        className="text-xs h-7 text-gray-500"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+                      onClick={() => handleRemoveTask(stageKey, idx)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs gap-1"
+                  onClick={() => handleAddTask(stageKey)}
+                >
+                  <Plus className="w-3 h-3" /> הוסף משימה לשלב
+                </Button>
+              </CardContent>
+            )}
+          </Card>
+        );
+      })}
+
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="outline" onClick={onCancel}>ביטול</Button>
+        <Button onClick={() => onSave(editTemplates)} className="bg-purple-600 hover:bg-purple-700">
+          <Save className="w-4 h-4 ml-1" /> שמור תבניות
+        </Button>
+      </div>
     </div>
   );
 }
