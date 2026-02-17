@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard } from 'lucide-react';
+import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard, BookUser } from 'lucide-react';
 
 const serviceTypeLabels = {
     bookkeeping: 'הנהלת חשבונות',
@@ -97,8 +97,9 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const [relatedTasks, setRelatedTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [accountsSummary, setAccountsSummary] = useState(null);
+  const [accountantName, setAccountantName] = useState(null);
 
-  // Load accounts summary on mount
+  // Load accounts summary and accountant on mount
   useEffect(() => {
     const loadAccountsSummary = async () => {
       try {
@@ -114,7 +115,26 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         // silently fail
       }
     };
+    const loadAccountant = async () => {
+      try {
+        const { ClientServiceProvider, ServiceProvider } = await import('@/api/entities');
+        const links = await ClientServiceProvider.filter({ client_id: client.id }, null, 50);
+        if (links && links.length > 0) {
+          const allProviders = await ServiceProvider.list(null, 500);
+          const providerMap = {};
+          (allProviders || []).forEach(p => { providerMap[p.id] = p; });
+          for (const link of links) {
+            const provider = providerMap[link.service_provider_id];
+            if (provider && (provider.type === 'cpa' || provider.type === 'cpa_representative')) {
+              setAccountantName(provider.name + (provider.company_name ? ` (${provider.company_name})` : ''));
+              break;
+            }
+          }
+        }
+      } catch { /* silently fail */ }
+    };
     loadAccountsSummary();
+    loadAccountant();
   }, [client.id]);
 
   const uiProps = statusUI[client.status] || statusUI.inactive;
@@ -234,6 +254,15 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
           </div>
         )}
         
+        {/* רו"ח */}
+        {accountantName && (
+          <div className="flex items-center gap-2 text-xs text-gray-600 mb-2 pb-2 border-b border-gray-100">
+            <BookUser className="w-3 h-3 text-indigo-500 flex-shrink-0" />
+            <span className="font-medium text-indigo-700">רו"ח:</span>
+            <span>{accountantName}</span>
+          </div>
+        )}
+
         {/* תדירויות דיווח - שורה 1: מע"מ ומקדמות, שורה 2: שכר ב"ל וניכויים */}
         {hasReporting && (
           <div className="border-t border-gray-100 pt-2 min-h-[3rem]">
