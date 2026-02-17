@@ -33,7 +33,7 @@ const navigationGroups = [
         name: "לקוחות",
         icon: Users,
         children: [
-          { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+          { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
         ],
       },
       {
@@ -65,8 +65,8 @@ const navigationGroups = [
         icon: BarChart3,
         children: [
           { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
-          { name: "תהליכי דיווח חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
-          { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
+          { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
+          { name: "דיווחי מיסים חודשיים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
           { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
           { name: "דיווחים מרכזים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
         ],

@@ -39,9 +39,10 @@ import {
   X,
   AlertTriangle,
   CheckSquare, // Added
-  Square // Added
+  Square, // Added
+  FolderKanban
 } from 'lucide-react';
-import { Client } from '@/api/entities';
+import { Client, Project, PeriodicReport, BalanceSheet } from '@/api/entities';
 import { mondayApi } from '@/api/functions';
 import { exportClientsToExcel } from '@/api/functions';
 import { importClientsFromExcel } from '@/api/functions';
@@ -106,6 +107,34 @@ export default function ClientManagementPage() {
   const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
   const [bulkNewStatus, setBulkNewStatus] = useState('active');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [isMigratingDev, setIsMigratingDev] = useState(false);
+
+  const handleMigrateDevToProjects = async () => {
+    if (!window.confirm('להעביר את כל כרטיסי הפיתוח כפרויקטים ולמחוק אותם מהלקוחות?')) return;
+    setIsMigratingDev(true);
+    try {
+      const devClients = clients.filter(c => c.status === 'development');
+      const existingProjects = await Project.list(null, 500);
+      const existingNames = new Set(existingProjects.map(p => p.name));
+
+      for (const client of devClients) {
+        if (!existingNames.has(client.name)) {
+          await Project.create({
+            name: client.name,
+            status: 'in_development',
+            system_type: 'web_app',
+            notes: client.notes || '',
+          });
+        }
+        await Client.delete(client.id);
+      }
+      await loadClients();
+    } catch (err) {
+      console.error('שגיאה בהעברת לקוחות פיתוח:', err);
+      setError('שגיאה בהעברת לקוחות פיתוח לפרויקטים');
+    }
+    setIsMigratingDev(false);
+  };
 
   useEffect(() => {
     loadClients();
@@ -371,6 +400,62 @@ export default function ClientManagementPage() {
     balance_sheet_only: 'סגירת מאזן בלבד'
   };
 
+  // Auto-create periodic reports and balance sheets for new/updated active clients
+  const autoCreateReportsForClient = async (clientId, clientName, clientData) => {
+    const services = clientData.service_types || [];
+    const year = String(new Date().getFullYear() - 1); // Report year (previous year)
+    const currentYear = String(new Date().getFullYear());
+
+    try {
+      // Auto-create periodic reports (126 forms) if client has payroll services
+      const hasPayroll = services.some(s => ['payroll', 'deductions', 'social_security'].includes(s));
+      if (hasPayroll) {
+        const existingReports = await PeriodicReport.list(null, 2000).catch(() => []);
+        const clientReports = existingReports.filter(r => r.client_id === clientId && r.report_year === year);
+
+        if (clientReports.length === 0) {
+          const reportTypes = {
+            bituach_leumi_126: ['h1', 'h2', 'annual'],
+            deductions_126_wage: ['annual'],
+          };
+          for (const [typeKey, periods] of Object.entries(reportTypes)) {
+            for (const period of periods) {
+              const y = parseInt(year);
+              const targetDate = period === 'h1' ? `${y}-07-18` : period === 'h2' ? `${y + 1}-01-18` : `${y + 1}-04-30`;
+              await PeriodicReport.create({
+                client_id: clientId, client_name: clientName,
+                report_year: year, report_type: typeKey, period,
+                target_date: targetDate, status: 'not_started',
+                reconciliation_steps: { payroll_vs_bookkeeping: false, periodic_vs_annual: false },
+                submission_date: '', notes: '',
+              });
+            }
+          }
+          console.log(`✅ נוצרו דיווחים מרכזים ל-${clientName} לשנת ${year}`);
+        }
+      }
+
+      // Auto-create balance sheet if client has bookkeeping
+      const hasBookkeeping = services.some(s => ['bookkeeping', 'bookkeeping_full'].includes(s));
+      if (hasBookkeeping) {
+        const existingBS = await BalanceSheet.list(null, 2000).catch(() => []);
+        const clientBS = existingBS.filter(b => b.client_id === clientId && b.tax_year === year);
+
+        if (clientBS.length === 0) {
+          await BalanceSheet.create({
+            client_name: clientName, client_id: clientId,
+            tax_year: year, current_stage: 'closing_operations',
+            target_date: `${parseInt(year) + 1}-05-31`,
+            folder_link: '', notes: '',
+          });
+          console.log(`✅ נוצר מאזן ל-${clientName} לשנת ${year}`);
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ שגיאה ביצירת דיווחים אוטומטיים:', err.message);
+    }
+  };
+
   const handleSaveClient = async (clientData) => {
     const isNew = !selectedClient?.id;
     setIsSaving(true);
@@ -387,6 +472,11 @@ export default function ClientManagementPage() {
           await Client.update(selectedClient.id, clientData);
         }
       }, 3, 2000);
+
+      // Auto-create reports in background for active clients with relevant services
+      if (savedClientId && (clientData.status === 'active' || (!isNew && selectedClient?.status === 'active'))) {
+        autoCreateReportsForClient(savedClientId, clientData.name, clientData);
+      }
 
       // Push to Monday.com in background (don't block UI)
       if (savedClientId) {
@@ -670,6 +760,20 @@ export default function ClientManagementPage() {
               </ToggleGroupItem>
             </ToggleGroup>
 
+            {/* Migrate dev clients to projects */}
+            {statusFilter === 'development' && filteredClients.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMigrateDevToProjects}
+                disabled={isMigratingDev}
+                className="gap-2 text-purple-700 border-purple-300 hover:bg-purple-50"
+              >
+                <FolderKanban className="w-4 h-4" />
+                {isMigratingDev ? 'מעביר...' : 'העבר לפרויקטים'}
+              </Button>
+            )}
+
             {/* Select All Checkbox */}
             {!isLoading && filteredClients.length > 0 && (
               <Button
@@ -795,7 +899,6 @@ export default function ClientManagementPage() {
                   <SelectItem value="inactive">לא פעיל</SelectItem>
                   <SelectItem value="potential">פוטנציאלי</SelectItem>
                   <SelectItem value="former">עבר</SelectItem>
-                  <SelectItem value="development">פיתוח</SelectItem>
                   <SelectItem value="onboarding_pending">ממתין לקליטה</SelectItem>
                   <SelectItem value="balance_sheet_only">סגירת מאזן בלבד</SelectItem>
                 </SelectContent>
