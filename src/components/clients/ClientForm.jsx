@@ -16,6 +16,7 @@ import { createPageUrl } from '@/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Client, ServiceCompany, ServiceProvider, ClientServiceProvider } from '@/api/entities';
 import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
+import { loadAutomationRules, getAutoLinkedServices } from '@/config/automationRules';
 
 
 export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate }) {
@@ -108,6 +109,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
 
   const [selectedCompanyToLink, setSelectedCompanyToLink] = useState(null);
   const [selectedProvidersToLink, setSelectedProvidersToLink] = useState([]);
+  const [automationRules, setAutomationRules] = useState([]);
 
   const isNewClient = !client?.id;
 
@@ -181,6 +183,10 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     loadLinkData();
   }, [client, isNewClient]);
 
+  useEffect(() => {
+    loadAutomationRules().then(({ rules }) => setAutomationRules(rules));
+  }, []);
+
   const handleInputChange = (field, value, section = null, subSection = null) => {
     setFormData(prev => {
       let newData = { ...prev };
@@ -230,28 +236,26 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
 
       let newReportingInfo = { ...prev.reporting_info };
 
-      // Auto-link: if payroll is unchecked, also remove social_security and deductions
+      // When unchecking payroll, also remove related services and reset frequencies
       if (serviceType === 'payroll' && !checked) {
-        newServiceTypes = newServiceTypes.filter(s => s !== 'social_security' && s !== 'deductions');
+        const payrollLinked = getAutoLinkedServices(automationRules, 'payroll', prev);
+        newServiceTypes = newServiceTypes.filter(s => !payrollLinked.includes(s));
         newReportingInfo.payroll_frequency = 'not_applicable';
         newReportingInfo.social_security_frequency = 'not_applicable';
         newReportingInfo.deductions_frequency = 'not_applicable';
       }
 
-      // If payroll is checked, also add social_security and deductions
-      if (serviceType === 'payroll' && checked) {
-        if (!newServiceTypes.includes('social_security')) newServiceTypes.push('social_security');
-        if (!newServiceTypes.includes('deductions')) newServiceTypes.push('deductions');
-        if (newReportingInfo.payroll_frequency === 'not_applicable') newReportingInfo.payroll_frequency = 'monthly';
-        if (newReportingInfo.social_security_frequency === 'not_applicable') newReportingInfo.social_security_frequency = 'monthly';
-        if (newReportingInfo.deductions_frequency === 'not_applicable') newReportingInfo.deductions_frequency = 'monthly';
-      }
-
-      // Auto-link: bookkeeping/bookkeeping_full → annual_reports (always) + reconciliation (if company)
-      if ((serviceType === 'bookkeeping' || serviceType === 'bookkeeping_full') && checked) {
-        if (!newServiceTypes.includes('annual_reports')) newServiceTypes.push('annual_reports');
-        if (prev.business_info?.business_type === 'company') {
-          if (!newServiceTypes.includes('reconciliation')) newServiceTypes.push('reconciliation');
+      // When checking a service, apply automation rules to auto-add linked services
+      if (checked) {
+        const autoAdd = getAutoLinkedServices(automationRules, serviceType, prev);
+        for (const svc of autoAdd) {
+          if (!newServiceTypes.includes(svc)) newServiceTypes.push(svc);
+        }
+        // Set payroll-related frequencies when payroll is selected
+        if (serviceType === 'payroll') {
+          if (newReportingInfo.payroll_frequency === 'not_applicable') newReportingInfo.payroll_frequency = 'monthly';
+          if (newReportingInfo.social_security_frequency === 'not_applicable') newReportingInfo.social_security_frequency = 'monthly';
+          if (newReportingInfo.deductions_frequency === 'not_applicable') newReportingInfo.deductions_frequency = 'monthly';
         }
       }
 
@@ -679,13 +683,19 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 <div><Label htmlFor="business_size">גודל העסק</Label><Select value={formData.business_info?.business_size} onValueChange={(value) => handleInputChange('business_size', value, 'business_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="small">קטן</SelectItem><SelectItem value="medium">בינוני</SelectItem><SelectItem value="large">גדול</SelectItem></SelectContent></Select></div>
                 <div><Label htmlFor="business_type">סוג העסק</Label><Select value={formData.business_info?.business_type} onValueChange={(value) => {
                   handleInputChange('business_type', value, 'business_info');
-                  // Auto-link: when changing to company and bookkeeping exists → add annual_reports + reconciliation
-                  const hasBookkeeping = (formData.service_types || []).some(s => s === 'bookkeeping' || s === 'bookkeeping_full');
-                  if (value === 'company' && hasBookkeeping) {
+                  // Re-apply automation rules for current services with new business type
+                  const currentServices = formData.service_types || [];
+                  const updatedClientData = { ...formData, business_info: { ...formData.business_info, business_type: value } };
+                  const allAutoAdd = [];
+                  for (const svc of currentServices) {
+                    allAutoAdd.push(...getAutoLinkedServices(automationRules, svc, updatedClientData));
+                  }
+                  if (allAutoAdd.length > 0) {
                     setFormData(prev => {
                       const st = [...(prev.service_types || [])];
-                      if (!st.includes('annual_reports')) st.push('annual_reports');
-                      if (!st.includes('reconciliation')) st.push('reconciliation');
+                      for (const s of allAutoAdd) {
+                        if (!st.includes(s)) st.push(s);
+                      }
                       return { ...prev, service_types: st };
                     });
                   }

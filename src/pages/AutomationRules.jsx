@@ -1,0 +1,411 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
+} from '@/components/ui/dialog';
+import { Zap, Plus, Pencil, Trash2, Save, AlertTriangle, CheckCircle, ArrowLeft, Settings } from 'lucide-react';
+import {
+  loadAutomationRules, saveAutomationRules,
+  ALL_SERVICES, BUSINESS_TYPES, REPORT_ENTITIES,
+  PERIODIC_REPORT_TYPES, PERIODIC_REPORT_PERIODS,
+  DEFAULT_RULES,
+} from '@/config/automationRules';
+
+const RULE_TYPES = {
+  service_auto_link: 'סימון שירות אוטומטי',
+  report_auto_create: 'יצירת דיווח אוטומטית',
+};
+
+const ruleTypeColors = {
+  service_auto_link: 'bg-blue-100 text-blue-800',
+  report_auto_create: 'bg-green-100 text-green-800',
+};
+
+function getEmptyRule(type) {
+  if (type === 'service_auto_link') {
+    return {
+      id: `rule_${Date.now()}`,
+      name: '',
+      description: '',
+      type: 'service_auto_link',
+      enabled: true,
+      trigger_service: '',
+      auto_add_services: [],
+      condition: null,
+    };
+  }
+  return {
+    id: `rule_${Date.now()}`,
+    name: '',
+    description: '',
+    type: 'report_auto_create',
+    enabled: true,
+    trigger_services: [],
+    target_entity: 'PeriodicReport',
+    report_types: {},
+  };
+}
+
+function RuleEditor({ rule, onSave, onCancel }) {
+  const [editRule, setEditRule] = useState({ ...rule });
+  const isServiceLink = editRule.type === 'service_auto_link';
+
+  const handleChange = (field, value) => {
+    setEditRule(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleConditionToggle = (enabled) => {
+    if (enabled) {
+      setEditRule(prev => ({ ...prev, condition: { field: 'business_type', value: 'company' } }));
+    } else {
+      setEditRule(prev => ({ ...prev, condition: null }));
+    }
+  };
+
+  const handleReportTypeToggle = (typeKey, period) => {
+    setEditRule(prev => {
+      const rt = { ...(prev.report_types || {}) };
+      const periods = rt[typeKey] || [];
+      if (periods.includes(period)) {
+        rt[typeKey] = periods.filter(p => p !== period);
+        if (rt[typeKey].length === 0) delete rt[typeKey];
+      } else {
+        rt[typeKey] = [...periods, period];
+      }
+      return { ...prev, report_types: rt };
+    });
+  };
+
+  const isValid = editRule.name.trim() &&
+    (isServiceLink ? editRule.trigger_service && editRule.auto_add_services.length > 0
+      : (editRule.trigger_services || []).length > 0);
+
+  return (
+    <DialogContent className="bg-white max-w-xl max-h-[85vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>{rule.name ? 'עריכת חוק' : 'חוק חדש'}</DialogTitle>
+        <DialogDescription>
+          {isServiceLink ? 'כשנבחר שירות ללקוח, סמן אוטומטית שירותים נוספים' : 'כששומרים לקוח עם שירותים מסוימים, צור דיווחים אוטומטית'}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-4 py-2">
+        <div>
+          <Label>שם החוק</Label>
+          <Input value={editRule.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="למשל: שכר → ביטוח לאומי" />
+        </div>
+        <div>
+          <Label>תיאור</Label>
+          <Input value={editRule.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="הסבר קצר מה החוק עושה" />
+        </div>
+
+        {isServiceLink ? (
+          <>
+            <div>
+              <Label>כשנבחר השירות:</Label>
+              <Select value={editRule.trigger_service} onValueChange={(v) => handleChange('trigger_service', v)}>
+                <SelectTrigger><SelectValue placeholder="בחר שירות מפעיל" /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  {Object.entries(ALL_SERVICES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>סמן אוטומטית גם:</Label>
+              <ToggleGroup type="multiple" value={editRule.auto_add_services || []} onValueChange={(v) => handleChange('auto_add_services', v)} className="flex-wrap justify-start">
+                {Object.entries(ALL_SERVICES).filter(([k]) => k !== editRule.trigger_service).map(([k, v]) => (
+                  <ToggleGroupItem key={k} value={k} className="text-xs">{v}</ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <Switch checked={!!editRule.condition} onCheckedChange={handleConditionToggle} />
+              <Label>רק אם סוג עסק מסוים</Label>
+            </div>
+            {editRule.condition && (
+              <Select value={editRule.condition.value} onValueChange={(v) => setEditRule(prev => ({ ...prev, condition: { ...prev.condition, value: v } }))}>
+                <SelectTrigger><SelectValue placeholder="בחר סוג עסק" /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  {Object.entries(BUSINESS_TYPES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </>
+        ) : (
+          <>
+            <div>
+              <Label>כשללקוח יש אחד מהשירותים:</Label>
+              <ToggleGroup type="multiple" value={editRule.trigger_services || []} onValueChange={(v) => handleChange('trigger_services', v)} className="flex-wrap justify-start">
+                {Object.entries(ALL_SERVICES).map(([k, v]) => (
+                  <ToggleGroupItem key={k} value={k} className="text-xs">{v}</ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </div>
+            <div>
+              <Label>ישות ליצירה</Label>
+              <Select value={editRule.target_entity} onValueChange={(v) => handleChange('target_entity', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  {Object.entries(REPORT_ENTITIES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {editRule.target_entity === 'PeriodicReport' && (
+              <div>
+                <Label>סוגי דיווח ותקופות</Label>
+                <div className="space-y-2 mt-2">
+                  {Object.entries(PERIODIC_REPORT_TYPES).map(([typeKey, typeLabel]) => (
+                    <div key={typeKey} className="border rounded p-3">
+                      <div className="font-medium text-sm mb-2">{typeLabel}</div>
+                      <ToggleGroup
+                        type="multiple"
+                        value={(editRule.report_types || {})[typeKey] || []}
+                        onValueChange={(periods) => {
+                          setEditRule(prev => {
+                            const rt = { ...(prev.report_types || {}) };
+                            if (periods.length > 0) {
+                              rt[typeKey] = periods;
+                            } else {
+                              delete rt[typeKey];
+                            }
+                            return { ...prev, report_types: rt };
+                          });
+                        }}
+                        className="justify-start"
+                      >
+                        {Object.entries(PERIODIC_REPORT_PERIODS).map(([pk, pv]) => (
+                          <ToggleGroupItem key={pk} value={pk} className="text-xs">{pv}</ToggleGroupItem>
+                        ))}
+                      </ToggleGroup>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button variant="ghost" onClick={onCancel}>ביטול</Button>
+        <Button onClick={() => onSave(editRule)} disabled={!isValid}>שמור חוק</Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+export default function AutomationRules() {
+  const [rules, setRules] = useState([]);
+  const [configId, setConfigId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingRule, setEditingRule] = useState(null);
+  const [newRuleType, setNewRuleType] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  useEffect(() => {
+    loadRules();
+  }, []);
+
+  const loadRules = async () => {
+    setIsLoading(true);
+    const { rules: loadedRules, configId: id } = await loadAutomationRules();
+    setRules(loadedRules);
+    setConfigId(id);
+    setIsLoading(false);
+  };
+
+  const handleSave = async (updatedRules) => {
+    try {
+      const newId = await saveAutomationRules(configId, updatedRules);
+      if (newId) setConfigId(newId);
+      setRules(updatedRules);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+  };
+
+  const handleToggleRule = async (ruleId) => {
+    const updated = rules.map(r => r.id === ruleId ? { ...r, enabled: !r.enabled } : r);
+    await handleSave(updated);
+  };
+
+  const handleDeleteRule = async (ruleId) => {
+    if (!window.confirm('למחוק את החוק?')) return;
+    const updated = rules.filter(r => r.id !== ruleId);
+    await handleSave(updated);
+  };
+
+  const handleSaveRule = async (rule) => {
+    const existing = rules.findIndex(r => r.id === rule.id);
+    let updated;
+    if (existing >= 0) {
+      updated = [...rules];
+      updated[existing] = rule;
+    } else {
+      updated = [...rules, rule];
+    }
+    await handleSave(updated);
+    setEditingRule(null);
+    setNewRuleType(null);
+  };
+
+  const handleResetDefaults = async () => {
+    if (!window.confirm('לאפס את כל החוקים לברירת המחדל? חוקים מותאמים אישית יימחקו.')) return;
+    await handleSave([...DEFAULT_RULES]);
+  };
+
+  const serviceAutoLinkRules = rules.filter(r => r.type === 'service_auto_link');
+  const reportAutoCreateRules = rules.filter(r => r.type === 'report_auto_create');
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto" dir="rtl">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Zap className="w-8 h-8 text-yellow-500" />
+          <div>
+            <h1 className="text-2xl font-bold">אוטומציות</h1>
+            <p className="text-gray-500 text-sm">חוקים אוטומטיים שרצים בעת הוספה ועדכון לקוחות</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {saveStatus === 'saved' && (
+            <span className="text-green-600 flex items-center gap-1 text-sm"><CheckCircle className="w-4 h-4" /> נשמר</span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="text-red-600 flex items-center gap-1 text-sm"><AlertTriangle className="w-4 h-4" /> שגיאה</span>
+          )}
+          <Button variant="outline" size="sm" onClick={handleResetDefaults} className="gap-1">
+            <Settings className="w-4 h-4" /> איפוס לברירת מחדל
+          </Button>
+        </div>
+      </div>
+
+      {/* Service Auto-Link Rules */}
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Badge className="bg-blue-100 text-blue-800">שירותים</Badge>
+            סימון שירות אוטומטי
+          </CardTitle>
+          <Button size="sm" onClick={() => { setNewRuleType('service_auto_link'); setEditingRule(getEmptyRule('service_auto_link')); }} className="gap-1">
+            <Plus className="w-4 h-4" /> חוק חדש
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-500 text-sm mb-4">כשנבחר שירות מסוים ללקוח, שירותים קשורים יסומנו אוטומטית</p>
+          {serviceAutoLinkRules.length === 0 ? (
+            <p className="text-gray-400 text-center py-4">אין חוקים מסוג זה</p>
+          ) : (
+            <div className="space-y-2">
+              {serviceAutoLinkRules.map(rule => (
+                <div key={rule.id} className={`flex items-center justify-between p-3 rounded-lg border ${rule.enabled ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <Switch checked={rule.enabled} onCheckedChange={() => handleToggleRule(rule.id)} />
+                    <div>
+                      <div className="font-medium text-sm">{rule.name}</div>
+                      <div className="text-xs text-gray-500">{rule.description}</div>
+                      {rule.condition && (
+                        <Badge variant="outline" className="mt-1 text-xs">
+                          תנאי: {BUSINESS_TYPES[rule.condition.value] || rule.condition.value}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setEditingRule(rule)}><Pencil className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(rule.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Report Auto-Create Rules */}
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Badge className="bg-green-100 text-green-800">דיווחים</Badge>
+            יצירת דיווח אוטומטית
+          </CardTitle>
+          <Button size="sm" onClick={() => { setNewRuleType('report_auto_create'); setEditingRule(getEmptyRule('report_auto_create')); }} className="gap-1">
+            <Plus className="w-4 h-4" /> חוק חדש
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-500 text-sm mb-4">כששומרים לקוח פעיל עם שירותים מסוימים, נוצרים דיווחים או מאזנים אוטומטית</p>
+          {reportAutoCreateRules.length === 0 ? (
+            <p className="text-gray-400 text-center py-4">אין חוקים מסוג זה</p>
+          ) : (
+            <div className="space-y-2">
+              {reportAutoCreateRules.map(rule => (
+                <div key={rule.id} className={`flex items-center justify-between p-3 rounded-lg border ${rule.enabled ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <Switch checked={rule.enabled} onCheckedChange={() => handleToggleRule(rule.id)} />
+                    <div>
+                      <div className="font-medium text-sm">{rule.name}</div>
+                      <div className="text-xs text-gray-500">{rule.description}</div>
+                      <div className="flex gap-1 mt-1 flex-wrap">
+                        <Badge variant="outline" className="text-xs">{REPORT_ENTITIES[rule.target_entity] || rule.target_entity}</Badge>
+                        {rule.report_types && Object.keys(rule.report_types).map(tk => (
+                          <Badge key={tk} variant="secondary" className="text-xs">
+                            {PERIODIC_REPORT_TYPES[tk] || tk}: {(rule.report_types[tk] || []).map(p => PERIODIC_REPORT_PERIODS[p] || p).join(', ')}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setEditingRule(rule)}><Pencil className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteRule(rule.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* How it works */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">איך זה עובד?</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-gray-600 space-y-2">
+          <p><strong>חוקי סימון שירות:</strong> כשאת בוחרת שירות בכרטיס לקוח, שירותים קשורים יסומנו אוטומטית. למשל: בחירת "שכר" תסמן גם "ביטוח לאומי" ו"ניכויים".</p>
+          <p><strong>חוקי יצירת דיווח:</strong> כששומרים לקוח פעיל עם שירותים מסוימים, נוצרים דיווחים מרכזים ו/או מאזנים אוטומטית לשנת הדיווח.</p>
+          <p><strong>תנאים:</strong> ניתן להגביל חוק לסוג עסק מסוים (למשל: רק חברות בע"מ).</p>
+          <p><strong>הפעלה/כיבוי:</strong> כל חוק ניתן להפעלה או כיבוי בלחיצה בלי למחוק אותו.</p>
+        </CardContent>
+      </Card>
+
+      {/* Rule Editor Dialog */}
+      <Dialog open={!!editingRule} onOpenChange={(open) => { if (!open) { setEditingRule(null); setNewRuleType(null); } }}>
+        {editingRule && (
+          <RuleEditor
+            rule={editingRule}
+            onSave={handleSaveRule}
+            onCancel={() => { setEditingRule(null); setNewRuleType(null); }}
+          />
+        )}
+      </Dialog>
+    </div>
+  );
+}

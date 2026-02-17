@@ -82,6 +82,8 @@ import Projects from "./Projects";
 
 import PeriodicSummaryReports from "./PeriodicSummaryReports";
 
+import AutomationRules from "./AutomationRules";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -167,6 +169,8 @@ const PAGES = {
     Projects: Projects,
 
     PeriodicSummaryReports: PeriodicSummaryReports,
+
+    AutomationRules: AutomationRules,
 
 }
 
@@ -276,6 +280,8 @@ function PagesContent() {
                 <Route path="/Projects" element={<Projects />} />
 
                 <Route path="/PeriodicSummaryReports" element={<PeriodicSummaryReports />} />
+
+                <Route path="/AutomationRules" element={<AutomationRules />} />
 
             </Routes>
         </Layout>
