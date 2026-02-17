@@ -514,6 +514,84 @@ export default function ClientManagementPage() {
     }
   };
 
+  // ============================================================
+  // Clean up tasks when reporting frequency changes
+  // e.g., VAT monthly → bimonthly: mark odd-month tasks as not_relevant
+  // ============================================================
+  const FREQUENCY_VALID_MONTHS = {
+    monthly: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    bimonthly: [2, 4, 6, 8, 10, 12],
+    quarterly: [3, 6, 9, 12],
+    semi_annual: [6, 12],
+    not_applicable: [],
+  };
+
+  const CATEGORY_FREQUENCY_FIELDS = {
+    'מע"מ': 'vat_reporting_frequency',
+    'מקדמות מס': 'tax_advances_frequency',
+    'ניכויים': 'deductions_frequency',
+    'ביטוח לאומי': 'social_security_frequency',
+    'שכר': 'payroll_frequency',
+  };
+
+  const cleanupTasksForFrequencyChange = async (clientId, clientName, oldReportingInfo, newReportingInfo) => {
+    try {
+      // Detect which categories had frequency changes
+      const changedCategories = [];
+      for (const [category, freqField] of Object.entries(CATEGORY_FREQUENCY_FIELDS)) {
+        const oldFreq = oldReportingInfo?.[freqField] || 'monthly';
+        const newFreq = newReportingInfo?.[freqField] || 'monthly';
+        if (oldFreq !== newFreq) {
+          changedCategories.push({ category, oldFreq, newFreq });
+        }
+      }
+
+      if (changedCategories.length === 0) return;
+
+      // Load all tasks for this client
+      const allTasks = await Task.list(null, 5000).catch(() => []);
+      const clientTasks = allTasks.filter(t =>
+        (t.client_id === clientId || t.client_name === clientName) &&
+        (t.source === 'recurring_tasks' || t.is_recurring) &&
+        t.status !== 'completed' &&
+        t.status !== 'not_relevant'
+      );
+
+      let markedCount = 0;
+
+      for (const { category, newFreq } of changedCategories) {
+        const newValidMonths = FREQUENCY_VALID_MONTHS[newFreq] || [];
+
+        // Find tasks for this category
+        const categoryTasks = clientTasks.filter(t => t.category === category);
+
+        for (const task of categoryTasks) {
+          if (!task.due_date) continue;
+
+          // Determine the report month from due_date
+          // Due date is typically in the month AFTER the report month
+          // Feb 19 (getMonth=1) → report month 1 (Jan)
+          // Mar 19 (getMonth=2) → report month 2 (Feb)
+          // Jan 19 (getMonth=0) → report month 12 (Dec, previous year)
+          const dueDate = new Date(task.due_date);
+          const reportMonth = dueDate.getMonth() === 0 ? 12 : dueDate.getMonth();
+
+          // If the new frequency doesn't include this report month, mark as not_relevant
+          if (newFreq === 'not_applicable' || !newValidMonths.includes(reportMonth)) {
+            await Task.update(task.id, { status: 'not_relevant' });
+            markedCount++;
+          }
+        }
+      }
+
+      if (markedCount > 0) {
+        console.log(`✅ סומנו ${markedCount} משימות כ"לא רלוונטי" עקב שינוי תדירות דיווח של ${clientName}`);
+      }
+    } catch (err) {
+      console.warn('⚠️ שגיאה בניקוי משימות ישנות:', err.message);
+    }
+  };
+
   // Auto-create a Lead + marketing follow-up task for potential clients
   const autoCreateLeadForPotentialClient = async (clientData) => {
     try {
@@ -588,6 +666,11 @@ export default function ClientManagementPage() {
       // Auto-create lead + marketing task for potential clients
       if (isPotentialNow && (isNew || !wasPotential)) {
         autoCreateLeadForPotentialClient(clientData);
+      }
+
+      // Clean up tasks when reporting frequency changes (e.g., monthly → bimonthly)
+      if (!isNew && selectedClient?.reporting_info) {
+        cleanupTasksForFrequencyChange(savedClientId, clientData.name, selectedClient.reporting_info, clientData.reporting_info);
       }
 
       // Push to Monday.com in background (don't block UI)

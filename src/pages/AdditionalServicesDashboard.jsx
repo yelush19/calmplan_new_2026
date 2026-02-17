@@ -21,6 +21,8 @@ import {
   getServiceForTask,
   getTaskProcessSteps,
   toggleStep,
+  markAllStepsDone,
+  areAllStepsDone,
 } from '@/config/processTemplates';
 
 // Services shown on this dashboard - all additional services
@@ -129,8 +131,14 @@ export default function AdditionalServicesDashboardPage() {
     const currentSteps = getTaskProcessSteps(task);
     const updatedSteps = toggleStep(currentSteps, stepKey);
     try {
-      await Task.update(task.id, { process_steps: updatedSteps });
-      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
+      const updatedTask = { ...task, process_steps: updatedSteps };
+      const allDone = areAllStepsDone(updatedTask);
+      const updatePayload = { process_steps: updatedSteps };
+      if (allDone && task.status !== 'completed') {
+        updatePayload.status = 'completed';
+      }
+      await Task.update(task.id, updatePayload);
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
     } catch (error) { console.error("Error updating step:", error); }
   }, []);
 
@@ -141,6 +149,17 @@ export default function AdditionalServicesDashboardPage() {
       await Task.update(task.id, { process_steps: updatedSteps });
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
     } catch (error) { console.error("Error updating date:", error); }
+  }, []);
+
+  const handleStatusChange = useCallback(async (task, newStatus) => {
+    try {
+      const updatePayload = { status: newStatus };
+      if (newStatus === 'completed') {
+        updatePayload.process_steps = markAllStepsDone(task);
+      }
+      await Task.update(task.id, updatePayload);
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
+    } catch (error) { console.error("Error updating status:", error); }
   }, []);
 
   const handleMonthChange = (dir) => {
@@ -235,6 +254,7 @@ export default function AdditionalServicesDashboardPage() {
               clientRows={clientRows}
               onToggleStep={handleToggleStep}
               onDateChange={handleDateChange}
+              onStatusChange={handleStatusChange}
             />
           ))}
         </div>
@@ -255,7 +275,7 @@ export default function AdditionalServicesDashboardPage() {
   );
 }
 
-function ServiceTable({ service, clientRows, onToggleStep, onDateChange }) {
+function ServiceTable({ service, clientRows, onToggleStep, onDateChange, onStatusChange }) {
   const completedCount = clientRows.filter(r => r.task.status === 'completed').length;
 
   return (
@@ -301,6 +321,7 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange }) {
                 isEven={idx % 2 === 0}
                 onToggleStep={onToggleStep}
                 onDateChange={onDateChange}
+                onStatusChange={onStatusChange}
               />
             ))}
           </tbody>
@@ -310,10 +331,13 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange }) {
   );
 }
 
-function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange }) {
+function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange }) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+
+  const statusOptions = ['not_started', 'in_progress', 'waiting_for_materials', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment', 'completed', 'not_relevant'];
 
   return (
     <tr className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50/40' : isEven ? 'bg-white' : 'bg-gray-50/30'} hover:bg-gray-100/50`}>
@@ -335,9 +359,34 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
       })}
 
       <td className="py-1.5 px-3 text-center">
-        <Badge className={`${statusCfg.bg} ${statusCfg.text} text-[10px] px-1.5 py-0.5 font-semibold`}>
-          {statusCfg.label}
-        </Badge>
+        <Popover open={showStatusMenu} onOpenChange={setShowStatusMenu}>
+          <PopoverTrigger asChild>
+            <button className="cursor-pointer">
+              <Badge className={`${statusCfg.bg} ${statusCfg.text} text-[10px] px-1.5 py-0.5 font-semibold hover:opacity-80 transition-opacity`}>
+                {statusCfg.label}
+              </Badge>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-1" align="center" side="top">
+            <div className="space-y-0.5">
+              {statusOptions.map(s => {
+                const cfg = STATUS_CONFIG[s];
+                if (!cfg) return null;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => { onStatusChange(task, s); setShowStatusMenu(false); }}
+                    className={`w-full text-right px-2 py-1.5 rounded text-xs font-medium transition-colors hover:bg-gray-100 flex items-center gap-2 ${task.status === s ? 'bg-gray-100 font-bold' : ''}`}
+                  >
+                    <div className={`w-2.5 h-2.5 rounded-full ${cfg.bg} border ${cfg.border}`} />
+                    {cfg.label}
+                    {s === 'completed' && <span className="text-[9px] text-gray-400 mr-auto">(+כל השלבים)</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
       </td>
     </tr>
   );

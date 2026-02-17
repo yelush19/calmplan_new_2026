@@ -408,6 +408,64 @@ export function isBimonthlyOffMonth(client, serviceKey, month) {
   return monthIndex % 2 === 0;
 }
 
+/**
+ * Mark ALL steps as done for a task (used when status → completed)
+ * Returns the updated process_steps object
+ */
+export function markAllStepsDone(task) {
+  const service = getServiceForTask(task);
+  if (!service) return task.process_steps || {};
+
+  const now = new Date().toISOString().split('T')[0];
+  const existingSteps = task.process_steps || {};
+  const result = {};
+
+  for (const step of service.steps) {
+    const existing = existingSteps[step.key] || {};
+    result[step.key] = {
+      done: true,
+      date: existing.date || now,
+      notes: existing.notes || '',
+    };
+  }
+
+  return result;
+}
+
+/**
+ * Mark ALL steps as undone for a task (used when reverting from completed)
+ * Returns the updated process_steps object
+ */
+export function markAllStepsUndone(task) {
+  const service = getServiceForTask(task);
+  if (!service) return task.process_steps || {};
+
+  const existingSteps = task.process_steps || {};
+  const result = {};
+
+  for (const step of service.steps) {
+    const existing = existingSteps[step.key] || {};
+    result[step.key] = {
+      done: false,
+      date: null,
+      notes: existing.notes || '',
+    };
+  }
+
+  return result;
+}
+
+/**
+ * Check if ALL steps are done for a task
+ */
+export function areAllStepsDone(task) {
+  const service = getServiceForTask(task);
+  if (!service) return false;
+
+  const steps = task.process_steps || {};
+  return service.steps.length > 0 && service.steps.every(s => steps[s.key]?.done);
+}
+
 // Status definitions shared across dashboards
 export const STATUS_CONFIG = {
   not_started:                   { label: 'נותרו השלמות',   bg: 'bg-gray-200',       text: 'text-gray-700',     border: 'border-gray-300',    priority: 3 },
