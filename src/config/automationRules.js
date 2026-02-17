@@ -369,6 +369,83 @@ export function getAutoLinkedServices(rules, triggerService, clientData) {
 }
 
 /**
+ * Check if a client has the specific service for a given task category.
+ * Uses TASK_BOARD_CATEGORIES for precise 1:1 category→service mapping.
+ * Returns true if no mapping found (permissive default) or client has the service.
+ */
+export function clientHasServiceForCategory(category, targetEntity, clientServices) {
+  if (!targetEntity?.startsWith('Task_') || !clientServices) return true;
+  const boardCategories = TASK_BOARD_CATEGORIES[targetEntity];
+  if (!boardCategories) return true;
+  const catDef = boardCategories.find(c => c.key === category);
+  if (!catDef || !catDef.service) return true;
+  return clientServices.includes(catDef.service);
+}
+
+// ── Per-service due dates ──
+
+const DUE_DATES_CONFIG_KEY = 'service_due_dates';
+
+export const DEFAULT_SERVICE_DUE_DATES = {
+  'מע"מ': { due_day: 19 },
+  'מקדמות מס': { due_day: 19 },
+  'שכר': { due_day: 15 },
+  'ביטוח לאומי': { due_day: 15 },
+  'ניכויים': { due_day: 15 },
+  'מס"ב סוציאליות': { due_day: 12 },
+  'מס"ב עובדים': { due_day: 10 },
+  'מס"ב רשויות': { due_day: 15 },
+  'מס"ב ספקים': { due_day: 10 },
+  'תשלום רשויות': { due_day: 15 },
+  'משלוח תלושים': { due_day: 10 },
+  'דיווח למתפעל': { due_day: null },
+  'דיווח לטמל': { due_day: null },
+  'מילואים': { due_day: null },
+  'סוציאליות': { due_day: null },
+};
+
+export async function loadServiceDueDates() {
+  try {
+    const configs = await SystemConfig.list(null, 50);
+    const config = configs.find(c => c.config_key === DUE_DATES_CONFIG_KEY);
+    if (config && config.data?.dueDates) {
+      return { dueDates: config.data.dueDates, configId: config.id };
+    }
+    const newConfig = await SystemConfig.create({
+      config_key: DUE_DATES_CONFIG_KEY,
+      data: { dueDates: DEFAULT_SERVICE_DUE_DATES },
+    });
+    return { dueDates: DEFAULT_SERVICE_DUE_DATES, configId: newConfig.id };
+  } catch (err) {
+    console.error('Error loading service due dates:', err);
+    return { dueDates: DEFAULT_SERVICE_DUE_DATES, configId: null };
+  }
+}
+
+export async function saveServiceDueDates(configId, dueDates) {
+  try {
+    if (configId) {
+      await SystemConfig.update(configId, { data: { dueDates } });
+    } else {
+      const newConfig = await SystemConfig.create({
+        config_key: DUE_DATES_CONFIG_KEY,
+        data: { dueDates },
+      });
+      return newConfig.id;
+    }
+    return configId;
+  } catch (err) {
+    console.error('Error saving service due dates:', err);
+    throw err;
+  }
+}
+
+export function getDueDayForCategory(dueDates, category) {
+  if (!dueDates || !category) return null;
+  return dueDates[category]?.due_day ?? null;
+}
+
+/**
  * Get report auto-create rules that match the client's services and conditions.
  * Returns matching rules with target entity and config.
  */
