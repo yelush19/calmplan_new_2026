@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Pencil, Trash2, ExternalLink, GitBranch, Globe, Server,
-  FolderKanban, X, Check
+  FolderKanban, X, Check, Database
 } from 'lucide-react';
 
 const statusOptions = [
@@ -39,6 +39,7 @@ const emptyProject = {
   system_type: 'web_app',
   git_repo: '',
   vercel_url: '',
+  supabase_url: '',
   subdomain: '',
   production_url: '',
   tech_stack: '',
@@ -102,6 +103,7 @@ export default function Projects() {
       system_type: project.system_type || 'web_app',
       git_repo: project.git_repo || '',
       vercel_url: project.vercel_url || '',
+      supabase_url: project.supabase_url || '',
       subdomain: project.subdomain || '',
       production_url: project.production_url || '',
       tech_stack: project.tech_stack || '',
@@ -205,6 +207,10 @@ export default function Projects() {
                   <Input value={formData.vercel_url} onChange={(e) => setFormData(p => ({ ...p, vercel_url: e.target.value }))} placeholder="https://project.vercel.app" dir="ltr" />
                 </div>
                 <div>
+                  <Label className="flex items-center gap-1"><Database className="w-4 h-4" /> Supabase URL</Label>
+                  <Input value={formData.supabase_url} onChange={(e) => setFormData(p => ({ ...p, supabase_url: e.target.value }))} placeholder="https://xxxxx.supabase.co" dir="ltr" />
+                </div>
+                <div>
                   <Label className="flex items-center gap-1"><Globe className="w-4 h-4" /> Subdomain</Label>
                   <Input value={formData.subdomain} onChange={(e) => setFormData(p => ({ ...p, subdomain: e.target.value }))} placeholder="app.example.com" dir="ltr" />
                 </div>
@@ -290,6 +296,11 @@ export default function Projects() {
                     {project.vercel_url && (
                       <a href={project.vercel_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
                         <Server className="w-3 h-3" /> {project.vercel_url.replace('https://', '')}
+                      </a>
+                    )}
+                    {project.supabase_url && (
+                      <a href={project.supabase_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
+                        <Database className="w-3 h-3" /> {project.supabase_url.replace('https://', '')}
                       </a>
                     )}
                     {project.subdomain && (

@@ -13,6 +13,60 @@ const statusUI = {
   balance_sheet_only: { label: 'סגירת מאזן בלבד', badge: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
 };
 
+const serviceTypeLabels = {
+  bookkeeping: 'הנה"ח',
+  bookkeeping_full: 'הנה"ח מלאה',
+  vat_reporting: 'מע״מ',
+  tax_advances: 'מקדמות',
+  payroll: 'שכר',
+  social_security: 'בל',
+  deductions: 'ניכויים',
+  annual_reports: 'מאזנים',
+  reconciliation: 'התאמות',
+  consulting: 'ייעוץ',
+  special_reports: 'דוחות מיוחדים',
+  masav_employees: 'מס״ב עובדים',
+  masav_social: 'מס״ב סוציאליות',
+  masav_authorities: 'מס״ב רשויות',
+  masav_suppliers: 'מס״ב ספקים',
+  authorities: 'דיווח רשויות',
+  authorities_payment: 'תשלום רשויות',
+  operator_reporting: 'דיווח למתפעל',
+  taml_reporting: 'דיווח לטמל',
+  payslip_sending: 'משלוח תלושים',
+  social_benefits: 'סוציאליות',
+  reserve_claims: 'מילואים',
+  pnl_reports: 'רוו"ה',
+  admin: 'אדמין',
+};
+
+const serviceTypeColors = {
+  bookkeeping: 'bg-green-100 text-green-800 border-green-200',
+  bookkeeping_full: 'bg-green-100 text-green-800 border-green-200',
+  vat_reporting: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  tax_advances: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  payroll: 'bg-teal-100 text-teal-800 border-teal-200',
+  social_security: 'bg-teal-100 text-teal-800 border-teal-200',
+  deductions: 'bg-teal-100 text-teal-800 border-teal-200',
+  annual_reports: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  reconciliation: 'bg-blue-100 text-blue-800 border-blue-200',
+  consulting: 'bg-gray-100 text-gray-800 border-gray-200',
+  special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  masav_employees: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  masav_social: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  masav_authorities: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  authorities: 'bg-teal-100 text-teal-800 border-teal-200',
+  authorities_payment: 'bg-teal-100 text-teal-800 border-teal-200',
+  operator_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
+  taml_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
+  payslip_sending: 'bg-purple-100 text-purple-800 border-purple-200',
+  social_benefits: 'bg-purple-100 text-purple-800 border-purple-200',
+  reserve_claims: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  pnl_reports: 'bg-orange-100 text-orange-800 border-orange-200',
+  admin: 'bg-gray-100 text-gray-800 border-gray-200',
+};
+
 
 export default function ClientListItem({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete }) {
     const uiProps = statusUI[client.status] || statusUI.inactive;
@@ -35,6 +89,15 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
                       <h3 className="text-lg font-semibold text-neutral-dark truncate">{client.name}</h3>
                   </div>
                   <div className="text-sm text-neutral-medium mt-1">{mainContact?.name || ''}</div>
+                  {client.service_types?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {client.service_types.map(st => (
+                        <Badge key={st} className={`${serviceTypeColors[st] || 'bg-gray-50 text-gray-700 border-gray-200'} text-[10px] px-1.5 py-0 border`}>
+                          {serviceTypeLabels[st] || st}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
             </div>
             
