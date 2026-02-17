@@ -29,10 +29,10 @@ const navigationGroups = [
         children: [
           { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
           { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+          { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
           { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
           { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
           { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
-          { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
         ],
       },
       {
