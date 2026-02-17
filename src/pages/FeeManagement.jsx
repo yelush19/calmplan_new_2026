@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   DollarSign, TrendingUp, TrendingDown, Users, Search, ArrowUpDown
 } from 'lucide-react';
+import ResizableTable from '@/components/ui/ResizableTable';
 
 const serviceTypeLabels = {
   bookkeeping: 'הנהלת חשבונות',
@@ -196,7 +197,7 @@ export default function FeeManagement() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <ResizableTable className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-right p-3 font-semibold">לקוח</th>
@@ -253,7 +254,7 @@ export default function FeeManagement() {
                   </td>
                 </tr>
               </tfoot>
-            </table>
+            </ResizableTable>
           </div>
         </CardContent>
       </Card>
