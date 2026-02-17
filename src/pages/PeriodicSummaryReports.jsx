@@ -9,12 +9,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from '@/components/ui/dialog';
 import {
   Plus, RefreshCw, CheckCircle, AlertCircle, Clock, Calendar,
   ChevronLeft, ChevronRight, FileText, Search, Pencil, Save, X,
-  AlertTriangle, Check
+  AlertTriangle, Check, CheckSquare, Square
 } from 'lucide-react';
 import ResizableTable from '@/components/ui/ResizableTable';
 
@@ -139,26 +139,34 @@ function EditReportDialog({ report, open, onClose, onSave }) {
 
   const periodConfig = PERIOD_CONFIG[report.period];
   const reportType = REPORT_TYPES[report.report_type];
+  const statusConfig = getStatusConfig(editData.status);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[480px] bg-white">
         <DialogHeader>
-          <DialogTitle className="text-lg">
-            {report.client_name} — {reportType?.shortLabel} {periodConfig?.label}
+          <DialogTitle className="text-lg font-bold">
+            {report.client_name}
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">שנת {report.report_year}</p>
+          <DialogDescription>
+            {reportType?.shortLabel} — {periodConfig?.label} | שנת {report.report_year}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
-          {/* Status */}
+          {/* Status with color indicator */}
           <div>
             <Label className="text-sm font-semibold">סטטוס</Label>
             <Select value={editData.status} onValueChange={(v) => setEditData(p => ({ ...p, status: v }))}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 {STATUS_OPTIONS.map(s => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  <SelectItem key={s.value} value={s.value}>
+                    <span className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
+                      {s.label}
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -193,7 +201,7 @@ function EditReportDialog({ report, open, onClose, onSave }) {
             <Label className="text-sm font-semibold mb-2 block">שלבי התאמה</Label>
             <div className="space-y-2">
               {RECONCILIATION_STEPS.map(step => (
-                <label key={step.key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
+                <label key={step.key} className="flex items-center gap-3 p-2.5 rounded-lg border hover:bg-gray-50 cursor-pointer transition-colors">
                   <Checkbox
                     checked={editData.reconciliation_steps?.[step.key] || false}
                     onCheckedChange={(checked) => setEditData(p => ({
@@ -219,12 +227,84 @@ function EditReportDialog({ report, open, onClose, onSave }) {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 justify-end pt-2">
+          <div className="flex gap-2 justify-end pt-3 border-t">
             <Button variant="outline" onClick={onClose}>
               <X className="w-4 h-4 ml-1" /> ביטול
             </Button>
-            <Button onClick={() => { onSave(report.id, editData); onClose(); }}>
+            <Button onClick={() => { onSave(report.id, editData); onClose(); }} className="bg-primary">
               <Save className="w-4 h-4 ml-1" /> שמור
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============================================================
+// Bulk Status Update Dialog
+// ============================================================
+function BulkStatusDialog({ open, onClose, selectedCount, columns, onApply }) {
+  const [bulkStatus, setBulkStatus] = useState('submitted');
+  const [bulkColumn, setBulkColumn] = useState('');
+
+  useEffect(() => {
+    if (open && columns.length > 0 && !bulkColumn) {
+      setBulkColumn(`${columns[0].typeKey}::${columns[0].period}`);
+    }
+  }, [open, columns]);
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[420px] bg-white">
+        <DialogHeader>
+          <DialogTitle>עדכון סטטוס מרוכז</DialogTitle>
+          <DialogDescription>
+            עדכון {selectedCount} לקוחות בבת אחת
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 mt-2">
+          <div>
+            <Label className="text-sm font-semibold">עמודת דיווח</Label>
+            <Select value={bulkColumn} onValueChange={setBulkColumn}>
+              <SelectTrigger className="mt-1"><SelectValue placeholder="בחר עמודה" /></SelectTrigger>
+              <SelectContent className="bg-white">
+                {columns.map(col => (
+                  <SelectItem key={`${col.typeKey}::${col.period}`} value={`${col.typeKey}::${col.period}`}>
+                    {col.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-sm font-semibold">סטטוס חדש</Label>
+            <Select value={bulkStatus} onValueChange={setBulkStatus}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-white">
+                {STATUS_OPTIONS.map(s => (
+                  <SelectItem key={s.value} value={s.value}>
+                    <span className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
+                      {s.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex gap-2 justify-end pt-3 border-t">
+            <Button variant="outline" onClick={onClose}>ביטול</Button>
+            <Button
+              onClick={() => { onApply(bulkColumn, bulkStatus); onClose(); }}
+              disabled={!bulkColumn}
+              className="bg-primary"
+            >
+              <Check className="w-4 h-4 ml-1" />
+              עדכן {selectedCount} לקוחות
             </Button>
           </div>
         </div>
@@ -243,6 +323,8 @@ export default function PeriodicSummaryReports() {
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear() - 1));
   const [editingReport, setEditingReport] = useState(null);
   const [search, setSearch] = useState('');
+  const [selectedClientIds, setSelectedClientIds] = useState(new Set());
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -261,15 +343,18 @@ export default function PeriodicSummaryReports() {
     setIsLoading(false);
   };
 
-  // Active clients with payroll or deductions services
+  // Active clients with payroll or deductions services, onboarded in or before selected year
   const eligibleClients = useMemo(() =>
-    clients.filter(c =>
-      c.status === 'active' &&
-      (c.service_types || []).some(st =>
+    clients.filter(c => {
+      if (c.status !== 'active') return false;
+      if (!(c.service_types || []).some(st =>
         ['payroll', 'deductions', 'social_security', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
-      )
-    ).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')),
-    [clients]
+      )) return false;
+      // If onboarding_year set, only include if <= selected year
+      if (c.onboarding_year && parseInt(c.onboarding_year) > parseInt(selectedYear)) return false;
+      return true;
+    }).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')),
+    [clients, selectedYear]
   );
 
   // Reports for selected year
@@ -349,6 +434,41 @@ export default function PeriodicSummaryReports() {
       await loadData();
     } catch (error) {
       console.error('Error updating report:', error);
+    }
+  };
+
+  const handleToggleClient = (clientId) => {
+    setSelectedClientIds(prev => {
+      const next = new Set(prev);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
+  };
+
+  const handleToggleAll = () => {
+    if (selectedClientIds.size === filteredClients.length) {
+      setSelectedClientIds(new Set());
+    } else {
+      setSelectedClientIds(new Set(filteredClients.map(c => c.id)));
+    }
+  };
+
+  const handleBulkStatusUpdate = async (columnKey, newStatus) => {
+    // columnKey format: "typeKey::period" using :: as separator
+    const [typeKey, period] = columnKey.split('::');
+
+    try {
+      for (const clientId of selectedClientIds) {
+        const report = reportLookup[clientId]?.[typeKey]?.[period];
+        if (report) {
+          await PeriodicReport.update(report.id, { status: newStatus });
+        }
+      }
+      setSelectedClientIds(new Set());
+      await loadData();
+    } catch (error) {
+      console.error('Error in bulk update:', error);
     }
   };
 
@@ -461,15 +581,30 @@ export default function PeriodicSummaryReports() {
         </Card>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="חיפוש לקוח..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pr-10"
-        />
+      {/* Search + Bulk actions */}
+      <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="חיפוש לקוח..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pr-10"
+          />
+        </div>
+
+        {selectedClientIds.size > 0 && (
+          <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            <CheckSquare className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-semibold text-blue-900">{selectedClientIds.size} נבחרו</span>
+            <Button size="sm" variant="outline" onClick={() => setSelectedClientIds(new Set())} className="h-7 text-xs">
+              בטל
+            </Button>
+            <Button size="sm" onClick={() => setShowBulkDialog(true)} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white">
+              עדכן סטטוס
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -479,7 +614,13 @@ export default function PeriodicSummaryReports() {
             <ResizableTable className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-right p-3 font-semibold sticky right-0 bg-muted/50 z-10 min-w-[160px]">
+                  <th className="text-center p-2 w-10 sticky right-0 bg-muted/50 z-10">
+                    <Checkbox
+                      checked={filteredClients.length > 0 && selectedClientIds.size === filteredClients.length}
+                      onCheckedChange={handleToggleAll}
+                    />
+                  </th>
+                  <th className="text-right p-3 font-semibold sticky right-10 bg-muted/50 z-10 min-w-[160px]">
                     לקוח
                   </th>
                   {columns.map(col => (
@@ -493,9 +634,16 @@ export default function PeriodicSummaryReports() {
               <tbody>
                 {filteredClients.map((client, idx) => {
                   const clientReports = reportLookup[client.id] || {};
+                  const isSelected = selectedClientIds.has(client.id);
                   return (
-                    <tr key={client.id} className={`border-b ${idx % 2 === 0 ? '' : 'bg-muted/20'} hover:bg-muted/30`}>
-                      <td className="p-3 font-medium sticky right-0 bg-white z-10 border-l">
+                    <tr key={client.id} className={`border-b ${isSelected ? 'bg-blue-50/50' : idx % 2 === 0 ? '' : 'bg-muted/20'} hover:bg-muted/30`}>
+                      <td className="text-center p-2 sticky right-0 bg-white z-10">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleToggleClient(client.id)}
+                        />
+                      </td>
+                      <td className="p-3 font-medium sticky right-10 bg-white z-10 border-l">
                         {client.name}
                       </td>
                       {columns.map(col => (
@@ -510,7 +658,7 @@ export default function PeriodicSummaryReports() {
                 })}
                 {filteredClients.length === 0 && (
                   <tr>
-                    <td colSpan={columns.length + 1} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={columns.length + 2} className="p-8 text-center text-muted-foreground">
                       {search ? 'לא נמצאו לקוחות' : 'אין לקוחות עם שירותי שכר/ניכויים'}
                     </td>
                   </tr>
@@ -544,6 +692,15 @@ export default function PeriodicSummaryReports() {
         open={!!editingReport}
         onClose={() => setEditingReport(null)}
         onSave={handleUpdateReport}
+      />
+
+      {/* Bulk Status Dialog */}
+      <BulkStatusDialog
+        open={showBulkDialog}
+        onClose={() => setShowBulkDialog(false)}
+        selectedCount={selectedClientIds.size}
+        columns={columns}
+        onApply={handleBulkStatusUpdate}
       />
     </div>
   );
