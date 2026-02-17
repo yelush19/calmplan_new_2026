@@ -33,7 +33,7 @@ const navigationGroups = [
         name: "לקוחות",
         icon: Users,
         children: [
-          { name: "כרטיסי לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+          { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
         ],
       },
       {

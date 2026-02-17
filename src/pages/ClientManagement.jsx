@@ -39,9 +39,10 @@ import {
   X,
   AlertTriangle,
   CheckSquare, // Added
-  Square // Added
+  Square, // Added
+  FolderKanban
 } from 'lucide-react';
-import { Client } from '@/api/entities';
+import { Client, Project } from '@/api/entities';
 import { mondayApi } from '@/api/functions';
 import { exportClientsToExcel } from '@/api/functions';
 import { importClientsFromExcel } from '@/api/functions';
@@ -106,6 +107,34 @@ export default function ClientManagementPage() {
   const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
   const [bulkNewStatus, setBulkNewStatus] = useState('active');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [isMigratingDev, setIsMigratingDev] = useState(false);
+
+  const handleMigrateDevToProjects = async () => {
+    if (!window.confirm('להעביר את כל כרטיסי הפיתוח כפרויקטים ולמחוק אותם מהלקוחות?')) return;
+    setIsMigratingDev(true);
+    try {
+      const devClients = clients.filter(c => c.status === 'development');
+      const existingProjects = await Project.list(null, 500);
+      const existingNames = new Set(existingProjects.map(p => p.name));
+
+      for (const client of devClients) {
+        if (!existingNames.has(client.name)) {
+          await Project.create({
+            name: client.name,
+            status: 'in_development',
+            system_type: 'web_app',
+            notes: client.notes || '',
+          });
+        }
+        await Client.delete(client.id);
+      }
+      await loadClients();
+    } catch (err) {
+      console.error('שגיאה בהעברת לקוחות פיתוח:', err);
+      setError('שגיאה בהעברת לקוחות פיתוח לפרויקטים');
+    }
+    setIsMigratingDev(false);
+  };
 
   useEffect(() => {
     loadClients();
@@ -670,6 +699,20 @@ export default function ClientManagementPage() {
               </ToggleGroupItem>
             </ToggleGroup>
 
+            {/* Migrate dev clients to projects */}
+            {statusFilter === 'development' && filteredClients.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMigrateDevToProjects}
+                disabled={isMigratingDev}
+                className="gap-2 text-purple-700 border-purple-300 hover:bg-purple-50"
+              >
+                <FolderKanban className="w-4 h-4" />
+                {isMigratingDev ? 'מעביר...' : 'העבר לפרויקטים'}
+              </Button>
+            )}
+
             {/* Select All Checkbox */}
             {!isLoading && filteredClients.length > 0 && (
               <Button
@@ -795,7 +838,6 @@ export default function ClientManagementPage() {
                   <SelectItem value="inactive">לא פעיל</SelectItem>
                   <SelectItem value="potential">פוטנציאלי</SelectItem>
                   <SelectItem value="former">עבר</SelectItem>
-                  <SelectItem value="development">פיתוח</SelectItem>
                   <SelectItem value="onboarding_pending">ממתין לקליטה</SelectItem>
                   <SelectItem value="balance_sheet_only">סגירת מאזן בלבד</SelectItem>
                 </SelectContent>

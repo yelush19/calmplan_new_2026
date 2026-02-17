@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { X } from 'lucide-react';
+import { X, Plus, Loader2 } from 'lucide-react';
 import { ServiceCompany, ServiceProvider } from '@/api/entities';
 
 const serviceProviderTypes = {
@@ -86,14 +86,33 @@ const getInitialFormData = (provider, serviceCompanyId) => {
 export default function ServiceProviderForm({ provider, serviceCompanyId, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(() => getInitialFormData(provider, serviceCompanyId));
   const [companies, setCompanies] = useState([]);
+  const [isCreatingCompany, setIsCreatingCompany] = useState(false);
+  const [newCompanyName, setNewCompanyName] = useState('');
+  const [isSavingCompany, setIsSavingCompany] = useState(false);
+
+  const fetchCompanies = async () => {
+    const data = await ServiceCompany.list();
+    setCompanies(data || []);
+  };
 
   useEffect(() => {
-    const fetchCompanies = async () => {
-        const data = await ServiceCompany.list();
-        setCompanies(data || []);
-    };
     fetchCompanies();
   }, []);
+
+  const handleCreateCompany = async () => {
+    if (!newCompanyName.trim()) return;
+    setIsSavingCompany(true);
+    try {
+      const newCompany = await ServiceCompany.create({ name: newCompanyName.trim() });
+      await fetchCompanies();
+      handleChange('service_company_id', newCompany.id);
+      setNewCompanyName('');
+      setIsCreatingCompany(false);
+    } catch (err) {
+      console.error('שגיאה ביצירת חברה:', err);
+    }
+    setIsSavingCompany(false);
+  };
   
   useEffect(() => {
     // This effect ensures the form resets if the provider prop changes (e.g., from editing one to creating a new one)
@@ -138,14 +157,37 @@ export default function ServiceProviderForm({ provider, serviceCompanyId, onSubm
             <div className="grid md:grid-cols-2 gap-4">
                <div>
                 <Label htmlFor="company">שיוך לחברה</Label>
-                <Select value={formData.service_company_id} onValueChange={(value) => handleChange('service_company_id', value)} required>
-                  <SelectTrigger><SelectValue placeholder="בחר חברה"/></SelectTrigger>
-                  <SelectContent>
-                    {companies.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isCreatingCompany ? (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="שם החברה החדשה"
+                      value={newCompanyName}
+                      onChange={(e) => setNewCompanyName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateCompany())}
+                      autoFocus
+                    />
+                    <Button type="button" size="sm" onClick={handleCreateCompany} disabled={isSavingCompany || !newCompanyName.trim()}>
+                      {isSavingCompany ? <Loader2 className="w-4 h-4 animate-spin" /> : 'צור'}
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setIsCreatingCompany(false)}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Select value={formData.service_company_id} onValueChange={(value) => handleChange('service_company_id', value)} required>
+                      <SelectTrigger><SelectValue placeholder="בחר חברה"/></SelectTrigger>
+                      <SelectContent>
+                        {companies.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="icon" variant="outline" onClick={() => setIsCreatingCompany(true)} title="הוסף חברה חדשה">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
               <div>
                 <Label htmlFor="name">שם</Label>
