@@ -32,6 +32,7 @@ const navigationGroups = [
           { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
           { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
           { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
+          { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
         ],
       },
       {
@@ -43,7 +44,6 @@ const navigationGroups = [
             icon: Calculator,
             children: [
               { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
-              { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
               { name: "דיווחים מרכזים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
             ],
           },
