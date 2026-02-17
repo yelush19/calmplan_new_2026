@@ -1164,89 +1164,78 @@ export default function AutomationRules() {
         </Card>
       )}
 
-      {/* Rules - collapsible sections by board */}
-      <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Zap className="w-5 h-5 text-yellow-500" />
-            חוקי אוטומציה
-          </CardTitle>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => { setNewRuleType('service_auto_link'); setEditingRule(getEmptyRule('service_auto_link')); }} className="gap-1 h-7 text-xs">
-              <Plus className="w-3 h-3" /> חוק סימון
+      {/* Rules - 2-column layout with collapsible sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Service Auto-Link Rules */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Badge className="bg-blue-100 text-blue-800">שירותים</Badge>
+              סימון שירות אוטומטי
+            </CardTitle>
+            <Button size="sm" onClick={() => { setNewRuleType('service_auto_link'); setEditingRule(getEmptyRule('service_auto_link')); }} className="gap-1 h-7 text-xs">
+              <Plus className="w-3 h-3" /> חוק חדש
             </Button>
-            <Button size="sm" variant="outline" onClick={() => { setNewRuleType('report_auto_create'); setEditingRule(getEmptyRule('report_auto_create')); }} className="gap-1 h-7 text-xs">
-              <Plus className="w-3 h-3" /> חוק יצירה
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0 space-y-1">
-          {/* Service Auto-Link Section */}
-          {(() => {
-            const sectionKey = 'service_auto_link';
-            const isOpen = expandedSections.has(sectionKey);
-            return (
-              <div className="border rounded-lg overflow-hidden">
-                <button
-                  className="w-full flex items-center gap-2 px-3 py-2.5 bg-blue-50 hover:bg-blue-100 transition-colors text-right"
-                  onClick={() => setExpandedSections(prev => {
-                    const next = new Set(prev);
-                    if (next.has(sectionKey)) next.delete(sectionKey); else next.add(sectionKey);
-                    return next;
-                  })}
-                >
-                  {isOpen ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                  <Badge className="bg-blue-100 text-blue-800 text-xs">שירותים</Badge>
-                  <span className="text-sm font-medium">סימון שירות אוטומטי</span>
-                  <span className="text-xs text-gray-400 mr-auto">{serviceAutoLinkRules.length} חוקים</span>
-                </button>
-                {isOpen && (
-                  <div className="p-3 space-y-1.5 bg-white">
-                    {serviceAutoLinkRules.length === 0 ? (
-                      <p className="text-gray-400 text-center py-2 text-sm">אין חוקים</p>
-                    ) : serviceAutoLinkRules.map(rule => (
-                      <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
-                    ))}
-                  </div>
-                )}
+          </CardHeader>
+          <CardContent className="pt-0">
+            {serviceAutoLinkRules.length === 0 ? (
+              <p className="text-gray-400 text-center py-3 text-sm">אין חוקים</p>
+            ) : (
+              <div className="space-y-1.5">
+                {serviceAutoLinkRules.map(rule => (
+                  <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
+                ))}
               </div>
-            );
-          })()}
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Report Auto-Create Sections - one per entity/board */}
-          {Object.keys(REPORT_ENTITIES).map(entityKey => {
-            const entityRules = reportRulesByEntity[entityKey] || [];
-            const cfg = entityDisplayConfig[entityKey] || {};
-            const isOpen = expandedSections.has(entityKey);
-            return (
-              <div key={entityKey} className="border rounded-lg overflow-hidden">
-                <button
-                  className="w-full flex items-center gap-2 px-3 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-right"
-                  onClick={() => setExpandedSections(prev => {
-                    const next = new Set(prev);
-                    if (next.has(entityKey)) next.delete(entityKey); else next.add(entityKey);
-                    return next;
-                  })}
-                >
-                  {isOpen ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                  <Badge className={`text-xs ${cfg.color || 'bg-gray-100'}`}>{REPORT_ENTITIES[entityKey]}</Badge>
-                  <span className="text-sm font-medium">{cfg.label || entityKey}</span>
-                  <span className="text-xs text-gray-400 mr-auto">{entityRules.length} חוקים</span>
-                </button>
-                {isOpen && (
-                  <div className="p-3 space-y-1.5 bg-white">
-                    {entityRules.length === 0 ? (
-                      <p className="text-gray-400 text-center py-2 text-xs">אין חוקים</p>
-                    ) : entityRules.map(rule => (
-                      <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+        {/* Report Auto-Create Rules - collapsible by board */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Badge className="bg-green-100 text-green-800">לוחות</Badge>
+              יצירה אוטומטית בלוחות
+            </CardTitle>
+            <Button size="sm" onClick={() => { setNewRuleType('report_auto_create'); setEditingRule(getEmptyRule('report_auto_create')); }} className="gap-1 h-7 text-xs">
+              <Plus className="w-3 h-3" /> חוק חדש
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-1">
+            {Object.keys(REPORT_ENTITIES).map(entityKey => {
+              const entityRules = reportRulesByEntity[entityKey] || [];
+              const cfg = entityDisplayConfig[entityKey] || {};
+              const isOpen = expandedSections.has(entityKey);
+              return (
+                <div key={entityKey} className="border rounded-lg overflow-hidden">
+                  <button
+                    className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-right"
+                    onClick={() => setExpandedSections(prev => {
+                      const next = new Set(prev);
+                      if (next.has(entityKey)) next.delete(entityKey); else next.add(entityKey);
+                      return next;
+                    })}
+                  >
+                    {isOpen ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                    <Badge className={`text-[10px] ${cfg.color || 'bg-gray-100'}`}>{REPORT_ENTITIES[entityKey]}</Badge>
+                    <span className="text-xs font-medium">{cfg.label || entityKey}</span>
+                    <span className="text-[10px] text-gray-400 mr-auto">{entityRules.length}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="p-2 space-y-1.5 bg-white">
+                      {entityRules.length === 0 ? (
+                        <p className="text-gray-400 text-center py-1 text-[10px]">אין חוקים</p>
+                      ) : entityRules.map(rule => (
+                        <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Due Dates + Cleanup Tool - side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
