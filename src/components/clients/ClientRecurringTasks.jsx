@@ -82,18 +82,6 @@ const REPORT_CATEGORIES = {
     dayOfMonth: 15,
     order: 5,
   },
-  'דוח שנתי': {
-    label: 'דוח שנתי',
-    icon: Calendar,
-    color: 'bg-rose-100 text-rose-800',
-    accent: 'border-rose-400',
-    bgSoft: 'bg-rose-50',
-    dot: 'bg-rose-500',
-    frequencyField: null,
-    serviceTypeRequired: ['annual_reports', 'tax_reports', 'bookkeeping', 'bookkeeping_full', 'full_service'],
-    dayOfMonth: null,
-    order: 6,
-  },
 };
 
 const BIMONTHLY_PERIOD_NAMES = {
@@ -117,13 +105,11 @@ const FREQUENCY_LABELS = {
   bimonthly: 'דו-חודשי',
   quarterly: 'רבעוני',
   semi_annual: 'חצי שנתי',
-  yearly: 'שנתי',
 };
 
 function getClientFrequency(categoryKey, client) {
   const cat = REPORT_CATEGORIES[categoryKey];
   if (!cat) return 'monthly';
-  if (categoryKey === 'דוח שנתי') return 'yearly';
   const field = cat.frequencyField;
   if (!field) return 'monthly';
   const freq = client.reporting_info?.[field];
@@ -149,47 +135,29 @@ function clientHasService(categoryKey, client) {
  *   semi_annual → only for מ"ה ניכויים: reportMonth 6 (Jan-Jun) and 12 (Jul-Dec)
  *                  task in month 07 for 01-06, month 01 for 07-12
  *   quarterly   → report months 3, 6, 9, 12
- *   yearly      → single annual report
  */
 function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
   const frequency = getClientFrequency(categoryKey, client);
   if (frequency === 'not_applicable') return [];
 
-  const is874 = isClient874(client);
   const tasks = [];
   const catLabel = REPORT_CATEGORIES[categoryKey].label;
 
-  if (frequency === 'yearly') {
-    if (selectedMonths.length > 0) {
-      tasks.push({
-        date: new Date(year, 4, 31),
-        period: `${year - 1}`,
-        description: `דוח שנתי לשנת ${year - 1}`,
-        reportMonth: null,
-        is874,
-      });
-    }
-    return tasks;
-  }
-
   // Semi-annual: only for ניכויים (מ"ה). Two periods per year.
+  // Task appears only when the END month of the period is selected (6 for H1, 12 for H2)
   if (frequency === 'semi_annual') {
     const SEMI_ANNUAL_PERIODS = [
       { reportMonth: 6, period: 'ינואר-יוני', dueMonth: 7, description: `${catLabel} עבור ינואר-יוני ${year}` },
       { reportMonth: 12, period: 'יולי-דצמבר', dueMonth: 1, dueYear: year + 1, description: `${catLabel} עבור יולי-דצמבר ${year}` },
     ];
     for (const sp of SEMI_ANNUAL_PERIODS) {
-      // Show this period if the user selected any month within it
-      const monthsInPeriod = sp.reportMonth === 6
-        ? [1, 2, 3, 4, 5, 6]
-        : [7, 8, 9, 10, 11, 12];
-      const userSelectedAny = selectedMonths.some(m => monthsInPeriod.includes(m));
-      if (!userSelectedAny) continue;
+      // Only show when the last month of the period is selected
+      if (!selectedMonths.includes(sp.reportMonth)) continue;
 
       const dueDateStr = getDueDateForCategory(categoryKey, client, sp.reportMonth);
       const dy = sp.dueYear || year;
       const dueDate = dueDateStr ? new Date(dueDateStr) : new Date(dy, (sp.dueMonth || 7) - 1, 19);
-      tasks.push({ date: dueDate, period: sp.period, description: sp.description, reportMonth: sp.reportMonth, is874 });
+      tasks.push({ date: dueDate, period: sp.period, description: sp.description, reportMonth: sp.reportMonth });
     }
     return tasks;
   }
@@ -225,7 +193,7 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
       description = `${catLabel} עבור חודש ${HEBREW_MONTH_NAMES[reportMonth - 1]} ${year}`;
     }
 
-    tasks.push({ date: dueDate, period, description, reportMonth, is874 });
+    tasks.push({ date: dueDate, period, description, reportMonth });
   }
 
   return tasks;
@@ -300,7 +268,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
         if (freq === 'not_applicable') continue;
 
         const dueDates = generateTasksForMonths(categoryKey, client, monthsArray, selectedYear);
-        for (const { date, period, description, reportMonth, is874 } of dueDates) {
+        for (const { date, period, description, reportMonth } of dueDates) {
           const taskTitle = `${client.name} - ${description}`;
           const dueDateStr = format(date, 'yyyy-MM-dd');
           // Check for existing tasks (by exact title OR by client+category+date)
@@ -310,7 +278,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           );
           if (!alreadyExists) {
             const taskId = `${client.id}_${categoryKey}_${dueDateStr}`;
-            const clientIs874 = isClient874(client);
+            const clientIs874 = categoryKey === 'מע"מ' && isClient874(client);
             tasksToCreate.push({
               _previewId: taskId, title: taskTitle,
               description: `${description}\nלקוח: ${client.name}${clientIs874 ? '\nסוג: מע"מ מפורט (874)' : ''}`,
