@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,12 +108,13 @@ export default function ClientManagementPage() {
   const [bulkNewStatus, setBulkNewStatus] = useState('active');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [isMigratingDev, setIsMigratingDev] = useState(false);
+  const devMigrationDone = useRef(false);
 
-  const handleMigrateDevToProjects = async () => {
-    if (!window.confirm('להעביר את כל כרטיסי הפיתוח כפרויקטים ולמחוק אותם מהלקוחות?')) return;
+  const handleMigrateDevToProjects = async (clientsList) => {
+    const devClients = (clientsList || clients).filter(c => c.status === 'development');
+    if (devClients.length === 0) return;
     setIsMigratingDev(true);
     try {
-      const devClients = clients.filter(c => c.status === 'development');
       const existingProjects = await Project.list(null, 500);
       const existingNames = new Set(existingProjects.map(p => p.name));
 
@@ -199,9 +200,17 @@ export default function ClientManagementPage() {
       });
       setClients(clientsData || []);
       setSelectedClientIds(new Set()); // Clear selection on reload
+      // Auto-migrate development clients to projects (one-time)
+      if (!devMigrationDone.current) {
+        const devClients = (clientsData || []).filter(c => c.status === 'development');
+        if (devClients.length > 0) {
+          devMigrationDone.current = true;
+          handleMigrateDevToProjects(clientsData);
+        }
+      }
     } catch (error) {
       console.error("Error loading clients:", error);
-      const errorMsg = error?.response?.status === 429 
+      const errorMsg = error?.response?.status === 429
         ? 'יותר מדי בקשות - המערכת עמוסה. אנא נסה שוב בעוד מספר שניות.'
         : 'שגיאה בטעינת לקוחות';
       setError(errorMsg);
@@ -760,18 +769,12 @@ export default function ClientManagementPage() {
               </ToggleGroupItem>
             </ToggleGroup>
 
-            {/* Migrate dev clients to projects */}
-            {statusFilter === 'development' && filteredClients.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleMigrateDevToProjects}
-                disabled={isMigratingDev}
-                className="gap-2 text-purple-700 border-purple-300 hover:bg-purple-50"
-              >
-                <FolderKanban className="w-4 h-4" />
-                {isMigratingDev ? 'מעביר...' : 'העבר לפרויקטים'}
-              </Button>
+            {/* Auto-migration indicator */}
+            {isMigratingDev && (
+              <span className="text-sm text-purple-600 flex items-center gap-2">
+                <FolderKanban className="w-4 h-4 animate-pulse" />
+                מעביר לקוחות פיתוח לפרויקטים...
+              </span>
             )}
 
             {/* Select All Checkbox */}
