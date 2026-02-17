@@ -8,7 +8,7 @@ import React, { useRef, useCallback, useState } from 'react';
  *     <tbody>...</tbody>
  *   </ResizableTable>
  */
-export default function ResizableTable({ children, className = '' }) {
+export default function ResizableTable({ children, className = '', stickyHeader = false, maxHeight }) {
   const tableRef = useRef(null);
   const [resizing, setResizing] = useState(null); // { colIndex, startX, startWidth }
 
@@ -51,7 +51,12 @@ export default function ResizableTable({ children, className = '' }) {
 
     // Find thead
     if (child.type === 'thead' || child.props?.children?.type === 'tr') {
+      const theadProps = stickyHeader ? {
+        className: `${child.props?.className || ''} sticky top-0 z-20`.trim(),
+      } : {};
+
       return React.cloneElement(child, {
+        ...theadProps,
         children: React.Children.map(child.props.children, (trChild) => {
           if (!trChild || trChild.type !== 'tr') return trChild;
 
@@ -80,7 +85,15 @@ export default function ResizableTable({ children, className = '' }) {
     return child;
   });
 
-  return (
+  const wrapperStyle = maxHeight ? { maxHeight, overflowY: 'auto', overflowX: 'auto' } : {};
+
+  return maxHeight ? (
+    <div style={wrapperStyle}>
+      <table ref={tableRef} className={`${className}`} style={{ tableLayout: 'auto' }}>
+        {enhancedChildren}
+      </table>
+    </div>
+  ) : (
     <table ref={tableRef} className={`${className}`} style={{ tableLayout: 'auto' }}>
       {enhancedChildren}
     </table>

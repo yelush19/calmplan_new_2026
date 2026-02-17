@@ -356,6 +356,12 @@ export default function PeriodicSummaryReports() {
     [clients, selectedYear]
   );
 
+  // Reports for selected year (must be defined before manuallyAddedClients)
+  const yearReports = useMemo(() =>
+    reports.filter(r => r.report_year === selectedYear),
+    [reports, selectedYear]
+  );
+
   // Clients that already have reports but aren't eligible (manually added)
   const manuallyAddedClients = useMemo(() => {
     const eligibleIds = new Set(eligibleClients.map(c => c.id));
@@ -368,12 +374,6 @@ export default function PeriodicSummaryReports() {
   const allDisplayedClients = useMemo(() =>
     [...eligibleClients, ...manuallyAddedClients],
     [eligibleClients, manuallyAddedClients]
-  );
-
-  // Reports for selected year
-  const yearReports = useMemo(() =>
-    reports.filter(r => r.report_year === selectedYear),
-    [reports, selectedYear]
   );
 
   // Build a lookup: client_id -> report_type -> period -> report
