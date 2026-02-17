@@ -29,6 +29,7 @@ import {
   markAllStepsUndone,
   areAllStepsDone,
 } from '@/config/processTemplates';
+import { getTaskReportingMonth } from '@/config/automationRules';
 
 // All services shown on the tax dashboard
 const taxDashboardServices = {
@@ -72,7 +73,12 @@ export default function TaxReportsDashboardPage() {
         }),
         Client.list(null, 500).catch(() => []),
       ]);
-      const filtered = (tasksData || []).filter(t => allTaxCategories.includes(t.category));
+      // Post-filter: only show tasks belonging to the selected reporting month
+      const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
+      const filtered = (tasksData || []).filter(t => {
+        if (!allTaxCategories.includes(t.category)) return false;
+        return getTaskReportingMonth(t) === selectedMonthStr;
+      });
       setTasks(filtered);
       setClients(clientsData || []);
 

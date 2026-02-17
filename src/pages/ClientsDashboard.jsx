@@ -19,6 +19,7 @@ import { createPageUrl } from '@/utils';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { isBimonthlyOffMonth } from '@/config/processTemplates';
+import { getTaskReportingMonth } from '@/config/automationRules';
 
 // === Column Groups ===
 const COLUMN_GROUPS = [
@@ -164,7 +165,12 @@ export default function ClientsDashboardPage() {
           .filter(c => c.status === 'active')
           .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
       );
-      setTasks(tasksData || []);
+      // Post-filter: only show tasks belonging to the selected reporting month
+      const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
+      const filteredTasks = (tasksData || []).filter(t => {
+        return getTaskReportingMonth(t) === selectedMonthStr;
+      });
+      setTasks(filteredTasks);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }
@@ -296,8 +302,8 @@ export default function ClientsDashboardPage() {
         // Update existing task
         await Task.update(popover.task.id, { status: newStatus });
       } else {
-        // Create new task
-        const end = endOfMonth(selectedMonth);
+        // Create new task - due_date in deadline month (M+1)
+        const deadlineEnd = endOfMonth(addMonths(selectedMonth, 1));
         const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: he });
         await Task.create({
           title: `${popover.col.createTitle} - ${popover.clientName} - ${monthLabel}`,
@@ -305,17 +311,22 @@ export default function ClientsDashboardPage() {
           client_id: popover.clientId,
           category: popover.col.createCategory,
           status: newStatus,
-          due_date: format(end, 'yyyy-MM-dd'),
+          due_date: format(deadlineEnd, 'yyyy-MM-dd'),
+          reporting_month: format(selectedMonth, 'yyyy-MM'),
         });
       }
 
       // Refresh tasks without full reload
-      const start = startOfMonth(selectedMonth);
-      const end = endOfMonth(selectedMonth);
+      const reportStart = startOfMonth(selectedMonth);
+      const deadlineMonthEnd = endOfMonth(addMonths(selectedMonth, 1));
       const tasksData = await Task.filter({
-        due_date: { '>=': format(start, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
+        due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(deadlineMonthEnd, 'yyyy-MM-dd') },
       }).catch(() => []);
-      setTasks(tasksData || []);
+      const refreshMonthStr = format(selectedMonth, 'yyyy-MM');
+      const refreshFiltered = (tasksData || []).filter(t => {
+        return getTaskReportingMonth(t) === refreshMonthStr;
+      });
+      setTasks(refreshFiltered);
     } catch (error) {
       console.error('Error updating task:', error);
     }

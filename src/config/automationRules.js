@@ -459,6 +459,31 @@ export function getDueDayForCategory(dueDates, category, paymentMethod = 'digita
 }
 
 /**
+ * Hebrew month names for parsing task titles
+ */
+const HEB_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+/**
+ * Get the reporting month (YYYY-MM) for a task.
+ * Priority: 1) reporting_month field, 2) parse Hebrew month from title, 3) due_date month
+ */
+export function getTaskReportingMonth(task) {
+  if (task.reporting_month) return task.reporting_month;
+  // Parse title - format: "Category - ClientName - MonthName Year"
+  if (task.title) {
+    for (let i = 0; i < HEB_MONTHS.length; i++) {
+      const regex = new RegExp(HEB_MONTHS[i] + '\\s+(\\d{4})');
+      const match = task.title.match(regex);
+      if (match) {
+        return `${match[1]}-${String(i + 1).padStart(2, '0')}`;
+      }
+    }
+  }
+  // Fallback: use due_date month
+  return task.due_date ? task.due_date.substring(0, 7) : null;
+}
+
+/**
  * Get report auto-create rules that match the client's services and conditions.
  * Returns matching rules with target entity and config.
  */
