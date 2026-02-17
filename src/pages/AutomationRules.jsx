@@ -297,7 +297,7 @@ function RuleRow({ rule, onToggle, onEdit, onDelete, onRun, isRunning }) {
         </div>
       </div>
       <div className="flex items-center gap-1">
-        {rule.type === 'report_auto_create' && onRun && (
+        {onRun && (
           <Button
             variant="outline"
             size="sm"
@@ -402,9 +402,83 @@ export default function AutomationRules() {
 
   // Run a single rule directly (per-rule Play button)
   const handleRunSingleRule = (ruleId) => {
-    setRunningRuleId(ruleId);
-    setSelectedRuleIds([ruleId]);
-    handleBulkScan([ruleId]);
+    const rule = rules.find(r => r.id === ruleId);
+    if (!rule) return;
+
+    if (rule.type === 'service_auto_link') {
+      handleRunServiceLinkRule(rule);
+    } else {
+      setRunningRuleId(ruleId);
+      setSelectedRuleIds([ruleId]);
+      handleBulkScan([ruleId]);
+    }
+  };
+
+  // Run a service_auto_link rule on all active clients
+  const handleRunServiceLinkRule = async (rule) => {
+    setRunningRuleId(rule.id);
+    setBulkResult(null);
+
+    try {
+      const allClients = await Client.list(null, 5000);
+      const activeClients = allClients.filter(c => c.status === 'active');
+      const resultDetails = [];
+
+      const businessType = rule.condition?.field === 'business_type' ? rule.condition.value : null;
+
+      for (const client of activeClients) {
+        const services = client.service_types || [];
+        if (!services.includes(rule.trigger_service)) continue;
+
+        // Check business type condition
+        if (businessType) {
+          const clientBizType = client.business_info?.business_type || client.business_type || '';
+          if (clientBizType !== businessType) continue;
+        }
+
+        const servicesToAdd = (rule.auto_add_services || []).filter(s => !services.includes(s));
+        if (servicesToAdd.length === 0) continue;
+
+        try {
+          const updatedServices = [...services, ...servicesToAdd];
+          await Client.update(client.id, { service_types: updatedServices });
+          resultDetails.push({
+            clientName: client.name,
+            entityLabel: 'שירותים',
+            description: `נוספו: ${servicesToAdd.map(s => ALL_SERVICES[s] || s).join(', ')}`,
+            status: 'success',
+          });
+        } catch (err) {
+          resultDetails.push({
+            clientName: client.name,
+            entityLabel: 'שירותים',
+            description: `שגיאה: ${err.message}`,
+            status: 'error',
+          });
+        }
+      }
+
+      const successCount = resultDetails.filter(r => r.status === 'success').length;
+      const errorCount = resultDetails.filter(r => r.status === 'error').length;
+
+      setBulkResult({
+        clients: resultDetails.length,
+        created: successCount,
+        warnings: 0,
+        errors: errorCount,
+        details: resultDetails.length > 0 ? resultDetails : [{
+          clientName: '-',
+          entityLabel: 'שירותים',
+          description: 'כל הלקוחות כבר מעודכנים - לא נדרש שינוי',
+          status: 'success',
+        }],
+      });
+    } catch (err) {
+      console.error('Service link scan error:', err);
+      setBulkResult({ error: err.message });
+    } finally {
+      setRunningRuleId(null);
+    }
   };
 
   // STEP 1: Scan existing clients using SELECTED rules only

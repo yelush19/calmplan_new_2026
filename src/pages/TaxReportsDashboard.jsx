@@ -45,7 +45,7 @@ export default function TaxReportsDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1));
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date());
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
@@ -56,6 +56,7 @@ export default function TaxReportsDashboardPage() {
       const end = endOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
         Task.filter({
+          context: 'work',
           due_date: { '>=': format(start, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
         }),
         Client.list(null, 500).catch(() => []),
