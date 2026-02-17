@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Task, Client } from '@/api/entities';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -16,6 +17,19 @@ import {
   differenceInDays, subWeeks, isWithinInterval, startOfDay
 } from 'date-fns';
 import { he } from 'date-fns/locale';
+
+const statusConfig = {
+  not_started: { text: 'לביצוע', color: 'bg-gray-100 text-gray-700' },
+  in_progress: { text: 'בעבודה', color: 'bg-sky-100 text-sky-700' },
+  completed: { text: 'הושלם', color: 'bg-emerald-100 text-emerald-700' },
+  waiting_for_materials: { text: 'ממתין לחומרים', color: 'bg-amber-100 text-amber-700' },
+  waiting_for_approval: { text: 'לבדיקה', color: 'bg-purple-100 text-purple-700' },
+  ready_for_reporting: { text: 'מוכן לדיווח', color: 'bg-teal-100 text-teal-700' },
+  reported_waiting_for_payment: { text: 'ממתין לתשלום', color: 'bg-yellow-100 text-yellow-700' },
+  issue: { text: 'בעיה', color: 'bg-pink-100 text-pink-700' },
+  postponed: { text: 'נדחה', color: 'bg-neutral-100 text-neutral-600' },
+  not_relevant: { text: 'לא רלוונטי', color: 'bg-gray-50 text-gray-400' },
+};
 
 export default function WeeklySummary() {
   const [isLoading, setIsLoading] = useState(true);
@@ -51,7 +65,7 @@ export default function WeeklySummary() {
 
       const MAX_OVERDUE_DAYS = 21;
       const overdueTasks = allTasks.filter(task => {
-        if (task.status === 'completed') return false;
+        if (task.status === 'completed' || task.status === 'not_relevant') return false;
         const dueStr = task.due_date || task.scheduled_start;
         if (!dueStr) return false;
         try {
@@ -77,7 +91,7 @@ export default function WeeklySummary() {
       });
 
       const failedThisWeek = allTasks.filter(task => {
-        if (task.status === 'completed') return false;
+        if (task.status === 'completed' || task.status === 'not_relevant') return false;
         const dueStr = task.due_date || task.scheduled_start;
         if (!dueStr) return false;
         try {
@@ -89,7 +103,7 @@ export default function WeeklySummary() {
       const nextWeekStart = new Date(weekEnd);
       nextWeekStart.setDate(nextWeekStart.getDate() + 1);
       const upcomingNextWeek = allTasks.filter(task => {
-        if (task.status === 'completed') return false;
+        if (task.status === 'completed' || task.status === 'not_relevant') return false;
         const dueStr = task.due_date || task.scheduled_start;
         if (!dueStr) return false;
         try {
@@ -129,7 +143,6 @@ export default function WeeklySummary() {
       overdueTasks.forEach(task => {
         let clientName = task.client_name ||
           (task.client_id && clientMap[task.client_id]);
-        // If no client name but has category, group by category
         if (!clientName && task.category) {
           clientName = getCategoryLabel(task.category);
         }
@@ -169,6 +182,16 @@ export default function WeeklySummary() {
     setIsLoading(false);
   };
 
+  const handleStatusChange = async (task, newStatus) => {
+    try {
+      await Task.update(task.id, { ...task, status: newStatus });
+      // Reload to reflect changes
+      loadWeeklySummary();
+    } catch (err) {
+      console.error('שגיאה בעדכון סטטוס:', err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -196,7 +219,7 @@ export default function WeeklySummary() {
         <p className="text-gray-500">שבוע {weekLabel}</p>
       </div>
 
-      {/* Stats Cards - calm colors */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className={`${data.stats.overdue > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}`}>
           <CardContent className="p-4 text-center">
@@ -235,7 +258,7 @@ export default function WeeklySummary() {
         </Card>
       </div>
 
-      {/* Overdue by Client - calm amber tones instead of red */}
+      {/* Overdue by Client with status update */}
       {data.clientSummary.length > 0 && (
         <Card className="border-2 border-amber-200">
           <CardHeader>
@@ -264,27 +287,38 @@ export default function WeeklySummary() {
                   </Badge>
                 </div>
                 <div className="space-y-2">
-                  {client.tasks.map(task => (
-                    <div key={task.id} className="flex items-center gap-3 p-2 rounded bg-white border border-amber-100">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        task.daysOverdue > 7 ? 'bg-amber-600' :
-                        task.daysOverdue > 3 ? 'bg-amber-500' :
-                        'bg-amber-400'
-                      }`} />
-                      <span className="flex-1 text-sm font-medium">{task.title}</span>
-                      {task.categoryLabel && (
-                        <Badge variant="outline" className="text-xs border-gray-200 text-gray-500">{task.categoryLabel}</Badge>
-                      )}
-                      <span className="text-xs text-stone-500">
-                        {task.daysOverdue} ימים
-                      </span>
-                      {task.due_date && (
-                        <span className="text-xs text-gray-500">
-                          (יעד: {format(parseISO(task.due_date), 'dd/MM', { locale: he })})
+                  {client.tasks.map(task => {
+                    const sCfg = statusConfig[task.status] || statusConfig.not_started;
+                    return (
+                      <div key={task.id} className="flex items-center gap-3 p-2 rounded bg-white border border-amber-100">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          task.daysOverdue > 7 ? 'bg-amber-600' :
+                          task.daysOverdue > 3 ? 'bg-amber-500' :
+                          'bg-amber-400'
+                        }`} />
+                        <span className="flex-1 text-sm font-medium truncate">{task.title}</span>
+                        {task.categoryLabel && (
+                          <Badge variant="outline" className="text-xs border-gray-200 text-gray-500 shrink-0">{task.categoryLabel}</Badge>
+                        )}
+                        <Select
+                          value={task.status || 'not_started'}
+                          onValueChange={(newStatus) => handleStatusChange(task, newStatus)}
+                        >
+                          <SelectTrigger className={`h-7 text-[10px] px-2 w-auto min-w-[90px] border-0 shrink-0 ${sCfg.color}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(statusConfig).map(([key, { text }]) => (
+                              <SelectItem key={key} value={key} className="text-xs">{text}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-xs text-stone-500 shrink-0">
+                          {task.daysOverdue} ימים
                         </span>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </motion.div>
             ))}
@@ -304,7 +338,7 @@ export default function WeeklySummary() {
         </Card>
       )}
 
-      {/* Failed this week - calm stone/warm tones */}
+      {/* Failed this week with status update */}
       {data.failedThisWeek.length > 0 && (
         <Card className="border-stone-200">
           <CardHeader>
@@ -315,25 +349,38 @@ export default function WeeklySummary() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {data.failedThisWeek.map(task => (
-                <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-stone-50 border border-stone-100">
-                  <Clock className="w-4 h-4 text-stone-500 flex-shrink-0" />
-                  <div className="flex-1">
-                    <span className="font-medium text-sm">{task.title}</span>
-                    {task.client_name && (
-                      <span className="text-xs text-gray-500 mr-2">({task.client_name})</span>
-                    )}
-                    {task.category && !task.client_name && (
-                      <span className="text-xs text-gray-400 mr-2">{task.category}</span>
+              {data.failedThisWeek.map(task => {
+                const sCfg = statusConfig[task.status] || statusConfig.not_started;
+                return (
+                  <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-stone-50 border border-stone-100">
+                    <Clock className="w-4 h-4 text-stone-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm">{task.title}</span>
+                      {task.client_name && (
+                        <span className="text-xs text-gray-500 mr-2">({task.client_name})</span>
+                      )}
+                    </div>
+                    <Select
+                      value={task.status || 'not_started'}
+                      onValueChange={(newStatus) => handleStatusChange(task, newStatus)}
+                    >
+                      <SelectTrigger className={`h-7 text-[10px] px-2 w-auto min-w-[90px] border-0 shrink-0 ${sCfg.color}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(statusConfig).map(([key, { text }]) => (
+                          <SelectItem key={key} value={key} className="text-xs">{text}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {task.due_date && (
+                      <span className="text-xs text-stone-500 shrink-0">
+                        {format(parseISO(task.due_date), 'dd/MM', { locale: he })}
+                      </span>
                     )}
                   </div>
-                  {task.due_date && (
-                    <span className="text-xs text-stone-500">
-                      יעד: {format(parseISO(task.due_date), 'dd/MM', { locale: he })}
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -360,7 +407,7 @@ export default function WeeklySummary() {
         </Card>
       )}
 
-      {/* Upcoming next week */}
+      {/* Upcoming next week with status update */}
       {data.upcomingNextWeek.length > 0 && (
         <Card className="border-sky-200">
           <CardHeader>
@@ -371,22 +418,38 @@ export default function WeeklySummary() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {data.upcomingNextWeek.map(task => (
-                <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-sky-50 border border-sky-100">
-                  <Calendar className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                  <div className="flex-1">
-                    <span className="font-medium text-sm">{task.title}</span>
-                    {task.client_name && (
-                      <span className="text-xs text-gray-500 mr-2">({task.client_name})</span>
+              {data.upcomingNextWeek.map(task => {
+                const sCfg = statusConfig[task.status] || statusConfig.not_started;
+                return (
+                  <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-sky-50 border border-sky-100">
+                    <Calendar className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm">{task.title}</span>
+                      {task.client_name && (
+                        <span className="text-xs text-gray-500 mr-2">({task.client_name})</span>
+                      )}
+                    </div>
+                    <Select
+                      value={task.status || 'not_started'}
+                      onValueChange={(newStatus) => handleStatusChange(task, newStatus)}
+                    >
+                      <SelectTrigger className={`h-7 text-[10px] px-2 w-auto min-w-[90px] border-0 shrink-0 ${sCfg.color}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(statusConfig).map(([key, { text }]) => (
+                          <SelectItem key={key} value={key} className="text-xs">{text}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {task.due_date && (
+                      <span className="text-xs text-sky-600 shrink-0">
+                        {format(parseISO(task.due_date), 'EEEE dd/MM', { locale: he })}
+                      </span>
                     )}
                   </div>
-                  {task.due_date && (
-                    <span className="text-xs text-sky-600">
-                      {format(parseISO(task.due_date), 'EEEE dd/MM', { locale: he })}
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
