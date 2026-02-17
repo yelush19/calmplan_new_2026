@@ -10,14 +10,16 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog';
-import { Zap, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Settings } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Zap, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Settings, Play, Loader2, X, CheckSquare, Square } from 'lucide-react';
 import {
   loadAutomationRules, saveAutomationRules,
   ALL_SERVICES, BUSINESS_TYPES, REPORT_ENTITIES,
   PERIODIC_REPORT_TYPES, PERIODIC_REPORT_PERIODS,
   TASK_BOARD_CATEGORIES, RECONCILIATION_TYPES,
-  DEFAULT_RULES,
+  DEFAULT_RULES, getReportAutoCreateRules,
 } from '@/config/automationRules';
+import { Client, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount } from '@/api/entities';
 
 // Icons/colors per target entity for display
 const entityDisplayConfig = {
@@ -309,6 +311,10 @@ export default function AutomationRules() {
   const [editingRule, setEditingRule] = useState(null);
   const [newRuleType, setNewRuleType] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [bulkScanning, setBulkScanning] = useState(false);
+  const [bulkExecuting, setBulkExecuting] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState(null); // { items: [...], stats }
+  const [bulkResult, setBulkResult] = useState(null);
 
   useEffect(() => {
     loadRules();
@@ -365,6 +371,241 @@ export default function AutomationRules() {
     await handleSave([...DEFAULT_RULES]);
   };
 
+  // STEP 1: Scan existing clients and build preview of what will be created
+  const handleBulkScan = async () => {
+    setBulkScanning(true);
+    setBulkResult(null);
+    setBulkPreview(null);
+
+    try {
+      const allClients = await Client.list(null, 5000);
+      const activeClients = allClients.filter(c => c.status === 'active');
+
+      const year = String(new Date().getFullYear() - 1);
+      const now = new Date();
+      const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const monthLabel = currentMonthEnd.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+      const dueDateStr = currentMonthEnd.toISOString().split('T')[0];
+
+      const [existingReports, existingBS, existingRecs, existingTasks, allAccounts] = await Promise.all([
+        PeriodicReport.list(null, 5000).catch(() => []),
+        BalanceSheet.list(null, 5000).catch(() => []),
+        AccountReconciliation.list(null, 5000).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
+        ClientAccount.list(null, 5000).catch(() => []),
+      ]);
+
+      const previewItems = [];
+
+      for (const client of activeClients) {
+        const services = client.service_types || [];
+        if (services.length === 0) continue;
+
+        const matchingRules = getReportAutoCreateRules(rules, services, client);
+        if (matchingRules.length === 0) continue;
+
+        for (const rule of matchingRules) {
+          if (rule.target_entity === 'PeriodicReport' && rule.report_types) {
+            const clientReports = existingReports.filter(r => r.client_id === client.id && r.report_year === year);
+            if (clientReports.length === 0) {
+              for (const [typeKey, periods] of Object.entries(rule.report_types)) {
+                for (const period of periods) {
+                  const y = parseInt(year);
+                  const targetDate = period === 'h1' ? `${y}-07-18` : period === 'h2' ? `${y + 1}-01-18` : `${y + 1}-04-30`;
+                  previewItems.push({
+                    id: `${client.id}_pr_${typeKey}_${period}`,
+                    checked: true,
+                    clientId: client.id,
+                    clientName: client.name,
+                    entity: 'PeriodicReport',
+                    entityLabel: 'דיווח מרכז',
+                    description: `${PERIODIC_REPORT_TYPES[typeKey] || typeKey} - ${PERIODIC_REPORT_PERIODS[period] || period} (${year})`,
+                    createData: {
+                      client_id: client.id, client_name: client.name,
+                      report_year: year, report_type: typeKey, period,
+                      target_date: targetDate, status: 'not_started',
+                      reconciliation_steps: { payroll_vs_bookkeeping: false, periodic_vs_annual: false },
+                      submission_date: '', notes: '',
+                    },
+                  });
+                }
+              }
+            }
+          }
+
+          if (rule.target_entity === 'BalanceSheet') {
+            const clientBS = existingBS.filter(b => b.client_id === client.id && b.tax_year === year);
+            if (clientBS.length === 0) {
+              previewItems.push({
+                id: `${client.id}_bs`,
+                checked: true,
+                clientId: client.id,
+                clientName: client.name,
+                entity: 'BalanceSheet',
+                entityLabel: 'מאזן שנתי',
+                description: `מאזן ${year}`,
+                createData: {
+                  client_name: client.name, client_id: client.id,
+                  tax_year: year, current_stage: 'closing_operations',
+                  target_date: `${parseInt(year) + 1}-05-31`,
+                  folder_link: '', notes: '',
+                },
+              });
+            }
+          }
+
+          if (rule.target_entity === 'AccountReconciliation') {
+            const clientAccounts = allAccounts.filter(a => a.client_id === client.id);
+            if (clientAccounts.length > 0) {
+              const period = now.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+              for (const account of clientAccounts) {
+                const exists = existingRecs.some(r => r.client_id === client.id && r.client_account_id === account.id && r.period === period);
+                if (!exists) {
+                  previewItems.push({
+                    id: `${client.id}_rec_${account.id}`,
+                    checked: true,
+                    clientId: client.id,
+                    clientName: client.name,
+                    entity: 'AccountReconciliation',
+                    entityLabel: 'התאמת חשבון',
+                    description: `${account.account_name || account.bank_name || 'חשבון'} - ${period}`,
+                    createData: {
+                      client_id: client.id, client_name: client.name,
+                      client_account_id: account.id, account_name: account.account_name || account.bank_name || '',
+                      period, reconciliation_type: 'bank_credit',
+                      status: 'not_started', due_date: dueDateStr, notes: '',
+                    },
+                  });
+                }
+              }
+            }
+          }
+
+          if (rule.target_entity?.startsWith('Task_') && rule.task_categories?.length > 0) {
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            const clientTasks = existingTasks.filter(t =>
+              t.client_id === client.id && t.due_date >= monthStart && t.due_date <= dueDateStr
+            );
+            for (const category of rule.task_categories) {
+              const exists = clientTasks.some(t => t.category === category);
+              if (!exists) {
+                previewItems.push({
+                  id: `${client.id}_task_${category}`,
+                  checked: true,
+                  clientId: client.id,
+                  clientName: client.name,
+                  entity: rule.target_entity,
+                  entityLabel: REPORT_ENTITIES[rule.target_entity] || 'משימה',
+                  description: `${category} - ${monthLabel}`,
+                  createData: {
+                    title: `${category} - ${client.name} - ${monthLabel}`,
+                    client_name: client.name, client_id: client.id,
+                    category, status: 'not_started', due_date: dueDateStr,
+                  },
+                });
+              }
+            }
+          }
+        }
+      }
+
+      setBulkPreview({
+        items: previewItems,
+        totalClients: activeClients.length,
+        affectedClients: new Set(previewItems.map(i => i.clientId)).size,
+      });
+    } catch (err) {
+      console.error('Bulk scan error:', err);
+      setBulkResult({ error: err.message });
+    } finally {
+      setBulkScanning(false);
+    }
+  };
+
+  // Toggle individual preview item
+  const handleTogglePreviewItem = (itemId) => {
+    if (!bulkPreview) return;
+    setBulkPreview(prev => ({
+      ...prev,
+      items: prev.items.map(item => item.id === itemId ? { ...item, checked: !item.checked } : item),
+    }));
+  };
+
+  // Toggle all items for a specific client
+  const handleToggleClientItems = (clientId, checked) => {
+    if (!bulkPreview) return;
+    setBulkPreview(prev => ({
+      ...prev,
+      items: prev.items.map(item => item.clientId === clientId ? { ...item, checked } : item),
+    }));
+  };
+
+  // STEP 2: Execute only checked items, then VERIFY each one was created
+  const handleBulkExecute = async () => {
+    if (!bulkPreview) return;
+    const checkedItems = bulkPreview.items.filter(i => i.checked);
+    if (checkedItems.length === 0) { setBulkPreview(null); return; }
+
+    setBulkExecuting(true);
+    const resultDetails = []; // detailed log of each action
+
+    for (const item of checkedItems) {
+      try {
+        let createdRecord = null;
+        if (item.entity === 'PeriodicReport') {
+          createdRecord = await PeriodicReport.create(item.createData);
+        } else if (item.entity === 'BalanceSheet') {
+          createdRecord = await BalanceSheet.create(item.createData);
+        } else if (item.entity === 'AccountReconciliation') {
+          createdRecord = await AccountReconciliation.create(item.createData);
+        } else if (item.entity?.startsWith('Task_')) {
+          createdRecord = await Task.create(item.createData);
+        }
+
+        // VERIFY: check the record was actually created with an ID
+        if (createdRecord && createdRecord.id) {
+          resultDetails.push({
+            clientName: item.clientName,
+            entityLabel: item.entityLabel,
+            description: item.description,
+            status: 'success',
+            recordId: createdRecord.id,
+          });
+        } else {
+          resultDetails.push({
+            clientName: item.clientName,
+            entityLabel: item.entityLabel,
+            description: item.description,
+            status: 'warning',
+            message: 'נוצר אך לא התקבל אישור ID',
+          });
+        }
+      } catch (err) {
+        resultDetails.push({
+          clientName: item.clientName,
+          entityLabel: item.entityLabel,
+          description: item.description,
+          status: 'error',
+          message: err.message,
+        });
+      }
+    }
+
+    const successCount = resultDetails.filter(r => r.status === 'success').length;
+    const errorCount = resultDetails.filter(r => r.status === 'error').length;
+    const warningCount = resultDetails.filter(r => r.status === 'warning').length;
+
+    setBulkResult({
+      clients: bulkPreview.affectedClients,
+      created: successCount,
+      warnings: warningCount,
+      errors: errorCount,
+      details: resultDetails,
+    });
+    setBulkPreview(null);
+    setBulkExecuting(false);
+  };
+
   const serviceAutoLinkRules = rules.filter(r => r.type === 'service_auto_link');
   const reportAutoCreateRules = rules.filter(r => r.type === 'report_auto_create');
 
@@ -396,8 +637,71 @@ export default function AutomationRules() {
           <Button variant="outline" size="sm" onClick={handleResetDefaults} className="gap-1">
             <Settings className="w-4 h-4" /> איפוס לברירת מחדל
           </Button>
+          <Button
+            size="sm"
+            onClick={handleBulkScan}
+            disabled={bulkScanning}
+            className="gap-1 bg-yellow-500 hover:bg-yellow-600 text-white"
+          >
+            {bulkScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            {bulkScanning ? 'סורק...' : 'הפעל על לקוחות קיימים'}
+          </Button>
         </div>
       </div>
+
+      {/* Bulk execution result with verification details */}
+      {bulkResult && (
+        <Card className={`mb-4 ${bulkResult.error ? 'border-red-300' : 'border-green-300'}`}>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              תוצאות הפעלה - אימות בוצע
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setBulkResult(null)}><X className="w-4 h-4" /></Button>
+          </CardHeader>
+          <CardContent>
+            {bulkResult.error ? (
+              <p className="text-red-700">שגיאה כללית: {bulkResult.error}</p>
+            ) : (
+              <>
+                <div className="flex items-center gap-4 mb-3 text-sm">
+                  <span className="text-green-700 font-medium">נוצרו ואומתו: {bulkResult.created}</span>
+                  {bulkResult.warnings > 0 && <span className="text-yellow-700">אזהרות: {bulkResult.warnings}</span>}
+                  {bulkResult.errors > 0 && <span className="text-red-700">שגיאות: {bulkResult.errors}</span>}
+                </div>
+                {bulkResult.details && bulkResult.details.length > 0 && (
+                  <div className="max-h-60 overflow-y-auto border rounded-md">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="text-right p-2">סטטוס</th>
+                          <th className="text-right p-2">לקוח</th>
+                          <th className="text-right p-2">סוג</th>
+                          <th className="text-right p-2">פירוט</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bulkResult.details.map((d, i) => (
+                          <tr key={i} className={`border-t ${d.status === 'error' ? 'bg-red-50' : d.status === 'warning' ? 'bg-yellow-50' : ''}`}>
+                            <td className="p-2">
+                              {d.status === 'success' && <CheckCircle className="w-3.5 h-3.5 text-green-600" />}
+                              {d.status === 'warning' && <AlertTriangle className="w-3.5 h-3.5 text-yellow-600" />}
+                              {d.status === 'error' && <X className="w-3.5 h-3.5 text-red-600" />}
+                            </td>
+                            <td className="p-2 font-medium">{d.clientName}</td>
+                            <td className="p-2">{d.entityLabel}</td>
+                            <td className="p-2">{d.description}{d.message ? ` - ${d.message}` : ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Service Auto-Link Rules */}
       <Card className="mb-6">
@@ -492,6 +796,119 @@ export default function AutomationRules() {
             onCancel={() => { setEditingRule(null); setNewRuleType(null); }}
           />
         )}
+      </Dialog>
+
+      {/* Bulk Preview Dialog */}
+      <Dialog open={!!bulkPreview} onOpenChange={(open) => { if (!open && !bulkExecuting) setBulkPreview(null); }}>
+        <DialogContent className="bg-white max-w-3xl max-h-[85vh] overflow-hidden flex flex-col" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Play className="w-5 h-5 text-yellow-500" />
+              תצוגה מקדימה - אוטומציות ללקוחות קיימים
+            </DialogTitle>
+            <DialogDescription>
+              {bulkPreview && (
+                <>
+                  נסרקו {bulkPreview.totalClients} לקוחות פעילים.
+                  {' '}נמצאו <strong>{bulkPreview.items.length}</strong> רשומות חדשות ליצירה
+                  {' '}עבור <strong>{bulkPreview.affectedClients}</strong> לקוחות.
+                  {bulkPreview.items.length === 0 && ' הכל כבר קיים!'}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {bulkPreview && bulkPreview.items.length > 0 && (
+            <>
+              <div className="flex items-center justify-between text-sm px-1 py-2 border-b">
+                <span className="text-gray-500">
+                  מסומנים: {bulkPreview.items.filter(i => i.checked).length} / {bulkPreview.items.length}
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setBulkPreview(prev => ({ ...prev, items: prev.items.map(i => ({ ...i, checked: true })) }))}>
+                    סמן הכל
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setBulkPreview(prev => ({ ...prev, items: prev.items.map(i => ({ ...i, checked: false })) }))}>
+                    נקה הכל
+                  </Button>
+                </div>
+              </div>
+
+              <div className="overflow-y-auto flex-1 min-h-0">
+                {/* Group by client */}
+                {(() => {
+                  const grouped = {};
+                  for (const item of bulkPreview.items) {
+                    if (!grouped[item.clientId]) grouped[item.clientId] = { name: item.clientName, items: [] };
+                    grouped[item.clientId].items.push(item);
+                  }
+                  return Object.entries(grouped).map(([clientId, group]) => {
+                    const allChecked = group.items.every(i => i.checked);
+                    const someChecked = group.items.some(i => i.checked);
+                    return (
+                      <div key={clientId} className="border-b last:border-b-0">
+                        <div
+                          className="flex items-center gap-2 p-2 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleToggleClientItems(clientId, !allChecked)}
+                        >
+                          {allChecked ? (
+                            <CheckSquare className="w-4 h-4 text-primary" />
+                          ) : someChecked ? (
+                            <CheckSquare className="w-4 h-4 text-gray-400" />
+                          ) : (
+                            <Square className="w-4 h-4 text-gray-300" />
+                          )}
+                          <span className="font-medium text-sm">{group.name}</span>
+                          <Badge variant="secondary" className="text-xs">{group.items.length} רשומות</Badge>
+                        </div>
+                        <div className="pr-6">
+                          {group.items.map(item => (
+                            <div
+                              key={item.id}
+                              className={`flex items-center gap-2 p-1.5 text-xs cursor-pointer hover:bg-gray-50 ${!item.checked ? 'opacity-50' : ''}`}
+                              onClick={() => handleTogglePreviewItem(item.id)}
+                            >
+                              {item.checked ? (
+                                <CheckSquare className="w-3.5 h-3.5 text-primary shrink-0" />
+                              ) : (
+                                <Square className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+                              )}
+                              <Badge className={`text-[10px] shrink-0 ${(entityDisplayConfig[item.entity] || {}).color || 'bg-gray-100'}`}>
+                                {item.entityLabel}
+                              </Badge>
+                              <span className="truncate">{item.description}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t">
+                <Button variant="outline" onClick={() => setBulkPreview(null)} disabled={bulkExecuting}>ביטול</Button>
+                <Button
+                  onClick={handleBulkExecute}
+                  disabled={bulkExecuting || bulkPreview.items.filter(i => i.checked).length === 0}
+                  className="gap-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {bulkExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  {bulkExecuting ? 'מבצע...' : `אשר והפעל (${bulkPreview.items.filter(i => i.checked).length})`}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {bulkPreview && bulkPreview.items.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
+              <p className="font-medium">הכל מעודכן!</p>
+              <p className="text-sm">כל הרשומות כבר קיימות לכל הלקוחות הפעילים</p>
+              <Button variant="outline" className="mt-4" onClick={() => setBulkPreview(null)}>סגור</Button>
+            </div>
+          )}
+        </DialogContent>
       </Dialog>
     </div>
   );
