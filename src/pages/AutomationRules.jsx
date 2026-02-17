@@ -417,8 +417,9 @@ export default function AutomationRules() {
   };
 
   // Bulk cleanup: scan all clients and mark tasks for removed services as not_relevant
+  // Also cleans up bi-monthly clients: tasks in odd months are not relevant
   const handleBulkCleanup = async () => {
-    if (!window.confirm('לסרוק את כל הלקוחות ולנקות משימות של שירותים שהוסרו?')) return;
+    if (!window.confirm('לסרוק את כל הלקוחות ולנקות משימות של שירותים שהוסרו ותדירויות שגויות?')) return;
     setCleanupScanning(true);
     setCleanupResult(null);
     try {
@@ -446,6 +447,15 @@ export default function AutomationRules() {
         }
       }
 
+      // Category → frequency field mapping for bi-monthly check
+      const categoryFreqField = {
+        'מע"מ': 'vat_reporting_frequency',
+        'מקדמות מס': 'tax_advances_frequency',
+        'שכר': 'payroll_frequency',
+        'ביטוח לאומי': 'social_security_frequency',
+        'ניכויים': 'deductions_frequency',
+      };
+
       let cleanedCount = 0;
       const details = [];
       const clientsArr = Array.isArray(allClients) ? allClients : [];
@@ -453,8 +463,9 @@ export default function AutomationRules() {
 
       for (const client of clientsArr) {
         const clientServices = client.service_types || [];
+        const reportingInfo = client.reporting_info || {};
         const clientTasks = tasksArr.filter(t =>
-          t.client_name === client.name &&
+          (t.client_name === client.name || t.client_id === client.id) &&
           t.status !== 'completed' &&
           t.status !== 'not_relevant'
         );
@@ -473,17 +484,40 @@ export default function AutomationRules() {
 
         for (const task of clientTasks) {
           if (!task.category) continue;
+          let reason = null;
 
+          // Check 1: Service removed from client
           const requiredService = categoryToService[task.category];
-          if (!requiredService) continue; // unknown category, skip
+          if (requiredService && !effectiveServices.has(requiredService)) {
+            reason = 'שירות הוסר';
+          }
 
-          if (!effectiveServices.has(requiredService)) {
+          // Check 2: Bi-monthly frequency - task in wrong month
+          if (!reason && task.due_date) {
+            const freqField = categoryFreqField[task.category];
+            const freq = freqField ? reportingInfo[freqField] : null;
+            if (freq === 'bimonthly') {
+              try {
+                const dueDate = new Date(task.due_date);
+                const taskMonth = dueDate.getMonth(); // 0-based
+                if (taskMonth % 2 !== 0) {
+                  reason = 'דו-חודשי - חודש לא רלוונטי';
+                }
+              } catch { /* skip */ }
+            }
+            if (freq === 'not_applicable') {
+              reason = 'תדירות לא רלוונטית';
+            }
+          }
+
+          if (reason) {
             await Task.update(task.id, { status: 'not_relevant' });
             cleanedCount++;
             details.push({
               clientName: client.name,
               taskTitle: task.title,
               category: task.category,
+              reason,
             });
           }
         }
@@ -755,7 +789,8 @@ export default function AutomationRules() {
               }
 
               const clientTasks = existingTasks.filter(t =>
-                t.client_id === client.id && t.due_date >= mStart && t.due_date <= mEnd
+                (t.client_id === client.id || t.client_name === client.name) &&
+                t.due_date >= mStart && t.due_date <= mEnd
               );
               for (const category of rule.task_categories) {
                 // Skip bi-monthly clients on odd months (0-based: Jan=0, Feb=1...)
@@ -964,8 +999,9 @@ export default function AutomationRules() {
                     <div key={i} className="text-xs flex items-center gap-2 p-1.5 rounded bg-gray-50">
                       <span className="font-medium text-gray-700">{d.clientName}</span>
                       <span className="text-gray-400">-</span>
-                      <span className="text-gray-500">{d.taskTitle}</span>
+                      <span className="text-gray-500 truncate max-w-[180px]">{d.taskTitle}</span>
                       <Badge variant="outline" className="text-[9px] px-1 py-0">{d.category}</Badge>
+                      {d.reason && <span className="text-[9px] text-amber-600">({d.reason})</span>}
                     </div>
                   ))}
                 </div>
