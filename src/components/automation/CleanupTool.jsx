@@ -151,6 +151,8 @@ export default function CleanupTool({ rules = [] }) {
         }
 
         // Check 3: Task in current month instead of previous month
+        // The system always works on the PREVIOUS month, so tasks with due_date
+        // in the current month were likely created with the wrong month
         if (!reason && task.due_date) {
           try {
             const dueDate = new Date(task.due_date);
@@ -161,13 +163,11 @@ export default function CleanupTool({ rules = [] }) {
             const currentYear = now.getFullYear();
 
             if (taskMonth === currentMonth && taskYear === currentYear) {
+              reason = 'wrong_month_current';
               const currentMonthName = now.toLocaleDateString('he-IL', { month: 'long' });
-              if (task.title && task.title.includes(currentMonthName)) {
-                reason = 'wrong_month_current';
-                const prevDate = new Date(currentYear, currentMonth - 1, 1);
-                const prevMonthName = prevDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-                detail = `משימה נוצרה לחודש הנוכחי (${currentMonthName}) במקום חודש הדיווח (${prevMonthName})`;
-              }
+              const prevDate = new Date(currentYear, currentMonth - 1, 1);
+              const prevMonthName = prevDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+              detail = `משימה עם תאריך יעד בחודש הנוכחי (${currentMonthName}) - צריכה להיות בחודש הקודם (${prevMonthName})`;
             }
           } catch { /* skip */ }
         }
@@ -239,9 +239,20 @@ export default function CleanupTool({ rules = [] }) {
           const fixedDate = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), fixedDay);
           const fixedDateStr = fixedDate.toISOString().split('T')[0];
 
-          const currentMonthLabel = dueDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-          const prevMonthLabel = fixedDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-          const fixedTitle = (item.task.title || '').replace(currentMonthLabel, prevMonthLabel);
+          // Try to fix month name in title (with and without year)
+          const currentMonthLabelFull = dueDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+          const prevMonthLabelFull = fixedDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+          const currentMonthName = dueDate.toLocaleDateString('he-IL', { month: 'long' });
+          const prevMonthName = fixedDate.toLocaleDateString('he-IL', { month: 'long' });
+          let fixedTitle = item.task.title || '';
+          // Replace "פברואר 2026" → "ינואר 2026" first (more specific)
+          if (fixedTitle.includes(currentMonthLabelFull)) {
+            fixedTitle = fixedTitle.replace(currentMonthLabelFull, prevMonthLabelFull);
+          } else if (fixedTitle.includes(currentMonthName)) {
+            // Replace just "פברואר" → "ינואר"
+            fixedTitle = fixedTitle.replace(currentMonthName, prevMonthName);
+          }
+          // If title didn't change, that's OK - we still fix the due_date
 
           await Task.update(item.task.id, { due_date: fixedDateStr, title: fixedTitle });
         } else {
