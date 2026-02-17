@@ -43,7 +43,7 @@ export default function PayrollDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date());
+  const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
@@ -311,18 +311,18 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange, onStatu
       </div>
 
       <div className="overflow-x-auto">
-        <ResizableTable className="w-full text-sm">
+        <ResizableTable className="w-full text-sm" stickyHeader maxHeight="60vh">
           <thead>
-            <tr className="border-b border-gray-100">
-              <th className="text-right py-2 px-4 font-semibold text-gray-600 text-xs bg-gray-50/50 sticky right-0 z-10 min-w-[140px]">
+            <tr className="border-b border-gray-100 bg-white">
+              <th className="text-right py-2 px-4 font-semibold text-gray-600 text-xs bg-gray-50 sticky right-0 z-30 min-w-[140px]">
                 לקוח
               </th>
               {service.steps.map(step => (
-                <th key={step.key} className="text-center py-2 px-2 font-medium text-gray-500 text-[11px] bg-gray-50/50 min-w-[80px]">
+                <th key={step.key} className="text-center py-2 px-2 font-medium text-gray-500 text-[11px] bg-gray-50 min-w-[80px]">
                   {step.label}
                 </th>
               ))}
-              <th className="text-center py-2 px-3 font-medium text-gray-500 text-[11px] bg-gray-50/50 min-w-[80px]">
+              <th className="text-center py-2 px-3 font-medium text-gray-500 text-[11px] bg-gray-50 min-w-[80px]">
                 סטטוס
               </th>
             </tr>
