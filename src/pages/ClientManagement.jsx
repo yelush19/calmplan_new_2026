@@ -52,7 +52,7 @@ import ClientForm from '@/components/clients/ClientForm';
 import ClientCard from '@/components/clients/ClientCard';
 import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
 import ClientListItem from '@/components/clients/ClientListItem';
-import { loadAutomationRules, getReportAutoCreateRules } from '@/config/automationRules';
+import { loadAutomationRules, getReportAutoCreateRules, clientHasServiceForCategory, loadServiceDueDates, getDueDayForCategory } from '@/config/automationRules';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import ClientCollections from '@/components/clients/ClientCollections';
 import ClientContractsManager from '@/components/clients/ClientContractsManager';
@@ -499,7 +499,22 @@ export default function ClientManagementPage() {
             taskDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay).toISOString().split('T')[0];
           }
 
+          // Load per-service due dates
+          let svcDueDates = null;
+          try { svcDueDates = (await loadServiceDueDates()).dueDates; } catch { /* ignore */ }
+
           for (const category of rule.task_categories) {
+            // Per-category service check: skip if client doesn't have this category's service
+            if (!clientHasServiceForCategory(category, rule.target_entity, services)) continue;
+
+            // Per-category due date override
+            const catDueDay = getDueDayForCategory(svcDueDates, category);
+            let catTaskDueDate = taskDueDate;
+            if (catDueDay) {
+              const dueDay = Math.min(catDueDay, currentMonthEnd.getDate());
+              catTaskDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay).toISOString().split('T')[0];
+            }
+
             const exists = clientTasks.some(t => t.category === category);
             if (!exists) {
               await Task.create({
@@ -508,7 +523,7 @@ export default function ClientManagementPage() {
                 client_id: clientId,
                 category: category,
                 status: 'not_started',
-                due_date: taskDueDate,
+                due_date: catTaskDueDate,
                 context: 'work',
                 process_steps: {},
               });

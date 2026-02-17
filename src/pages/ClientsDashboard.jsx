@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader, RefreshCw, Users, Search,
   ChevronLeft, ChevronRight,
-  ExternalLink, Calculator, Briefcase,
+  ExternalLink, Calculator, Briefcase, Settings2,
   Plus, Check, X, ArrowLeft
 } from 'lucide-react';
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
@@ -47,6 +47,24 @@ const COLUMN_GROUPS = [
       { key: 'payroll', label: 'שכר', categories: ['שכר', 'work_payroll'], createCategory: 'שכר', createTitle: 'שכר' },
       { key: 'social_security', label: 'ביט"ל', categories: ['ביטוח לאומי', 'work_social_security'], createCategory: 'ביטוח לאומי', createTitle: 'ביטוח לאומי' },
       { key: 'deductions', label: 'ניכויים', categories: ['ניכויים', 'work_deductions'], createCategory: 'ניכויים', createTitle: 'ניכויים' },
+    ],
+  },
+  {
+    key: 'additional',
+    label: 'שירותים נוספים',
+    bgColor: 'bg-indigo-50/50',
+    headerBg: 'bg-indigo-600',
+    headerText: 'text-white',
+    drillDownPage: 'AdditionalServicesDashboard',
+    icon: Settings2,
+    serviceCheck: true, // columns are only shown if client has the service
+    columns: [
+      { key: 'masav_social', label: 'מס"ב סוצ\'', categories: ['מס"ב סוציאליות'], createCategory: 'מס"ב סוציאליות', createTitle: 'מס"ב סוציאליות', service: 'masav_social' },
+      { key: 'masav_employees', label: 'מס"ב עוב\'', categories: ['מס"ב עובדים'], createCategory: 'מס"ב עובדים', createTitle: 'מס"ב עובדים', service: 'masav_employees' },
+      { key: 'payslip_sending', label: 'תלושים', categories: ['משלוח תלושים'], createCategory: 'משלוח תלושים', createTitle: 'משלוח תלושים', service: 'payslip_sending' },
+      { key: 'authorities_payment', label: 'רשויות', categories: ['תשלום רשויות'], createCategory: 'תשלום רשויות', createTitle: 'תשלום רשויות', service: 'authorities_payment' },
+      { key: 'operator_reporting', label: 'מתפעל', categories: ['דיווח למתפעל'], createCategory: 'דיווח למתפעל', createTitle: 'דיווח למתפעל', service: 'operator_reporting' },
+      { key: 'taml_reporting', label: 'טמל', categories: ['דיווח לטמל'], createCategory: 'דיווח לטמל', createTitle: 'דיווח לטמל', service: 'taml_reporting' },
     ],
   },
 ];
@@ -590,6 +608,14 @@ export default function ClientsDashboardPage() {
                                   <div className={`${STATUS_CONFIG.not_relevant.bg} text-gray-900 rounded py-1.5 text-xs font-bold mx-0.5`}>
                                     {STATUS_CONFIG.not_relevant.label}
                                   </div>
+                                </td>
+                              );
+                            }
+                            // Additional services: N/A if client doesn't have this service
+                            if (group.serviceCheck && col.service && !client.service_types?.includes(col.service)) {
+                              return (
+                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                                  <div className="bg-gray-50 text-gray-300 rounded py-1.5 text-[10px] mx-0.5">-</div>
                                 </td>
                               );
                             }

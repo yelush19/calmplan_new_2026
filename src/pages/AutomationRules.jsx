@@ -18,8 +18,12 @@ import {
   PERIODIC_REPORT_TYPES, PERIODIC_REPORT_PERIODS,
   TASK_BOARD_CATEGORIES, RECONCILIATION_TYPES,
   DEFAULT_RULES, getReportAutoCreateRules,
+  clientHasServiceForCategory,
+  loadServiceDueDates, saveServiceDueDates, getDueDayForCategory,
+  DEFAULT_SERVICE_DUE_DATES,
 } from '@/config/automationRules';
 import { Client, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount } from '@/api/entities';
+import CleanupTool from '@/components/automation/CleanupTool';
 
 // Icons/colors per target entity for display
 const entityDisplayConfig = {
@@ -356,13 +360,38 @@ export default function AutomationRules() {
   const [showRulePicker, setShowRulePicker] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState([]);
   const [runningRuleId, setRunningRuleId] = useState(null);
-  const [startMonth, setStartMonth] = useState(new Date().getMonth()); // 0-based (0=Jan)
-  const [startYear, setStartYear] = useState(new Date().getFullYear());
+  // Default to previous month (the system always works on previous month)
+  const [startMonth, setStartMonth] = useState(() => {
+    const d = new Date();
+    return d.getMonth() === 0 ? 11 : d.getMonth() - 1;
+  });
+  const [startYear, setStartYear] = useState(() => {
+    const d = new Date();
+    return d.getMonth() === 0 ? d.getFullYear() - 1 : d.getFullYear();
+  });
   const [cleanupScanning, setCleanupScanning] = useState(false);
   const [cleanupResult, setCleanupResult] = useState(null);
+  const [serviceDueDates, setServiceDueDates] = useState({});
+  const [dueDatesConfigId, setDueDatesConfigId] = useState(null);
+  const [dueDatesSaving, setDueDatesSaving] = useState(false);
 
   useEffect(() => {
     loadRules();
+  }, []);
+
+  // Flatten all categories from TASK_BOARD_CATEGORIES for the due dates editor
+  const allCategoriesFlat = React.useMemo(() => {
+    const cats = [];
+    const seen = new Set();
+    for (const [, categories] of Object.entries(TASK_BOARD_CATEGORIES)) {
+      for (const cat of categories) {
+        if (!seen.has(cat.key)) {
+          seen.add(cat.key);
+          cats.push(cat);
+        }
+      }
+    }
+    return cats;
   }, []);
 
   const loadRules = async () => {
@@ -370,7 +399,35 @@ export default function AutomationRules() {
     const { rules: loadedRules, configId: id } = await loadAutomationRules();
     setRules(loadedRules);
     setConfigId(id);
+    // Load service due dates
+    try {
+      const { dueDates, configId: ddId } = await loadServiceDueDates();
+      setServiceDueDates(dueDates || {});
+      setDueDatesConfigId(ddId);
+    } catch { /* use defaults */ }
     setIsLoading(false);
+  };
+
+  const handleDueDateChange = (catKey, value) => {
+    const day = value ? parseInt(value) : null;
+    setServiceDueDates(prev => ({
+      ...prev,
+      [catKey]: { due_day: day && day >= 1 && day <= 31 ? day : null },
+    }));
+  };
+
+  const handleSaveDueDates = async () => {
+    setDueDatesSaving(true);
+    try {
+      const newId = await saveServiceDueDates(dueDatesConfigId, serviceDueDates);
+      if (newId) setDueDatesConfigId(newId);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+    setDueDatesSaving(false);
   };
 
   const handleSave = async (updatedRules) => {
@@ -417,8 +474,9 @@ export default function AutomationRules() {
   };
 
   // Bulk cleanup: scan all clients and mark tasks for removed services as not_relevant
+  // Also cleans up bi-monthly clients: tasks in odd months are not relevant
   const handleBulkCleanup = async () => {
-    if (!window.confirm('לסרוק את כל הלקוחות ולנקות משימות של שירותים שהוסרו?')) return;
+    if (!window.confirm('לסרוק את כל הלקוחות ולנקות משימות של שירותים שהוסרו ותדירויות שגויות?')) return;
     setCleanupScanning(true);
     setCleanupResult(null);
     try {
@@ -446,6 +504,15 @@ export default function AutomationRules() {
         }
       }
 
+      // Category → frequency field mapping for bi-monthly check
+      const categoryFreqField = {
+        'מע"מ': 'vat_reporting_frequency',
+        'מקדמות מס': 'tax_advances_frequency',
+        'שכר': 'payroll_frequency',
+        'ביטוח לאומי': 'social_security_frequency',
+        'ניכויים': 'deductions_frequency',
+      };
+
       let cleanedCount = 0;
       const details = [];
       const clientsArr = Array.isArray(allClients) ? allClients : [];
@@ -453,8 +520,9 @@ export default function AutomationRules() {
 
       for (const client of clientsArr) {
         const clientServices = client.service_types || [];
+        const reportingInfo = client.reporting_info || {};
         const clientTasks = tasksArr.filter(t =>
-          t.client_name === client.name &&
+          (t.client_name === client.name || t.client_id === client.id) &&
           t.status !== 'completed' &&
           t.status !== 'not_relevant'
         );
@@ -473,17 +541,40 @@ export default function AutomationRules() {
 
         for (const task of clientTasks) {
           if (!task.category) continue;
+          let reason = null;
 
+          // Check 1: Service removed from client
           const requiredService = categoryToService[task.category];
-          if (!requiredService) continue; // unknown category, skip
+          if (requiredService && !effectiveServices.has(requiredService)) {
+            reason = 'שירות הוסר';
+          }
 
-          if (!effectiveServices.has(requiredService)) {
+          // Check 2: Bi-monthly frequency - task in wrong month
+          if (!reason && task.due_date) {
+            const freqField = categoryFreqField[task.category];
+            const freq = freqField ? reportingInfo[freqField] : null;
+            if (freq === 'bimonthly') {
+              try {
+                const dueDate = new Date(task.due_date);
+                const taskMonth = dueDate.getMonth(); // 0-based
+                if (taskMonth % 2 !== 0) {
+                  reason = 'דו-חודשי - חודש לא רלוונטי';
+                }
+              } catch { /* skip */ }
+            }
+            if (freq === 'not_applicable') {
+              reason = 'תדירות לא רלוונטית';
+            }
+          }
+
+          if (reason) {
             await Task.update(task.id, { status: 'not_relevant' });
             cleanedCount++;
             details.push({
               clientName: client.name,
               taskTitle: task.title,
               category: task.category,
+              reason,
             });
           }
         }
@@ -610,11 +701,13 @@ export default function AutomationRules() {
       const year = String(new Date().getFullYear() - 1);
       const now = new Date();
 
-      // Build month range from startMonth/startYear to current month
+      // Build month range from startMonth/startYear to previous month (system works on prev month)
+      const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const prevMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
       const months = [];
       let iterYear = startYear;
       let iterMonth = startMonth;
-      while (iterYear < now.getFullYear() || (iterYear === now.getFullYear() && iterMonth <= now.getMonth())) {
+      while (iterYear < prevMonthYear || (iterYear === prevMonthYear && iterMonth <= prevMonth)) {
         const monthEnd = new Date(iterYear, iterMonth + 1, 0);
         const monthLabel = monthEnd.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
         months.push({ year: iterYear, month: iterMonth, monthEnd, monthLabel, dueDateStr: monthEnd.toISOString().split('T')[0] });
@@ -755,14 +848,27 @@ export default function AutomationRules() {
               }
 
               const clientTasks = existingTasks.filter(t =>
-                t.client_id === client.id && t.due_date >= mStart && t.due_date <= mEnd
+                (t.client_id === client.id || t.client_name === client.name) &&
+                t.due_date >= mStart && t.due_date <= mEnd
               );
               for (const category of rule.task_categories) {
+                // Per-category service check: skip if client doesn't have this category's service
+                if (!clientHasServiceForCategory(category, rule.target_entity, services)) continue;
                 // Skip bi-monthly clients on odd months (0-based: Jan=0, Feb=1...)
                 const freq = catFreqMap[category];
                 if (freq === 'bimonthly' && m.month % 2 !== 0) continue;
                 // Skip not_applicable
                 if (freq === 'not_applicable') continue;
+
+                // Per-category due date override
+                const categoryDueDay = getDueDayForCategory(serviceDueDates, category);
+                let catTaskDueDate;
+                if (categoryDueDay) {
+                  const dueDay = Math.min(categoryDueDay, m.monthEnd.getDate());
+                  catTaskDueDate = new Date(m.year, m.month, dueDay).toISOString().split('T')[0];
+                } else {
+                  catTaskDueDate = taskDueDate;
+                }
 
                 // Only count active tasks as existing (not not_relevant)
                 const exists = clientTasks.some(t => t.category === category && t.status !== 'not_relevant');
@@ -779,7 +885,7 @@ export default function AutomationRules() {
                     createData: {
                       title: `${category} - ${client.name} - ${m.monthLabel}`,
                       client_name: client.name, client_id: client.id,
-                      category, status: 'not_started', due_date: taskDueDate,
+                      category, status: 'not_started', due_date: catTaskDueDate,
                       context: 'work', process_steps: {},
                     },
                   });
@@ -964,8 +1070,9 @@ export default function AutomationRules() {
                     <div key={i} className="text-xs flex items-center gap-2 p-1.5 rounded bg-gray-50">
                       <span className="font-medium text-gray-700">{d.clientName}</span>
                       <span className="text-gray-400">-</span>
-                      <span className="text-gray-500">{d.taskTitle}</span>
+                      <span className="text-gray-500 truncate max-w-[180px]">{d.taskTitle}</span>
                       <Badge variant="outline" className="text-[9px] px-1 py-0">{d.category}</Badge>
+                      {d.reason && <span className="text-[9px] text-amber-600">({d.reason})</span>}
                     </div>
                   ))}
                 </div>
@@ -1092,8 +1199,49 @@ export default function AutomationRules() {
         </CardContent>
       </Card>
 
+      {/* Service Due Dates Editor */}
+      <Card className="border-2 border-blue-200 bg-blue-50/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CalendarDays className="w-5 h-5 text-blue-600" />
+            תאריכי יעד לפי שירות
+          </CardTitle>
+          <p className="text-xs text-gray-500">
+            הגדר יום בחודש כתאריך יעד לכל סוג שירות. ריק = סוף החודש.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {allCategoriesFlat.map(cat => (
+              <div key={cat.key} className="flex items-center gap-2 p-2 border rounded-lg bg-white">
+                <span className="text-xs flex-1 text-gray-700">{cat.label}</span>
+                <Input
+                  type="number"
+                  min="1" max="31"
+                  value={serviceDueDates[cat.key]?.due_day || ''}
+                  onChange={(e) => handleDueDateChange(cat.key, e.target.value)}
+                  className="w-14 text-center text-xs h-7"
+                  placeholder="-"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <Button onClick={handleSaveDueDates} size="sm" disabled={dueDatesSaving}
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-1">
+              {dueDatesSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+              שמור תאריכי יעד
+            </Button>
+            <span className="text-[10px] text-gray-400">העדיפות: תאריך לפי שירות → תאריך לפי חוק → סוף חודש</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cleanup Tool */}
+      <CleanupTool rules={rules} />
+
       {/* How it works */}
-      <Card>
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle className="text-lg">איך זה עובד?</CardTitle>
         </CardHeader>
