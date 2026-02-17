@@ -39,6 +39,19 @@ export const TAX_SERVICES = {
       { key: 'submission',   label: 'דיווח ותשלום',  icon: 'send' },
     ],
   },
+
+  vat_874: {
+    key: 'vat_874',
+    label: 'מע"מ 874',
+    dashboard: 'tax',
+    taskCategories: ['מע"מ 874', 'work_vat_874'],
+    createCategory: 'מע"מ 874',
+    steps: [
+      { key: 'data_export',  label: 'הפקת נתונים',  icon: 'database' },
+      { key: 'report_prep',  label: 'הכנת דו"ח 874', icon: 'file-text' },
+      { key: 'submission',   label: 'שידור',          icon: 'send' },
+    ],
+  },
 };
 
 // ============================================================
@@ -159,13 +172,13 @@ export const ADDITIONAL_SERVICES = {
 
   social_benefits: {
     key: 'social_benefits',
-    label: 'סוציאליות',
+    label: 'הנחיות מס"ב ממתפעל',
     dashboard: 'payroll',
-    taskCategories: ['סוציאליות', 'work_social_benefits'],
-    createCategory: 'סוציאליות',
+    taskCategories: ['הנחיות מס"ב ממתפעל', 'סוציאליות', 'work_social_benefits'],
+    createCategory: 'הנחיות מס"ב ממתפעל',
     steps: [
-      { key: 'calculation',  label: 'חישוב',   icon: 'calculator' },
-      { key: 'execution',    label: 'ביצוע',    icon: 'check-circle' },
+      { key: 'receive_instructions', label: 'קבלת הנחיות',  icon: 'inbox' },
+      { key: 'execution',            label: 'ביצוע',         icon: 'check-circle' },
     ],
   },
 

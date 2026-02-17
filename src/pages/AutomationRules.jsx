@@ -20,7 +20,7 @@ import {
   DEFAULT_RULES, getReportAutoCreateRules,
   clientHasServiceForCategory,
   loadServiceDueDates, saveServiceDueDates, getDueDayForCategory,
-  DEFAULT_SERVICE_DUE_DATES,
+  DEFAULT_SERVICE_DUE_DATES, PAYMENT_METHOD_CATEGORIES,
 } from '@/config/automationRules';
 import { Client, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount } from '@/api/entities';
 import CleanupTool from '@/components/automation/CleanupTool';
@@ -408,12 +408,17 @@ export default function AutomationRules() {
     setIsLoading(false);
   };
 
-  const handleDueDateChange = (catKey, value) => {
+  const handleDueDateChange = (catKey, value, variant = null) => {
     const day = value ? parseInt(value) : null;
-    setServiceDueDates(prev => ({
-      ...prev,
-      [catKey]: { due_day: day && day >= 1 && day <= 31 ? day : null },
-    }));
+    const validDay = day && day >= 1 && day <= 31 ? day : null;
+    setServiceDueDates(prev => {
+      const existing = prev[catKey] || {};
+      if (variant) {
+        // digital or check variant
+        return { ...prev, [catKey]: { ...existing, [variant]: validDay } };
+      }
+      return { ...prev, [catKey]: { due_day: validDay } };
+    });
   };
 
   const handleSaveDueDates = async () => {
@@ -834,58 +839,80 @@ export default function AutomationRules() {
               'ניכויים': reportingInfo.deductions_frequency,
             };
 
+            // Client payment method for due date calculation
+            const clientPaymentMethod = reportingInfo.payment_method || 'digital';
+            // Masav supplier cycles
+            const masavSupplierCycles = reportingInfo.masav_supplier_cycles || 1;
+
             for (const m of months) {
               const mStart = new Date(m.year, m.month, 1).toISOString().split('T')[0];
               const mEnd = m.dueDateStr;
+              // Deadline month = one month AFTER reporting month
+              const deadlineMonthEnd = new Date(m.year, m.month + 2, 0);
+              const deadlineMonthEndStr = deadlineMonthEnd.toISOString().split('T')[0];
+              const deadlineStart = new Date(m.year, m.month + 1, 1).toISOString().split('T')[0];
+              const reportingMonthStr = `${m.year}-${String(m.month + 1).padStart(2, '0')}`;
 
-              // Calculate due date: use rule's due_day_of_month or end of month
+              // Calculate due date in DEADLINE month (M+1)
               let taskDueDate;
               if (rule.due_day_of_month) {
-                const dueDay = Math.min(rule.due_day_of_month, m.monthEnd.getDate());
-                taskDueDate = new Date(m.year, m.month, dueDay).toISOString().split('T')[0];
+                const dueDay = Math.min(rule.due_day_of_month, deadlineMonthEnd.getDate());
+                taskDueDate = new Date(m.year, m.month + 1, dueDay).toISOString().split('T')[0];
               } else {
-                taskDueDate = mEnd;
+                taskDueDate = deadlineMonthEndStr;
               }
 
+              // Check BOTH reporting month and deadline month for existing tasks
               const clientTasks = existingTasks.filter(t =>
                 (t.client_id === client.id || t.client_name === client.name) &&
-                t.due_date >= mStart && t.due_date <= mEnd
+                t.due_date >= mStart && t.due_date <= deadlineMonthEndStr
               );
               for (const category of rule.task_categories) {
                 // Per-category service check: skip if client doesn't have this category's service
                 if (!clientHasServiceForCategory(category, rule.target_entity, services)) continue;
                 // Skip bi-monthly clients on odd months (0-based: Jan=0, Feb=1...)
-                const freq = catFreqMap[category];
-                if (freq === 'bimonthly' && m.month % 2 !== 0) continue;
-                // Skip not_applicable
-                if (freq === 'not_applicable') continue;
+                const freq = catFreqMap[category] || catFreqMap['מע"מ']; // מע"מ 874 uses same freq as מע"מ
+                if (category === 'מע"מ 874') {
+                  const vatFreq = catFreqMap['מע"מ'];
+                  if (vatFreq === 'bimonthly' && m.month % 2 !== 0) continue;
+                  if (vatFreq === 'not_applicable') continue;
+                } else {
+                  if (freq === 'bimonthly' && m.month % 2 !== 0) continue;
+                  if (freq === 'not_applicable') continue;
+                }
 
-                // Per-category due date override
-                const categoryDueDay = getDueDayForCategory(serviceDueDates, category);
+                // Per-category due date in DEADLINE month (M+1)
+                const categoryDueDay = getDueDayForCategory(serviceDueDates, category, clientPaymentMethod);
                 let catTaskDueDate;
                 if (categoryDueDay) {
-                  const dueDay = Math.min(categoryDueDay, m.monthEnd.getDate());
-                  catTaskDueDate = new Date(m.year, m.month, dueDay).toISOString().split('T')[0];
+                  const dueDay = Math.min(categoryDueDay, deadlineMonthEnd.getDate());
+                  catTaskDueDate = new Date(m.year, m.month + 1, dueDay).toISOString().split('T')[0];
                 } else {
                   catTaskDueDate = taskDueDate;
                 }
 
-                // Only count active tasks as existing (not not_relevant)
-                const exists = clientTasks.some(t => t.category === category && t.status !== 'not_relevant');
-                if (!exists) {
+                // Handle masav supplier cycles (1 or 2)
+                const cycleCount = (category === 'מס"ב ספקים') ? masavSupplierCycles : 1;
+                for (let cycle = 1; cycle <= cycleCount; cycle++) {
+                  const cycleSuffix = cycleCount > 1 ? ` (סייקל ${cycle})` : '';
+                  const taskCategory = category; // keep same category
+                  const existingForCycle = clientTasks.filter(t => t.category === taskCategory && t.status !== 'not_relevant');
+                  if (existingForCycle.length >= cycle) continue; // already exists for this cycle
+
                   previewItems.push({
                     ...ruleInfo,
-                    id: `${client.id}_task_${category}_${m.year}_${m.month}`,
+                    id: `${client.id}_task_${category}_${m.year}_${m.month}_c${cycle}`,
                     checked: true,
                     clientId: client.id,
                     clientName: client.name,
                     entity: rule.target_entity,
                     entityLabel: REPORT_ENTITIES[rule.target_entity] || 'משימה',
-                    description: `${category} - ${m.monthLabel}`,
+                    description: `${category}${cycleSuffix} - ${m.monthLabel}`,
                     createData: {
-                      title: `${category} - ${client.name} - ${m.monthLabel}`,
+                      title: `${category}${cycleSuffix} - ${client.name} - ${m.monthLabel}`,
                       client_name: client.name, client_id: client.id,
-                      category, status: 'not_started', due_date: catTaskDueDate,
+                      category: taskCategory, status: 'not_started', due_date: catTaskDueDate,
+                      reporting_month: reportingMonthStr,
                       context: 'work', process_steps: {},
                     },
                   });
@@ -1006,7 +1033,7 @@ export default function AutomationRules() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto" dir="rtl">
+    <div className="p-6 max-w-7xl mx-auto" dir="rtl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Zap className="w-8 h-8 text-yellow-500" />
@@ -1136,69 +1163,71 @@ export default function AutomationRules() {
         </Card>
       )}
 
-      {/* Service Auto-Link Rules */}
-      <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Badge className="bg-blue-100 text-blue-800">שירותים</Badge>
-            סימון שירות אוטומטי
-          </CardTitle>
-          <Button size="sm" onClick={() => { setNewRuleType('service_auto_link'); setEditingRule(getEmptyRule('service_auto_link')); }} className="gap-1">
-            <Plus className="w-4 h-4" /> חוק חדש
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-500 text-sm mb-4">כשנבחר שירות מסוים ללקוח, שירותים קשורים יסומנו אוטומטית</p>
-          {serviceAutoLinkRules.length === 0 ? (
-            <p className="text-gray-400 text-center py-4">אין חוקים מסוג זה</p>
-          ) : (
-            <div className="space-y-2">
-              {serviceAutoLinkRules.map(rule => (
-                <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Report Auto-Create Rules - grouped by board */}
-      <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Badge className="bg-green-100 text-green-800">לוחות</Badge>
-            יצירה אוטומטית בלוחות
-          </CardTitle>
-          <Button size="sm" onClick={() => { setNewRuleType('report_auto_create'); setEditingRule(getEmptyRule('report_auto_create')); }} className="gap-1">
-            <Plus className="w-4 h-4" /> חוק חדש
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-500 text-sm mb-4">כששומרים לקוח פעיל עם שירותים מסוימים, נוצרות רשומות אוטומטית בלוחות הרלוונטיים</p>
-
-          {Object.keys(REPORT_ENTITIES).map(entityKey => {
-            const entityRules = reportRulesByEntity[entityKey] || [];
-            const cfg = entityDisplayConfig[entityKey] || {};
-            return (
-              <div key={entityKey} className="mb-4 last:mb-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge className={`text-xs ${cfg.color || 'bg-gray-100'}`}>{REPORT_ENTITIES[entityKey]}</Badge>
-                  <span className="text-xs text-gray-400">{entityRules.length} חוקים</span>
-                </div>
-                {entityRules.length === 0 ? (
-                  <p className="text-gray-400 text-xs mr-4 mb-2">אין חוקים ללוח זה</p>
-                ) : (
-                  <div className="space-y-2 mr-2">
-                    {entityRules.map(rule => (
-                      <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
-                    ))}
-                  </div>
-                )}
+      {/* Rules - 2-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Service Auto-Link Rules */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Badge className="bg-blue-100 text-blue-800">שירותים</Badge>
+              סימון שירות אוטומטי
+            </CardTitle>
+            <Button size="sm" onClick={() => { setNewRuleType('service_auto_link'); setEditingRule(getEmptyRule('service_auto_link')); }} className="gap-1 h-7 text-xs">
+              <Plus className="w-3 h-3" /> חוק חדש
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {serviceAutoLinkRules.length === 0 ? (
+              <p className="text-gray-400 text-center py-3 text-sm">אין חוקים</p>
+            ) : (
+              <div className="space-y-1.5">
+                {serviceAutoLinkRules.map(rule => (
+                  <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
+                ))}
               </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
 
+        {/* Report Auto-Create Rules - grouped by board */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Badge className="bg-green-100 text-green-800">לוחות</Badge>
+              יצירה אוטומטית בלוחות
+            </CardTitle>
+            <Button size="sm" onClick={() => { setNewRuleType('report_auto_create'); setEditingRule(getEmptyRule('report_auto_create')); }} className="gap-1 h-7 text-xs">
+              <Plus className="w-3 h-3" /> חוק חדש
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {Object.keys(REPORT_ENTITIES).map(entityKey => {
+              const entityRules = reportRulesByEntity[entityKey] || [];
+              const cfg = entityDisplayConfig[entityKey] || {};
+              return (
+                <div key={entityKey} className="mb-3 last:mb-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge className={`text-[10px] ${cfg.color || 'bg-gray-100'}`}>{REPORT_ENTITIES[entityKey]}</Badge>
+                    <span className="text-[10px] text-gray-400">{entityRules.length}</span>
+                  </div>
+                  {entityRules.length === 0 ? (
+                    <p className="text-gray-400 text-[10px] mr-3">אין חוקים</p>
+                  ) : (
+                    <div className="space-y-1.5 mr-1">
+                      {entityRules.map(rule => (
+                        <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Due Dates + Cleanup Tool - side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
       {/* Service Due Dates Editor */}
       <Card className="border-2 border-blue-200 bg-blue-50/30">
         <CardHeader className="pb-3">
@@ -1212,19 +1241,42 @@ export default function AutomationRules() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {allCategoriesFlat.map(cat => (
-              <div key={cat.key} className="flex items-center gap-2 p-2 border rounded-lg bg-white">
-                <span className="text-xs flex-1 text-gray-700">{cat.label}</span>
-                <Input
-                  type="number"
-                  min="1" max="31"
-                  value={serviceDueDates[cat.key]?.due_day || ''}
-                  onChange={(e) => handleDueDateChange(cat.key, e.target.value)}
-                  className="w-14 text-center text-xs h-7"
-                  placeholder="-"
-                />
-              </div>
-            ))}
+            {allCategoriesFlat.map(cat => {
+              const hasPaymentVariants = PAYMENT_METHOD_CATEGORIES.includes(cat.key);
+              const entry = serviceDueDates[cat.key] || {};
+              if (hasPaymentVariants) {
+                return (
+                  <div key={cat.key} className="p-2 border rounded-lg bg-white border-blue-200">
+                    <span className="text-xs font-medium text-gray-700 block mb-1">{cat.label}</span>
+                    <div className="flex items-center gap-1">
+                      <div className="flex-1 text-center">
+                        <span className="text-[9px] text-blue-600 block">דיגיטלי</span>
+                        <Input type="number" min="1" max="31"
+                          value={entry.digital || ''}
+                          onChange={(e) => handleDueDateChange(cat.key, e.target.value, 'digital')}
+                          className="w-full text-center text-xs h-7" placeholder="-" />
+                      </div>
+                      <div className="flex-1 text-center">
+                        <span className="text-[9px] text-amber-600 block">המחאה</span>
+                        <Input type="number" min="1" max="31"
+                          value={entry.check || ''}
+                          onChange={(e) => handleDueDateChange(cat.key, e.target.value, 'check')}
+                          className="w-full text-center text-xs h-7" placeholder="-" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={cat.key} className="flex items-center gap-2 p-2 border rounded-lg bg-white">
+                  <span className="text-xs flex-1 text-gray-700">{cat.label}</span>
+                  <Input type="number" min="1" max="31"
+                    value={entry.due_day ?? ''}
+                    onChange={(e) => handleDueDateChange(cat.key, e.target.value)}
+                    className="w-14 text-center text-xs h-7" placeholder="-" />
+                </div>
+              );
+            })}
           </div>
           <div className="flex items-center gap-2 mt-3">
             <Button onClick={handleSaveDueDates} size="sm" disabled={dueDatesSaving}
@@ -1232,13 +1284,14 @@ export default function AutomationRules() {
               {dueDatesSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
               שמור תאריכי יעד
             </Button>
-            <span className="text-[10px] text-gray-400">העדיפות: תאריך לפי שירות → תאריך לפי חוק → סוף חודש</span>
+            <span className="text-[10px] text-gray-400">יעד = חודש שאחרי תקופת הדיווח. דיגיטלי/המחאה = לפי הגדרת לקוח.</span>
           </div>
         </CardContent>
       </Card>
 
       {/* Cleanup Tool */}
       <CleanupTool rules={rules} />
+      </div>
 
       {/* How it works */}
       <Card className="mt-6">

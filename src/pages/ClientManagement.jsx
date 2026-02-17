@@ -419,9 +419,16 @@ export default function ClientManagementPage() {
     const services = clientData.service_types || [];
     const year = String(new Date().getFullYear() - 1);
     const now = new Date();
-    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const monthLabel = currentMonthEnd.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-    const dueDateStr = currentMonthEnd.toISOString().split('T')[0];
+    // Reporting period = previous month
+    const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+    const prevMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const reportingMonthEnd = new Date(prevMonthYear, prevMonth + 1, 0);
+    const monthLabel = reportingMonthEnd.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+    const reportingMonthStr = `${prevMonthYear}-${String(prevMonth + 1).padStart(2, '0')}`;
+    // Deadline month = current month (due dates go here)
+    const deadlineMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const deadlineMonthEndStr = deadlineMonthEnd.toISOString().split('T')[0];
+    const dueDateStr = deadlineMonthEndStr; // backward compat
 
     try {
       const matchingRules = getReportAutoCreateRules(automationRules, services, clientData);
@@ -487,15 +494,17 @@ export default function ClientManagementPage() {
 
         // --- Task-based boards (monthly reports, tax reports, payroll) ---
         if (rule.target_entity?.startsWith('Task_') && rule.task_categories?.length > 0) {
+          // Check both reporting month and deadline month for existing tasks
+          const reportingStart = new Date(prevMonthYear, prevMonth, 1).toISOString().split('T')[0];
           const existingTasks = await Task.filter({
-            due_date: { '>=': new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0], '<=': dueDateStr },
+            due_date: { '>=': reportingStart, '<=': deadlineMonthEndStr },
           }).catch(() => []);
           const clientTasks = existingTasks.filter(t => t.client_id === clientId);
 
-          // Calculate due date from rule's due_day_of_month or fall back to end of month
-          let taskDueDate = dueDateStr;
+          // Due dates go in the DEADLINE month (current month)
+          let taskDueDate = deadlineMonthEndStr;
           if (rule.due_day_of_month) {
-            const dueDay = Math.min(rule.due_day_of_month, currentMonthEnd.getDate());
+            const dueDay = Math.min(rule.due_day_of_month, deadlineMonthEnd.getDate());
             taskDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay).toISOString().split('T')[0];
           }
 
@@ -503,27 +512,37 @@ export default function ClientManagementPage() {
           let svcDueDates = null;
           try { svcDueDates = (await loadServiceDueDates()).dueDates; } catch { /* ignore */ }
 
+          // Client payment method
+          const clientPaymentMethod = clientData?.reporting_info?.payment_method || 'digital';
+          const masavSupplierCycles = clientData?.reporting_info?.masav_supplier_cycles || 1;
+
           for (const category of rule.task_categories) {
             // Per-category service check: skip if client doesn't have this category's service
             if (!clientHasServiceForCategory(category, rule.target_entity, services)) continue;
 
-            // Per-category due date override
-            const catDueDay = getDueDayForCategory(svcDueDates, category);
+            // Per-category due date in DEADLINE month
+            const catDueDay = getDueDayForCategory(svcDueDates, category, clientPaymentMethod);
             let catTaskDueDate = taskDueDate;
             if (catDueDay) {
-              const dueDay = Math.min(catDueDay, currentMonthEnd.getDate());
+              const dueDay = Math.min(catDueDay, deadlineMonthEnd.getDate());
               catTaskDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay).toISOString().split('T')[0];
             }
 
-            const exists = clientTasks.some(t => t.category === category);
-            if (!exists) {
+            // Handle masav supplier cycles
+            const cycleCount = (category === 'מס"ב ספקים') ? masavSupplierCycles : 1;
+            for (let cycle = 1; cycle <= cycleCount; cycle++) {
+              const cycleSuffix = cycleCount > 1 ? ` (סייקל ${cycle})` : '';
+              const existingForCycle = clientTasks.filter(t => t.category === category && t.status !== 'not_relevant');
+              if (existingForCycle.length >= cycle) continue;
+
               await Task.create({
-                title: `${category} - ${clientName} - ${monthLabel}`,
+                title: `${category}${cycleSuffix} - ${clientName} - ${monthLabel}`,
                 client_name: clientName,
                 client_id: clientId,
                 category: category,
                 status: 'not_started',
                 due_date: catTaskDueDate,
+                reporting_month: reportingMonthStr,
                 context: 'work',
                 process_steps: {},
               });

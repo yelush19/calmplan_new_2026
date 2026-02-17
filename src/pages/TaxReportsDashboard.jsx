@@ -58,12 +58,17 @@ export default function TaxReportsDashboardPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const start = startOfMonth(selectedMonth);
-      const end = endOfMonth(selectedMonth);
+      // Due dates are in the DEADLINE month (month after reporting period)
+      // e.g., viewing January reporting → load tasks with due_date in February
+      const deadlineMonth = addMonths(selectedMonth, 1);
+      const start = startOfMonth(deadlineMonth);
+      const end = endOfMonth(deadlineMonth);
+      // Also load reporting-month tasks for backward compatibility with old data
+      const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
         Task.filter({
           context: 'work',
-          due_date: { '>=': format(start, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
+          due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
         }),
         Client.list(null, 500).catch(() => []),
       ]);

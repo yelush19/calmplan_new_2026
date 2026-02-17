@@ -55,6 +55,7 @@ export const TASK_BOARD_CATEGORIES = {
   ],
   Task_tax_reports: [
     { key: 'מע"מ', label: 'מע"מ', service: 'vat_reporting' },
+    { key: 'מע"מ 874', label: 'מע"מ 874', service: 'vat_reporting' },
     { key: 'מקדמות מס', label: 'מקדמות מס', service: 'tax_advances' },
   ],
   Task_payroll: [
@@ -69,7 +70,7 @@ export const TASK_BOARD_CATEGORIES = {
     { key: 'מס"ב ספקים', label: 'מס"ב ספקים', service: 'masav_suppliers' },
     { key: 'משלוח תלושים', label: 'משלוח תלושים', service: 'payslip_sending' },
     { key: 'תשלום רשויות', label: 'תשלום רשויות', service: 'authorities_payment' },
-    { key: 'סוציאליות', label: 'סוציאליות', service: 'social_benefits' },
+    { key: 'הנחיות מס"ב ממתפעל', label: 'הנחיות מס"ב ממתפעל', service: 'operator_reporting' },
     { key: 'מילואים', label: 'תביעות מילואים', service: 'reserve_claims' },
     { key: 'דיווח למתפעל', label: 'דיווח למתפעל', service: 'operator_reporting' },
     { key: 'דיווח לטמל', label: 'דיווח לטמל', service: 'taml_reporting' },
@@ -386,12 +387,15 @@ export function clientHasServiceForCategory(category, targetEntity, clientServic
 
 const DUE_DATES_CONFIG_KEY = 'service_due_dates';
 
+// Categories with digital/check variants have { digital, check } instead of { due_day }
+// Digital = payment via internet, Check = payment via bank slip (המחאה)
 export const DEFAULT_SERVICE_DUE_DATES = {
-  'מע"מ': { due_day: 19 },
-  'מקדמות מס': { due_day: 19 },
+  'מע"מ': { digital: 19, check: 15 },
+  'מע"מ 874': { due_day: 23 },
+  'מקדמות מס': { digital: 19, check: 15 },
   'שכר': { due_day: 15 },
   'ביטוח לאומי': { due_day: 15 },
-  'ניכויים': { due_day: 15 },
+  'ניכויים': { digital: 19, check: 15 },
   'מס"ב סוציאליות': { due_day: 12 },
   'מס"ב עובדים': { due_day: 10 },
   'מס"ב רשויות': { due_day: 15 },
@@ -401,8 +405,11 @@ export const DEFAULT_SERVICE_DUE_DATES = {
   'דיווח למתפעל': { due_day: null },
   'דיווח לטמל': { due_day: null },
   'מילואים': { due_day: null },
-  'סוציאליות': { due_day: null },
+  'הנחיות מס"ב ממתפעל': { due_day: null },
 };
+
+// Categories that vary by payment method (digital vs check/המחאה)
+export const PAYMENT_METHOD_CATEGORIES = ['מע"מ', 'מקדמות מס', 'ניכויים'];
 
 export async function loadServiceDueDates() {
   try {
@@ -440,9 +447,15 @@ export async function saveServiceDueDates(configId, dueDates) {
   }
 }
 
-export function getDueDayForCategory(dueDates, category) {
+export function getDueDayForCategory(dueDates, category, paymentMethod = 'digital') {
   if (!dueDates || !category) return null;
-  return dueDates[category]?.due_day ?? null;
+  const entry = dueDates[category];
+  if (!entry) return null;
+  // If entry has digital/check variants
+  if (entry.digital !== undefined || entry.check !== undefined) {
+    return entry[paymentMethod] ?? entry.digital ?? null;
+  }
+  return entry.due_day ?? null;
 }
 
 /**

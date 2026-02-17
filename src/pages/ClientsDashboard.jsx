@@ -31,7 +31,7 @@ const COLUMN_GROUPS = [
     drillDownPage: 'TaxReportsDashboard',
     icon: Calculator,
     columns: [
-      { key: 'vat', label: 'מע"מ', categories: ['מע"מ', 'work_vat_reporting'], createCategory: 'מע"מ', createTitle: 'מע"מ' },
+      { key: 'vat', label: 'מע"מ', categories: ['מע"מ', 'מע"מ 874', 'work_vat_reporting'], createCategory: 'מע"מ', createTitle: 'מע"מ' },
       { key: 'tax_advances', label: 'מקדמות מ"ה', categories: ['מקדמות מס', 'work_tax_advances'], createCategory: 'מקדמות מס', createTitle: 'מקדמות מס הכנסה' },
     ],
   },
@@ -146,13 +146,16 @@ export default function ClientsDashboardPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const start = startOfMonth(selectedMonth);
-      const end = endOfMonth(selectedMonth);
+      // Due dates are in the DEADLINE month (month after reporting period)
+      const deadlineMonth = addMonths(selectedMonth, 1);
+      const start = startOfMonth(deadlineMonth);
+      const end = endOfMonth(deadlineMonth);
+      const reportStart = startOfMonth(selectedMonth);
 
       const [clientsData, tasksData] = await Promise.all([
         Client.list(null, 500).catch(() => []),
         Task.filter({
-          due_date: { '>=': format(start, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
+          due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
         }).catch(() => []),
       ]);
 

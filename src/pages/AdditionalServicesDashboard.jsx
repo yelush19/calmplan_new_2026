@@ -63,12 +63,15 @@ export default function AdditionalServicesDashboardPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const start = startOfMonth(selectedMonth);
-      const end = endOfMonth(selectedMonth);
+      // Due dates are in the DEADLINE month (month after reporting period)
+      const deadlineMonth = addMonths(selectedMonth, 1);
+      const start = startOfMonth(deadlineMonth);
+      const end = endOfMonth(deadlineMonth);
+      const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
         Task.filter({
           context: 'work',
-          due_date: { '>=': format(start, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
+          due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
         }),
         Client.list(null, 500).catch(() => []),
       ]);

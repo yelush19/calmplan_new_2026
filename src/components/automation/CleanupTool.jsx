@@ -51,7 +51,7 @@ const REASON_LABELS = {
   service_removed: 'שירות הוסר מהכרטיס',
   orphan_service: 'שירות יתום (שכר הוסר)',
   wrong_month: 'חודש לא רלוונטי (דו-חודשי)',
-  wrong_month_current: 'חודש שגוי (נוכחי במקום קודם)',
+  wrong_month_current: 'יעד בחודש דיווח (צריך חודש מועד)',
   freq_na: 'תדירות לא רלוונטית',
 };
 
@@ -150,9 +150,10 @@ export default function CleanupTool({ rules = [] }) {
           }
         }
 
-        // Check 3: Task in current month instead of previous month
-        // The system always works on the PREVIOUS month, so tasks with due_date
-        // in the current month were likely created with the wrong month
+        // Check 3: Task with due_date in the REPORTING month instead of DEADLINE month
+        // Due dates should be in the month AFTER the reporting period.
+        // e.g., for January reporting → due_date should be in February.
+        // If due_date is in the reporting month (previous month), shift forward by 1.
         if (!reason && task.due_date) {
           try {
             const dueDate = new Date(task.due_date);
@@ -161,13 +162,16 @@ export default function CleanupTool({ rules = [] }) {
             const now = new Date();
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
+            // Expected reporting month = previous month
+            const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+            const prevMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-            if (taskMonth === currentMonth && taskYear === currentYear) {
+            if (taskMonth === prevMonth && taskYear === prevMonthYear) {
               reason = 'wrong_month_current';
-              const currentMonthName = now.toLocaleDateString('he-IL', { month: 'long' });
-              const prevDate = new Date(currentYear, currentMonth - 1, 1);
-              const prevMonthName = prevDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-              detail = `משימה עם תאריך יעד בחודש הנוכחי (${currentMonthName}) - צריכה להיות בחודש הקודם (${prevMonthName})`;
+              const reportMonthName = dueDate.toLocaleDateString('he-IL', { month: 'long' });
+              const deadlineDate = new Date(currentYear, currentMonth, 1);
+              const deadlineMonthName = deadlineDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+              detail = `תאריך יעד בחודש הדיווח (${reportMonthName}) - צריך להיות בחודש המועד (${deadlineMonthName})`;
             }
           } catch { /* skip */ }
         }
@@ -219,9 +223,9 @@ export default function CleanupTool({ rules = [] }) {
     const wrongMonthCount = toClean.filter(i => i.reason === 'wrong_month_current').length;
     const notRelevantCount = toClean.length - wrongMonthCount;
     const confirmMsg = wrongMonthCount > 0 && notRelevantCount > 0
-      ? `לתקן ${wrongMonthCount} משימות חודש שגוי ולסמן ${notRelevantCount} כ"לא רלוונטי"?`
+      ? `לתקן ${wrongMonthCount} תאריכי יעד (להזיז לחודש המועד) ולסמן ${notRelevantCount} כ"לא רלוונטי"?`
       : wrongMonthCount > 0
-      ? `לתקן ${wrongMonthCount} משימות חודש שגוי (להזיז לחודש הקודם)?`
+      ? `לתקן ${wrongMonthCount} תאריכי יעד (להזיז מחודש דיווח לחודש מועד)?`
       : `לסמן ${toClean.length} משימות כ"לא רלוונטי"?`;
     if (!window.confirm(confirmMsg)) return;
 
@@ -231,30 +235,21 @@ export default function CleanupTool({ rules = [] }) {
     for (const item of toClean) {
       try {
         if (item.reason === 'wrong_month_current') {
-          // Fix the due_date and title to previous month
+          // Shift due_date FORWARD by 1 month (from reporting month to deadline month)
           const dueDate = new Date(item.task.due_date);
-          const prevMonth = new Date(dueDate.getFullYear(), dueDate.getMonth() - 1, 1);
-          const prevMonthEnd = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0);
-          const fixedDay = Math.min(dueDate.getDate(), prevMonthEnd.getDate());
-          const fixedDate = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), fixedDay);
+          const nextMonth = new Date(dueDate.getFullYear(), dueDate.getMonth() + 1, 1);
+          const nextMonthEnd = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0);
+          const fixedDay = Math.min(dueDate.getDate(), nextMonthEnd.getDate());
+          const fixedDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), fixedDay);
           const fixedDateStr = fixedDate.toISOString().split('T')[0];
 
-          // Try to fix month name in title (with and without year)
-          const currentMonthLabelFull = dueDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-          const prevMonthLabelFull = fixedDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-          const currentMonthName = dueDate.toLocaleDateString('he-IL', { month: 'long' });
-          const prevMonthName = fixedDate.toLocaleDateString('he-IL', { month: 'long' });
-          let fixedTitle = item.task.title || '';
-          // Replace "פברואר 2026" → "ינואר 2026" first (more specific)
-          if (fixedTitle.includes(currentMonthLabelFull)) {
-            fixedTitle = fixedTitle.replace(currentMonthLabelFull, prevMonthLabelFull);
-          } else if (fixedTitle.includes(currentMonthName)) {
-            // Replace just "פברואר" → "ינואר"
-            fixedTitle = fixedTitle.replace(currentMonthName, prevMonthName);
-          }
-          // If title didn't change, that's OK - we still fix the due_date
+          // Add reporting_month field
+          const reportingMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}`;
 
-          await Task.update(item.task.id, { due_date: fixedDateStr, title: fixedTitle });
+          await Task.update(item.task.id, {
+            due_date: fixedDateStr,
+            reporting_month: reportingMonth,
+          });
         } else {
           await Task.update(item.task.id, { status: 'not_relevant' });
         }
@@ -461,9 +456,9 @@ export default function CleanupTool({ rules = [] }) {
                   const fixMonthCount = selectedItemsArr.filter(i => i.reason === 'wrong_month_current').length;
                   const markNrCount = selectedCount - fixMonthCount;
                   const label = fixMonthCount > 0 && markNrCount > 0
-                    ? `תקן ${fixMonthCount} חודש + סמן ${markNrCount} לא-רלוונטי`
+                    ? `תקן ${fixMonthCount} יעדים + סמן ${markNrCount} לא-רלוונטי`
                     : fixMonthCount > 0
-                    ? `תקן ${fixMonthCount} משימות חודש שגוי`
+                    ? `תקן ${fixMonthCount} תאריכי יעד (→ חודש מועד)`
                     : `סמן ${selectedCount} כ"לא רלוונטי"`;
                   return (
                     <div className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-teal-200">
