@@ -74,6 +74,7 @@ const navigationGroups = [
           { name: "תהליכי דיווח חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
           { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
           { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
+          { name: "דיווחים מרכזים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
         ],
       },
     ],
