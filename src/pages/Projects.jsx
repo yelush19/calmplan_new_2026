@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Pencil, Trash2, ExternalLink, GitBranch, Globe, Server,
-  FolderKanban, X, Check, Database
+  FolderKanban, X, Check, Database, BarChart3, HardDrive, TrainFront
 } from 'lucide-react';
+import { loadPlatformConfig } from '@/config/platformConfig';
 
 const statusOptions = [
   { value: 'planning', label: 'תכנון', color: 'bg-gray-200 text-gray-800' },
@@ -32,13 +33,26 @@ const systemTypes = [
   { value: 'other', label: 'אחר' },
 ];
 
+const PLATFORM_ICONS = {
+  server: Server,
+  'bar-chart': BarChart3,
+  globe: Globe,
+  'hard-drive': HardDrive,
+  'train-front': TrainFront,
+};
+
+function getPlatformIcon(iconName) {
+  return PLATFORM_ICONS[iconName] || Server;
+}
+
 const emptyProject = {
   name: '',
   description: '',
   status: 'planning',
   system_type: 'web_app',
+  platform: '',
+  platform_data: {},
   git_repo: '',
-  vercel_url: '',
   supabase_url: '',
   subdomain: '',
   production_url: '',
@@ -52,9 +66,11 @@ export default function Projects() {
   const [editingProject, setEditingProject] = useState(null);
   const [formData, setFormData] = useState({ ...emptyProject });
   const [isCreating, setIsCreating] = useState(false);
+  const [platforms, setPlatforms] = useState([]);
 
   useEffect(() => {
     loadProjects();
+    loadPlatforms();
   }, []);
 
   const loadProjects = async () => {
@@ -66,6 +82,15 @@ export default function Projects() {
       console.error('Failed to load projects:', e);
     }
     setLoading(false);
+  };
+
+  const loadPlatforms = async () => {
+    try {
+      const { platforms: loaded } = await loadPlatformConfig();
+      setPlatforms(loaded.filter(p => p.enabled));
+    } catch (e) {
+      console.error('Failed to load platforms:', e);
+    }
   };
 
   const handleSave = async () => {
@@ -101,8 +126,9 @@ export default function Projects() {
       description: project.description || '',
       status: project.status || 'planning',
       system_type: project.system_type || 'web_app',
+      platform: project.platform || '',
+      platform_data: project.platform_data || {},
       git_repo: project.git_repo || '',
-      vercel_url: project.vercel_url || '',
       supabase_url: project.supabase_url || '',
       subdomain: project.subdomain || '',
       production_url: project.production_url || '',
@@ -129,6 +155,18 @@ export default function Projects() {
 
   const getSystemTypeLabel = (type) =>
     systemTypes.find(s => s.value === type)?.label || type;
+
+  const selectedPlatform = platforms.find(p => p.id === formData.platform);
+
+  const updatePlatformField = (fieldKey, value) => {
+    setFormData(prev => ({
+      ...prev,
+      platform_data: { ...prev.platform_data, [fieldKey]: value },
+    }));
+  };
+
+  const getPlatformForProject = (project) =>
+    platforms.find(p => p.id === project.platform) || null;
 
   if (loading) {
     return (
@@ -195,16 +233,60 @@ export default function Projects() {
               <Textarea value={formData.description} onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))} placeholder="תיאור קצר של הפרויקט" rows={2} />
             </div>
 
+            {/* Platform Section */}
             <div className="border-t pt-4">
-              <h4 className="font-semibold mb-3">פרטי פריסה ותשתית</h4>
+              <h4 className="font-semibold mb-3">פלטפורמת הרצה</h4>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Badge
+                  variant={!formData.platform ? 'default' : 'outline'}
+                  className="cursor-pointer px-3 py-1.5 text-sm"
+                  onClick={() => setFormData(p => ({ ...p, platform: '', platform_data: {} }))}
+                >
+                  ללא
+                </Badge>
+                {platforms.map(plat => {
+                  const Icon = getPlatformIcon(plat.icon);
+                  const isActive = formData.platform === plat.id;
+                  return (
+                    <Badge
+                      key={plat.id}
+                      variant={isActive ? 'default' : 'outline'}
+                      className={`cursor-pointer px-3 py-1.5 text-sm gap-1.5 ${isActive ? plat.color : 'hover:bg-gray-100'}`}
+                      onClick={() => setFormData(p => ({ ...p, platform: plat.id, platform_data: isActive ? p.platform_data : {} }))}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {plat.name}
+                    </Badge>
+                  );
+                })}
+              </div>
+
+              {/* Dynamic fields for selected platform */}
+              {selectedPlatform && selectedPlatform.fields.length > 0 && (
+                <div className="grid md:grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg border">
+                  {selectedPlatform.fields.map(field => (
+                    <div key={field.key}>
+                      <Label className="text-xs">{field.label}</Label>
+                      <Input
+                        value={formData.platform_data?.[field.key] || ''}
+                        onChange={(e) => updatePlatformField(field.key, e.target.value)}
+                        placeholder={field.placeholder}
+                        dir="ltr"
+                        className="text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Infrastructure */}
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-3">תשתית ולינקים</h4>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label className="flex items-center gap-1"><GitBranch className="w-4 h-4" /> Git Repository</Label>
                   <Input value={formData.git_repo} onChange={(e) => setFormData(p => ({ ...p, git_repo: e.target.value }))} placeholder="https://github.com/user/repo" dir="ltr" />
-                </div>
-                <div>
-                  <Label className="flex items-center gap-1"><Server className="w-4 h-4" /> Vercel URL</Label>
-                  <Input value={formData.vercel_url} onChange={(e) => setFormData(p => ({ ...p, vercel_url: e.target.value }))} placeholder="https://project.vercel.app" dir="ltr" />
                 </div>
                 <div>
                   <Label className="flex items-center gap-1"><Database className="w-4 h-4" /> Supabase URL</Label>
@@ -251,13 +333,23 @@ export default function Projects() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => {
             const statusConf = getStatusConfig(project.status);
+            const plat = getPlatformForProject(project);
+            const PlatIcon = plat ? getPlatformIcon(plat.icon) : null;
             return (
               <Card key={project.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">{project.name}</CardTitle>
-                      <Badge className={`mt-1 ${statusConf.color}`}>{statusConf.label}</Badge>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Badge className={statusConf.color}>{statusConf.label}</Badge>
+                        {plat && (
+                          <Badge className={`text-[10px] gap-1 ${plat.color}`}>
+                            {PlatIcon && <PlatIcon className="w-3 h-3" />}
+                            {plat.name}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => startEdit(project)}>
@@ -287,15 +379,30 @@ export default function Projects() {
                     </div>
                   )}
 
+                  {/* Platform-specific fields */}
+                  {plat && project.platform_data && Object.keys(project.platform_data).some(k => project.platform_data[k]) && (
+                    <div className="border rounded-md p-2 space-y-1 text-xs bg-gray-50" dir="ltr">
+                      {plat.fields.map(field => {
+                        const val = project.platform_data?.[field.key];
+                        if (!val) return null;
+                        return field.type === 'url' ? (
+                          <a key={field.key} href={val} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                            {PlatIcon && <PlatIcon className="w-3 h-3" />}
+                            <span className="truncate">{val.replace('https://', '')}</span>
+                          </a>
+                        ) : (
+                          <div key={field.key} className="flex items-center gap-1 text-muted-foreground">
+                            <span className="text-gray-400">{field.label}:</span> {val}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="border-t pt-2 space-y-1 text-xs" dir="ltr">
                     {project.git_repo && (
                       <a href={project.git_repo} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
                         <GitBranch className="w-3 h-3" /> {project.git_repo.replace('https://github.com/', '')}
-                      </a>
-                    )}
-                    {project.vercel_url && (
-                      <a href={project.vercel_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
-                        <Server className="w-3 h-3" /> {project.vercel_url.replace('https://', '')}
                       </a>
                     )}
                     {project.supabase_url && (
