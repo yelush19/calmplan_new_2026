@@ -235,12 +235,13 @@ const ReconciliationCard = ({ rec, onStatusChange, onEdit }) => {
 export default function ReconciliationsPage() {
   const [reconciliations, setReconciliations] = useState([]);
   const [clients, setClients] = useState([]);
+  const [allAccounts, setAllAccounts] = useState([]);
   const [filters, setFilters] = useState({ status: 'all', client: 'all' });
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingReconciliation, setEditingReconciliation] = useState(null); // State to hold reconciliation being edited
-  const [isGeneratingTasks, setIsGeneratingTasks] = useState(false); // New state for task generation
-  const [generationResult, setGenerationResult] = useState(null); // New state for generation result
+  const [editingReconciliation, setEditingReconciliation] = useState(null);
+  const [isGeneratingTasks, setIsGeneratingTasks] = useState(false);
+  const [generationResult, setGenerationResult] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -249,17 +250,38 @@ export default function ReconciliationsPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [recsData, clientsData] = await Promise.all([
-        AccountReconciliation.list().catch(() => []),
-        Client.list().catch(() => [])
+      const [recsData, clientsData, accountsData] = await Promise.all([
+        AccountReconciliation.list(null, 500).catch(() => []),
+        Client.list(null, 500).catch(() => []),
+        ClientAccount.list(null, 2000).catch(() => []),
       ]);
       setReconciliations(recsData || []);
       setClients(clientsData || []);
+      setAllAccounts(accountsData || []);
     } catch (error) {
       console.error("Error loading data:", error);
     }
     setIsLoading(false);
   };
+
+  // Build a summary of accounts per client for the overview section
+  const accountsSummary = useMemo(() => {
+    const clientMap = {};
+    clients.forEach(c => { clientMap[c.id] = c; });
+
+    const summary = {};
+    allAccounts.forEach(acc => {
+      const client = clientMap[acc.client_id];
+      if (!client) return;
+      if (!summary[acc.client_id]) {
+        summary[acc.client_id] = { client, accounts: [] };
+      }
+      summary[acc.client_id].accounts.push(acc);
+    });
+    return Object.values(summary).sort((a, b) =>
+      (a.client.name || '').localeCompare(b.client.name || '', 'he')
+    );
+  }, [clients, allAccounts]);
 
   const handleStatusChange = async (id, status) => {
     try {
@@ -461,6 +483,72 @@ export default function ReconciliationsPage() {
           </div>
         </CardHeader>
       </Card>
+
+      {/* Client accounts overview */}
+      {!isLoading && accountsSummary.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Landmark className="w-5 h-5" /> חשבונות לקוחות ({allAccounts.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-right p-2 font-semibold">לקוח</th>
+                    <th className="text-right p-2 font-semibold">חשבונות בנק</th>
+                    <th className="text-right p-2 font-semibold">כרטיסי אשראי</th>
+                    <th className="text-right p-2 font-semibold">אחר</th>
+                    <th className="text-center p-2 font-semibold">סה״כ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accountsSummary.map(({ client, accounts }) => {
+                    const banks = accounts.filter(a => a.account_type === 'bank');
+                    const cards = accounts.filter(a => a.account_type === 'credit_card');
+                    const other = accounts.filter(a => a.account_type !== 'bank' && a.account_type !== 'credit_card');
+                    return (
+                      <tr key={client.id} className="border-b hover:bg-muted/30">
+                        <td className="p-2 font-medium">{client.name}</td>
+                        <td className="p-2">
+                          {banks.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {banks.map(a => (
+                                <Badge key={a.id} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                  <Landmark className="w-3 h-3 ml-1" />
+                                  {a.account_name || a.bank_name || 'חשבון'}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : <span className="text-muted-foreground text-xs">-</span>}
+                        </td>
+                        <td className="p-2">
+                          {cards.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {cards.map(a => (
+                                <Badge key={a.id} variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                                  <CreditCard className="w-3 h-3 ml-1" />
+                                  {a.account_name || 'כרטיס'}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : <span className="text-muted-foreground text-xs">-</span>}
+                        </td>
+                        <td className="p-2">
+                          {other.length > 0 ? (
+                            <span className="text-xs">{other.length} חשבונות</span>
+                          ) : <span className="text-muted-foreground text-xs">-</span>}
+                        </td>
+                        <td className="p-2 text-center font-semibold">{accounts.length}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

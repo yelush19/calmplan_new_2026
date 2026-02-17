@@ -20,10 +20,10 @@ import TimeAwareness from "@/components/ui/TimeAwareness";
 
 const navigationGroups = [
   {
-    title: "מבט על",
+    title: "LitayHub",
     icon: Home,
     items: [
-      { name: "סקירה כללית", href: createPageUrl("Home"), icon: Home },
+      { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
     ],
   },
   {
@@ -99,7 +99,7 @@ export default function Layout({ children, currentPageName }) {
   }, [location.pathname, navigate]);
 
   const getPageTitle = () => {
-    if (location.pathname === createPageUrl("Home")) return 'בית';
+    if (location.pathname === createPageUrl("Home")) return 'פוקוס יומי';
     for (const group of navigationGroups) {
       for (const item of group.items) {
         if (item.children) {

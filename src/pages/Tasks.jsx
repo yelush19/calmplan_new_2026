@@ -288,8 +288,8 @@ export default function TasksPage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#657453]/10 flex items-center justify-center mb-4">
-            <RefreshCw className="w-8 h-8 animate-spin text-[#657453]" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-600/10 flex items-center justify-center mb-4">
+            <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
           </div>
           <p className="text-lg text-gray-500">טוען משימות...</p>
         </div>
@@ -487,7 +487,7 @@ export default function TasksPage() {
                                         </span>
                                       )}
                                       {task.due_date && (
-                                        <span className="text-xs text-[#657453] font-medium">
+                                        <span className="text-xs text-emerald-600 font-medium">
                                           {formatDate(task.due_date)}
                                         </span>
                                       )}

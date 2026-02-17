@@ -15,6 +15,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import ResizableTable from '@/components/ui/ResizableTable';
 import {
   TAX_SERVICES,
   ADDITIONAL_SERVICES,
@@ -274,7 +275,7 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange }) {
 
       {/* Grid */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <ResizableTable className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
               <th className="text-right py-2 px-4 font-semibold text-gray-600 text-xs bg-gray-50/50 sticky right-0 z-10 min-w-[140px]">
@@ -304,7 +305,7 @@ function ServiceTable({ service, clientRows, onToggleStep, onDateChange }) {
               />
             ))}
           </tbody>
-        </table>
+        </ResizableTable>
       </div>
     </Card>
   );

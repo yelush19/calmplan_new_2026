@@ -248,8 +248,8 @@ export default function WeeklyPlanningDashboard() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#657453]/10 flex items-center justify-center mb-4">
-            <Brain className="w-8 h-8 text-[#657453]" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 flex items-center justify-center mb-4">
+            <Brain className="w-8 h-8 text-emerald-600" />
           </div>
           <p className="text-lg text-gray-500">טוען תכנון שבועי...</p>
         </div>
@@ -280,7 +280,7 @@ export default function WeeklyPlanningDashboard() {
             variant={weekOffset === 0 ? 'default' : 'outline'}
             size="sm"
             onClick={() => setWeekOffset(0)}
-            className={`rounded-xl font-bold ${weekOffset === 0 ? 'bg-[#657453] hover:bg-[#4a5f3a]' : ''}`}
+            className={`rounded-xl font-bold ${weekOffset === 0 ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
           >
             השבוע
           </Button>
@@ -373,24 +373,24 @@ export default function WeeklyPlanningDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
             >
-              <Card className={`border-0 shadow-sm overflow-hidden ${day.isToday ? 'ring-2 ring-[#657453]/50' : ''}`}>
+              <Card className={`border-0 shadow-sm overflow-hidden ${day.isToday ? 'ring-2 ring-emerald-400/50' : ''}`}>
                 {/* Day header */}
                 <div className={`flex items-center justify-between px-5 py-3 ${
                   day.isToday
-                    ? 'bg-[#657453]/10'
+                    ? 'bg-emerald-50'
                     : day.isPast
                       ? 'bg-gray-50'
                       : 'bg-white'
                 }`}>
                   <div className="flex items-center gap-3">
-                    <span className={`text-lg font-black ${day.isToday ? 'text-[#657453]' : 'text-gray-700'}`}>
+                    <span className={`text-lg font-black ${day.isToday ? 'text-emerald-700' : 'text-gray-700'}`}>
                       יום {wd.name}
                     </span>
                     <span className="text-sm text-gray-400">
                       {format(day.date, 'dd/MM')}
                     </span>
                     {day.isToday && (
-                      <Badge className="bg-[#657453] text-white text-xs">היום</Badge>
+                      <Badge className="bg-emerald-600 text-white text-xs">היום</Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -401,7 +401,7 @@ export default function WeeklyPlanningDashboard() {
                           key={i}
                           className={`w-2 h-5 rounded-full ${
                             i < taskCount
-                              ? isOverloaded ? 'bg-amber-400' : 'bg-[#657453]'
+                              ? isOverloaded ? 'bg-amber-400' : 'bg-emerald-500'
                               : 'bg-gray-200'
                           }`}
                         />
@@ -475,7 +475,7 @@ export default function WeeklyPlanningDashboard() {
             </div>
             <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-[#657453] rounded-full"
+                className="h-full bg-emerald-500 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${(stats.completed / stats.total) * 100}%` }}
                 transition={{ duration: 0.5 }}

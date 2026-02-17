@@ -439,8 +439,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     return (
       <Card className="border-0 shadow-lg">
         <CardContent className="p-12 text-center">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#657453]/10 flex items-center justify-center mb-4">
-            <RefreshCw className="w-8 h-8 animate-spin text-[#657453]" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-600/10 flex items-center justify-center mb-4">
+            <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
           </div>
           <p className="text-lg text-gray-500">טוען נתונים...</p>
         </CardContent>
@@ -452,14 +452,14 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     <div className="space-y-6">
       {/* Main Card — Clean & Calm */}
       <Card className="border-0 shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-l from-[#657453]/5 to-[#657453]/15 pb-6">
+        <CardHeader className="bg-gradient-to-l from-emerald-50 to-emerald-100 pb-6">
           <CardTitle className="flex items-center gap-4">
             <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center">
-              <Sparkles className="w-7 h-7 text-[#657453]" />
+              <Sparkles className="w-7 h-7 text-emerald-600" />
             </div>
             <div>
               <h3 className="text-xl font-bold text-gray-800">משימות חוזרות</h3>
-              <p className="text-base text-[#657453] font-normal mt-1">
+              <p className="text-base text-emerald-600 font-normal mt-1">
                 {clients.length} לקוחות פעילים
               </p>
             </div>
@@ -509,7 +509,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 >
                   &lt;
                 </Button>
-                <span className="text-lg font-black text-[#657453] min-w-[60px] text-center">{selectedYear}</span>
+                <span className="text-lg font-black text-emerald-600 min-w-[60px] text-center">{selectedYear}</span>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -534,10 +534,10 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                     onClick={() => toggleMonth(month)}
                     className={`rounded-xl h-11 text-sm font-bold transition-all ${
                       isSelected
-                        ? 'bg-[#657453] hover:bg-[#4a5f3a] text-white shadow-md'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'
                         : isCurrent
-                          ? 'border-2 border-[#657453]/50 hover:border-[#657453] text-[#657453] font-black'
-                          : 'border-2 hover:border-[#657453]/30'
+                          ? 'border-2 border-emerald-600/50 hover:border-emerald-600 text-emerald-600 font-black'
+                          : 'border-2 hover:border-emerald-600/30'
                     }`}
                   >
                     {name}
@@ -552,7 +552,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 variant="ghost"
                 size="sm"
                 onClick={selectCurrentMonth}
-                className="rounded-xl text-sm font-bold text-[#657453] hover:bg-[#657453]/10"
+                className="rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-600/10"
               >
                 חודש נוכחי
               </Button>
@@ -560,7 +560,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 variant="ghost"
                 size="sm"
                 onClick={selectAllMonths}
-                className="rounded-xl text-sm font-bold text-[#657453] hover:bg-[#657453]/10"
+                className="rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-600/10"
               >
                 כל השנה
               </Button>
@@ -579,7 +579,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           <Button
             onClick={generateTasksPreview}
             disabled={selectedMonths.size === 0}
-            className="w-full h-14 text-lg font-bold rounded-2xl bg-[#657453] hover:bg-[#4a5f3a] shadow-lg hover:shadow-xl transition-all disabled:opacity-40"
+            className="w-full h-14 text-lg font-bold rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-40"
             size="lg"
           >
             <Eye className="w-6 h-6 ml-3" />
@@ -620,7 +620,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
           {/* Header — clean, with progress */}
-          <div className="px-6 pt-6 pb-4 bg-gradient-to-l from-[#657453]/5 to-[#657453]/15">
+          <div className="px-6 pt-6 pb-4 bg-gradient-to-l from-emerald-50 to-emerald-100">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-gray-800">
                 {previewTasks.length > 0
@@ -640,7 +640,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             {previewTasks.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {Array.from(selectedMonths).sort((a, b) => a - b).map(m => (
-                  <span key={m} className="text-xs font-bold bg-[#657453]/15 text-[#657453] px-2.5 py-1 rounded-full">
+                  <span key={m} className="text-xs font-bold bg-emerald-600/15 text-emerald-600 px-2.5 py-1 rounded-full">
                     {HEBREW_MONTH_NAMES[m - 1]} {selectedYear}
                   </span>
                 ))}
@@ -660,7 +660,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 </div>
                 <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
                   <motion.div
-                    className="h-full bg-[#657453] rounded-full"
+                    className="h-full bg-emerald-600 rounded-full"
                     initial={{ width: '100%' }}
                     animate={{ width: `${(selectedCount / previewTasks.length) * 100}%` }}
                     transition={{ duration: 0.3 }}
@@ -789,7 +789,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                                         <span className="text-sm text-gray-500 font-medium">
                                           {task.period}
                                         </span>
-                                        <span className="text-sm font-bold text-[#657453] bg-[#657453]/10 px-2.5 py-0.5 rounded-full">
+                                        <span className="text-sm font-bold text-emerald-600 bg-emerald-600/10 px-2.5 py-0.5 rounded-full">
                                           {format(new Date(task.due_date), 'dd/MM')}
                                         </span>
                                         {task._is874 && (
@@ -826,7 +826,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                   <Button
                     onClick={createTasks}
                     disabled={isGenerating || selectedCount === 0}
-                    className="flex-1 h-14 text-lg font-bold rounded-2xl bg-[#657453] hover:bg-[#4a5f3a] shadow-lg disabled:opacity-40"
+                    className="flex-1 h-14 text-lg font-bold rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg disabled:opacity-40"
                   >
                     {isGenerating ? (
                       <>

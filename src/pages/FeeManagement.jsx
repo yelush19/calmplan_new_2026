@@ -7,6 +7,61 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   DollarSign, TrendingUp, TrendingDown, Users, Search, ArrowUpDown
 } from 'lucide-react';
+import ResizableTable from '@/components/ui/ResizableTable';
+
+const serviceTypeLabels = {
+  bookkeeping: 'הנהלת חשבונות',
+  bookkeeping_full: 'הנהלת חשבונות מלאה',
+  vat_reporting: 'דיווחי מע״מ',
+  tax_advances: 'מקדמות מס',
+  payroll: 'שכר',
+  social_security: 'ביטוח לאומי',
+  deductions: 'מ״ה ניכויים',
+  annual_reports: 'מאזנים / דוחות שנתיים',
+  reconciliation: 'התאמות חשבונות',
+  consulting: 'ייעוץ',
+  special_reports: 'דוחות מיוחדים',
+  masav_employees: 'מס״ב עובדים',
+  masav_social: 'מס״ב סוציאליות',
+  masav_authorities: 'מס״ב רשויות',
+  masav_suppliers: 'מס״ב ספקים',
+  authorities_payment: 'תשלום רשויות',
+  authorities: 'דיווח רשויות',
+  operator_reporting: 'דיווח למתפעל',
+  taml_reporting: 'דיווח לטמל',
+  payslip_sending: 'משלוח תלושים',
+  social_benefits: 'סוציאליות',
+  reserve_claims: 'תביעות מילואים',
+  pnl_reports: 'דוחות רווח והפסד',
+  admin: 'אדמיניסטרציה',
+};
+
+const serviceTypeColors = {
+  bookkeeping: 'bg-green-100 text-green-800 border-green-200',
+  bookkeeping_full: 'bg-green-100 text-green-800 border-green-200',
+  vat_reporting: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  tax_advances: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  payroll: 'bg-teal-100 text-teal-800 border-teal-200',
+  social_security: 'bg-teal-100 text-teal-800 border-teal-200',
+  deductions: 'bg-teal-100 text-teal-800 border-teal-200',
+  annual_reports: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  reconciliation: 'bg-blue-100 text-blue-800 border-blue-200',
+  consulting: 'bg-gray-100 text-gray-800 border-gray-200',
+  special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  masav_employees: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  masav_social: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  masav_authorities: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  authorities_payment: 'bg-teal-100 text-teal-800 border-teal-200',
+  authorities: 'bg-teal-100 text-teal-800 border-teal-200',
+  operator_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
+  taml_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
+  payslip_sending: 'bg-purple-100 text-purple-800 border-purple-200',
+  social_benefits: 'bg-purple-100 text-purple-800 border-purple-200',
+  reserve_claims: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  pnl_reports: 'bg-orange-100 text-orange-800 border-orange-200',
+  admin: 'bg-gray-100 text-gray-800 border-gray-200',
+};
 
 export default function FeeManagement() {
   const [clients, setClients] = useState([]);
@@ -142,7 +197,7 @@ export default function FeeManagement() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <ResizableTable className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-right p-3 font-semibold">לקוח</th>
@@ -160,7 +215,9 @@ export default function FeeManagement() {
                       <td className="p-3">
                         <div className="flex flex-wrap gap-1">
                           {(client.service_types || []).slice(0, 3).map(st => (
-                            <Badge key={st} variant="outline" className="text-xs">{st}</Badge>
+                            <Badge key={st} className={`${serviceTypeColors[st] || 'bg-gray-50 text-gray-700 border-gray-200'} text-xs px-2 py-0.5 border`}>
+                              {serviceTypeLabels[st] || st}
+                            </Badge>
                           ))}
                           {(client.service_types || []).length > 3 && (
                             <Badge variant="outline" className="text-xs">+{client.service_types.length - 3}</Badge>
@@ -197,7 +254,7 @@ export default function FeeManagement() {
                   </td>
                 </tr>
               </tfoot>
-            </table>
+            </ResizableTable>
           </div>
         </CardContent>
       </Card>

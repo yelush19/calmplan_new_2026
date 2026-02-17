@@ -23,24 +23,25 @@ const serviceTypeLabels = {
     masav_authorities: 'מס״ב רשויות',
     masav_suppliers: 'מס״ב ספקים',
     authorities: 'דיווח רשויות',
+    authorities_payment: 'תשלום רשויות',
     operator_reporting: 'דיווח למתפעל',
     taml_reporting: 'דיווח לטמל',
     payslip_sending: 'משלוח תלושים',
     social_benefits: 'סוציאליות',
     reserve_claims: 'תביעות מילואים',
-    client_management: 'ניהול לקוח',
+    pnl_reports: 'דוחות רווח והפסד',
     admin: 'אדמיניסטרציה',
 };
 
 const serviceTypeColors = {
     bookkeeping: 'bg-green-100 text-green-800 border-green-200',
     bookkeeping_full: 'bg-green-100 text-green-800 border-green-200',
-    vat_reporting: 'bg-[#657453]/20 text-[#4a5f3a] border-[#657453]',
-    tax_advances: 'bg-[#4a5f3a]/20 text-[#4a5f3a] border-[#4a5f3a]',
-    payroll: 'bg-[#a8b396]/20 text-[#4a5f3a] border-[#a8b396]',
-    social_security: 'bg-[#a8b396]/20 text-[#4a5f3a] border-[#a8b396]',
-    deductions: 'bg-[#a8b396]/20 text-[#4a5f3a] border-[#a8b396]',
-    annual_reports: 'bg-[#8a9b7a]/20 text-[#4a5f3a] border-[#8a9b7a]',
+    vat_reporting: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    tax_advances: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    payroll: 'bg-teal-100 text-teal-800 border-teal-200',
+    social_security: 'bg-teal-100 text-teal-800 border-teal-200',
+    deductions: 'bg-teal-100 text-teal-800 border-teal-200',
+    annual_reports: 'bg-cyan-100 text-cyan-800 border-cyan-200',
     reconciliation: 'bg-blue-100 text-blue-800 border-blue-200',
     consulting: 'bg-gray-100 text-gray-800 border-gray-200',
     special_reports: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -49,12 +50,13 @@ const serviceTypeColors = {
     masav_authorities: 'bg-indigo-100 text-indigo-800 border-indigo-200',
     masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
     authorities: 'bg-teal-100 text-teal-800 border-teal-200',
+    authorities_payment: 'bg-teal-100 text-teal-800 border-teal-200',
     operator_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
     taml_reporting: 'bg-teal-100 text-teal-800 border-teal-200',
     payslip_sending: 'bg-purple-100 text-purple-800 border-purple-200',
     social_benefits: 'bg-purple-100 text-purple-800 border-purple-200',
     reserve_claims: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    client_management: 'bg-gray-100 text-gray-800 border-gray-200',
+    pnl_reports: 'bg-orange-100 text-orange-800 border-orange-200',
     admin: 'bg-gray-100 text-gray-800 border-gray-200',
 };
 
@@ -156,7 +158,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
                 />
               </div>
               
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-gray-800 group-hover:text-[#657453] transition-colors leading-tight min-w-0 flex-1">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-gray-800 group-hover:text-emerald-600 transition-colors leading-tight min-w-0 flex-1">
                 <Building className="w-4 h-4 text-gray-600 flex-shrink-0" />
                 <span className="truncate">{client.name}</span>
               </CardTitle>
@@ -186,13 +188,13 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         {(mainContact?.phone || mainContact?.email) && (
           <div className="space-y-2 mb-3">
             {mainContact.phone && (
-              <a href={`tel:${mainContact.phone}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#4a5f3a] transition-colors">
+              <a href={`tel:${mainContact.phone}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-emerald-700 transition-colors">
                 <Phone className="w-3 h-3 flex-shrink-0" />
                 <span className="truncate">{mainContact.phone}</span>
               </a>
             )}
             {mainContact.email && (
-              <a href={`mailto:${mainContact.email}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#4a5f3a] transition-colors">
+              <a href={`mailto:${mainContact.email}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-emerald-700 transition-colors">
                 <Mail className="w-3 h-3 flex-shrink-0" />
                 <span className="truncate">{mainContact.email}</span>
               </a>
