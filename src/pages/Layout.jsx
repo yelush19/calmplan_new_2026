@@ -34,49 +34,37 @@ const navigationGroups = [
           { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
         ],
       },
-      { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
       {
-        name: "לקוחות",
-        icon: Users,
+        name: "חשבות שכר והנה\"ח",
+        icon: Calculator,
         children: [
-          { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+          { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
+          { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
+          { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
+          { name: "דיווחי מיסים חודשיים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
+          { name: "דיווחים מרכזים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
+          { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
+          { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
         ],
       },
       {
-        name: "שיווק וכספים",
-        icon: DollarSign,
+        name: "מרכז לקוחות",
+        icon: Users,
         children: [
+          { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
           { name: "לידים", href: createPageUrl("Leads"), icon: Target },
           { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
           { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
         ],
       },
       {
-        name: "ספקים ונותני שירותים",
+        name: "ספקים ונותני שירות",
         icon: BookUser,
         children: [
           { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
         ],
       },
-      {
-        name: "הנהלת חשבונות",
-        icon: BookCheck,
-        children: [
-          { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
-          { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
-        ],
-      },
-      {
-        name: "דיווחים ושכר",
-        icon: BarChart3,
-        children: [
-          { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
-          { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
-          { name: "דיווחי מיסים חודשיים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
-          { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
-          { name: "דיווחים מרכזים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
-        ],
-      },
+      { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
     ],
   },
   {
