@@ -438,14 +438,21 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* Sticky Notes Left Side Panel */}
-          <div className={`hidden md:flex flex-col border-r border-border bg-amber-50/30 transition-all duration-300 shrink-0 ${notesOpen ? 'w-72' : 'w-10'}`}>
+          <div className={`hidden md:flex flex-col border-l-2 border-amber-300 bg-amber-50/50 transition-all duration-300 shrink-0 ${notesOpen ? 'w-72' : 'w-12'}`}>
             <button
               onClick={() => setNotesOpen(!notesOpen)}
-              className="flex items-center justify-center gap-1 p-2 border-b border-amber-200/50 hover:bg-amber-100/50 transition-colors"
+              className="flex items-center justify-center gap-1 px-2 py-3 border-b border-amber-200 hover:bg-amber-100 transition-colors bg-amber-100/50"
               title={notesOpen ? 'סגור פתקים' : 'פתח פתקים'}
             >
-              {notesOpen ? <ChevronLeft className="w-4 h-4 text-amber-600" /> : <StickyNote className="w-4 h-4 text-amber-600" />}
+              <StickyNote className="w-5 h-5 text-amber-600" />
+              {notesOpen && <span className="text-xs font-medium text-amber-700 mr-1">פתקים</span>}
+              {notesOpen ? <ChevronLeft className="w-4 h-4 text-amber-500" /> : null}
             </button>
+            {!notesOpen && (
+              <div className="flex-1 flex items-start justify-center pt-3">
+                <span className="text-amber-500 text-[10px] font-medium" style={{ writingMode: 'vertical-rl' }}>פתקים</span>
+              </div>
+            )}
             {notesOpen && (
               <div className="flex-1 overflow-y-auto p-2">
                 <StickyNotes compact={true} />
