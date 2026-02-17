@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Clock, User, Calendar, Briefcase, Home, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { STATUS_CONFIG } from '@/config/processTemplates';
 
 const columnMapping = {
   todo: ['not_started', 'postponed', 'waiting_for_materials'],
@@ -20,18 +21,11 @@ const columnsConfig = {
   completed: { title: 'הושלם', color: 'bg-green-100', tasks: [] },
 };
 
-const statusOptions = {
-  not_started: { text: 'לביצוע', dot: 'bg-gray-400' },
-  in_progress: { text: 'בעבודה', dot: 'bg-sky-500' },
-  completed: { text: 'הושלם', dot: 'bg-emerald-500' },
-  postponed: { text: 'נדחה', dot: 'bg-neutral-400' },
-  waiting_for_approval: { text: 'לבדיקה', dot: 'bg-purple-500' },
-  waiting_for_materials: { text: 'ממתין לחומרים', dot: 'bg-amber-500' },
-  issue: { text: 'בעיה', dot: 'bg-pink-500' },
-  ready_for_reporting: { text: 'מוכן לדיווח', dot: 'bg-teal-500' },
-  reported_waiting_for_payment: { text: 'ממתין לתשלום', dot: 'bg-yellow-500' },
-  not_relevant: { text: 'לא רלוונטי', dot: 'bg-gray-300' },
-};
+const statusOptions = Object.fromEntries(
+  Object.entries(STATUS_CONFIG)
+    .filter(([k]) => k !== 'issues')
+    .map(([k, cfg]) => [k, { text: cfg.label, dot: cfg.bg }])
+);
 
 const getPriorityColor = (priority) => {
   const colors = {

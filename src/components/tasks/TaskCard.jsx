@@ -22,6 +22,7 @@ import {
 import { format, formatDistanceToNow, parseISO, isBefore, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import OverdueTags from "./OverdueTags";
+import { STATUS_CONFIG } from '@/config/processTemplates';
 
 const statusTranslations = {
   not_started: 'נותרו השלמות',
@@ -173,18 +174,9 @@ export default function TaskCard({
 
   const isUrgent = task.due_date && differenceInDays(parseISO(task.due_date), new Date()) <= 3;
 
-  const statusOptions = [
-    { value: 'not_started', label: 'נותרו השלמות' },
-    { value: 'waiting_for_materials', label: 'ממתין לחומרים' },
-    { value: 'in_progress', label: 'בעבודה' },
-    { value: 'issue', label: 'בעיה' },
-    { value: 'waiting_for_approval', label: 'לבדיקה' },
-    { value: 'ready_for_reporting', label: 'מוכן לדיווח' },
-    { value: 'reported_waiting_for_payment', label: 'ממתין לתשלום' },
-    { value: 'completed', label: 'דווח ושולם' },
-    { value: 'postponed', label: 'נדחה' },
-    { value: 'not_relevant', label: 'לא רלוונטי' },
-  ];
+  const statusOptions = Object.entries(STATUS_CONFIG)
+    .filter(([k]) => k !== 'issues') // skip duplicate
+    .map(([value, cfg]) => ({ value, label: cfg.label }));
 
   const priorityOptions = [
     { value: 'low', label: 'נמוכה' },
