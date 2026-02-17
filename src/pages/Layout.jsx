@@ -56,6 +56,7 @@ const navigationGroups = [
               { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
             ],
           },
+          { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: Settings },
         ],
       },
       {

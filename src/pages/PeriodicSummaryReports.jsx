@@ -14,7 +14,7 @@ import {
 import {
   Plus, RefreshCw, CheckCircle, AlertCircle, Clock, Calendar,
   ChevronLeft, ChevronRight, FileText, Search, Pencil, Save, X,
-  AlertTriangle, Check, CheckSquare, Square
+  AlertTriangle, Check, CheckSquare, Square, Trash2, UserPlus
 } from 'lucide-react';
 import ResizableTable from '@/components/ui/ResizableTable';
 
@@ -343,18 +343,31 @@ export default function PeriodicSummaryReports() {
     setIsLoading(false);
   };
 
-  // Active clients with payroll or deductions services, onboarded in or before selected year
+  // Active clients with payroll-related services (126 forms are for payroll only)
   const eligibleClients = useMemo(() =>
     clients.filter(c => {
       if (c.status !== 'active') return false;
       if (!(c.service_types || []).some(st =>
-        ['payroll', 'deductions', 'social_security', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
+        ['payroll', 'deductions', 'social_security'].includes(st)
       )) return false;
-      // If onboarding_year set, only include if <= selected year
       if (c.onboarding_year && parseInt(c.onboarding_year) > parseInt(selectedYear)) return false;
       return true;
     }).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')),
     [clients, selectedYear]
+  );
+
+  // Clients that already have reports but aren't eligible (manually added)
+  const manuallyAddedClients = useMemo(() => {
+    const eligibleIds = new Set(eligibleClients.map(c => c.id));
+    const reportClientIds = new Set(yearReports.map(r => r.client_id));
+    return clients.filter(c => reportClientIds.has(c.id) && !eligibleIds.has(c.id))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
+  }, [clients, eligibleClients, yearReports]);
+
+  // All displayed clients = eligible + manually added
+  const allDisplayedClients = useMemo(() =>
+    [...eligibleClients, ...manuallyAddedClients],
+    [eligibleClients, manuallyAddedClients]
   );
 
   // Reports for selected year
@@ -381,11 +394,11 @@ export default function PeriodicSummaryReports() {
 
   // Filtered clients
   const filteredClients = useMemo(() => {
-    if (!search) return eligibleClients;
-    return eligibleClients.filter(c =>
+    if (!search) return allDisplayedClients;
+    return allDisplayedClients.filter(c =>
       c.name?.toLowerCase().includes(search.toLowerCase())
     );
-  }, [eligibleClients, search]);
+  }, [allDisplayedClients, search]);
 
   // Stats
   const stats = useMemo(() => {
@@ -436,6 +449,63 @@ export default function PeriodicSummaryReports() {
       console.error('Error updating report:', error);
     }
   };
+
+  const [showAddClientDialog, setShowAddClientDialog] = useState(false);
+  const [addClientSearch, setAddClientSearch] = useState('');
+
+  // Delete all reports for a client in selected year
+  const handleDeleteClientReports = async (clientId) => {
+    const clientReports = yearReports.filter(r => r.client_id === clientId);
+    if (clientReports.length === 0) return;
+    if (!window.confirm(`למחוק ${clientReports.length} דיווחים ללקוח זה?`)) return;
+    try {
+      for (const r of clientReports) {
+        await PeriodicReport.delete(r.id);
+      }
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting reports:', error);
+    }
+  };
+
+  // Add a client manually (create all report rows)
+  const handleAddClient = async (client) => {
+    try {
+      for (const [typeKey, typeDef] of Object.entries(REPORT_TYPES)) {
+        for (const period of typeDef.periods) {
+          await PeriodicReport.create({
+            client_id: client.id,
+            client_name: client.name,
+            report_year: selectedYear,
+            report_type: typeKey,
+            period,
+            target_date: getDefaultTargetDate(selectedYear, period),
+            status: 'not_started',
+            reconciliation_steps: {
+              payroll_vs_bookkeeping: false,
+              periodic_vs_annual: false,
+            },
+            submission_date: '',
+            notes: '',
+          });
+        }
+      }
+      setShowAddClientDialog(false);
+      setAddClientSearch('');
+      await loadData();
+    } catch (error) {
+      console.error('Error adding client:', error);
+    }
+  };
+
+  // Clients available to add (active, not already displayed)
+  const availableClientsToAdd = useMemo(() => {
+    const displayedIds = new Set(allDisplayedClients.map(c => c.id));
+    return clients
+      .filter(c => c.status === 'active' && !displayedIds.has(c.id))
+      .filter(c => !addClientSearch || c.name?.toLowerCase().includes(addClientSearch.toLowerCase()))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
+  }, [clients, allDisplayedClients, addClientSearch]);
 
   const handleToggleClient = (clientId) => {
     setSelectedClientIds(prev => {
@@ -581,7 +651,7 @@ export default function PeriodicSummaryReports() {
         </Card>
       )}
 
-      {/* Search + Bulk actions */}
+      {/* Search + Add + Bulk actions */}
       <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -592,6 +662,10 @@ export default function PeriodicSummaryReports() {
             className="pr-10"
           />
         </div>
+
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddClientDialog(true)}>
+          <UserPlus className="w-4 h-4" /> הוסף לקוח
+        </Button>
 
         {selectedClientIds.size > 0 && (
           <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
@@ -636,7 +710,7 @@ export default function PeriodicSummaryReports() {
                   const clientReports = reportLookup[client.id] || {};
                   const isSelected = selectedClientIds.has(client.id);
                   return (
-                    <tr key={client.id} className={`border-b ${isSelected ? 'bg-blue-50/50' : idx % 2 === 0 ? '' : 'bg-muted/20'} hover:bg-muted/30`}>
+                    <tr key={client.id} className={`group border-b ${isSelected ? 'bg-blue-50/50' : idx % 2 === 0 ? '' : 'bg-muted/20'} hover:bg-muted/30`}>
                       <td className="text-center p-2 sticky right-0 bg-white z-10">
                         <Checkbox
                           checked={isSelected}
@@ -644,7 +718,16 @@ export default function PeriodicSummaryReports() {
                         />
                       </td>
                       <td className="p-3 font-medium sticky right-10 bg-white z-10 border-l">
-                        {client.name}
+                        <div className="flex items-center gap-2">
+                          <span className="flex-1">{client.name}</span>
+                          <button
+                            onClick={() => handleDeleteClientReports(client.id)}
+                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-0.5"
+                            title="מחק דיווחים ללקוח"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                       {columns.map(col => (
                         <ReportCell
@@ -702,6 +785,47 @@ export default function PeriodicSummaryReports() {
         columns={columns}
         onApply={handleBulkStatusUpdate}
       />
+
+      {/* Add Client Dialog */}
+      <Dialog open={showAddClientDialog} onOpenChange={(open) => { setShowAddClientDialog(open); if (!open) setAddClientSearch(''); }}>
+        <DialogContent className="sm:max-w-[420px] bg-white">
+          <DialogHeader>
+            <DialogTitle>הוספת לקוח לדיווחים מרכזים</DialogTitle>
+            <DialogDescription>בחר לקוח להוספה לטבלת דיווחי 126 לשנת {selectedYear}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="חיפוש לקוח..."
+                value={addClientSearch}
+                onChange={(e) => setAddClientSearch(e.target.value)}
+                className="pr-10"
+                autoFocus
+              />
+            </div>
+            <div className="max-h-64 overflow-y-auto space-y-1 border rounded-lg p-1">
+              {availableClientsToAdd.slice(0, 30).map(client => (
+                <button
+                  key={client.id}
+                  onClick={() => handleAddClient(client)}
+                  className="w-full text-right px-3 py-2 rounded-md hover:bg-primary/10 transition-colors text-sm"
+                >
+                  {client.name}
+                </button>
+              ))}
+              {availableClientsToAdd.length === 0 && (
+                <p className="text-center text-gray-400 py-4 text-sm">לא נמצאו לקוחות</p>
+              )}
+              {availableClientsToAdd.length > 30 && (
+                <p className="text-center text-gray-400 py-2 text-xs">
+                  מציג 30 מתוך {availableClientsToAdd.length} — חפש לצמצום
+                </p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
