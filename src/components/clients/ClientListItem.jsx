@@ -72,6 +72,17 @@ const serviceTypeColors = {
   special_reports: 'bg-green-100 text-green-800 border-green-200',
 };
 
+// סדר מיון לפי קבוצת צבעים
+const serviceGroupOrder = {
+  bookkeeping: 1, bookkeeping_full: 1, reconciliation: 1,
+  annual_reports: 1, pnl_reports: 1, admin: 1, special_reports: 1,
+  vat_reporting: 2, tax_advances: 2,
+  payroll: 3, social_security: 3, deductions: 3,
+  authorities: 3, authorities_payment: 3, social_benefits: 3, reserve_claims: 3,
+  payslip_sending: 4, masav_employees: 4,
+  masav_social: 5, masav_authorities: 5, operator_reporting: 5, taml_reporting: 5,
+  masav_suppliers: 6,
+};
 
 export default function ClientListItem({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete }) {
     const uiProps = statusUI[client.status] || statusUI.inactive;
@@ -96,7 +107,7 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
                   <div className="text-sm text-neutral-medium mt-1">{mainContact?.name || ''}</div>
                   {client.service_types?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
-                      {client.service_types.map(st => (
+                      {[...client.service_types].sort((a, b) => (serviceGroupOrder[a] || 99) - (serviceGroupOrder[b] || 99)).map(st => (
                         <Badge key={st} className={`${serviceTypeColors[st] || 'bg-gray-50 text-gray-700 border-gray-200'} text-[10px] px-1.5 py-0 border`}>
                           {serviceTypeLabels[st] || st}
                         </Badge>
