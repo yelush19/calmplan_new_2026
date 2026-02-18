@@ -250,6 +250,7 @@ export default function WeeklyPlanningDashboard() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [collapsedDays, setCollapsedDays] = useState({});
+  const [expandedCompletedDays, setExpandedCompletedDays] = useState({});
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
@@ -509,26 +510,58 @@ export default function WeeklyPlanningDashboard() {
     );
   };
 
-  const renderDayTasks = (dayTasks) => {
-    if (!groupByCategory) return dayTasks.map(renderTaskRow);
+  const toggleCompletedDay = (dayIndex) => {
+    setExpandedCompletedDays(prev => ({ ...prev, [dayIndex]: !prev[dayIndex] }));
+  };
 
-    // Group by category
-    const groups = {};
-    dayTasks.forEach(t => {
-      const cat = getCategoryLabel(t.category);
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(t);
-    });
+  const renderDayTasks = (dayTasks, dayIndex) => {
+    const activeTasks = dayTasks.filter(t => t.status !== 'completed');
+    const completedTasks = dayTasks.filter(t => t.status === 'completed');
+    const showCompleted = !!expandedCompletedDays[dayIndex];
 
-    return Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([cat, catTasks]) => (
-      <div key={cat}>
-        <div className="flex items-center gap-2 mb-1 mt-2 first:mt-0">
-          <div className={`w-2 h-2 rounded-sm ${CATEGORY_BAR_COLORS[cat] || 'bg-gray-400'}`} />
-          <span className="text-[10px] font-semibold text-gray-500">{cat} ({catTasks.length})</span>
+    const renderList = (taskList) => {
+      if (!groupByCategory) return taskList.map(renderTaskRow);
+
+      const groups = {};
+      taskList.forEach(t => {
+        const cat = getCategoryLabel(t.category);
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(t);
+      });
+
+      return Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([cat, catTasks]) => (
+        <div key={cat}>
+          <div className="flex items-center gap-2 mb-1 mt-2 first:mt-0">
+            <div className={`w-2 h-2 rounded-sm ${CATEGORY_BAR_COLORS[cat] || 'bg-gray-400'}`} />
+            <span className="text-[10px] font-semibold text-gray-500">{cat} ({catTasks.length})</span>
+          </div>
+          {catTasks.map(renderTaskRow)}
         </div>
-        {catTasks.map(renderTaskRow)}
-      </div>
-    ));
+      ));
+    };
+
+    return (
+      <>
+        {renderList(activeTasks)}
+        {completedTasks.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleCompletedDay(dayIndex); }}
+              className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors w-full"
+            >
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{completedTasks.length} הושלמו</span>
+              {showCompleted ? <ChevronUp className="w-3 h-3 mr-auto" /> : <ChevronDown className="w-3 h-3 mr-auto" />}
+            </button>
+            {showCompleted && (
+              <div className="mt-1.5 space-y-1">
+                {renderList(completedTasks)}
+              </div>
+            )}
+          </div>
+        )}
+      </>
+    );
   };
 
   if (isLoading) {
@@ -805,7 +838,7 @@ export default function WeeklyPlanningDashboard() {
                       </p>
                     ) : (
                       <div className="space-y-1.5">
-                        {renderDayTasks(day.tasks)}
+                        {renderDayTasks(day.tasks, wd.dayIndex)}
                       </div>
                     )}
                   </CardContent>
