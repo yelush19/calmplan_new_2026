@@ -95,6 +95,8 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
         status: task.status || 'not_started',
         priority: task.priority || 'medium',
         due_date: task.due_date || '',
+        due_time: task.due_time || '',
+        estimated_duration: task.estimated_duration || '',
         scheduled_start: task.scheduled_start || '',
         notes: task.notes || '',
         sub_tasks: task.sub_tasks || [],
@@ -244,6 +246,37 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
                   onChange={(e) => setEditData(prev => ({ ...prev, due_date: e.target.value }))}
                   className="text-sm h-9"
                   dir="ltr"
+                />
+              </div>
+            </div>
+            {/* Time + Duration */}
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  שעה
+                </span>
+                <Input
+                  type="time"
+                  value={editData.due_time}
+                  onChange={(e) => setEditData(prev => ({ ...prev, due_time: e.target.value }))}
+                  className="text-sm h-9"
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                  <Timer className="w-3 h-3" />
+                  משך משימה (דקות)
+                </span>
+                <Input
+                  type="number"
+                  value={editData.estimated_duration}
+                  onChange={(e) => setEditData(prev => ({ ...prev, estimated_duration: e.target.value }))}
+                  placeholder="30"
+                  className="text-sm h-9"
+                  dir="ltr"
+                  min="0"
                 />
               </div>
             </div>
