@@ -58,6 +58,7 @@ import ClientCollections from '@/components/clients/ClientCollections';
 import ClientContractsManager from '@/components/clients/ClientContractsManager';
 import ClientTasksTab from '@/components/clients/ClientTasksTab';
 import MondayDataImport from '@/components/clients/MondayDataImport';
+import ClientFilesManager from '@/components/files/ClientFilesManager';
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 // Helper: retry with exponential backoff for rate limits
@@ -100,6 +101,7 @@ export default function ClientManagementPage() {
   const [selectedCollectionsClient, setSelectedCollectionsClient] = useState(null);
   const [selectedContractsClient, setSelectedContractsClient] = useState(null);
   const [selectedTasksClient, setSelectedTasksClient] = useState(null);
+  const [selectedFilesClient, setSelectedFilesClient] = useState(null);
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -1094,6 +1096,7 @@ export default function ClientManagementPage() {
                       onSelectAccounts={setSelectedAccountsClient}
                       onSelectCollections={setSelectedCollectionsClient}
                       onSelectContracts={setSelectedContractsClient}
+                      onSelectFiles={setSelectedFilesClient}
                       onDelete={() => handleDeleteClient(client.id)}
                     />
                   ))}
@@ -1120,6 +1123,7 @@ export default function ClientManagementPage() {
                             onSelectAccounts={setSelectedAccountsClient}
                             onSelectCollections={setSelectedCollectionsClient}
                             onSelectContracts={setSelectedContractsClient}
+                            onSelectFiles={setSelectedFilesClient}
                             onDelete={() => handleDeleteClient(client.id)}
                           />
                         ))}
@@ -1295,6 +1299,19 @@ export default function ClientManagementPage() {
             <DialogDescription>ניהול משימות הקשורות ללקוח.</DialogDescription>
           </DialogHeader>
           {selectedTasksClient && <ClientTasksTab clientId={selectedTasksClient.id} clientName={selectedTasksClient.name} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Files Dialog */}
+      <Dialog open={!!selectedFilesClient} onOpenChange={(open) => {
+        if (!open) setSelectedFilesClient(null);
+      }}>
+        <DialogContent className="sm:max-w-[1100px] h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>קבצים עבור {selectedFilesClient?.name}</DialogTitle>
+            <DialogDescription>ניהול קבצים ומסמכים של הלקוח.</DialogDescription>
+          </DialogHeader>
+          {selectedFilesClient && <ClientFilesManager clientId={selectedFilesClient.id} clientName={selectedFilesClient.name} />}
         </DialogContent>
       </Dialog>
 

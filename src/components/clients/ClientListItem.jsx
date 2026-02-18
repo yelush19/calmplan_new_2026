@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck } from 'lucide-react';
+import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FolderOpen } from 'lucide-react';
 
 const statusUI = {
   active: { label: 'פעיל', badge: 'bg-green-100 text-green-800 border-green-200' },
@@ -84,7 +84,7 @@ const serviceGroupOrder = {
   masav_suppliers: 6,
 };
 
-export default function ClientListItem({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete }) {
+export default function ClientListItem({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectFiles }) {
     const uiProps = statusUI[client.status] || statusUI.inactive;
     const mainContact = client.contacts?.find(c => c.is_primary) || client.contacts?.[0] || { name: client.contact_person, email: client.email, phone: client.phone };
 
@@ -142,6 +142,9 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => onSelectCollections(client)} title="ניהול גבייה">
                         <DollarSign className="w-4 h-4 text-neutral-medium hover:text-litay-accent" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => onSelectFiles?.(client)} title="ניהול קבצים">
+                        <FolderOpen className="w-4 h-4 text-neutral-medium hover:text-litay-accent" />
                     </Button>
                      <Button variant="ghost" size="icon" onClick={() => onDelete(client.id)} title="מחיקת לקוח">
                         <Trash2 className="w-4 h-4 text-status-error hover:text-status-error/80" />
