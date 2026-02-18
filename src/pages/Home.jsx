@@ -23,6 +23,8 @@ import TaskEditDialog from "@/components/tasks/TaskEditDialog";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Pencil, Trash2, Pin } from "lucide-react";
 import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
+import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
+import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -67,10 +69,6 @@ export default function HomePage() {
   const [userName, setUserName] = useState("");
   const [activeTab, setActiveTab] = useState('overdue');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [quickTaskTitle, setQuickTaskTitle] = useState('');
-  const [quickTaskDue, setQuickTaskDue] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [quickTaskContext, setQuickTaskContext] = useState('work');
-  const [isSavingQuickTask, setIsSavingQuickTask] = useState(false);
   const [focusView, setFocusView] = useState('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
@@ -188,6 +186,7 @@ export default function HomePage() {
     try {
       const updatePayload = { status: newStatus };
       await Task.update(task.id, updatePayload);
+      syncNotesWithTaskStatus(task.id, newStatus);
       setData(prev => {
         if (!prev) return prev;
         const updateInList = (list) => list.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
@@ -219,28 +218,6 @@ export default function HomePage() {
     } catch (err) {
       console.error('שגיאה בעדכון תאריך תשלום:', err);
     }
-  };
-
-  const handleQuickAddTask = async () => {
-    if (!quickTaskTitle.trim() || isSavingQuickTask) return;
-    setIsSavingQuickTask(true);
-    try {
-      await Task.create({
-        title: quickTaskTitle.trim(),
-        status: 'not_started',
-        due_date: quickTaskDue,
-        context: quickTaskContext,
-        category: '',
-        process_steps: {},
-      });
-      setQuickTaskTitle('');
-      setQuickTaskDue(format(new Date(), 'yyyy-MM-dd'));
-      setShowQuickAdd(false);
-      loadData();
-    } catch (err) {
-      console.error('שגיאה ביצירת משימה:', err);
-    }
-    setIsSavingQuickTask(false);
   };
 
   const handleEditTask = async (taskId, updatedData) => {
@@ -566,48 +543,11 @@ export default function HomePage() {
       </motion.div>
 
       {/* Quick Add Task Dialog */}
-      <Dialog open={showQuickAdd} onOpenChange={setShowQuickAdd}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              הוספת משימה מהירה
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="quick-title">תיאור המשימה</Label>
-              <Input
-                id="quick-title"
-                value={quickTaskTitle}
-                onChange={(e) => setQuickTaskTitle(e.target.value)}
-                placeholder="מה צריך לעשות?"
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleQuickAddTask()}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="quick-due">תאריך יעד</Label>
-                <Input id="quick-due" type="date" value={quickTaskDue} onChange={(e) => setQuickTaskDue(e.target.value)} />
-              </div>
-              <div>
-                <Label htmlFor="quick-context">הקשר</Label>
-                <Select value={quickTaskContext} onValueChange={setQuickTaskContext}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="work">עבודה</SelectItem>
-                    <SelectItem value="home">בית</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button onClick={handleQuickAddTask} disabled={!quickTaskTitle.trim() || isSavingQuickTask} className="w-full">
-              {isSavingQuickTask ? 'שומר...' : 'הוסף משימה'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <QuickAddTaskDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onCreated={loadData}
+      />
 
       {/* Task Edit Dialog */}
       <TaskEditDialog

@@ -383,9 +383,10 @@ export function clientHasServiceForCategory(category, targetEntity, clientServic
   return clientServices.includes(catDef.service);
 }
 
-// ── Per-service due dates ──
+// ── Per-service due dates & execution periods ──
 
 const DUE_DATES_CONFIG_KEY = 'service_due_dates';
+const EXECUTION_PERIODS_CONFIG_KEY = 'service_execution_periods';
 
 // Categories with digital/check variants have { digital, check } instead of { due_day }
 // Digital = payment via internet, Check = payment via bank slip (המחאה)
@@ -456,6 +457,106 @@ export function getDueDayForCategory(dueDates, category, paymentMethod = 'digita
     return entry[paymentMethod] ?? entry.digital ?? null;
   }
   return entry.due_day ?? null;
+}
+
+// ── Execution period templates per service ──
+// start_day: day of month to begin work
+// buffer_days: how many days before due_date to start (alternative to fixed start_day)
+// If start_day is set, it takes priority. If not, buffer_days before due_date is used.
+
+export const DEFAULT_EXECUTION_PERIODS = {
+  'מע"מ':           { start_day: 1,  buffer_days: 18 },
+  'מע"מ 874':       { start_day: 5,  buffer_days: 18 },
+  'מקדמות מס':      { start_day: 1,  buffer_days: 18 },
+  'שכר':            { start_day: 1,  buffer_days: 14 },
+  'ביטוח לאומי':    { start_day: 1,  buffer_days: 14 },
+  'ניכויים':        { start_day: 1,  buffer_days: 18 },
+  'מס"ב סוציאליות': { start_day: 5,  buffer_days: 7 },
+  'מס"ב עובדים':    { start_day: 5,  buffer_days: 5 },
+  'מס"ב רשויות':    { start_day: 5,  buffer_days: 10 },
+  'מס"ב ספקים':     { start_day: 5,  buffer_days: 5 },
+  'תשלום רשויות':   { start_day: 1,  buffer_days: 14 },
+  'משלוח תלושים':   { start_day: 7,  buffer_days: 3 },
+  'דיווח למתפעל':   { start_day: null, buffer_days: 5 },
+  'דיווח לטמל':     { start_day: null, buffer_days: 5 },
+  'מילואים':        { start_day: null, buffer_days: 7 },
+  'הנחיות מס"ב ממתפעל': { start_day: null, buffer_days: 5 },
+  'הנהלת חשבונות':  { start_day: 1,  buffer_days: 20 },
+  'התאמות':         { start_day: 15, buffer_days: 10 },
+  'ייעוץ':          { start_day: null, buffer_days: 3 },
+  'אדמיניסטרציה':   { start_day: null, buffer_days: 3 },
+};
+
+export async function loadExecutionPeriods() {
+  try {
+    const configs = await SystemConfig.list(null, 50);
+    const config = configs.find(c => c.config_key === EXECUTION_PERIODS_CONFIG_KEY);
+    if (config && config.data?.periods) {
+      return { periods: config.data.periods, configId: config.id };
+    }
+    const newConfig = await SystemConfig.create({
+      config_key: EXECUTION_PERIODS_CONFIG_KEY,
+      data: { periods: DEFAULT_EXECUTION_PERIODS },
+    });
+    return { periods: DEFAULT_EXECUTION_PERIODS, configId: newConfig.id };
+  } catch (err) {
+    console.error('Error loading execution periods:', err);
+    return { periods: DEFAULT_EXECUTION_PERIODS, configId: null };
+  }
+}
+
+export async function saveExecutionPeriods(configId, periods) {
+  try {
+    if (configId) {
+      await SystemConfig.update(configId, { data: { periods } });
+    } else {
+      const newConfig = await SystemConfig.create({
+        config_key: EXECUTION_PERIODS_CONFIG_KEY,
+        data: { periods },
+      });
+      return newConfig.id;
+    }
+    return configId;
+  } catch (err) {
+    console.error('Error saving execution periods:', err);
+    throw err;
+  }
+}
+
+/**
+ * Calculate scheduled_start date based on execution period template.
+ * @param {string} category - Task category (Hebrew)
+ * @param {string} dueDate - Due date in YYYY-MM-DD format
+ * @param {Object} periods - Execution periods config
+ * @returns {string|null} - Scheduled start date in YYYY-MM-DD format
+ */
+export function getScheduledStartForCategory(category, dueDate, periods) {
+  if (!category || !dueDate) return null;
+  const p = (periods || DEFAULT_EXECUTION_PERIODS)[category];
+  if (!p) return null;
+
+  const due = new Date(dueDate);
+  if (isNaN(due.getTime())) return null;
+
+  if (p.start_day) {
+    // Fixed start day in the same month as due_date
+    const year = due.getFullYear();
+    const month = due.getMonth();
+    const start = new Date(year, month, p.start_day);
+    // If start_day is after due_date, go back one month
+    if (start > due) {
+      start.setMonth(start.getMonth() - 1);
+    }
+    return start.toISOString().split('T')[0];
+  }
+
+  if (p.buffer_days) {
+    const start = new Date(due);
+    start.setDate(start.getDate() - p.buffer_days);
+    return start.toISOString().split('T')[0];
+  }
+
+  return null;
 }
 
 /**

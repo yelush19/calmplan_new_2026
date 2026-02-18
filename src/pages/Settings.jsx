@@ -16,6 +16,7 @@ import {
 import { exportAllData, importAllData } from '@/api/base44Client';
 import { isSupabaseConfigured } from '@/api/supabaseClient';
 import { loadPlatformConfig, savePlatformConfig, DEFAULT_PLATFORMS } from '@/config/platformConfig';
+import ExecutionPeriodSettings from '@/components/settings/ExecutionPeriodSettings';
 
 // =====================================================
 // MAIN SETTINGS PAGE - Tabbed UI
@@ -234,6 +235,9 @@ function LitaySettings() {
           );
         })}
       </div>
+
+      {/* Execution Period Templates */}
+      <ExecutionPeriodSettings />
     </div>
   );
 }

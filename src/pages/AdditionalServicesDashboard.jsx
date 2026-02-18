@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight,
-  ArrowRight, Users, X, Settings2, List, LayoutGrid, Search, GanttChart
+  ArrowRight, Users, X, Settings2, List, LayoutGrid, Search, GanttChart, Plus
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -31,6 +31,8 @@ import {
   areAllStepsDone,
 } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
+import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 
 // Services shown on this dashboard - all additional services
 const additionalDashboardServices = Object.fromEntries(
@@ -64,6 +66,7 @@ export default function AdditionalServicesDashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, [selectedMonth]);
@@ -185,6 +188,7 @@ export default function AdditionalServicesDashboardPage() {
       }
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
+      if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
     } catch (error) { console.error("Error updating step:", error); }
   }, []);
 
@@ -207,6 +211,7 @@ export default function AdditionalServicesDashboardPage() {
       }
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
+      syncNotesWithTaskStatus(task.id, newStatus);
     } catch (error) { console.error("Error updating status:", error); }
   }, []);
 
@@ -312,6 +317,10 @@ export default function AdditionalServicesDashboardPage() {
               <GanttChart className="w-4 h-4" />
             </Button>
           </div>
+          <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
+            <Plus className="w-4 h-4" />
+            משימה מהירה
+          </Button>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -398,6 +407,12 @@ export default function AdditionalServicesDashboardPage() {
         </Card>
       )}
 
+      <QuickAddTaskDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onCreated={loadData}
+        defaultContext="work"
+      />
       <TaskEditDialog
         task={editingTask}
         open={!!editingTask}

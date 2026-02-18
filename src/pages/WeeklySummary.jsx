@@ -11,10 +11,12 @@ import { createPageUrl } from '@/utils';
 import {
   CheckCircle, Clock, Calendar, User, TrendingUp, ArrowRight,
   RefreshCw, Target, AlertTriangle, BarChart3, Zap, Award,
-  ChevronDown, ChevronUp, Activity, Search, Pencil, Trash2, Pin
+  ChevronDown, ChevronUp, Activity, Search, Pencil, Trash2, Pin, Plus
 } from 'lucide-react';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
+import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   format, parseISO, isValid, startOfWeek, endOfWeek,
@@ -77,6 +79,7 @@ export default function WeeklySummary() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
@@ -191,6 +194,7 @@ export default function WeeklySummary() {
     try {
       await Task.update(task.id, { ...task, status: newStatus });
       setRawTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+      syncNotesWithTaskStatus(task.id, newStatus);
     } catch (err) { console.error(err); }
   };
 
@@ -241,9 +245,15 @@ export default function WeeklySummary() {
           <h1 className="text-2xl font-bold text-gray-800">סיכום שבועי</h1>
           <p className="text-sm text-gray-500">שבוע {weekLabel}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadData} className="gap-1">
-          <RefreshCw className="w-4 h-4" /> רענן
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setShowQuickAdd(true)} className="gap-1">
+            <Plus className="w-4 h-4" />
+            משימה מהירה
+          </Button>
+          <Button variant="outline" size="sm" onClick={loadData} className="gap-1">
+            <RefreshCw className="w-4 h-4" /> רענן
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -496,6 +506,11 @@ export default function WeeklySummary() {
         </Link>
       </div>
 
+      <QuickAddTaskDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onCreated={loadData}
+      />
       <TaskEditDialog
         task={editingTask}
         open={!!editingTask}

@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Task, Client } from "@/api/entities";
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
+import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2, Pencil,
-  ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink,
+  ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink, Plus,
   ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X
 } from "lucide-react";
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
@@ -107,6 +109,7 @@ export default function TasksPage() {
   const [isClearing, setIsClearing] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [clientMap, setClientMap] = useState({});
   const [timeTab, setTimeTab] = useState('active');
   const [contextFilter, setContextFilter] = useState('all');
@@ -272,6 +275,7 @@ export default function TasksPage() {
     try {
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
       await Task.update(task.id, { ...task, status: newStatus });
+      syncNotesWithTaskStatus(task.id, newStatus);
     } catch (error) {
       console.error("Error updating status:", error);
       loadTasks();
@@ -392,6 +396,10 @@ export default function TasksPage() {
               <LayoutGrid className="w-5 h-5" />
             </Button>
           </div>
+          <Button size="sm" onClick={() => setShowQuickAdd(true)} className="gap-1 rounded-xl">
+            <Plus className="w-4 h-4" />
+            משימה מהירה
+          </Button>
           <Button variant="ghost" size="sm" onClick={loadTasks} className="rounded-xl">
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -642,6 +650,12 @@ export default function TasksPage() {
           getPriorityText={(p) => priorityConfig[p]?.text || p}
         />
       )}
+
+      <QuickAddTaskDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onCreated={loadTasks}
+      />
 
       <TaskEditDialog
         task={editingTask}
