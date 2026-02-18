@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Zap, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Settings, Play, Loader2, X, CheckSquare, Square, CalendarDays, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   loadAutomationRules, saveAutomationRules,
-  ALL_SERVICES, BUSINESS_TYPES, REPORT_ENTITIES,
+  SERVICE_LABELS, BUSINESS_TYPES, REPORT_ENTITIES,
   PERIODIC_REPORT_TYPES, PERIODIC_REPORT_PERIODS,
   TASK_BOARD_CATEGORIES, RECONCILIATION_TYPES,
   DEFAULT_RULES, getReportAutoCreateRules,
@@ -114,7 +114,7 @@ function RuleEditor({ rule, onSave, onCancel }) {
               <Select value={editRule.trigger_service} onValueChange={(v) => handleChange('trigger_service', v)}>
                 <SelectTrigger><SelectValue placeholder="בחר שירות מפעיל" /></SelectTrigger>
                 <SelectContent className="bg-white">
-                  {Object.entries(ALL_SERVICES).map(([k, v]) => (
+                  {Object.entries(SERVICE_LABELS).map(([k, v]) => (
                     <SelectItem key={k} value={k}>{v}</SelectItem>
                   ))}
                 </SelectContent>
@@ -123,7 +123,7 @@ function RuleEditor({ rule, onSave, onCancel }) {
             <div>
               <Label>סמן אוטומטית גם:</Label>
               <ToggleGroup type="multiple" value={editRule.auto_add_services || []} onValueChange={(v) => handleChange('auto_add_services', v)} className="flex-wrap justify-start">
-                {Object.entries(ALL_SERVICES).filter(([k]) => k !== editRule.trigger_service).map(([k, v]) => (
+                {Object.entries(SERVICE_LABELS).filter(([k]) => k !== editRule.trigger_service).map(([k, v]) => (
                   <ToggleGroupItem key={k} value={k} className="text-xs">{v}</ToggleGroupItem>
                 ))}
               </ToggleGroup>
@@ -148,7 +148,7 @@ function RuleEditor({ rule, onSave, onCancel }) {
             <div>
               <Label>כשללקוח יש אחד מהשירותים:</Label>
               <ToggleGroup type="multiple" value={editRule.trigger_services || []} onValueChange={(v) => handleChange('trigger_services', v)} className="flex-wrap justify-start">
-                {Object.entries(ALL_SERVICES).map(([k, v]) => (
+                {Object.entries(SERVICE_LABELS).map(([k, v]) => (
                   <ToggleGroupItem key={k} value={k} className="text-xs">{v}</ToggleGroupItem>
                 ))}
               </ToggleGroup>
@@ -654,7 +654,7 @@ export default function AutomationRules() {
           resultDetails.push({
             clientName: client.name,
             entityLabel: 'שירותים',
-            description: `נוספו: ${servicesToAdd.map(s => ALL_SERVICES[s] || s).join(', ')}`,
+            description: `נוספו: ${servicesToAdd.map(s => SERVICE_LABELS[s] || s).join(', ')}`,
             status: 'success',
           });
         } catch (err) {

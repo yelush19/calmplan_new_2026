@@ -5,20 +5,22 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Trash2, RefreshCw, Database, AlertTriangle } from 'lucide-react';
 import { emergencyReset } from '@/api/functions';
 import { mondayApi } from '@/api/functions';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 export default function EmergencyResetPage() {
+    const { confirm, ConfirmDialogComponent } = useConfirm();
     const [isResetting, setIsResetting] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
 
     const handleFullReset = async () => {
-        if (!window.confirm('⚠️ פעולה הרסנית! האם למחוק את כל הנתונים ולהתחיל מאפס? פעולה זו בלתי הפיכה!')) {
-            return;
-        }
-
-        if (!window.confirm('בטוח בטוח? כל הנתונים יימחקו ויישאר רק מה שב-Monday!')) {
-            return;
-        }
+        const ok = await confirm({
+            title: 'איפוס מלא של המערכת',
+            description: 'פעולה הרסנית! כל הנתונים יימחקו ויישאר רק מה שב-Monday.\nפעולה זו בלתי הפיכה!',
+            confirmText: 'מחק הכל ואפס',
+            delayMs: 5000,
+        });
+        if (!ok) return;
 
         setIsResetting(true);
         setResult(null);
@@ -26,20 +28,16 @@ export default function EmergencyResetPage() {
 
         try {
             // שלב 1: מחיקה מלאה
-            console.log('🗑️ מוחק את כל הנתונים...');
             const deleteResult = await emergencyReset({ action: 'deleteAll' });
-            
+
             if (!deleteResult.data.success) {
                 throw new Error(`שגיאה במחיקה: ${deleteResult.data.error}`);
             }
-
-            console.log(`✅ נמחקו ${deleteResult.data.deleted} רשומות`);
 
             // שלב 2: המתנה קצרה
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // שלב 3: סנכרון מחדש מ-Monday
-            console.log('🔄 מסנכרן מחדש מ-Monday...');
             const syncResults = [];
             
             // סנכרון לקוחות
@@ -77,6 +75,7 @@ export default function EmergencyResetPage() {
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-6">
+            {ConfirmDialogComponent}
             <div className="text-center">
                 <h1 className="text-3xl font-bold text-red-600 mb-2">איפוס מלא של המערכת</h1>
                 <p className="text-gray-600">מחיקה מלאה של כל הנתונים וסנכרון מחדש מ-Monday בלבד</p>

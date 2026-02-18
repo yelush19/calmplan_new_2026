@@ -279,6 +279,7 @@ export async function exportAllData() {
   const { data, error } = await supabase
     .from('app_data')
     .select('*')
+    .neq('collection', 'backup_snapshots')
     .order('collection')
     .limit(50000);
 
@@ -391,6 +392,17 @@ export async function restoreFromBackupSnapshot(backupId) {
 
   await importAllData(data.data.snapshot);
   return { restored: true, date: data.data.date };
+}
+
+/**
+ * Delete all data from Supabase (except backup_snapshots)
+ */
+export async function clearAllData() {
+  const { error } = await supabase
+    .from('app_data')
+    .delete()
+    .neq('collection', 'backup_snapshots');
+  if (error) throw error;
 }
 
 /**

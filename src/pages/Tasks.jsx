@@ -20,18 +20,7 @@ import KanbanView from "../components/tasks/KanbanView";
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import ResizableTable from '@/components/ui/ResizableTable';
 
-const statusConfig = {
-  not_started: { text: 'לביצוע', color: 'bg-cyan-100 text-cyan-700', dot: 'bg-cyan-400' },
-  in_progress: { text: 'בעבודה', color: 'bg-sky-100 text-sky-700', dot: 'bg-sky-500' },
-  completed: { text: 'הושלם', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-  postponed: { text: 'נדחה', color: 'bg-neutral-100 text-neutral-600', dot: 'bg-neutral-400' },
-  waiting_for_approval: { text: 'לבדיקה', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
-  waiting_for_materials: { text: 'ממתין לחומרים', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
-  issue: { text: 'בעיה', color: 'bg-pink-100 text-pink-700', dot: 'bg-pink-500' },
-  ready_for_reporting: { text: 'מוכן לדיווח', color: 'bg-teal-100 text-teal-700', dot: 'bg-teal-500' },
-  reported_waiting_for_payment: { text: 'ממתין לתשלום', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
-  not_relevant: { text: 'לא רלוונטי', color: 'bg-gray-50 text-gray-400', dot: 'bg-gray-300' },
-};
+import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 
 const priorityConfig = {
   low: { text: 'נמוך', color: 'bg-blue-50 text-blue-700', dot: 'bg-blue-400', order: 3 },
@@ -64,19 +53,23 @@ const mondayStatusMapping = {
 };
 
 // Time period tabs
-const now = new Date();
-const prevMonthStart = startOfMonth(subMonths(now, 1));
-const prevMonthEnd = endOfMonth(subMonths(now, 1));
-const currMonthStart = startOfMonth(now);
-const currMonthEnd = endOfMonth(now);
-
-const TIME_TABS = [
-  { key: 'prev_month', label: format(subMonths(now, 1), 'MMMM', { locale: he }), icon: Calendar },
-  { key: 'curr_month', label: format(now, 'MMMM', { locale: he }), icon: Clock },
-  { key: 'active', label: 'פעילות', icon: AlertTriangle },
-  { key: 'completed', label: 'הושלמו', icon: CheckCircle },
-  { key: 'all', label: 'הכל', icon: List },
-];
+function getTimePeriods() {
+  const now = new Date();
+  return {
+    now,
+    prevMonthStart: startOfMonth(subMonths(now, 1)),
+    prevMonthEnd: endOfMonth(subMonths(now, 1)),
+    currMonthStart: startOfMonth(now),
+    currMonthEnd: endOfMonth(now),
+    tabs: [
+      { key: 'prev_month', label: format(subMonths(now, 1), 'MMMM', { locale: he }), icon: Calendar },
+      { key: 'curr_month', label: format(now, 'MMMM', { locale: he }), icon: Clock },
+      { key: 'active', label: 'פעילות', icon: AlertTriangle },
+      { key: 'completed', label: 'הושלמו', icon: CheckCircle },
+      { key: 'all', label: 'הכל', icon: List },
+    ],
+  };
+}
 
 const getCategoryLabel = (cat) => {
   const labels = {
@@ -89,7 +82,11 @@ const getCategoryLabel = (cat) => {
   return labels[cat] || cat;
 };
 
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+
 export default function TasksPage() {
+  const { confirm, ConfirmDialogComponent } = useConfirm();
+  const { prevMonthStart, prevMonthEnd, currMonthStart, currMonthEnd, tabs: TIME_TABS } = useMemo(() => getTimePeriods(), []);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -258,7 +255,8 @@ export default function TasksPage() {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (window.confirm("למחוק משימה זו?")) {
+    const ok = await confirm({ description: 'למחוק משימה זו?' });
+    if (ok) {
       try {
         await Task.delete(taskId);
         setTasks(prev => prev.filter(t => t.id !== taskId));
@@ -270,8 +268,13 @@ export default function TasksPage() {
 
   const handleClearAllTasks = async () => {
     const count = tasks.length;
-    if (!window.confirm(`למחוק את כל ${count} המשימות? פעולה בלתי הפיכה!`)) return;
-    if (!window.confirm('בטוח? לא ניתן לשחזר.')) return;
+    const ok = await confirm({
+      title: 'מחיקת כל המשימות',
+      description: `למחוק את כל ${count} המשימות? פעולה בלתי הפיכה!`,
+      confirmText: 'מחק הכל',
+      delayMs: 3000,
+    });
+    if (!ok) return;
     setIsClearing(true);
     try {
       await Task.deleteAll();
@@ -324,6 +327,7 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-4 max-w-6xl mx-auto">
+      {ConfirmDialogComponent}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

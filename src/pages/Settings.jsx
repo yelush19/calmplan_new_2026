@@ -669,7 +669,6 @@ function DataBackupSection() {
         if (result.saved) {
           localStorage.setItem('calmplan_last_supa_backup', today);
           setLastSupaBackup(today);
-          console.log('Daily Supabase backup saved:', result.summary);
         } else {
           localStorage.setItem('calmplan_last_supa_backup', today);
           setLastSupaBackup(today);

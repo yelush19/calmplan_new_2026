@@ -219,7 +219,7 @@ export { auth };
 export function exportAllData() {
   const allData = {};
   for (const key of Object.keys(localStorage)) {
-    if (key.startsWith(DB_PREFIX)) {
+    if (key.startsWith(DB_PREFIX) && !key.includes('backup_snapshots')) {
       allData[key] = JSON.parse(localStorage.getItem(key));
     }
   }

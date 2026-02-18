@@ -46,8 +46,6 @@ export default function SystemOverviewPage() {
     setIsLoading(true);
     setError(null);
     try {
-      console.log('🔄 Loading all data for detailed Monday sync analysis...');
-
       const [dashboardsData, clientsData, tasksData, recsData, clientAccountsData, therapistsData] = await Promise.all([
         Dashboard.list().catch(() => []),
         Client.filter({}, '-updated_date', 1000).catch(() => []),
@@ -56,8 +54,6 @@ export default function SystemOverviewPage() {
         ClientAccount.filter({}, '-updated_date', 1000).catch(() => []),
         Therapist.list(null, 1000).catch(() => [])
       ]);
-
-      console.log('🔍 === DETAILED ID ANALYSIS ==='); // Kept for consistency with general analysis
 
       // Function to analyze ID fields for any entity
       const analyzeEntityIds = (entities, entityName) => {
@@ -72,36 +68,10 @@ export default function SystemOverviewPage() {
           missingBoth: entities.filter(e => e.id && !e.monday_board_id && !e.monday_item_id)
         };
 
-        console.log(`\n📊 ${entityName.toUpperCase()} ID ANALYSIS:`);
-        console.log(`- Total records: ${analysis.total}`);
-        console.log(`- With CalmPlan ID (id): ${analysis.withCalmPlanId}`);
-        console.log(`- With Monday Board ID: ${analysis.withMondayBoardId}`);
-        console.log(`- With Monday Item ID: ${analysis.withMondayItemId}`);
-        console.log(`- With ALL 3 IDs: ${analysis.withAllIds}`);
-        console.log(`- Missing Board ID: ${analysis.missingBoardId.length}`);
-        console.log(`- Missing Item ID: ${analysis.missingItemId.length}`);
-        console.log(`- Missing BOTH Monday IDs: ${analysis.missingBoth.length}`);
-
         // Show samples of problematic records
-        if (analysis.missingBoth.length > 0) {
-          console.log(`\n🚨 ${entityName} - SAMPLE RECORDS MISSING BOTH MONDAY IDs:`);
-          analysis.missingBoth.slice(0, 5).forEach((record, i) => {
-            console.log(`${i+1}. ID: ${record.id}, Title/Name: "${record.title || record.name || record.task_name || record.full_name || 'No name'}", Created: ${record.created_date}`);
-          });
-        }
-
-        if (analysis.missingItemId.length > 0) {
-          console.log(`\n⚠️ ${entityName} - SAMPLE RECORDS WITH BOARD ID BUT MISSING ITEM ID:`);
-          analysis.missingItemId.slice(0, 5).forEach((record, i) => {
-            console.log(`${i+1}. ID: ${record.id}, Board: ${record.monday_board_id}, Title/Name: "${record.title || record.name || record.task_name || record.full_name || 'No name'}"`);
-          });
-        }
-
         return analysis;
       };
 
-      console.log('🔍 === MONDAY BOARD SYNC ANALYSIS ===');
-      
       // Create board mapping for analysis
       const boardMappings = {
         'clients': 'לקוחות',
@@ -139,8 +109,6 @@ export default function SystemOverviewPage() {
       let totalActual = 0;
       const actualCountsByBoardType = {}; // To store actual counts for boardBreakdown
 
-      console.log('\n📋 BOARD BY BOARD ANALYSIS:');
-
       for (const config of configs) {
         let count = 0;
         let actualEntities = [];
@@ -150,7 +118,6 @@ export default function SystemOverviewPage() {
 
         if (config.monday_board_id) {
             const boardIdStr = String(config.monday_board_id);
-            console.log(`\n🔍 PROCESSING: ${config.type} (${boardMappings[config.type]}) - Board ID: ${boardIdStr}`);
 
             switch(config.type) {
                 case 'clients':
@@ -185,28 +152,9 @@ export default function SystemOverviewPage() {
             actualCountsByBoardType[config.type] = count; // Store for boardBreakdown
             totalActual += count;
 
-            console.log(`   Expected: ${expected}, Actual: ${count}, Difference: ${count - expected}`);
-
-            if (count !== expected) {
-                console.log(`   ⚠️ MISMATCH: Expected ${expected} but found ${count} for ${config.type}`);
-                if (count < expected) {
-                    console.log(`   📉 Missing ${expected - count} items in ${config.type}`);
-                } else {
-                    console.log(`   📈 Extra ${count - expected} items in ${config.type}`);
-                }
-            }
         } else {
-            console.log(`\n❌ ${config.type} (${boardMappings[config.type]}) - NO BOARD ID SET`);
+            // No board ID set for this config type
         }
-      }
-
-      console.log(`\n📊 TOTALS:`);
-      console.log(`   Expected (Monday): ${totalExpected}`);
-      console.log(`   Actual (Database): ${totalActual}`);
-      console.log(`   Difference: ${totalActual - totalExpected}`);
-
-      if (totalActual < totalExpected) {
-          console.log(`   🚨 MISSING ${totalExpected - totalActual} items that should have been synced from Monday`);
       }
 
       // Continue with rest of analysis...
@@ -220,32 +168,12 @@ export default function SystemOverviewPage() {
       };
 
       // Special analysis for tasks - check for demo/protected flags (existing logic)
-      console.log(`\n🔍 TASKS - SPECIAL FLAGS ANALYSIS:`);
       const taskFlags = {
         isDemo: tasksData.filter(t => t.isDemo === true).length,
         isProtected: tasksData.filter(t => t.isProtected === true).length,
         isFromMonday: tasksData.filter(t => t.isFromMonday === true).length,
         noFlags: tasksData.filter(t => !t.isDemo && !t.isProtected && !t.isFromMonday).length
       };
-      console.log(`- Demo tasks: ${taskFlags.isDemo}`);
-      console.log(`- Protected tasks: ${taskFlags.isProtected}`);
-      console.log(`- From Monday flag: ${taskFlags.isFromMonday}`);
-      console.log(`- No special flags: ${taskFlags.noFlags}`);
-
-      // Check board IDs distribution (existing logic)
-      console.log(`\n📋 TASKS - BOARD ID DISTRIBUTION:`);
-      const boardIdCounts = {};
-      tasksData.forEach(task => {
-        const boardId = task.monday_board_id || 'NO_BOARD_ID';
-        boardIdCounts[boardId] = (boardIdCounts[boardId] || 0) + 1;
-      });
-      Object.entries(boardIdCounts)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 10)
-        .forEach(([boardId, count]) => {
-          console.log(`- ${boardId}: ${count} tasks`);
-        });
-
       // Update system status with detailed analysis, incorporating new and existing data
       const status = {
         tasks: {
@@ -291,14 +219,6 @@ export default function SystemOverviewPage() {
         }))
       };
 
-      console.log('\n🎯 SUMMARY - RECORDS MISSING MONDAY CONNECTION:');
-      Object.entries(analyses).forEach(([type, analysis]) => {
-        // Only log if 'missingBoth' exists and has entries, as some analyses might not have it
-        if (analysis.missingBoth?.length > 0) {
-          console.log(`- ${type.toUpperCase()}: ${analysis.missingBoth.length} records completely disconnected from Monday`);
-        }
-      });
-
       setSystemStatus(status);
     } catch (error) {
       console.error("❌ Error loading data:", error);
@@ -316,10 +236,7 @@ export default function SystemOverviewPage() {
     
     setIsLoading(true);
     try {
-      console.log('🧹 Starting Dashboard cleanup...');
-      
       const allDashboards = await Dashboard.list();
-      console.log('Found', allDashboards.length, 'dashboard records');
       
       const typeGroups = {};
       allDashboards.forEach(d => {
@@ -334,8 +251,6 @@ export default function SystemOverviewPage() {
         if (dashboards.length > 1 && boardCategories[type]) {
           const toDelete = dashboards.slice(1);
           
-          console.log(`Type ${type}: Keeping 1, deleting ${toDelete.length}`);
-          
           for (const dashboard of toDelete) {
             await Dashboard.delete(dashboard.id);
             deletedCount++;
@@ -349,7 +264,6 @@ export default function SystemOverviewPage() {
         }
       }
       
-      console.log(`✅ Deleted ${deletedCount} duplicate or unknown dashboard records`);
       alert(`✅ נמחקו ${deletedCount} רשומות Dashboard כפולות או לא מזוהות`);
       
       await loadData();
@@ -367,7 +281,6 @@ export default function SystemOverviewPage() {
     setIsLoading(true);
     try {
       const demoTasks = await Task.filter({ isDemo: true });
-      console.log(`🧹 Found ${demoTasks.length} demo tasks to delete`);
       
       let deletedCount = 0;
       for (const task of demoTasks) {
@@ -375,7 +288,6 @@ export default function SystemOverviewPage() {
         deletedCount++;
       }
       
-      console.log(`✅ Deleted ${deletedCount} demo tasks`);
       alert(`✅ נמחקו ${deletedCount} משימות דמו`);
       
       await loadData();
@@ -394,8 +306,7 @@ export default function SystemOverviewPage() {
       isDemo: { $ne: true }
     }, '-updated_date', 100);
     
-    console.log('🔍 ORPHANED TASKS:', orphanedTasks.map(t => ({ id: t.id, title: t.title, isDemo: t.isDemo })));
-    alert(`נמצאו ${orphanedTasks.length} משימות מקומיות (לא מקושרות ל-Monday ולא נתוני דמו). בדוק Console לפרטים.`);
+    alert(`נמצאו ${orphanedTasks.length} משימות מקומיות (לא מקושרות ל-Monday ולא נתוני דמו).`);
   };
 
   const showDuplicateTasks = () => {
@@ -423,36 +334,19 @@ export default function SystemOverviewPage() {
     
     setIsLoading(true);
     try {
-      console.log('🧹 Starting Monday duplicates cleanup...');
-      
-      // First, let's debug what we actually have
       const allTasks = await Task.list(null, 2000);
-      console.log('📊 TOTAL TASKS FOUND:', allTasks.length);
       
       const fromMondayTasks = allTasks.filter(t => t.isFromMonday === true);
-      console.log('📊 TASKS WITH isFromMonday=true:', fromMondayTasks.length);
-      
       const protectedTasks = allTasks.filter(t => t.isProtected === true);
-      console.log('📊 TASKS WITH isProtected=true:', protectedTasks.length);
-      
       const tasksWithBothIds = allTasks.filter(t => t.monday_board_id && t.monday_item_id);
-      console.log('📊 TASKS WITH BOTH MONDAY IDs:', tasksWithBothIds.length);
-      
-      // Show samples of fromMonday tasks
-      console.log('🔍 SAMPLE FROM MONDAY TASKS:');
-      fromMondayTasks.slice(0, 10).forEach((task, i) => {
-        console.log(`${i+1}. "${task.title}" - Board: "${task.monday_board_id}", Item: "${task.monday_item_id}", isFromMonday: ${task.isFromMonday}, isProtected: ${task.isProtected}`);
-      });
-      
-      // NEW APPROACH: Find tasks that are either:
+
+      // Find tasks that are either:
       // 1. From Monday but missing IDs
       // 2. Protected but missing IDs (since they seem to be the same)
       const duplicateTasks = allTasks.filter(task => 
         (task.isFromMonday === true || task.isProtected === true) &&
         (!task.monday_board_id || !task.monday_item_id)
       );
-      
-      console.log(`🔍 FOUND ${duplicateTasks.length} DUPLICATE TASKS (isFromMonday OR isProtected but missing Board/Item ID)`);
       
       if (duplicateTasks.length === 0) {
         // Alternative: Look for any tasks missing Monday connection
@@ -463,21 +357,13 @@ export default function SystemOverviewPage() {
           task.created_date
         );
         
-        console.log(`🔍 ALTERNATIVE: Found ${alternativeDuplicates.length} tasks with no Monday connection (including protected)`);
-        
         if (alternativeDuplicates.length > 0) {
-          console.log('🚨 SAMPLE ALTERNATIVE DUPLICATES:');
-          alternativeDuplicates.slice(0, 10).forEach((task, i) => {
-            console.log(`${i+1}. "${task.title}" - ID: ${task.id}, Created: ${task.created_date}, isDemo: ${task.isDemo}, isProtected: ${task.isProtected}, isFromMonday: ${task.isFromMonday}`);
-          });
-          
           if (window.confirm(`❓ נמצאו ${alternativeDuplicates.length} משימות ללא חיבור Monday (כולל מוגנות). האם למחוק גם משימות מוגנות?`)) {
             let deletedCount = 0;
             for (const task of alternativeDuplicates) {
               await Task.delete(task.id);
               deletedCount++;
             }
-            console.log(`✅ Deleted ${deletedCount} unconnected tasks (including protected)`);
             alert(`✅ נמחקו ${deletedCount} משימות לא מחוברות (כולל מוגנות)`);
             await loadData();
           }
@@ -486,12 +372,6 @@ export default function SystemOverviewPage() {
         }
         return;
       }
-      
-      // Show sample before deletion
-      console.log('🚨 SAMPLE DUPLICATE TASKS TO DELETE:');
-      duplicateTasks.slice(0, 10).forEach((task, i) => {
-        console.log(`${i+1}. "${task.title}" - ID: ${task.id}, Board: ${task.monday_board_id}, Item: ${task.monday_item_id}, isFromMonday: ${task.isFromMonday}, isProtected: ${task.isProtected}`);
-      });
       
       const finalConfirm = window.confirm(`⚠️ נמצאו ${duplicateTasks.length} משימות כפולות. חלקן מסומנות כמוגנות. האם למחוק בכל זאת?`);
       if (!finalConfirm) {
@@ -506,7 +386,6 @@ export default function SystemOverviewPage() {
         deletedCount++;
       }
       
-      console.log(`✅ Deleted ${deletedCount} duplicate tasks (including protected ones)`);
       alert(`✅ נמחקו ${deletedCount} משימות כפולות (כולל מוגנות)`);
       
       await loadData();
@@ -523,8 +402,6 @@ export default function SystemOverviewPage() {
     
     setIsLoading(true);
     try {
-      console.log('🧹 Starting orphaned tasks cleanup...');
-      
       // Find tasks without any Monday connection and no special flags
       const orphanedTasks = await Task.filter({
         monday_board_id: null,
@@ -534,18 +411,10 @@ export default function SystemOverviewPage() {
         isFromMonday: { $ne: true }
       });
       
-      console.log(`🔍 Found ${orphanedTasks.length} orphaned tasks to delete`);
-      
       if (orphanedTasks.length === 0) {
         alert('לא נמצאו משימות יתומות למחיקה');
         return;
       }
-      
-      // Show sample before deletion
-      console.log('🚨 SAMPLE ORPHANED TASKS TO DELETE:');
-      orphanedTasks.slice(0, 10).forEach((task, i) => {
-        console.log(`${i+1}. "${task.title}" - ID: ${task.id}, Created: ${task.created_date}`);
-      });
       
       let deletedCount = 0;
       for (const task of orphanedTasks) {
@@ -553,7 +422,6 @@ export default function SystemOverviewPage() {
         deletedCount++;
       }
       
-      console.log(`✅ Deleted ${deletedCount} orphaned tasks`);
       alert(`✅ נמחקו ${deletedCount} משימות יתומות`);
       
       await loadData();
