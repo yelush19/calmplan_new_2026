@@ -503,6 +503,8 @@ export default function HomePage() {
               <KanbanView
                 tasks={filterBySearch([...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])])}
                 onTaskStatusChange={handleStatusChange}
+                onDeleteTask={(taskId) => handleDeleteTask({ id: taskId })}
+                onEditTask={handleEditTask}
               />
             ) : (
               <AnimatePresence mode="wait">

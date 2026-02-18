@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, User, Calendar, Briefcase, Home, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, User, Calendar, Briefcase, Home, Trash2, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { STATUS_CONFIG } from '@/config/processTemplates';
@@ -37,7 +37,7 @@ const getPriorityColor = (priority) => {
   return colors[priority] || "border-r-4 border-gray-300";
 };
 
-const TaskCard = ({ task, index, onStatusChange, onDelete }) => {
+const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit }) => {
   const [expanded, setExpanded] = useState(false);
   const statusCfg = STATUS_CONFIG[task?.status] || STATUS_CONFIG.not_started;
 
@@ -142,19 +142,34 @@ const TaskCard = ({ task, index, onStatusChange, onDelete }) => {
                   </SelectContent>
                 </Select>
 
-                {onDelete && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-gray-400 hover:text-red-500"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(task.id);
-                    }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                )}
+                <div className="flex items-center gap-1">
+                  {onEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-gray-400 hover:text-blue-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(task);
+                      }}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-gray-400 hover:text-red-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(task.id);
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -164,7 +179,7 @@ const TaskCard = ({ task, index, onStatusChange, onDelete }) => {
   );
 };
 
-export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask }) {
+export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask, onEditTask }) {
   const [board, setBoard] = useState(columnsConfig);
 
   useEffect(() => {
@@ -256,6 +271,7 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                       index={index}
                       onStatusChange={onTaskStatusChange}
                       onDelete={onDeleteTask}
+                      onEdit={onEditTask}
                     />
                   ))}
                   {provided.placeholder}

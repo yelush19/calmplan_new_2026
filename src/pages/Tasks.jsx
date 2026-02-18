@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2,
+  Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2, Pencil,
   ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink,
   ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X
 } from "lucide-react";
+import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { format, parseISO, isValid, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -104,6 +105,7 @@ export default function TasksPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [view, setView] = useState("kanban");
   const [isClearing, setIsClearing] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
   const [clientMap, setClientMap] = useState({});
   const [timeTab, setTimeTab] = useState('active');
   const [contextFilter, setContextFilter] = useState('all');
@@ -284,6 +286,18 @@ export default function TasksPage() {
       } catch (error) {
         console.error("Error deleting task:", error);
       }
+    }
+  };
+
+  const handleEditTask = (task) => setEditingTask(task);
+
+  const handleSaveTask = async (updatedData) => {
+    try {
+      await Task.update(editingTask.id, updatedData);
+      setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...updatedData } : t));
+      setEditingTask(null);
+    } catch (error) {
+      console.error("Error updating task:", error);
     }
   };
 
@@ -583,13 +597,29 @@ export default function TasksPage() {
                       </td>
                       {/* Actions */}
                       <td className="px-2 py-2">
-                        <button
-                          onClick={() => createNoteFromTask(task)}
-                          className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
-                          title="העבר לפתק"
-                        >
-                          <Pin className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            onClick={() => handleEditTask(task)}
+                            className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+                            title="עריכת משימה"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                            title="מחק משימה"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => createNoteFromTask(task)}
+                            className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
+                            title="העבר לפתק"
+                          >
+                            <Pin className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -603,6 +633,7 @@ export default function TasksPage() {
           tasks={filteredTasks}
           onTaskStatusChange={handleStatusChange}
           onDeleteTask={handleDeleteTask}
+          onEditTask={handleEditTask}
           formatDate={formatDate}
           getPriorityColor={(p) => priorityConfig[p]?.color || priorityConfig.medium.color}
           getStatusColor={(s) => statusConfig[s]?.color || statusConfig.not_started.color}
@@ -610,6 +641,14 @@ export default function TasksPage() {
           getPriorityText={(p) => priorityConfig[p]?.text || p}
         />
       )}
+
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleSaveTask}
+        onDelete={(task) => { setEditingTask(null); handleDeleteTask(task.id); }}
+      />
 
       {/* Bottom: clear all */}
       {tasks.length > 0 && (

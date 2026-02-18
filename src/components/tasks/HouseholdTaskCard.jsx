@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Clock, Zap, Brain, ShieldAlert, Users, Repeat } from 'lucide-react';
+import { Clock, Zap, Brain, ShieldAlert, Users, Repeat, Pencil, Trash2 } from 'lucide-react';
 
 const categoryColors = {
     cleaning: 'border-l-4 border-cyan-500 bg-cyan-50',
@@ -44,7 +44,7 @@ const roleDisplayName = {
     anyone: "כולם"
 };
 
-export default function HouseholdTaskCard({ task, index, onStatusChange, onAssign, onClick }) {
+export default function HouseholdTaskCard({ task, index, onStatusChange, onAssign, onClick, onEdit, onDelete }) {
     if (!task) return null;
 
     const getMainCategory = (category) => {
@@ -120,10 +120,22 @@ export default function HouseholdTaskCard({ task, index, onStatusChange, onAssig
                                         </Badge>
                                     ))}
                                 </div>
-                                <Button onClick={() => onAssign(task)} size="sm" className="bg-primary hover:bg-primary/90 text-white">
-                                    <Users className="w-4 h-4 ml-2" />
-                                    הקצה למישהו
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    {onEdit && (
+                                        <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1.5 rounded hover:bg-blue-50 transition-colors" title="עריכת משימה">
+                                            <Pencil className="w-4 h-4 text-gray-400 hover:text-blue-600" />
+                                        </button>
+                                    )}
+                                    {onDelete && (
+                                        <button onClick={(e) => { e.stopPropagation(); onDelete(task); }} className="p-1.5 rounded hover:bg-red-50 transition-colors" title="מחק משימה">
+                                            <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
+                                        </button>
+                                    )}
+                                    <Button onClick={() => onAssign(task)} size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                                        <Users className="w-4 h-4 ml-2" />
+                                        הקצה למישהו
+                                    </Button>
+                                </div>
                             </div>
 
                             {task.safety && (

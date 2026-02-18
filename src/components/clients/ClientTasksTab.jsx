@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar, Clock, CheckCircle, AlertCircle, Search, Filter } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertCircle, Search, Filter, Pencil, Trash2 } from 'lucide-react';
+import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
@@ -50,10 +52,12 @@ const statusColors = {
 };
 
 export default function ClientTasksTab({ clientId, clientName }) {
+  const { confirm, ConfirmDialogComponent } = useConfirm();
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingTask, setEditingTask] = useState(null);
 
   useEffect(() => {
     loadClientTasks();
@@ -70,6 +74,30 @@ export default function ClientTasksTab({ clientId, clientName }) {
       setTasks([]);
     }
     setIsLoading(false);
+  };
+
+  const handleEditTask = (task) => setEditingTask(task);
+
+  const handleDeleteTask = async (task) => {
+    const ok = await confirm({ description: `למחוק את "${task.title}"?` });
+    if (ok) {
+      try {
+        await Task.delete(task.id);
+        setTasks(prev => prev.filter(t => t.id !== task.id));
+      } catch (error) {
+        console.error("Error deleting task:", error);
+      }
+    }
+  };
+
+  const handleSaveTask = async (updatedData) => {
+    try {
+      await Task.update(editingTask.id, updatedData);
+      setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...updatedData } : t));
+      setEditingTask(null);
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
   };
 
   const filteredTasks = tasks.filter(task => {
@@ -216,21 +244,37 @@ export default function ClientTasksTab({ clientId, clientName }) {
                       )}
                     </div>
                   </div>
-                  {task.external_app_link && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(task.external_app_link, '_blank')}
-                    >
-                      פתח ב-Monday
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handleEditTask(task)} className="p-1.5 rounded hover:bg-blue-50 transition-colors" title="עריכת משימה">
+                      <Pencil className="w-4 h-4 text-gray-400 hover:text-blue-600" />
+                    </button>
+                    <button onClick={() => handleDeleteTask(task)} className="p-1.5 rounded hover:bg-red-50 transition-colors" title="מחק משימה">
+                      <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
+                    </button>
+                    {task.external_app_link && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(task.external_app_link, '_blank')}
+                      >
+                        פתח ב-Monday
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
           ))
         )}
       </div>
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+      />
+      {ConfirmDialogComponent}
     </div>
   );
 }
