@@ -7,7 +7,7 @@ import {
   Home, Brain, Briefcase, CheckSquare, Target, BookCheck, DollarSign,
   BarChart3, Settings, Menu, X, Users, Monitor, Scaling,
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, Database,
-  ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote, ChevronLeft, ChevronRight
+  ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote, ChevronLeft, ChevronRight, Plus
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import {
@@ -19,6 +19,7 @@ import {
 import TimeAwareness from "@/components/ui/TimeAwareness";
 import StickyNotes from "@/components/StickyNotes";
 import GlobalSearch from "@/components/GlobalSearch";
+import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
 import useAutoReminders from "@/hooks/useAutoReminders";
 
 const navigationGroups = [
@@ -138,6 +139,7 @@ export default function Layout({ children, currentPageName }) {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   useAutoReminders();
 
   useEffect(() => {
@@ -445,6 +447,15 @@ export default function Layout({ children, currentPageName }) {
 
       {isMobileMenuOpen && <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)}></div>}
 
+      {/* Floating Quick Add Task FAB */}
+      <button
+        onClick={() => setShowQuickAdd(true)}
+        className="fixed bottom-6 left-20 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-105"
+        title="משימה מהירה"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
       {/* Floating Sticky Notes FAB */}
       <button
         onClick={() => setNotesOpen(!notesOpen)}
@@ -457,6 +468,13 @@ export default function Layout({ children, currentPageName }) {
       >
         {notesOpen ? <X className="w-5 h-5" /> : <StickyNote className="w-5 h-5" />}
       </button>
+
+      {/* Global Quick Add Task Dialog */}
+      <QuickAddTaskDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onCreated={() => {}}
+      />
 
       {/* Floating Sticky Notes Panel - overlay */}
       {notesOpen && (
