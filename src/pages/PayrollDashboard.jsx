@@ -16,6 +16,8 @@ import { he } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
+import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   PAYROLL_SERVICES,
   ADDITIONAL_SERVICES,
@@ -48,6 +50,8 @@ export default function PayrollDashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
   const [viewMode, setViewMode] = useState('kanban');
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingTask, setEditingTask] = useState(null);
+  const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
@@ -227,6 +231,33 @@ export default function PayrollDashboardPage() {
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, attachments } : t));
   }, []);
 
+  const handleEditTask = async (taskId, updatedData) => {
+    try {
+      await Task.update(taskId, updatedData);
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updatedData } : t));
+    } catch (err) {
+      console.error('שגיאה בעדכון משימה:', err);
+    }
+  };
+
+  const handleDeleteTask = async (task) => {
+    setEditingTask(null);
+    const ok = await confirm({
+      title: 'מחיקת משימה',
+      description: `האם למחוק את המשימה "${task.title}" עבור ${task.client_name || ''}?`,
+      confirmText: 'מחק',
+      cancelText: 'ביטול',
+    });
+    if (ok) {
+      try {
+        await Task.delete(task.id);
+        setTasks(prev => prev.filter(t => t.id !== task.id));
+      } catch (err) {
+        console.error('שגיאה במחיקת משימה:', err);
+      }
+    }
+  };
+
   const handleMonthChange = (dir) => {
     setSelectedMonth(c => dir === 'prev' ? subMonths(c, 1) : addMonths(c, 1));
   };
@@ -347,6 +378,8 @@ export default function PayrollDashboardPage() {
                   onSubTaskChange={handleSubTaskChange}
                   onAttachmentUpdate={handleAttachmentUpdate}
                   getClientIds={getPayrollIds}
+                  onEdit={setEditingTask}
+                  onDelete={handleDeleteTask}
                 />
               );
             })}
@@ -359,6 +392,15 @@ export default function PayrollDashboardPage() {
           <p className="text-gray-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
         </Card>
       )}
+
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleEditTask}
+        onDelete={handleDeleteTask}
+      />
+      {ConfirmDialogComponent}
     </div>
   );
 }

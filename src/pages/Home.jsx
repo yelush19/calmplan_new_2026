@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import StickyNotes from "@/components/StickyNotes";
 import KanbanView from "../components/tasks/KanbanView";
+import TaskEditDialog from "@/components/tasks/TaskEditDialog";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { Pencil, Trash2 } from "lucide-react";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -70,6 +73,8 @@ export default function HomePage() {
   const [isSavingQuickTask, setIsSavingQuickTask] = useState(false);
   const [focusView, setFocusView] = useState('kanban');
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingTask, setEditingTask] = useState(null);
+  const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
 
@@ -237,6 +242,33 @@ export default function HomePage() {
     setIsSavingQuickTask(false);
   };
 
+  const handleEditTask = async (taskId, updatedData) => {
+    try {
+      await Task.update(taskId, updatedData);
+      loadData();
+    } catch (err) {
+      console.error('שגיאה בעדכון משימה:', err);
+    }
+  };
+
+  const handleDeleteTask = async (task) => {
+    setEditingTask(null);
+    const ok = await confirm({
+      title: 'מחיקת משימה',
+      description: `האם למחוק את המשימה "${task.title}"?`,
+      confirmText: 'מחק',
+      cancelText: 'ביטול',
+    });
+    if (ok) {
+      try {
+        await Task.delete(task.id);
+        loadData();
+      } catch (err) {
+        console.error('שגיאה במחיקת משימה:', err);
+      }
+    }
+  };
+
   if (isLoading || !data) {
     return (
       <div className="space-y-6 p-6">
@@ -272,7 +304,7 @@ export default function HomePage() {
         return filtered.length === 0 ? (
           <EmptyState icon={<CheckCircle className="w-10 h-10 text-emerald-400" />} text="אין משימות באיחור" />
         ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDeadlineContext />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} showDeadlineContext />
         );
       }
       case 'today': {
@@ -280,7 +312,7 @@ export default function HomePage() {
         return filtered.length === 0 ? (
           <EmptyState icon={<Sparkles className="w-10 h-10 text-emerald-400" />} text="אין משימות להיום - כל הכבוד!" />
         ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDeadlineContext />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} showDeadlineContext />
         );
       }
       case 'upcoming': {
@@ -288,7 +320,7 @@ export default function HomePage() {
         return filtered.length === 0 ? (
           <EmptyState icon={<Clock className="w-10 h-10 text-gray-300" />} text="אין משימות ל-3 ימים הקרובים" />
         ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDate />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} showDate />
         );
       }
       case 'events': {
@@ -316,7 +348,7 @@ export default function HomePage() {
         return filtered.length === 0 ? (
           <EmptyState icon={<CreditCard className="w-10 h-10 text-yellow-300" />} text="אין משימות ממתינות לתשלום" />
         ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showPaymentDate />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} showPaymentDate />
         );
       }
       default:
@@ -574,6 +606,17 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
+      {/* Task Edit Dialog */}
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleEditTask}
+        onDelete={handleDeleteTask}
+      />
+
+      {ConfirmDialogComponent}
+
       {/* FAB */}
       <button
         onClick={() => setShowQuickAdd(true)}
@@ -595,7 +638,7 @@ function EmptyState({ icon, text }) {
   );
 }
 
-function TaskList({ tasks, onStatusChange, onPaymentDateChange, showDeadlineContext, showDate, showPaymentDate }) {
+function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, showDeadlineContext, showDate, showPaymentDate }) {
   const [showAll, setShowAll] = useState(false);
   const visibleTasks = showAll ? tasks : tasks.slice(0, 15);
 
@@ -607,6 +650,7 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, showDeadlineCont
           task={task}
           onStatusChange={onStatusChange}
           onPaymentDateChange={onPaymentDateChange}
+          onEdit={onEdit}
           showDeadlineContext={showDeadlineContext}
           showDate={showDate}
           showPaymentDate={showPaymentDate}
@@ -622,7 +666,7 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, showDeadlineCont
   );
 }
 
-function TaskRow({ task, onStatusChange, onPaymentDateChange, showDeadlineContext, showDate, showPaymentDate }) {
+function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, showDeadlineContext, showDate, showPaymentDate }) {
   const ctx = getTaskContext(task);
   const isWork = ctx === 'work';
   const isHome = ctx === 'home';
@@ -684,6 +728,15 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, showDeadlineContex
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        {onEdit && (
+          <button
+            onClick={() => onEdit(task)}
+            className="p-1 rounded hover:bg-gray-200 transition-colors"
+            title="ערוך משימה"
+          >
+            <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+          </button>
+        )}
         {/* Payment due date input - shows for reported_waiting_for_payment */}
         {task.status === 'reported_waiting_for_payment' && onPaymentDateChange && (
           <input

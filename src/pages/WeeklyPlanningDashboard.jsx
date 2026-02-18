@@ -8,9 +8,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Calendar, Clock, CheckCircle, Target,
   Brain, TrendingUp, Users, Briefcase, ChevronLeft, ChevronRight,
-  Sparkles, ArrowRight, ChevronDown, ChevronUp, Search
+  Sparkles, ArrowRight, ChevronDown, ChevronUp, Search, Pencil, Trash2
 } from 'lucide-react';
 import { Task, Client } from '@/api/entities';
+import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import {
@@ -111,6 +113,8 @@ export default function WeeklyPlanningDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0); // 0=this week, 1=next, -1=prev
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingTask, setEditingTask] = useState(null);
+  const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
 
@@ -255,6 +259,33 @@ export default function WeeklyPlanningDashboard() {
 
     return recs;
   }, [stats, dailyTasks, weekOffset]);
+
+  const handleEditTask = async (taskId, updatedData) => {
+    try {
+      await Task.update(taskId, updatedData);
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updatedData } : t));
+    } catch (err) {
+      console.error('שגיאה בעדכון משימה:', err);
+    }
+  };
+
+  const handleDeleteTask = async (task) => {
+    setEditingTask(null);
+    const ok = await confirm({
+      title: 'מחיקת משימה',
+      description: `האם למחוק את המשימה "${task.title}"?`,
+      confirmText: 'מחק',
+      cancelText: 'ביטול',
+    });
+    if (ok) {
+      try {
+        await Task.delete(task.id);
+        setTasks(prev => prev.filter(t => t.id !== task.id));
+      } catch (err) {
+        console.error('שגיאה במחיקת משימה:', err);
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -455,7 +486,7 @@ export default function WeeklyPlanningDashboard() {
                         return (
                           <div
                             key={task.id}
-                            className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                            className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${
                               isCompleted
                                 ? 'bg-gray-50 opacity-50'
                                 : 'bg-white border border-gray-100'
@@ -471,6 +502,13 @@ export default function WeeklyPlanningDashboard() {
                               )}
                             </div>
                             <Badge className={`text-xs ${pri.color}`}>{pri.label}</Badge>
+                            <button
+                              onClick={() => setEditingTask(task)}
+                              className="p-1 rounded hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100"
+                              title="ערוך משימה"
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-gray-400" />
+                            </button>
                             {isCompleted && (
                               <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                             )}
@@ -507,6 +545,15 @@ export default function WeeklyPlanningDashboard() {
           </CardContent>
         </Card>
       )}
+
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleEditTask}
+        onDelete={handleDeleteTask}
+      />
+      {ConfirmDialogComponent}
     </div>
   );
 }
