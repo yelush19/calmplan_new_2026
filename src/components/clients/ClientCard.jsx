@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard, BookUser, FolderOpen } from 'lucide-react';
+import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard, BookUser, FolderOpen, Receipt } from 'lucide-react';
+import TaxInfoDialog from '@/components/clients/TaxInfoDialog';
 
 const serviceTypeLabels = {
     bookkeeping: 'הנהלת חשבונות',
@@ -98,6 +99,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [accountsSummary, setAccountsSummary] = useState(null);
   const [accountantName, setAccountantName] = useState(null);
+  const [showTaxInfo, setShowTaxInfo] = useState(false);
 
   // Load accounts summary and accountant on mount
   useEffect(() => {
@@ -395,7 +397,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         )}
       </CardContent>
       
-      <CardFooter className="grid grid-cols-7 gap-1 p-2 border-t bg-neutral-light/20 flex-shrink-0">
+      <CardFooter className="grid grid-cols-4 gap-1 p-2 border-t bg-neutral-light/20 flex-shrink-0">
           <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
             <Edit className="w-3 h-3 ml-1" />
             עריכה
@@ -407,6 +409,10 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
           <Button variant="ghost" size="sm" onClick={() => onSelectFiles?.(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
             <FolderOpen className="w-3 h-3 ml-1" />
             קבצים
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowTaxInfo(true)} className="h-8 text-xs text-neutral-medium hover:bg-emerald-50 hover:text-emerald-700">
+            <Receipt className="w-3 h-3 ml-1" />
+            פרטי מס
           </Button>
           <Button variant="ghost" size="sm" onClick={() => onSelectAccounts(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
             <Building className="w-3 h-3 ml-1" />
@@ -425,6 +431,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
               מחיקה
           </Button>
       </CardFooter>
+      <TaxInfoDialog client={client} open={showTaxInfo} onClose={() => setShowTaxInfo(false)} />
     </Card>
   );
 }

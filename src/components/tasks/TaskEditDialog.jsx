@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Pencil, Save, X, Plus, Trash2, CheckSquare, Square,
   AlertTriangle, ArrowUp, ArrowRight, ArrowDown, ListChecks, StickyNote,
-  Calendar, Clock, Timer, Wand2
+  Calendar, Clock, Timer, Wand2, Paperclip
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import { differenceInDays, format, parseISO, isValid } from 'date-fns';
 import { getScheduledStartForCategory } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
 import { toast } from 'sonner';
 
 const PRIORITY_OPTIONS = [
@@ -326,6 +327,23 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
                 <Plus className="w-3.5 h-3.5" />
               </Button>
             </div>
+          </div>
+
+          {/* File Attachments */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium flex items-center gap-1.5">
+              <Paperclip className="w-3.5 h-3.5" />
+              קבצים מצורפים
+            </Label>
+            <TaskFileAttachments
+              taskId={task.id}
+              attachments={task.attachments || []}
+              onUpdate={(updated) => {
+                setEditData(prev => ({ ...prev, attachments: updated }));
+              }}
+              clientId={task.client_id}
+              clientName={task.client_name}
+            />
           </div>
 
           {/* Client info (read-only) */}
