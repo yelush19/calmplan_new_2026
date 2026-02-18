@@ -25,10 +25,12 @@ const navigationGroups = [
   {
     title: "LitayHub",
     icon: Home,
+    color: 'emerald', // group accent color
     items: [
       {
         name: "ניהול זמן וריכוז",
         icon: Eye,
+        color: 'sky',
         children: [
           { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
           { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
@@ -41,10 +43,12 @@ const navigationGroups = [
       {
         name: "חשבות שכר והנה\"ח",
         icon: Calculator,
+        color: 'violet',
         children: [
           {
             name: "שכר ודיווחי שכר",
             icon: Calculator,
+            color: 'violet',
             children: [
               { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
               { name: "דיווחים מרכזים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
@@ -53,6 +57,7 @@ const navigationGroups = [
           {
             name: "הנה\"ח ודיווחי מיסים",
             icon: BookCheck,
+            color: 'blue',
             children: [
               { name: "דיווחי מיסים חודשיים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
               { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
@@ -65,6 +70,7 @@ const navigationGroups = [
       {
         name: "אוטומציות ויצירת משימות חוזרות",
         icon: Zap,
+        color: 'amber',
         children: [
           { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
           { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
@@ -73,6 +79,7 @@ const navigationGroups = [
       {
         name: "מרכז לקוחות",
         icon: Users,
+        color: 'orange',
         children: [
           { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
           { name: "לידים", href: createPageUrl("Leads"), icon: Target },
@@ -83,16 +90,18 @@ const navigationGroups = [
       {
         name: "ספקים ונותני שירות",
         icon: BookUser,
+        color: 'teal',
         children: [
           { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
         ],
       },
-      { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
+      { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban, color: 'rose' },
     ],
   },
   {
     title: "LENA - בית וחיים",
     icon: BookHeart,
+    color: 'pink',
     items: [
       { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
       { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
@@ -102,12 +111,27 @@ const navigationGroups = [
   {
     title: "מערכת",
     icon: Settings,
+    color: 'gray',
     items: [
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
     ],
   },
 ];
+
+// Color mapping for section-specific styling
+const SECTION_COLORS = {
+  sky: { bg: 'bg-sky-50', border: 'border-r-sky-400', icon: 'text-sky-600', activeBg: 'bg-sky-500', dot: 'bg-sky-400' },
+  violet: { bg: 'bg-violet-50', border: 'border-r-violet-400', icon: 'text-violet-600', activeBg: 'bg-violet-500', dot: 'bg-violet-400' },
+  blue: { bg: 'bg-blue-50', border: 'border-r-blue-400', icon: 'text-blue-600', activeBg: 'bg-blue-500', dot: 'bg-blue-400' },
+  amber: { bg: 'bg-amber-50', border: 'border-r-amber-400', icon: 'text-amber-600', activeBg: 'bg-amber-500', dot: 'bg-amber-400' },
+  orange: { bg: 'bg-orange-50', border: 'border-r-orange-400', icon: 'text-orange-600', activeBg: 'bg-orange-500', dot: 'bg-orange-400' },
+  teal: { bg: 'bg-teal-50', border: 'border-r-teal-400', icon: 'text-teal-600', activeBg: 'bg-teal-500', dot: 'bg-teal-400' },
+  rose: { bg: 'bg-rose-50', border: 'border-r-rose-400', icon: 'text-rose-600', activeBg: 'bg-rose-500', dot: 'bg-rose-400' },
+  emerald: { bg: 'bg-emerald-50', border: 'border-r-emerald-400', icon: 'text-emerald-600', activeBg: 'bg-emerald-500', dot: 'bg-emerald-400' },
+  pink: { bg: 'bg-pink-50', border: 'border-r-pink-400', icon: 'text-pink-600', activeBg: 'bg-pink-500', dot: 'bg-pink-400' },
+  gray: { bg: 'bg-gray-50', border: 'border-r-gray-400', icon: 'text-gray-600', activeBg: 'bg-gray-500', dot: 'bg-gray-400' },
+};
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -249,68 +273,75 @@ export default function Layout({ children, currentPageName }) {
               <GlobalSearch />
             </div>
 
-            <nav className="flex-1 p-4 overflow-y-auto">
+            <nav className="flex-1 p-3 overflow-y-auto">
               <Accordion type="single" collapsible className="w-full" defaultValue={activeGroupTitle || navigationGroups[0].title}>
-                {navigationGroups.map((group) => (
-                  <AccordionItem value={group.title} key={group.title} className="border-none mb-2 rounded-xl overflow-hidden bg-muted/30">
-                    <AccordionTrigger className="p-3 font-semibold text-foreground hover:no-underline hover:bg-muted/50 rounded-t-lg">
+                {navigationGroups.map((group) => {
+                  const groupColor = SECTION_COLORS[group.color] || SECTION_COLORS.emerald;
+                  const groupHasActive = group.items.some(item => isNavItemActive(item));
+                  return (
+                  <AccordionItem value={group.title} key={group.title} className="border-none mb-2 rounded-xl overflow-hidden">
+                    <AccordionTrigger className={`p-3 font-bold text-foreground hover:no-underline rounded-t-lg transition-colors ${groupHasActive ? groupColor.bg : 'hover:bg-muted/50'}`}>
                       <div className="flex items-center gap-3">
-                        <group.icon className="w-5 h-5 text-primary" />
-                        <span>{group.title}</span>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${groupHasActive ? groupColor.activeBg : 'bg-gray-200'}`}>
+                          <group.icon className={`w-4 h-4 ${groupHasActive ? 'text-white' : 'text-gray-500'}`} />
+                        </div>
+                        <span className="text-sm">{group.title}</span>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="pt-2 pb-1 px-1 space-y-1 bg-card">
+                    <AccordionContent className="pt-1 pb-1 px-1 space-y-0.5 bg-card">
                       {group.items.map((item) => {
                         const hasActiveChild = isNavItemActive(item);
+                        const sectionColor = SECTION_COLORS[item.color] || groupColor;
 
                         if (item.children) {
                           return (
                             <Accordion
                               type="single"
                               collapsible
-                              className="w-full pr-2"
+                              className="w-full"
                               defaultValue={hasActiveChild ? item.name : undefined}
                               key={item.name}
                             >
-                              <AccordionItem value={item.name} className="border-none rounded-xl overflow-hidden bg-muted/20">
-                                <AccordionTrigger className="p-3 font-semibold text-foreground hover:no-underline hover:bg-muted/50 rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <item.icon className="w-5 h-5 text-primary" />
-                                    <span>{item.name}</span>
+                              <AccordionItem value={item.name} className={`border-none rounded-lg overflow-hidden ${hasActiveChild ? 'border-r-2 ' + sectionColor.border : ''}`}>
+                                <AccordionTrigger className={`p-2.5 pr-3 font-semibold text-sm hover:no-underline rounded-lg transition-colors ${hasActiveChild ? sectionColor.bg : 'hover:bg-muted/40'}`}>
+                                  <div className="flex items-center gap-2.5">
+                                    <div className={`w-2 h-2 rounded-full ${hasActiveChild ? sectionColor.dot : 'bg-gray-300'}`} />
+                                    <item.icon className={`w-4 h-4 ${hasActiveChild ? sectionColor.icon : 'text-gray-400'}`} />
+                                    <span className={hasActiveChild ? 'text-gray-900' : 'text-gray-600'}>{item.name}</span>
                                   </div>
                                 </AccordionTrigger>
-                                <AccordionContent className="pt-2 pb-1 px-1 space-y-1 bg-card">
+                                <AccordionContent className="pt-1 pb-1 px-1 space-y-0.5">
                                   {item.children.map((childItem) => {
+                                    const childColor = SECTION_COLORS[childItem.color] || sectionColor;
                                     if (childItem.children) {
                                       const hasActiveSubChild = isNavItemActive(childItem);
                                       return (
                                         <Accordion
                                           type="single"
                                           collapsible
-                                          className="w-full pr-1"
+                                          className="w-full"
                                           defaultValue={hasActiveSubChild ? childItem.name : undefined}
                                           key={childItem.name}
                                         >
-                                          <AccordionItem value={childItem.name} className="border-none rounded-lg overflow-hidden bg-muted/10">
-                                            <AccordionTrigger className="p-2.5 pr-4 text-sm font-semibold text-foreground hover:no-underline hover:bg-muted/40 rounded-lg">
+                                          <AccordionItem value={childItem.name} className="border-none rounded-lg overflow-hidden">
+                                            <AccordionTrigger className={`p-2 pr-5 text-xs font-semibold hover:no-underline rounded-lg transition-colors ${hasActiveSubChild ? childColor.bg : 'hover:bg-muted/30'}`}>
                                               <div className="flex items-center gap-2">
-                                                <childItem.icon className="w-4 h-4 text-primary/70" />
-                                                <span>{childItem.name}</span>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${hasActiveSubChild ? childColor.dot : 'bg-gray-200'}`} />
+                                                <childItem.icon className={`w-3.5 h-3.5 ${hasActiveSubChild ? childColor.icon : 'text-gray-400'}`} />
+                                                <span className={hasActiveSubChild ? 'text-gray-800' : 'text-gray-500'}>{childItem.name}</span>
                                               </div>
                                             </AccordionTrigger>
-                                            <AccordionContent className="pt-1 pb-1 px-1 space-y-0.5">
+                                            <AccordionContent className="pt-0.5 pb-1 px-1 space-y-0.5">
                                               {childItem.children.map((subItem) => {
                                                 const isActive = location.pathname.startsWith(subItem.href);
-                                                const subClasses = `group flex items-center pr-8 pl-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'text-foreground hover:bg-primary/10'}`;
-                                                const subIconClasses = `ml-2 h-3.5 w-3.5 ${isActive ? 'text-primary-foreground' : 'text-primary/70'}`;
                                                 return (
                                                   <Link
                                                     key={subItem.name}
                                                     to={subItem.href}
                                                     onClick={() => setIsMobileMenuOpen(false)}
-                                                    className={subClasses}
+                                                    className={`group flex items-center pr-8 pl-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${isActive ? childColor.activeBg + ' text-white shadow-sm' : 'text-gray-600 hover:' + childColor.bg}`}
                                                   >
-                                                    <subItem.icon className={subIconClasses} />
+                                                    <subItem.icon className={`ml-2 h-3.5 w-3.5 ${isActive ? 'text-white' : childColor.icon}`} />
                                                     {subItem.name}
                                                   </Link>
                                                 );
@@ -322,33 +353,14 @@ export default function Layout({ children, currentPageName }) {
                                     }
 
                                     const isActive = location.pathname.startsWith(childItem.href);
-                                    const itemClasses = `group flex items-center pr-6 pl-3 py-2.5 text-base font-medium rounded-lg transition-all duration-300 ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'text-foreground hover:bg-primary/10'}`;
-                                    const iconClasses = `ml-3 h-4 w-4 ${isActive ? 'text-primary-foreground' : 'text-primary/80'}`;
-
-                                    if (childItem.external) {
-                                      return (
-                                        <a
-                                          key={childItem.name}
-                                          href={childItem.href}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className={itemClasses}
-                                          onClick={() => setIsMobileMenuOpen(false)}
-                                        >
-                                          <childItem.icon className={iconClasses} />
-                                          {childItem.name}
-                                        </a>
-                                      );
-                                    }
-
                                     return (
                                       <Link
                                         key={childItem.name}
                                         to={childItem.href}
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className={itemClasses}
+                                        className={`group flex items-center pr-5 pl-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${isActive ? sectionColor.activeBg + ' text-white shadow-sm' : 'text-gray-600 hover:' + sectionColor.bg}`}
                                       >
-                                        <childItem.icon className={iconClasses} />
+                                        <childItem.icon className={`ml-2.5 h-4 w-4 ${isActive ? 'text-white' : sectionColor.icon}`} />
                                         {childItem.name}
                                       </Link>
                                     );
@@ -359,33 +371,15 @@ export default function Layout({ children, currentPageName }) {
                           );
                         } else {
                           const isActive = location.pathname.startsWith(item.href);
-                          const itemClasses = `group flex items-center pr-4 pl-3 py-2.5 text-base font-medium rounded-lg transition-all duration-300 ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'text-foreground hover:bg-primary/10'}`;
-                          const iconClasses = `ml-3 h-5 w-5 ${isActive ? 'text-primary-foreground' : 'text-primary/80'}`;
-
-                          if (item.external) {
-                            return (
-                              <a
-                                key={item.name}
-                                href={item.href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={itemClasses}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                              >
-                                <item.icon className={iconClasses} />
-                                {item.name}
-                              </a>
-                            );
-                          }
-
                           return (
                             <Link
                               key={item.name}
                               to={item.href}
                               onClick={() => setIsMobileMenuOpen(false)}
-                              className={itemClasses}
+                              className={`group flex items-center pr-3 pl-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${isActive ? sectionColor.activeBg + ' text-white shadow-sm' : 'text-gray-600 hover:' + sectionColor.bg}`}
                             >
-                              <item.icon className={iconClasses} />
+                              <div className={`w-2 h-2 rounded-full ml-2.5 ${isActive ? 'bg-white' : sectionColor.dot}`} />
+                              <item.icon className={`ml-2.5 h-4 w-4 ${isActive ? 'text-white' : sectionColor.icon}`} />
                               {item.name}
                             </Link>
                           );
@@ -393,7 +387,8 @@ export default function Layout({ children, currentPageName }) {
                       })}
                     </AccordionContent>
                   </AccordionItem>
-                ))}
+                  );
+                })}
               </Accordion>
             </nav>
           </div>

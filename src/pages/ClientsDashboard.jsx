@@ -33,8 +33,8 @@ const COLUMN_GROUPS = [
     drillDownPage: 'TaxReportsDashboard',
     icon: Calculator,
     columns: [
-      { key: 'vat', label: 'מע"מ', categories: ['מע"מ', 'מע"מ 874', 'work_vat_reporting'], createCategory: 'מע"מ', createTitle: 'מע"מ' },
-      { key: 'tax_advances', label: 'מקדמות מ"ה', categories: ['מקדמות מס', 'work_tax_advances'], createCategory: 'מקדמות מס', createTitle: 'מקדמות מס הכנסה' },
+      { key: 'vat', label: 'מע"מ', categories: ['מע"מ', 'מע"מ 874', 'work_vat_reporting'], createCategory: 'מע"מ', createTitle: 'מע"מ', requiredServices: ['vat_reporting', 'bookkeeping', 'full_service'] },
+      { key: 'tax_advances', label: 'מקדמות מ"ה', categories: ['מקדמות מס', 'work_tax_advances'], createCategory: 'מקדמות מס', createTitle: 'מקדמות מס הכנסה', requiredServices: ['tax_advances', 'bookkeeping', 'full_service', 'tax_reports'] },
     ],
   },
   {
@@ -148,7 +148,7 @@ export default function ClientsDashboardPage() {
 
       setClients(
         (clientsData || [])
-          .filter(c => c.status === 'active')
+          .filter(c => c.status === 'active' || c.status === 'balance_sheet_only' || c.status === 'onboarding_pending')
           .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
       );
       // Post-filter: only show tasks belonging to the selected reporting month
@@ -195,6 +195,21 @@ export default function ClientsDashboardPage() {
     return client.service_types?.some(st =>
       ['payroll', 'full_service', 'bookkeeping'].includes(st)
     ) || client.reporting_info?.payroll_frequency === 'monthly';
+  };
+
+  // Check if client needs a specific service column
+  const clientNeedsService = (client, col, group) => {
+    // Payroll group: use existing payroll check
+    if (group.key === 'payroll') return hasPayroll(client);
+    // Columns with requiredServices (tax columns)
+    if (col.requiredServices) {
+      return (client.service_types || []).some(st => col.requiredServices.includes(st));
+    }
+    // Additional services with serviceCheck
+    if (group.serviceCheck && col.service) {
+      return (client.service_types || []).includes(col.service);
+    }
+    return true;
   };
 
   const filteredClients = useMemo(() => {
@@ -340,11 +355,14 @@ export default function ClientsDashboardPage() {
 
     for (const client of clients) {
       for (const group of COLUMN_GROUPS) {
-        // Skip payroll columns if client doesn't have payroll service
-        const isPayrollGroup = group.key === 'payroll';
-
         for (const col of group.columns) {
           try {
+            // Skip if service not relevant for this client
+            if (!clientNeedsService(client, col, group)) {
+              skipped++;
+              continue;
+            }
+
             // Check if task already exists
             const existing = clientDataMap[client.name]?.[col.key];
             if (existing && existing.length > 0) {
@@ -562,7 +580,6 @@ export default function ClientsDashboardPage() {
                 </thead>
                 <tbody>
                   {filteredClients.map((client, index) => {
-                    const clientHasPayroll = hasPayroll(client);
                     const data = clientDataMap[client.name] || {};
                     const allClientTasks = Object.values(data).flat();
                     const relevantTasks = allClientTasks.filter(t => t.status !== 'not_relevant');
@@ -606,21 +623,13 @@ export default function ClientsDashboardPage() {
                         {/* Process cells */}
                         {COLUMN_GROUPS.map(group =>
                           group.columns.map((col, colIdx) => {
-                            // Payroll N/A for non-payroll clients
-                            if (group.key === 'payroll' && !clientHasPayroll) {
+                            // Service not applicable for this client
+                            if (!clientNeedsService(client, col, group)) {
                               return (
                                 <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
-                                  <div className={`${STATUS_CONFIG.not_relevant.bg} text-gray-900 rounded py-1.5 text-xs font-bold mx-0.5`}>
-                                    {STATUS_CONFIG.not_relevant.label}
+                                  <div className={`${STATUS_CONFIG.not_relevant.bg} text-gray-400 rounded py-1.5 text-[10px] font-medium mx-0.5`}>
+                                    לא רלוונטי
                                   </div>
-                                </td>
-                              );
-                            }
-                            // Additional services: N/A if client doesn't have this service
-                            if (group.serviceCheck && col.service && !client.service_types?.includes(col.service)) {
-                              return (
-                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
-                                  <div className="bg-gray-50 text-gray-300 rounded py-1.5 text-[10px] mx-0.5">-</div>
                                 </td>
                               );
                             }
