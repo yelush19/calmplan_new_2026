@@ -20,6 +20,7 @@ import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns
 import { he } from 'date-fns/locale';
 import { isBimonthlyOffMonth, STATUS_CONFIG } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
+import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 
 // === Column Groups ===
 const COLUMN_GROUPS = [
@@ -288,8 +289,8 @@ export default function ClientsDashboardPage() {
 
     try {
       if (popover.task) {
-        // Update existing task
         await Task.update(popover.task.id, { status: newStatus });
+        syncNotesWithTaskStatus(popover.task.id, newStatus);
       } else {
         // Create new task - due_date in deadline month (M+1)
         const deadlineEnd = endOfMonth(addMonths(selectedMonth, 1));

@@ -13,10 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Pencil, Save, X, Plus, Trash2, CheckSquare, Square,
   AlertTriangle, ArrowUp, ArrowRight, ArrowDown, ListChecks, StickyNote,
-  Calendar, Clock, Timer
+  Calendar, Clock, Timer, Wand2
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import { differenceInDays, format, parseISO, isValid } from 'date-fns';
+import { getScheduledStartForCategory } from '@/config/automationRules';
+import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import { toast } from 'sonner';
 
 const PRIORITY_OPTIONS = [
   { value: 'urgent', label: 'דחוף', icon: AlertTriangle, color: 'text-red-600' },
@@ -104,6 +107,8 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
 
   const handleSave = () => {
     onSave(task.id, editData);
+    // Clean up linked sticky notes if task is now completed/cancelled
+    syncNotesWithTaskStatus(task.id, editData.status);
     onClose();
   };
 
@@ -195,10 +200,30 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
 
           {/* Execution Period: Start Date + Due Date */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" />
-              תקופת ביצוע
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                תקופת ביצוע
+              </Label>
+              {editData.due_date && task.category && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const startDate = getScheduledStartForCategory(task.category, editData.due_date);
+                    if (startDate) {
+                      setEditData(prev => ({ ...prev, scheduled_start: startDate }));
+                      toast.success('תאריך התחלה מולא מתבנית');
+                    } else {
+                      toast.info('לא נמצאה תבנית לקטגוריה זו');
+                    }
+                  }}
+                  className="text-[10px] text-violet-600 hover:text-violet-800 flex items-center gap-1 hover:bg-violet-50 px-1.5 py-0.5 rounded"
+                >
+                  <Wand2 className="w-3 h-3" />
+                  מלא מתבנית
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <span className="text-[10px] text-gray-500">תאריך התחלה</span>

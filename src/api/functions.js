@@ -8,6 +8,7 @@ import { base44, exportAllData, importAllData, clearAllData } from './base44Clie
 
 const entities = base44.entities;
 import { getDueDateForCategory, isClient874 } from '@/config/taxCalendar2026';
+import { getScheduledStartForCategory, DEFAULT_EXECUTION_PERIODS } from '@/config/automationRules';
 
 // ===== Monday.com Board API =====
 // Used by MondayIntegration page to list available boards
@@ -1314,6 +1315,7 @@ export const generateProcessTasks = async (params = {}) => {
           const calendarDueDate = getDueDateForCategory(template.category, client, currentMonth);
           const taskDueDate = calendarDueDate || `${currentYear}-${monthNum}-19`;
           try {
+            const scheduledStart = getScheduledStartForCategory(template.category, taskDueDate);
             await entities.Task.create({
               title,
               category: workCategory,
@@ -1323,6 +1325,7 @@ export const generateProcessTasks = async (params = {}) => {
               status: 'not_started',
               priority: 'high',
               due_date: taskDueDate,
+              scheduled_start: scheduledStart || undefined,
               is_recurring: true,
             });
             results.summary.tasksCreated++;
@@ -1358,6 +1361,8 @@ export const generateProcessTasks = async (params = {}) => {
         if (exists) continue;
 
         try {
+          const annualDue = `${currentYear}-05-31`;
+          const scheduledStart = getScheduledStartForCategory('הנהלת חשבונות', annualDue);
           await entities.Task.create({
             title,
             category: 'work_client_management',
@@ -1366,7 +1371,8 @@ export const generateProcessTasks = async (params = {}) => {
             client_id: client.id,
             status: 'not_started',
             priority: 'medium',
-            due_date: `${currentYear}-05-31`,
+            due_date: annualDue,
+            scheduled_start: scheduledStart || undefined,
             is_recurring: true,
           });
           results.summary.tasksCreated++;
@@ -1391,6 +1397,8 @@ export const generateProcessTasks = async (params = {}) => {
         if (exists) continue;
 
         try {
+          const reconDue = `${currentYear}-${monthNum}-25`;
+          const scheduledStart = getScheduledStartForCategory('התאמות', reconDue);
           await entities.Task.create({
             title,
             category: 'work_reconciliation',
@@ -1399,7 +1407,8 @@ export const generateProcessTasks = async (params = {}) => {
             client_id: client.id,
             status: 'not_started',
             priority: 'medium',
-            due_date: `${currentYear}-${monthNum}-25`,
+            due_date: reconDue,
+            scheduled_start: scheduledStart || undefined,
             is_recurring: true,
           });
           results.summary.tasksCreated++;

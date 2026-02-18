@@ -17,6 +17,7 @@ import { format, addMonths, setDate, startOfMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
 import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_NAMES } from '@/config/taxCalendar2026';
+import { getScheduledStartForCategory } from '@/config/automationRules';
 
 // ============================================================
 // Category definitions with display order
@@ -279,10 +280,12 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           if (!alreadyExists) {
             const taskId = `${client.id}_${categoryKey}_${dueDateStr}`;
             const clientIs874 = categoryKey === 'מע"מ' && isClient874(client);
+            const scheduledStart = getScheduledStartForCategory(categoryKey, dueDateStr);
             tasksToCreate.push({
               _previewId: taskId, title: taskTitle,
               description: `${description}\nלקוח: ${client.name}${clientIs874 ? '\nסוג: מע"מ מפורט (874)' : ''}`,
-              due_date: dueDateStr, client_name: client.name, client_id: client.id,
+              due_date: dueDateStr, scheduled_start: scheduledStart || undefined,
+              client_name: client.name, client_id: client.id,
               category: categoryKey, context: 'work', priority: 'high', status: 'not_started',
               is_recurring: true, source: 'recurring_tasks',
               _categoryOrder: categoryDef.order, _categoryLabel: categoryDef.label,
