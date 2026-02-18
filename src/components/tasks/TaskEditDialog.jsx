@@ -12,9 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Pencil, Save, X, Plus, Trash2, CheckSquare, Square,
-  AlertTriangle, ArrowUp, ArrowRight, ArrowDown, ListChecks, StickyNote
+  AlertTriangle, ArrowUp, ArrowRight, ArrowDown, ListChecks, StickyNote,
+  Calendar, Clock, Timer
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+import { differenceInDays, format, parseISO, isValid } from 'date-fns';
 
 const PRIORITY_OPTIONS = [
   { value: 'urgent', label: 'דחוף', icon: AlertTriangle, color: 'text-red-600' },
@@ -22,6 +24,59 @@ const PRIORITY_OPTIONS = [
   { value: 'medium', label: 'בינוני', icon: ArrowRight, color: 'text-yellow-500' },
   { value: 'low', label: 'נמוך', icon: ArrowDown, color: 'text-blue-400' },
 ];
+
+function ExecutionTimeline({ startDate, dueDate }) {
+  if (!startDate || !dueDate) return null;
+
+  const start = parseISO(startDate);
+  const end = parseISO(dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (!isValid(start) || !isValid(end)) return null;
+
+  const totalDays = differenceInDays(end, start);
+  const elapsed = differenceInDays(today, start);
+  const remaining = differenceInDays(end, today);
+  const progress = totalDays > 0 ? Math.min(Math.max((elapsed / totalDays) * 100, 0), 100) : 0;
+
+  const isOverdue = remaining < 0;
+  const isUrgent = remaining >= 0 && remaining <= 1;
+  const isWarning = remaining >= 2 && remaining <= 3;
+
+  const barColor = isOverdue ? 'bg-red-500' : isUrgent ? 'bg-red-400' : isWarning ? 'bg-amber-400' : 'bg-emerald-500';
+  const textColor = isOverdue ? 'text-red-600' : isUrgent ? 'text-red-500' : isWarning ? 'text-amber-600' : 'text-emerald-600';
+
+  return (
+    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <span className="flex items-center gap-1 text-gray-500">
+          <Timer className="w-3 h-3" />
+          תקופת ביצוע
+        </span>
+        <span className={`font-bold ${textColor}`}>
+          {isOverdue
+            ? `באיחור ${Math.abs(remaining)} ימים!`
+            : remaining === 0
+              ? 'היום דדליין!'
+              : `נותרו ${remaining} ימים`}
+        </span>
+      </div>
+      {/* Progress bar */}
+      <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <div className="flex justify-between text-[10px] text-gray-400">
+        <span>התחלה: {format(start, 'd/M')}</span>
+        <span>{totalDays} ימים סה"כ</span>
+        <span>סיום: {format(end, 'd/M')}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }) {
   const [editData, setEditData] = useState({});
@@ -36,6 +91,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
         status: task.status || 'not_started',
         priority: task.priority || 'medium',
         due_date: task.due_date || '',
+        scheduled_start: task.scheduled_start || '',
         notes: task.notes || '',
         sub_tasks: task.sub_tasks || [],
       });
@@ -137,17 +193,38 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
             </div>
           </div>
 
-          {/* Due Date */}
+          {/* Execution Period: Start Date + Due Date */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium">תאריך יעד</Label>
-            <Input
-              type="date"
-              value={editData.due_date}
-              onChange={(e) => setEditData(prev => ({ ...prev, due_date: e.target.value }))}
-              className="text-sm h-9"
-              dir="ltr"
-            />
+            <Label className="text-xs font-medium flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
+              תקופת ביצוע
+            </Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500">תאריך התחלה</span>
+                <Input
+                  type="date"
+                  value={editData.scheduled_start}
+                  onChange={(e) => setEditData(prev => ({ ...prev, scheduled_start: e.target.value }))}
+                  className="text-sm h-9"
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500">תאריך יעד (דדליין)</span>
+                <Input
+                  type="date"
+                  value={editData.due_date}
+                  onChange={(e) => setEditData(prev => ({ ...prev, due_date: e.target.value }))}
+                  className="text-sm h-9"
+                  dir="ltr"
+                />
+              </div>
+            </div>
           </div>
+
+          {/* Execution Timeline Visual */}
+          <ExecutionTimeline startDate={editData.scheduled_start} dueDate={editData.due_date} />
 
           {/* Notes */}
           <div className="space-y-1.5">

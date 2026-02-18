@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight,
-  ArrowRight, Users, X, Settings2, List, LayoutGrid, Search
+  ArrowRight, Users, X, Settings2, List, LayoutGrid, Search, GanttChart
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -16,6 +16,7 @@ import { he } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
+import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -307,6 +308,9 @@ export default function AdditionalServicesDashboardPage() {
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')}>
               <LayoutGrid className="w-4 h-4" />
             </Button>
+            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="תצוגת פרויקט">
+              <GanttChart className="w-4 h-4" />
+            </Button>
           </div>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -358,6 +362,8 @@ export default function AdditionalServicesDashboardPage() {
       ) : Object.keys(serviceData).length > 0 ? (
         viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} />
+        ) : viewMode === 'timeline' ? (
+          <ProjectTimelineView tasks={filteredTasks} month={selectedMonth} year={selectedYear} onEdit={setEditingTask} />
         ) : (
           <div className="space-y-6">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => (
