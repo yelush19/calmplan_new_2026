@@ -92,6 +92,86 @@ async function deleteFile({ file_path }) {
   await supabase.storage.from(BUCKET_NAME).remove([file_path]);
 }
 
+/**
+ * Upload a file to a client-specific folder with progress tracking.
+ * @param {{ file: File, clientId: string, documentType?: string, onProgress?: (percent: number) => void }} params
+ * @returns {{ file_url: string, file_name: string, file_size: number, file_path: string, file_type: string }}
+ */
+async function uploadClientFile({ file, clientId, documentType = 'other', onProgress }) {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase לא מוגדר. בדוק את הגדרות הסביבה.');
+  }
+  await ensureBucket();
+
+  const timestamp = Date.now();
+  const safeName = file.name.replace(/[^a-zA-Z0-9._\u0590-\u05FF-]/g, '_');
+  const folderPath = `clients/${clientId}/${documentType}`;
+  const filePath = `${folderPath}/${timestamp}_${safeName}`;
+
+  // Simulate progress for smaller files since Supabase JS SDK doesn't expose upload progress natively
+  let progressInterval;
+  let simulatedProgress = 0;
+  if (onProgress) {
+    onProgress(0);
+    progressInterval = setInterval(() => {
+      simulatedProgress = Math.min(simulatedProgress + Math.random() * 15, 85);
+      onProgress(Math.round(simulatedProgress));
+    }, 200);
+  }
+
+  try {
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (progressInterval) clearInterval(progressInterval);
+    if (onProgress) onProgress(90);
+
+    if (error) throw new Error(`שגיאה בהעלאת קובץ: ${error.message}`);
+
+    // Get a signed URL (valid for 1 year)
+    const { data: urlData, error: urlError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .createSignedUrl(data.path, 365 * 24 * 60 * 60);
+
+    if (urlError) throw new Error(`שגיאה ביצירת קישור: ${urlError.message}`);
+
+    if (onProgress) onProgress(100);
+
+    return {
+      file_url: urlData.signedUrl,
+      file_name: file.name,
+      file_size: file.size,
+      file_path: data.path,
+      file_type: file.type,
+    };
+  } catch (err) {
+    if (progressInterval) clearInterval(progressInterval);
+    throw err;
+  }
+}
+
+/**
+ * Create a temporary sharing link with custom expiry.
+ * @param {{ file_path: string, expiresInSeconds?: number }} params
+ * @returns {{ file_url: string, expires_at: string }}
+ */
+async function createSharingLink({ file_path, expiresInSeconds = 7 * 24 * 60 * 60 }) {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase לא מוגדר.');
+  }
+  const { data, error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .createSignedUrl(file_path, expiresInSeconds);
+  if (error) throw new Error(`שגיאה ביצירת קישור שיתוף: ${error.message}`);
+
+  const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+  return { file_url: data.signedUrl, expires_at: expiresAt };
+}
+
 export const Core = {
   InvokeLLM: notAvailable,
   SendEmail: notAvailable,
@@ -101,6 +181,8 @@ export const Core = {
   CreateFileSignedUrl: createFileSignedUrl,
   UploadPrivateFile: uploadFile,
   DeleteFile: deleteFile,
+  UploadClientFile: uploadClientFile,
+  CreateSharingLink: createSharingLink,
 };
 
 export const InvokeLLM = Core.InvokeLLM;
@@ -111,3 +193,5 @@ export const ExtractDataFromUploadedFile = Core.ExtractDataFromUploadedFile;
 export const CreateFileSignedUrl = Core.CreateFileSignedUrl;
 export const UploadPrivateFile = Core.UploadPrivateFile;
 export const DeleteFile = Core.DeleteFile;
+export const UploadClientFile = Core.UploadClientFile;
+export const CreateSharingLink = Core.CreateSharingLink;

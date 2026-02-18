@@ -211,6 +211,7 @@ export const entities = {
   Project: createEntity('projects'),
   SystemConfig: createEntity('system_config'),
   PeriodicReport: createEntity('periodic_reports'),
+  FileMetadata: createEntity('file_metadata'),
 };
 
 export { auth };

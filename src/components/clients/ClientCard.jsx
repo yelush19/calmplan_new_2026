@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard, BookUser } from 'lucide-react';
+import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard, BookUser, FolderOpen } from 'lucide-react';
 
 const serviceTypeLabels = {
     bookkeeping: 'הנהלת חשבונות',
@@ -92,7 +92,7 @@ const statusUI = {
   balance_sheet_only: { label: 'סגירת מאזן בלבד', icon: FileText, color: 'text-cyan-600', badge: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
 };
 
-export default function ClientCard({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks }) {
+export default function ClientCard({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks, onSelectFiles }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [relatedTasks, setRelatedTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
@@ -395,7 +395,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         )}
       </CardContent>
       
-      <CardFooter className="grid grid-cols-6 gap-1 p-2 border-t bg-neutral-light/20 flex-shrink-0">
+      <CardFooter className="grid grid-cols-7 gap-1 p-2 border-t bg-neutral-light/20 flex-shrink-0">
           <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
             <Edit className="w-3 h-3 ml-1" />
             עריכה
@@ -403,6 +403,10 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
           <Button variant="ghost" size="sm" onClick={() => onSelectTasks(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
             <CheckSquare className="w-3 h-3 ml-1" />
             משימות
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => onSelectFiles?.(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
+            <FolderOpen className="w-3 h-3 ml-1" />
+            קבצים
           </Button>
           <Button variant="ghost" size="sm" onClick={() => onSelectAccounts(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
             <Building className="w-3 h-3 ml-1" />

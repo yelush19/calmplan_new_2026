@@ -86,6 +86,8 @@ import AutomationRules from "./AutomationRules";
 
 import AdditionalServicesDashboard from "./AdditionalServicesDashboard";
 
+import ClientFiles from "./ClientFiles";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -175,6 +177,8 @@ const PAGES = {
     AutomationRules: AutomationRules,
 
     AdditionalServicesDashboard: AdditionalServicesDashboard,
+
+    ClientFiles: ClientFiles,
 
 }
 
@@ -288,6 +292,8 @@ function PagesContent() {
                 <Route path="/AutomationRules" element={<AutomationRules />} />
 
                 <Route path="/AdditionalServicesDashboard" element={<AdditionalServicesDashboard />} />
+
+                <Route path="/ClientFiles" element={<ClientFiles />} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">
