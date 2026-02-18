@@ -17,6 +17,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   ADDITIONAL_SERVICES,
@@ -61,6 +62,7 @@ export default function AdditionalServicesDashboardPage() {
   const [viewMode, setViewMode] = useState('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
+  const [noteTask, setNoteTask] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, [selectedMonth]);
@@ -371,6 +373,7 @@ export default function AdditionalServicesDashboardPage() {
                 onAttachmentUpdate={handleAttachmentUpdate}
                 onEdit={setEditingTask}
                 onDelete={handleDeleteTask}
+                onNote={setNoteTask}
               />
             ))}
           </div>
@@ -395,6 +398,11 @@ export default function AdditionalServicesDashboardPage() {
         onClose={() => setEditingTask(null)}
         onSave={handleEditTask}
         onDelete={handleDeleteTask}
+      />
+      <TaskToNoteDialog
+        task={noteTask}
+        open={!!noteTask}
+        onClose={() => setNoteTask(null)}
       />
       {ConfirmDialogComponent}
     </div>

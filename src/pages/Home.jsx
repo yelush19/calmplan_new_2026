@@ -22,7 +22,9 @@ import StickyNotes from "@/components/StickyNotes";
 import KanbanView from "../components/tasks/KanbanView";
 import TaskEditDialog from "@/components/tasks/TaskEditDialog";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Pin } from "lucide-react";
+import useAutoReminders from "@/hooks/useAutoReminders";
+import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -74,7 +76,9 @@ export default function HomePage() {
   const [focusView, setFocusView] = useState('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
+  const [noteTask, setNoteTask] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
+  useAutoReminders();
 
   useEffect(() => { loadData(); }, []);
 
@@ -304,7 +308,7 @@ export default function HomePage() {
         return filtered.length === 0 ? (
           <EmptyState icon={<CheckCircle className="w-10 h-10 text-emerald-400" />} text="אין משימות באיחור" />
         ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} showDeadlineContext />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDeadlineContext />
         );
       }
       case 'today': {
@@ -312,7 +316,7 @@ export default function HomePage() {
         return filtered.length === 0 ? (
           <EmptyState icon={<Sparkles className="w-10 h-10 text-emerald-400" />} text="אין משימות להיום - כל הכבוד!" />
         ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} showDeadlineContext />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDeadlineContext />
         );
       }
       case 'upcoming': {
@@ -320,7 +324,7 @@ export default function HomePage() {
         return filtered.length === 0 ? (
           <EmptyState icon={<Clock className="w-10 h-10 text-gray-300" />} text="אין משימות ל-3 ימים הקרובים" />
         ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} showDate />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDate />
         );
       }
       case 'events': {
@@ -348,7 +352,7 @@ export default function HomePage() {
         return filtered.length === 0 ? (
           <EmptyState icon={<CreditCard className="w-10 h-10 text-yellow-300" />} text="אין משימות ממתינות לתשלום" />
         ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} showPaymentDate />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showPaymentDate />
         );
       }
       default:
@@ -617,6 +621,12 @@ export default function HomePage() {
         onDelete={handleDeleteTask}
       />
 
+      <TaskToNoteDialog
+        task={noteTask}
+        open={!!noteTask}
+        onClose={() => setNoteTask(null)}
+      />
+
       {ConfirmDialogComponent}
 
       {/* FAB */}
@@ -640,7 +650,7 @@ function EmptyState({ icon, text }) {
   );
 }
 
-function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, showDeadlineContext, showDate, showPaymentDate }) {
+function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
   const [showAll, setShowAll] = useState(false);
   const visibleTasks = showAll ? tasks : tasks.slice(0, 15);
 
@@ -653,6 +663,7 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, showDead
           onStatusChange={onStatusChange}
           onPaymentDateChange={onPaymentDateChange}
           onEdit={onEdit}
+          onNote={onNote}
           showDeadlineContext={showDeadlineContext}
           showDate={showDate}
           showPaymentDate={showPaymentDate}
@@ -668,7 +679,7 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, showDead
   );
 }
 
-function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, showDeadlineContext, showDate, showPaymentDate }) {
+function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
   const ctx = getTaskContext(task);
   const isWork = ctx === 'work';
   const isHome = ctx === 'home';
@@ -730,6 +741,15 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, showDeadli
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        {onNote && (
+          <button
+            onClick={() => onNote(task)}
+            className="p-1 rounded hover:bg-amber-100 transition-colors"
+            title="הוסף לפתק דביק"
+          >
+            <Pin className="w-3.5 h-3.5 text-gray-400 hover:text-amber-600" />
+          </button>
+        )}
         {onEdit && (
           <button
             onClick={() => onEdit(task)}

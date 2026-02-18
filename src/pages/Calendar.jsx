@@ -19,7 +19,8 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import EventDetailsModal from "../components/calendar/EventDetailsModal";
-import StickyNotes, { createNoteFromTask } from "@/components/StickyNotes";
+import StickyNotes from "@/components/StickyNotes";
+import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 
 const DAYS_HE = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 const DAYS_FULL = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -58,6 +59,7 @@ export default function CalendarPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showStickyPanel, setShowStickyPanel] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [noteTask, setNoteTask] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -165,8 +167,8 @@ export default function CalendarPage() {
     setSelectedDate(new Date());
   };
 
-  const handleMoveToNote = async (task) => {
-    await createNoteFromTask(task);
+  const handleMoveToNote = (task) => {
+    setNoteTask(task);
   };
 
   if (isLoading) {
@@ -380,6 +382,12 @@ export default function CalendarPage() {
           />
         )}
       </AnimatePresence>
+
+      <TaskToNoteDialog
+        task={noteTask}
+        open={!!noteTask}
+        onClose={() => setNoteTask(null)}
+      />
     </div>
   );
 }

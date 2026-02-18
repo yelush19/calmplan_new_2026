@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ResizableTable from '@/components/ui/ResizableTable';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
@@ -40,6 +40,7 @@ export default function GroupedServiceTable({
   getClientIds,
   onEdit,
   onDelete,
+  onNote,
 }) {
   const relevantRows = clientRows.filter(r => r.task.status !== 'not_relevant');
   const completedCount = relevantRows.filter(r => r.task.status === 'completed').length;
@@ -168,6 +169,7 @@ export default function GroupedServiceTable({
                       getClientIds={getClientIds}
                       onEdit={onEdit}
                       onDelete={onDelete}
+                      onNote={onNote}
                     />
                   ))}
                 </React.Fragment>
@@ -184,7 +186,7 @@ export default function GroupedServiceTable({
 // CLIENT ROW
 // =====================================================
 
-function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete }) {
+function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote }) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
@@ -361,8 +363,17 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                 />
               </div>
               {/* Edit / Delete actions */}
-              {(onEdit || onDelete) && (
+              {(onEdit || onDelete || onNote) && (
                 <div className="mt-3 pt-2 border-t border-indigo-100 flex items-center gap-2">
+                  {onNote && (
+                    <button
+                      onClick={() => onNote(task)}
+                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded px-2 py-1 transition-colors"
+                    >
+                      <Pin className="w-3 h-3" />
+                      הוסף לפתק
+                    </button>
+                  )}
                   {onEdit && (
                     <button
                       onClick={() => onEdit(task)}
