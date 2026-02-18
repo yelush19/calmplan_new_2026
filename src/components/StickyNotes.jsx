@@ -7,14 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Pin, PinOff, Trash2, Link2, Edit3, Check, User, Calendar, Tag, Paperclip, Upload, Loader2, FileText, Download } from 'lucide-react';
+import { Plus, X, Pin, PinOff, Trash2, Link2, Edit3, Check, User, Calendar, Tag, Paperclip, Upload, Loader2, FileText, Download, AlertTriangle } from 'lucide-react';
 
+// ADHD-friendly: soft muted pastels, low contrast, calming tones
 const NOTE_COLORS = [
-  { key: 'yellow', bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-900', hover: 'hover:bg-amber-200', ring: 'ring-amber-400' },
-  { key: 'pink', bg: 'bg-pink-100', border: 'border-pink-300', text: 'text-pink-900', hover: 'hover:bg-pink-200', ring: 'ring-pink-400' },
-  { key: 'blue', bg: 'bg-sky-100', border: 'border-sky-300', text: 'text-sky-900', hover: 'hover:bg-sky-200', ring: 'ring-sky-400' },
-  { key: 'green', bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-900', hover: 'hover:bg-emerald-200', ring: 'ring-emerald-400' },
-  { key: 'purple', bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-900', hover: 'hover:bg-violet-200', ring: 'ring-violet-400' },
+  { key: 'yellow', bg: 'bg-[#FFF8E7]', border: 'border-[#E8D5A3]', text: 'text-[#6B5B3E]', hover: 'hover:bg-[#FFF3D6]', ring: 'ring-[#D4BA6A]' },
+  { key: 'pink', bg: 'bg-[#FFF0F3]', border: 'border-[#E8B4BE]', text: 'text-[#7A4A55]', hover: 'hover:bg-[#FFE4EA]', ring: 'ring-[#D4899A]' },
+  { key: 'blue', bg: 'bg-[#EFF6FF]', border: 'border-[#A8C8E8]', text: 'text-[#3B5975]', hover: 'hover:bg-[#E0EEFA]', ring: 'ring-[#7EB0D6]' },
+  { key: 'green', bg: 'bg-[#F0FAF4]', border: 'border-[#A3D4B5]', text: 'text-[#3D6B50]', hover: 'hover:bg-[#E0F5E8]', ring: 'ring-[#78BF94]' },
+  { key: 'purple', bg: 'bg-[#F5F0FF]', border: 'border-[#BDA8E8]', text: 'text-[#5B437A]', hover: 'hover:bg-[#ECE4FF]', ring: 'ring-[#9A7ED6]' },
 ];
 
 function getColorConfig(colorKey) {
@@ -215,16 +216,23 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
     loadNotes();
   };
 
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editUrgency, setEditUrgency] = useState('none');
+
   const startEdit = (note) => {
     setEditingId(note.id);
     setEditTitle(note.title);
     setEditContent(note.content || '');
+    setEditDueDate(note.due_date || '');
+    setEditUrgency(note.urgency || 'none');
   };
 
   const saveEdit = async (id) => {
     await StickyNote.update(id, {
       title: editTitle.trim() || 'פתק',
       content: editContent.trim(),
+      due_date: editDueDate || null,
+      urgency: editUrgency !== 'none' ? editUrgency : null,
     });
     setEditingId(null);
     loadNotes();
@@ -390,6 +398,25 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                       className="bg-white/60 border-current text-xs min-h-[40px]"
                       rows={2}
                     />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="date"
+                        value={editDueDate}
+                        onChange={(e) => setEditDueDate(e.target.value)}
+                        className="bg-white/60 border-current text-xs h-7"
+                        dir="ltr"
+                      />
+                      <Select value={editUrgency} onValueChange={setEditUrgency}>
+                        <SelectTrigger className="bg-white/60 border-current text-xs h-7">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {URGENCY_OPTIONS.map(u => (
+                            <SelectItem key={u.value} value={u.value} className="text-xs">{u.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex justify-end">
                       <Button size="sm" variant="ghost" onClick={() => setEditingId(null)} className="text-xs h-7">ביטול</Button>
                       <Button size="sm" onClick={() => saveEdit(note.id)} className="bg-emerald-500 text-white text-xs h-7">

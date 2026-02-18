@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import TimeAwareness from "@/components/ui/TimeAwareness";
 import StickyNotes from "@/components/StickyNotes";
+import GlobalSearch from "@/components/GlobalSearch";
 import useAutoReminders from "@/hooks/useAutoReminders";
 
 const navigationGroups = [
@@ -241,6 +242,11 @@ export default function Layout({ children, currentPageName }) {
                 <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
                     <X className="w-5 h-5"/>
                 </Button>
+            </div>
+
+            {/* Global Search */}
+            <div className="px-4 pt-3">
+              <GlobalSearch />
             </div>
 
             <nav className="flex-1 p-4 overflow-y-auto">
