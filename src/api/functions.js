@@ -4,8 +4,9 @@
  */
 
 import * as monday from './mondayClient';
-import { exportAllData, importAllData, clearAllData } from './base44Client';
-import { entities } from './entities';
+import { base44, exportAllData, importAllData, clearAllData } from './base44Client';
+
+const entities = base44.entities;
 import { getDueDateForCategory, isClient874 } from '@/config/taxCalendar2026';
 
 // ===== Monday.com Board API =====
