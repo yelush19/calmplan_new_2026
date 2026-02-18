@@ -15,7 +15,7 @@ import {
   getDaysInMonth, getDay, isToday, isSameMonth, differenceInDays, startOfDay
 } from "date-fns";
 import { he } from "date-fns/locale";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import EventDetailsModal from "../components/calendar/EventDetailsModal";
@@ -58,10 +58,12 @@ export default function CalendarPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [noteTask, setNoteTask] = useState(null);
+  const location = useLocation();
 
+  // Reload data on mount and when navigating back to this page
   useEffect(() => {
     loadData();
-  }, []);
+  }, [location.key]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -72,7 +74,7 @@ export default function CalendarPage() {
       ]);
 
       const allTasks = (tasksData || []).filter(t => {
-        if (!t || t.status === 'completed') return false;
+        if (!t || t.status === 'completed' || t.status === 'not_relevant') return false;
         const dueDate = safeParseDateString(t.due_date);
         const scheduledStart = safeParseDateString(t.scheduled_start);
         return dueDate !== null || scheduledStart !== null;
