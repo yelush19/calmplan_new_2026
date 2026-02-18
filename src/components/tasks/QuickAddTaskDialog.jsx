@@ -7,12 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Briefcase, Home as HomeIcon, Search, ChevronDown, X, Clock } from 'lucide-react';
+import { Plus, Briefcase, Home as HomeIcon, Search, ChevronDown, X, Clock, Calendar as CalendarIcon } from 'lucide-react';
 import { Task, Client } from '@/api/entities';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { getScheduledStartForCategory } from '@/config/automationRules';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 // Group services by dashboard for the dropdown
 const SERVICE_GROUPS = [
@@ -171,7 +174,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
   useEffect(() => {
     if (open) {
       Client.list(null, 500).then(list => {
-        setClients((list || []).filter(c => c.status === 'active').sort((a, b) => a.name?.localeCompare(b.name, 'he')));
+        setClients((list || []).filter(c => c.status === 'active' || c.status === 'onboarding_pending' || c.status === 'balance_sheet_only').sort((a, b) => a.name?.localeCompare(b.name, 'he')));
       }).catch(() => setClients([]));
       setTitle('');
       setDueDate(format(new Date(), 'yyyy-MM-dd'));
@@ -299,13 +302,27 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
           <div className="grid grid-cols-3 gap-3">
             <div>
               <Label className="text-xs">תאריך יעד</Label>
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="text-xs h-9"
-                dir="ltr"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="w-full h-9 justify-start text-xs font-normal px-3"
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5 ml-1.5 shrink-0" />
+                    {dueDate ? format(parseISO(dueDate), 'd בMMM yyyy', { locale: he }) : 'בחר תאריך'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate ? parseISO(dueDate) : undefined}
+                    onSelect={(date) => date && setDueDate(format(date, 'yyyy-MM-dd'))}
+                    locale={he}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-xs flex items-center gap-1">

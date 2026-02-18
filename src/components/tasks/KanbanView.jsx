@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,9 @@ const columnsConfig = {
   in_progress: { title: 'בביצוע', color: 'bg-blue-100', tasks: [] },
   completed: { title: 'הושלם', color: 'bg-green-100', tasks: [] },
 };
+
+// Statuses that are collapsed by default inside columns
+const DEFAULT_COLLAPSED_STATUSES = new Set(['completed', 'not_relevant']);
 
 const statusOptions = Object.fromEntries(
   Object.entries(STATUS_CONFIG)
@@ -182,9 +185,18 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit }) => {
 export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask, onEditTask }) {
   const [board, setBoard] = useState(columnsConfig);
   const [collapsed, setCollapsed] = useState({ completed: true });
+  const [collapsedStatuses, setCollapsedStatuses] = useState(() => {
+    const init = {};
+    DEFAULT_COLLAPSED_STATUSES.forEach(s => { init[s] = true; });
+    return init;
+  });
 
   const toggleCollapsed = (colId) => {
     setCollapsed(prev => ({ ...prev, [colId]: !prev[colId] }));
+  };
+
+  const toggleStatusGroup = (status) => {
+    setCollapsedStatuses(prev => ({ ...prev, [status]: !prev[status] }));
   };
 
   useEffect(() => {
@@ -279,16 +291,75 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                     {...provided.droppableProps}
                     className={`flex-grow p-4 transition-colors min-h-[200px] ${snapshot.isDraggingOver ? 'bg-opacity-80' : ''}`}
                   >
-                    {Array.isArray(column.tasks) && column.tasks.map((task, index) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        index={index}
-                        onStatusChange={onTaskStatusChange}
-                        onDelete={onDeleteTask}
-                        onEdit={onEditTask}
-                      />
-                    ))}
+                    {(() => {
+                      const statusOrder = columnMapping[columnId];
+                      const tasksByStatus = {};
+                      statusOrder.forEach(s => { tasksByStatus[s] = []; });
+                      (column.tasks || []).forEach(task => {
+                        const s = task.status || statusOrder[0];
+                        if (tasksByStatus[s]) tasksByStatus[s].push(task);
+                      });
+
+                      // Check if there's more than one status present
+                      const activeStatuses = statusOrder.filter(s => (tasksByStatus[s] || []).length > 0);
+                      const needsSubGroups = activeStatuses.length > 1;
+
+                      if (!needsSubGroups) {
+                        // Single status or no tasks - render flat (no sub-group headers)
+                        return (column.tasks || []).map((task, index) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            index={index}
+                            onStatusChange={onTaskStatusChange}
+                            onDelete={onDeleteTask}
+                            onEdit={onEditTask}
+                          />
+                        ));
+                      }
+
+                      // Multiple statuses - render with sub-group headers
+                      let runningIndex = 0;
+                      return statusOrder.map(status => {
+                        const statusTasks = tasksByStatus[status] || [];
+                        if (statusTasks.length === 0) return null;
+                        const isStatusCollapsed = !!collapsedStatuses[status];
+                        const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.not_started;
+                        const startIdx = runningIndex;
+                        if (!isStatusCollapsed) {
+                          runningIndex += statusTasks.length;
+                        }
+
+                        return (
+                          <div key={status} className="mb-2">
+                            {/* Sub-group header */}
+                            <button
+                              type="button"
+                              onClick={() => toggleStatusGroup(status)}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/60 hover:bg-white/80 transition-colors mb-1.5"
+                            >
+                              <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform shrink-0 ${isStatusCollapsed ? 'rotate-[-90deg]' : ''}`} />
+                              <Badge className={`${cfg.bg} ${cfg.text} text-[10px] px-1.5 py-0 font-semibold border ${cfg.border}`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot || cfg.bg} mr-1`} />
+                                {cfg.label}
+                              </Badge>
+                              <span className="text-[10px] text-gray-500 font-medium">{statusTasks.length}</span>
+                            </button>
+                            {/* Tasks in this sub-group */}
+                            {!isStatusCollapsed && statusTasks.map((task, i) => (
+                              <TaskCard
+                                key={task.id}
+                                task={task}
+                                index={startIdx + i}
+                                onStatusChange={onTaskStatusChange}
+                                onDelete={onDeleteTask}
+                                onEdit={onEditTask}
+                              />
+                            ))}
+                          </div>
+                        );
+                      });
+                    })()}
                     {provided.placeholder}
 
                     {taskCount === 0 && (
