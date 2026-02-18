@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Event, Task, StickyNote } from "@/api/entities";
+import { Event, Task } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,6 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import EventDetailsModal from "../components/calendar/EventDetailsModal";
-import StickyNotes from "@/components/StickyNotes";
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 
 const DAYS_HE = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
@@ -57,7 +56,6 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [showStickyPanel, setShowStickyPanel] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [noteTask, setNoteTask] = useState(null);
 
@@ -220,23 +218,10 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-violet-200 bg-violet-50/80 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowStickyPanel(!showStickyPanel)}>
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-500 flex items-center justify-center">
-              <Pin className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-violet-700">פתקים</p>
-              <p className="text-xs text-violet-500">{showStickyPanel ? 'הסתר' : 'הצג'}</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Main Layout: Calendar + Sticky Notes Panel */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        {/* Calendar Main Area */}
-        <div className="flex-1 space-y-4">
+      {/* Calendar Main Area */}
+      <div className="space-y-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -340,32 +325,13 @@ export default function CalendarPage() {
               />
             )}
           </AnimatePresence>
-        </div>
-
-        {/* Sticky Notes Side Panel */}
-        <AnimatePresence>
-          {showStickyPanel && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              className="w-full lg:w-72 flex-shrink-0"
-            >
-              <Card className="shadow-sm border-amber-200/50 sticky top-4">
-                <CardContent className="p-3">
-                  <StickyNotes compact={false} />
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Add Event FAB */}
       <Link to={createPageUrl("NewEvent")}>
         <Button
           size="lg"
-          className="fixed bottom-8 left-8 w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 shadow-2xl z-50 transition-all duration-300 hover:scale-110"
+          className="fixed bottom-8 left-20 w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 shadow-2xl z-50 transition-all duration-300 hover:scale-110"
         >
           <Plus className="w-7 h-7 text-white" />
         </Button>
