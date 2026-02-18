@@ -127,6 +127,22 @@ export default function PayrollDashboardPage() {
     return result;
   }, [filteredTasks, clientByName]);
 
+  // Sort service keys: active work first, fully completed last
+  const sortedServiceKeys = useMemo(() => {
+    return Object.keys(serviceData).sort((a, b) => {
+      const aRows = serviceData[a].clientRows;
+      const bRows = serviceData[b].clientRows;
+      const aActive = aRows.filter(r => r.task.status !== 'completed' && r.task.status !== 'not_relevant').length;
+      const bActive = bRows.filter(r => r.task.status !== 'completed' && r.task.status !== 'not_relevant').length;
+      const aAllDone = aActive === 0;
+      const bAllDone = bActive === 0;
+      // Fully completed services go to bottom
+      if (aAllDone !== bAllDone) return aAllDone ? 1 : -1;
+      // Among active services, sort by more active tasks first
+      return bActive - aActive;
+    });
+  }, [serviceData]);
+
   const stats = useMemo(() => {
     const relevant = filteredTasks.filter(t => t.status !== 'not_relevant');
     const total = relevant.length;
@@ -289,25 +305,28 @@ export default function PayrollDashboardPage() {
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
-      ) : Object.keys(serviceData).length > 0 ? (
+      ) : sortedServiceKeys.length > 0 ? (
         viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} />
         ) : (
           <div className="space-y-6">
-            {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => (
-              <GroupedServiceTable
-                key={serviceKey}
-                service={service}
-                clientRows={clientRows}
-                onToggleStep={handleToggleStep}
-                onDateChange={handleDateChange}
-                onStatusChange={handleStatusChange}
-                onPaymentDateChange={handlePaymentDateChange}
-                onSubTaskChange={handleSubTaskChange}
-                onAttachmentUpdate={handleAttachmentUpdate}
-                getClientIds={getPayrollIds}
-              />
-            ))}
+            {sortedServiceKeys.map(serviceKey => {
+              const { service, clientRows } = serviceData[serviceKey];
+              return (
+                <GroupedServiceTable
+                  key={serviceKey}
+                  service={service}
+                  clientRows={clientRows}
+                  onToggleStep={handleToggleStep}
+                  onDateChange={handleDateChange}
+                  onStatusChange={handleStatusChange}
+                  onPaymentDateChange={handlePaymentDateChange}
+                  onSubTaskChange={handleSubTaskChange}
+                  onAttachmentUpdate={handleAttachmentUpdate}
+                  getClientIds={getPayrollIds}
+                />
+              );
+            })}
           </div>
         )
       ) : (
