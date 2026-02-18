@@ -394,8 +394,6 @@ export default function MondayIntegrationPage() {
 
   const loadData = useCallback(async () => {
     try {
-      console.log('🔄 Loading all data for Monday Integration page...');
-
       const [dashboardsData, clientsData, tasksData, recsData, schedulesData, clientAccountsData, therapistsData] = await Promise.all([
         Dashboard.list().catch(e => { console.warn('Failed to load dashboards:', e); return []; }),
         Client.filter({}, '-updated_date', 1000).catch(e => { console.warn('Failed to load clients:', e); return []; }),
@@ -405,20 +403,6 @@ export default function MondayIntegrationPage() {
         ClientAccount.filter({}, '-updated_date', 1000).catch(e => { console.warn('Failed to load client accounts:', e); return []; }),
         Therapist.list().catch(e => { console.warn('Failed to load therapists:', e); return []; })
       ]);
-
-      console.log('🔍 COMPLETE DATA DEBUG:');
-      console.log('- Dashboards:', dashboardsData);
-      console.log('- Tasks (full):', tasksData);
-      console.log('- Tasks with monday_board_id:', tasksData?.filter(t => t.monday_board_id));
-
-      // Group tasks by board_id for debugging
-      const tasksByBoard = {};
-      (tasksData || []).forEach(task => {
-          const boardId = String(task.monday_board_id || 'no-board');
-          if (!tasksByBoard[boardId]) tasksByBoard[boardId] = [];
-          tasksByBoard[boardId].push(task.title);
-      });
-      console.log('🔍 Tasks grouped by board_id:', tasksByBoard);
 
       const configs = Object.keys(boardCategories).map(type => {
         const existing = (dashboardsData || []).find(d => d.type === type);
@@ -435,8 +419,6 @@ export default function MondayIntegrationPage() {
 
         if (config.monday_board_id) {
             const boardIdStr = String(config.monday_board_id);
-            console.log(`🔍 PROCESSING: ${config.type} with board_id "${boardIdStr}"`);
-
             switch(config.type) {
                 case 'clients':
                     const boardClients = (clientsData || []).filter(c =>
@@ -456,7 +438,6 @@ export default function MondayIntegrationPage() {
                 case 'weekly_planning':
                     const boardTasks = (tasksData || []).filter(t => String(t.monday_board_id) === boardIdStr);
                     count = boardTasks.length;
-                    console.log(`🔍 DEBUG: ${config.type} - Found ${count} tasks matching board_id "${boardIdStr}"`);
                     if(count > 0) lastSync = Math.max(...boardTasks.map(t => new Date(t.updated_date).getTime()));
                     break;
 
@@ -479,7 +460,6 @@ export default function MondayIntegrationPage() {
                     break;
             }
 
-            console.log(`✅ Final count for ${config.type}: ${count}`);
         }
 
         setBoardData(prev => ({
@@ -670,7 +650,6 @@ export default function MondayIntegrationPage() {
         // Important: Update local state with the new database ID
         setBoardConfigs(prev => prev.map(c => c.type === board.type ? { ...c, id: newBoard.id } : c));
       }
-      console.log(`[UI] Config for ${board.type} saved successfully before sync.`);
     } catch (error) {
       console.error("Error saving board config before sync:", error);
       setError(`שגיאה בשמירת הגדרות לפני סנכרון: ${error.message}`);
@@ -678,7 +657,6 @@ export default function MondayIntegrationPage() {
     }
     // End New Save Logic
 
-    console.log(`[UI] 🔄 Starting sync for ${board.type} (${board.monday_board_id})`);
     setSyncStatuses(prev => ({ ...prev, [board.type]: 'syncing' }));
     setLogs(prev => ({ ...prev, [board.type]: [`[${new Date().toLocaleTimeString('he-IL')}] מתחיל סנכרון...`] }));
     setError(null);
@@ -707,7 +685,6 @@ export default function MondayIntegrationPage() {
         response = { data: { success: true, created: [], updated: [], skipped:[], errors:[], log: [`אין פונקציית סנכרון ללוח מסוג '${board.type}'`] } };
       }
 
-      console.log(`[UI] ✅ Sync response for ${board.type}:`, response);
       setLogs(prev => ({ ...prev, [board.type]: response.data.log || ['לא התקבל יומן מהשרת.'] }));
 
       if (response?.data?.success) {
@@ -799,7 +776,6 @@ export default function MondayIntegrationPage() {
         // Important: Update local state with the new database ID
         setBoardConfigs(prev => prev.map(c => c.type === board.type ? { ...c, id: newBoard.id } : c));
       }
-      console.log(`[UI] Config for ${board.type} saved successfully before purge and resync.`);
     } catch (error) {
       console.error("Error saving board config before purge and resync:", error);
       setError(`שגיאה בשמירת הגדרות לפני סנכרון: ${error.message}`);
@@ -807,7 +783,6 @@ export default function MondayIntegrationPage() {
     }
     // End New Save Logic
 
-    console.log(`[UI] 🔄 Starting PURGE AND RESYNC for ${board.type} (${board.monday_board_id})`);
     setSyncStatuses(prev => ({ ...prev, [board.type]: 'syncing' }));
     setLogs(prev => ({ ...prev, [board.type]: [`[${new Date().toLocaleTimeString('he-IL')}] מתחיל מחיקה וסנכרון מחדש...`] }));
     setError(null);
@@ -815,7 +790,6 @@ export default function MondayIntegrationPage() {
     try {
         const response = await mondayApi({ action: 'purgeAndResync', boardId: board.monday_board_id, type: board.type });
 
-        console.log(`[UI] ✅ Purge and Resync response for ${board.type}:`, response);
         setLogs(prev => ({ ...prev, [board.type]: response.data.log || ['לא התקבל יומן מהשרת.'] }));
 
         if (response?.data?.success) {
@@ -889,7 +863,6 @@ export default function MondayIntegrationPage() {
       return;
     }
 
-    console.log('[UI] 🚀 Starting sync for all boards using bulk sync');
     setIsLoading(true);
     setError(null);
 
@@ -939,7 +912,6 @@ export default function MondayIntegrationPage() {
         
         alert(message);
 
-        console.log('[UI] 📊 Bulk sync results:', results);
         await loadData();
         setLastSyncTime(new Date());
       } else {

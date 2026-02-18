@@ -192,7 +192,7 @@ export default function Layout({ children, currentPageName }) {
           --destructive-foreground: 0 0% 100%;
         }
 
-        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&family=Varela+Round:wght@400&display=swap');
+        /* Fonts loaded via index.html <link> for faster rendering */
 
         body {
           font-family: 'Varela Round', 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;

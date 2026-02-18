@@ -11,7 +11,7 @@ import {
   Headphones,
   BookOpen
 } from 'lucide-react';
-import { InvokeLLM } from '@/api/integrations'; // Assuming this integration exists
+// Note: InvokeLLM integration not yet available - using simulated recommendations
 
 const musicPlaylists = [
     { name: "ריכוז עמוק", icon: Headphones, genre: "Lofi & Ambient", mood: "focus" },
@@ -38,25 +38,16 @@ export default function InspirationPage() {
       return;
     }
     setIsLoading(true);
-    try {
-      // This is a placeholder for the actual logic.
-      // In a real implementation, you would use an LLM with the image.
-      const prompt = `Based on the attached image of a bookshelf, recommend a book that the user might enjoy next. Explain why in a short, encouraging paragraph.`;
-      
-      // Since we can't actually send the image via this mock, we'll simulate.
-      // const response = await InvokeLLM({ prompt: prompt, file_urls: [uploadedImageUrl] });
-      
-      // Simulated response:
-      setTimeout(() => {
-        setRecommendation("בהתבסס על אהבתך לספרי מתח היסטוריים, אני ממליצה לך על 'צופן דה וינצ'י'. הוא משלב תעלומה, היסטוריה וקצב מסחרר שישאיר אותך במתח עד העמוד האחרון.");
-        setIsLoading(false);
-      }, 2000);
-
-    } catch (error) {
-      console.error("Error getting recommendation:", error);
-      setRecommendation("אופס, משהו השתבש בקבלת ההמלצה. נסי שוב מאוחר יותר.");
+    // Simulated recommendation (LLM integration not yet available)
+    const recommendations = [
+      "בהתבסס על אהבתך לספרי מתח היסטוריים, אני ממליצה לך על 'צופן דה וינצ'י'. הוא משלב תעלומה, היסטוריה וקצב מסחרר שישאיר אותך במתח עד העמוד האחרון.",
+      "נראה שאת אוהבת סיפורים עם דמויות חזקות. נסי את 'בין חברים' של אמי סילברמן - ספר מרגש שמתאים מאוד לערבי שישי.",
+      "על בסיס הטעם שלך, ממליצה על 'האלכימאי' מאת פאולו קואלו - ספר קצר ומעורר השראה שאפשר לסיים בישיבה אחת.",
+    ];
+    setTimeout(() => {
+      setRecommendation(recommendations[Math.floor(Math.random() * recommendations.length)]);
       setIsLoading(false);
-    }
+    }, 1500);
   };
 
   return (

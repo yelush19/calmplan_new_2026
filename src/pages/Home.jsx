@@ -48,18 +48,7 @@ function sortByPriority(tasks) {
   });
 }
 
-const statusConfig = {
-  not_started: { text: 'לביצוע', color: 'bg-cyan-100 text-cyan-700' },
-  in_progress: { text: 'בעבודה', color: 'bg-sky-100 text-sky-700' },
-  completed: { text: 'הושלם', color: 'bg-emerald-100 text-emerald-700' },
-  waiting_for_materials: { text: 'ממתין לחומרים', color: 'bg-amber-100 text-amber-700' },
-  waiting_for_approval: { text: 'לבדיקה', color: 'bg-purple-100 text-purple-700' },
-  ready_for_reporting: { text: 'מוכן לדיווח', color: 'bg-teal-100 text-teal-700' },
-  reported_waiting_for_payment: { text: 'ממתין לתשלום', color: 'bg-yellow-100 text-yellow-700' },
-  issue: { text: 'בעיה', color: 'bg-pink-100 text-pink-700' },
-  postponed: { text: 'נדחה', color: 'bg-neutral-100 text-neutral-600' },
-  not_relevant: { text: 'לא רלוונטי', color: 'bg-gray-50 text-gray-400' },
-};
+import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 
 const FOCUS_TABS = [
   { key: 'overdue', label: 'באיחור', icon: AlertTriangle, color: 'text-red-600', activeBg: 'bg-red-50 border-red-300 text-red-700', badgeColor: 'bg-red-100 text-red-700' },

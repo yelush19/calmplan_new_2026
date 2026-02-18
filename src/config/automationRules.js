@@ -2,8 +2,8 @@ import { SystemConfig } from '@/api/entities';
 
 const CONFIG_KEY = 'automation_rules';
 
-// All available service type keys (matching ClientForm.jsx)
-export const ALL_SERVICES = {
+// All available service type keys with Hebrew labels (matching ClientForm.jsx)
+export const SERVICE_LABELS = {
   bookkeeping: 'הנהלת חשבונות',
   bookkeeping_full: 'הנהלת חשבונות מלאה',
   vat_reporting: 'דיווחי מע״מ',

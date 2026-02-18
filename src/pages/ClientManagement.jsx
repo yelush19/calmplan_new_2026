@@ -160,17 +160,10 @@ export default function ClientManagementPage() {
   }, [clients, searchParams]);
 
   useEffect(() => {
-    console.log('🔍 FILTERING CLIENTS:', {
-      totalClients: clients.length,
-      statusFilter,
-      searchTerm
-    });
-
     let tempClients = [...clients];
 
     if (statusFilter.length > 0) {
       tempClients = tempClients.filter(client => statusFilter.includes(client.status));
-      console.log(`📊 After status filter (${statusFilter.join(',')}):`, tempClients.length);
     }
 
     if (searchTerm) {
@@ -182,12 +175,10 @@ export default function ClientManagementPage() {
           contact.phone?.toLowerCase().includes(searchTerm.toLowerCase())
         ))
       );
-      console.log(`🔍 After search filter:`, tempClients.length);
     }
     
     tempClients.sort((a, b) => a.name.localeCompare(b.name, 'he'));
 
-    console.log('✅ FINAL FILTERED CLIENTS:', tempClients.length);
     setFilteredClients(tempClients);
   }, [clients, statusFilter, searchTerm]);
 
@@ -196,13 +187,6 @@ export default function ClientManagementPage() {
     setError(null);
     try {
       const clientsData = await retryWithBackoff(() => Client.list(null, 500));
-      console.log('🔍 RAW CLIENTS FROM DB (WITH LIMIT OVERRIDE):', {
-        total: clientsData.length,
-        statusBreakdown: clientsData.reduce((acc, client) => {
-          acc[client.status || 'undefined'] = (acc[client.status || 'undefined'] || 0) + 1;
-          return acc;
-        }, {})
-      });
       setClients(clientsData || []);
       setSelectedClientIds(new Set()); // Clear selection on reload
       // Auto-migrate development clients to projects (one-time)
@@ -236,7 +220,6 @@ export default function ClientManagementPage() {
       balance_sheet_only: clients.filter(c => c.status === 'balance_sheet_only').length,
     };
 
-    console.log('📊 STATUS COUNTS:', counts);
     return counts;
   };
   const statusCounts = getStatusCounts();
@@ -305,7 +288,6 @@ export default function ClientManagementPage() {
     setIsImporting(true);
     try {
       const response = await importClientsFromExcel({ file });
-      console.log('Import result:', response.data);
       alert(`הייבוא הושלם בהצלחה!\nנוצרו: ${response.data.created} לקוחות\nעודכנו: ${response.data.updated} לקוחות\nשגיאות: ${response.data.errors?.length || 0}`);
       if (response.data.errors && response.data.errors.length > 0) {
         console.warn('Import errors:', response.data.errors);
@@ -327,7 +309,6 @@ export default function ClientManagementPage() {
     setIsImporting(true);
     try {
       const response = await importClientAccounts({ file });
-      console.log('Import result:', response.data);
       alert(`הייבוא הושלם בהצלחה!\nנוצרו: ${response.data.created} חשבונות\nעודכנו: ${response.data.updated} חשבונות`);
       if (response.data.errors && response.data.errors.length > 0) {
         console.warn('Import errors:', response.data.errors);
@@ -452,7 +433,6 @@ export default function ClientManagementPage() {
                 });
               }
             }
-            console.log(`✅ נוצרו דיווחים מרכזים ל-${clientName} לשנת ${year}`);
           }
         }
 
@@ -467,7 +447,6 @@ export default function ClientManagementPage() {
               target_date: `${parseInt(year) + 1}-05-31`,
               folder_link: '', notes: '',
             });
-            console.log(`✅ נוצר מאזן ל-${clientName} לשנת ${year}`);
           }
         }
 
@@ -488,7 +467,6 @@ export default function ClientManagementPage() {
                 });
               }
             }
-            console.log(`✅ נוצרו התאמות ל-${clientName}`);
           }
         }
 
@@ -548,7 +526,6 @@ export default function ClientManagementPage() {
               });
             }
           }
-          console.log(`✅ נוצרו משימות ${rule.task_categories.join(', ')} ל-${clientName}`);
         }
       }
     } catch (err) {
@@ -626,9 +603,6 @@ export default function ClientManagementPage() {
         }
       }
 
-      if (markedCount > 0) {
-        console.log(`✅ סומנו ${markedCount} משימות כ"לא רלוונטי" עקב שינוי תדירות דיווח של ${clientName}`);
-      }
     } catch (err) {
       console.warn('⚠️ שגיאה בניקוי משימות ישנות:', err.message);
     }
@@ -695,13 +669,6 @@ export default function ClientManagementPage() {
         }
       }
 
-      if (markedCount > 0) {
-        const removedLabels = removed.map(s => {
-          const tKey = CLIENT_SERVICE_TO_TEMPLATE_KEY[s];
-          return (tKey && ALL_SERVICES[tKey]?.label) || s;
-        }).join(', ');
-        console.log(`✅ סומנו ${markedCount} משימות כ"לא רלוונטי" עקב הסרת שירותים (${removedLabels}) של ${clientName}`);
-      }
     } catch (err) {
       console.warn('⚠️ שגיאה בניקוי משימות עקב שינוי שירותים:', err.message);
     }
@@ -725,7 +692,6 @@ export default function ClientManagementPage() {
           quote_amount: parseFloat(clientData.monthly_fee) || existingLead.quote_amount,
           last_contact_date: today,
         });
-        console.log('✅ עודכן ליד קיים עבור:', clientData.name);
         return;
       }
 
@@ -741,8 +707,6 @@ export default function ClientManagementPage() {
         last_contact_date: today,
         quote_amount: parseFloat(clientData.monthly_fee) || null,
       });
-      console.log('✅ נוצר ליד עבור לקוח פוטנציאלי:', clientData.name);
-
       // Create marketing follow-up task
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 3);
@@ -756,7 +720,6 @@ export default function ClientManagementPage() {
         notes: `לקוח פוטנציאלי חדש. שכ״ט צפוי: ₪${clientData.monthly_fee || 0}. ליצור קשר ולעקוב.`,
         process_steps: {},
       });
-      console.log('✅ נוצרה משימת מעקב שיווק עבור:', clientData.name);
     } catch (err) {
       console.warn('⚠️ שגיאה ביצירת/עדכון ליד:', err.message);
     }
@@ -810,9 +773,7 @@ export default function ClientManagementPage() {
             clientId: savedClientId,
             boardId,
           }).then(res => {
-            if (res.data?.success) {
-              console.log('✅ סנכרון ל-Monday הצליח:', res.data.result?.action);
-            } else {
+            if (!res.data?.success) {
               console.warn('⚠️ סנכרון ל-Monday נכשל:', res.data?.error);
             }
           }).catch(err => {
