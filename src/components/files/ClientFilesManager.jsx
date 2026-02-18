@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  FolderOpen, Upload, RefreshCw, FileText, Copy, Check, ExternalLink
+  FolderOpen, Upload, RefreshCw, FileText, Copy, Check, ExternalLink,
+  FileBarChart, ScrollText, Receipt, Mail, MoreHorizontal
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { FileMetadata, Client } from '@/api/entities';
+import { FileMetadata } from '@/api/entities';
 import { DeleteFile, CreateSharingLink } from '@/api/integrations';
 import FileUploader from './FileUploader';
 import FileList from './FileList';
@@ -23,9 +24,19 @@ import FilePreview from './FilePreview';
 import FileMetadataForm from './FileMetadataForm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const TAB_DEFINITIONS = [
+  { value: 'all', label: 'הכל', icon: FolderOpen, types: null },
+  { value: 'reports', label: 'דוחות', icon: FileBarChart, types: ['monthly_report', 'tax_report', 'bank_statement'] },
+  { value: 'contracts', label: 'חוזים', icon: ScrollText, types: ['contract'] },
+  { value: 'payslips', label: 'תלושים', icon: Receipt, types: ['payslip'] },
+  { value: 'correspondence', label: 'התכתבויות', icon: Mail, types: ['correspondence'] },
+  { value: 'other', label: 'אחר', icon: MoreHorizontal, types: ['invoice', 'receipt', 'other'] },
+];
+
 export default function ClientFilesManager({ clientId, clientName }) {
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
   const [editingFile, setEditingFile] = useState(null);
@@ -51,10 +62,29 @@ export default function ClientFilesManager({ clientId, clientName }) {
     if (clientId) loadFiles();
   }, [clientId, loadFiles]);
 
-  // Handle upload completion - create metadata records
+  // Filter files by active tab
+  const filteredByTab = useMemo(() => {
+    const tabDef = TAB_DEFINITIONS.find(t => t.value === activeTab);
+    if (!tabDef || !tabDef.types) return files;
+    return files.filter(f => tabDef.types.includes(f.document_type));
+  }, [files, activeTab]);
+
+  // Count files per tab
+  const tabCounts = useMemo(() => {
+    const counts = {};
+    for (const tab of TAB_DEFINITIONS) {
+      if (!tab.types) {
+        counts[tab.value] = files.length;
+      } else {
+        counts[tab.value] = files.filter(f => tab.types.includes(f.document_type)).length;
+      }
+    }
+    return counts;
+  }, [files]);
+
   const handleUploadComplete = async (uploadedFiles) => {
     try {
-      const user = { full_name: 'ליתאי' }; // Will be replaced when auth is implemented
+      const user = { full_name: 'ליתאי' };
 
       for (const uploaded of uploadedFiles) {
         await FileMetadata.create({
@@ -86,7 +116,6 @@ export default function ClientFilesManager({ clientId, clientName }) {
     }
   };
 
-  // Handle metadata edit
   const handleSaveMetadata = async (updatedData) => {
     try {
       await FileMetadata.update(editingFile.id, updatedData);
@@ -99,16 +128,10 @@ export default function ClientFilesManager({ clientId, clientName }) {
     }
   };
 
-  // Handle file delete
   const handleDeleteFile = async (file) => {
     if (!window.confirm(`האם למחוק את "${file.file_name}"?`)) return;
-
     try {
-      // Delete from storage
-      if (file.file_path) {
-        await DeleteFile({ file_path: file.file_path });
-      }
-      // Delete metadata
+      if (file.file_path) await DeleteFile({ file_path: file.file_path });
       await FileMetadata.delete(file.id);
       toast.success('הקובץ נמחק');
       await loadFiles();
@@ -118,18 +141,13 @@ export default function ClientFilesManager({ clientId, clientName }) {
     }
   };
 
-  // Handle bulk delete
   const handleBulkDelete = async (fileIds) => {
     try {
       const filesToDelete = files.filter(f => fileIds.includes(f.id));
-
       for (const file of filesToDelete) {
-        if (file.file_path) {
-          await DeleteFile({ file_path: file.file_path });
-        }
+        if (file.file_path) await DeleteFile({ file_path: file.file_path });
         await FileMetadata.delete(file.id);
       }
-
       toast.success(`${fileIds.length} קבצים נמחקו`);
       await loadFiles();
     } catch (err) {
@@ -138,8 +156,7 @@ export default function ClientFilesManager({ clientId, clientName }) {
     }
   };
 
-  // Handle sharing
-  const handleShare = async (file) => {
+  const handleShare = (file) => {
     setSharingFile(file);
     setSharingLink(null);
     setIsCopied(false);
@@ -148,14 +165,7 @@ export default function ClientFilesManager({ clientId, clientName }) {
 
   const generateSharingLink = async () => {
     if (!sharingFile?.file_path) return;
-
-    const expiryMap = {
-      '1h': 3600,
-      '24h': 86400,
-      '7d': 604800,
-      '30d': 2592000,
-    };
-
+    const expiryMap = { '1h': 3600, '24h': 86400, '7d': 604800, '30d': 2592000 };
     try {
       const result = await CreateSharingLink({
         file_path: sharingFile.file_path,
@@ -176,7 +186,6 @@ export default function ClientFilesManager({ clientId, clientName }) {
       toast.success('הקישור הועתק');
       setTimeout(() => setIsCopied(false), 2000);
     } catch {
-      // Fallback for non-HTTPS
       const input = document.createElement('input');
       input.value = sharingLink.file_url;
       document.body.appendChild(input);
@@ -187,13 +196,6 @@ export default function ClientFilesManager({ clientId, clientName }) {
       toast.success('הקישור הועתק');
       setTimeout(() => setIsCopied(false), 2000);
     }
-  };
-
-  const expiryLabels = {
-    '1h': 'שעה',
-    '24h': '24 שעות',
-    '7d': 'שבוע',
-    '30d': 'חודש',
   };
 
   return (
@@ -218,16 +220,44 @@ export default function ClientFilesManager({ clientId, clientName }) {
         </div>
       </div>
 
-      {/* File List */}
-      <FileList
-        files={files}
-        isLoading={isLoading}
-        onPreview={setPreviewFile}
-        onEdit={setEditingFile}
-        onDelete={handleDeleteFile}
-        onShare={handleShare}
-        onBulkDelete={handleBulkDelete}
-      />
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
+        <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-gray-100 p-1.5 rounded-lg">
+          {TAB_DEFINITIONS.map(tab => {
+            const Icon = tab.icon;
+            const count = tabCounts[tab.value] || 0;
+            return (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md"
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+                {count > 0 && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 min-w-[18px] flex items-center justify-center rounded-full">
+                    {count}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+
+        {TAB_DEFINITIONS.map(tab => (
+          <TabsContent key={tab.value} value={tab.value} className="mt-3">
+            <FileList
+              files={filteredByTab}
+              isLoading={isLoading}
+              onPreview={setPreviewFile}
+              onEdit={setEditingFile}
+              onDelete={handleDeleteFile}
+              onShare={handleShare}
+              onBulkDelete={handleBulkDelete}
+            />
+          </TabsContent>
+        ))}
+      </Tabs>
 
       {/* Upload Dialog */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
@@ -291,7 +321,6 @@ export default function ClientFilesManager({ clientId, clientName }) {
               צור קישור זמני לשיתוף "{sharingFile?.file_name}" עם לקוח
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>תוקף הקישור</Label>
@@ -307,12 +336,10 @@ export default function ClientFilesManager({ clientId, clientName }) {
                 </SelectContent>
               </Select>
             </div>
-
             <Button onClick={generateSharingLink} className="w-full bg-primary hover:bg-accent">
               <ExternalLink className="w-4 h-4 ml-2" />
               צור קישור שיתוף
             </Button>
-
             {sharingLink && (
               <div className="space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
                 <p className="text-sm font-medium text-green-800">הקישור נוצר בהצלחה!</p>
@@ -323,17 +350,8 @@ export default function ClientFilesManager({ clientId, clientName }) {
                     className="text-xs bg-white"
                     dir="ltr"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={copyLink}
-                    className="flex-shrink-0"
-                  >
-                    {isCopied ? (
-                      <Check className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
+                  <Button variant="outline" size="sm" onClick={copyLink} className="flex-shrink-0">
+                    {isCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                   </Button>
                 </div>
                 <p className="text-xs text-green-700">

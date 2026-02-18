@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { UploadFile, DeleteFile } from '@/api/integrations';
-import { Task } from '@/api/entities';
+import { Task, FileMetadata } from '@/api/entities';
 import {
   Paperclip, Upload, Loader2, FileText, Image, File,
   Trash2, Download, X
@@ -32,7 +31,12 @@ function formatFileSize(bytes) {
   return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
-export default function TaskFileAttachments({ taskId, attachments = [], onUpdate }) {
+/**
+ * File attachments for tasks and subtasks.
+ * When clientId/clientName are provided, also creates FileMetadata records
+ * so files appear in the client's file manager.
+ */
+export default function TaskFileAttachments({ taskId, attachments = [], onUpdate, clientId, clientName }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
@@ -61,6 +65,32 @@ export default function TaskFileAttachments({ taskId, attachments = [], onUpdate
       const updated = [...attachments, newAttachment];
       await Task.update(taskId, { attachments: updated });
       onUpdate?.(updated);
+
+      // Also create FileMetadata record if task is linked to a client
+      if (clientId) {
+        try {
+          await FileMetadata.create({
+            client_id: clientId,
+            client_name: clientName || '',
+            file_name: result.file_name,
+            file_path: result.file_path,
+            file_url: result.file_url,
+            file_size: result.file_size,
+            file_type: file.type || '',
+            document_type: 'other',
+            year: String(new Date().getFullYear()),
+            month: '',
+            status: 'final',
+            notes: `צורף ממשימה`,
+            uploaded_by: 'ליתאי',
+            version: 1,
+            tags: ['task_attachment'],
+            source_task_id: taskId,
+          });
+        } catch (metaErr) {
+          console.warn('Failed to create FileMetadata for task attachment:', metaErr);
+        }
+      }
     } catch (err) {
       setError(err.message || 'שגיאה בהעלאת הקובץ');
     } finally {
