@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2,
   ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink,
-  ArrowUpDown, Clock, AlertTriangle
+  ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -21,6 +21,15 @@ import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import ResizableTable from '@/components/ui/ResizableTable';
 
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+
+function getTaskContext(task) {
+  if (task.context === 'work' || task.context === 'home') return task.context;
+  const cat = task.category || '';
+  if (['מע"מ','מקדמות מס','ניכויים','ביטוח לאומי','שכר'].includes(cat)) return 'work';
+  if (cat === 'home' || cat === 'personal') return 'home';
+  if (task.client_name) return 'work';
+  return 'other';
+}
 
 const priorityConfig = {
   low: { text: 'נמוך', color: 'bg-blue-50 text-blue-700', dot: 'bg-blue-400', order: 3 },
@@ -62,11 +71,11 @@ function getTimePeriods() {
     currMonthStart: startOfMonth(now),
     currMonthEnd: endOfMonth(now),
     tabs: [
+      { key: 'active', label: 'פעילות (כל התקופות)', icon: AlertTriangle },
       { key: 'prev_month', label: format(subMonths(now, 1), 'MMMM', { locale: he }), icon: Calendar },
       { key: 'curr_month', label: format(now, 'MMMM', { locale: he }), icon: Clock },
-      { key: 'active', label: 'פעילות', icon: AlertTriangle },
-      { key: 'completed', label: 'הושלמו', icon: CheckCircle },
       { key: 'all', label: 'הכל', icon: List },
+      { key: 'completed', label: 'הושלמו', icon: CheckCircle },
     ],
   };
 }
@@ -96,7 +105,8 @@ export default function TasksPage() {
   const [view, setView] = useState("list");
   const [isClearing, setIsClearing] = useState(false);
   const [clientMap, setClientMap] = useState({});
-  const [timeTab, setTimeTab] = useState('prev_month');
+  const [timeTab, setTimeTab] = useState('active');
+  const [contextFilter, setContextFilter] = useState('all');
   const [sortField, setSortField] = useState('due_date');
   const [sortDir, setSortDir] = useState('asc');
 
@@ -107,8 +117,16 @@ export default function TasksPage() {
     const params = new URLSearchParams(location.search);
     const statusParam = params.get('status');
     const priorityParam = params.get('priority');
+    const tabParam = params.get('tab');
+    const contextParam = params.get('context');
     if (statusParam) setStatusFilter([statusParam]);
     if (priorityParam) setPriorityFilter(priorityParam);
+    if (tabParam && ['prev_month', 'curr_month', 'active', 'completed', 'all'].includes(tabParam)) {
+      setTimeTab(tabParam);
+    }
+    if (contextParam && ['work', 'home'].includes(contextParam)) {
+      setContextFilter(contextParam);
+    }
   }, [location.search]);
 
   useEffect(() => { loadTasks(); loadClients(); }, []);
@@ -170,10 +188,13 @@ export default function TasksPage() {
     });
   }, [tasks, timeTab]);
 
-  // Search + status + priority + category filtering
+  // Search + status + priority + category + context filtering
   const filteredTasks = useMemo(() => {
     let result = [...timeFilteredTasks];
 
+    if (contextFilter !== 'all') {
+      result = result.filter(t => getTaskContext(t) === contextFilter);
+    }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(t =>
@@ -192,7 +213,7 @@ export default function TasksPage() {
       result = result.filter(t => t.category === categoryFilter);
     }
     return result;
-  }, [timeFilteredTasks, searchTerm, statusFilter, priorityFilter, categoryFilter]);
+  }, [timeFilteredTasks, searchTerm, statusFilter, priorityFilter, categoryFilter, contextFilter]);
 
   // Sorting
   const sortedTasks = useMemo(() => {
@@ -331,7 +352,18 @@ export default function TasksPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">כל המשימות</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-800">כל המשימות</h1>
+            {contextFilter !== 'all' && (
+              <Badge className={`text-sm px-2.5 py-1 gap-1.5 ${contextFilter === 'work' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                {contextFilter === 'work' ? <Briefcase className="w-3.5 h-3.5" /> : <HomeIcon className="w-3.5 h-3.5" />}
+                {contextFilter === 'work' ? 'עבודה' : 'בית'}
+                <button onClick={() => setContextFilter('all')} className="hover:bg-white/40 rounded-full p-0.5 mr-0.5">
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+          </div>
           <p className="text-base text-gray-500 mt-1">
             {stats.total} משימות | {stats.completed} הושלמו | {stats.inProgress} בעבודה
           </p>
@@ -356,7 +388,10 @@ export default function TasksPage() {
         {TIME_TABS.map(tab => {
           const Icon = tab.icon;
           const isActive = timeTab === tab.key;
-          const count = tasks.filter(t => {
+          const contextTasks = contextFilter !== 'all'
+            ? tasks.filter(t => getTaskContext(t) === contextFilter)
+            : tasks;
+          const count = contextTasks.filter(t => {
             const d = t.due_date ? parseISO(t.due_date) : null;
             switch (tab.key) {
               case 'prev_month': return d && d >= prevMonthStart && d <= prevMonthEnd;

@@ -335,7 +335,7 @@ export default function HomePage() {
 
       {/* Quick counters */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Link to={createPageUrl("Tasks?context=work")}>
+        <Link to={createPageUrl("Tasks") + "?tab=active&context=work"}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200 bg-blue-50/70">
             <CardContent className="p-3 flex items-center gap-3">
               <Briefcase className="w-5 h-5 text-blue-600" />
@@ -346,7 +346,7 @@ export default function HomePage() {
             </CardContent>
           </Card>
         </Link>
-        <Link to={createPageUrl("Tasks?context=home")}>
+        <Link to={createPageUrl("Tasks") + "?tab=active&context=home"}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200 bg-green-50/70">
             <CardContent className="p-3 flex items-center gap-3">
               <HomeIcon className="w-5 h-5 text-green-600" />
