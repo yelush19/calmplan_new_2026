@@ -2,9 +2,9 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { differenceInDays, startOfDay } from 'date-fns';
-import { AlertTriangle, FileWarning, CircleEllipsis } from 'lucide-react';
+import { AlertTriangle, FileWarning, CircleEllipsis, Pencil, Trash2 } from 'lucide-react';
 
-export default function ProcessTaskItem({ task }) {
+export default function ProcessTaskItem({ task, onEdit, onDelete }) {
   const getStatusBadge = () => {
     switch(task.status) {
       case 'completed':
@@ -35,11 +35,21 @@ export default function ProcessTaskItem({ task }) {
   const daysLeft = task.due_date ? differenceInDays(startOfDay(new Date(task.due_date)), startOfDay(new Date())) : null;
   
   return (
-    <div className="flex justify-between items-center bg-gray-50 p-2 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors">
+    <div className="group flex justify-between items-center bg-gray-50 p-2 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors">
       <div className="flex-1 min-w-0">
         <p className="truncate font-medium text-gray-800">{task.client_name || task.title}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
+        {onEdit && (
+          <button onClick={() => onEdit(task)} className="p-1 rounded hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100" title="עריכת משימה">
+            <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-blue-600" />
+          </button>
+        )}
+        {onDelete && (
+          <button onClick={() => onDelete(task)} className="p-1 rounded hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100" title="מחק משימה">
+            <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-600" />
+          </button>
+        )}
         {daysLeft !== null && daysLeft <= 3 && task.status !== 'completed' && (
           <TooltipProvider>
             <Tooltip>
