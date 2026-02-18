@@ -68,7 +68,7 @@ export default function HomePage() {
   const [quickTaskDue, setQuickTaskDue] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [quickTaskContext, setQuickTaskContext] = useState('work');
   const [isSavingQuickTask, setIsSavingQuickTask] = useState(false);
-  const [focusView, setFocusView] = useState('list');
+  const [focusView, setFocusView] = useState('kanban');
 
   useEffect(() => { loadData(); }, []);
 

@@ -102,7 +102,7 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState([]);
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [view, setView] = useState("list");
+  const [view, setView] = useState("kanban");
   const [isClearing, setIsClearing] = useState(false);
   const [clientMap, setClientMap] = useState({});
   const [timeTab, setTimeTab] = useState('active');

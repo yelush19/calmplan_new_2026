@@ -45,7 +45,7 @@ export default function PayrollDashboardPage() {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
-  const [viewMode, setViewMode] = useState('table');
+  const [viewMode, setViewMode] = useState('kanban');
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
