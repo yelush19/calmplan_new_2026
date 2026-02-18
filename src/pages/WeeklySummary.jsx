@@ -11,8 +11,10 @@ import { createPageUrl } from '@/utils';
 import {
   CheckCircle, Clock, Calendar, User, TrendingUp, ArrowRight,
   RefreshCw, Target, AlertTriangle, BarChart3, Zap, Award,
-  ChevronDown, ChevronUp, Activity, Search
+  ChevronDown, ChevronUp, Activity, Search, Pencil, Trash2
 } from 'lucide-react';
+import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   format, parseISO, isValid, startOfWeek, endOfWeek,
   differenceInDays, isWithinInterval, startOfDay, subWeeks
@@ -72,6 +74,8 @@ export default function WeeklySummary() {
   const [clients, setClients] = useState([]);
   const [expandedSection, setExpandedSection] = useState('overdue');
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingTask, setEditingTask] = useState(null);
+  const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
 
@@ -186,6 +190,33 @@ export default function WeeklySummary() {
       await Task.update(task.id, { ...task, status: newStatus });
       setRawTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
     } catch (err) { console.error(err); }
+  };
+
+  const handleEditTask = async (taskId, updatedData) => {
+    try {
+      await Task.update(taskId, updatedData);
+      setRawTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updatedData } : t));
+    } catch (err) {
+      console.error('שגיאה בעדכון משימה:', err);
+    }
+  };
+
+  const handleDeleteTask = async (task) => {
+    setEditingTask(null);
+    const ok = await confirm({
+      title: 'מחיקת משימה',
+      description: `האם למחוק את המשימה "${task.title}"?`,
+      confirmText: 'מחק',
+      cancelText: 'ביטול',
+    });
+    if (ok) {
+      try {
+        await Task.delete(task.id);
+        setRawTasks(prev => prev.filter(t => t.id !== task.id));
+      } catch (err) {
+        console.error('שגיאה במחיקת משימה:', err);
+      }
+    }
   };
 
   const toggleSection = (s) => setExpandedSection(expandedSection === s ? null : s);
@@ -334,9 +365,12 @@ export default function WeeklySummary() {
                   </div>
                   <div className="space-y-1">
                     {data.tasks.map(task => (
-                      <div key={task.id} className="flex items-center gap-2 p-1.5 rounded bg-white text-xs">
+                      <div key={task.id} className="flex items-center gap-2 p-1.5 rounded bg-white text-xs group">
                         <div className={`w-1.5 h-1.5 rounded-full ${task.daysOverdue > 7 ? 'bg-red-500' : task.daysOverdue > 3 ? 'bg-amber-500' : 'bg-yellow-400'}`} />
                         <span className="flex-1 truncate">{task.title}</span>
+                        <button onClick={() => setEditingTask(task)} className="p-0.5 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity" title="ערוך">
+                          <Pencil className="w-3 h-3 text-gray-400" />
+                        </button>
                         <MiniStatusDropdown task={task} onStatusChange={handleStatusChange} />
                         <span className="text-gray-400 shrink-0">{task.daysOverdue}d</span>
                       </div>
@@ -365,9 +399,12 @@ export default function WeeklySummary() {
             <CardContent className="pt-0">
               <div className="space-y-1">
                 {analysis.failedThisWeek.map(task => (
-                  <div key={task.id} className="flex items-center gap-2 p-2 rounded bg-stone-50 text-xs">
+                  <div key={task.id} className="flex items-center gap-2 p-2 rounded bg-stone-50 text-xs group">
                     <span className="flex-1 font-medium truncate">{task.title}</span>
                     {task.client_name && <span className="text-gray-400 shrink-0">{task.client_name}</span>}
+                    <button onClick={() => setEditingTask(task)} className="p-0.5 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity" title="ערוך">
+                      <Pencil className="w-3 h-3 text-gray-400" />
+                    </button>
                     <MiniStatusDropdown task={task} onStatusChange={handleStatusChange} />
                   </div>
                 ))}
@@ -393,9 +430,12 @@ export default function WeeklySummary() {
             <CardContent className="pt-0">
               <div className="space-y-1">
                 {analysis.upcoming.map(task => (
-                  <div key={task.id} className="flex items-center gap-2 p-2 rounded bg-sky-50 text-xs">
+                  <div key={task.id} className="flex items-center gap-2 p-2 rounded bg-sky-50 text-xs group">
                     <span className="flex-1 font-medium truncate">{task.title}</span>
                     {task.client_name && <span className="text-gray-400 shrink-0">{task.client_name}</span>}
+                    <button onClick={() => setEditingTask(task)} className="p-0.5 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity" title="ערוך">
+                      <Pencil className="w-3 h-3 text-gray-400" />
+                    </button>
                     <MiniStatusDropdown task={task} onStatusChange={handleStatusChange} />
                     {task.due_date && (
                       <span className="text-sky-500 shrink-0">{format(parseISO(task.due_date), 'EEE d/M', { locale: he })}</span>
@@ -447,6 +487,15 @@ export default function WeeklySummary() {
           </Button>
         </Link>
       </div>
+
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleEditTask}
+        onDelete={handleDeleteTask}
+      />
+      {ConfirmDialogComponent}
     </div>
   );
 }

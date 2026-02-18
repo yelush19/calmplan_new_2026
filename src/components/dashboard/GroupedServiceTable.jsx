@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, ChevronDown, ChevronLeft, Plus, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ResizableTable from '@/components/ui/ResizableTable';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
@@ -38,6 +38,8 @@ export default function GroupedServiceTable({
   onSubTaskChange,
   onAttachmentUpdate,
   getClientIds,
+  onEdit,
+  onDelete,
 }) {
   const relevantRows = clientRows.filter(r => r.task.status !== 'not_relevant');
   const completedCount = relevantRows.filter(r => r.task.status === 'completed').length;
@@ -164,6 +166,8 @@ export default function GroupedServiceTable({
                       onSubTaskChange={onSubTaskChange}
                       onAttachmentUpdate={onAttachmentUpdate}
                       getClientIds={getClientIds}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
                     />
                   ))}
                 </React.Fragment>
@@ -180,7 +184,7 @@ export default function GroupedServiceTable({
 // CLIENT ROW
 // =====================================================
 
-function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds }) {
+function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete }) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
@@ -356,6 +360,29 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                   clientName={task.client_name}
                 />
               </div>
+              {/* Edit / Delete actions */}
+              {(onEdit || onDelete) && (
+                <div className="mt-3 pt-2 border-t border-indigo-100 flex items-center gap-2">
+                  {onEdit && (
+                    <button
+                      onClick={() => onEdit(task)}
+                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded px-2 py-1 transition-colors"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      עריכת משימה
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={() => onDelete(task)}
+                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 rounded px-2 py-1 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      מחק
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </td>
         </tr>
