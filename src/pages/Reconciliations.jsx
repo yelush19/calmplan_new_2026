@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AccountReconciliation, Client, ClientAccount } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +16,7 @@ import {
 import {
   BookCheck, Plus, Filter, Banknote, MoreHorizontal, CheckCircle,
   Clock, AlertCircle, Landmark, CreditCard, AlertTriangle,
-  Calendar, ArrowLeft, Pencil, Search, BookUser, Building2
+  Calendar, ArrowLeft, Pencil, Search, BookUser, Building2, ChevronDown
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -87,8 +87,20 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('he-IL');
 }
 
+const STATUS_GROUP_ORDER_REC = ['issues', 'waiting_for_materials', 'in_progress', 'not_started', 'completed'];
+const DEFAULT_COLLAPSED_REC = new Set(['completed']);
+
 // --- Status Table Tab ---
 function StatusTable({ accounts, clients, reconciliations, onUpdateAccount, searchTerm, statusFilter }) {
+  const [collapsedGroups, setCollapsedGroups] = useState(() => {
+    const init = {};
+    DEFAULT_COLLAPSED_REC.forEach(s => { init[s] = true; });
+    return init;
+  });
+  const toggleGroup = useCallback((status) => {
+    setCollapsedGroups(prev => ({ ...prev, [status]: !prev[status] }));
+  }, []);
+
   const clientMap = useMemo(() => {
     const m = {};
     clients.forEach(c => { m[c.id] = c; });
@@ -141,6 +153,19 @@ function StatusTable({ accounts, clients, reconciliations, onUpdateAccount, sear
 
   const overdueCount = rows.filter(r => r.daysOverdue > 0).length;
 
+  // Group rows by status
+  const groupedRows = useMemo(() => {
+    const groups = {};
+    rows.forEach(row => {
+      const s = row.latestStatus || 'not_started';
+      if (!groups[s]) groups[s] = [];
+      groups[s].push(row);
+    });
+    return STATUS_GROUP_ORDER_REC
+      .filter(s => groups[s] && groups[s].length > 0)
+      .map(s => ({ status: s, rows: groups[s] }));
+  }, [rows]);
+
   return (
     <div>
       {overdueCount > 0 && (
@@ -168,7 +193,26 @@ function StatusTable({ accounts, clients, reconciliations, onUpdateAccount, sear
           <tbody>
             {rows.length === 0 ? (
               <tr><td colSpan={9} className="text-center py-8 text-gray-400">אין חשבונות להצגה</td></tr>
-            ) : rows.map(({ account, client, nextDate, daysOverdue, latestRec, latestStatus }) => {
+            ) : groupedRows.map(({ status, rows: groupRows }) => {
+              const cfg = statusConfig[status] || statusConfig.not_started;
+              const isCollapsed = !!collapsedGroups[status];
+              return (
+                <React.Fragment key={status}>
+                  {/* Group header */}
+                  <tr
+                    className="cursor-pointer select-none hover:bg-gray-100 bg-gray-50/80 transition-colors"
+                    onClick={() => toggleGroup(status)}
+                  >
+                    <td colSpan={9} className="p-2.5 border-b border-gray-200">
+                      <div className="flex items-center gap-2.5">
+                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isCollapsed ? 'rotate-[-90deg]' : ''}`} />
+                        <Badge className={`text-xs ${cfg.color}`}>{cfg.label}</Badge>
+                        <span className="text-xs text-gray-500 font-medium">{groupRows.length} חשבונות</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Rows */}
+                  {!isCollapsed && groupRows.map(({ account, client, nextDate, daysOverdue, latestRec, latestStatus }) => {
               const isOverdue = daysOverdue > 0;
               const AccIcon = accountTypeIcons[account.account_type] || Landmark;
               return (
@@ -220,6 +264,9 @@ function StatusTable({ accounts, clients, reconciliations, onUpdateAccount, sear
                   </td>
                 </tr>
               );
+                  })}
+                </React.Fragment>
+              );
             })}
           </tbody>
         </table>
@@ -236,17 +283,27 @@ function TasksKanban({ reconciliations, onStatusChange, onEdit }) {
     { key: 'in_progress', label: 'בתהליך', color: 'border-blue-300 bg-blue-50' },
     { key: 'completed', label: 'הושלם', color: 'border-green-300 bg-green-50' },
   ];
+  const [collapsed, setCollapsed] = useState({ completed: true });
+  const toggleCol = (key) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {columns.map(col => {
         const items = reconciliations.filter(r => r.status === col.key);
+        const isCollapsed = !!collapsed[col.key];
         return (
-          <div key={col.key} className={`rounded-lg border-2 ${col.color} p-3 min-h-[200px]`}>
-            <h3 className="font-bold text-sm mb-3 flex items-center justify-between">
-              {col.label}
+          <div key={col.key} className={`rounded-lg border-2 ${col.color} p-3 ${isCollapsed ? '' : 'min-h-[200px]'}`}>
+            <h3
+              className="font-bold text-sm mb-3 flex items-center justify-between cursor-pointer select-none"
+              onClick={() => toggleCol(col.key)}
+            >
+              <div className="flex items-center gap-1.5">
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isCollapsed ? 'rotate-[-90deg]' : ''}`} />
+                {col.label}
+              </div>
               <Badge variant="secondary" className="text-xs">{items.length}</Badge>
             </h3>
+            {!isCollapsed && (
             <div className="space-y-2">
               <AnimatePresence>
                 {items.map(rec => (
@@ -290,6 +347,7 @@ function TasksKanban({ reconciliations, onStatusChange, onEdit }) {
                 <p className="text-xs text-gray-400 text-center py-4">אין משימות</p>
               )}
             </div>
+            )}
           </div>
         );
       })}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Briefcase, Home as HomeIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Briefcase, Home as HomeIcon, Search, ChevronDown, X, Clock } from 'lucide-react';
 import { Task, Client } from '@/api/entities';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { getScheduledStartForCategory } from '@/config/automationRules';
@@ -27,9 +28,140 @@ const SERVICE_LIST = Object.values(ALL_SERVICES).map(s => ({
   createCategory: s.createCategory,
 }));
 
+// Searchable dropdown component
+function SearchableSelect({ value, onChange, items, placeholder, renderItem, groupBy, groupLabels, allowNone, noneLabel = 'ללא' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) setSearch('');
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return items;
+    const q = search.toLowerCase();
+    return items.filter(item => {
+      const label = typeof renderItem === 'function' ? renderItem(item) : (item.label || item.name || '');
+      return String(label).toLowerCase().includes(q);
+    });
+  }, [items, search, renderItem]);
+
+  const selectedItem = items.find(i => i.id === value || i.key === value);
+  const displayLabel = selectedItem ? (renderItem ? renderItem(selectedItem) : selectedItem.label || selectedItem.name) : (value === '__none__' ? noneLabel : placeholder);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => { setIsOpen(!isOpen); setTimeout(() => inputRef.current?.focus(), 50); }}
+        className="w-full flex items-center justify-between h-9 px-3 text-xs border border-gray-200 rounded-md bg-white hover:bg-gray-50 transition-colors"
+      >
+        <span className={`truncate ${!selectedItem && value === '__none__' ? 'text-gray-400' : 'text-gray-800'}`}>
+          {displayLabel}
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 flex flex-col">
+          {/* Search input */}
+          <div className="p-1.5 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300" />
+              <input
+                ref={inputRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="חפש..."
+                className="w-full h-7 text-xs pr-7 pl-2 border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-emerald-300"
+              />
+            </div>
+          </div>
+
+          {/* Options */}
+          <div className="overflow-y-auto flex-1">
+            {allowNone && (
+              <button
+                type="button"
+                onClick={() => { onChange('__none__'); setIsOpen(false); }}
+                className={`w-full text-right px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors ${value === '__none__' ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-500'}`}
+              >
+                {noneLabel}
+              </button>
+            )}
+
+            {groupBy ? (
+              // Grouped rendering
+              groupLabels.map(group => {
+                const groupItems = filtered.filter(i => i[groupBy] === group.key);
+                if (groupItems.length === 0) return null;
+                return (
+                  <div key={group.key}>
+                    <div className="px-3 py-1 text-[10px] font-bold text-gray-400 bg-gray-50 sticky top-0">
+                      {group.label}
+                    </div>
+                    {groupItems.map(item => {
+                      const itemKey = item.id || item.key;
+                      const isSelected = itemKey === value;
+                      return (
+                        <button
+                          type="button"
+                          key={itemKey}
+                          onClick={() => { onChange(itemKey); setIsOpen(false); }}
+                          className={`w-full text-right px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors ${isSelected ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-700'}`}
+                        >
+                          {renderItem ? renderItem(item) : item.label || item.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })
+            ) : (
+              // Flat rendering
+              filtered.map(item => {
+                const itemKey = item.id || item.key;
+                const isSelected = itemKey === value;
+                return (
+                  <button
+                    type="button"
+                    key={itemKey}
+                    onClick={() => { onChange(itemKey); setIsOpen(false); }}
+                    className={`w-full text-right px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors ${isSelected ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-700'}`}
+                  >
+                    {renderItem ? renderItem(item) : item.label || item.name}
+                  </button>
+                );
+              })
+            )}
+
+            {filtered.length === 0 && !allowNone && (
+              <div className="text-center py-3 text-xs text-gray-400">לא נמצאו תוצאות</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defaultContext = 'work', defaultCategory = '' }) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [dueTime, setDueTime] = useState('');
+  const [duration, setDuration] = useState('');
   const [context, setContext] = useState(defaultContext);
   const [serviceKey, setServiceKey] = useState(defaultCategory || '__none__');
   const [clientId, setClientId] = useState('__none__');
@@ -43,6 +175,8 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
       }).catch(() => setClients([]));
       setTitle('');
       setDueDate(format(new Date(), 'yyyy-MM-dd'));
+      setDueTime('');
+      setDuration('');
       setContext(defaultContext);
       setServiceKey(defaultCategory || '__none__');
       setClientId('__none__');
@@ -69,6 +203,8 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         title: taskTitle,
         status: 'not_started',
         due_date: dueDate,
+        due_time: dueTime || undefined,
+        estimated_duration: duration ? parseInt(duration) : undefined,
         scheduled_start: scheduledStart || undefined,
         context,
         category,
@@ -90,7 +226,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[440px]" dir="rtl">
+      <DialogContent className="sm:max-w-[460px]" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5" />
@@ -111,34 +247,21 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
             />
           </div>
 
-          {/* Service type + Context */}
+          {/* Service type (searchable) + Context */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">סוג שירות</Label>
-              <Select value={serviceKey} onValueChange={setServiceKey}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue placeholder="בחר שירות" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__" className="text-xs">ללא (כללי)</SelectItem>
-                  {SERVICE_GROUPS.map(group => {
-                    const services = SERVICE_LIST.filter(s => s.dashboard === group.key);
-                    if (services.length === 0) return null;
-                    return (
-                      <React.Fragment key={group.key}>
-                        <div className="px-2 py-1 text-[10px] font-bold text-gray-400 bg-gray-50">
-                          {group.label}
-                        </div>
-                        {services.map(s => (
-                          <SelectItem key={s.key} value={s.key} className="text-xs">
-                            {s.label}
-                          </SelectItem>
-                        ))}
-                      </React.Fragment>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={serviceKey}
+                onChange={setServiceKey}
+                items={SERVICE_LIST}
+                placeholder="בחר שירות"
+                renderItem={(item) => item.label}
+                groupBy="dashboard"
+                groupLabels={SERVICE_GROUPS}
+                allowNone
+                noneLabel="ללא (כללי)"
+              />
             </div>
             <div>
               <Label className="text-xs">הקשר</Label>
@@ -158,24 +281,22 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
             </div>
           </div>
 
-          {/* Client + Due date */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">לקוח</Label>
-              <Select value={clientId} onValueChange={setClientId}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue placeholder="שיוך ללקוח" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__" className="text-xs">ללא לקוח</SelectItem>
-                  {clients.map(c => (
-                    <SelectItem key={c.id} value={c.id} className="text-xs">
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Client (searchable) */}
+          <div>
+            <Label className="text-xs">שיוך ללקוח</Label>
+            <SearchableSelect
+              value={clientId}
+              onChange={setClientId}
+              items={clients}
+              placeholder="בחר לקוח"
+              renderItem={(item) => item.name}
+              allowNone
+              noneLabel="ללא לקוח"
+            />
+          </div>
+
+          {/* Due date + Time + Duration */}
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <Label className="text-xs">תאריך יעד</Label>
               <Input
@@ -184,6 +305,31 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
                 onChange={(e) => setDueDate(e.target.value)}
                 className="text-xs h-9"
                 dir="ltr"
+              />
+            </div>
+            <div>
+              <Label className="text-xs flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                שעה
+              </Label>
+              <Input
+                type="time"
+                value={dueTime}
+                onChange={(e) => setDueTime(e.target.value)}
+                className="text-xs h-9"
+                dir="ltr"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">משך (דקות)</Label>
+              <Input
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="30"
+                className="text-xs h-9"
+                dir="ltr"
+                min="0"
               />
             </div>
           </div>
