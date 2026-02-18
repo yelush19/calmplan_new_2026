@@ -122,6 +122,7 @@ export default function TasksPage() {
   const [timeTab, setTimeTab] = useState('active');
   const [contextFilter, setContextFilter] = useState('all');
   const [sortField, setSortField] = useState('due_date');
+  const [groupBy, setGroupBy] = useState('status'); // 'status' or 'category'
   const [collapsedStatuses, setCollapsedStatuses] = useState(() => {
     const init = {};
     DEFAULT_COLLAPSED_STATUSES.forEach(s => { init[s] = true; });
@@ -272,8 +273,29 @@ export default function TasksPage() {
     return sorted;
   }, [filteredTasks, sortField, sortDir]);
 
-  // Group sorted tasks by status for the list view
-  const statusGroupedTasks = useMemo(() => {
+  // Group sorted tasks by status or category for the list view
+  const groupedTasks = useMemo(() => {
+    if (groupBy === 'category') {
+      const groups = {};
+      sortedTasks.forEach(task => {
+        const cat = task.category || '__none__';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(task);
+      });
+      // Sort categories alphabetically with __none__ at end
+      const catKeys = Object.keys(groups).sort((a, b) => {
+        if (a === '__none__') return 1;
+        if (b === '__none__') return -1;
+        return getCategoryLabel(a).localeCompare(getCategoryLabel(b), 'he');
+      });
+      return catKeys.map(cat => ({
+        key: cat,
+        label: cat === '__none__' ? 'ללא קטגוריה' : getCategoryLabel(cat),
+        dot: 'bg-gray-400',
+        tasks: groups[cat],
+      }));
+    }
+    // Default: group by status
     const groups = {};
     sortedTasks.forEach(task => {
       const s = task.status || 'not_started';
@@ -282,8 +304,11 @@ export default function TasksPage() {
     });
     return STATUS_GROUP_ORDER
       .filter(s => groups[s] && groups[s].length > 0)
-      .map(s => ({ status: s, tasks: groups[s] }));
-  }, [sortedTasks]);
+      .map(s => {
+        const cfg = statusConfig[s] || statusConfig.not_started;
+        return { key: s, label: cfg.text, dot: cfg.dot, tasks: groups[s] };
+      });
+  }, [sortedTasks, groupBy]);
 
   const stats = useMemo(() => {
     const total = filteredTasks.length;
@@ -523,6 +548,27 @@ export default function TasksPage() {
         </CardContent>
       </Card>
 
+      {/* Group by toggle for list view */}
+      {view === 'list' && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 font-medium">קיבוץ לפי:</span>
+          <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
+            <button
+              onClick={() => setGroupBy('status')}
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${groupBy === 'status' ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              סטטוס
+            </button>
+            <button
+              onClick={() => setGroupBy('category')}
+              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${groupBy === 'category' ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              סוג דיווח
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       {view === 'list' ? (
         sortedTasks.length === 0 ? (
@@ -551,22 +597,20 @@ export default function TasksPage() {
                 </tr>
               </thead>
               <tbody>
-                {statusGroupedTasks.map(({ status, tasks: groupTasks }) => {
-                  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.not_started;
-                  const stsCfg = statusConfig[status] || statusConfig.not_started;
-                  const isGroupCollapsed = !!collapsedStatuses[status];
+                {groupedTasks.map(({ key: groupKey, label: groupLabel, dot: groupDot, tasks: groupTasks }) => {
+                  const isGroupCollapsed = !!collapsedStatuses[groupKey];
                   return (
-                    <React.Fragment key={status}>
-                      {/* Status group header row */}
+                    <React.Fragment key={groupKey}>
+                      {/* Group header row */}
                       <tr
                         className="cursor-pointer select-none hover:bg-gray-50/80 transition-colors bg-gray-50/50"
-                        onClick={() => toggleStatusGroup(status)}
+                        onClick={() => toggleStatusGroup(groupKey)}
                       >
                         <td colSpan={7} className="py-2 px-3 border-b border-gray-100">
                           <div className="flex items-center gap-2.5">
                             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isGroupCollapsed ? 'rotate-[-90deg]' : ''}`} />
-                            <div className={`w-2.5 h-2.5 rounded-full ${stsCfg.dot} shrink-0`} />
-                            <span className="font-semibold text-gray-700 text-xs">{stsCfg.text}</span>
+                            <div className={`w-2.5 h-2.5 rounded-full ${groupDot} shrink-0`} />
+                            <span className="font-semibold text-gray-700 text-xs">{groupLabel}</span>
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 font-normal">
                               {groupTasks.length}
                             </Badge>

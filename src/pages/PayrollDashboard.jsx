@@ -378,7 +378,7 @@ export default function PayrollDashboardPage() {
         viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} />
         ) : viewMode === 'timeline' ? (
-          <ProjectTimelineView tasks={filteredTasks} month={selectedMonth} year={selectedYear} onEdit={setEditingTask} />
+          <ProjectTimelineView tasks={filteredTasks} month={selectedMonth} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
         ) : (
           <div className="space-y-6">
             {sortedServiceKeys.map(serviceKey => {
