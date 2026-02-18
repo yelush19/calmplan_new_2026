@@ -181,6 +181,11 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit }) => {
 
 export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask, onEditTask }) {
   const [board, setBoard] = useState(columnsConfig);
+  const [collapsed, setCollapsed] = useState({ completed: true });
+
+  const toggleCollapsed = (colId) => {
+    setCollapsed(prev => ({ ...prev, [colId]: !prev[colId] }));
+  };
 
   useEffect(() => {
     const validTasks = Array.isArray(tasks) ? tasks : [];
@@ -247,45 +252,61 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {Object.entries(board).map(([columnId, column]) => (
+        {Object.entries(board).map(([columnId, column]) => {
+          const isCollapsed = !!collapsed[columnId];
+          const taskCount = Array.isArray(column.tasks) ? column.tasks.length : 0;
+          return (
           <Droppable droppableId={columnId} key={columnId}>
             {(provided, snapshot) => (
               <Card className={`flex flex-col ${column.color}`}>
-                <CardHeader>
+                <CardHeader
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleCollapsed(columnId)}
+                >
                   <CardTitle className="flex justify-between items-center">
-                    <span>{column.title}</span>
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isCollapsed ? 'rotate-[-90deg]' : ''}`} />
+                      <span>{column.title}</span>
+                    </div>
                     <Badge variant="secondary">
-                      {Array.isArray(column.tasks) ? column.tasks.length : 0}
+                      {taskCount}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
-                <CardContent
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`flex-grow p-4 transition-colors min-h-[200px] ${snapshot.isDraggingOver ? 'bg-opacity-80' : ''}`}
-                >
-                  {Array.isArray(column.tasks) && column.tasks.map((task, index) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      index={index}
-                      onStatusChange={onTaskStatusChange}
-                      onDelete={onDeleteTask}
-                      onEdit={onEditTask}
-                    />
-                  ))}
-                  {provided.placeholder}
+                {!isCollapsed ? (
+                  <CardContent
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`flex-grow p-4 transition-colors min-h-[200px] ${snapshot.isDraggingOver ? 'bg-opacity-80' : ''}`}
+                  >
+                    {Array.isArray(column.tasks) && column.tasks.map((task, index) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        index={index}
+                        onStatusChange={onTaskStatusChange}
+                        onDelete={onDeleteTask}
+                        onEdit={onEditTask}
+                      />
+                    ))}
+                    {provided.placeholder}
 
-                  {(!column.tasks || column.tasks.length === 0) && (
-                    <div className="text-center text-gray-400 py-8">
-                      <p>אין משימות</p>
-                    </div>
-                  )}
-                </CardContent>
+                    {taskCount === 0 && (
+                      <div className="text-center text-gray-400 py-8">
+                        <p>אין משימות</p>
+                      </div>
+                    )}
+                  </CardContent>
+                ) : (
+                  <div ref={provided.innerRef} {...provided.droppableProps} className="hidden">
+                    {provided.placeholder}
+                  </div>
+                )}
               </Card>
             )}
           </Droppable>
-        ))}
+          );
+        })}
       </div>
     </DragDropContext>
   );

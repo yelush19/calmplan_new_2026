@@ -23,7 +23,15 @@ import KanbanView from "../components/tasks/KanbanView";
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import ResizableTable from '@/components/ui/ResizableTable';
 
-import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/processTemplates';
+
+// Display order for status groups in list view
+const STATUS_GROUP_ORDER = [
+  'issue', 'waiting_for_materials', 'in_progress', 'waiting_for_approval',
+  'not_started', 'ready_for_reporting', 'postponed', 'reported_waiting_for_payment',
+  'completed', 'not_relevant',
+];
+const DEFAULT_COLLAPSED_STATUSES = new Set(['completed', 'not_relevant']);
 
 function getTaskContext(task) {
   if (task.context === 'work' || task.context === 'home') return task.context;
@@ -114,6 +122,15 @@ export default function TasksPage() {
   const [timeTab, setTimeTab] = useState('active');
   const [contextFilter, setContextFilter] = useState('all');
   const [sortField, setSortField] = useState('due_date');
+  const [collapsedStatuses, setCollapsedStatuses] = useState(() => {
+    const init = {};
+    DEFAULT_COLLAPSED_STATUSES.forEach(s => { init[s] = true; });
+    return init;
+  });
+
+  const toggleStatusGroup = (status) => {
+    setCollapsedStatuses(prev => ({ ...prev, [status]: !prev[status] }));
+  };
   const [sortDir, setSortDir] = useState('asc');
 
   const location = useLocation();
@@ -254,6 +271,19 @@ export default function TasksPage() {
     });
     return sorted;
   }, [filteredTasks, sortField, sortDir]);
+
+  // Group sorted tasks by status for the list view
+  const statusGroupedTasks = useMemo(() => {
+    const groups = {};
+    sortedTasks.forEach(task => {
+      const s = task.status || 'not_started';
+      if (!groups[s]) groups[s] = [];
+      groups[s].push(task);
+    });
+    return STATUS_GROUP_ORDER
+      .filter(s => groups[s] && groups[s].length > 0)
+      .map(s => ({ status: s, tasks: groups[s] }));
+  }, [sortedTasks]);
 
   const stats = useMemo(() => {
     const total = filteredTasks.length;
@@ -521,7 +551,30 @@ export default function TasksPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedTasks.map(task => {
+                {statusGroupedTasks.map(({ status, tasks: groupTasks }) => {
+                  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.not_started;
+                  const stsCfg = statusConfig[status] || statusConfig.not_started;
+                  const isGroupCollapsed = !!collapsedStatuses[status];
+                  return (
+                    <React.Fragment key={status}>
+                      {/* Status group header row */}
+                      <tr
+                        className="cursor-pointer select-none hover:bg-gray-50/80 transition-colors bg-gray-50/50"
+                        onClick={() => toggleStatusGroup(status)}
+                      >
+                        <td colSpan={7} className="py-2 px-3 border-b border-gray-100">
+                          <div className="flex items-center gap-2.5">
+                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isGroupCollapsed ? 'rotate-[-90deg]' : ''}`} />
+                            <div className={`w-2.5 h-2.5 rounded-full ${stsCfg.dot} shrink-0`} />
+                            <span className="font-semibold text-gray-700 text-xs">{stsCfg.text}</span>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 font-normal">
+                              {groupTasks.length}
+                            </Badge>
+                          </div>
+                        </td>
+                      </tr>
+                      {/* Task rows */}
+                      {!isGroupCollapsed && groupTasks.map(task => {
                   const sts = statusConfig[task.status] || statusConfig.not_started;
                   const pri = priorityConfig[task.priority] || priorityConfig.medium;
                   const isCompleted = task.status === 'completed';
@@ -631,6 +684,9 @@ export default function TasksPage() {
                         </div>
                       </td>
                     </tr>
+                  );
+                      })}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
