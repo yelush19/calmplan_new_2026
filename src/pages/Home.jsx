@@ -16,7 +16,7 @@ import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   ArrowRight, Target, AlertTriangle, ChevronDown, Sparkles,
-  FileBarChart, Brain, Zap, Plus, CreditCard, List, LayoutGrid
+  FileBarChart, Brain, Zap, Plus, CreditCard, List, LayoutGrid, Search
 } from "lucide-react";
 import StickyNotes from "@/components/StickyNotes";
 import KanbanView from "../components/tasks/KanbanView";
@@ -69,6 +69,7 @@ export default function HomePage() {
   const [quickTaskContext, setQuickTaskContext] = useState('work');
   const [isSavingQuickTask, setIsSavingQuickTask] = useState(false);
   const [focusView, setFocusView] = useState('kanban');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => { loadData(); }, []);
 
@@ -248,37 +249,55 @@ export default function HomePage() {
     );
   }
 
+  const filterBySearch = (items, isEvent = false) => {
+    if (!searchTerm) return items;
+    const lower = searchTerm.toLowerCase();
+    return items.filter(item =>
+      item.title?.toLowerCase().includes(lower) ||
+      (!isEvent && item.client_name?.toLowerCase().includes(lower)) ||
+      (!isEvent && item.category?.toLowerCase().includes(lower)) ||
+      (isEvent && item.description?.toLowerCase().includes(lower))
+    );
+  };
+
   const getTabCount = (tabKey) => {
-    if (tabKey === 'events') return data.todayEvents.length;
-    return (data[tabKey] || []).length;
+    if (tabKey === 'events') return filterBySearch(data.todayEvents, true).length;
+    return filterBySearch(data[tabKey] || []).length;
   };
 
   const getTabContent = () => {
     switch (activeTab) {
-      case 'overdue':
-        return data.overdue.length === 0 ? (
+      case 'overdue': {
+        const filtered = filterBySearch(data.overdue);
+        return filtered.length === 0 ? (
           <EmptyState icon={<CheckCircle className="w-10 h-10 text-emerald-400" />} text="אין משימות באיחור" />
         ) : (
-          <TaskList tasks={data.overdue} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDeadlineContext />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDeadlineContext />
         );
-      case 'today':
-        return data.today.length === 0 ? (
+      }
+      case 'today': {
+        const filtered = filterBySearch(data.today);
+        return filtered.length === 0 ? (
           <EmptyState icon={<Sparkles className="w-10 h-10 text-emerald-400" />} text="אין משימות להיום - כל הכבוד!" />
         ) : (
-          <TaskList tasks={data.today} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDeadlineContext />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDeadlineContext />
         );
-      case 'upcoming':
-        return data.upcoming.length === 0 ? (
+      }
+      case 'upcoming': {
+        const filtered = filterBySearch(data.upcoming);
+        return filtered.length === 0 ? (
           <EmptyState icon={<Clock className="w-10 h-10 text-gray-300" />} text="אין משימות ל-3 ימים הקרובים" />
         ) : (
-          <TaskList tasks={data.upcoming} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDate />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showDate />
         );
-      case 'events':
-        return data.todayEvents.length === 0 ? (
+      }
+      case 'events': {
+        const filtered = filterBySearch(data.todayEvents, true);
+        return filtered.length === 0 ? (
           <EmptyState icon={<Calendar className="w-10 h-10 text-purple-300" />} text="אין אירועים היום" />
         ) : (
           <div className="space-y-2">
-            {data.todayEvents.map(event => (
+            {filtered.map(event => (
               <div key={event.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-purple-50 border border-purple-100">
                 <div className="text-sm font-mono font-semibold text-purple-700 min-w-[50px]">
                   {format(parseISO(event.start_date), 'HH:mm')}
@@ -291,12 +310,15 @@ export default function HomePage() {
             ))}
           </div>
         );
-      case 'payment':
-        return data.payment.length === 0 ? (
+      }
+      case 'payment': {
+        const filtered = filterBySearch(data.payment);
+        return filtered.length === 0 ? (
           <EmptyState icon={<CreditCard className="w-10 h-10 text-yellow-300" />} text="אין משימות ממתינות לתשלום" />
         ) : (
-          <TaskList tasks={data.payment} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showPaymentDate />
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} showPaymentDate />
         );
+      }
       default:
         return null;
     }
@@ -406,6 +428,16 @@ export default function HomePage() {
                 </Link>
               </div>
             </div>
+            {/* Search */}
+            <div className="relative mb-2">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="חיפוש לפי שם לקוח, משימה..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10 h-8 text-sm"
+              />
+            </div>
             {/* Horizontal Tab Bar */}
             <div className="flex gap-1.5 overflow-x-auto pb-2 border-b border-gray-100">
               {FOCUS_TABS.map(tab => {
@@ -437,7 +469,7 @@ export default function HomePage() {
           <CardContent className="pt-4">
             {focusView === 'kanban' ? (
               <KanbanView
-                tasks={[...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])]}
+                tasks={filterBySearch([...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])])}
                 onTaskStatusChange={handleStatusChange}
               />
             ) : (

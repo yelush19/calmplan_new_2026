@@ -4,10 +4,11 @@ import { Task, Client } from '@/api/entities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight,
-  ArrowRight, Users, X, Settings2, List, LayoutGrid
+  ArrowRight, Users, X, Settings2, List, LayoutGrid, Search
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -56,6 +57,7 @@ export default function AdditionalServicesDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
   const [viewMode, setViewMode] = useState('kanban');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
@@ -108,9 +110,20 @@ export default function AdditionalServicesDashboardPage() {
   }, [clients]);
 
   const filteredTasks = useMemo(() => {
-    if (!clientFilter) return tasks;
-    return tasks.filter(t => t.client_name === clientFilter);
-  }, [tasks, clientFilter]);
+    let result = tasks;
+    if (clientFilter) {
+      result = result.filter(t => t.client_name === clientFilter);
+    }
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      result = result.filter(t =>
+        t.client_name?.toLowerCase().includes(lower) ||
+        t.title?.toLowerCase().includes(lower) ||
+        t.category?.toLowerCase().includes(lower)
+      );
+    }
+    return result;
+  }, [tasks, clientFilter, searchTerm]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
@@ -267,6 +280,16 @@ export default function AdditionalServicesDashboardPage() {
           </Button>
         </div>
       </motion.div>
+
+      <div className="relative">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          placeholder="חיפוש לפי שם לקוח, משימה..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pr-10 h-9"
+        />
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">

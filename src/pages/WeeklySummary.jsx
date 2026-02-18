@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Task, Client } from '@/api/entities';
 import { Link } from 'react-router-dom';
@@ -10,7 +11,7 @@ import { createPageUrl } from '@/utils';
 import {
   CheckCircle, Clock, Calendar, User, TrendingUp, ArrowRight,
   RefreshCw, Target, AlertTriangle, BarChart3, Zap, Award,
-  ChevronDown, ChevronUp, Activity
+  ChevronDown, ChevronUp, Activity, Search
 } from 'lucide-react';
 import {
   format, parseISO, isValid, startOfWeek, endOfWeek,
@@ -70,6 +71,7 @@ export default function WeeklySummary() {
   const [rawTasks, setRawTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [expandedSection, setExpandedSection] = useState('overdue');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => { loadData(); }, []);
 
@@ -86,6 +88,16 @@ export default function WeeklySummary() {
     setIsLoading(false);
   };
 
+  const filteredRawTasks = useMemo(() => {
+    if (!searchTerm) return rawTasks;
+    const lower = searchTerm.toLowerCase();
+    return rawTasks.filter(t =>
+      t.title?.toLowerCase().includes(lower) ||
+      t.client_name?.toLowerCase().includes(lower) ||
+      t.category?.toLowerCase().includes(lower)
+    );
+  }, [rawTasks, searchTerm]);
+
   const analysis = useMemo(() => {
     const now = new Date();
     const today = startOfDay(now);
@@ -98,8 +110,8 @@ export default function WeeklySummary() {
     const nextWeekStart = new Date(weekEnd);
     nextWeekStart.setDate(nextWeekStart.getDate() + 1);
 
-    const active = rawTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
-    const completed = rawTasks.filter(t => t.status === 'completed');
+    const active = filteredRawTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
+    const completed = filteredRawTasks.filter(t => t.status === 'completed');
 
     const overdue = active.filter(task => {
       const d = task.due_date;
@@ -167,7 +179,7 @@ export default function WeeklySummary() {
       activeCount: active.length, completedCount: completedThisWeek.length,
       prevWeekCompleted: completedPrevWeek.length, weeklyTrend,
     };
-  }, [rawTasks, clients]);
+  }, [filteredRawTasks, clients]);
 
   const handleStatusChange = async (task, newStatus) => {
     try {
@@ -199,6 +211,17 @@ export default function WeeklySummary() {
         <Button variant="outline" size="sm" onClick={loadData} className="gap-1">
           <RefreshCw className="w-4 h-4" /> רענן
         </Button>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          placeholder="חיפוש לפי שם לקוח, משימה..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pr-10 h-9"
+        />
       </div>
 
       {/* KPI Row - 5 metrics */}

@@ -3,10 +3,11 @@ import { Event, Task, StickyNote } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Plus, Calendar as CalendarIcon, Clock, ChevronRight, ChevronLeft,
   CheckCircle, Target, Briefcase, Home, Star, Pin, ArrowLeft, ArrowRight,
-  Loader, Eye
+  Loader, Eye, Search
 } from "lucide-react";
 import {
   format, parseISO, isValid, isBefore, isSameDay, startOfWeek, endOfWeek,
@@ -56,6 +57,7 @@ export default function CalendarPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showStickyPanel, setShowStickyPanel] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadData();
@@ -98,14 +100,27 @@ export default function CalendarPage() {
   };
 
   // Combine all items
-  const allItems = useMemo(() => [
-    ...events.map(e => ({ ...e, itemType: 'event', _date: safeParseDateString(e.start_date) })),
-    ...tasks.map(t => ({
-      ...t,
-      itemType: 'task',
-      _date: safeParseDateString(t.due_date) || safeParseDateString(t.scheduled_start)
-    }))
-  ].filter(item => item._date), [events, tasks]);
+  const allItems = useMemo(() => {
+    let items = [
+      ...events.map(e => ({ ...e, itemType: 'event', _date: safeParseDateString(e.start_date) })),
+      ...tasks.map(t => ({
+        ...t,
+        itemType: 'task',
+        _date: safeParseDateString(t.due_date) || safeParseDateString(t.scheduled_start)
+      }))
+    ].filter(item => item._date);
+
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      items = items.filter(item =>
+        item.title?.toLowerCase().includes(lower) ||
+        item.client_name?.toLowerCase().includes(lower) ||
+        item.description?.toLowerCase().includes(lower)
+      );
+    }
+
+    return items;
+  }, [events, tasks, searchTerm]);
 
   const getItemsForDate = (date) => {
     return allItems.filter(item => isSameDay(item._date, date));
@@ -220,6 +235,17 @@ export default function CalendarPage() {
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Calendar Main Area */}
         <div className="flex-1 space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="חיפוש לפי שם לקוח, אירוע, משימה..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-10 h-9"
+            />
+          </div>
+
           {/* View Tabs + Navigation */}
           <Card className="shadow-sm">
             <CardContent className="p-3">

@@ -19,7 +19,7 @@ import {
 import {
   BarChart3, Plus, Filter, RefreshCw, CheckCircle, AlertCircle, Clock,
   FileText, Building2, Calendar, User, ExternalLink, FolderOpen, ChevronDown,
-  ChevronUp, ChevronRight, Pencil, Save, X, ListChecks, Wand2, Settings2, Trash2, Check
+  ChevronUp, ChevronRight, Pencil, Save, X, ListChecks, Wand2, Settings2, Trash2, Check, Search
 } from 'lucide-react';
 import { generateProcessTasks } from '@/api/functions';
 import { loadBalanceSheetTemplates, saveBalanceSheetTemplates, DEFAULT_STAGE_TEMPLATES } from '@/config/balanceSheetTemplates';
@@ -208,6 +208,7 @@ export default function BalanceSheetsPage() {
   const [showGenerateDialog, setShowGenerateDialog] = useState(null); // balance sheet id
   const [isGeneratingFromTemplate, setIsGeneratingFromTemplate] = useState(false);
   const [templateGenResult, setTemplateGenResult] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadData();
@@ -375,12 +376,20 @@ export default function BalanceSheetsPage() {
   };
 
   const filteredBalances = useMemo(() => {
-    return balanceSheets.filter(balance =>
-      (filters.stage === 'all' || balance.current_stage === filters.stage) &&
-      (filters.client === 'all' || balance.client_name === filters.client) &&
-      (filters.year === 'all' || balance.tax_year === filters.year)
-    );
-  }, [balanceSheets, filters]);
+    return balanceSheets.filter(balance => {
+      if (filters.stage !== 'all' && balance.current_stage !== filters.stage) return false;
+      if (filters.client !== 'all' && balance.client_name !== filters.client) return false;
+      if (filters.year !== 'all' && balance.tax_year !== filters.year) return false;
+      if (searchTerm) {
+        const lower = searchTerm.toLowerCase();
+        if (!balance.client_name?.toLowerCase().includes(lower) &&
+            !balance.notes?.toLowerCase().includes(lower)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [balanceSheets, filters, searchTerm]);
 
   const progress = filteredBalances.length > 0
     ? (filteredBalances.filter(b => b.current_stage === 'signed').length / filteredBalances.length) * 100
@@ -525,6 +534,17 @@ export default function BalanceSheetsPage() {
             {s.label}: {stageCounts[s.key] || 0}
           </Badge>
         ))}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          placeholder="חיפוש לפי שם לקוח..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pr-10 h-9"
+        />
       </div>
 
       {/* Filters */}
