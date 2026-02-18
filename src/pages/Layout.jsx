@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import TimeAwareness from "@/components/ui/TimeAwareness";
 import StickyNotes from "@/components/StickyNotes";
+import useAutoReminders from "@/hooks/useAutoReminders";
 
 const navigationGroups = [
   {
@@ -112,6 +113,7 @@ export default function Layout({ children, currentPageName }) {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  useAutoReminders();
 
   useEffect(() => {
     if (location.pathname === "/") {
@@ -437,31 +439,52 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </div>
 
-          {/* Sticky Notes Left Side Panel */}
-          <div className={`hidden md:flex flex-col border-l-2 border-amber-300 bg-amber-50/50 transition-all duration-300 shrink-0 ${notesOpen ? 'w-72' : 'w-12'}`}>
-            <button
-              onClick={() => setNotesOpen(!notesOpen)}
-              className="flex items-center justify-center gap-1 px-2 py-3 border-b border-amber-200 hover:bg-amber-100 transition-colors bg-amber-100/50"
-              title={notesOpen ? 'סגור פתקים' : 'פתח פתקים'}
-            >
-              <StickyNote className="w-5 h-5 text-amber-600" />
-              {notesOpen && <span className="text-xs font-medium text-amber-700 mr-1">פתקים</span>}
-              {notesOpen ? <ChevronLeft className="w-4 h-4 text-amber-500" /> : null}
-            </button>
-            {!notesOpen && (
-              <div className="flex-1 flex items-start justify-center pt-3">
-                <span className="text-amber-500 text-[10px] font-medium" style={{ writingMode: 'vertical-rl' }}>פתקים</span>
-              </div>
-            )}
-            {notesOpen && (
-              <div className="flex-1 overflow-y-auto p-2">
-                <StickyNotes compact={true} />
-              </div>
-            )}
-          </div>
         </main>
       </div>
-       {isMobileMenuOpen && <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)}></div>}
+
+      {isMobileMenuOpen && <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)}></div>}
+
+      {/* Floating Sticky Notes FAB */}
+      <button
+        onClick={() => setNotesOpen(!notesOpen)}
+        className={`fixed bottom-6 left-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
+          notesOpen
+            ? 'bg-gray-500 hover:bg-gray-600 text-white scale-90'
+            : 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse hover:animate-none'
+        }`}
+        title={notesOpen ? 'סגור פתקים' : 'פתח פתקים'}
+      >
+        {notesOpen ? <X className="w-5 h-5" /> : <StickyNote className="w-5 h-5" />}
+      </button>
+
+      {/* Floating Sticky Notes Panel - overlay */}
+      {notesOpen && (
+        <>
+          <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setNotesOpen(false)} />
+          <div
+            className="fixed bottom-20 left-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[70vh] bg-white rounded-2xl shadow-2xl border-2 border-amber-300 flex flex-col overflow-hidden"
+            style={{ direction: 'rtl' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-l from-amber-100 to-amber-50 border-b border-amber-200 shrink-0">
+              <div className="flex items-center gap-2">
+                <StickyNote className="w-5 h-5 text-amber-600" />
+                <span className="font-bold text-amber-800">פתקים דביקים</span>
+              </div>
+              <button
+                onClick={() => setNotesOpen(false)}
+                className="p-1 rounded-lg hover:bg-amber-200 transition-colors"
+              >
+                <X className="w-4 h-4 text-amber-600" />
+              </button>
+            </div>
+            {/* Scrollable notes body */}
+            <div className="flex-1 overflow-y-auto overscroll-contain p-3" style={{ scrollBehavior: 'smooth' }}>
+              <StickyNotes compact={false} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

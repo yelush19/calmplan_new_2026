@@ -18,12 +18,10 @@ import {
   ArrowRight, Target, AlertTriangle, ChevronDown, Sparkles,
   FileBarChart, Brain, Zap, Plus, CreditCard, List, LayoutGrid, Search
 } from "lucide-react";
-import StickyNotes from "@/components/StickyNotes";
 import KanbanView from "../components/tasks/KanbanView";
 import TaskEditDialog from "@/components/tasks/TaskEditDialog";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Pencil, Trash2, Pin } from "lucide-react";
-import useAutoReminders from "@/hooks/useAutoReminders";
 import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
 
 const getGreeting = () => {
@@ -78,7 +76,6 @@ export default function HomePage() {
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
-  useAutoReminders();
 
   useEffect(() => { loadData(); }, []);
 
@@ -632,7 +629,7 @@ export default function HomePage() {
       {/* FAB */}
       <button
         onClick={() => setShowQuickAdd(true)}
-        className="fixed bottom-6 left-6 w-14 h-14 bg-primary hover:bg-accent text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40"
+        className="fixed bottom-6 left-20 w-14 h-14 bg-primary hover:bg-accent text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40"
         title="הוסף משימה מהירה"
       >
         <Plus className="w-6 h-6" />
