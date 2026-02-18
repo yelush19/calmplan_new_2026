@@ -3,11 +3,12 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Calendar, Clock, CheckCircle, Target,
   Brain, TrendingUp, Users, Briefcase, ChevronLeft, ChevronRight,
-  Sparkles, ArrowRight, ChevronDown, ChevronUp
+  Sparkles, ArrowRight, ChevronDown, ChevronUp, Search
 } from 'lucide-react';
 import { Task, Client } from '@/api/entities';
 import { Link } from 'react-router-dom';
@@ -109,6 +110,7 @@ export default function WeeklyPlanningDashboard() {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0); // 0=this week, 1=next, -1=prev
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => { loadData(); }, []);
 
@@ -148,12 +150,22 @@ export default function WeeklyPlanningDashboard() {
     const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
     const todayStr = format(today, 'yyyy-MM-dd');
 
-    const weekTasks = tasks.filter(t => {
+    let filtered = tasks;
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      filtered = tasks.filter(t =>
+        t.title?.toLowerCase().includes(lower) ||
+        t.client_name?.toLowerCase().includes(lower) ||
+        t.category?.toLowerCase().includes(lower)
+      );
+    }
+
+    const weekTasks = filtered.filter(t => {
       const d = t.due_date;
       return d && d >= weekStartStr && d <= weekEndStr;
     });
 
-    const overdueTasks = tasks.filter(t => {
+    const overdueTasks = filtered.filter(t => {
       if (t.status === 'completed') return false;
       const d = t.due_date;
       return d && d < todayStr;
@@ -189,7 +201,7 @@ export default function WeeklyPlanningDashboard() {
       overdueTasks,
       stats: { total, completed, remaining: total - completed, overdue: overdueTasks.length }
     };
-  }, [tasks, weekStart, weekEnd, today]);
+  }, [tasks, weekStart, weekEnd, today, searchTerm]);
 
   // Smart recommendations
   const recommendations = useMemo(() => {
@@ -293,6 +305,17 @@ export default function WeeklyPlanningDashboard() {
             <ChevronLeft className="w-4 h-4" />
           </Button>
         </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          placeholder="חיפוש לפי שם לקוח, משימה..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pr-10 h-9"
+        />
       </div>
 
       {/* Stats row — big numbers */}
