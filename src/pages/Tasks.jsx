@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { Task, Client } from "@/api/entities";
-import { createNoteFromTask } from "@/components/StickyNotes";
+import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -106,6 +106,7 @@ export default function TasksPage() {
   const [view, setView] = useState("kanban");
   const [isClearing, setIsClearing] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [noteTask, setNoteTask] = useState(null);
   const [clientMap, setClientMap] = useState({});
   const [timeTab, setTimeTab] = useState('active');
   const [contextFilter, setContextFilter] = useState('all');
@@ -613,9 +614,9 @@ export default function TasksPage() {
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => createNoteFromTask(task)}
+                            onClick={() => setNoteTask(task)}
                             className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
-                            title="העבר לפתק"
+                            title="הוסף לפתק דביק"
                           >
                             <Pin className="w-3.5 h-3.5" />
                           </button>
@@ -648,6 +649,12 @@ export default function TasksPage() {
         onClose={() => setEditingTask(null)}
         onSave={handleSaveTask}
         onDelete={(task) => { setEditingTask(null); handleDeleteTask(task.id); }}
+      />
+
+      <TaskToNoteDialog
+        task={noteTask}
+        open={!!noteTask}
+        onClose={() => setNoteTask(null)}
       />
 
       {/* Bottom: clear all */}

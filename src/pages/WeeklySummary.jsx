@@ -11,9 +11,10 @@ import { createPageUrl } from '@/utils';
 import {
   CheckCircle, Clock, Calendar, User, TrendingUp, ArrowRight,
   RefreshCw, Target, AlertTriangle, BarChart3, Zap, Award,
-  ChevronDown, ChevronUp, Activity, Search, Pencil, Trash2
+  ChevronDown, ChevronUp, Activity, Search, Pencil, Trash2, Pin
 } from 'lucide-react';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   format, parseISO, isValid, startOfWeek, endOfWeek,
@@ -75,6 +76,7 @@ export default function WeeklySummary() {
   const [expandedSection, setExpandedSection] = useState('overdue');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
+  const [noteTask, setNoteTask] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
@@ -402,6 +404,9 @@ export default function WeeklySummary() {
                   <div key={task.id} className="flex items-center gap-2 p-2 rounded bg-stone-50 text-xs group">
                     <span className="flex-1 font-medium truncate">{task.title}</span>
                     {task.client_name && <span className="text-gray-400 shrink-0">{task.client_name}</span>}
+                    <button onClick={() => setNoteTask(task)} className="p-0.5 rounded hover:bg-amber-100 opacity-0 group-hover:opacity-100 transition-opacity" title="הוסף לפתק">
+                      <Pin className="w-3 h-3 text-gray-400" />
+                    </button>
                     <button onClick={() => setEditingTask(task)} className="p-0.5 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity" title="ערוך">
                       <Pencil className="w-3 h-3 text-gray-400" />
                     </button>
@@ -433,6 +438,9 @@ export default function WeeklySummary() {
                   <div key={task.id} className="flex items-center gap-2 p-2 rounded bg-sky-50 text-xs group">
                     <span className="flex-1 font-medium truncate">{task.title}</span>
                     {task.client_name && <span className="text-gray-400 shrink-0">{task.client_name}</span>}
+                    <button onClick={() => setNoteTask(task)} className="p-0.5 rounded hover:bg-amber-100 opacity-0 group-hover:opacity-100 transition-opacity" title="הוסף לפתק">
+                      <Pin className="w-3 h-3 text-gray-400" />
+                    </button>
                     <button onClick={() => setEditingTask(task)} className="p-0.5 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity" title="ערוך">
                       <Pencil className="w-3 h-3 text-gray-400" />
                     </button>
@@ -494,6 +502,11 @@ export default function WeeklySummary() {
         onClose={() => setEditingTask(null)}
         onSave={handleEditTask}
         onDelete={handleDeleteTask}
+      />
+      <TaskToNoteDialog
+        task={noteTask}
+        open={!!noteTask}
+        onClose={() => setNoteTask(null)}
       />
       {ConfirmDialogComponent}
     </div>
