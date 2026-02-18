@@ -188,6 +188,12 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
       }
     });
 
+    // Sort each column: nearest due_date first
+    const sortByDueDate = (a, b) => (a.due_date || '9999') .localeCompare(b.due_date || '9999');
+    newBoard.todo.tasks.sort(sortByDueDate);
+    newBoard.in_progress.tasks.sort(sortByDueDate);
+    newBoard.completed.tasks.sort(sortByDueDate);
+
     setBoard(newBoard);
   }, [tasks]);
 
