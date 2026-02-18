@@ -39,6 +39,7 @@ const getPriorityColor = (priority) => {
 
 const TaskCard = ({ task, index, onStatusChange, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
+  const statusCfg = STATUS_CONFIG[task?.status] || STATUS_CONFIG.not_started;
 
   const formatDate = (dateString) => {
     if (!dateString) return null;
@@ -75,6 +76,19 @@ const TaskCard = ({ task, index, onStatusChange, onDelete }) => {
                 {expanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
               </div>
             </div>
+            {/* Status + meta - always visible */}
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <Badge className={`${statusCfg.bg} ${statusCfg.text} text-[10px] px-1.5 py-0 font-semibold border ${statusCfg.border}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot || statusCfg.bg} mr-1`} />
+                {statusCfg.label}
+              </Badge>
+              {task.client_name && (
+                <span className="text-[10px] text-gray-500 truncate max-w-[100px]">{task.client_name}</span>
+              )}
+              {task.category && (
+                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">{task.category}</Badge>
+              )}
+            </div>
             <div className="flex items-center gap-3 text-xs text-gray-500 mt-1.5">
               {formatDate(task.due_date) && (
                 <div className="flex items-center gap-1">
@@ -102,14 +116,6 @@ const TaskCard = ({ task, index, onStatusChange, onDelete }) => {
             <div className="px-3 pb-3 border-t border-gray-100 pt-2 space-y-2">
               {task.description && (
                 <p className="text-xs text-gray-600">{task.description}</p>
-              )}
-              {task.client_name && (
-                <div className="text-xs text-gray-500">
-                  לקוח: <span className="font-medium text-gray-700">{task.client_name}</span>
-                </div>
-              )}
-              {task.category && (
-                <Badge variant="secondary" className="text-[10px]">{task.category}</Badge>
               )}
 
               {/* Status dropdown */}
