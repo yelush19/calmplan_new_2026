@@ -90,10 +90,10 @@ export default function ClientTasksTab({ clientId, clientName }) {
     }
   };
 
-  const handleSaveTask = async (updatedData) => {
+  const handleSaveTask = async (taskId, updatedData) => {
     try {
-      await Task.update(editingTask.id, updatedData);
-      setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...updatedData } : t));
+      await Task.update(taskId, updatedData);
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updatedData } : t));
       setEditingTask(null);
     } catch (error) {
       console.error("Error updating task:", error);

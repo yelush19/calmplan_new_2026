@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
   Loader, RefreshCw, Briefcase, ChevronLeft, ChevronRight,
-  ArrowRight, Users, X, List, LayoutGrid, Search
+  ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -16,6 +16,7 @@ import { he } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
+import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -313,6 +314,9 @@ export default function PayrollDashboardPage() {
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')}>
               <LayoutGrid className="w-4 h-4" />
             </Button>
+            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="תצוגת פרויקט">
+              <GanttChart className="w-4 h-4" />
+            </Button>
           </div>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -364,6 +368,8 @@ export default function PayrollDashboardPage() {
       ) : sortedServiceKeys.length > 0 ? (
         viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} />
+        ) : viewMode === 'timeline' ? (
+          <ProjectTimelineView tasks={filteredTasks} month={selectedMonth} year={selectedYear} onEdit={setEditingTask} />
         ) : (
           <div className="space-y-6">
             {sortedServiceKeys.map(serviceKey => {
@@ -419,16 +425,23 @@ function getPayrollIds(client, serviceKey) {
   const ti = client.tax_info || {};
   const annual = ti.annual_tax_ids || {};
 
+  // Always show entity number
+  if (client.entity_number) ids.push({ label: 'ח"פ', value: client.entity_number });
+
   switch (serviceKey) {
     case 'deductions':
-      if (ti.tax_deduction_file_number) ids.push({ label: 'פנקס', value: ti.tax_deduction_file_number });
-      if (annual.deductions_id) ids.push({ label: 'ניכויים', value: annual.deductions_id });
+      if (ti.tax_deduction_file_number) ids.push({ label: 'תיק ניכויים', value: ti.tax_deduction_file_number });
+      if (annual.deductions_id) ids.push({ label: 'פנקס ניכויים', value: annual.deductions_id });
       break;
     case 'social_security':
-      if (ti.social_security_file_number) ids.push({ label: 'תיק ביט"ל', value: ti.social_security_file_number });
+      if (ti.social_security_file_number) ids.push({ label: 'תיק ב"ל', value: ti.social_security_file_number });
+      if (ti.tax_deduction_file_number) ids.push({ label: 'תיק ניכויים', value: ti.tax_deduction_file_number });
       break;
     default:
-      if (client.entity_number) ids.push({ label: 'ח"פ', value: client.entity_number });
+      // For payroll - show all related IDs for reporting reference
+      if (ti.tax_deduction_file_number) ids.push({ label: 'ניכויים', value: ti.tax_deduction_file_number });
+      if (annual.deductions_id) ids.push({ label: 'פנקס ניכויים', value: annual.deductions_id });
+      if (ti.social_security_file_number) ids.push({ label: 'ב"ל', value: ti.social_security_file_number });
   }
   return ids;
 }

@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar } from 'lucide-react';
+import { differenceInDays, parseISO, isValid, format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ResizableTable from '@/components/ui/ResizableTable';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
@@ -24,6 +25,55 @@ const STATUS_DISPLAY_ORDER = [
   'completed',                    // 5 - הושלם
   'not_relevant',                 // 6 - לא רלוונטי
 ];
+
+function ExecutionBar({ startDate, dueDate }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const end = dueDate ? parseISO(dueDate) : null;
+  const start = startDate ? parseISO(startDate) : null;
+  const remaining = end && isValid(end) ? differenceInDays(end, today) : null;
+
+  if (remaining === null) return null;
+
+  let totalDays = 0;
+  let progress = 0;
+  if (start && isValid(start) && end) {
+    totalDays = differenceInDays(end, start);
+    const elapsed = differenceInDays(today, start);
+    progress = totalDays > 0 ? Math.min(Math.max((elapsed / totalDays) * 100, 0), 100) : 0;
+  }
+
+  const isOverdue = remaining < 0;
+  const barColor = isOverdue ? 'bg-red-500' : remaining <= 1 ? 'bg-red-400' : remaining <= 3 ? 'bg-amber-400' : 'bg-emerald-500';
+  const textColor = isOverdue ? 'text-red-600' : remaining <= 1 ? 'text-red-500' : remaining <= 3 ? 'text-amber-600' : 'text-emerald-600';
+
+  return (
+    <div className="bg-gray-50 rounded-lg px-2.5 py-2 space-y-1">
+      <div className="flex items-center justify-between text-[10px]">
+        <span className="flex items-center gap-1 text-gray-500">
+          <Timer className="w-3 h-3" />
+          {start && isValid(start) ? format(start, 'd/M') : '—'}
+          {' → '}
+          {end && isValid(end) ? format(end, 'd/M') : '—'}
+          {totalDays > 0 && <span className="text-gray-400">({totalDays}d)</span>}
+        </span>
+        <span className={`font-bold ${textColor}`}>
+          {isOverdue
+            ? `באיחור ${Math.abs(remaining)}d`
+            : remaining === 0
+              ? 'היום!'
+              : `נותרו ${remaining}d`}
+        </span>
+      </div>
+      {totalDays > 0 && (
+        <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${barColor}`} style={{ width: `${progress}%` }} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 // These statuses start collapsed
 const DEFAULT_COLLAPSED = new Set(['completed', 'not_relevant']);
@@ -250,6 +300,16 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                 {subTasks.filter(s => s.done).length}/{subTasks.length}
               </Badge>
             )}
+            {(() => {
+              if (!task.due_date) return null;
+              const d = parseISO(task.due_date);
+              if (!isValid(d)) return null;
+              const t = new Date(); t.setHours(0,0,0,0);
+              const rem = differenceInDays(d, t);
+              if (rem < 0) return <Badge className="text-[9px] px-1 py-0 bg-red-100 text-red-700 shrink-0">-{Math.abs(rem)}d</Badge>;
+              if (rem <= 3) return <Badge className="text-[9px] px-1 py-0 bg-amber-100 text-amber-700 shrink-0">{rem}d</Badge>;
+              return null;
+            })()}
           </div>
         </td>
 
@@ -353,6 +413,31 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
+              {/* Tax/Reporting Info Card */}
+              {taxIds.length > 0 && (
+                <div className="mt-3 pt-2 border-t border-indigo-100">
+                  <div className="bg-blue-50 rounded-lg p-2.5 space-y-1.5">
+                    <div className="flex items-center gap-1 text-xs font-medium text-blue-700">
+                      <FileText className="w-3 h-3" />
+                      פרטי דיווח
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      {taxIds.map(({ label, value }) => (
+                        <div key={label} className="text-[11px]">
+                          <span className="text-blue-500">{label}:</span>{' '}
+                          <span className="font-mono font-medium text-blue-900 select-all">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Execution Period Timeline */}
+              {(task.scheduled_start || task.due_date) && (
+                <div className="mt-2">
+                  <ExecutionBar startDate={task.scheduled_start} dueDate={task.due_date} />
+                </div>
+              )}
               <div className="mt-3 pt-2 border-t border-indigo-100">
                 <TaskFileAttachments
                   taskId={task.id}
