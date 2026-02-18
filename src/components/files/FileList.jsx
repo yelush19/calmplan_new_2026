@@ -49,6 +49,7 @@ export default function FileList({
   onShare,
   onBulkDelete,
   isLoading,
+  showClientColumn = false,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [docTypeFilter, setDocTypeFilter] = useState('all');
@@ -270,6 +271,17 @@ export default function FileList({
                   </div>
                 </th>
                 <th className="p-3 text-right">סוג</th>
+                {showClientColumn && (
+                  <th
+                    className="p-3 text-right cursor-pointer hover:bg-gray-100 select-none"
+                    onClick={() => toggleSort('client_name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      לקוח
+                      {sortField === 'client_name' && <SortIcon className="w-3 h-3" />}
+                    </div>
+                  </th>
+                )}
                 <th
                   className="p-3 text-right cursor-pointer hover:bg-gray-100 select-none hidden md:table-cell"
                   onClick={() => toggleSort('created_date')}
@@ -295,13 +307,13 @@ export default function FileList({
             <tbody className="divide-y">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-500">
+                  <td colSpan={showClientColumn ? 8 : 7} className="p-8 text-center text-gray-500">
                     טוען קבצים...
                   </td>
                 </tr>
               ) : filteredFiles.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center">
+                  <td colSpan={showClientColumn ? 8 : 7} className="p-8 text-center">
                     <File className="w-12 h-12 mx-auto text-gray-300 mb-3" />
                     <p className="text-gray-500">
                       {searchTerm || hasActiveFilters ? 'לא נמצאו קבצים תואמים' : 'אין קבצים עדיין'}
@@ -344,6 +356,11 @@ export default function FileList({
                           {documentTypeLabels[file.document_type] || file.document_type}
                         </Badge>
                       </td>
+                      {showClientColumn && (
+                        <td className="p-3 text-gray-700 text-xs whitespace-nowrap">
+                          {file.client_name || '-'}
+                        </td>
+                      )}
                       <td className="p-3 text-gray-600 hidden md:table-cell whitespace-nowrap">
                         {file.created_date
                           ? new Date(file.created_date).toLocaleDateString('he-IL')

@@ -352,6 +352,8 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                   taskId={task.id}
                   attachments={task.attachments || []}
                   onUpdate={(updated) => onAttachmentUpdate(task, updated)}
+                  clientId={task.client_id}
+                  clientName={task.client_name}
                 />
               </div>
             </div>

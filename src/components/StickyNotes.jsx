@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { StickyNote, Client } from '@/api/entities';
+import React, { useState, useEffect, useRef } from 'react';
+import { StickyNote, Client, FileMetadata } from '@/api/entities';
+import { UploadFile, DeleteFile } from '@/api/integrations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Pin, PinOff, Trash2, Link2, Edit3, Check, User, Calendar, Tag } from 'lucide-react';
+import { Plus, X, Pin, PinOff, Trash2, Link2, Edit3, Check, User, Calendar, Tag, Paperclip, Upload, Loader2, FileText, Download } from 'lucide-react';
 
 const NOTE_COLORS = [
   { key: 'yellow', bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-900', hover: 'hover:bg-amber-200', ring: 'ring-amber-400' },
@@ -35,6 +36,104 @@ const CATEGORY_OPTIONS = [
   { value: 'personal', label: 'אישי' },
   { value: 'client_work', label: 'עבודה ללקוח' },
 ];
+
+function NoteAttachments({ noteId, attachments = [], clientName, onUpdate }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const result = await UploadFile({ file });
+      const newAtt = {
+        id: crypto.randomUUID(),
+        file_url: result.file_url,
+        file_name: result.file_name,
+        file_size: result.file_size,
+        file_path: result.file_path,
+        uploaded_at: new Date().toISOString(),
+      };
+      const updated = [...attachments, newAtt];
+      await StickyNote.update(noteId, { attachments: updated });
+      onUpdate?.();
+
+      // Also create FileMetadata if note is associated with a client
+      if (clientName) {
+        try {
+          // Find client by name to get ID
+          const allClients = await Client.list(null, 500);
+          const client = allClients.find(c => c.name === clientName);
+          if (client) {
+            await FileMetadata.create({
+              client_id: client.id,
+              client_name: clientName,
+              file_name: result.file_name,
+              file_path: result.file_path,
+              file_url: result.file_url,
+              file_size: result.file_size,
+              file_type: file.type || '',
+              document_type: 'other',
+              year: String(new Date().getFullYear()),
+              month: '',
+              status: 'final',
+              notes: 'צורף מפתק',
+              uploaded_by: 'ליתאי',
+              version: 1,
+              tags: ['note_attachment'],
+              source_note_id: noteId,
+            });
+          }
+        } catch (metaErr) {
+          console.warn('Failed to create FileMetadata for note attachment:', metaErr);
+        }
+      }
+    } catch (err) {
+      console.error('Error uploading to note:', err);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async (attId) => {
+    const att = attachments.find(a => a.id === attId);
+    if (att?.file_path) await DeleteFile({ file_path: att.file_path }).catch(() => {});
+    const updated = attachments.filter(a => a.id !== attId);
+    await StickyNote.update(noteId, { attachments: updated });
+    onUpdate?.();
+  };
+
+  return (
+    <div className="mt-1.5">
+      {attachments.length > 0 && (
+        <div className="space-y-0.5 mb-1">
+          {attachments.map(att => (
+            <div key={att.id} className="flex items-center gap-1 text-[10px] opacity-80 group/att">
+              <FileText className="w-2.5 h-2.5" />
+              <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate max-w-[120px]">
+                {att.file_name}
+              </a>
+              <button onClick={() => handleDelete(att.id)} className="opacity-0 group-hover/att:opacity-100 p-0.5 hover:bg-white/50 rounded">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="inline-flex items-center gap-0.5 text-[10px] opacity-60 hover:opacity-100 transition-opacity"
+      >
+        {uploading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Paperclip className="w-2.5 h-2.5" />}
+        {uploading ? 'מעלה...' : 'צרף קובץ'}
+      </button>
+      <input ref={fileRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.csv" onChange={handleUpload} />
+    </div>
+  );
+}
 
 export default function StickyNotes({ compact = false, onTaskLink }) {
   const [notes, setNotes] = useState([]);
@@ -337,6 +436,14 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                         <span className="truncate">{note.linked_task_title}</span>
                       </div>
                     )}
+
+                    {/* File attachments */}
+                    <NoteAttachments
+                      noteId={note.id}
+                      attachments={note.attachments || []}
+                      clientName={note.client_name}
+                      onUpdate={loadNotes}
+                    />
 
                     {/* Actions - show on hover */}
                     <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
