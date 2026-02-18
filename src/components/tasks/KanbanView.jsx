@@ -300,25 +300,7 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                         if (tasksByStatus[s]) tasksByStatus[s].push(task);
                       });
 
-                      // Check if there's more than one status present
-                      const activeStatuses = statusOrder.filter(s => (tasksByStatus[s] || []).length > 0);
-                      const needsSubGroups = activeStatuses.length > 1;
-
-                      if (!needsSubGroups) {
-                        // Single status or no tasks - render flat (no sub-group headers)
-                        return (column.tasks || []).map((task, index) => (
-                          <TaskCard
-                            key={task.id}
-                            task={task}
-                            index={index}
-                            onStatusChange={onTaskStatusChange}
-                            onDelete={onDeleteTask}
-                            onEdit={onEditTask}
-                          />
-                        ));
-                      }
-
-                      // Multiple statuses - render with sub-group headers
+                      // Always show sub-group headers so users see status breakdown in every column
                       let runningIndex = 0;
                       return statusOrder.map(status => {
                         const statusTasks = tasksByStatus[status] || [];
