@@ -10,9 +10,9 @@ import { he } from 'date-fns/locale';
 import { STATUS_CONFIG } from '@/config/processTemplates';
 
 const columnMapping = {
-  todo: ['not_started', 'postponed', 'waiting_for_materials'],
-  in_progress: ['in_progress'],
-  completed: ['completed'],
+  todo: ['not_started', 'postponed', 'waiting_for_materials', 'issue'],
+  in_progress: ['in_progress', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment'],
+  completed: ['completed', 'not_relevant'],
 };
 
 const columnsConfig = {
