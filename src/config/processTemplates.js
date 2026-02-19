@@ -210,9 +210,55 @@ export const ADDITIONAL_SERVICES = {
   admin: {
     key: 'admin',
     label: 'אדמיניסטרציה',
-    dashboard: 'tax',
+    dashboard: 'admin',
     taskCategories: ['אדמיניסטרציה', 'work_admin'],
     createCategory: 'אדמיניסטרציה',
+    steps: [
+      { key: 'task',  label: 'ביצוע',  icon: 'check-circle' },
+    ],
+  },
+
+  marketing_followup: {
+    key: 'marketing_followup',
+    label: 'מעקב שיווק',
+    dashboard: 'admin',
+    taskCategories: ['מעקב שיווק', 'work_marketing'],
+    createCategory: 'מעקב שיווק',
+    steps: [
+      { key: 'contact',   label: 'יצירת קשר',  icon: 'phone' },
+      { key: 'follow_up', label: 'מעקב',        icon: 'clock' },
+    ],
+  },
+
+  client_callback: {
+    key: 'client_callback',
+    label: 'לחזור ללקוח',
+    dashboard: 'admin',
+    taskCategories: ['לחזור ללקוח', 'work_callback'],
+    createCategory: 'לחזור ללקוח',
+    steps: [
+      { key: 'call',  label: 'ביצוע שיחה',  icon: 'phone' },
+    ],
+  },
+
+  meeting: {
+    key: 'meeting',
+    label: 'פגישה',
+    dashboard: 'admin',
+    taskCategories: ['פגישה', 'work_meeting'],
+    createCategory: 'פגישה',
+    steps: [
+      { key: 'schedule',  label: 'תיאום',    icon: 'calendar' },
+      { key: 'execute',   label: 'ביצוע',    icon: 'check-circle' },
+    ],
+  },
+
+  general: {
+    key: 'general',
+    label: 'כללי',
+    dashboard: 'admin',
+    taskCategories: ['כללי', 'work_general', ''],
+    createCategory: 'כללי',
     steps: [
       { key: 'task',  label: 'ביצוע',  icon: 'check-circle' },
     ],

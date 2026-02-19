@@ -8,20 +8,20 @@ import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight,
-  ArrowRight, Users, X, Settings2, List, LayoutGrid, Search, GanttChart, Plus
+  ArrowRight, Users, X, ClipboardList, List, LayoutGrid, Search, Plus
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
-import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
+import { format, subMonths, addMonths, differenceInDays, parseISO, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
-import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   ADDITIONAL_SERVICES,
+  ALL_SERVICES,
   STATUS_CONFIG,
   getServiceForTask,
   getTaskProcessSteps,
@@ -29,87 +29,72 @@ import {
   markAllStepsDone,
   markAllStepsUndone,
   areAllStepsDone,
+  getCategoriesForDashboard,
 } from '@/config/processTemplates';
-import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 
-// Services shown on this dashboard - all additional services
-const additionalDashboardServices = Object.fromEntries(
-  Object.entries(ADDITIONAL_SERVICES).filter(([key]) => [
-    'masav_social',
-    'masav_employees',
-    'masav_authorities',
-    'masav_suppliers',
-    'payslip_sending',
-    'authorities_payment',
-    'reserve_claims',
-    'social_benefits',
-    'operator_reporting',
-    'taml_reporting',
-    'consulting',
-  ].includes(key))
+// Admin dashboard services (dashboard: 'admin')
+const adminDashboardServices = Object.fromEntries(
+  Object.entries(ADDITIONAL_SERVICES).filter(([, s]) => s.dashboard === 'admin')
 );
 
-const allAdditionalCategories = Object.values(additionalDashboardServices).flatMap(s => s.taskCategories);
+const adminCategories = Object.values(adminDashboardServices).flatMap(s => s.taskCategories);
 
-export default function AdditionalServicesDashboardPage() {
+// All categories that belong to OTHER dashboards (tax, payroll, additional)
+const otherDashboardCategories = new Set([
+  ...getCategoriesForDashboard('tax'),
+  ...getCategoriesForDashboard('payroll'),
+  ...getCategoriesForDashboard('additional'),
+]);
+
+export default function AdminTasksDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const clientFilter = searchParams.get('client') || '';
 
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
-  const [viewMode, setViewMode] = useState('kanban');
+  const [viewMode, setViewMode] = useState('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
-  useEffect(() => { loadData(); }, [selectedMonth]);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Due dates are in the DEADLINE month (month after reporting period)
-      const deadlineMonth = addMonths(selectedMonth, 1);
-      const start = startOfMonth(deadlineMonth);
-      const end = endOfMonth(deadlineMonth);
-      const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
-        Task.filter({
-          context: 'work',
-          due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
-        }),
+        Task.list('-due_date', 5000).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
-      // Post-filter: only show tasks belonging to the selected reporting month
-      const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
+
+      // Include: admin-category tasks + uncategorized work tasks that don't belong to any other dashboard
+      const now = new Date();
       const filtered = (tasksData || []).filter(t => {
-        if (!allAdditionalCategories.includes(t.category)) return false;
-        return getTaskReportingMonth(t) === selectedMonthStr;
+        if (!t) return false;
+        // Admin-category task
+        if (t.category && adminCategories.includes(t.category)) return true;
+        // Uncategorized work task (no category or not in any other dashboard)
+        if (t.context === 'work' && (!t.category || !otherDashboardCategories.has(t.category))) {
+          // Only show recent (last 60 days) or future tasks
+          if (t.due_date) {
+            const d = parseISO(t.due_date);
+            if (isValid(d) && differenceInDays(now, d) > 60) return false;
+          }
+          return true;
+        }
+        return false;
       });
       setTasks(filtered);
       setClients(clientsData || []);
-      syncCompletedTaskSteps(filtered);
     } catch (error) {
-      console.error("Error loading additional services tasks:", error);
+      console.error("Error loading admin tasks:", error);
     }
     setIsLoading(false);
-  };
-
-  const syncCompletedTaskSteps = async (tasksList) => {
-    for (const task of tasksList) {
-      if (task.status === 'completed' && !areAllStepsDone(task)) {
-        const updatedSteps = markAllStepsDone(task);
-        if (Object.keys(updatedSteps).length > 0) {
-          await Task.update(task.id, { process_steps: updatedSteps });
-          setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
-        }
-      }
-    }
   };
 
   const clientByName = useMemo(() => {
@@ -141,7 +126,8 @@ export default function AdditionalServicesDashboardPage() {
 
   const serviceData = useMemo(() => {
     const result = {};
-    Object.values(additionalDashboardServices).forEach(service => {
+    // Group by admin services
+    Object.values(adminDashboardServices).forEach(service => {
       const serviceTasks = filteredTasks.filter(t => service.taskCategories.includes(t.category));
       if (serviceTasks.length > 0) {
         result[service.key] = {
@@ -156,6 +142,25 @@ export default function AdditionalServicesDashboardPage() {
         };
       }
     });
+
+    // Catch-all: uncategorized tasks (not matching any known service)
+    const uncategorized = filteredTasks.filter(t => !getServiceForTask(t));
+    if (uncategorized.length > 0) {
+      const generalService = adminDashboardServices.general || {
+        key: 'uncategorized', label: 'ללא קטגוריה', steps: [{ key: 'task', label: 'ביצוע' }],
+      };
+      result['__uncategorized'] = {
+        service: generalService,
+        clientRows: uncategorized
+          .map(task => ({
+            clientName: task.client_name || 'ללא לקוח',
+            task,
+            client: clientByName[task.client_name] || null,
+          }))
+          .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
+      };
+    }
+
     return result;
   }, [filteredTasks, clientByName]);
 
@@ -163,16 +168,13 @@ export default function AdditionalServicesDashboardPage() {
     const relevant = filteredTasks.filter(t => t.status !== 'not_relevant');
     const total = relevant.length;
     const completed = relevant.filter(t => t.status === 'completed').length;
-    let totalSteps = 0, doneSteps = 0;
-    relevant.forEach(task => {
-      const service = getServiceForTask(task);
-      if (service) {
-        const steps = task.process_steps || {};
-        totalSteps += service.steps.length;
-        doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
-      }
-    });
-    return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0 };
+    return {
+      total,
+      completed,
+      pct: total > 0 ? Math.round((completed / total) * 100) : 0,
+      pending: relevant.filter(t => t.status === 'not_started').length,
+      inProgress: relevant.filter(t => !['not_started', 'completed', 'not_relevant'].includes(t.status)).length,
+    };
   }, [filteredTasks]);
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
@@ -237,7 +239,7 @@ export default function AdditionalServicesDashboardPage() {
       await Task.update(taskId, updatedData);
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updatedData } : t));
     } catch (err) {
-      console.error('שגיאה בעדכון משימה:', err);
+      console.error('Error editing task:', err);
     }
   };
 
@@ -254,21 +256,17 @@ export default function AdditionalServicesDashboardPage() {
         await Task.delete(task.id);
         setTasks(prev => prev.filter(t => t.id !== task.id));
       } catch (err) {
-        console.error('שגיאה במחיקת משימה:', err);
+        console.error('Error deleting task:', err);
       }
     }
-  };
-
-  const handleMonthChange = (dir) => {
-    setSelectedMonth(c => dir === 'prev' ? subMonths(c, 1) : addMonths(c, 1));
   };
 
   return (
     <div className="p-4 md:p-6 space-y-5">
       <div className="flex items-center gap-2 flex-wrap">
-        <Link to={createPageUrl('ClientsDashboard')}>
+        <Link to={createPageUrl('Tasks')}>
           <Button variant="outline" size="sm" className="gap-2 text-gray-600 hover:text-emerald-700">
-            <ArrowRight className="w-4 h-4" />חזור ללוח לקוחות
+            <ArrowRight className="w-4 h-4" />חזור למשימות
           </Button>
         </Link>
         {clientFilter && (
@@ -282,38 +280,21 @@ export default function AdditionalServicesDashboardPage() {
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
-            <Settings2 className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-md">
+            <ClipboardList className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">שירותים נוספים</h1>
-            <p className="text-gray-500">חודש: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | מס"ב, משלוח תלושים, דיווחים ועוד</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">לוח אדמיניסטרטיבי</h1>
+            <p className="text-gray-500">שיווק, מעקב לקוחות, פגישות ומשימות כלליות</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <div className="text-center w-32">
-              <div className="text-[10px] text-gray-400 leading-none">חודש</div>
-              <div className="font-semibold text-sm text-gray-700">
-                {format(selectedMonth, 'MMMM yyyy', { locale: he })}
-              </div>
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('next')}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-          </div>
           <div className="flex items-center gap-0.5 bg-white rounded-lg border border-gray-200 p-0.5">
-            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')}>
+            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('list')}>
               <List className="w-4 h-4" />
             </Button>
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')}>
               <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="תצוגת פרויקט">
-              <GanttChart className="w-4 h-4" />
             </Button>
           </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
@@ -329,7 +310,7 @@ export default function AdditionalServicesDashboardPage() {
       <div className="relative">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
         <Input
-          placeholder="חיפוש לפי שם לקוח, משימה..."
+          placeholder="חיפוש לפי שם לקוח, משימה, קטגוריה..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pr-10 h-9"
@@ -340,25 +321,25 @@ export default function AdditionalServicesDashboardPage() {
         <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-gray-700">{stats.total}</div>
-            <div className="text-xs text-gray-500">סה"כ תהליכים</div>
+            <div className="text-xs text-gray-500">סה"כ משימות</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200 shadow-sm">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
+            <div className="text-xs text-gray-500">ממתינות</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200 shadow-sm">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-blue-600">{stats.inProgress}</div>
+            <div className="text-xs text-gray-500">בתהליך</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-emerald-600">{stats.completed}</div>
-            <div className="text-xs text-gray-500">הושלמו</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-emerald-50/50 to-white border-emerald-200 shadow-sm">
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-emerald-700">{stats.pct}%</div>
-            <div className="text-xs text-gray-500">תהליכים שהושלמו</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-sky-50 to-white border-sky-200 shadow-sm">
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-sky-700">{stats.stepsPct}%</div>
-            <div className="text-xs text-gray-500">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
+            <div className="text-xs text-gray-500">הושלמו ({stats.pct}%)</div>
           </CardContent>
         </Card>
       </div>
@@ -369,9 +350,7 @@ export default function AdditionalServicesDashboardPage() {
         </div>
       ) : Object.keys(serviceData).length > 0 ? (
         viewMode === 'kanban' ? (
-          <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} />
-        ) : viewMode === 'timeline' ? (
-          <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
+          <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} />
         ) : (
           <div className="space-y-6">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => (
@@ -394,15 +373,9 @@ export default function AdditionalServicesDashboardPage() {
         )
       ) : (
         <Card className="p-12 text-center border-gray-200">
-          <Settings2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-600 mb-2">אין שירותים נוספים לחודש הנבחר</h3>
-          <p className="text-gray-500">הפעל אוטומציות כדי ליצור משימות חודשיות עבור שירותים נוספים כמו מס"ב, משלוח תלושים ועוד</p>
-          <Link to={createPageUrl('AutomationRules')}>
-            <Button variant="outline" className="mt-4 gap-2">
-              <Settings2 className="w-4 h-4" />
-              עבור לאוטומציות
-            </Button>
-          </Link>
+          <ClipboardList className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-600 mb-2">אין משימות אדמיניסטרטיביות</h3>
+          <p className="text-gray-500">הוסף משימות כלליות כמו שיווק, מעקב לקוחות, פגישות ועוד</p>
         </Card>
       )}
 
@@ -428,4 +401,3 @@ export default function AdditionalServicesDashboardPage() {
     </div>
   );
 }
-
