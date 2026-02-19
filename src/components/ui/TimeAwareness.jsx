@@ -1,15 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { format, differenceInCalendarDays, endOfMonth, getDay, addDays, startOfMonth, startOfWeek, endOfWeek, isSameDay, isSameMonth, addMonths, subMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Clock, Calendar, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { Clock, Calendar, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { Task } from '@/api/entities';
 
+// Map each reporting deadline to the task categories it covers
 const REPORTING_DEADLINES = [
-  { day: 15, label: 'ביטוח לאומי', color: 'slate' },
-  { day: 19, label: 'מע"מ / ניכויים / מקדמות', color: 'gray' },
-  { day: 23, label: '874 מפורט', color: 'gray' },
+  { day: 15, label: 'ביטוח לאומי', color: 'slate', categories: ['ביטוח לאומי', 'שכר'] },
+  { day: 19, label: 'מע"מ / ניכויים / מקדמות', color: 'gray', categories: ['מע"מ', 'ניכויים', 'מקדמות מס'] },
+  { day: 23, label: '874 מפורט', color: 'gray', categories: ['מע"מ 874'] },
 ];
+
+// Statuses that mean the report has been filed / is done
+const DONE_STATUSES = new Set(['completed', 'not_relevant', 'reported_waiting_for_payment']);
 
 function getWorkDaysUntil(targetDate) {
   const today = new Date();
@@ -29,8 +34,13 @@ function getWorkDaysUntil(targetDate) {
   return count;
 }
 
-function getDeadlineStyle(calendarDays) {
-  if (calendarDays <= 0) return 'bg-gray-200 text-gray-400 line-through';
+function getDeadlineStyle(calendarDays, hasIncomplete) {
+  if (calendarDays < 0) return 'bg-gray-200 text-gray-400 line-through';
+  if (calendarDays === 0) {
+    // Today is the deadline day
+    if (hasIncomplete) return 'bg-red-200 text-red-800 font-bold ring-2 ring-red-300';
+    return 'bg-emerald-200 text-emerald-800 font-bold';
+  }
   if (calendarDays <= 2) return 'bg-amber-200 text-amber-800 font-bold';
   if (calendarDays <= 5) return 'bg-amber-100 text-amber-700 font-semibold';
   return 'bg-emerald-100 text-emerald-700 font-semibold';
@@ -140,11 +150,37 @@ function MiniCalendar({ now, onClose }) {
 export default function TimeAwareness() {
   const [now, setNow] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
+  const [deadlineTasks, setDeadlineTasks] = useState({});  // { deadlineDay: { total, incomplete } }
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch tasks and compute incomplete counts per deadline
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchDeadlineTasks() {
+      try {
+        const allTasks = await Task.list(null, 5000).catch(() => []);
+        if (cancelled) return;
+
+        const counts = {};
+        for (const dl of REPORTING_DEADLINES) {
+          const matching = allTasks.filter(t =>
+            t && t.category && dl.categories.includes(t.category)
+          );
+          const incomplete = matching.filter(t => !DONE_STATUSES.has(t.status));
+          counts[dl.day] = { total: matching.length, incomplete: incomplete.length };
+        }
+        setDeadlineTasks(counts);
+      } catch {
+        // ignore
+      }
+    }
+    fetchDeadlineTasks();
+    return () => { cancelled = true; };
+  }, [now]);
 
   const dayOfWeek = format(now, 'EEEE', { locale: he });
   const dateStr = format(now, 'd בMMMM yyyy', { locale: he });
@@ -159,15 +195,21 @@ export default function TimeAwareness() {
       const deadlineDate = new Date(now.getFullYear(), now.getMonth(), d.day);
       const calendarDays = differenceInCalendarDays(deadlineDate, now);
       const workDays = calendarDays > 0 ? getWorkDaysUntil(deadlineDate) : 0;
-      return { ...d, calendarDays, workDays, passed: calendarDays < 0 };
+      const taskInfo = deadlineTasks[d.day] || { total: 0, incomplete: 0 };
+      return { ...d, calendarDays, workDays, passed: calendarDays < 0, ...taskInfo };
     })
     .filter(d => !d.passed);
 
   const nearestDeadline = upcomingDeadlines[0];
   const isUrgent = nearestDeadline && nearestDeadline.calendarDays <= 2;
+  const hasTodayIncomplete = upcomingDeadlines.some(d => d.calendarDays === 0 && d.incomplete > 0);
 
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-xl mb-4 shadow-sm ${isUrgent ? 'bg-amber-50 border-2 border-amber-200' : 'bg-white border border-gray-200'}`}>
+    <div className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-xl mb-4 shadow-sm ${
+      hasTodayIncomplete ? 'bg-red-50 border-2 border-red-300' :
+      isUrgent ? 'bg-amber-50 border-2 border-amber-200' :
+      'bg-white border border-gray-200'
+    }`}>
       {/* Date & Time - bigger text */}
       <div className="flex items-center gap-4 relative">
         <button
@@ -197,26 +239,49 @@ export default function TimeAwareness() {
       </div>
 
       {/* Reporting Deadlines - bigger badges */}
-      <div className="flex items-center gap-2">
-        {upcomingDeadlines.length > 0 ? (
-          upcomingDeadlines.map((d) => (
-            <span
-              key={d.day}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap text-sm ${getDeadlineStyle(d.calendarDays)}`}
-            >
-              {d.calendarDays <= 2 && <Clock className="w-4 h-4" />}
-              {d.calendarDays === 0 ? (
-                <span>היום! {d.label} (ה-{d.day})</span>
-              ) : (
-                <span>{d.workDays} ימ"ע {d.label} (ה-{d.day})</span>
-              )}
+      <div className="flex flex-col items-end gap-1.5">
+        <div className="flex items-center gap-2">
+          {upcomingDeadlines.length > 0 ? (
+            upcomingDeadlines.map((d) => {
+              const hasIncomplete = d.incomplete > 0;
+              return (
+                <span
+                  key={d.day}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap text-sm ${getDeadlineStyle(d.calendarDays, hasIncomplete)}`}
+                >
+                  {d.calendarDays === 0 && hasIncomplete && <AlertTriangle className="w-4 h-4" />}
+                  {d.calendarDays <= 2 && !(d.calendarDays === 0 && hasIncomplete) && <Clock className="w-4 h-4" />}
+                  {d.calendarDays === 0 ? (
+                    <span>היום! {d.label} (ה-{d.day})</span>
+                  ) : (
+                    <span>{d.workDays} ימ"ע {d.label} (ה-{d.day})</span>
+                  )}
+                  {d.calendarDays === 0 && d.total > 0 && (
+                    <span className={`mr-1 px-1.5 py-0.5 rounded text-xs font-bold ${
+                      hasIncomplete ? 'bg-red-300 text-red-900' : 'bg-emerald-300 text-emerald-900'
+                    }`}>
+                      {d.total - d.incomplete}/{d.total}
+                    </span>
+                  )}
+                </span>
+              );
+            })
+          ) : (
+            <span className="text-sm text-gray-500 px-3 py-1.5 rounded-lg bg-emerald-50">
+              {differenceInCalendarDays(endOfMonth(now), now)} ימים לסוף חודש - כל הדיווחים הוגשו
             </span>
-          ))
-        ) : (
-          <span className="text-sm text-gray-500 px-3 py-1.5 rounded-lg bg-emerald-50">
-            {differenceInCalendarDays(endOfMonth(now), now)} ימים לסוף חודש - כל הדיווחים הוגשו
-          </span>
-        )}
+          )}
+        </div>
+
+        {/* Warning banner for today's incomplete reports */}
+        {upcomingDeadlines.filter(d => d.calendarDays === 0 && d.incomplete > 0).map(d => (
+          <div key={`warn-${d.day}`} className="flex items-center gap-2 bg-red-100 border border-red-300 rounded-lg px-3 py-1.5 text-sm text-red-800 font-semibold animate-pulse">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>
+              {d.label}: {d.incomplete} דיווחים לא הושלמו מתוך {d.total} — היום יום אחרון!
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
