@@ -1,30 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Wrench, BatteryLow } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { Task } from '@/api/entities';
 
-const FEEDBACK_OPTIONS = [
-  {
-    key: 'interruptions',
-    label: 'הפרעות חיצוניות',
-    icon: Phone,
-    color: 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-200',
-    description: 'טלפונים / בלגן',
-  },
-  {
-    key: 'complexity',
-    label: 'מורכבות טכנית',
-    icon: Wrench,
-    color: 'bg-blue-100 hover:bg-blue-200 text-blue-700 border-blue-200',
-    description: 'התיק היה קשה',
-  },
-  {
-    key: 'low_energy',
-    label: 'אנרגיה נמוכה',
-    icon: BatteryLow,
-    color: 'bg-red-100 hover:bg-red-200 text-red-700 border-red-200',
-    description: 'יום עמוס / עייפות',
-  },
+// Zero-Panic Green for success
+const GREEN = '#2E7D32';
+
+const SIZE_OPTIONS = [
+  { key: 'S', label: 'קל', emoji: '🟢', description: 'מהיר וחלק', color: 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200' },
+  { key: 'M', label: 'בינוני', emoji: '🔵', description: 'כצפוי', color: 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200' },
+  { key: 'L', label: 'כבד', emoji: '🟣', description: 'מורכב מהצפוי', color: 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200' },
 ];
 
 export default function CompletionFeedback() {
@@ -38,28 +23,32 @@ export default function CompletionFeedback() {
       if (task) {
         setCompletedTask(task);
         setVisible(true);
-        // Auto-hide after 5 seconds if no interaction
+        // Auto-hide after 4 seconds if no interaction
         setTimeout(() => {
           setVisible(false);
           setCompletedTask(null);
-        }, 5000);
+        }, 4000);
       }
     };
     window.addEventListener('calmplan:task-completed', handler);
     return () => window.removeEventListener('calmplan:task-completed', handler);
   }, []);
 
-  const handleFeedback = useCallback(async (feedbackKey) => {
+  const handleSizeFeedback = useCallback(async (sizeKey) => {
     if (!completedTask) return;
     try {
-      // Store feedback in the task
-      const existingFeedback = completedTask.completion_feedback || [];
+      // Store the feedback to adjust future complexity estimates
       await Task.update(completedTask.id, {
-        completion_feedback: [...existingFeedback, {
-          key: feedbackKey,
-          date: new Date().toISOString(),
-        }],
-        last_feedback: feedbackKey,
+        actual_complexity: sizeKey,
+        completion_feedback: [
+          ...(completedTask.completion_feedback || []),
+          {
+            key: `size_${sizeKey}`,
+            actual_size: sizeKey,
+            estimated_size: completedTask.client_size || 'M',
+            date: new Date().toISOString(),
+          },
+        ],
       });
     } catch { /* ignore errors */ }
     setVisible(false);
@@ -79,30 +68,32 @@ export default function CompletionFeedback() {
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: 50, opacity: 0, scale: 0.9 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 w-[360px] max-w-[calc(100vw-2rem)]"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 w-[340px] max-w-[calc(100vw-2rem)]"
           dir="rtl"
         >
           <div className="text-center mb-3">
-            <p className="text-sm font-medium text-gray-700">מה קרה הפעם?</p>
-            <p className="text-[11px] text-gray-400 mt-0.5 truncate">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <CheckCircle className="w-5 h-5" style={{ color: GREEN }} />
+              <p className="text-sm font-bold" style={{ color: GREEN }}>הושלם!</p>
+            </div>
+            <p className="text-[11px] text-gray-500 truncate">
               {completedTask.title}
             </p>
+            <p className="text-xs font-medium text-gray-700 mt-2">איך היה? מה המורכבות בפועל?</p>
           </div>
           <div className="flex gap-2 justify-center">
-            {FEEDBACK_OPTIONS.map(option => {
-              const Icon = option.icon;
-              return (
-                <button
-                  key={option.key}
-                  onClick={() => handleFeedback(option.key)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${option.color}`}
-                  title={option.description}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium whitespace-nowrap">{option.label}</span>
-                </button>
-              );
-            })}
+            {SIZE_OPTIONS.map(option => (
+              <button
+                key={option.key}
+                onClick={() => handleSizeFeedback(option.key)}
+                className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all flex-1 ${option.color}`}
+                title={option.description}
+              >
+                <span className="text-xl">{option.emoji}</span>
+                <span className="text-sm font-bold">{option.key}</span>
+                <span className="text-[10px] font-medium">{option.label}</span>
+              </button>
+            ))}
           </div>
           <button
             onClick={handleDismiss}
