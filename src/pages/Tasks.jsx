@@ -416,7 +416,7 @@ export default function TasksPage() {
     return (
       <th
         onClick={() => toggleSort(field)}
-        className="px-3 py-2.5 text-right text-xs font-bold text-gray-600 cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap bg-white"
+        className="px-3 py-2.5 2xl:px-4 2xl:py-3 text-right text-xs 2xl:text-sm font-bold text-gray-600 cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap bg-white"
       >
         <div className="flex items-center gap-1">
           {children}
@@ -444,7 +444,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-6xl mx-auto">
+    <div className="space-y-4 w-full mx-auto">
       {ConfirmDialogComponent}
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -695,9 +695,9 @@ export default function TasksPage() {
                       className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isCompleted ? 'opacity-50' : ''}`}
                     >
                       {/* Client */}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 2xl:px-4 2xl:py-3">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-medium text-gray-800 truncate max-w-[150px]">
+                          <span className="text-sm 2xl:text-base font-medium text-gray-800 truncate max-w-[150px] 2xl:max-w-[200px]">
                             {task.client_name || '-'}
                           </span>
                           {clientMap[task.client_name] && (
@@ -712,7 +712,7 @@ export default function TasksPage() {
                         </div>
                       </td>
                       {/* Category */}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 2xl:px-4 2xl:py-3">
                         {task.category ? (
                           <Badge variant="outline" className="text-[10px] px-2 py-0.5">
                             {getCategoryLabel(task.category)}
@@ -722,8 +722,8 @@ export default function TasksPage() {
                         )}
                       </td>
                       {/* Title / description */}
-                      <td className="px-3 py-2">
-                        <p className={`text-sm truncate max-w-[250px] ${isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                      <td className="px-3 py-2 2xl:px-4 2xl:py-3">
+                        <p className={`text-sm 2xl:text-base truncate max-w-[250px] 2xl:max-w-[400px] ${isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                           {task.title}
                         </p>
                         {task.description && (
@@ -733,13 +733,13 @@ export default function TasksPage() {
                         )}
                       </td>
                       {/* Due date */}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 2xl:px-4 2xl:py-3">
                         <span className="text-xs font-mono text-gray-600">
                           {formatDate(task.due_date) || '-'}
                         </span>
                       </td>
                       {/* Status */}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 2xl:px-4 2xl:py-3">
                         <Select
                           value={task.status}
                           onValueChange={(newStatus) => handleStatusChange(task, newStatus)}
@@ -763,7 +763,7 @@ export default function TasksPage() {
                         </Select>
                       </td>
                       {/* Priority */}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 2xl:px-4 2xl:py-3">
                         <Badge className={`text-[10px] px-2 py-0.5 ${pri.color}`}>
                           {pri.text}
                         </Badge>

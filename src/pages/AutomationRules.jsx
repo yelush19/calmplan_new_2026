@@ -1034,7 +1034,7 @@ export default function AutomationRules() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto" dir="rtl">
+    <div className="p-6 w-full" dir="rtl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Zap className="w-8 h-8 text-yellow-500" />
