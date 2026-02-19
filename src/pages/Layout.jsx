@@ -15,7 +15,7 @@ import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import TimeAwareness from "@/components/ui/TimeAwareness";
 import StickyNotes from "@/components/StickyNotes";
 import GlobalSearch from "@/components/GlobalSearch";
@@ -222,6 +222,7 @@ function LayoutInner({ children }) {
   const { daysLeft, label: deadlineLabel } = getNextDeadline();
 
   return (
+    <TooltipProvider>
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
       <style>{`
         :root {
@@ -645,6 +646,7 @@ function LayoutInner({ children }) {
         </>
       )}
     </div>
+    </TooltipProvider>
   );
 }
 
