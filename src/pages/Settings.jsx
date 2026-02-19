@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { DaySchedule, WeeklyRecommendation, SystemConfig } from '@/api/entities';
 import {
   Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle,
-  Plus, X, Download, Upload, Database, Cloud, AlertTriangle,
+  Plus, X, Download, Upload, Database, Cloud, AlertTriangle, RefreshCw,
   Settings, Trash2, Server, Pencil, Briefcase, Heart,
   Monitor, FileText, CalendarClock, BarChart3, Users, Tag
 } from 'lucide-react';
@@ -470,10 +470,117 @@ function SystemSettings() {
         <h2 className="text-lg font-bold text-gray-800">הגדרות מערכת</h2>
       </div>
       <div className="grid grid-cols-1 gap-4">
+        <CloudSyncSection />
         <PlatformManagementSection />
         <DataBackupSection />
       </div>
     </div>
+  );
+}
+
+// =====================================================
+// CLOUD SYNC STATUS & CONFIGURATION
+// =====================================================
+
+function CloudSyncSection() {
+  const [connectionTest, setConnectionTest] = useState(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const testConnection = async () => {
+    setIsTesting(true);
+    setConnectionTest(null);
+    try {
+      if (!isSupabaseConfigured) {
+        setConnectionTest({ ok: false, message: 'Supabase לא מוגדר. הוסף VITE_SUPABASE_URL ו-VITE_SUPABASE_ANON_KEY לקובץ .env' });
+        setIsTesting(false);
+        return;
+      }
+      const { supabase } = await import('@/api/supabaseClient');
+      const { count, error } = await supabase
+        .from('app_data')
+        .select('id', { count: 'exact', head: true });
+
+      if (error) {
+        setConnectionTest({ ok: false, message: `שגיאת חיבור: ${error.message}` });
+      } else {
+        setConnectionTest({ ok: true, message: `מחובר בהצלחה! ${count} רשומות בענן.` });
+      }
+    } catch (e) {
+      setConnectionTest({ ok: false, message: `שגיאה: ${e.message}` });
+    }
+    setIsTesting(false);
+  };
+
+  return (
+    <Card className={`border-2 ${isSupabaseConfigured ? 'border-green-200 bg-green-50/30' : 'border-orange-200 bg-orange-50/30'}`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Cloud className={`w-4 h-4 ${isSupabaseConfigured ? 'text-green-600' : 'text-orange-500'}`} />
+          סנכרון ענן
+          {isSupabaseConfigured ? (
+            <Badge className="bg-green-100 text-green-700 text-[10px]">מחובר</Badge>
+          ) : (
+            <Badge className="bg-orange-100 text-orange-700 text-[10px]">מקומי בלבד</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isSupabaseConfigured ? (
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-green-800">הנתונים מסונכרנים בענן</p>
+                <p className="text-xs text-green-600 mt-1">
+                  כל שינוי שתבצעי יופיע מיד בכל מכשיר אחר שמחובר לאותו חשבון Supabase.
+                  סנכרון בזמן אמת (Realtime) פעיל.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={testConnection} disabled={isTesting} className="text-xs gap-1">
+              {isTesting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Database className="w-3 h-3" />}
+              בדוק חיבור
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-orange-800">מצב מקומי - הנתונים לא מסונכרנים</p>
+                <p className="text-xs text-orange-600 mt-1">
+                  הנתונים נשמרים רק במכשיר זה. כדי לסנכרן בין מכשירים, הגדירי חשבון Supabase.
+                </p>
+              </div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-bold text-gray-700">הוראות הגדרה:</p>
+              <ol className="text-xs text-gray-600 space-y-1 list-decimal list-inside">
+                <li>צרי חשבון חינמי ב-<span className="font-mono text-blue-600">supabase.com</span></li>
+                <li>צרי פרויקט חדש וטבלה בשם <span className="font-mono">app_data</span></li>
+                <li>העתיקי את ה-URL וה-Anon Key מ-Settings → API</li>
+                <li>צרי קובץ <span className="font-mono">.env</span> בתיקיית הפרויקט:</li>
+              </ol>
+              <div className="bg-gray-900 text-green-400 rounded-lg p-2 font-mono text-[11px]">
+                VITE_SUPABASE_URL=https://xxx.supabase.co<br/>
+                VITE_SUPABASE_ANON_KEY=eyJ...
+              </div>
+              <p className="text-[10px] text-gray-400">לאחר ההגדרה, בצעי build מחדש ופתחי את האפליקציה.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={testConnection} disabled={isTesting} className="text-xs gap-1">
+              {isTesting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Database className="w-3 h-3" />}
+              בדוק חיבור
+            </Button>
+          </div>
+        )}
+        {connectionTest && (
+          <div className={`flex items-center gap-2 p-2 rounded-lg text-xs ${connectionTest.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {connectionTest.ok ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+            {connectionTest.message}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -5,6 +5,8 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Use relative paths so Electron can load from file:// protocol
+  base: './',
   server: {
     allowedHosts: true
   },
