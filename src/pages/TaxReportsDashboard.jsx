@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
   Calculator, Loader, RefreshCw, ChevronLeft, ChevronRight,
-  ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus
+  ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus,
+  Zap, Flame, ChevronDown
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -61,6 +62,8 @@ export default function TaxReportsDashboardPage() {
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [filingSprintActive, setFilingSprintActive] = useState(false);
+  const [filingSprintIdx, setFilingSprintIdx] = useState(0);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, [selectedMonth]);
@@ -177,6 +180,32 @@ export default function TaxReportsDashboardPage() {
     });
     return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0 };
   }, [filteredTasks]);
+
+  // Filing Sprint: tasks that are ready_for_reporting (ready to file)
+  const filingSprintTasks = useMemo(() => {
+    return filteredTasks.filter(t => t.status === 'ready_for_reporting');
+  }, [filteredTasks]);
+
+  const canStartFilingSprint = filingSprintTasks.length >= 2;
+
+  const handleFilingSprint = useCallback(async () => {
+    if (!filingSprintActive) {
+      setFilingSprintActive(true);
+      setFilingSprintIdx(0);
+      return;
+    }
+    // Mark current task as completed and advance
+    const currentTask = filingSprintTasks[filingSprintIdx];
+    if (currentTask) {
+      await handleStatusChange(currentTask, 'completed');
+      if (filingSprintIdx < filingSprintTasks.length - 1) {
+        setFilingSprintIdx(prev => prev + 1);
+      } else {
+        setFilingSprintActive(false);
+        setFilingSprintIdx(0);
+      }
+    }
+  }, [filingSprintActive, filingSprintTasks, filingSprintIdx]);
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
     const currentSteps = getTaskProcessSteps(task);
@@ -369,6 +398,94 @@ export default function TaxReportsDashboardPage() {
         </Card>
       </div>
 
+      {/* Filing Sprint Banner */}
+      {canStartFilingSprint && !filingSprintActive && (
+        <Card className="bg-gradient-to-l from-amber-50 to-orange-50 border-amber-200 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Flame className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-amber-800 text-sm">Filing Sprint זמין!</h3>
+                <p className="text-xs text-amber-600">
+                  {filingSprintTasks.length} לקוחות מוכנים להגשה - {filingSprintTasks.map(t => t.client_name).join(', ')}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => { setFilingSprintActive(true); setFilingSprintIdx(0); }}
+              className="bg-amber-500 hover:bg-amber-600 text-white gap-1.5 font-bold"
+              size="sm"
+            >
+              <Zap className="w-4 h-4" />
+              התחל Filing Sprint
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Active Filing Sprint */}
+      {filingSprintActive && filingSprintTasks.length > 0 && (
+        <Card className="bg-gradient-to-l from-amber-100 to-orange-100 border-amber-300 shadow-md">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Flame className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-amber-800">Filing Sprint</h3>
+                <Badge className="bg-amber-200 text-amber-800 text-[10px]">
+                  {filingSprintIdx + 1} / {filingSprintTasks.length}
+                </Badge>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFilingSprintActive(false)}
+                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+              >
+                <X className="w-3.5 h-3.5 ml-1" />
+                סיום Sprint
+              </Button>
+            </div>
+            {/* Progress bar */}
+            <div className="w-full h-2 bg-amber-200 rounded-full overflow-hidden mb-3">
+              <div
+                className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                style={{ width: `${((filingSprintIdx) / filingSprintTasks.length) * 100}%` }}
+              />
+            </div>
+            {/* Current task */}
+            {filingSprintTasks[filingSprintIdx] && (
+              <div className="bg-white rounded-lg p-4 border border-amber-200 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-gray-800">{filingSprintTasks[filingSprintIdx].client_name}</div>
+                  <div className="text-xs text-gray-500">{filingSprintTasks[filingSprintIdx].title}</div>
+                </div>
+                <Button
+                  onClick={handleFilingSprint}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1.5 font-bold"
+                >
+                  <Zap className="w-4 h-4" />
+                  {filingSprintIdx < filingSprintTasks.length - 1 ? 'הושלם → הבא' : 'הושלם - סיום!'}
+                </Button>
+              </div>
+            )}
+            {/* Upcoming queue */}
+            {filingSprintTasks.length > filingSprintIdx + 1 && (
+              <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-600">
+                <span>בתור:</span>
+                {filingSprintTasks.slice(filingSprintIdx + 1, filingSprintIdx + 4).map(t => (
+                  <Badge key={t.id} className="bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0">{t.client_name}</Badge>
+                ))}
+                {filingSprintTasks.length > filingSprintIdx + 4 && (
+                  <span>+{filingSprintTasks.length - filingSprintIdx - 4} נוספים</span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Content */}
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
@@ -376,7 +493,7 @@ export default function TaxReportsDashboardPage() {
         </div>
       ) : Object.keys(serviceData).length > 0 ? (
         viewMode === 'kanban' ? (
-          <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} />
+          <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} clients={clients} />
         ) : viewMode === 'timeline' ? (
           <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
         ) : (

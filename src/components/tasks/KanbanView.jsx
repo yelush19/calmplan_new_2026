@@ -4,14 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, User, Calendar, Briefcase, Home, Trash2, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, User, Calendar, Briefcase, Home, Trash2, Pencil, ChevronDown, ChevronUp, Zap, FastForward } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { STATUS_CONFIG } from '@/config/processTemplates';
+import { getVatEnergyTier, getPayrollTier } from '@/engines/taskCascadeEngine';
 
 const columnMapping = {
   todo: ['not_started', 'postponed', 'waiting_for_materials', 'issue'],
-  in_progress: ['in_progress', 'remaining_completions', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment'],
+  in_progress: ['in_progress', 'remaining_completions', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment', 'pending_external'],
   completed: ['completed', 'not_relevant'],
 };
 
@@ -40,9 +41,18 @@ const getPriorityColor = (priority) => {
   return colors[priority] || "border-r-4 border-gray-300";
 };
 
-const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit }) => {
+const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients }) => {
   const [expanded, setExpanded] = useState(false);
   const statusCfg = STATUS_CONFIG[task?.status] || STATUS_CONFIG.not_started;
+
+  // Energy tier computation
+  const isVat = task?.category === 'מע"מ' || task?.category === 'work_vat_reporting';
+  const isPayroll = task?.category === 'שכר' || task?.category === 'work_payroll';
+  const vatTier = isVat ? getVatEnergyTier(task) : null;
+  const payrollClient = isPayroll && clients ? clients.find(c => c.name === task?.client_name) : null;
+  const payrollTier = payrollClient ? getPayrollTier(payrollClient) : null;
+  const isQuickWin = vatTier?.key === 'quick_win' || payrollTier?.key === 'nano';
+  const isClimb = vatTier?.key === 'climb';
 
   const formatDate = (dateString) => {
     if (!dateString) return null;
@@ -85,6 +95,17 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit }) => {
                 <div className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot || statusCfg.bg} mr-1`} />
                 {statusCfg.label}
               </Badge>
+              {isQuickWin && (
+                <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 font-bold border border-emerald-300 gap-0.5">
+                  <Zap className="w-3 h-3" />
+                  Quick Win
+                </Badge>
+              )}
+              {isClimb && (
+                <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0 font-medium border border-purple-200">
+                  45+ דק'
+                </Badge>
+              )}
               {task.client_name && (
                 <span className="text-[10px] text-gray-500 truncate max-w-[100px]">{task.client_name}</span>
               )}
@@ -119,6 +140,33 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit }) => {
             <div className="px-3 pb-3 border-t border-gray-100 pt-2 space-y-2">
               {task.description && (
                 <p className="text-xs text-gray-600">{task.description}</p>
+              )}
+
+              {/* Fast-Track button for nano payroll */}
+              {payrollTier?.fastTrack && task.status !== 'completed' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStatusChange && onStatusChange(task, 'completed');
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-colors"
+                >
+                  <FastForward className="w-3.5 h-3.5" />
+                  Fast-Track - סיום מהיר
+                </button>
+              )}
+
+              {/* Climb task progress indicator */}
+              {isClimb && task.sub_tasks?.length > 0 && (
+                <div className="bg-purple-50 rounded-md px-2 py-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-purple-700 font-medium mb-1">
+                    <span>שלב {task.sub_tasks.filter(s => s.done).length + 1} מתוך {task.sub_tasks.length}</span>
+                    <span>{Math.round((task.sub_tasks.filter(s => s.done).length / task.sub_tasks.length) * 100)}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-purple-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${(task.sub_tasks.filter(s => s.done).length / task.sub_tasks.length) * 100}%` }} />
+                  </div>
+                </div>
               )}
 
               {/* Status dropdown */}
@@ -182,7 +230,7 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit }) => {
   );
 };
 
-export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask, onEditTask }) {
+export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask, onEditTask, clients = [] }) {
   const [board, setBoard] = useState(columnsConfig);
   const [collapsed, setCollapsed] = useState({ completed: true });
   const [collapsedStatuses, setCollapsedStatuses] = useState(() => {
@@ -355,6 +403,7 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                                 onStatusChange={onTaskStatusChange}
                                 onDelete={onDeleteTask}
                                 onEdit={onEditTask}
+                                clients={clients}
                               />
                             ))}
                           </div>

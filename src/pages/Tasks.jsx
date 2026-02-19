@@ -31,7 +31,7 @@ import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/proc
 // Display order for status groups in list view
 const STATUS_GROUP_ORDER = [
   'issue', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'waiting_for_approval',
-  'not_started', 'ready_for_reporting', 'postponed', 'reported_waiting_for_payment',
+  'not_started', 'ready_for_reporting', 'pending_external', 'postponed', 'reported_waiting_for_payment',
   'completed', 'not_relevant',
 ];
 const DEFAULT_COLLAPSED_STATUSES = new Set(['completed', 'not_relevant']);

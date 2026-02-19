@@ -487,12 +487,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   boxShadow: isHovered
                     ? `0 0 20px ${client.color}66, 0 4px 12px rgba(0,0,0,0.2)`
                     : '0 2px 6px rgba(0,0,0,0.12)',
-                  opacity: isSpotlit(branch.category) ? 1 : 0.12,
-                  transition: 'opacity 0.4s ease-in-out, box-shadow 0.2s ease, border-color 0.2s ease',
+                  opacity: isSpotlit(branch.category) ? (isAllDone ? 0.45 : 1) : 0.12,
+                  filter: isAllDone ? 'saturate(0.4)' : 'none',
+                  transition: 'opacity 0.4s ease-in-out, box-shadow 0.2s ease, border-color 0.2s ease, filter 0.4s ease',
                 }}
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{
-                  opacity: isSpotlit(branch.category) ? 1 : 0.12,
+                  opacity: isSpotlit(branch.category) ? (isAllDone ? 0.45 : 1) : 0.12,
                   scale: 1,
                 }}
                 transition={{
@@ -633,6 +634,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {[
           { color: ZERO_PANIC.orange, label: 'להיום' },
           { color: ZERO_PANIC.purple, label: 'באיחור' },
+          { color: '#1565C0', label: "צד ג'" },
           { color: ZERO_PANIC.blue, label: 'פעיל' },
           { color: ZERO_PANIC.green, label: 'הושלם' },
         ].map(item => (
