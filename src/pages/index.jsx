@@ -89,6 +89,8 @@ import ClientFiles from "./ClientFiles";
 
 import BackupManager from "./BackupManager";
 
+import SystemReadiness from "./SystemReadiness";
+
 import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -180,6 +182,8 @@ const PAGES = {
     ClientFiles: ClientFiles,
 
     BackupManager: BackupManager,
+
+    SystemReadiness: SystemReadiness,
 
 }
 
@@ -295,6 +299,8 @@ function PagesContent() {
                 <Route path="/ClientFiles" element={<ClientFiles />} />
 
                 <Route path="/BackupManager" element={<BackupManager />} />
+
+                <Route path="/SystemReadiness" element={<SystemReadiness />} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">

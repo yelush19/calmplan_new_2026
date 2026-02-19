@@ -110,6 +110,7 @@ const getSidebarSections = () => ({
     title: "מערכת",
     icon: Settings,
     items: [
+      { name: "אשף הגדרת נתונים", href: createPageUrl("SystemReadiness"), icon: Zap },
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
       { name: "גיבוי ושחזור", href: createPageUrl("BackupManager"), icon: Shield },
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
