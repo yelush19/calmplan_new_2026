@@ -11,7 +11,7 @@ import { Plus, Briefcase, Home as HomeIcon, Search, ChevronDown, X, Clock, Calen
 import { Task, Client } from '@/api/entities';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { getScheduledStartForCategory } from '@/config/automationRules';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Calendar } from '@/components/ui/calendar';
@@ -202,6 +202,14 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         taskTitle = `${taskTitle} - ${selectedClient.name}`;
       }
 
+      // For work tasks with a service category, set reporting_month so dashboards find this task.
+      // Due dates are in the deadline month (M+1), so reporting_month = due_date month - 1.
+      let reportingMonth;
+      if (context === 'work' && category && dueDate) {
+        const dueDateObj = parseISO(dueDate);
+        reportingMonth = format(subMonths(dueDateObj, 1), 'yyyy-MM');
+      }
+
       await Task.create({
         title: taskTitle,
         status: 'not_started',
@@ -215,6 +223,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         client_id: selectedClient?.id || undefined,
         client_related: !!selectedClient,
         priority: 'medium',
+        ...(reportingMonth && { reporting_month: reportingMonth }),
       });
 
       toast.success('משימה נוצרה בהצלחה');
