@@ -8,6 +8,9 @@ import { setupAutoStart } from './autoStart.js';
 import { setupDragDrop } from './dragDrop.js';
 import { showNativeNotification } from './notifications.js';
 
+// Use app.getAppPath() for reliable ASAR path resolution.
+// import.meta.url + fileURLToPath can break inside ASAR on Windows.
+const appRoot = app.getAppPath();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -19,7 +22,7 @@ let quickCaptureWindow = null;
 let realityCheckWindow = null;
 
 function getPreloadPath() {
-  return path.join(__dirname, 'preload.cjs');
+  return path.join(appRoot, 'electron', 'preload.cjs');
 }
 
 function createMainWindow() {
@@ -31,7 +34,7 @@ function createMainWindow() {
     minWidth: 900,
     minHeight: 600,
     title: 'CalmPlan',
-    icon: path.join(__dirname, 'icons', 'icon.png'),
+    icon: path.join(appRoot, 'electron', 'icons', 'icon.png'),
     webPreferences: {
       preload: getPreloadPath(),
       nodeIntegration: false,
@@ -54,8 +57,17 @@ function createMainWindow() {
     mainWindow.loadURL(DEV_SERVER_URL);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    // appRoot = project root (or app.asar root in packaged build)
+    // dist/index.html is at the root level, next to electron/ and src/
+    const indexPath = path.join(appRoot, 'dist', 'index.html');
+    console.log('[CalmPlan] Loading:', indexPath);
+    mainWindow.loadFile(indexPath);
   }
+
+  // Log load failures for debugging
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('[CalmPlan] Failed to load:', errorCode, errorDescription);
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
