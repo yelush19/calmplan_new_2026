@@ -580,15 +580,35 @@ export default function HomePage() {
           </CardHeader>
           <CardContent className={focusView === 'mindmap' ? 'pt-2 px-2 pb-2' : 'pt-4'}>
             {focusView === 'mindmap' ? (
-              <MindMapView
-                tasks={data.activeTasks || allFocusTasks}
-                clients={clients}
-                inboxItems={inboxItems}
-                onInboxDismiss={handleInboxDismiss}
-                focusMode={focusMode}
-              />
+              <div className="relative">
+                <MindMapView
+                  tasks={data.activeTasks || allFocusTasks}
+                  clients={clients}
+                  inboxItems={inboxItems}
+                  onInboxDismiss={handleInboxDismiss}
+                  focusMode={focusMode}
+                />
+                {/* Prominent Gantt toggle on MindMap */}
+                <button
+                  onClick={() => setFocusView('gantt')}
+                  className="absolute bottom-4 right-4 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300 transition-all text-sm font-medium"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>הצג כגאנט</span>
+                </button>
+              </div>
             ) : focusView === 'gantt' ? (
-              <GanttView tasks={allFocusTasks} clients={clients} />
+              <div className="relative">
+                <GanttView tasks={allFocusTasks} clients={clients} />
+                {/* Back to MindMap button */}
+                <button
+                  onClick={() => setFocusView('mindmap')}
+                  className="absolute bottom-4 right-4 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all text-sm font-medium"
+                >
+                  <Network className="w-4 h-4" />
+                  <span>חזרה למפה</span>
+                </button>
+              </div>
             ) : focusView === 'kanban' ? (
               <KanbanView
                 tasks={allFocusTasks}
