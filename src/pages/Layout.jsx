@@ -614,7 +614,7 @@ function LayoutInner({ children }) {
             )}
 
             <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-5 bg-neutral-bg/30">
-              <div className="max-w-[1400px] mx-auto">
+              <div className="w-full">
                 <TimeAwareness />
 
                 {/* Admin Mode: Prominent Import Backup Banner */}

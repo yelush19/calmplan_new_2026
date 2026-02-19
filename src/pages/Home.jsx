@@ -420,7 +420,7 @@ export default function HomePage() {
 
   return (
     <motion.div
-      className="p-4 md:p-5 space-y-4"
+      className="p-3 md:p-4 space-y-3"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
@@ -479,7 +479,7 @@ export default function HomePage() {
       )}
 
       {/* Quick counters with Zero-Panic colors */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-5 gap-3">
         <Link to={createPageUrl("Tasks") + "?tab=active&context=work"}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD70' }}>
             <CardContent className="p-3 flex items-center gap-3">
@@ -561,7 +561,7 @@ export default function HomePage() {
       {/* PROACTIVE INSIGHTS COCKPIT */}
       {insights.length > 0 && (
         <motion.div initial={{ y: 5, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.17 }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
             {insights.slice(0, 6).map((insight, i) => {
               const colorMap = {
                 teal: { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', icon: 'text-teal-500' },
@@ -664,7 +664,7 @@ export default function HomePage() {
               </>
             )}
           </CardHeader>
-          <CardContent className={focusView === 'mindmap' ? 'pt-2 px-2 pb-2' : 'pt-4'}>
+          <CardContent className={focusView === 'mindmap' ? 'pt-2 px-0 pb-2' : 'pt-4'}>
             {focusView === 'mindmap' ? (
               <div className="relative">
                 <MindMapView
@@ -724,7 +724,7 @@ export default function HomePage() {
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.35 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-5 gap-3"
       >
         <Link to={createPageUrl("WeeklyPlanningDashboard")}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD50' }}>
