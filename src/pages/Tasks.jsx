@@ -137,6 +137,18 @@ export default function TasksPage() {
   const toggleCategoryGroup = (key) => {
     setCollapsedCategories(prev => ({ ...prev, [key]: !prev[key] }));
   };
+  const expandAllCategories = () => setCollapsedCategories({});
+  const collapseAllCategories = () => {
+    const allKeys = {};
+    groupedTasks.forEach(({ key: groupKey, tasks: groupTasks }) => {
+      const cats = new Set();
+      groupTasks.forEach(t => cats.add(getCategoryLabel(t.category)));
+      if (cats.size > 1) {
+        cats.forEach(cat => { allKeys[`${groupKey}_${cat}`] = true; });
+      }
+    });
+    setCollapsedCategories(allKeys);
+  };
   const [sortDir, setSortDir] = useState('asc');
 
   const location = useLocation();
@@ -569,6 +581,14 @@ export default function TasksPage() {
               className={`px-3 py-1.5 rounded-md font-medium transition-colors ${groupBy === 'category' ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
             >
               סוג דיווח
+            </button>
+          </div>
+          <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs mr-2">
+            <button onClick={expandAllCategories} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+              פתח הכל
+            </button>
+            <button onClick={collapseAllCategories} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+              סגור הכל
             </button>
           </div>
         </div>

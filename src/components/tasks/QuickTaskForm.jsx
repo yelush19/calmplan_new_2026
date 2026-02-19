@@ -117,7 +117,7 @@ export default function QuickTaskForm({ quadrant, onClose, onSave }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <motion.div
@@ -127,7 +127,7 @@ export default function QuickTaskForm({ quadrant, onClose, onSave }) {
         className="w-full max-w-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <Card className={`shadow-2xl ${quadrantInfo.color}`}>
+        <Card className={`shadow-2xl bg-white ${quadrantInfo.color}`}>
           <CardHeader className="flex flex-row items-center justify-between p-6">
             <CardTitle className="flex items-center gap-3 text-2xl">
               <quadrantInfo.icon className="w-8 h-8" />

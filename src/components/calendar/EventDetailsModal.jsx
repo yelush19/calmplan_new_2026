@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+const fixShortYear = (v) => { if (!v) return v; const m = v.match(/^(\d{1,2})-(\d{2})-(\d{2})$/); if (m) { const yr = parseInt(m[1], 10); return `${yr < 100 ? (yr < 50 ? 2000 + yr : 1900 + yr) : yr}-${m[2]}-${m[3]}`; } return v; };
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -108,14 +109,14 @@ export default function EventDetailsModal({ item, itemType, onClose, onSave }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         >
-          <Card className="shadow-2xl">
+          <Card className="shadow-2xl bg-white">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-xl">
                 {isEditing ?
@@ -228,6 +229,7 @@ export default function EventDetailsModal({ item, itemType, onClose, onSave }) {
                           type="date"
                           value={editData.due_date ? editData.due_date.substring(0, 10) : ''}
                           onChange={(e) => setEditData({...editData, due_date: e.target.value || null})}
+                          onBlur={(e) => { const f = fixShortYear(e.target.value); if (f !== e.target.value) setEditData(prev => ({...prev, due_date: f})); }}
                         />
                       </div>
 
