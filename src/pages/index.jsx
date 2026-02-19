@@ -90,6 +90,8 @@ import AdminTasksDashboard from "./AdminTasksDashboard";
 
 import ClientFiles from "./ClientFiles";
 
+import BackupManager from "./BackupManager";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -183,6 +185,8 @@ const PAGES = {
     AdminTasksDashboard: AdminTasksDashboard,
 
     ClientFiles: ClientFiles,
+
+    BackupManager: BackupManager,
 
 }
 
@@ -300,6 +304,8 @@ function PagesContent() {
                 <Route path="/AdminTasksDashboard" element={<AdminTasksDashboard />} />
 
                 <Route path="/ClientFiles" element={<ClientFiles />} />
+
+                <Route path="/BackupManager" element={<BackupManager />} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">

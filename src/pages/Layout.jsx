@@ -9,7 +9,7 @@ import {
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, Database,
   ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote,
   ChevronLeft, ChevronRight, Plus, Hourglass, Maximize2, Star,
-  BatteryLow, BatteryMedium, BatteryFull
+  BatteryLow, BatteryMedium, BatteryFull, Shield
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -110,6 +110,7 @@ const getSidebarSections = () => ({
     icon: Settings,
     items: [
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
+      { name: "גיבוי ושחזור", href: createPageUrl("BackupManager"), icon: Shield },
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
     ]
   },
