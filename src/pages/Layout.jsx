@@ -68,6 +68,7 @@ const navigationGroups = [
             ],
           },
           { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: Settings },
+          { name: "אדמיניסטרטיבי", href: createPageUrl("AdminTasksDashboard"), icon: FolderKanban },
         ],
       },
       {
