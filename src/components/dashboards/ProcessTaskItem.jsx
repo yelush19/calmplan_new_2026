@@ -27,6 +27,10 @@ export default function ProcessTaskItem({ task, onEdit, onDelete }) {
         );
       case 'issue':
         return <Badge variant="destructive">תקלה</Badge>;
+      case 'pending_external':
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">מחכה לצד ג'</Badge>;
+      case 'ready_for_reporting':
+        return <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">מוכן לדיווח</Badge>;
       default:
         return <Badge variant="secondary">ממתין</Badge>;
     }

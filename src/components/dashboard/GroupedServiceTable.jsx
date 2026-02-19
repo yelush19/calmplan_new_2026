@@ -3,7 +3,7 @@ const fixShortYear = (v) => { if (!v) return v; const m = v.match(/^(\d{1,2})-(\
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar, Zap, FastForward } from 'lucide-react';
 import { differenceInDays, parseISO, isValid, format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ResizableTable from '@/components/ui/ResizableTable';
@@ -12,6 +12,7 @@ import {
   STATUS_CONFIG,
   getTaskProcessSteps,
 } from '@/config/processTemplates';
+import { getVatEnergyTier, getPayrollTier } from '@/engines/taskCascadeEngine';
 
 // Status display order by priority (lower = more urgent = shown first)
 const STATUS_DISPLAY_ORDER = [
@@ -266,6 +267,14 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
   const [newSubDue, setNewSubDue] = useState('');
   const [newSubTime, setNewSubTime] = useState('');
 
+  // Energy tier computation
+  const isVat = service.key === 'vat' || service.key === 'tax_advances';
+  const isPayroll = service.key === 'payroll';
+  const vatTier = isVat ? getVatEnergyTier(task) : null;
+  const payrollTier = isPayroll && client ? getPayrollTier(client) : null;
+  const isQuickWin = vatTier?.key === 'quick_win' || payrollTier?.key === 'nano';
+  const isClimb = vatTier?.key === 'climb';
+
   const statusOptions = ['not_started', 'in_progress', 'waiting_for_materials', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment', 'pending_external', 'completed', 'not_relevant'];
 
   const subTasks = task.sub_tasks || [];
@@ -305,7 +314,17 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSubTasks ? 'rotate-180' : ''}`} />
             </button>
             <div className="min-w-0">
-              <span className="truncate block max-w-[180px] font-medium text-gray-800 text-xs">{clientName}</span>
+              <div className="flex items-center gap-1">
+                <span className="truncate block max-w-[160px] font-medium text-gray-800 text-xs">{clientName}</span>
+                {isQuickWin && task.status !== 'completed' && (
+                  <span className="text-emerald-500 shrink-0" title="Quick Win">
+                    <Zap className="w-3.5 h-3.5" />
+                  </span>
+                )}
+                {isClimb && task.status !== 'completed' && (
+                  <Badge className="text-[8px] px-1 py-0 bg-purple-100 text-purple-600 border-purple-200 shrink-0">45+</Badge>
+                )}
+              </div>
               {taxIds.length > 0 && (
                 <div className="flex gap-2 mt-0.5">
                   {taxIds.map(({ label, value }) => (
@@ -403,6 +422,35 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
         <tr className="bg-indigo-50/30">
           <td colSpan={service.steps.length + 2} className="px-4 py-2">
             <div className="space-y-1.5 mr-6">
+              {/* Fast-Track button for nano payroll */}
+              {payrollTier?.fastTrack && task.status !== 'completed' && (
+                <button
+                  onClick={() => onStatusChange(task, 'completed')}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold transition-colors shadow-sm"
+                >
+                  <FastForward className="w-4 h-4" />
+                  Fast-Track - סיום מהיר (Nano {payrollTier.emoji})
+                </button>
+              )}
+              {/* Climb task progress bar */}
+              {isClimb && task.status !== 'completed' && (
+                <div className="bg-purple-50 rounded-lg px-3 py-2 border border-purple-100">
+                  <div className="flex items-center justify-between text-xs text-purple-700 font-medium mb-1">
+                    <span>משימת עומק - {task.estimated_duration || 45}+ דקות</span>
+                    {task.sub_tasks?.length > 0 && (
+                      <span>שלב {task.sub_tasks.filter(s => s.done).length + 1} מתוך {task.sub_tasks.length}</span>
+                    )}
+                  </div>
+                  {task.sub_tasks?.length > 0 && (
+                    <div className="w-full h-2 bg-purple-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-purple-500 rounded-full transition-all"
+                        style={{ width: `${(task.sub_tasks.filter(s => s.done).length / task.sub_tasks.length) * 100}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
               {subTasks.map(st => (
                 <div key={st.id} className="flex items-center gap-2 text-xs">
                   <button

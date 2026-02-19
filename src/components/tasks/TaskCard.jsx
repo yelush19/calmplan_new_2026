@@ -14,22 +14,24 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-    Clock, 
-    Check, 
-    Edit, 
-    Play, 
+import {
+    Clock,
+    Check,
+    Edit,
+    Play,
     User,
     CheckCircle,
     ExternalLink,
     Trash2,
     Save,
-    X
+    X,
+    Zap
 } from 'lucide-react';
 import { format, formatDistanceToNow, parseISO, isBefore, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import OverdueTags from "./OverdueTags";
 import { STATUS_CONFIG } from '@/config/processTemplates';
+import { getVatEnergyTier } from '@/engines/taskCascadeEngine';
 
 const statusTranslations = {
   not_started: 'טרם התחיל',
@@ -183,6 +185,12 @@ export default function TaskCard({
 
   const isUrgent = task.due_date && differenceInDays(parseISO(task.due_date), new Date()) <= 3;
 
+  // Energy tier for VAT tasks
+  const isVat = task?.category === 'מע"מ' || task?.category === 'work_vat_reporting';
+  const vatTier = isVat ? getVatEnergyTier(task) : null;
+  const isQuickWin = vatTier?.key === 'quick_win';
+  const isClimb = vatTier?.key === 'climb';
+
   const statusOptions = Object.entries(STATUS_CONFIG)
     .filter(([k]) => k !== 'issues') // skip duplicate
     .map(([value, cfg]) => ({ value, label: cfg.label }));
@@ -265,6 +273,17 @@ export default function TaskCard({
                     <h3 className={`text-lg font-semibold ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                       {task.title}
                     </h3>
+                  )}
+                  {!isQuickEditing && isQuickWin && task.status !== 'completed' && (
+                    <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 font-bold border border-emerald-300 gap-0.5 shrink-0">
+                      <Zap className="w-3 h-3" />
+                      Quick Win
+                    </Badge>
+                  )}
+                  {!isQuickEditing && isClimb && task.status !== 'completed' && (
+                    <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0 font-medium border border-purple-200 shrink-0">
+                      45+ דק'
+                    </Badge>
                   )}
                   {!isQuickEditing && <OverdueTags dueDate={task.due_date} showText={true} />}
                 </div>
@@ -519,7 +538,8 @@ export default function TaskCard({
                 </div>
               ) : null}
               {!isQuickEditing && (
-                <Badge variant={task.status === 'in_progress' ? 'default' : 'secondary'}>
+                <Badge variant={task.status === 'in_progress' ? 'default' : 'secondary'}
+                  className={task.status === 'pending_external' ? 'bg-blue-100 text-blue-800 border border-blue-300' : ''}>
                   {statusTranslations[task.status] || task.status}
                 </Badge>
               )}
