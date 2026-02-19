@@ -6,12 +6,12 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Task } from '@/api/entities';
 
-// Map each reporting deadline to the task categories it covers
+// Map each reporting deadline to the task categories it covers (Hebrew + English work categories)
 const REPORTING_DEADLINES = [
-  { day: 9,  label: 'שכר - מס"ב ותלושים', color: 'slate', categories: ['שכר'] },
-  { day: 15, label: 'סוציאליות וביטוח לאומי', color: 'slate', categories: ['ביטוח לאומי'] },
-  { day: 19, label: 'מע"מ / ניכויים / מקדמות', color: 'gray', categories: ['מע"מ', 'ניכויים', 'מקדמות מס'] },
-  { day: 23, label: '874 מפורט', color: 'gray', categories: ['מע"מ 874'] },
+  { day: 9,  label: 'שכר - מס"ב ותלושים', color: 'slate', categories: ['שכר', 'work_payroll'] },
+  { day: 15, label: 'סוציאליות וביטוח לאומי', color: 'slate', categories: ['ביטוח לאומי', 'work_social_security'] },
+  { day: 19, label: 'מע"מ / ניכויים / מקדמות', color: 'gray', categories: ['מע"מ', 'work_vat_reporting', 'ניכויים', 'work_deductions', 'מקדמות מס', 'work_tax_advances'] },
+  { day: 23, label: '874 מפורט', color: 'gray', categories: ['מע"מ 874', 'work_vat_874'] },
 ];
 
 // Statuses that mean the report has been filed / is done
@@ -158,7 +158,7 @@ export default function TimeAwareness() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch tasks and compute incomplete counts per deadline
+  // Fetch tasks and compute incomplete counts per deadline (current month only)
   useEffect(() => {
     let cancelled = false;
     async function fetchDeadlineTasks() {
@@ -166,11 +166,19 @@ export default function TimeAwareness() {
         const allTasks = await Task.list(null, 5000).catch(() => []);
         if (cancelled) return;
 
+        // Only count tasks whose due_date falls in the current month (YYYY-MM)
+        const currentMonthPrefix = format(now, 'yyyy-MM');
+
         const counts = {};
         for (const dl of REPORTING_DEADLINES) {
-          const matching = allTasks.filter(t =>
-            t && t.category && dl.categories.includes(t.category)
-          );
+          const matching = allTasks.filter(t => {
+            if (!t || !t.category) return false;
+            // Match category (Hebrew or English)
+            if (!dl.categories.includes(t.category)) return false;
+            // Only tasks due this month
+            if (!t.due_date || !t.due_date.startsWith(currentMonthPrefix)) return false;
+            return true;
+          });
           const incomplete = matching.filter(t => !DONE_STATUSES.has(t.status));
           counts[dl.day] = { total: matching.length, incomplete: incomplete.length };
         }
