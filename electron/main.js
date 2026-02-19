@@ -1,11 +1,15 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, nativeImage, screen } = require('electron');
-const path = require('path');
-const { createTray, updateTrayPressure, destroyTray } = require('./tray');
-const { createQuickCaptureWindow, toggleQuickCapture } = require('./quickCapture');
-const { createRealityCheckWindow, updateRealityCheck, toggleRealityCheck, destroyRealityCheck } = require('./realityCheck');
-const { setupAutoStart } = require('./autoStart');
-const { setupDragDrop } = require('./dragDrop');
-const { showNativeNotification } = require('./notifications');
+import { app, BrowserWindow, globalShortcut, ipcMain, nativeImage, screen } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createTray, updateTrayPressure, destroyTray } from './tray.js';
+import { createQuickCaptureWindow, toggleQuickCapture } from './quickCapture.js';
+import { createRealityCheckWindow, updateRealityCheck, toggleRealityCheck, destroyRealityCheck } from './realityCheck.js';
+import { setupAutoStart } from './autoStart.js';
+import { setupDragDrop } from './dragDrop.js';
+import { showNativeNotification } from './notifications.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const DEV_SERVER_URL = 'http://localhost:5173';
@@ -15,7 +19,7 @@ let quickCaptureWindow = null;
 let realityCheckWindow = null;
 
 function getPreloadPath() {
-  return path.join(__dirname, 'preload.js');
+  return path.join(__dirname, 'preload.cjs');
 }
 
 function createMainWindow() {
@@ -34,7 +38,6 @@ function createMainWindow() {
       contextIsolation: true,
       sandbox: false,
     },
-    // Sterile mode - hide browser chrome
     autoHideMenuBar: true,
     frame: true,
     titleBarStyle: 'hidden',
@@ -43,23 +46,19 @@ function createMainWindow() {
       symbolColor: '#6b7280',
       height: 40,
     },
-    show: false, // Show when ready
+    show: false,
     backgroundColor: '#f8f9fa',
   });
 
-  // Load the app
   if (isDev) {
     mainWindow.loadURL(DEV_SERVER_URL);
-    // Open DevTools in development
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
 
-  // Show when ready to prevent flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    // Navigate to Home on startup (HashRouter uses #/path)
     mainWindow.webContents.executeJavaScript(`
       if (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#') {
         window.location.hash = '#/Home';
@@ -71,7 +70,6 @@ function createMainWindow() {
     mainWindow = null;
   });
 
-  // Minimize to tray instead of closing
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
       event.preventDefault();
@@ -83,14 +81,12 @@ function createMainWindow() {
 }
 
 function registerGlobalShortcuts() {
-  // Global Command Bar: Alt+Space (Windows/Linux) or Cmd+K (Mac)
   const shortcut = process.platform === 'darwin' ? 'CommandOrControl+K' : 'Alt+Space';
 
   globalShortcut.register(shortcut, () => {
     toggleQuickCapture(quickCaptureWindow, mainWindow);
   });
 
-  // Also register Ctrl+K as alternative on all platforms
   if (process.platform !== 'darwin') {
     globalShortcut.register('CommandOrControl+K', () => {
       toggleQuickCapture(quickCaptureWindow, mainWindow);
@@ -101,7 +97,6 @@ function registerGlobalShortcuts() {
 // ─── IPC Handlers ───────────────────────────────────────────────
 
 function setupIPC() {
-  // Quick Capture
   ipcMain.handle('quick-capture:submit', async (event, taskText) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('quick-capture:new-task', taskText);
@@ -115,7 +110,6 @@ function setupIPC() {
     }
   });
 
-  // Reality Check
   ipcMain.handle('reality-check:update', (event, data) => {
     updateRealityCheck(realityCheckWindow, data);
   });
@@ -130,22 +124,18 @@ function setupIPC() {
     }
   });
 
-  // System Tray
   ipcMain.handle('tray:update-pressure', (event, level) => {
     updateTrayPressure(level);
   });
 
   ipcMain.handle('tray:update-tasks', (event, tasks) => {
-    // Store tasks for tray menu
     app.nextTasks = tasks;
   });
 
-  // Native Notifications
   ipcMain.handle('notification:show', (event, { title, body, urgency }) => {
     showNativeNotification(title, body, urgency, mainWindow);
   });
 
-  // Window controls
   ipcMain.handle('window:focus-mode', (event, enabled) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setAlwaysOnTop(enabled);
@@ -160,14 +150,12 @@ function setupIPC() {
     }
   });
 
-  // File drop
   ipcMain.handle('file:dropped', (event, filePaths) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('file:received', filePaths);
     }
   });
 
-  // App info
   ipcMain.handle('app:is-desktop', () => true);
   ipcMain.handle('app:get-version', () => app.getVersion());
   ipcMain.handle('app:get-platform', () => process.platform);
@@ -176,26 +164,16 @@ function setupIPC() {
 // ─── App Lifecycle ──────────────────────────────────────────────
 
 app.whenReady().then(() => {
-  // Setup IPC handlers first
   setupIPC();
 
-  // Create main window
   mainWindow = createMainWindow();
 
-  // Create secondary windows
   quickCaptureWindow = createQuickCaptureWindow(getPreloadPath());
   realityCheckWindow = createRealityCheckWindow(getPreloadPath(), isDev);
 
-  // Setup system tray
   createTray(mainWindow, app);
-
-  // Register global shortcuts
   registerGlobalShortcuts();
-
-  // Setup auto-start
   setupAutoStart(app);
-
-  // Setup drag & drop
   setupDragDrop(mainWindow);
 
   app.on('activate', () => {

@@ -1,13 +1,11 @@
-const { ipcMain } = require('electron');
-const path = require('path');
-const fs = require('fs');
+import { ipcMain } from 'electron';
+import path from 'path';
+import fs from 'fs';
 
-function setupDragDrop(mainWindow) {
+export function setupDragDrop(mainWindow) {
   if (!mainWindow) return;
 
-  // Handle files dropped on the main window
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    // Prevent navigation when files are dragged onto the window
     if (url.startsWith('file://')) {
       event.preventDefault();
       const filePath = decodeURIComponent(url.replace('file://', ''));
@@ -15,7 +13,6 @@ function setupDragDrop(mainWindow) {
     }
   });
 
-  // Handle IPC file drop events from renderer
   ipcMain.handle('file:process-drop', async (event, { filePaths, clientId, targetType }) => {
     const results = [];
 
@@ -42,7 +39,6 @@ function setupDragDrop(mainWindow) {
     return results;
   });
 
-  // Read file contents for upload
   ipcMain.handle('file:read', async (event, filePath) => {
     try {
       const buffer = fs.readFileSync(filePath);
@@ -94,5 +90,3 @@ function getFileType(ext) {
   };
   return types[ext] || 'other';
 }
-
-module.exports = { setupDragDrop };

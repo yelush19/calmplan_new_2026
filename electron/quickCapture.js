@@ -1,9 +1,13 @@
-const { BrowserWindow, screen } = require('electron');
-const path = require('path');
+import { BrowserWindow, screen } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let quickCaptureWindow = null;
 
-function createQuickCaptureWindow(preloadPath) {
+export function createQuickCaptureWindow(preloadPath) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
   quickCaptureWindow = new BrowserWindow({
@@ -42,14 +46,13 @@ function createQuickCaptureWindow(preloadPath) {
   return quickCaptureWindow;
 }
 
-function toggleQuickCapture(win, mainWindow) {
+export function toggleQuickCapture(win, mainWindow) {
   const window = win || quickCaptureWindow;
   if (!window || window.isDestroyed()) return;
 
   if (window.isVisible()) {
     window.hide();
   } else {
-    // Center on current screen
     const cursorPoint = screen.getCursorScreenPoint();
     const display = screen.getDisplayNearestPoint(cursorPoint);
     const { x, y, width, height } = display.workArea;
@@ -64,5 +67,3 @@ function toggleQuickCapture(win, mainWindow) {
     window.webContents.send('quick-capture:focus');
   }
 }
-
-module.exports = { createQuickCaptureWindow, toggleQuickCapture };
