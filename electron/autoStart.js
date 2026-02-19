@@ -1,19 +1,11 @@
-const { app } = require('electron');
-
-function setupAutoStart(appRef) {
-  // Configure auto-start on login
-  // Works on Windows and macOS
+export function setupAutoStart(appRef) {
   if (process.platform === 'linux') {
-    // On Linux, auto-start requires .desktop file in ~/.config/autostart/
-    // This is handled by electron-builder's linux config
     return;
   }
 
   const loginSettings = {
     openAtLogin: true,
     openAsHidden: false,
-    // On macOS, open directly to the main window
-    // On Windows, start with the system tray
     args: process.platform === 'win32' ? ['--start-minimized'] : [],
   };
 
@@ -24,7 +16,7 @@ function setupAutoStart(appRef) {
   }
 }
 
-function isAutoStartEnabled(appRef) {
+export function isAutoStartEnabled(appRef) {
   try {
     const settings = appRef.getLoginItemSettings();
     return settings.openAtLogin;
@@ -33,7 +25,7 @@ function isAutoStartEnabled(appRef) {
   }
 }
 
-function toggleAutoStart(appRef, enabled) {
+export function toggleAutoStart(appRef, enabled) {
   try {
     appRef.setLoginItemSettings({
       openAtLogin: enabled,
@@ -45,9 +37,3 @@ function toggleAutoStart(appRef, enabled) {
     return false;
   }
 }
-
-module.exports = {
-  setupAutoStart,
-  isAutoStartEnabled,
-  toggleAutoStart,
-};

@@ -1,7 +1,11 @@
-const { Notification } = require('electron');
-const path = require('path');
+import { Notification } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-function showNativeNotification(title, body, urgency = 'normal', mainWindow) {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export function showNativeNotification(title, body, urgency = 'normal', mainWindow) {
   if (!Notification.isSupported()) {
     console.warn('Native notifications not supported on this platform');
     return;
@@ -12,7 +16,7 @@ function showNativeNotification(title, body, urgency = 'normal', mainWindow) {
     body,
     icon: path.join(__dirname, 'icons', 'icon.png'),
     silent: urgency === 'low',
-    urgency, // 'low', 'normal', 'critical' (Linux only)
+    urgency,
     timeoutType: urgency === 'critical' ? 'never' : 'default',
   });
 
@@ -26,5 +30,3 @@ function showNativeNotification(title, body, urgency = 'normal', mainWindow) {
   notification.show();
   return notification;
 }
-
-module.exports = { showNativeNotification };

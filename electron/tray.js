@@ -1,24 +1,19 @@
-const { Tray, Menu, nativeImage, app } = require('electron');
-const path = require('path');
+import { Tray, Menu, nativeImage } from 'electron';
 
 let tray = null;
 let currentPressure = 'green';
 
-// Create colored tray icons programmatically
 function createTrayIcon(color) {
   const size = 16;
-  const canvas = nativeImage.createEmpty();
 
-  // Create a simple colored circle icon using data URL
   const colors = {
-    green: '#10b981',   // הכל תחת שליטה
-    orange: '#f59e0b',  // דברים דחופים להיום
-    purple: '#8b5cf6',  // פיגור שדורש התייחסות
+    green: '#10b981',
+    orange: '#f59e0b',
+    purple: '#8b5cf6',
   };
 
   const hex = colors[color] || colors.green;
 
-  // SVG-based icon
   const svg = `
     <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
       <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="${hex}" />
@@ -39,7 +34,6 @@ function buildTrayMenu(mainWindow, appRef) {
     ? nextTasks.slice(0, 3).map((task, i) => ({
         label: `${i + 1}. ${task.title || task.name || 'משימה'}`,
         enabled: false,
-        icon: task.size === 'L' ? undefined : undefined,
       }))
     : [{ label: 'אין משימות קרובות', enabled: false }];
 
@@ -50,20 +44,11 @@ function buildTrayMenu(mainWindow, appRef) {
   };
 
   return Menu.buildFromTemplate([
-    {
-      label: 'CalmPlan',
-      enabled: false,
-    },
+    { label: 'CalmPlan', enabled: false },
     { type: 'separator' },
-    {
-      label: pressureLabels[currentPressure] || pressureLabels.green,
-      enabled: false,
-    },
+    { label: pressureLabels[currentPressure] || pressureLabels.green, enabled: false },
     { type: 'separator' },
-    {
-      label: '📋 המשימות הבאות:',
-      enabled: false,
-    },
+    { label: '📋 המשימות הבאות:', enabled: false },
     ...taskItems,
     { type: 'separator' },
     {
@@ -114,7 +99,7 @@ function buildTrayMenu(mainWindow, appRef) {
   ]);
 }
 
-function createTray(mainWindow, appRef) {
+export function createTray(mainWindow, appRef) {
   const icon = createTrayIcon('green');
   tray = new Tray(icon);
   tray.setToolTip('CalmPlan - מרכז השליטה השקט');
@@ -122,7 +107,6 @@ function createTray(mainWindow, appRef) {
   const contextMenu = buildTrayMenu(mainWindow, appRef);
   tray.setContextMenu(contextMenu);
 
-  // Double-click to open main window
   tray.on('double-click', () => {
     if (mainWindow) {
       mainWindow.show();
@@ -133,7 +117,7 @@ function createTray(mainWindow, appRef) {
   return tray;
 }
 
-function updateTrayPressure(level) {
+export function updateTrayPressure(level) {
   if (!tray || tray.isDestroyed()) return;
   currentPressure = level;
 
@@ -148,22 +132,15 @@ function updateTrayPressure(level) {
   tray.setToolTip(tooltips[level] || tooltips.green);
 }
 
-function refreshTrayMenu(mainWindow, appRef) {
+export function refreshTrayMenu(mainWindow, appRef) {
   if (!tray || tray.isDestroyed()) return;
   const contextMenu = buildTrayMenu(mainWindow, appRef);
   tray.setContextMenu(contextMenu);
 }
 
-function destroyTray() {
+export function destroyTray() {
   if (tray && !tray.isDestroyed()) {
     tray.destroy();
   }
   tray = null;
 }
-
-module.exports = {
-  createTray,
-  updateTrayPressure,
-  refreshTrayMenu,
-  destroyTray,
-};

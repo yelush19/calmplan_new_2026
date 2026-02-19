@@ -1,9 +1,13 @@
-const { BrowserWindow, screen } = require('electron');
-const path = require('path');
+import { BrowserWindow, screen } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let realityCheckWindow = null;
 
-function createRealityCheckWindow(preloadPath, isDev) {
+export function createRealityCheckWindow(preloadPath, isDev) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
   realityCheckWindow = new BrowserWindow({
@@ -36,11 +40,10 @@ function createRealityCheckWindow(preloadPath, isDev) {
   return realityCheckWindow;
 }
 
-function updateRealityCheck(win, data) {
+export function updateRealityCheck(win, data) {
   const window = win || realityCheckWindow;
   if (!window || window.isDestroyed()) return;
 
-  // Use executeJavaScript to call the global update function in the window
   const safeData = JSON.stringify(data);
   window.webContents.executeJavaScript(
     `if (window.updateRealityCheckData) window.updateRealityCheckData(${safeData});`
@@ -53,14 +56,13 @@ function updateRealityCheck(win, data) {
   }
 }
 
-function toggleRealityCheck(win) {
+export function toggleRealityCheck(win) {
   const window = win || realityCheckWindow;
   if (!window || window.isDestroyed()) return;
 
   if (window.isVisible()) {
     window.hide();
   } else {
-    // Position at bottom-right of current screen
     const cursorPoint = screen.getCursorScreenPoint();
     const display = screen.getDisplayNearestPoint(cursorPoint);
     const { x, y, width, height } = display.workArea;
@@ -74,16 +76,9 @@ function toggleRealityCheck(win) {
   }
 }
 
-function destroyRealityCheck(win) {
+export function destroyRealityCheck(win) {
   const window = win || realityCheckWindow;
   if (window && !window.isDestroyed()) {
     window.destroy();
   }
 }
-
-module.exports = {
-  createRealityCheckWindow,
-  updateRealityCheck,
-  toggleRealityCheck,
-  destroyRealityCheck,
-};
