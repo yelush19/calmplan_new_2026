@@ -33,15 +33,17 @@ const STATUS_TO_COLOR = {
   not_relevant:                    ZERO_PANIC.gray,
 };
 
-// Service category branches
+// Service category branches – each with distinct color + icon
 const BRANCH_CONFIG = {
-  'מע"מ':        { color: '#7C4DFF', icon: '📊' },
-  'מקדמות מס':   { color: '#00BCD4', icon: '💰' },
-  'שכר':         { color: '#FF9800', icon: '👥' },
-  'ביטוח לאומי':  { color: '#4CAF50', icon: '🏛️' },
-  'ניכויים':      { color: '#009688', icon: '📋' },
-  'הנחש':        { color: '#795548', icon: '📑' },
-  'אחר':         { color: '#607D8B', icon: '📁' },
+  'מע"מ':        { color: '#7C4DFF', icon: '📊', label: 'VAT' },
+  'מקדמות מס':   { color: '#00BCD4', icon: '💰', label: 'Tax' },
+  'שכר':         { color: '#FF9800', icon: '👥', label: 'Payroll' },
+  'ביטוח לאומי':  { color: '#4CAF50', icon: '🏛️', label: 'NI' },
+  'ניכויים':      { color: '#009688', icon: '📋', label: 'Deduct' },
+  'הנחש':        { color: '#795548', icon: '📑', label: 'Hashna' },
+  'home':        { color: '#8D6E63', icon: '🏠', label: 'Home' },
+  'personal':    { color: '#78909C', icon: '👤', label: 'Personal' },
+  'אחר':         { color: '#607D8B', icon: '📁', label: 'Other' },
 };
 
 // ─── Node Scaling by Complexity ─────────────────────────────────
@@ -310,7 +312,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }
 
   return (
-    <div ref={containerRef} className="relative w-full min-h-[500px] h-[70vh] max-h-[800px] overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/30 border border-gray-200">
+    <div ref={containerRef} className="relative w-full min-h-[500px] h-[70vh] max-h-[800px] overflow-hidden rounded-2xl border border-gray-200" style={{ background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' }}>
       <svg
         width={dimensions.width}
         height={dimensions.height}
@@ -366,12 +368,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
       {/* ── Center Node: "היום שלי" ── */}
       <motion.div
-        className="absolute z-20 flex flex-col items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-xl cursor-default select-none"
+        className="absolute z-20 flex flex-col items-center justify-center rounded-full text-white shadow-xl cursor-default select-none"
         style={{
           width: layout.centerR * 2,
           height: layout.centerR * 2,
           left: layout.cx - layout.centerR,
           top: layout.cy - layout.centerR,
+          background: 'linear-gradient(135deg, #0288D1, #00897B)',
+          boxShadow: '0 4px 20px rgba(2,136,209,0.35), 0 2px 8px rgba(0,0,0,0.15)',
         }}
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
@@ -379,6 +383,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       >
         <span className="text-sm font-bold leading-tight">היום שלי</span>
         <span className="text-[10px] opacity-80 mt-0.5">{layout.branchPositions.reduce((sum, b) => sum + b.clients.length, 0)} לקוחות</span>
+        <span className="text-[9px] opacity-60">{tasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant').length} משימות</span>
       </motion.div>
 
       {/* ── Branch (Category) Nodes ── */}
@@ -481,6 +486,21 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       transform={`rotate(-90 ${nodeRadius / 2} ${nodeRadius / 2})`}
                     />
                   </svg>
+                )}
+                {/* Task count badge */}
+                {client.totalTasks > 0 && nodeRadius >= 40 && (
+                  <span
+                    className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white font-bold pointer-events-none"
+                    style={{
+                      width: 18,
+                      height: 18,
+                      fontSize: '9px',
+                      backgroundColor: client.overdueTasks > 0 ? ZERO_PANIC.purple : client.color,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    {client.totalTasks - client.completedTasks}
+                  </span>
                 )}
               </motion.div>
             );

@@ -54,28 +54,27 @@ function createMainWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL(DEV_SERVER_URL);
+    mainWindow.loadURL(DEV_SERVER_URL + '#/Home');
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     // appRoot = project root (or app.asar root in packaged build)
-    // dist/index.html is at the root level, next to electron/ and src/
     const indexPath = path.join(appRoot, 'dist', 'index.html');
     console.log('[CalmPlan] Loading:', indexPath);
-    mainWindow.loadFile(indexPath);
+    // loadFile with hash option sets the URL to file:///...index.html#/Home
+    mainWindow.loadFile(indexPath, { hash: '/Home' });
   }
 
   // Log load failures for debugging
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('[CalmPlan] Failed to load:', errorCode, errorDescription);
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('[CalmPlan] Failed to load:', errorCode, errorDescription, validatedURL);
+  });
+
+  mainWindow.webContents.on('console-message', (event, level, message) => {
+    if (level >= 2) console.error('[Renderer]', message);
   });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    mainWindow.webContents.executeJavaScript(`
-      if (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#') {
-        window.location.hash = '#/Home';
-      }
-    `).catch(() => {});
   });
 
   mainWindow.on('closed', () => {
