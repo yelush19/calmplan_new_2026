@@ -39,7 +39,7 @@ const WORK_MODES = [
     icon: Zap,
     color: 'bg-emerald-500 text-white',
     description: 'קנבן + משימות להיום',
-    visibleSections: ['focus', 'operations']
+    visibleSections: ['core', 'reporting']
   },
   {
     key: 'planning',
@@ -55,33 +55,33 @@ const WORK_MODES = [
     icon: Settings,
     color: 'bg-gray-500 text-white',
     description: 'לקוחות + ספקים + הגדרות',
-    visibleSections: ['admin', 'system']
+    visibleSections: ['clients', 'system']
   },
 ];
 
-// Sidebar sections (flat structure)
+// Sidebar sections – 6 clear categories
 const getSidebarSections = () => ({
-  focus: {
-    title: "פוקוס",
+  core: {
+    title: "ליבת הביצוע",
     icon: Target,
     items: [
       { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
       { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
+      { name: "ריכוז לקוחות חודשי", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
     ]
   },
-  operations: {
-    title: "ביצוע",
-    icon: Calculator,
+  reporting: {
+    title: "דיווחים",
+    icon: FileBarChart,
     items: [
-      { name: "ריכוז דיווחים חודשיים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
       { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
       { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
       { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
+      { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
       { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
       { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: Settings },
       { name: "אדמיניסטרטיבי", href: createPageUrl("AdminTasksDashboard"), icon: FolderKanban },
-      { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
     ]
   },
   planning: {
@@ -95,8 +95,8 @@ const getSidebarSections = () => ({
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
     ]
   },
-  admin: {
-    title: "משרד",
+  clients: {
+    title: "ניהול לקוחות",
     icon: Users,
     items: [
       { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
@@ -113,6 +113,8 @@ const getSidebarSections = () => ({
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
       { name: "גיבוי ושחזור", href: createPageUrl("BackupManager"), icon: Shield },
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
+      { name: "סקירת מערכת", href: createPageUrl("SystemOverview"), icon: Eye },
+      { name: "שחזור חירום", href: createPageUrl("EmergencyRecovery"), icon: AlertTriangle },
     ]
   },
   life: {
@@ -302,7 +304,7 @@ function LayoutInner({ children }) {
 
       <div className="min-h-screen flex flex-col">
         {/* === TOP HEADER BAR === */}
-        <header className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+        <header className="bg-white border-b border-gray-200 px-4 py-1.5 flex items-center justify-between sticky top-0 z-50 shadow-sm">
           {/* Right: Logo + Mobile menu */}
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -610,8 +612,8 @@ function LayoutInner({ children }) {
               </div>
             )}
 
-            <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 2xl:p-8 bg-neutral-bg/30">
-              <div className="max-w-none w-full">
+            <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-5 bg-neutral-bg/30">
+              <div className="max-w-[1400px] mx-auto">
                 <TimeAwareness />
 
                 {/* Admin Mode: Prominent Import Backup Banner */}

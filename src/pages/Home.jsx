@@ -395,7 +395,7 @@ export default function HomePage() {
 
   return (
     <motion.div
-      className="p-4 md:p-6 space-y-5 w-full"
+      className="p-4 md:p-5 space-y-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
@@ -403,10 +403,10 @@ export default function HomePage() {
       {/* Greeting */}
       <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl 2xl:text-3xl font-bold text-gray-800">
+          <h1 className="text-2xl font-bold text-gray-800">
             {getGreeting()}{userName ? `, ${userName}` : ''}
           </h1>
-          <p className="text-sm 2xl:text-base text-gray-500">
+          <p className="text-sm text-gray-500">
             {format(new Date(), 'EEEE, d בMMMM', { locale: he })}
           </p>
         </div>
@@ -425,36 +425,36 @@ export default function HomePage() {
       </motion.div>
 
       {/* Quick counters with Zero-Panic colors */}
-      <div className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Link to={createPageUrl("Tasks") + "?tab=active&context=work"}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD70' }}>
-            <CardContent className="p-3 2xl:p-4 flex items-center gap-3">
-              <Briefcase className="w-5 h-5 2xl:w-6 2xl:h-6" style={{ color: ZERO_PANIC.blue }} />
+            <CardContent className="p-3 flex items-center gap-3">
+              <Briefcase className="w-5 h-5" style={{ color: ZERO_PANIC.blue }} />
               <div>
-                <div className="text-xl 2xl:text-2xl font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</div>
-                <div className="text-[11px] 2xl:text-xs" style={{ color: ZERO_PANIC.blue }}>משימות עבודה</div>
+                <div className="text-xl font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</div>
+                <div className="text-[11px]" style={{ color: ZERO_PANIC.blue }}>משימות עבודה</div>
               </div>
             </CardContent>
           </Card>
         </Link>
         <Link to={createPageUrl("Tasks") + "?tab=active&context=home"}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#C8E6C9', backgroundColor: '#E8F5E970' }}>
-            <CardContent className="p-3 2xl:p-4 flex items-center gap-3">
-              <HomeIcon className="w-5 h-5 2xl:w-6 2xl:h-6" style={{ color: ZERO_PANIC.green }} />
+            <CardContent className="p-3 flex items-center gap-3">
+              <HomeIcon className="w-5 h-5" style={{ color: ZERO_PANIC.green }} />
               <div>
-                <div className="text-xl 2xl:text-2xl font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</div>
-                <div className="text-[11px] 2xl:text-xs" style={{ color: ZERO_PANIC.green }}>משימות בית</div>
+                <div className="text-xl font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</div>
+                <div className="text-[11px]" style={{ color: ZERO_PANIC.green }}>משימות בית</div>
               </div>
             </CardContent>
           </Card>
         </Link>
         <Link to={createPageUrl("Calendar")}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200 bg-purple-50/70">
-            <CardContent className="p-3 2xl:p-4 flex items-center gap-3">
-              <Calendar className="w-5 h-5 2xl:w-6 2xl:h-6 text-purple-600" />
+            <CardContent className="p-3 flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-purple-600" />
               <div>
-                <div className="text-xl 2xl:text-2xl font-bold text-purple-700">{data.todayEvents.length}</div>
-                <div className="text-[11px] 2xl:text-xs text-purple-600">אירועים היום</div>
+                <div className="text-xl font-bold text-purple-700">{data.todayEvents.length}</div>
+                <div className="text-[11px] text-purple-600">אירועים היום</div>
               </div>
             </CardContent>
           </Card>
@@ -463,27 +463,16 @@ export default function HomePage() {
           borderColor: data.overdue.length > 0 ? '#FFE0B2' : '#e5e7eb',
           backgroundColor: data.overdue.length > 0 ? '#FFF3E070' : '#f9fafb70',
         }}>
-          <CardContent className="p-3 2xl:p-4 flex items-center gap-3">
-            <Clock className="w-5 h-5 2xl:w-6 2xl:h-6" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }} />
+          <CardContent className="p-3 flex items-center gap-3">
+            <Clock className="w-5 h-5" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }} />
             <div>
-              <div className="text-xl 2xl:text-2xl font-bold" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }}>
+              <div className="text-xl font-bold" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }}>
                 {data.overdue.length}
               </div>
-              <div className="text-[11px] 2xl:text-xs" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#6B7280' }}>באיחור</div>
+              <div className="text-[11px]" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#6B7280' }}>באיחור</div>
             </div>
           </CardContent>
         </Card>
-        <Link to={createPageUrl("Tasks")} className="hidden 2xl:block">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#D1C4E9', backgroundColor: '#EDE7F650' }}>
-            <CardContent className="p-3 flex items-center gap-3">
-              <Target className="w-5 h-5" style={{ color: ZERO_PANIC.purple }} />
-              <div>
-                <div className="text-xl 2xl:text-2xl font-bold" style={{ color: ZERO_PANIC.purple }}>{data.totalActive}</div>
-                <div className="text-[11px] 2xl:text-xs" style={{ color: ZERO_PANIC.purple }}>סה"כ פעילות</div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
       </div>
 
       {/* Daily Progress Bar */}
@@ -492,12 +481,12 @@ export default function HomePage() {
         const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
         return (
           <motion.div initial={{ y: 5, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
-            <div className="bg-white rounded-xl p-4 2xl:p-5 border shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm 2xl:text-base font-medium text-gray-600">התקדמות יומית</span>
-                <span className="text-sm 2xl:text-base font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
+            <div className="bg-white rounded-xl p-3 border shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm font-medium text-gray-600">התקדמות יומית</span>
+                <span className="text-sm font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-4 2xl:h-5 overflow-hidden">
+              <div className="w-full bg-gray-200 rounded-full h-3.5 overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
                   style={{ background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }}
@@ -649,7 +638,7 @@ export default function HomePage() {
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.35 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 2xl:gap-4"
+        className="grid grid-cols-2 md:grid-cols-4 gap-3"
       >
         <Link to={createPageUrl("WeeklyPlanningDashboard")}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD50' }}>
@@ -788,10 +777,10 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
     : null;
 
   return (
-    <div className={`flex items-center gap-3 p-2.5 2xl:p-3.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-orange-50/30' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}>
+    <div className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-orange-50/30' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-sm 2xl:text-base text-gray-800 truncate">{task.title}</span>
+          <span className="font-medium text-sm text-gray-800 truncate">{task.title}</span>
           {task.priority === 'urgent' && (
             <Badge style={{ backgroundColor: '#FFF3E0', color: '#E65100' }} className="text-[10px] px-1.5 py-0">דחוף</Badge>
           )}
