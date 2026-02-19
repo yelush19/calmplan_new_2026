@@ -12,8 +12,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2, Pencil,
   ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink, Plus,
-  ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X
+  ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X,
+  Network, BarChart3
 } from "lucide-react";
+import MindMapView from "../components/views/MindMapView";
+import GanttView from "../components/views/GanttView";
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -461,11 +464,17 @@ export default function TasksPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex bg-white rounded-xl p-1 shadow-sm border">
-            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')}>
+            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')} title="תצוגת רשימה">
               <List className="w-5 h-5" />
             </Button>
-            <Button variant={view === 'kanban' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('kanban')}>
+            <Button variant={view === 'kanban' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('kanban')} title="תצוגת קנבן">
               <LayoutGrid className="w-5 h-5" />
+            </Button>
+            <Button variant={view === 'mindmap' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('mindmap')} title="מפת חשיבה">
+              <Network className="w-5 h-5" />
+            </Button>
+            <Button variant={view === 'gantt' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('gantt')} title="ציר זמן">
+              <BarChart3 className="w-5 h-5" />
             </Button>
           </div>
           <Button size="sm" onClick={() => setShowQuickAdd(true)} className="gap-1 rounded-xl">
@@ -796,6 +805,10 @@ export default function TasksPage() {
             </ResizableTable>
           </Card>
         )
+      ) : view === 'mindmap' ? (
+        <MindMapView tasks={filteredTasks} clients={[]} />
+      ) : view === 'gantt' ? (
+        <GanttView tasks={filteredTasks} clients={[]} />
       ) : (
         <KanbanView
           tasks={filteredTasks}
