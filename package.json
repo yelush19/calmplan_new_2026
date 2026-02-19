@@ -73,6 +73,26 @@
     "vaul": "^1.1.2",
     "zod": "^3.24.2"
   },
+  "build": {
+    "appId": "com.calmplan.desktop",
+    "productName": "CalmPlan",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "electron/icons/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
     "@flydotio/dockerfile": "^0.7.8",
