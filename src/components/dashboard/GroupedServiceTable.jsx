@@ -17,8 +17,9 @@ const STATUS_DISPLAY_ORDER = [
   'issue',                        // 0 - דורש טיפול
   'waiting_for_materials',        // 1 - ממתין לחומרים
   'in_progress',                  // 2 - בעבודה
+  'remaining_completions',        // 2 - נותרו השלמות
   'waiting_for_approval',         // 2 - לבדיקה
-  'not_started',                  // 3 - נותרו השלמות
+  'not_started',                  // 3 - טרם התחיל
   'ready_for_reporting',          // 3 - מוכן לדיווח
   'postponed',                    // 4 - נדחה
   'reported_waiting_for_payment', // 4 - ממתין לתשלום

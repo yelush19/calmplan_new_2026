@@ -9,7 +9,8 @@ import {
   Calendar, Clock, CheckCircle, Target,
   Brain, TrendingUp, ChevronLeft, ChevronRight,
   Sparkles, ArrowRight, ChevronDown, ChevronUp, Search, Pencil, Pin, Plus,
-  BarChart3, Layers, ArrowLeftRight, RefreshCw, AlertTriangle
+  BarChart3, Layers, ArrowLeftRight, RefreshCw, AlertTriangle,
+  Inbox, Zap, MoveRight
 } from 'lucide-react';
 import { Task } from '@/api/entities';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
@@ -251,6 +252,8 @@ export default function WeeklyPlanningDashboard() {
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [collapsedDays, setCollapsedDays] = useState({});
   const [expandedCompletedDays, setExpandedCompletedDays] = useState({});
+  const [showUnassigned, setShowUnassigned] = useState(false);
+  const [assigningTaskId, setAssigningTaskId] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
@@ -315,6 +318,15 @@ export default function WeeklyPlanningDashboard() {
       return d && d < todayStr;
     });
 
+    const unassignedTasks = filtered.filter(t => {
+      if (t.status === 'completed' || t.status === 'not_relevant') return false;
+      return !t.due_date;
+    }).sort((a, b) => {
+      const pa = PRIORITY_CONFIG[a.priority]?.order ?? 9;
+      const pb = PRIORITY_CONFIG[b.priority]?.order ?? 9;
+      return pa - pb;
+    });
+
     const daily = {};
     const weekDaysArr = [];
     for (const wd of WORK_DAYS) {
@@ -350,7 +362,8 @@ export default function WeeklyPlanningDashboard() {
       dailyTasks: daily,
       weekTasks,
       overdueTasks,
-      stats: { total, completed, remaining: total - completed, overdue: overdueTasks.length },
+      unassignedTasks,
+      stats: { total, completed, remaining: total - completed, overdue: overdueTasks.length, unassigned: unassignedTasks.length },
       weekCategories,
       weekDaysData: weekDaysArr,
     };
@@ -460,6 +473,79 @@ export default function WeeklyPlanningDashboard() {
     }
   };
 
+  // === PLANNING TOOLS ===
+
+  const handleBulkMoveOverdue = useCallback(async () => {
+    if (overdueTasks.length === 0) return;
+    const todayStr = format(today, 'yyyy-MM-dd');
+    try {
+      const updates = overdueTasks.map(t => Task.update(t.id, { ...t, due_date: todayStr }));
+      await Promise.all(updates);
+      setTasks(prev => prev.map(t => {
+        if (overdueTasks.some(ot => ot.id === t.id)) {
+          return { ...t, due_date: todayStr };
+        }
+        return t;
+      }));
+    } catch (err) { console.error(err); }
+  }, [overdueTasks, today]);
+
+  const handleAutoBalance = useCallback(async () => {
+    // Collect all active (non-completed) tasks from the week + overdue
+    const futureDays = WORK_DAYS
+      .map(wd => dailyTasks[wd.dayIndex])
+      .filter(d => d && !d.isPast);
+
+    if (futureDays.length === 0) return;
+
+    // Get all movable tasks (active, non-completed) from future days
+    const allActiveTasks = [];
+    futureDays.forEach(day => {
+      day.tasks.forEach(t => {
+        if (t.status !== 'completed') allActiveTasks.push(t);
+      });
+    });
+
+    if (allActiveTasks.length === 0) return;
+
+    // Sort by priority
+    allActiveTasks.sort((a, b) => {
+      const pa = PRIORITY_CONFIG[a.priority]?.order ?? 9;
+      const pb = PRIORITY_CONFIG[b.priority]?.order ?? 9;
+      return pa - pb;
+    });
+
+    // Distribute evenly
+    const perDay = Math.ceil(allActiveTasks.length / futureDays.length);
+    const updates = [];
+
+    allActiveTasks.forEach((task, i) => {
+      const dayIdx = Math.min(Math.floor(i / perDay), futureDays.length - 1);
+      const targetDay = futureDays[dayIdx];
+      if (task.due_date !== targetDay.dateStr) {
+        updates.push({ id: task.id, task, newDate: targetDay.dateStr });
+      }
+    });
+
+    if (updates.length === 0) return;
+
+    try {
+      await Promise.all(updates.map(u => Task.update(u.id, { ...u.task, due_date: u.newDate })));
+      setTasks(prev => prev.map(t => {
+        const upd = updates.find(u => u.id === t.id);
+        return upd ? { ...t, due_date: upd.newDate } : t;
+      }));
+    } catch (err) { console.error(err); }
+  }, [dailyTasks]);
+
+  const handleAssignToDay = useCallback(async (task, dayStr) => {
+    try {
+      await Task.update(task.id, { ...task, due_date: dayStr });
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, due_date: dayStr } : t));
+      setAssigningTaskId(null);
+    } catch (err) { console.error(err); }
+  }, []);
+
   const toggleDay = (dayIndex) => {
     setCollapsedDays(prev => ({ ...prev, [dayIndex]: !prev[dayIndex] }));
   };
@@ -519,9 +605,10 @@ export default function WeeklyPlanningDashboard() {
     const completedTasks = dayTasks.filter(t => t.status === 'completed');
     const showCompleted = !!expandedCompletedDays[dayIndex];
 
-    const renderList = (taskList) => {
+    const renderGrouped = (taskList) => {
       if (!groupByCategory) return taskList.map(renderTaskRow);
 
+      // Group by category (service type)
       const groups = {};
       taskList.forEach(t => {
         const cat = getCategoryLabel(t.category);
@@ -540,9 +627,47 @@ export default function WeeklyPlanningDashboard() {
       ));
     };
 
+    // Group active tasks by status, then by category inside each status
+    const statusGroups = {};
+    activeTasks.forEach(t => {
+      const s = t.status || 'not_started';
+      if (!statusGroups[s]) statusGroups[s] = [];
+      statusGroups[s].push(t);
+    });
+
+    // Sort status groups by the STATUS_DISPLAY_ORDER logic
+    const STATUS_ORDER = ['issue', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'waiting_for_approval', 'not_started', 'ready_for_reporting', 'postponed', 'reported_waiting_for_payment'];
+    const sortedStatuses = Object.keys(statusGroups).sort((a, b) => {
+      const ia = STATUS_ORDER.indexOf(a);
+      const ib = STATUS_ORDER.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+
     return (
       <>
-        {renderList(activeTasks)}
+        {sortedStatuses.length <= 1 ? (
+          // Single status or no status grouping needed - just render with category groups
+          renderGrouped(activeTasks)
+        ) : (
+          // Multiple statuses - show status headers with category sub-groups
+          sortedStatuses.map(status => {
+            const sCfg = statusConfig[status] || statusConfig.not_started;
+            const tasksInStatus = statusGroups[status];
+            return (
+              <div key={status} className="mb-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`h-1 w-4 rounded-full ${sCfg.dot}`} />
+                  <span className={`text-[11px] font-bold ${sCfg.color} px-1.5 py-0.5 rounded`}>
+                    {sCfg.text} ({tasksInStatus.length})
+                  </span>
+                </div>
+                <div className="mr-3">
+                  {renderGrouped(tasksInStatus)}
+                </div>
+              </div>
+            );
+          })
+        )}
         {completedTasks.length > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-100">
             <button
@@ -555,7 +680,7 @@ export default function WeeklyPlanningDashboard() {
             </button>
             {showCompleted && (
               <div className="mt-1.5 space-y-1">
-                {renderList(completedTasks)}
+                {renderGrouped(completedTasks)}
               </div>
             )}
           </div>
@@ -646,12 +771,13 @@ export default function WeeklyPlanningDashboard() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-5 gap-3">
         {[
           { label: 'סה"כ משימות', value: stats.total, color: 'text-gray-800', bg: '' },
           { label: 'הושלמו', value: stats.completed, color: 'text-emerald-600', bg: '' },
           { label: 'נותרו', value: stats.remaining, color: 'text-blue-600', bg: '' },
           { label: 'באיחור', value: stats.overdue, color: stats.overdue > 0 ? 'text-amber-600' : 'text-gray-400', bg: stats.overdue > 0 ? 'bg-amber-50' : '' },
+          { label: 'ללא תאריך', value: stats.unassigned, color: stats.unassigned > 0 ? 'text-indigo-600' : 'text-gray-400', bg: stats.unassigned > 0 ? 'bg-indigo-50' : '' },
         ].map(({ label, value, color, bg }) => (
           <Card key={label} className={`border-0 shadow-sm ${bg}`}>
             <CardContent className="p-3 text-center">
@@ -695,6 +821,108 @@ export default function WeeklyPlanningDashboard() {
             );
           })}
         </div>
+      )}
+
+      {/* Planning Tools */}
+      <Card className="border-0 shadow-sm bg-indigo-50/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2 text-indigo-800">
+            <Zap className="w-4 h-4" />
+            כלי תכנון
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-3 flex flex-wrap gap-2">
+          {overdueTasks.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkMoveOverdue}
+              className="gap-1.5 text-xs border-amber-200 text-amber-700 hover:bg-amber-50"
+            >
+              <MoveRight className="w-3.5 h-3.5" />
+              העבר {overdueTasks.length} באיחור להיום
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAutoBalance}
+            className="gap-1.5 text-xs border-violet-200 text-violet-700 hover:bg-violet-50"
+          >
+            <ArrowLeftRight className="w-3.5 h-3.5" />
+            איזון אוטומטי
+          </Button>
+          <Button
+            variant={showUnassigned ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowUnassigned(!showUnassigned)}
+            className={`gap-1.5 text-xs ${showUnassigned ? 'bg-indigo-600' : 'border-indigo-200 text-indigo-700 hover:bg-indigo-50'}`}
+          >
+            <Inbox className="w-3.5 h-3.5" />
+            ללא תאריך ({unassignedTasks.length})
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Unassigned Tasks Pool */}
+      {showUnassigned && unassignedTasks.length > 0 && (
+        <Card className="border-2 border-indigo-200 bg-indigo-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-indigo-800">
+              <Inbox className="w-4 h-4" />
+              משימות ללא תאריך — בחר יום לשיבוץ ({unassignedTasks.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-1.5">
+            {unassignedTasks.slice(0, 20).map(task => {
+              const pri = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
+              const catLabel = getCategoryLabel(task.category);
+              const isAssigning = assigningTaskId === task.id;
+              return (
+                <div key={task.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-white border border-indigo-100 group">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${pri.dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate text-gray-800">{task.title}</p>
+                    {task.client_name && <span className="text-[10px] text-gray-400">{task.client_name}</span>}
+                  </div>
+                  <Badge className={`text-[9px] px-1.5 py-0 ${CATEGORY_BADGE_COLORS[catLabel] || 'bg-gray-100 text-gray-600'}`}>
+                    {catLabel}
+                  </Badge>
+                  {isAssigning ? (
+                    <div className="flex gap-1">
+                      {weekDaysData.map(wd => (
+                        <button
+                          key={wd.dateStr}
+                          onClick={() => handleAssignToDay(task, wd.dateStr)}
+                          className="px-2 py-1 text-[10px] font-bold rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition-colors"
+                        >
+                          {wd.short}׳
+                        </button>
+                      ))}
+                      <button onClick={() => setAssigningTaskId(null)} className="px-1.5 text-gray-400 hover:text-gray-600">
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAssigningTaskId(task.id)}
+                      className="h-6 text-[10px] px-2 border-indigo-200 text-indigo-600"
+                    >
+                      שבץ ליום
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+            {unassignedTasks.length > 20 && (
+              <p className="text-center text-xs text-gray-400 pt-1">
+                +{unassignedTasks.length - 20} נוספות
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Overdue tasks */}

@@ -27,7 +27,7 @@ import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/proc
 
 // Display order for status groups in list view
 const STATUS_GROUP_ORDER = [
-  'issue', 'waiting_for_materials', 'in_progress', 'waiting_for_approval',
+  'issue', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'waiting_for_approval',
   'not_started', 'ready_for_reporting', 'postponed', 'reported_waiting_for_payment',
   'completed', 'not_relevant',
 ];
@@ -129,8 +129,13 @@ export default function TasksPage() {
     return init;
   });
 
+  const [collapsedCategories, setCollapsedCategories] = useState({});
+
   const toggleStatusGroup = (status) => {
     setCollapsedStatuses(prev => ({ ...prev, [status]: !prev[status] }));
+  };
+  const toggleCategoryGroup = (key) => {
+    setCollapsedCategories(prev => ({ ...prev, [key]: !prev[key] }));
   };
   const [sortDir, setSortDir] = useState('asc');
 
@@ -617,8 +622,38 @@ export default function TasksPage() {
                           </div>
                         </td>
                       </tr>
-                      {/* Task rows */}
-                      {!isGroupCollapsed && groupTasks.map(task => {
+                      {/* Task rows - grouped by category */}
+                      {!isGroupCollapsed && (() => {
+                        // Group tasks by category
+                        const catGroups = {};
+                        groupTasks.forEach(t => {
+                          const cat = getCategoryLabel(t.category);
+                          if (!catGroups[cat]) catGroups[cat] = [];
+                          catGroups[cat].push(t);
+                        });
+                        const catEntries = Object.entries(catGroups).sort((a, b) => b[1].length - a[1].length);
+                        const showCatHeaders = catEntries.length > 1;
+
+                        return catEntries.map(([cat, catTasks]) => {
+                          const catKey = `${groupKey}_${cat}`;
+                          const isCatCollapsed = !!collapsedCategories[catKey];
+                          return (
+                            <React.Fragment key={catKey}>
+                              {showCatHeaders && (
+                                <tr
+                                  className="cursor-pointer select-none hover:bg-gray-50/60 transition-colors"
+                                  onClick={() => toggleCategoryGroup(catKey)}
+                                >
+                                  <td colSpan={7} className="py-1.5 px-6 border-b border-gray-50">
+                                    <div className="flex items-center gap-2">
+                                      <ChevronDown className={`w-3 h-3 text-gray-300 transition-transform ${isCatCollapsed ? 'rotate-[-90deg]' : ''}`} />
+                                      <span className="text-[11px] font-semibold text-gray-500">{cat}</span>
+                                      <span className="text-[10px] text-gray-400">({catTasks.length})</span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                              {(!showCatHeaders || !isCatCollapsed) && catTasks.map(task => {
                   const sts = statusConfig[task.status] || statusConfig.not_started;
                   const pri = priorityConfig[task.priority] || priorityConfig.medium;
                   const isCompleted = task.status === 'completed';
@@ -729,7 +764,11 @@ export default function TasksPage() {
                       </td>
                     </tr>
                   );
-                      })}
+                              })}
+                            </React.Fragment>
+                          );
+                        });
+                      })()}
                     </React.Fragment>
                   );
                 })}

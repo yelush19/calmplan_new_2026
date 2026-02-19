@@ -44,7 +44,8 @@ const PERIOD_CONFIG = {
 };
 
 const STATUS_OPTIONS = [
-  { value: 'not_started', label: 'נותרו השלמות', color: 'bg-cyan-200 text-cyan-700', dot: 'bg-cyan-400' },
+  { value: 'not_started', label: 'טרם התחיל', color: 'bg-slate-200 text-slate-700', dot: 'bg-slate-400' },
+  { value: 'remaining_completions', label: 'נותרו השלמות', color: 'bg-cyan-200 text-cyan-700', dot: 'bg-cyan-400' },
   { value: 'reconciling', label: 'בהתאמות', color: 'bg-amber-200 text-amber-800', dot: 'bg-amber-500' },
   { value: 'ready_to_submit', label: 'מוכן לשידור', color: 'bg-teal-200 text-teal-800', dot: 'bg-teal-500' },
   { value: 'submitted', label: 'שודר', color: 'bg-emerald-400 text-white', dot: 'bg-emerald-500' },

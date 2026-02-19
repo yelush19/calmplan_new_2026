@@ -14,13 +14,14 @@ import { he } from 'date-fns/locale';
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 const STATUS_GROUP_ORDER = [
-  'issue', 'waiting_for_materials', 'in_progress', 'waiting_for_approval',
+  'issue', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'waiting_for_approval',
   'not_started', 'ready_for_reporting', 'postponed', 'reported_waiting_for_payment',
   'completed', 'not_relevant',
 ];
 
 const statusTranslations = {
-  not_started: 'נותרו השלמות',
+  not_started: 'טרם התחיל',
+  remaining_completions: 'נותרו השלמות',
   in_progress: 'בעבודה',
   completed: 'דווח ושולם',
   postponed: 'נדחה',

@@ -11,12 +11,12 @@ import { STATUS_CONFIG } from '@/config/processTemplates';
 
 const columnMapping = {
   todo: ['not_started', 'postponed', 'waiting_for_materials', 'issue'],
-  in_progress: ['in_progress', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment'],
+  in_progress: ['in_progress', 'remaining_completions', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment'],
   completed: ['completed', 'not_relevant'],
 };
 
 const columnsConfig = {
-  todo: { title: 'לביצוע', color: 'bg-gray-100', tasks: [] },
+  todo: { title: 'טרם התחיל', color: 'bg-gray-100', tasks: [] },
   in_progress: { title: 'בביצוע', color: 'bg-blue-100', tasks: [] },
   completed: { title: 'הושלם', color: 'bg-green-100', tasks: [] },
 };

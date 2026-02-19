@@ -226,7 +226,8 @@ export default function ClientsDashboardPage() {
         const checks = {
           has_issues: relevant.some(t => t.status === 'issue' || t.status === 'issues' || t.status === 'waiting_for_materials'),
           all_done: relevant.length > 0 && relevant.every(t => t.status === 'completed'),
-          in_progress: relevant.some(t => t.status !== 'completed' && t.status !== 'not_started'),
+          in_progress: relevant.some(t => t.status !== 'completed' && t.status !== 'not_started' && t.status !== 'remaining_completions'),
+          remaining_completions: relevant.some(t => t.status === 'remaining_completions'),
           not_started: relevant.some(t => t.status === 'not_started') || relevant.length === 0,
         };
         return statusFilter.some(f => checks[f]);
@@ -526,7 +527,8 @@ export default function ClientsDashboardPage() {
           options={[
             { value: 'has_issues', label: 'דורש טיפול' },
             { value: 'in_progress', label: 'בעבודה' },
-            { value: 'not_started', label: 'נותרו השלמות' },
+            { value: 'remaining_completions', label: 'נותרו השלמות' },
+            { value: 'not_started', label: 'טרם התחיל' },
             { value: 'all_done', label: 'הכל הושלם' },
           ]}
           selected={statusFilter}

@@ -482,7 +482,8 @@ export function areAllStepsDone(task) {
 // Status definitions shared across dashboards
 // Dashboard status config (used in process dashboards)
 export const STATUS_CONFIG = {
-  not_started:                   { label: 'נותרו השלמות',   bg: 'bg-cyan-200',       text: 'text-cyan-800',     border: 'border-cyan-300',    priority: 3 },
+  not_started:                   { label: 'טרם התחיל',        bg: 'bg-slate-200',      text: 'text-slate-800',    border: 'border-slate-300',   priority: 3 },
+  remaining_completions:         { label: 'נותרו השלמות',   bg: 'bg-cyan-200',       text: 'text-cyan-800',     border: 'border-cyan-300',    priority: 2 },
   in_progress:                   { label: 'בעבודה',         bg: 'bg-emerald-200',    text: 'text-emerald-900',  border: 'border-emerald-300', priority: 2 },
   completed:                     { label: 'הושלם',          bg: 'bg-emerald-400',    text: 'text-white',        border: 'border-emerald-500', priority: 5 },
   postponed:                     { label: 'נדחה',           bg: 'bg-gray-300',       text: 'text-gray-600',     border: 'border-gray-400',    priority: 4 },
@@ -496,7 +497,8 @@ export const STATUS_CONFIG = {
 
 // Simple badge-style status config (used in task lists/pages)
 export const TASK_STATUS_CONFIG = {
-  not_started:                   { text: 'נותרו השלמות',     color: 'bg-cyan-100 text-cyan-700',      dot: 'bg-cyan-400' },
+  not_started:                   { text: 'טרם התחיל',         color: 'bg-slate-100 text-slate-700',     dot: 'bg-slate-400' },
+  remaining_completions:         { text: 'נותרו השלמות',     color: 'bg-cyan-100 text-cyan-700',      dot: 'bg-cyan-400' },
   in_progress:                   { text: 'בעבודה',          color: 'bg-sky-100 text-sky-700',         dot: 'bg-sky-500' },
   completed:                     { text: 'הושלם',           color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
   postponed:                     { text: 'נדחה',            color: 'bg-neutral-100 text-neutral-600', dot: 'bg-neutral-400' },
