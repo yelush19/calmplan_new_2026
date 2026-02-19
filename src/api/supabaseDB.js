@@ -407,13 +407,55 @@ export async function clearAllData() {
 }
 
 /**
- * Import data from JSON backup to Supabase
+ * Clean zombie keys from data objects.
+ * Removes numeric string keys ("0", "1", "2", ...) that appear from
+ * corrupted array-to-object serialization in backups.
+ * Also removes undefined/null-only entries.
+ */
+function cleanZombieFields(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+  const cleaned = {};
+  for (const [key, value] of Object.entries(obj)) {
+    // Skip numeric string keys (zombie fields from array corruption)
+    if (/^\d+$/.test(key)) continue;
+    // Keep everything else (including nested objects/arrays)
+    cleaned[key] = value;
+  }
+  return cleaned;
+}
+
+/**
+ * Normalize collection name:
+ * - Strips "calmplan_" prefix if present (localStorage format → Supabase format)
+ * - Skips internal/user keys
+ */
+function normalizeCollectionName(key) {
+  // Skip internal keys
+  if (key === 'calmplan__user' || key === '_user') return null;
+  // Strip calmplan_ prefix if present
+  if (key.startsWith('calmplan_')) return key.replace('calmplan_', '');
+  return key;
+}
+
+/**
+ * Import data from JSON backup to Supabase.
+ * Handles both formats:
+ *  - Supabase export: { "clients": [...], "tasks": [...] }
+ *  - localStorage export: { "calmplan_clients": [...], "calmplan_tasks": [...] }
+ * Cleans zombie numeric keys from all records.
  */
 export async function importAllData(allData) {
   const rows = [];
-  for (const [collection, items] of Object.entries(allData)) {
+  for (const [rawKey, items] of Object.entries(allData)) {
+    const collection = normalizeCollectionName(rawKey);
+    if (!collection) continue;
+    // Skip backup_snapshots to avoid importing old backups
+    if (collection === 'backup_snapshots') continue;
+    if (!Array.isArray(items)) continue;
+
     for (const item of items) {
-      const { id, created_date, updated_date, ...data } = item;
+      const { id, created_date, updated_date, ...rawData } = item;
+      const data = cleanZombieFields(rawData);
       rows.push({
         id: id || generateId(),
         collection,
@@ -424,10 +466,24 @@ export async function importAllData(allData) {
     }
   }
 
+  if (rows.length === 0) {
+    throw new Error('No valid data found in backup file');
+  }
+
   // Upsert in batches of 500
+  const errors = [];
   for (let i = 0; i < rows.length; i += 500) {
     const batch = rows.slice(i, i + 500);
     const { error } = await supabase.from('app_data').upsert(batch, { onConflict: 'collection,id' });
-    if (error) throw error;
+    if (error) {
+      console.error(`Batch upsert error (rows ${i}-${i + batch.length}):`, error);
+      errors.push(error.message);
+    }
   }
+
+  if (errors.length > 0) {
+    throw new Error(`Import completed with errors: ${errors.join('; ')}`);
+  }
+
+  return { imported: rows.length };
 }

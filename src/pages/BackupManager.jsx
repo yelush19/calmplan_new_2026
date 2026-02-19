@@ -7,9 +7,8 @@ import {
   saveDailyBackupToSupabase,
   listBackupSnapshots,
   restoreFromBackupSnapshot,
-  exportAllData,
-  importAllData,
 } from '@/api/supabaseDB';
+import { exportAllData, importAllData } from '@/api/base44Client';
 import {
   Shield, Download, Upload, RefreshCw, Clock, CheckCircle,
   AlertTriangle, Database, HardDrive, RotateCcw

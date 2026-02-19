@@ -13,11 +13,12 @@
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
     "electron:check-env": "node scripts/check-env.cjs",
-    "electron:build": "node scripts/check-env.cjs && vite build && electron-builder",
-    "electron:build:win": "node scripts/check-env.cjs && vite build && electron-builder --win",
-    "electron:build:mac": "node scripts/check-env.cjs && vite build && electron-builder --mac",
-    "electron:build:linux": "node scripts/check-env.cjs && vite build && electron-builder --linux",
-    "electron:build:cloud": "node scripts/check-env.cjs --strict && vite build && electron-builder --win",
+    "clean": "node -e \"const fs=require('fs');if(fs.existsSync('dist'))fs.rmSync('dist',{recursive:true,force:true})\"",
+    "electron:build": "npm run clean && node scripts/check-env.cjs && vite build && electron-builder",
+    "electron:build:win": "npm run clean && node scripts/check-env.cjs && vite build && electron-builder --win",
+    "electron:build:mac": "npm run clean && node scripts/check-env.cjs && vite build && electron-builder --mac",
+    "electron:build:linux": "npm run clean && node scripts/check-env.cjs && vite build && electron-builder --linux",
+    "electron:build:cloud": "npm run clean && node scripts/check-env.cjs --strict && vite build && electron-builder --win",
     "electron:preview": "node scripts/check-env.cjs && vite build && electron ."
   },
   "dependencies": {

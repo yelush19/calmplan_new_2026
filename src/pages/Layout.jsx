@@ -25,7 +25,7 @@ import useBackupMonitor from "@/hooks/useBackupMonitor";
 import BackupHealthIndicator from "@/components/BackupHealthIndicator";
 import SyncStatusIndicator from "@/components/SyncStatusIndicator";
 import { Task, Client } from "@/api/entities";
-import { importAllData } from "@/api/supabaseDB";
+import { importAllData } from "@/api/base44Client";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import RealityCheck from "@/components/tasks/RealityCheck";
 import CompletionFeedback from "@/components/tasks/CompletionFeedback";
