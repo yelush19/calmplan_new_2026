@@ -122,6 +122,7 @@ export default function TasksPage() {
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [clientMap, setClientMap] = useState({});
+  const [clientsList, setClientsList] = useState([]);
   const [timeTab, setTimeTab] = useState('active');
   const [contextFilter, setContextFilter] = useState('all');
   const [sortField, setSortField] = useState('due_date');
@@ -178,10 +179,12 @@ export default function TasksPage() {
   const loadClients = async () => {
     try {
       const clients = await Client.list(null, 500);
+      const arr = Array.isArray(clients) ? clients : [];
+      setClientsList(arr);
       const map = {};
-      (clients || []).forEach(c => { if (c.name) map[c.name] = c.id; });
+      arr.forEach(c => { if (c.name) map[c.name] = c.id; });
       setClientMap(map);
-    } catch { setClientMap({}); }
+    } catch { setClientMap({}); setClientsList([]); }
   };
 
   const loadTasks = async () => {
@@ -806,9 +809,9 @@ export default function TasksPage() {
           </Card>
         )
       ) : view === 'mindmap' ? (
-        <MindMapView tasks={filteredTasks} clients={[]} />
+        <MindMapView tasks={filteredTasks} clients={clientsList} />
       ) : view === 'gantt' ? (
-        <GanttView tasks={filteredTasks} clients={[]} />
+        <GanttView tasks={filteredTasks} clients={clientsList} />
       ) : (
         <KanbanView
           tasks={filteredTasks}
