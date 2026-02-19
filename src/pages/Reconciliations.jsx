@@ -87,7 +87,7 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('he-IL');
 }
 
-const STATUS_GROUP_ORDER_REC = ['issues', 'waiting_for_materials', 'in_progress', 'not_started', 'completed'];
+const STATUS_GROUP_ORDER_REC = ['issues', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'not_started', 'completed'];
 const DEFAULT_COLLAPSED_REC = new Set(['completed']);
 
 // --- Status Table Tab ---

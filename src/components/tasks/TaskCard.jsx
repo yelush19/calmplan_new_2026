@@ -25,7 +25,8 @@ import OverdueTags from "./OverdueTags";
 import { STATUS_CONFIG } from '@/config/processTemplates';
 
 const statusTranslations = {
-  not_started: 'נותרו השלמות',
+  not_started: 'טרם התחיל',
+  remaining_completions: 'נותרו השלמות',
   in_progress: 'בעבודה',
   completed: 'דווח ושולם',
   postponed: 'נדחה',

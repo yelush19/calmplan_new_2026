@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   X, Calendar, Clock, MapPin, User, Edit3, Trash2, Save,
-  AlertTriangle, ExternalLink
+  AlertTriangle, ExternalLink, Paperclip
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Task, Event } from '@/api/entities';
 import { TASK_STATUS_CONFIG } from '@/config/processTemplates';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
 
 export default function EventDetailsModal({ item, itemType, onClose, onSave }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -239,6 +240,20 @@ export default function EventDetailsModal({ item, itemType, onClose, onSave }) {
                           onChange={(e) => setEditData({...editData, estimated_duration: parseInt(e.target.value) || 0})}
                         />
                       </div>
+
+                      <div>
+                        <Label className="text-xs font-medium flex items-center gap-1.5">
+                          <Paperclip className="w-3.5 h-3.5" />
+                          קבצים מצורפים
+                        </Label>
+                        <TaskFileAttachments
+                          taskId={item.id}
+                          attachments={editData.attachments || []}
+                          onUpdate={(updated) => setEditData(prev => ({ ...prev, attachments: updated }))}
+                          clientId={item.client_id}
+                          clientName={item.client_name}
+                        />
+                      </div>
                     </>
                   )}
 
@@ -394,6 +409,29 @@ export default function EventDetailsModal({ item, itemType, onClose, onSave }) {
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                       <h4 className="font-semibold text-gray-700 mb-2">הערות:</h4>
                       <p className="text-gray-600">{item.notes}</p>
+                    </div>
+                  )}
+
+                  {itemType === 'task' && item.attachments?.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                        <Paperclip className="w-4 h-4" />
+                        קבצים מצורפים ({item.attachments.length})
+                      </h4>
+                      <div className="space-y-1">
+                        {item.attachments.map((att, idx) => (
+                          <a
+                            key={att.id || idx}
+                            href={att.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors text-sm text-blue-600 hover:underline"
+                          >
+                            <Paperclip className="w-3.5 h-3.5 text-gray-400" />
+                            {att.file_name}
+                          </a>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
