@@ -124,10 +124,20 @@ export const ADDITIONAL_SERVICES = {
     dashboard: 'tax',
     taskCategories: ['התאמות', 'work_reconciliation'],
     createCategory: 'התאמות',
+    supportsComplexity: true,
     steps: [
       { key: 'bank_statements', label: 'קבלת דפי בנק',     icon: 'file-down' },
       { key: 'reconcile',       label: 'ביצוע התאמה',       icon: 'check-square' },
       { key: 'differences',     label: 'טיפול בהפרשים',    icon: 'alert-triangle' },
+    ],
+    // Extended steps for High complexity clients (multiple accounts)
+    highComplexitySteps: [
+      { key: 'bank_statements',      label: 'קבלת דפי בנק',           icon: 'file-down' },
+      { key: 'reconcile_primary',    label: 'התאמה - חשבון ראשי',     icon: 'check-square' },
+      { key: 'reconcile_secondary',  label: 'התאמה - חשבונות נוספים', icon: 'check-square' },
+      { key: 'cross_check',          label: 'בדיקת סבירות צולבת',     icon: 'eye' },
+      { key: 'differences',          label: 'טיפול בהפרשים',          icon: 'alert-triangle' },
+      { key: 'final_review',         label: 'סקירה סופית',            icon: 'check-circle' },
     ],
   },
 
@@ -137,11 +147,22 @@ export const ADDITIONAL_SERVICES = {
     dashboard: 'tax',
     taskCategories: ['דוח שנתי', 'work_annual_reports'],
     createCategory: 'דוח שנתי',
+    supportsComplexity: true,
     steps: [
       { key: 'gather_materials', label: 'איסוף חומרים',  icon: 'inbox' },
       { key: 'report_prep',      label: 'הכנת דו"ח',     icon: 'file-text' },
       { key: 'review',           label: 'עיון ובדיקה',   icon: 'eye' },
       { key: 'submission',       label: 'הגשה',           icon: 'send' },
+    ],
+    // Extended steps for High complexity balance sheets
+    highComplexitySteps: [
+      { key: 'gather_materials',   label: 'איסוף חומרים',         icon: 'inbox' },
+      { key: 'data_entry',         label: 'קליטת נתונים',         icon: 'download' },
+      { key: 'base_reconciliation', label: 'התאמות יסוד',         icon: 'check-square' },
+      { key: 'sanity_check',       label: 'בדיקת סבירות',        icon: 'eye' },
+      { key: 'review',             label: 'סקירה',               icon: 'eye' },
+      { key: 'final_close',        label: 'סגירה',               icon: 'check-circle' },
+      { key: 'submission',         label: 'הגשה',                icon: 'send' },
     ],
   },
 
@@ -166,7 +187,8 @@ export const ADDITIONAL_SERVICES = {
     steps: [
       { key: 'claim_prep',     label: 'הכנת תביעה',       icon: 'file-text' },
       { key: 'claim_submit',   label: 'הגשה לביט"ל',      icon: 'send' },
-      { key: 'follow_up',      label: 'מעקב טיפול',       icon: 'clock' },
+      { key: 'pending_funds',  label: 'ממתין לכספים',     icon: 'clock',  autoStatus: 'pending_external' },
+      { key: 'follow_up',      label: 'עדכון בשכר',       icon: 'check-circle' },
     ],
   },
 
@@ -385,19 +407,37 @@ export function getCategoriesForDashboard(dashboardType) {
 /**
  * Initialize process_steps for a task based on its service template.
  * Returns existing steps if already set, or empty defaults from template.
+ * For services with supportsComplexity, uses highComplexitySteps when task.complexity === 'high'.
  */
 export function getTaskProcessSteps(task) {
   const service = getServiceForTask(task);
   if (!service) return {};
 
+  // Choose steps based on task complexity
+  const useHighComplexity = service.supportsComplexity && task?.complexity === 'high' && service.highComplexitySteps;
+  const templateSteps = useHighComplexity ? service.highComplexitySteps : service.steps;
+
   const existingSteps = task.process_steps || {};
   const result = {};
 
-  for (const step of service.steps) {
+  for (const step of templateSteps) {
     result[step.key] = existingSteps[step.key] || { done: false, date: null, notes: '' };
   }
 
   return result;
+}
+
+/**
+ * Get the step template for a task, accounting for complexity.
+ */
+export function getStepsForTask(task) {
+  const service = getServiceForTask(task);
+  if (!service) return [];
+
+  if (service.supportsComplexity && task?.complexity === 'high' && service.highComplexitySteps) {
+    return service.highComplexitySteps;
+  }
+  return service.steps;
 }
 
 /**
@@ -421,15 +461,12 @@ export function toggleStep(currentSteps, stepKey) {
  * Calculate completion percentage for a task's process steps
  */
 export function getStepCompletionPercent(task) {
-  const service = getServiceForTask(task);
-  if (!service) return 0;
+  const templateSteps = getStepsForTask(task);
+  if (!templateSteps.length) return 0;
 
   const steps = task.process_steps || {};
-  const totalSteps = service.steps.length;
-  if (totalSteps === 0) return 100;
-
-  const doneSteps = service.steps.filter(s => steps[s.key]?.done).length;
-  return Math.round((doneSteps / totalSteps) * 100);
+  const doneSteps = templateSteps.filter(s => steps[s.key]?.done).length;
+  return Math.round((doneSteps / templateSteps.length) * 100);
 }
 
 // ============================================================
@@ -472,14 +509,14 @@ export function isBimonthlyOffMonth(client, serviceKey, month) {
  * Returns the updated process_steps object
  */
 export function markAllStepsDone(task) {
-  const service = getServiceForTask(task);
-  if (!service) return task.process_steps || {};
+  const templateSteps = getStepsForTask(task);
+  if (!templateSteps.length) return task.process_steps || {};
 
   const now = new Date().toISOString().split('T')[0];
   const existingSteps = task.process_steps || {};
   const result = {};
 
-  for (const step of service.steps) {
+  for (const step of templateSteps) {
     const existing = existingSteps[step.key] || {};
     result[step.key] = {
       done: true,
@@ -496,13 +533,13 @@ export function markAllStepsDone(task) {
  * Returns the updated process_steps object
  */
 export function markAllStepsUndone(task) {
-  const service = getServiceForTask(task);
-  if (!service) return task.process_steps || {};
+  const templateSteps = getStepsForTask(task);
+  if (!templateSteps.length) return task.process_steps || {};
 
   const existingSteps = task.process_steps || {};
   const result = {};
 
-  for (const step of service.steps) {
+  for (const step of templateSteps) {
     const existing = existingSteps[step.key] || {};
     result[step.key] = {
       done: false,
@@ -518,11 +555,11 @@ export function markAllStepsUndone(task) {
  * Check if ALL steps are done for a task
  */
 export function areAllStepsDone(task) {
-  const service = getServiceForTask(task);
-  if (!service) return false;
+  const templateSteps = getStepsForTask(task);
+  if (!templateSteps.length) return false;
 
   const steps = task.process_steps || {};
-  return service.steps.length > 0 && service.steps.every(s => steps[s.key]?.done);
+  return templateSteps.every(s => steps[s.key]?.done);
 }
 
 // Status definitions shared across dashboards
@@ -538,6 +575,7 @@ export const STATUS_CONFIG = {
   issue:                         { label: 'דורש טיפול',     bg: 'bg-amber-300',      text: 'text-amber-900',    border: 'border-amber-400',   priority: 0 },
   ready_for_reporting:           { label: 'מוכן לדיווח',    bg: 'bg-teal-200',       text: 'text-teal-900',     border: 'border-teal-300',    priority: 3 },
   reported_waiting_for_payment:  { label: 'ממתין לתשלום',   bg: 'bg-sky-200',        text: 'text-sky-900',      border: 'border-sky-300',     priority: 4 },
+  pending_external:              { label: "מחכה לצד ג'",    bg: 'bg-blue-200',       text: 'text-blue-900',     border: 'border-blue-300',    priority: 3 },
   not_relevant:                  { label: 'לא רלוונטי',     bg: 'bg-gray-100',       text: 'text-gray-400',     border: 'border-gray-200',    priority: 6 },
 };
 
@@ -553,5 +591,6 @@ export const TASK_STATUS_CONFIG = {
   issue:                         { text: 'דורש טיפול',      color: 'bg-pink-100 text-pink-700',       dot: 'bg-pink-500' },
   ready_for_reporting:           { text: 'מוכן לדיווח',     color: 'bg-teal-100 text-teal-700',       dot: 'bg-teal-500' },
   reported_waiting_for_payment:  { text: 'ממתין לתשלום',    color: 'bg-yellow-100 text-yellow-700',   dot: 'bg-yellow-500' },
+  pending_external:              { text: "מחכה לצד ג'",     color: 'bg-blue-100 text-blue-700',       dot: 'bg-blue-500' },
   not_relevant:                  { text: 'לא רלוונטי',      color: 'bg-gray-50 text-gray-400',        dot: 'bg-gray-300' },
 };

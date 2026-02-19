@@ -24,6 +24,7 @@ const STATUS_DISPLAY_ORDER = [
   'ready_for_reporting',          // 3 - מוכן לדיווח
   'postponed',                    // 4 - נדחה
   'reported_waiting_for_payment', // 4 - ממתין לתשלום
+  'pending_external',             // 3 - מחכה לצד ג'
   'completed',                    // 5 - הושלם
   'not_relevant',                 // 6 - לא רלוונטי
 ];
@@ -265,7 +266,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
   const [newSubDue, setNewSubDue] = useState('');
   const [newSubTime, setNewSubTime] = useState('');
 
-  const statusOptions = ['not_started', 'in_progress', 'waiting_for_materials', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment', 'completed', 'not_relevant'];
+  const statusOptions = ['not_started', 'in_progress', 'waiting_for_materials', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment', 'pending_external', 'completed', 'not_relevant'];
 
   const subTasks = task.sub_tasks || [];
 

@@ -27,6 +27,7 @@ import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
 import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
+import useTaskCascade from "@/hooks/useTaskCascade";
 import { useApp } from "@/contexts/AppContext";
 
 // ─── Zero-Panic Colors (NO RED) ─────────────────────────────────
@@ -88,6 +89,16 @@ export default function HomePage() {
   const [noteTask, setNoteTask] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { focusMode } = useApp();
+  // Cascade engine for proactive insights
+  const allTasksForCascade = data?.allTasks || [];
+  const setAllTasksForCascade = useCallback((updater) => {
+    setData(prev => {
+      if (!prev) return prev;
+      const updated = typeof updater === 'function' ? updater(prev.allTasks) : updater;
+      return { ...prev, allTasks: updated };
+    });
+  }, []);
+  const { insights } = useTaskCascade(allTasksForCascade, setAllTasksForCascade, clients);
 
   useEffect(() => { loadData(); }, []);
 
@@ -503,6 +514,38 @@ export default function HomePage() {
           </motion.div>
         );
       })()}
+
+      {/* PROACTIVE INSIGHTS COCKPIT */}
+      {insights.length > 0 && (
+        <motion.div initial={{ y: 5, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.17 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {insights.slice(0, 6).map((insight, i) => {
+              const colorMap = {
+                teal: { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', icon: 'text-teal-500' },
+                amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: 'text-amber-500' },
+                blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'text-blue-500' },
+                emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: 'text-emerald-500' },
+              };
+              const c = colorMap[insight.color] || colorMap.teal;
+              return (
+                <div key={i} className={`${c.bg} ${c.border} border rounded-lg p-2.5 flex items-start gap-2`}>
+                  <div className={`${c.icon} mt-0.5 flex-shrink-0`}>
+                    {insight.type === 'warning' && <AlertTriangle className="w-4 h-4" />}
+                    {insight.type === 'action' && <Zap className="w-4 h-4" />}
+                    {insight.type === 'progress' && <Clock className="w-4 h-4" />}
+                    {insight.type === 'info' && <Eye className="w-4 h-4" />}
+                    {insight.type === 'celebration' && <Sparkles className="w-4 h-4" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-medium ${c.text} leading-tight`}>{insight.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{insight.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* FOCUS AREA */}
       <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
