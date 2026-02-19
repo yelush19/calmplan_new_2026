@@ -198,6 +198,15 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
   const toggleStatusGroup = (status) => {
     setCollapsedStatuses(prev => ({ ...prev, [status]: !prev[status] }));
   };
+  const expandAllStatuses = () => {
+    setCollapsedStatuses({});
+    setCollapsed({});
+  };
+  const collapseAllStatuses = () => {
+    const all = {};
+    Object.values(columnMapping).flat().forEach(s => { all[s] = true; });
+    setCollapsedStatuses(all);
+  };
 
   useEffect(() => {
     const validTasks = Array.isArray(tasks) ? tasks : [];
@@ -263,6 +272,16 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
+      <div className="flex justify-end mb-2">
+        <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
+          <button onClick={expandAllStatuses} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+            פתח הכל
+          </button>
+          <button onClick={collapseAllStatuses} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+            סגור הכל
+          </button>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {Object.entries(board).map(([columnId, column]) => {
           const isCollapsed = !!collapsed[columnId];
