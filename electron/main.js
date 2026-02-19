@@ -59,11 +59,10 @@ function createMainWindow() {
   // Show when ready to prevent flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    // Navigate to Home (Mind Map) on startup
+    // Navigate to Home on startup (HashRouter uses #/path)
     mainWindow.webContents.executeJavaScript(`
-      if (window.location.pathname === '/') {
-        window.history.pushState({}, '', '/Home');
-        window.dispatchEvent(new PopStateEvent('popstate'));
+      if (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#') {
+        window.location.hash = '#/Home';
       }
     `).catch(() => {});
   });

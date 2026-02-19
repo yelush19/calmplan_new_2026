@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import {
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, Database,
   ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote,
   ChevronLeft, ChevronRight, Plus, Hourglass, Maximize2, Star,
-  BatteryLow, BatteryMedium, BatteryFull, Shield
+  BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -25,6 +25,7 @@ import useBackupMonitor from "@/hooks/useBackupMonitor";
 import BackupHealthIndicator from "@/components/BackupHealthIndicator";
 import SyncStatusIndicator from "@/components/SyncStatusIndicator";
 import { Task, Client } from "@/api/entities";
+import { importAllData } from "@/api/supabaseDB";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import RealityCheck from "@/components/tasks/RealityCheck";
 import CompletionFeedback from "@/components/tasks/CompletionFeedback";
@@ -154,9 +155,28 @@ function LayoutInner({ children }) {
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
+  const [importStatus, setImportStatus] = useState(null); // {type, message}
+  const importFileRef = useRef(null);
 
   useAutoReminders();
   const backupHealth = useBackupMonitor();
+
+  const handleImportJsonBackup = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await importAllData(data);
+      setImportStatus({ type: 'success', message: 'נתונים יובאו בהצלחה! רענן את הדף לראות את השינויים.' });
+      setTimeout(() => setImportStatus(null), 8000);
+    } catch (err) {
+      console.error('Import failed:', err);
+      setImportStatus({ type: 'error', message: `שגיאה בייבוא: ${err.message}` });
+      setTimeout(() => setImportStatus(null), 8000);
+    }
+    e.target.value = '';
+  };
 
   const sidebarSections = getSidebarSections();
 
@@ -593,6 +613,51 @@ function LayoutInner({ children }) {
             <div className="flex-1 overflow-auto p-3 md:p-6 lg:p-8 bg-neutral-bg/30">
               <div className="max-w-full mx-auto">
                 <TimeAwareness />
+
+                {/* Admin Mode: Prominent Import Backup Banner */}
+                {workMode === 'admin' && (
+                  <div className="mb-6">
+                    {importStatus && (
+                      <div className={`mb-4 p-4 rounded-lg flex items-center gap-3 ${
+                        importStatus.type === 'success'
+                          ? 'bg-green-50 border border-green-200 text-green-800'
+                          : 'bg-amber-50 border border-amber-200 text-amber-800'
+                      }`}>
+                        {importStatus.type === 'success'
+                          ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                          : <AlertTriangle className="w-5 h-5 flex-shrink-0" />}
+                        <span className="font-medium">{importStatus.message}</span>
+                        <button onClick={() => setImportStatus(null)} className="mr-auto text-sm underline opacity-60 hover:opacity-100">
+                          סגור
+                        </button>
+                      </div>
+                    )}
+                    <Card className="border-2 border-dashed border-orange-300 bg-gradient-to-l from-orange-50 to-amber-50 hover:shadow-lg transition-shadow cursor-pointer"
+                          onClick={() => importFileRef.current?.click()}>
+                      <CardContent className="p-5 flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                          <Upload className="w-7 h-7 text-orange-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-gray-800">ייבוא גיבוי JSON</h3>
+                          <p className="text-sm text-gray-500">לחצי כאן לבחור קובץ גיבוי (.json) ולשחזר את כל הנתונים</p>
+                        </div>
+                        <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6">
+                          <Upload className="w-4 h-4 ml-2" />
+                          בחר קובץ
+                        </Button>
+                        <input
+                          ref={importFileRef}
+                          type="file"
+                          accept=".json"
+                          className="hidden"
+                          onChange={handleImportJsonBackup}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
                 {children}
               </div>
             </div>
