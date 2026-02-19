@@ -15,7 +15,7 @@ import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 const STATUS_GROUP_ORDER = [
   'issue', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'waiting_for_approval',
-  'not_started', 'ready_for_reporting', 'postponed', 'reported_waiting_for_payment',
+  'not_started', 'ready_for_reporting', 'postponed', 'reported_waiting_for_payment', 'pending_external',
   'completed', 'not_relevant',
 ];
 
@@ -31,6 +31,7 @@ const statusTranslations = {
   issue: 'בעיה',
   ready_for_reporting: 'מוכן לדיווח',
   reported_waiting_for_payment: 'ממתין לתשלום',
+  pending_external: "מחכה לצד ג'",
   not_relevant: 'לא רלוונטי'
 };
 
@@ -55,6 +56,7 @@ const statusColors = {
   issue: 'bg-amber-100 text-amber-800',
   ready_for_reporting: 'bg-purple-100 text-purple-800',
   reported_waiting_for_payment: 'bg-cyan-100 text-cyan-800',
+  pending_external: 'bg-blue-100 text-blue-800',
   postponed: 'bg-gray-200 text-gray-700'
 };
 

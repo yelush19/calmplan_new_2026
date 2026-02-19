@@ -42,7 +42,8 @@ const statusTranslations = {
   waiting_for_materials: 'ממתין לחומרים',
   issue: 'בעיה',
   ready_for_reporting: 'מוכן לדיווח',
-  reported_waiting_for_payment: 'ממתין לתשלום'
+  reported_waiting_for_payment: 'ממתין לתשלום',
+  pending_external: "מחכה לצד ג'"
 };
 
 const categoryTranslations = {

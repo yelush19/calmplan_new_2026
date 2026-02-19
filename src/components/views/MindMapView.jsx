@@ -30,7 +30,18 @@ const STATUS_TO_COLOR = {
   issue:                           ZERO_PANIC.amber,
   ready_for_reporting:             ZERO_PANIC.indigo,
   reported_waiting_for_payment:    ZERO_PANIC.purple,
+  pending_external:                '#1565C0',  // Deep blue - ball is with external party
   not_relevant:                    ZERO_PANIC.gray,
+};
+
+// Cascade-aware color overrides for client nodes
+const NODE_COLOR_MAP = {
+  emerald: '#2E7D32',
+  blue:    '#1565C0',
+  amber:   '#FF8F00',
+  teal:    '#00897B',
+  sky:     '#0288D1',
+  slate:   '#90A4AE',
 };
 
 // Service category branches – each with distinct color + icon
@@ -81,13 +92,30 @@ function getNodeColor(task) {
   return STATUS_TO_COLOR[task.status] || ZERO_PANIC.blue;
 }
 
-function getClientAggregateColor(clientTasks) {
-  if (!clientTasks || clientTasks.length === 0) return ZERO_PANIC.gray;
+/**
+ * Compute the aggregate color and visual state for a client node.
+ * Priority: overdue > due today > pending_external > active > all completed
+ * Returns { color, shouldPulse, completionRatio }
+ */
+function getClientAggregateState(clientTasks) {
+  if (!clientTasks || clientTasks.length === 0) {
+    return { color: ZERO_PANIC.gray, shouldPulse: false, completionRatio: 0 };
+  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Priority: overdue > due today > active > done
+  const active = clientTasks.filter(t => t.status !== 'not_relevant');
+  const completed = active.filter(t => t.status === 'completed').length;
+  const total = active.length;
+  const completionRatio = total > 0 ? completed / total : 0;
+
+  // All completed = green (shrink effect handled in rendering)
+  if (total > 0 && completed === total) {
+    return { color: ZERO_PANIC.green, shouldPulse: false, completionRatio: 1 };
+  }
+
+  // Priority: overdue > due today > pending_external > ready_for_reporting > active
   const hasOverdue = clientTasks.some(t => {
     if (t.status === 'completed' || t.status === 'not_relevant') return false;
     if (!t.due_date) return false;
@@ -95,7 +123,7 @@ function getClientAggregateColor(clientTasks) {
     due.setHours(23, 59, 59, 999);
     return due < today;
   });
-  if (hasOverdue) return ZERO_PANIC.purple;
+  if (hasOverdue) return { color: ZERO_PANIC.purple, shouldPulse: true, completionRatio };
 
   const hasDueToday = clientTasks.some(t => {
     if (t.status === 'completed' || t.status === 'not_relevant') return false;
@@ -104,14 +132,27 @@ function getClientAggregateColor(clientTasks) {
     dueDay.setHours(0, 0, 0, 0);
     return dueDay.getTime() === today.getTime();
   });
-  if (hasDueToday) return ZERO_PANIC.orange;
+  if (hasDueToday) return { color: ZERO_PANIC.orange, shouldPulse: false, completionRatio };
+
+  // Pending external = blue (ball is not in Lena's court)
+  const hasPendingExternal = clientTasks.some(t => t.status === 'pending_external');
+  if (hasPendingExternal) return { color: '#1565C0', shouldPulse: false, completionRatio };
+
+  // Ready for reporting = indigo/amber glow
+  const hasReadyForReporting = clientTasks.some(t => t.status === 'ready_for_reporting');
+  if (hasReadyForReporting) return { color: ZERO_PANIC.amber, shouldPulse: false, completionRatio };
 
   const hasActive = clientTasks.some(t =>
     t.status !== 'completed' && t.status !== 'not_relevant'
   );
-  if (hasActive) return ZERO_PANIC.blue;
+  if (hasActive) return { color: ZERO_PANIC.blue, shouldPulse: false, completionRatio };
 
-  return ZERO_PANIC.green;
+  return { color: ZERO_PANIC.green, shouldPulse: false, completionRatio };
+}
+
+// Backwards-compatible wrapper
+function getClientAggregateColor(clientTasks) {
+  return getClientAggregateState(clientTasks).color;
 }
 
 // ─── Main Component ─────────────────────────────────────────────
@@ -168,7 +209,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           clientId: client?.id,
           size,
           radius: size, // resolved to px in layout useMemo
-          color: getClientAggregateColor(clientTasks),
+          ...getClientAggregateState(clientTasks),
           tasks: clientTasks,
           totalTasks: clientTasks.length,
           completedTasks: clientTasks.filter(t => t.status === 'completed').length,
@@ -423,8 +464,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           {/* ── Client Leaf Nodes ── */}
           {branch.clientPositions.map((client, j) => {
             const isHovered = hoveredNode === client.name;
-            const nodeRadius = client.radius;
-            const isOverdue = client.overdueTasks > 0;
+            const isAllDone = client.completionRatio === 1 && client.totalTasks > 0;
+            const nodeRadius = isAllDone ? Math.max(client.radius * 0.7, 20) : client.radius;
             // Ghost Node: dashed border if missing due_date on all tasks or no explicit size
             const isGhost = client.tasks.every(t => !t.due_date) || !clients?.find(c => c.name === client.name)?.size;
 
@@ -432,7 +473,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <motion.div
                 key={`${branch.category}-${client.name}`}
                 className={`absolute z-10 flex items-center justify-center rounded-full border-2 text-white font-medium cursor-pointer select-none
-                  ${isOverdue ? 'animate-pulse' : ''}`}
+                  ${client.shouldPulse ? 'animate-pulse' : ''}`}
                 style={{
                   width: nodeRadius,
                   height: nodeRadius,
