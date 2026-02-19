@@ -48,7 +48,7 @@ export default function QuickTaskForm({ quadrant, onClose, onSave }) {
           title: "עשה מיד",
           subtitle: "דחוף + חשוב",
           icon: AlertTriangle,
-          color: "bg-red-50 border-red-200",
+          color: "bg-amber-50 border-amber-200",
           advice: "משימה קריטית שדורשת טיפול מיידי"
         };
       case 'important_not_urgent':

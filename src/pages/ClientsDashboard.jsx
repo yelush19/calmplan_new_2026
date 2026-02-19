@@ -473,7 +473,7 @@ export default function ClientsDashboardPage() {
             <Check className="w-4 h-4" />
             <span>נוצרו <strong>{generateResult.created}</strong> דיווחים חדשים</span>
             {generateResult.skipped > 0 && <span className="text-gray-500">({generateResult.skipped} כבר קיימים)</span>}
-            {generateResult.errors > 0 && <span className="text-red-500">({generateResult.errors} שגיאות)</span>}
+            {generateResult.errors > 0 && <span className="text-amber-500">({generateResult.errors} שגיאות)</span>}
           </div>
           <button onClick={() => setGenerateResult(null)} className="text-gray-400 hover:text-gray-600">
             <X className="w-4 h-4" />

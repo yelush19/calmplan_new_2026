@@ -72,13 +72,13 @@ export default function FullSyncPage() {
             </Card>
 
             {error && (
-                <Card className="max-w-2xl mx-auto border-red-200 bg-red-50">
+                <Card className="max-w-2xl mx-auto border-amber-200 bg-amber-50">
                     <CardContent className="p-4">
-                        <div className="flex items-center gap-2 text-red-600">
+                        <div className="flex items-center gap-2 text-amber-600">
                             <AlertTriangle className="w-5 h-5" />
                             <span className="font-medium">שגיאה בסנכרון</span>
                         </div>
-                        <p className="text-red-700 mt-2">{error}</p>
+                        <p className="text-amber-700 mt-2">{error}</p>
                     </CardContent>
                 </Card>
             )}
@@ -102,8 +102,8 @@ export default function FullSyncPage() {
                                     <div className="text-sm text-blue-600">פריטים נוצרו</div>
                                 </div>
                                 <div>
-                                    <div className="text-2xl font-bold text-red-700">{results.summary.totalDeleted}</div>
-                                    <div className="text-sm text-red-600">פריטים נמחקו</div>
+                                    <div className="text-2xl font-bold text-amber-700">{results.summary.totalDeleted}</div>
+                                    <div className="text-sm text-amber-600">פריטים נמחקו</div>
                                 </div>
                             </div>
                         </CardContent>
@@ -124,7 +124,7 @@ export default function FullSyncPage() {
                                                     הצליח
                                                 </Badge>
                                             ) : (
-                                                <Badge className="bg-red-100 text-red-800">
+                                                <Badge className="bg-amber-100 text-amber-800">
                                                     נכשל
                                                 </Badge>
                                             )}

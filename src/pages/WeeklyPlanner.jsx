@@ -14,7 +14,7 @@ import { createPageUrl } from '@/utils';
 const daysOfWeek = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
 const priorityColors = {
-  urgent: 'bg-red-500 text-white',
+  urgent: 'bg-amber-500 text-white',
   high: 'bg-orange-400 text-white',
   medium: 'bg-yellow-400 text-black',
   low: 'bg-blue-400 text-white',
@@ -31,7 +31,7 @@ const UrgentTaskItem = ({ task }) => (
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, x: -10 }}
-    className="p-3 bg-white rounded-lg shadow-sm border-l-4 border-red-500"
+    className="p-3 bg-white rounded-lg shadow-sm border-l-4 border-amber-500"
   >
     <div className="flex justify-between items-start">
         <div className="flex-grow">
@@ -128,9 +128,9 @@ export default function WeeklyPlannerPage() {
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center h-screen text-center">
-                <ServerCrash className="w-16 h-16 text-red-500 mb-4" />
+                <ServerCrash className="w-16 h-16 text-amber-500 mb-4" />
                 <h2 className="text-2xl font-bold mb-2">אופס, משהו השתבש</h2>
-                <p className="text-red-600 mb-4">{error}</p>
+                <p className="text-amber-600 mb-4">{error}</p>
                 <Link to={createPageUrl("TreatmentInput")}>
                     <Button>
                         <ArrowRight className="w-4 h-4 ml-2" />
@@ -176,13 +176,13 @@ export default function WeeklyPlannerPage() {
                 })}
             </div>
             <div className="space-y-6 sticky top-6">
-                <Card className="bg-red-50 border-red-200 shadow-lg">
+                <Card className="bg-amber-50 border-amber-200 shadow-lg">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-red-700">
+                        <CardTitle className="flex items-center gap-2 text-amber-700">
                             <AlertTriangle className="w-6 h-6" />
                             משימות דחופות לטיפול
                         </CardTitle>
-                        <p className="text-sm text-red-600">רשימה זו מורכבת אוטומטית ממשימות עם עדיפות "דחופה" ודדליינים קרובים.</p>
+                        <p className="text-sm text-amber-600">רשימה זו מורכבת אוטומטית ממשימות עם עדיפות "דחופה" ודדליינים קרובים.</p>
                     </CardHeader>
                     <CardContent className="space-y-3 max-h-[60vh] overflow-y-auto">
                         <AnimatePresence>

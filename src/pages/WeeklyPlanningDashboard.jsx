@@ -160,7 +160,7 @@ function WorkloadHeatmap({ dailyTasks, weekCategories }) {
                   {/* Capacity line */}
                   {maxTasks > 0 && (
                     <div
-                      className="absolute left-0 w-full border-t border-red-300 border-dashed"
+                      className="absolute left-0 w-full border-t border-amber-300 border-dashed"
                       style={{ bottom: `${(MAX_DAILY_TASKS / maxTasks) * 100}%` }}
                     />
                   )}
@@ -182,7 +182,7 @@ function WorkloadHeatmap({ dailyTasks, weekCategories }) {
             </div>
           ))}
           <div className="flex items-center gap-1 mr-2">
-            <div className="w-4 border-t border-red-300 border-dashed" />
+            <div className="w-4 border-t border-amber-300 border-dashed" />
             <span className="text-[10px] text-gray-400">קיבולת ({MAX_DAILY_TASKS})</span>
           </div>
         </div>

@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Cloud, Inbox, GripVertical, X, Sparkles } from 'lucide-react';
+import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink } from 'lucide-react';
+import { Task } from '@/api/entities';
+import { toast } from 'sonner';
 
 // ─── Zero-Panic Palette (NO RED) ────────────────────────────────
 const ZERO_PANIC = {
@@ -117,6 +119,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [tooltip, setTooltip] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 700 });
+  const [editPopover, setEditPopover] = useState(null); // { client, x, y }
+  const [quickTaskTitle, setQuickTaskTitle] = useState('');
 
   // Measure container
   useEffect(() => {
@@ -255,6 +259,39 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     setSelectedBranch(prev => prev === category ? null : category);
   }, []);
 
+  // Single-click opens quick-edit popover
+  const handleClientClick = useCallback((client, x, y) => {
+    setEditPopover(prev => prev?.name === client.name ? null : { ...client, x, y });
+  }, []);
+
+  // Quick-add task from popover
+  const handleQuickAddTask = useCallback(async () => {
+    if (!quickTaskTitle.trim() || !editPopover) return;
+    try {
+      await Task.create({
+        title: quickTaskTitle.trim(),
+        client_name: editPopover.name,
+        category: editPopover.category || 'אחר',
+        status: 'not_started',
+        due_date: new Date().toISOString().split('T')[0],
+      });
+      setQuickTaskTitle('');
+      toast.success(`משימה נוספה ל-${editPopover.name}`);
+    } catch (err) {
+      toast.error('שגיאה בהוספת משימה');
+    }
+  }, [quickTaskTitle, editPopover]);
+
+  // Close popover on outside click
+  useEffect(() => {
+    if (!editPopover) return;
+    const handler = (e) => {
+      if (!e.target.closest('[data-popover]')) setEditPopover(null);
+    };
+    const timer = setTimeout(() => document.addEventListener('click', handler), 100);
+    return () => { clearTimeout(timer); document.removeEventListener('click', handler); };
+  }, [editPopover]);
+
   // Determine which branches are spotlighted in focus mode
   const isSpotlit = useCallback((category) => {
     if (!focusMode) return true;
@@ -373,6 +410,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             const isHovered = hoveredNode === client.name;
             const nodeRadius = client.radius;
             const isOverdue = client.overdueTasks > 0;
+            // Ghost Node: dashed border if missing due_date on all tasks or no explicit size
+            const isGhost = client.tasks.every(t => !t.due_date) || !clients?.find(c => c.name === client.name)?.size;
 
             return (
               <motion.div
@@ -384,8 +423,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   height: nodeRadius,
                   left: client.x - nodeRadius / 2,
                   top: client.y - nodeRadius / 2,
-                  backgroundColor: client.color,
-                  borderColor: isHovered ? '#fff' : client.color,
+                  backgroundColor: isGhost ? 'transparent' : client.color,
+                  borderColor: isGhost ? client.color : (isHovered ? '#fff' : client.color),
+                  borderStyle: isGhost ? 'dashed' : 'solid',
+                  color: isGhost ? client.color : '#fff',
                   fontSize: nodeRadius < 40 ? '8px' : nodeRadius < 60 ? '10px' : '12px',
                   boxShadow: isHovered
                     ? `0 0 20px ${client.color}66, 0 4px 12px rgba(0,0,0,0.2)`
@@ -407,8 +448,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 whileHover={{ scale: 1.3, zIndex: 50 }}
                 onMouseEnter={(e) => handleClientHover(client, e.clientX, e.clientY)}
                 onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
+                onClick={(e) => handleClientClick(client, e.clientX, e.clientY)}
                 onDoubleClick={() => handleClientDoubleClick(client)}
-                title={`${client.name} (${client.size}) - לחיצה כפולה לפתיחה`}
+                title={`${client.name} (${client.size})${isGhost ? ' [חסר תאריך/גודל]' : ''} - לחיצה לעריכה`}
               >
                 {client.name?.substring(0, nodeRadius < 40 ? 2 : 4)}
                 {/* Completion ring */}
@@ -540,6 +582,94 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           </div>
         ))}
       </div>
+
+      {/* ── Quick-Edit Popover ── */}
+      <AnimatePresence>
+        {editPopover && (
+          <motion.div
+            data-popover
+            className="fixed z-[100] bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 w-[280px]"
+            style={{
+              left: Math.min(editPopover.x + 10, window.innerWidth - 300),
+              top: Math.max(editPopover.y - 20, 10),
+            }}
+            initial={{ opacity: 0, scale: 0.9, y: 5 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.15 }}
+            dir="rtl"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: editPopover.color }} />
+                <span className="font-bold text-sm text-gray-800">{editPopover.name}</span>
+                <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{editPopover.size}</span>
+              </div>
+              <button onClick={() => setEditPopover(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Task summary */}
+            <div className="flex items-center gap-3 text-[11px] text-gray-500 mb-3 pb-3 border-b border-gray-100">
+              <span>{editPopover.totalTasks} משימות</span>
+              <span className="text-green-600">{editPopover.completedTasks} הושלמו</span>
+              {editPopover.overdueTasks > 0 && (
+                <span style={{ color: ZERO_PANIC.purple }}>{editPopover.overdueTasks} באיחור</span>
+              )}
+            </div>
+
+            {/* Quick-add task */}
+            <div className="mb-3">
+              <div className="flex gap-1.5">
+                <input
+                  data-popover
+                  type="text"
+                  value={quickTaskTitle}
+                  onChange={(e) => setQuickTaskTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleQuickAddTask()}
+                  placeholder="הוסף משימה מהירה..."
+                  className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                />
+                <button
+                  data-popover
+                  onClick={handleQuickAddTask}
+                  disabled={!quickTaskTitle.trim()}
+                  className="p-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick actions */}
+            <div className="flex gap-1.5">
+              <button
+                data-popover
+                onClick={() => {
+                  handleClientDoubleClick(editPopover);
+                  setEditPopover(null);
+                }}
+                className="flex-1 flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+                לוח עבודה
+              </button>
+              <button
+                data-popover
+                onClick={() => {
+                  navigate(createPageUrl('Tasks') + `?search=${encodeURIComponent(editPopover.name)}`);
+                  setEditPopover(null);
+                }}
+                className="flex-1 flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                <CheckCircle className="w-3 h-3" />
+                כל המשימות
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Focus Mode Indicator ── */}
       {focusMode && selectedBranch && (

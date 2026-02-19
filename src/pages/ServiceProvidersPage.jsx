@@ -115,7 +115,7 @@ export default function ServiceProvidersPage() {
                 </div>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" onClick={() => handleEditProvider(provider)}><Edit className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteProvider(provider.id)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDeleteProvider(provider.id)}><Trash2 className="w-4 h-4 text-amber-500" /></Button>
                 </div>
               </div>
             </CardContent>

@@ -28,15 +28,15 @@ const STATUS_CONFIG = {
   },
   overdue: {
     icon: AlertTriangle,
-    bgClass: 'bg-red-500 animate-pulse',
+    bgClass: 'bg-amber-500 animate-pulse',
     pulseClass: '',
-    tooltipBg: 'bg-red-50 border-red-200 text-red-800',
+    tooltipBg: 'bg-amber-50 border-amber-200 text-amber-800',
   },
   error: {
     icon: CloudOff,
-    bgClass: 'bg-red-500 animate-pulse',
+    bgClass: 'bg-amber-500 animate-pulse',
     pulseClass: '',
-    tooltipBg: 'bg-red-50 border-red-200 text-red-800',
+    tooltipBg: 'bg-amber-50 border-amber-200 text-amber-800',
   },
   disabled: {
     icon: CloudOff,

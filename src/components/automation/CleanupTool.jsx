@@ -40,7 +40,7 @@ const SERVICE_LABELS = {
 };
 
 const REASON_COLORS = {
-  service_removed: 'bg-red-100 text-red-700 border-red-200',
+  service_removed: 'bg-amber-100 text-amber-700 border-amber-200',
   orphan_service: 'bg-orange-100 text-orange-700 border-orange-200',
   wrong_month: 'bg-amber-100 text-amber-700 border-amber-200',
   wrong_month_current: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -358,7 +358,7 @@ export default function CleanupTool({ rules = [] }) {
           <div className={`p-3 rounded-lg text-sm ${result.errors > 0 ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'}`}>
             <CheckCircle className="w-4 h-4 inline ml-1 text-green-600" />
             עודכנו {result.success} משימות בהצלחה
-            {result.errors > 0 && <span className="text-red-600"> ({result.errors} שגיאות)</span>}
+            {result.errors > 0 && <span className="text-amber-600"> ({result.errors} שגיאות)</span>}
           </div>
         )}
 
@@ -416,7 +416,7 @@ export default function CleanupTool({ rules = [] }) {
                             }
                             <User className="w-4 h-4 text-gray-500" />
                             <span className="font-bold text-gray-800 text-sm">{clientName}</span>
-                            <Badge className="bg-red-100 text-red-700 text-[10px] border border-red-200">
+                            <Badge className="bg-amber-100 text-amber-700 text-[10px] border border-amber-200">
                               {group.items.length} אי-התאמות
                             </Badge>
                             <div className="flex-1" />
@@ -497,7 +497,7 @@ export default function CleanupTool({ rules = [] }) {
                       <Button
                         onClick={handleExecute}
                         disabled={executing || selectedCount === 0}
-                        className={`gap-1 text-white ${totalFixCount > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}
+                        className={`gap-1 text-white ${totalFixCount > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-600 hover:bg-amber-700'}`}
                         size="sm"
                       >
                         {executing ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
@@ -512,7 +512,7 @@ export default function CleanupTool({ rules = [] }) {
         )}
 
         {findings?.error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
             <AlertTriangle className="w-4 h-4 inline ml-1" />
             שגיאה: {findings.error}
           </div>

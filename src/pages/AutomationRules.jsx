@@ -340,7 +340,7 @@ function RuleRow({ rule, onToggle, onEdit, onDelete, onRun, isRunning }) {
           </Button>
         )}
         <Button variant="ghost" size="icon" onClick={() => onEdit(rule)}><Pencil className="w-4 h-4" /></Button>
-        <Button variant="ghost" size="icon" onClick={() => onDelete(rule.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => onDelete(rule.id)} className="text-amber-500 hover:text-amber-700"><Trash2 className="w-4 h-4" /></Button>
       </div>
     </div>
   );
@@ -1048,7 +1048,7 @@ export default function AutomationRules() {
             <span className="text-green-600 flex items-center gap-1 text-sm"><CheckCircle className="w-4 h-4" /> נשמר</span>
           )}
           {saveStatus === 'error' && (
-            <span className="text-red-600 flex items-center gap-1 text-sm"><AlertTriangle className="w-4 h-4" /> שגיאה</span>
+            <span className="text-amber-600 flex items-center gap-1 text-sm"><AlertTriangle className="w-4 h-4" /> שגיאה</span>
           )}
           <Button variant="outline" size="sm" onClick={handleResetDefaults} className="gap-1">
             <Settings className="w-4 h-4" /> איפוס לברירת מחדל
@@ -1058,7 +1058,7 @@ export default function AutomationRules() {
             variant="outline"
             onClick={handleBulkCleanup}
             disabled={cleanupScanning}
-            className="gap-1 border-red-300 text-red-600 hover:bg-red-50"
+            className="gap-1 border-amber-300 text-amber-600 hover:bg-amber-50"
           >
             {cleanupScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             {cleanupScanning ? 'מנקה...' : 'ניקוי משימות שירותים שהוסרו'}
@@ -1077,17 +1077,17 @@ export default function AutomationRules() {
 
       {/* Cleanup result */}
       {cleanupResult && (
-        <Card className={`mb-4 ${cleanupResult.error ? 'border-red-300' : 'border-teal-300'}`}>
+        <Card className={`mb-4 ${cleanupResult.error ? 'border-amber-300' : 'border-teal-300'}`}>
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              {cleanupResult.error ? <AlertTriangle className="w-5 h-5 text-red-500" /> : <CheckCircle className="w-5 h-5 text-teal-600" />}
+              {cleanupResult.error ? <AlertTriangle className="w-5 h-5 text-amber-500" /> : <CheckCircle className="w-5 h-5 text-teal-600" />}
               תוצאות ניקוי משימות
             </CardTitle>
             <Button variant="ghost" size="sm" onClick={() => setCleanupResult(null)}><X className="w-4 h-4" /></Button>
           </CardHeader>
           <CardContent>
             {cleanupResult.error ? (
-              <p className="text-red-700">שגיאה: {cleanupResult.error}</p>
+              <p className="text-amber-700">שגיאה: {cleanupResult.error}</p>
             ) : cleanupResult.cleaned === 0 ? (
               <p className="text-teal-700 font-medium">לא נמצאו משימות לניקוי - הכל תקין!</p>
             ) : (
@@ -1112,7 +1112,7 @@ export default function AutomationRules() {
 
       {/* Bulk execution result with verification details */}
       {bulkResult && (
-        <Card className={`mb-4 ${bulkResult.error ? 'border-red-300' : 'border-green-300'}`}>
+        <Card className={`mb-4 ${bulkResult.error ? 'border-amber-300' : 'border-green-300'}`}>
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-600" />
@@ -1122,13 +1122,13 @@ export default function AutomationRules() {
           </CardHeader>
           <CardContent>
             {bulkResult.error ? (
-              <p className="text-red-700">שגיאה כללית: {bulkResult.error}</p>
+              <p className="text-amber-700">שגיאה כללית: {bulkResult.error}</p>
             ) : (
               <>
                 <div className="flex items-center gap-4 mb-3 text-sm">
                   <span className="text-green-700 font-medium">נוצרו ואומתו: {bulkResult.created}</span>
                   {bulkResult.warnings > 0 && <span className="text-yellow-700">אזהרות: {bulkResult.warnings}</span>}
-                  {bulkResult.errors > 0 && <span className="text-red-700">שגיאות: {bulkResult.errors}</span>}
+                  {bulkResult.errors > 0 && <span className="text-amber-700">שגיאות: {bulkResult.errors}</span>}
                 </div>
                 {bulkResult.details && bulkResult.details.length > 0 && (
                   <div className="max-h-60 overflow-y-auto border rounded-md">
@@ -1143,11 +1143,11 @@ export default function AutomationRules() {
                       </thead>
                       <tbody>
                         {bulkResult.details.map((d, i) => (
-                          <tr key={i} className={`border-t ${d.status === 'error' ? 'bg-red-50' : d.status === 'warning' ? 'bg-yellow-50' : ''}`}>
+                          <tr key={i} className={`border-t ${d.status === 'error' ? 'bg-amber-50' : d.status === 'warning' ? 'bg-yellow-50' : ''}`}>
                             <td className="p-2">
                               {d.status === 'success' && <CheckCircle className="w-3.5 h-3.5 text-green-600" />}
                               {d.status === 'warning' && <AlertTriangle className="w-3.5 h-3.5 text-yellow-600" />}
-                              {d.status === 'error' && <X className="w-3.5 h-3.5 text-red-600" />}
+                              {d.status === 'error' && <X className="w-3.5 h-3.5 text-amber-600" />}
                             </td>
                             <td className="p-2 font-medium">{d.clientName}</td>
                             <td className="p-2">{d.entityLabel}</td>

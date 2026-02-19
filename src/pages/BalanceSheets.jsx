@@ -106,7 +106,7 @@ const BalanceSheetCard = ({ balance, onUpdate, onStageChange, onGenerateFromTemp
           {/* Target date */}
           {balance.target_date && (
             <div className={`flex items-center gap-2 text-sm p-2 rounded-lg ${
-              daysUntilTarget < 0 ? 'bg-red-50 text-red-700' :
+              daysUntilTarget < 0 ? 'bg-amber-50 text-amber-700' :
               daysUntilTarget <= 7 ? 'bg-yellow-50 text-yellow-700' :
               'bg-green-50 text-green-700'
             }`}>
@@ -485,7 +485,7 @@ export default function BalanceSheetsPage() {
       {/* Task generation result */}
       {generationResult && (
         <div className={`p-4 rounded-lg border ${
-          generationResult.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'
+          generationResult.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'
         }`}>
           <div className="flex items-center gap-2">
             {generationResult.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
@@ -512,7 +512,7 @@ export default function BalanceSheetsPage() {
         <Card>
           <CardContent className="p-3 text-center">
             <p className="text-sm text-muted-foreground">באיחור</p>
-            <p className="text-2xl font-bold text-red-600">{overdueCount}</p>
+            <p className="text-2xl font-bold text-amber-600">{overdueCount}</p>
           </CardContent>
         </Card>
         <Card>
@@ -575,7 +575,7 @@ export default function BalanceSheetsPage() {
       {/* Template generation result */}
       {templateGenResult && (
         <div className={`p-4 rounded-lg border ${
-          templateGenResult.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'
+          templateGenResult.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'
         }`}>
           <div className="flex items-center gap-2">
             {templateGenResult.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
@@ -788,7 +788,7 @@ function TemplateEditor({ templates, onSave, onCancel }) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+                      className="h-8 w-8 text-amber-400 hover:text-amber-600 hover:bg-amber-50 shrink-0"
                       onClick={() => handleRemoveTask(stageKey, idx)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />

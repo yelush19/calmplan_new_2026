@@ -35,7 +35,7 @@ const fixShortYear = (value) => {
 };
 
 const PRIORITY_OPTIONS = [
-  { value: 'urgent', label: 'דחוף', icon: AlertTriangle, color: 'text-red-600' },
+  { value: 'urgent', label: 'דחוף', icon: AlertTriangle, color: 'text-amber-600' },
   { value: 'high', label: 'גבוה', icon: ArrowUp, color: 'text-orange-500' },
   { value: 'medium', label: 'בינוני', icon: ArrowRight, color: 'text-yellow-500' },
   { value: 'low', label: 'נמוך', icon: ArrowDown, color: 'text-blue-400' },
@@ -60,8 +60,8 @@ function ExecutionTimeline({ startDate, dueDate }) {
   const isUrgent = remaining >= 0 && remaining <= 1;
   const isWarning = remaining >= 2 && remaining <= 3;
 
-  const barColor = isOverdue ? 'bg-red-500' : isUrgent ? 'bg-red-400' : isWarning ? 'bg-amber-400' : 'bg-emerald-500';
-  const textColor = isOverdue ? 'text-red-600' : isUrgent ? 'text-red-500' : isWarning ? 'text-amber-600' : 'text-emerald-600';
+  const barColor = isOverdue ? 'bg-amber-500' : isUrgent ? 'bg-amber-400' : isWarning ? 'bg-amber-400' : 'bg-emerald-500';
+  const textColor = isOverdue ? 'text-amber-600' : isUrgent ? 'text-amber-500' : isWarning ? 'text-amber-600' : 'text-emerald-600';
 
   return (
     <div className="bg-gray-50 rounded-lg p-3 space-y-2">
@@ -357,7 +357,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
                         onClick={() => handleDeleteSubTask(st.id)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                       >
-                        <X className="w-3.5 h-3.5 text-red-400 hover:text-red-600" />
+                        <X className="w-3.5 h-3.5 text-amber-400 hover:text-amber-600" />
                       </button>
                     </div>
                   );
@@ -450,7 +450,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
+                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 gap-1"
                 onClick={() => onDelete(task)}
               >
                 <Trash2 className="w-3.5 h-3.5" />

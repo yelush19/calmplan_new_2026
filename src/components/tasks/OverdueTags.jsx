@@ -26,12 +26,12 @@ const OverdueTags = ({ dueDate, showText = false }) => {
     textColor = 'text-orange-800';
     label = `איחור ${daysOverdue} ימים`;
   } else if (daysOverdue <= 7) {
-    bgColor = 'bg-red-100';
-    textColor = 'text-red-800';
+    bgColor = 'bg-amber-100';
+    textColor = 'text-amber-800';
     label = `איחור ${daysOverdue} ימים`;
   } else {
-    bgColor = 'bg-red-200';
-    textColor = 'text-red-900';
+    bgColor = 'bg-amber-200';
+    textColor = 'text-amber-900';
     label = `איחור ${daysOverdue} ימים`;
   }
   

@@ -34,7 +34,7 @@ const docTypeColors = {
   monthly_report: 'bg-blue-100 text-blue-800',
   payslip: 'bg-green-100 text-green-800',
   correspondence: 'bg-orange-100 text-orange-800',
-  tax_report: 'bg-red-100 text-red-800',
+  tax_report: 'bg-amber-100 text-amber-800',
   invoice: 'bg-cyan-100 text-cyan-800',
   receipt: 'bg-teal-100 text-teal-800',
   bank_statement: 'bg-indigo-100 text-indigo-800',
@@ -402,7 +402,7 @@ export default function FileList({
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => onDelete?.(file)}
-                              className="text-red-600 focus:text-red-600"
+                              className="text-amber-600 focus:text-amber-600"
                             >
                               <Trash2 className="w-4 h-4 ml-2" />
                               מחיקה

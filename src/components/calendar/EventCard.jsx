@@ -93,7 +93,7 @@ export default function EventCard({
             {getItemIcon()}
             <h4 className="font-semibold text-lg">{item.title}</h4>
             {priority === "urgent" && (
-              <AlertCircle className="w-4 h-4 text-red-600 animate-pulse" />
+              <AlertCircle className="w-4 h-4 text-amber-600 animate-pulse" />
             )}
           </div>
           

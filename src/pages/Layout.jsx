@@ -311,14 +311,14 @@ function LayoutInner({ children }) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
-                  {energyLevel === 'low' && <BatteryLow className="w-5 h-5 text-red-500" />}
+                  {energyLevel === 'low' && <BatteryLow className="w-5 h-5 text-amber-500" />}
                   {energyLevel === 'medium' && <BatteryMedium className="w-5 h-5 text-yellow-500" />}
                   {energyLevel === 'full' && <BatteryFull className="w-5 h-5 text-green-500" />}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setEnergyLevel('low')}>
-                  <BatteryLow className="w-4 h-4 ml-2 text-red-500" />
+                  <BatteryLow className="w-4 h-4 ml-2 text-amber-500" />
                   סוללה נמוכה - רק משימות של 5-10 דקות
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setEnergyLevel('medium')}>

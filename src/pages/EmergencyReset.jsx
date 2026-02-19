@@ -77,13 +77,13 @@ export default function EmergencyResetPage() {
         <div className="max-w-4xl mx-auto p-6 space-y-6">
             {ConfirmDialogComponent}
             <div className="text-center">
-                <h1 className="text-3xl font-bold text-red-600 mb-2">איפוס מלא של המערכת</h1>
+                <h1 className="text-3xl font-bold text-amber-600 mb-2">איפוס מלא של המערכת</h1>
                 <p className="text-gray-600">מחיקה מלאה של כל הנתונים וסנכרון מחדש מ-Monday בלבד</p>
             </div>
 
-            <Card className="border-red-200 bg-red-50">
+            <Card className="border-amber-200 bg-amber-50">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-3 text-red-700">
+                    <CardTitle className="flex items-center gap-3 text-amber-700">
                         <AlertTriangle className="w-6 h-6" />
                         אזהרה - פעולה הרסנית!
                     </CardTitle>
@@ -108,7 +108,7 @@ export default function EmergencyResetPage() {
                     <Button
                         onClick={handleFullReset}
                         disabled={isResetting}
-                        className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-3"
+                        className="w-full bg-amber-600 hover:bg-amber-700 text-white text-lg py-3"
                     >
                         {isResetting ? (
                             <>

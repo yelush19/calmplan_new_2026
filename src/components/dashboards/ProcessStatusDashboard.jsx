@@ -80,7 +80,7 @@ export default function ProcessStatusDashboard({ title, tasks, onTasksChange }) 
         <div className="space-y-4 flex-grow">
           {urgentTasks.length > 0 && (
             <div>
-              <h4 className="font-semibold text-red-600 mb-2">🔴 דחוף ({urgentTasks.length})</h4>
+              <h4 className="font-semibold text-amber-600 mb-2">🔴 דחוף ({urgentTasks.length})</h4>
               <div className="space-y-2">
                 {urgentTasks.map(task => <ProcessTaskItem key={task.id} task={task} onEdit={handleEditTask} onDelete={handleDeleteTask} />)}
               </div>

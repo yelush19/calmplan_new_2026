@@ -11,7 +11,7 @@ const StatusIcon = ({ status }) => {
   switch (status) {
     case 'working': return <CheckCircle className="w-4 h-4 text-green-500" />;
     case 'partial': return <AlertCircle className="w-4 h-4 text-yellow-500" />;
-    case 'broken': return <XCircle className="w-4 h-4 text-red-500" />;
+    case 'broken': return <XCircle className="w-4 h-4 text-amber-500" />;
     case 'empty': return <AlertCircle className="w-4 h-4 text-gray-400" />;
     default: return <AlertCircle className="w-4 h-4 text-gray-400" />;
   }
@@ -471,7 +471,7 @@ export default function SystemOverviewPage() {
             data.status === 'working' ? 'border-green-200 bg-green-50' :
             data.status === 'partial' ? 'border-yellow-200 bg-yellow-50' :
             data.status === 'empty' ? 'border-gray-200 bg-gray-50' :
-            'border-red-200 bg-red-50'
+            'border-amber-200 bg-amber-50'
           }`}>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -505,8 +505,8 @@ export default function SystemOverviewPage() {
                         <Badge className="bg-orange-100 text-orange-800 font-bold">{data.missingItemId?.length || 0}</Badge>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-red-700">חסר חיבור Monday:</span>
-                        <Badge className="bg-red-100 text-red-800 font-bold">{data.missingBoth?.length || 0}</Badge>
+                        <span className="text-sm font-medium text-amber-700">חסר חיבור Monday:</span>
+                        <Badge className="bg-amber-100 text-amber-800 font-bold">{data.missingBoth?.length || 0}</Badge>
                       </div>
                     </div>
                     
@@ -530,7 +530,7 @@ export default function SystemOverviewPage() {
                     <div className="bg-white p-3 rounded border space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium">סה"כ רשומות Dashboard:</span>
-                        <Badge variant="outline" className="font-bold text-red-600">{data.totalDashboards}</Badge>
+                        <Badge variant="outline" className="font-bold text-amber-600">{data.totalDashboards}</Badge>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium">לוחות מוגדרים:</span>
@@ -561,13 +561,13 @@ export default function SystemOverviewPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">סה"כ פריטים בפועל (בבסיס נתונים):</span>
-                  <Badge className={`font-bold ${systemStatus.actualTotal === systemStatus.expectedTotal ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  <Badge className={`font-bold ${systemStatus.actualTotal === systemStatus.expectedTotal ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                     {systemStatus.actualTotal}
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">הפרש (חיובי = עודף, שלילי = חסר):</span>
-                  <Badge className={`font-bold ${systemStatus.actualTotal - systemStatus.expectedTotal === 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  <Badge className={`font-bold ${systemStatus.actualTotal - systemStatus.expectedTotal === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                     {systemStatus.actualTotal - systemStatus.expectedTotal}
                   </Badge>
                 </div>
@@ -595,13 +595,13 @@ export default function SystemOverviewPage() {
                       </div>
                       <div className="flex justify-between">
                         <span>בפועל:</span>
-                        <Badge className={`${board.actual === board.expected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        <Badge className={`${board.actual === board.expected ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                           {board.actual}
                         </Badge>
                       </div>
                       <div className="flex justify-between">
                         <span>הפרש:</span>
-                        <Badge className={`${board.actual - board.expected === 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        <Badge className={`${board.actual - board.expected === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                           {board.actual - board.expected}
                         </Badge>
                       </div>
@@ -631,15 +631,15 @@ export default function SystemOverviewPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {systemStatus.tasks?.taskFlags && (systemStatus.tasks.taskFlags.isFromMonday - systemStatus.tasks.withAllIds > 0) && (
-              <div className="p-4 bg-white rounded border border-red-300">
-                <h4 className="font-semibold text-red-700 mb-2">🔄 כפילויות Monday - דחוף!</h4>
+              <div className="p-4 bg-white rounded border border-amber-300">
+                <h4 className="font-semibold text-amber-700 mb-2">🔄 כפילויות Monday - דחוף!</h4>
                 <p className="text-sm text-gray-600 mb-3">
                   <strong>בעיה קריטית:</strong> יש {systemStatus.tasks.taskFlags.isFromMonday} משימות מסומנות "From Monday" 
                   אבל רק {systemStatus.tasks.withAllIds} עם IDs מלאים. 
                   <br/>
                   <strong>כלומר: {systemStatus.tasks.taskFlags.isFromMonday - systemStatus.tasks.withAllIds} כפילויות שצריך למחוק!</strong>
                 </p>
-                <div className="bg-red-50 p-3 rounded mb-3 text-sm">
+                <div className="bg-amber-50 p-3 rounded mb-3 text-sm">
                   <strong>מה זה אומר:</strong> המערכת סנכרנה משימות מ-Monday פעמיים - פעם אחת עם IDs נכונים, 
                   ופעם שנייה בלי IDs. הכפילויות מבלבלות את המערכת.
                 </div>
@@ -648,7 +648,7 @@ export default function SystemOverviewPage() {
                   variant="destructive" 
                   size="lg"
                   disabled={isLoading}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold"
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold"
                 >
                   🗑️ נקה כפילויות Monday ({systemStatus.tasks.taskFlags.isFromMonday - systemStatus.tasks.withAllIds} משימות)
                 </Button>
@@ -684,7 +684,7 @@ export default function SystemOverviewPage() {
 
             {systemStatus.dashboards?.totalDashboards > 12 && (
               <div className="p-4 bg-white rounded border">
-                <h4 className="font-semibold text-red-700 mb-2">🚨 Dashboard כפילויות</h4>
+                <h4 className="font-semibold text-amber-700 mb-2">🚨 Dashboard כפילויות</h4>
                 <p className="text-sm text-gray-600 mb-3">
                   יש {systemStatus.dashboards.totalDashboards} רשומות Dashboard במקום 12. יש לנקות כפילויות.
                 </p>
@@ -700,8 +700,8 @@ export default function SystemOverviewPage() {
             )}
 
             {/* Emergency reset button */}
-            <div className="p-4 bg-red-100 rounded border border-red-300">
-              <h4 className="font-semibold text-red-800 mb-2">⚠️ ניקוי כללי - אפשרות גרעין</h4>
+            <div className="p-4 bg-amber-100 rounded border border-amber-300">
+              <h4 className="font-semibold text-amber-800 mb-2">⚠️ ניקוי כללי - אפשרות גרעין</h4>
               <p className="text-sm text-gray-700 mb-3">
                 אם הכל מבולבל - אפשר למחוק את כל המשימות שלא מסונכרנות כמו שצריך ולהתחיל מחדש עם סנכרון נקי.
               </p>
@@ -715,7 +715,7 @@ export default function SystemOverviewPage() {
                 variant="destructive" 
                 size="lg"
                 disabled={isLoading}
-                className="w-full bg-red-800 hover:bg-red-900"
+                className="w-full bg-amber-800 hover:bg-amber-900"
               >
                 🔥 ניקוי כללי - השאר רק משימות מסונכרנות
               </Button>

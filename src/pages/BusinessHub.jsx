@@ -284,7 +284,7 @@ export default function BusinessHubPage() {
             className={`p-4 rounded-lg border mb-6 mt-6 ${
               taskGenerationResult.type === 'success' 
                 ? 'bg-green-50 border-green-200 text-green-800' 
-                : 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-amber-50 border-amber-200 text-amber-800'
             }`}
           >
             <div className="flex items-center gap-2 mb-2">

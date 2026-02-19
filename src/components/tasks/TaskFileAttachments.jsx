@@ -141,7 +141,7 @@ export default function TaskFileAttachments({ taskId, attachments = [], onUpdate
       </div>
 
       {error && (
-        <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 flex items-center gap-1">
+        <div className="text-xs text-amber-600 bg-amber-50 rounded px-2 py-1 flex items-center gap-1">
           <X className="w-3 h-3 cursor-pointer" onClick={() => setError(null)} />
           {error}
         </div>
@@ -178,10 +178,10 @@ export default function TaskFileAttachments({ taskId, attachments = [], onUpdate
                   </a>
                   <button
                     onClick={() => handleDelete(att.id)}
-                    className="p-0.5 hover:bg-red-100 rounded"
+                    className="p-0.5 hover:bg-amber-100 rounded"
                     title="מחק"
                   >
-                    <Trash2 className="w-3 h-3 text-red-500" />
+                    <Trash2 className="w-3 h-3 text-amber-500" />
                   </button>
                 </div>
               </div>

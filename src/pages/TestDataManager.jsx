@@ -353,10 +353,10 @@ export default function TestDataManager() {
 
       {/* Emergency Alert */}
       {stats.demo === 0 && stats.real === 0 && stats.monday === 0 && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertTitle className="text-red-800">🚨 מצב חירום: אין נתונים במערכת</AlertTitle>
-          <AlertDescription className="text-red-700">
+        <Alert className="border-amber-200 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800">🚨 מצב חירום: אין נתונים במערכת</AlertTitle>
+          <AlertDescription className="text-amber-700">
             כל הנתונים נמחקו. עבור לטאב "שחזור חירום" כדי לנסות לשחזר נתונים או הזן אותם מחדש.
           </AlertDescription>
         </Alert>
@@ -374,7 +374,7 @@ export default function TestDataManager() {
         <Button 
           variant={activeTab === 'recovery' ? 'default' : 'outline'}
           onClick={() => setActiveTab('recovery')}
-          className="text-red-600 border-red-200"
+          className="text-amber-600 border-amber-200"
         >
           <AlertTriangle className="w-4 h-4 mr-2" />
           שחזור חירום
@@ -406,7 +406,7 @@ export default function TestDataManager() {
                     onClick={handleDeleteDuplicates} 
                     disabled={isDeleting || isLoading || stats.real === 0} 
                     size="lg" 
-                    className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 text-lg"
+                    className="bg-amber-500 hover:bg-amber-600 text-white px-8 py-4 text-lg"
                   >
                     {isDeleting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Trash2 className="w-5 h-5 mr-2" />}
                     מחק כפילויות ({stats.real})

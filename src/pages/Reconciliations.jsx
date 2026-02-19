@@ -28,7 +28,7 @@ const statusConfig = {
   waiting_for_materials: { label: 'ממתין לחומרים', color: 'bg-yellow-200 text-yellow-800', icon: AlertCircle },
   in_progress: { label: 'בתהליך', color: 'bg-blue-200 text-blue-800', icon: Clock },
   completed: { label: 'הושלם', color: 'bg-green-200 text-green-800', icon: CheckCircle },
-  issues: { label: 'בעיות', color: 'bg-red-200 text-red-800', icon: AlertCircle },
+  issues: { label: 'בעיות', color: 'bg-amber-200 text-amber-800', icon: AlertCircle },
 };
 
 const frequencyLabels = {
@@ -169,7 +169,7 @@ function StatusTable({ accounts, clients, reconciliations, onUpdateAccount, sear
   return (
     <div>
       {overdueCount > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-center gap-2 text-red-800">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-center gap-2 text-amber-800">
           <AlertTriangle className="w-5 h-5" />
           <span className="font-medium">{overdueCount} חשבונות בפיגור התאמה!</span>
         </div>
@@ -216,7 +216,7 @@ function StatusTable({ accounts, clients, reconciliations, onUpdateAccount, sear
               const isOverdue = daysOverdue > 0;
               const AccIcon = accountTypeIcons[account.account_type] || Landmark;
               return (
-                <tr key={account.id} className={`border-b hover:bg-slate-50 ${isOverdue ? 'bg-red-50' : ''}`}>
+                <tr key={account.id} className={`border-b hover:bg-slate-50 ${isOverdue ? 'bg-amber-50' : ''}`}>
                   <td className="p-3 font-medium">{client.name}</td>
                   <td className="p-3">
                     <div className="flex items-center gap-1">
@@ -233,10 +233,10 @@ function StatusTable({ accounts, clients, reconciliations, onUpdateAccount, sear
                   </td>
                   <td className="p-3 text-center text-xs">{formatDate(account.last_reconciliation_date)}</td>
                   <td className="p-3 text-center">
-                    <span className={`text-xs font-medium ${isOverdue ? 'text-red-700' : 'text-gray-600'}`}>
+                    <span className={`text-xs font-medium ${isOverdue ? 'text-amber-700' : 'text-gray-600'}`}>
                       {formatDate(nextDate)}
                       {isOverdue && (
-                        <span className="block text-red-600 font-bold">{daysOverdue} ימי פיגור</span>
+                        <span className="block text-amber-600 font-bold">{daysOverdue} ימי פיגור</span>
                       )}
                     </span>
                   </td>
@@ -570,9 +570,9 @@ export default function ReconciliationsPage() {
             <div className="text-xs text-gray-500">חשבונות פעילים</div>
           </CardContent>
         </Card>
-        <Card className={`border-l-4 ${overdueAccounts.length > 0 ? 'border-l-red-500' : 'border-l-green-500'}`}>
+        <Card className={`border-l-4 ${overdueAccounts.length > 0 ? 'border-l-amber-500' : 'border-l-green-500'}`}>
           <CardContent className="p-4">
-            <div className={`text-2xl font-bold ${overdueAccounts.length > 0 ? 'text-red-600' : 'text-green-600'}`}>{overdueAccounts.length}</div>
+            <div className={`text-2xl font-bold ${overdueAccounts.length > 0 ? 'text-amber-600' : 'text-green-600'}`}>{overdueAccounts.length}</div>
             <div className="text-xs text-gray-500">בפיגור</div>
           </CardContent>
         </Card>

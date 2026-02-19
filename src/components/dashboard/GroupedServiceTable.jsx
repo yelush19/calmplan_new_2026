@@ -47,8 +47,8 @@ function ExecutionBar({ startDate, dueDate }) {
   }
 
   const isOverdue = remaining < 0;
-  const barColor = isOverdue ? 'bg-red-500' : remaining <= 1 ? 'bg-red-400' : remaining <= 3 ? 'bg-amber-400' : 'bg-emerald-500';
-  const textColor = isOverdue ? 'text-red-600' : remaining <= 1 ? 'text-red-500' : remaining <= 3 ? 'text-amber-600' : 'text-emerald-600';
+  const barColor = isOverdue ? 'bg-amber-500' : remaining <= 1 ? 'bg-amber-400' : remaining <= 3 ? 'bg-amber-400' : 'bg-emerald-500';
+  const textColor = isOverdue ? 'text-amber-600' : remaining <= 1 ? 'text-amber-500' : remaining <= 3 ? 'text-amber-600' : 'text-emerald-600';
 
   return (
     <div className="bg-gray-50 rounded-lg px-2.5 py-2 space-y-1">
@@ -326,7 +326,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
               if (!isValid(d)) return null;
               const t = new Date(); t.setHours(0,0,0,0);
               const rem = differenceInDays(d, t);
-              if (rem < 0) return <Badge className="text-[9px] px-1 py-0 bg-red-100 text-red-700 shrink-0">-{Math.abs(rem)}d</Badge>;
+              if (rem < 0) return <Badge className="text-[9px] px-1 py-0 bg-amber-100 text-amber-700 shrink-0">-{Math.abs(rem)}d</Badge>;
               if (rem <= 3) return <Badge className="text-[9px] px-1 py-0 bg-amber-100 text-amber-700 shrink-0">{rem}d</Badge>;
               return null;
             })()}
@@ -413,7 +413,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                   <span className={`flex-1 ${st.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>{st.title}</span>
                   {st.due_time && <span className="text-[10px] text-blue-400">{st.due_time}</span>}
                   {st.due_date && <span className="text-[10px] text-gray-400">{new Date(st.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })}</span>}
-                  <button onClick={() => handleDeleteSubTask(st.id)} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
+                  <button onClick={() => handleDeleteSubTask(st.id)} className="text-gray-300 hover:text-amber-500"><Trash2 className="w-3 h-3" /></button>
                 </div>
               ))}
               <div className="flex items-center gap-2 mt-1">
@@ -499,7 +499,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                   {onDelete && (
                     <button
                       onClick={() => onDelete(task)}
-                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 rounded px-2 py-1 transition-colors"
+                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded px-2 py-1 transition-colors"
                     >
                       <Trash2 className="w-3 h-3" />
                       מחק
@@ -570,7 +570,7 @@ function StepCell({ stepData, onToggle, onDateChange }) {
           <Button
             variant="outline"
             size="sm"
-            className="w-full text-xs text-red-500 hover:text-red-700 hover:border-red-300"
+            className="w-full text-xs text-amber-500 hover:text-amber-700 hover:border-amber-300"
             onClick={() => { onToggle(); setEditingDate(false); }}
           >
             בטל סימון
