@@ -8,7 +8,8 @@ import { Task } from '@/api/entities';
 
 // Map each reporting deadline to the task categories it covers
 const REPORTING_DEADLINES = [
-  { day: 15, label: 'ביטוח לאומי', color: 'slate', categories: ['ביטוח לאומי', 'שכר'] },
+  { day: 9,  label: 'שכר - מס"ב ותלושים', color: 'slate', categories: ['שכר'] },
+  { day: 15, label: 'סוציאליות וביטוח לאומי', color: 'slate', categories: ['ביטוח לאומי'] },
   { day: 19, label: 'מע"מ / ניכויים / מקדמות', color: 'gray', categories: ['מע"מ', 'ניכויים', 'מקדמות מס'] },
   { day: 23, label: '874 מפורט', color: 'gray', categories: ['מע"מ 874'] },
 ];
