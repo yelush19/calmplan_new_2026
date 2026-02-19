@@ -21,6 +21,8 @@ import StickyNotes from "@/components/StickyNotes";
 import GlobalSearch from "@/components/GlobalSearch";
 import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
 import useAutoReminders from "@/hooks/useAutoReminders";
+import useBackupMonitor from "@/hooks/useBackupMonitor";
+import BackupHealthIndicator from "@/components/BackupHealthIndicator";
 
 const navigationGroups = [
   {
@@ -141,6 +143,7 @@ export default function Layout({ children, currentPageName }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   useAutoReminders();
+  const backupHealth = useBackupMonitor();
 
   useEffect(() => {
     if (location.pathname === "/") {
@@ -265,9 +268,12 @@ export default function Layout({ children, currentPageName }) {
                       <p className="text-sm text-muted-foreground">ניהול עסק חכם</p>
                     </div>
                 </Link>
-                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-                    <X className="w-5 h-5"/>
-                </Button>
+                <div className="flex items-center gap-1">
+                  <BackupHealthIndicator health={backupHealth} />
+                  <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+                      <X className="w-5 h-5"/>
+                  </Button>
+                </div>
             </div>
 
             {/* Global Search */}
