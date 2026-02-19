@@ -4,6 +4,7 @@ import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, eachDayOf
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Task } from '@/api/entities';
 import { toast } from 'sonner';
+import { getScheduledStartForCategory } from '@/config/automationRules';
 
 const STATUS_COLORS = {
   completed: 'bg-emerald-400',
@@ -59,7 +60,11 @@ export default function GanttView({ tasks, clients, currentMonth }) {
   };
 
   const getTaskPosition = (task) => {
-    const start = task.scheduled_start ? parseISO(task.scheduled_start) : parseISO(task.due_date);
+    // Use scheduled_start if available, otherwise derive from Settings-driven execution periods
+    const derivedStart = task.scheduled_start
+      || getScheduledStartForCategory(task.category, task.due_date)
+      || task.due_date;
+    const start = parseISO(derivedStart);
     const end = parseISO(task.due_date);
     const startDay = Math.max(0, differenceInDays(start, monthStart));
     const endDay = Math.min(daysInMonth - 1, differenceInDays(end, monthStart));
