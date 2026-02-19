@@ -250,7 +250,7 @@ export default function HomeTaskGeneratorPage() {
   const timeEstimate = getTotalEstimatedTime();
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8 w-full">
       {/* כותרת */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

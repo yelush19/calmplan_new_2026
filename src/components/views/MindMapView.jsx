@@ -46,8 +46,9 @@ const BRANCH_CONFIG = {
   'אחר':         { color: '#607D8B', icon: '📁', label: 'Other' },
 };
 
-// ─── Node Scaling by Complexity ─────────────────────────────────
+// ─── Node Scaling by Complexity (base sizes, scaled up for wide screens in layout) ──
 const SIZE_MAP = { S: 30, M: 50, L: 80 };
+const SIZE_MAP_WIDE = { S: 40, M: 65, L: 100 };
 
 function estimateSize(client, tasks) {
   if (client?.size) return client.size;
@@ -166,7 +167,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           name,
           clientId: client?.id,
           size,
-          radius: SIZE_MAP[size],
+          radius: size, // resolved to px in layout useMemo
           color: getClientAggregateColor(clientTasks),
           tasks: clientTasks,
           totalTasks: clientTasks.length,
@@ -193,29 +194,38 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     return { branches, clientNodes, centerLabel };
   }, [tasks, clients]);
 
-  // ── Layout Calculation ──
+  // ── Layout Calculation (adaptive to screen width) ──
   const layout = useMemo(() => {
     const cx = dimensions.width / 2;
     const cy = dimensions.height / 2;
-    const centerR = 55;
-    const branchDistance = Math.min(dimensions.width, dimensions.height) * 0.28;
-    const leafDistance = branchDistance * 0.65;
+    const centerR = dimensions.width > 1400 ? 65 : 55;
+
+    // Use elliptical distances that exploit wide screens
+    const isWide = dimensions.width > 1200;
+    const sizeMap = isWide ? SIZE_MAP_WIDE : SIZE_MAP;
+    const scaleX = isWide ? dimensions.width * 0.34 : Math.min(dimensions.width, dimensions.height) * 0.28;
+    const scaleY = isWide ? dimensions.height * 0.30 : Math.min(dimensions.width, dimensions.height) * 0.28;
+    const leafDistance = (isWide ? Math.max(scaleX, scaleY) : scaleX) * 0.65;
 
     const angleStep = (2 * Math.PI) / Math.max(branches.length, 1);
 
     const branchPositions = branches.map((branch, i) => {
       const angle = i * angleStep - Math.PI / 2;
-      const bx = cx + Math.cos(angle) * branchDistance;
-      const by = cy + Math.sin(angle) * branchDistance;
+      // Elliptical positioning: branches spread wider horizontally
+      const bx = cx + Math.cos(angle) * scaleX;
+      const by = cy + Math.sin(angle) * scaleY;
 
       // Spread clients around the branch node
       const clientCount = branch.clients.length;
-      const clientAngleSpread = Math.min(Math.PI * 0.6, clientCount * 0.35);
+      const clientAngleSpread = Math.min(Math.PI * 0.7, clientCount * 0.4);
+      const baseLeafDist = isWide ? leafDistance * 1.1 : leafDistance;
       const clientPositions = branch.clients.map((client, j) => {
         const clientAngle = angle + (j - (clientCount - 1) / 2) * (clientAngleSpread / Math.max(clientCount - 1, 1));
-        const dist = leafDistance + (j % 2) * 25; // stagger
+        const dist = baseLeafDist + (j % 2) * (isWide ? 35 : 25); // stagger
+        const resolvedRadius = sizeMap[client.radius] || sizeMap.S;
         return {
           ...client,
+          radius: resolvedRadius,
           x: bx + Math.cos(clientAngle) * dist,
           y: by + Math.sin(clientAngle) * dist,
           branchX: bx,
@@ -312,7 +322,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }
 
   return (
-    <div ref={containerRef} className="relative w-full min-h-[500px] h-[70vh] max-h-[800px] overflow-hidden rounded-2xl border border-gray-200" style={{ background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' }}>
+    <div ref={containerRef} className="relative w-full min-h-[500px] h-[85vh] overflow-hidden rounded-2xl border border-gray-200" style={{ background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' }}>
       <svg
         width={dimensions.width}
         height={dimensions.height}
@@ -381,9 +391,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 15 }}
       >
-        <span className="text-sm font-bold leading-tight">היום שלי</span>
-        <span className="text-[10px] opacity-80 mt-0.5">{layout.branchPositions.reduce((sum, b) => sum + b.clients.length, 0)} לקוחות</span>
-        <span className="text-[9px] opacity-60">{tasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant').length} משימות</span>
+        <span className={`font-bold leading-tight ${dimensions.width > 1400 ? 'text-base' : 'text-sm'}`}>היום שלי</span>
+        <span className={`opacity-80 mt-0.5 ${dimensions.width > 1400 ? 'text-xs' : 'text-[10px]'}`}>{layout.branchPositions.reduce((sum, b) => sum + b.clients.length, 0)} לקוחות</span>
+        <span className={`opacity-60 ${dimensions.width > 1400 ? 'text-[11px]' : 'text-[9px]'}`}>{tasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant').length} משימות</span>
       </motion.div>
 
       {/* ── Branch (Category) Nodes ── */}
