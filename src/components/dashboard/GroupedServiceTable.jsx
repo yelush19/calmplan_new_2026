@@ -133,6 +133,12 @@ export default function GroupedServiceTable({
   const toggleGroup = (status) => {
     setCollapsedGroups(prev => ({ ...prev, [status]: !prev[status] }));
   };
+  const expandAll = () => setCollapsedGroups({});
+  const collapseAll = () => {
+    const all = {};
+    STATUS_DISPLAY_ORDER.forEach(s => { all[s] = true; });
+    setCollapsedGroups(all);
+  };
 
   const colCount = service.steps.length + 2; // client + steps + status
 
@@ -144,11 +150,21 @@ export default function GroupedServiceTable({
           <h2 className="font-bold text-gray-800">{service.label}</h2>
           <span className="text-xs text-gray-500">{completedCount}/{relevantRows.length} הושלמו</span>
         </div>
-        <div className="w-24 bg-gray-200 rounded-full h-1.5">
-          <div
-            className="h-1.5 rounded-full bg-emerald-500 transition-all"
-            style={{ width: `${relevantRows.length > 0 ? Math.round((completedCount / relevantRows.length) * 100) : 0}%` }}
-          />
+        <div className="flex items-center gap-3">
+          <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
+            <button onClick={expandAll} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+              פתח הכל
+            </button>
+            <button onClick={collapseAll} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+              סגור הכל
+            </button>
+          </div>
+          <div className="w-24 bg-gray-200 rounded-full h-1.5">
+            <div
+              className="h-1.5 rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${relevantRows.length > 0 ? Math.round((completedCount / relevantRows.length) * 100) : 0}%` }}
+            />
+          </div>
         </div>
       </div>
 
