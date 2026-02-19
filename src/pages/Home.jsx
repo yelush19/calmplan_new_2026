@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from "react";
-import { Task, Event } from "@/api/entities";
+import React, { useState, useEffect, useCallback } from "react";
+import { Task, Event, Client } from "@/api/entities";
 import { parseISO, format, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,15 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   ArrowRight, Target, AlertTriangle, ChevronDown, Sparkles,
   FileBarChart, Brain, Zap, Plus, CreditCard, List, LayoutGrid, Search,
-  Network, BarChart3
+  Network, BarChart3, Eye, EyeOff
 } from "lucide-react";
 import MindMapView from "../components/views/MindMapView";
 import GanttView from "../components/views/GanttView";
@@ -28,6 +26,15 @@ import { Pencil, Trash2, Pin } from "lucide-react";
 import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
 import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import { useApp } from "@/contexts/AppContext";
+
+// ─── Zero-Panic Colors (NO RED) ─────────────────────────────────
+const ZERO_PANIC = {
+  orange: '#F57C00',
+  purple: '#7B1FA2',
+  green:  '#2E7D32',
+  blue:   '#0288D1',
+};
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -59,8 +66,8 @@ function sortByPriority(tasks) {
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 
 const FOCUS_TABS = [
-  { key: 'overdue', label: 'באיחור', icon: AlertTriangle, color: 'text-red-600', activeBg: 'bg-red-50 border-red-300 text-red-700', badgeColor: 'bg-red-100 text-red-700' },
-  { key: 'today', label: 'היום', icon: Target, color: 'text-sky-600', activeBg: 'bg-sky-50 border-sky-300 text-sky-700', badgeColor: 'bg-sky-100 text-sky-700' },
+  { key: 'overdue', label: 'באיחור', icon: AlertTriangle, color: 'text-[#7B1FA2]', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
+  { key: 'today', label: 'היום', icon: Target, color: 'text-[#F57C00]', activeBg: 'bg-orange-50 border-orange-300 text-orange-700', badgeColor: 'bg-orange-100 text-orange-700' },
   { key: 'upcoming', label: '3 ימים', icon: Clock, color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-300 text-gray-700', badgeColor: 'bg-gray-100 text-gray-700' },
   { key: 'events', label: 'אירועים', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
   { key: 'payment', label: 'ממתין לתשלום', icon: CreditCard, color: 'text-yellow-600', activeBg: 'bg-yellow-50 border-yellow-300 text-yellow-700', badgeColor: 'bg-yellow-100 text-yellow-700' },
@@ -68,17 +75,32 @@ const FOCUS_TABS = [
 
 export default function HomePage() {
   const [data, setData] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [inboxItems, setInboxItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("");
   const [activeTab, setActiveTab] = useState('overdue');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [focusView, setFocusView] = useState('kanban');
+  const [focusView, setFocusView] = useState('mindmap'); // Default to mind map
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
+  const { focusMode } = useApp();
 
   useEffect(() => { loadData(); }, []);
+
+  // Listen for quick capture from desktop app
+  useEffect(() => {
+    const handler = (e) => {
+      const { task } = e.detail || {};
+      if (task) {
+        setInboxItems(prev => [...prev, task]);
+      }
+    };
+    window.addEventListener('calmplan:inbox-item', handler);
+    return () => window.removeEventListener('calmplan:inbox-item', handler);
+  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -92,10 +114,13 @@ export default function HomePage() {
         }
       } catch { setUserName('לנה'); }
 
-      const [tasksData, eventsData] = await Promise.all([
+      const [tasksData, eventsData, clientsData] = await Promise.all([
         Task.list("-due_date", 5000).catch(() => []),
         Event.list("-start_date", 500).catch(() => []),
+        Client.list("name", 1000).catch(() => []),
       ]);
+
+      setClients(Array.isArray(clientsData) ? clientsData : []);
 
       const rawTasks = Array.isArray(tasksData) ? tasksData : [];
       const nowMs = Date.now();
@@ -116,6 +141,12 @@ export default function HomePage() {
       });
 
       const activeTasks = allTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
+
+      // Inbox items = tasks with source 'quick-capture' that have no category/client
+      const inbox = activeTasks.filter(t =>
+        t.source === 'quick-capture' && !t.client_name && !t.category
+      );
+      setInboxItems(inbox);
 
       const overdue = activeTasks.filter(task => {
         const d = task.due_date;
@@ -141,7 +172,6 @@ export default function HomePage() {
         return taskDate >= tomorrow && taskDate <= in3Days;
       });
 
-      // Tasks waiting for payment
       const waitingPayment = activeTasks.filter(t => t.status === 'reported_waiting_for_payment');
 
       const allEvents = Array.isArray(eventsData) ? eventsData : [];
@@ -156,6 +186,8 @@ export default function HomePage() {
       const homeCount = activeTasks.filter(t => getTaskContext(t) === 'home').length;
 
       setData({
+        allTasks,
+        activeTasks,
         overdue: sortByPriority(overdue),
         today: sortByPriority(todayTasks),
         upcoming: sortByPriority(upcoming),
@@ -172,7 +204,6 @@ export default function HomePage() {
         }).length,
       });
 
-      // Auto-select first tab with content
       if (overdue.length > 0) setActiveTab('overdue');
       else if (todayTasks.length > 0) setActiveTab('today');
       else if (upcoming.length > 0) setActiveTab('upcoming');
@@ -190,6 +221,12 @@ export default function HomePage() {
       const updatePayload = { status: newStatus };
       await Task.update(task.id, updatePayload);
       syncNotesWithTaskStatus(task.id, newStatus);
+
+      // Dispatch completion event for CompletionFeedback
+      if (newStatus === 'completed') {
+        window.dispatchEvent(new CustomEvent('calmplan:task-completed', { detail: { task } }));
+      }
+
       setData(prev => {
         if (!prev) return prev;
         const updateInList = (list) => list.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
@@ -250,6 +287,14 @@ export default function HomePage() {
     }
   };
 
+  const handleInboxDismiss = useCallback(async (item) => {
+    // Move item out of inbox by assigning it a category
+    try {
+      await Task.update(item.id, { source: 'assigned', category: 'אחר' });
+      setInboxItems(prev => prev.filter(i => i.id !== item.id));
+    } catch { /* ignore */ }
+  }, []);
+
   if (isLoading || !data) {
     return (
       <div className="space-y-6 p-6">
@@ -278,12 +323,19 @@ export default function HomePage() {
     return filterBySearch(data[tabKey] || []).length;
   };
 
+  const allFocusTasks = filterBySearch([
+    ...(data.overdue || []),
+    ...(data.today || []),
+    ...(data.upcoming || []),
+    ...(data.payment || []),
+  ]);
+
   const getTabContent = () => {
     switch (activeTab) {
       case 'overdue': {
         const filtered = filterBySearch(data.overdue);
         return filtered.length === 0 ? (
-          <EmptyState icon={<CheckCircle className="w-10 h-10 text-emerald-400" />} text="אין משימות באיחור" />
+          <EmptyState icon={<CheckCircle className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />} text="אין משימות באיחור" />
         ) : (
           <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDeadlineContext />
         );
@@ -291,7 +343,7 @@ export default function HomePage() {
       case 'today': {
         const filtered = filterBySearch(data.today);
         return filtered.length === 0 ? (
-          <EmptyState icon={<Sparkles className="w-10 h-10 text-emerald-400" />} text="אין משימות להיום - כל הכבוד!" />
+          <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />} text="אין משימות להיום - כל הכבוד!" />
         ) : (
           <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDeadlineContext />
         );
@@ -339,7 +391,7 @@ export default function HomePage() {
 
   return (
     <motion.div
-      className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto"
+      className="p-4 md:p-6 space-y-5 max-w-5xl mx-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
@@ -356,7 +408,7 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-2">
           {data.completedToday > 0 && (
-            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1">
+            <Badge className="border-green-200 gap-1" style={{ backgroundColor: '#E8F5E9', color: ZERO_PANIC.green }}>
               <CheckCircle className="w-3.5 h-3.5" />
               {data.completedToday} הושלמו היום
             </Badge>
@@ -368,26 +420,26 @@ export default function HomePage() {
         </div>
       </motion.div>
 
-      {/* Quick counters */}
+      {/* Quick counters with Zero-Panic colors */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Link to={createPageUrl("Tasks") + "?tab=active&context=work"}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200 bg-blue-50/70">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD70' }}>
             <CardContent className="p-3 flex items-center gap-3">
-              <Briefcase className="w-5 h-5 text-blue-600" />
+              <Briefcase className="w-5 h-5" style={{ color: ZERO_PANIC.blue }} />
               <div>
-                <div className="text-xl font-bold text-blue-700">{data.workCount}</div>
-                <div className="text-[11px] text-blue-600">משימות עבודה</div>
+                <div className="text-xl font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</div>
+                <div className="text-[11px]" style={{ color: ZERO_PANIC.blue }}>משימות עבודה</div>
               </div>
             </CardContent>
           </Card>
         </Link>
         <Link to={createPageUrl("Tasks") + "?tab=active&context=home"}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200 bg-green-50/70">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#C8E6C9', backgroundColor: '#E8F5E970' }}>
             <CardContent className="p-3 flex items-center gap-3">
-              <HomeIcon className="w-5 h-5 text-green-600" />
+              <HomeIcon className="w-5 h-5" style={{ color: ZERO_PANIC.green }} />
               <div>
-                <div className="text-xl font-bold text-green-700">{data.homeCount}</div>
-                <div className="text-[11px] text-green-600">משימות בית</div>
+                <div className="text-xl font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</div>
+                <div className="text-[11px]" style={{ color: ZERO_PANIC.green }}>משימות בית</div>
               </div>
             </CardContent>
           </Card>
@@ -403,14 +455,17 @@ export default function HomePage() {
             </CardContent>
           </Card>
         </Link>
-        <Card className={`border-2 ${data.overdue.length > 0 ? 'border-amber-300 bg-amber-50/70' : 'border-gray-200 bg-gray-50/70'}`}>
+        <Card className="border-2" style={{
+          borderColor: data.overdue.length > 0 ? '#FFE0B2' : '#e5e7eb',
+          backgroundColor: data.overdue.length > 0 ? '#FFF3E070' : '#f9fafb70',
+        }}>
           <CardContent className="p-3 flex items-center gap-3">
-            <Clock className={`w-5 h-5 ${data.overdue.length > 0 ? 'text-amber-600' : 'text-gray-400'}`} />
+            <Clock className="w-5 h-5" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }} />
             <div>
-              <div className={`text-xl font-bold ${data.overdue.length > 0 ? 'text-amber-700' : 'text-gray-400'}`}>
+              <div className="text-xl font-bold" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }}>
                 {data.overdue.length}
               </div>
-              <div className={`text-[11px] ${data.overdue.length > 0 ? 'text-amber-600' : 'text-gray-500'}`}>באיחור</div>
+              <div className="text-[11px]" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#6B7280' }}>באיחור</div>
             </div>
           </CardContent>
         </Card>
@@ -425,11 +480,12 @@ export default function HomePage() {
             <div className="bg-white rounded-xl p-4 border shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-600">התקדמות יומית</span>
-                <span className="text-sm font-bold text-emerald-600">{Math.round(progress)}%</span>
+                <span className="text-sm font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full"
+                  className="h-full rounded-full"
+                  style={{ background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }}
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.8, ease: "easeOut" }}
@@ -437,32 +493,33 @@ export default function HomePage() {
               </div>
               <p className="text-xs text-gray-500 mt-1.5">
                 {data.completedToday} מתוך {todayTotal + data.completedToday} משימות הושלמו היום
-                {progress >= 100 && <span className="mr-2 text-emerald-600 font-medium">כל הכבוד!</span>}
+                {progress >= 100 && <span className="mr-2 font-medium" style={{ color: ZERO_PANIC.green }}>כל הכבוד!</span>}
               </p>
             </div>
           </motion.div>
         );
       })()}
 
-      {/* FOCUS AREA: Horizontal Tabs */}
+      {/* FOCUS AREA */}
       <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
         <Card>
           <CardHeader className="pb-0">
             <div className="flex items-center justify-between mb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Target className="w-5 h-5 text-blue-600" />
-                <span>הפוקוס שלי</span>
+                <Target className="w-5 h-5" style={{ color: ZERO_PANIC.blue }} />
+                <span>מרכז השליטה</span>
               </CardTitle>
               <div className="flex items-center gap-2">
+                {/* View Switcher */}
                 <div className="flex bg-gray-100 rounded-lg p-0.5">
-                  <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('list')} title="רשימה">
-                    <List className="w-3.5 h-3.5" />
+                  <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
+                    <Network className="w-3.5 h-3.5" />
                   </Button>
                   <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('kanban')} title="קנבן">
                     <LayoutGrid className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
-                    <Network className="w-3.5 h-3.5" />
+                  <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('list')} title="רשימה">
+                    <List className="w-3.5 h-3.5" />
                   </Button>
                   <Button variant={focusView === 'gantt' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('gantt')} title="ציר זמן">
                     <BarChart3 className="w-3.5 h-3.5" />
@@ -476,51 +533,61 @@ export default function HomePage() {
               </div>
             </div>
             {/* Search */}
-            <div className="relative mb-2">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="חיפוש לפי שם לקוח, משימה..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10 h-8 text-sm"
-              />
-            </div>
-            {/* Horizontal Tab Bar */}
-            <div className="flex gap-1.5 overflow-x-auto pb-2 border-b border-gray-100">
-              {FOCUS_TABS.map(tab => {
-                const count = getTabCount(tab.key);
-                const isActive = activeTab === tab.key;
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-sm font-medium transition-all whitespace-nowrap border-b-2 ${
-                      isActive
-                        ? `${tab.activeBg} border-current`
-                        : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 ${isActive ? '' : tab.color}`} />
-                    <span>{tab.label}</span>
-                    {count > 0 && (
-                      <Badge className={`text-[10px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>
-                        {count}
-                      </Badge>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            {focusView !== 'mindmap' && (
+              <>
+                <div className="relative mb-2">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="חיפוש לפי שם לקוח, משימה..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pr-10 h-8 text-sm"
+                  />
+                </div>
+                {/* Horizontal Tab Bar */}
+                <div className="flex gap-1.5 overflow-x-auto pb-2 border-b border-gray-100">
+                  {FOCUS_TABS.map(tab => {
+                    const count = getTabCount(tab.key);
+                    const isActive = activeTab === tab.key;
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-sm font-medium transition-all whitespace-nowrap border-b-2 ${
+                          isActive
+                            ? `${tab.activeBg} border-current`
+                            : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 ${isActive ? '' : tab.color}`} />
+                        <span>{tab.label}</span>
+                        {count > 0 && (
+                          <Badge className={`text-[10px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>
+                            {count}
+                          </Badge>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </CardHeader>
-          <CardContent className="pt-4">
+          <CardContent className={focusView === 'mindmap' ? 'pt-2 px-2 pb-2' : 'pt-4'}>
             {focusView === 'mindmap' ? (
-              <MindMapView tasks={filterBySearch([...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])])} clients={[]} />
+              <MindMapView
+                tasks={data.activeTasks || allFocusTasks}
+                clients={clients}
+                inboxItems={inboxItems}
+                onInboxDismiss={handleInboxDismiss}
+                focusMode={focusMode}
+              />
             ) : focusView === 'gantt' ? (
-              <GanttView tasks={filterBySearch([...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])])} clients={[]} />
+              <GanttView tasks={allFocusTasks} clients={clients} />
             ) : focusView === 'kanban' ? (
               <KanbanView
-                tasks={filterBySearch([...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])])}
+                tasks={allFocusTasks}
                 onTaskStatusChange={handleStatusChange}
                 onDeleteTask={(taskId) => handleDeleteTask({ id: taskId })}
                 onEditTask={handleEditTask}
@@ -550,10 +617,10 @@ export default function HomePage() {
         className="grid grid-cols-2 md:grid-cols-4 gap-3"
       >
         <Link to={createPageUrl("WeeklyPlanningDashboard")}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200 bg-blue-50/50 h-full">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD50' }}>
             <CardContent className="p-4 text-center">
-              <Brain className="w-6 h-6 mx-auto mb-2 text-blue-600" />
-              <h3 className="font-medium text-sm text-blue-800">תכנון שבועי</h3>
+              <Brain className="w-6 h-6 mx-auto mb-2" style={{ color: ZERO_PANIC.blue }} />
+              <h3 className="font-medium text-sm" style={{ color: '#1565C0' }}>תכנון שבועי</h3>
             </CardContent>
           </Card>
         </Link>
@@ -566,18 +633,18 @@ export default function HomePage() {
           </Card>
         </Link>
         <Link to={createPageUrl("AutomationRules")}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-yellow-200 bg-yellow-50/50 h-full">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#FFE0B2', backgroundColor: '#FFF3E050' }}>
             <CardContent className="p-4 text-center">
-              <Zap className="w-6 h-6 mx-auto mb-2 text-yellow-600" />
-              <h3 className="font-medium text-sm text-yellow-800">אוטומציות</h3>
+              <Zap className="w-6 h-6 mx-auto mb-2" style={{ color: ZERO_PANIC.orange }} />
+              <h3 className="font-medium text-sm" style={{ color: '#E65100' }}>אוטומציות</h3>
             </CardContent>
           </Card>
         </Link>
         <Link to={createPageUrl("WeeklySummary")}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200 bg-orange-50/50 h-full">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#CE93D8', backgroundColor: '#F3E5F550' }}>
             <CardContent className="p-4 text-center">
-              <FileBarChart className="w-6 h-6 mx-auto mb-2 text-orange-600" />
-              <h3 className="font-medium text-sm text-orange-800">סיכום שבועי</h3>
+              <FileBarChart className="w-6 h-6 mx-auto mb-2" style={{ color: ZERO_PANIC.purple }} />
+              <h3 className="font-medium text-sm" style={{ color: '#6A1B9A' }}>סיכום שבועי</h3>
             </CardContent>
           </Card>
         </Link>
@@ -610,7 +677,8 @@ export default function HomePage() {
       {/* FAB */}
       <button
         onClick={() => setShowQuickAdd(true)}
-        className="fixed bottom-6 left-20 w-14 h-14 bg-primary hover:bg-accent text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40"
+        className="fixed bottom-6 left-20 w-14 h-14 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40"
+        style={{ backgroundColor: ZERO_PANIC.blue }}
         title="הוסף משימה מהירה"
       >
         <Plus className="w-6 h-6" />
@@ -657,17 +725,21 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, 
   );
 }
 
+// Zero-Panic priority styles (NO RED)
+const priorityStyles = {
+  urgent: 'border-r-4 border-r-[#F57C00]',  // Orange, not red
+  high: 'border-r-4 border-r-[#FF8F00]',     // Amber
+  medium: 'border-r-4 border-r-[#FFB300]',   // Yellow-amber
+  low: 'border-r-4 border-r-gray-300',
+};
+
 function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
   const ctx = getTaskContext(task);
   const isWork = ctx === 'work';
   const isHome = ctx === 'home';
 
-  const priorityStyles = {
-    urgent: 'border-r-4 border-r-red-500',
-    high: 'border-r-4 border-r-orange-400',
-    medium: 'border-r-4 border-r-yellow-400',
-    low: 'border-r-4 border-r-gray-300',
-  };
+  // Ghost node: missing due date or complexity
+  const isMissingData = !task.due_date || !task.client_size;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -676,18 +748,20 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
 
   const statusCfg = statusConfig[task.status] || statusConfig.not_started;
 
-  // Payment date tracking
   const paymentDaysLeft = task.payment_due_date
     ? differenceInDays(parseISO(task.payment_due_date), today)
     : null;
 
   return (
-    <div className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-amber-50/30' : ''}`}>
+    <div className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-orange-50/30' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm text-gray-800 truncate">{task.title}</span>
           {task.priority === 'urgent' && (
-            <Badge className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0">דחוף</Badge>
+            <Badge style={{ backgroundColor: '#FFF3E0', color: '#E65100' }} className="text-[10px] px-1.5 py-0">דחוף</Badge>
+          )}
+          {isMissingData && (
+            <Badge className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 border border-dashed border-gray-300">חסר מידע</Badge>
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -697,8 +771,11 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
           {task.category && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{task.category}</Badge>
           )}
+          {task.client_size && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-bold">{task.client_size}</Badge>
+          )}
           {showDeadlineContext && isOverdue && (
-            <Badge className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0">
+            <Badge style={{ backgroundColor: '#F3E5F5', color: '#7B1FA2' }} className="text-[10px] px-1.5 py-0">
               {daysFromDue === 1 ? 'אתמול' : `${daysFromDue} ימים באיחור`}
             </Badge>
           )}
@@ -710,9 +787,8 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
               {isTomorrow(parseISO(task.due_date)) ? 'מחר' : format(parseISO(task.due_date), 'd/M')}
             </span>
           )}
-          {/* Payment date info */}
           {showPaymentDate && task.payment_due_date && (
-            <Badge className={`text-[10px] px-1.5 py-0 ${paymentDaysLeft <= 0 ? 'bg-red-100 text-red-700' : paymentDaysLeft <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-yellow-100 text-yellow-700'}`}>
+            <Badge className={`text-[10px] px-1.5 py-0 ${paymentDaysLeft <= 0 ? 'bg-purple-100 text-purple-700' : paymentDaysLeft <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
               {paymentDaysLeft < 0 ? `${Math.abs(paymentDaysLeft)} ימים באיחור תשלום` : paymentDaysLeft === 0 ? 'תשלום היום' : `${paymentDaysLeft} ימים לתשלום`}
             </Badge>
           )}
@@ -737,7 +813,6 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
             <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
           </button>
         )}
-        {/* Payment due date input - shows for reported_waiting_for_payment */}
         {task.status === 'reported_waiting_for_payment' && onPaymentDateChange && (
           <input
             type="date"
@@ -760,9 +835,9 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
           </Select>
         )}
         {isWork ? (
-          <Briefcase className="w-3.5 h-3.5 text-blue-500" />
+          <Briefcase className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
         ) : isHome ? (
-          <HomeIcon className="w-3.5 h-3.5 text-green-500" />
+          <HomeIcon className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.green }} />
         ) : null}
       </div>
     </div>

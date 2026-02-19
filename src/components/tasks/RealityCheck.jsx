@@ -12,6 +12,11 @@ const SIZE_DURATION_MAP = {
   XL: 180,
 };
 
+// Zero-Panic Purple for the Reality Check
+const PURPLE = '#7B1FA2';
+const PURPLE_LIGHT = '#E1BEE7';
+const PURPLE_BG = '#F3E5F5';
+
 export default function RealityCheck() {
   const [activeTask, setActiveTask] = useState(null);
   const [startTime, setStartTime] = useState(null);
@@ -91,15 +96,19 @@ export default function RealityCheck() {
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -50, opacity: 0 }}
-          className="fixed top-16 left-1/2 -translate-x-1/2 z-[60] bg-white border-2 border-blue-300 rounded-2xl shadow-2xl p-4 w-[400px] max-w-[calc(100vw-2rem)]"
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-[60] rounded-2xl shadow-2xl p-4 w-[400px] max-w-[calc(100vw-2rem)]"
+          style={{
+            backgroundColor: PURPLE_BG,
+            border: `2px solid ${PURPLE_LIGHT}`,
+          }}
           dir="rtl"
         >
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-100 rounded-xl shrink-0">
-              <Hourglass className="w-6 h-6 text-blue-600" />
+            <div className="p-2 rounded-xl shrink-0" style={{ backgroundColor: PURPLE_LIGHT }}>
+              <Hourglass className="w-6 h-6" style={{ color: PURPLE }} />
             </div>
             <div className="flex-1">
-              <h3 className="font-bold text-blue-800 text-sm">Reality Check</h3>
+              <h3 className="font-bold text-sm" style={{ color: PURPLE }}>Reality Check</h3>
               <p className="text-xs text-gray-600 mt-1">
                 את עובדת על <strong>"{activeTask.title}"</strong> כבר {elapsedMinutes} דקות.
                 הזמן המוערך חלף.
@@ -107,7 +116,8 @@ export default function RealityCheck() {
               <div className="flex gap-2 mt-3">
                 <Button
                   size="sm"
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs gap-1"
+                  className="text-white text-xs gap-1"
+                  style={{ backgroundColor: '#2E7D32' }}
                   onClick={handleContinue}
                 >
                   <Play className="w-3 h-3" />
@@ -116,7 +126,8 @@ export default function RealityCheck() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                  className="text-xs gap-1"
+                  style={{ borderColor: PURPLE_LIGHT, color: PURPLE }}
                   onClick={handleStop}
                 >
                   <Square className="w-3 h-3" />
