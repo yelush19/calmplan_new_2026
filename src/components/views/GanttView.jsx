@@ -5,6 +5,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Task } from '@/api/entities';
 import { toast } from 'sonner';
 import { getScheduledStartForCategory } from '@/config/automationRules';
+import { getPayrollTier, getVatEnergyTier, getTaskComplexity } from '@/engines/taskCascadeEngine';
+import { getServiceForTask } from '@/config/processTemplates';
 
 const STATUS_COLORS = {
   completed: 'bg-emerald-400',
@@ -15,7 +17,15 @@ const STATUS_COLORS = {
   reported_waiting_for_payment: 'bg-violet-300',
   ready_for_reporting: 'bg-indigo-300',
   waiting_for_approval: 'bg-cyan-300',
+  pending_external: 'bg-blue-400',
   postponed: 'bg-gray-400',
+};
+
+// Estimated work-hours → calendar days mapping
+// Quick Win / Nano = 0.5 day, Standard/Small = 1 day, Mid = 2 days, Enterprise/Climb = 3+ days
+const TIER_DURATION_DAYS = {
+  nano: 1, small: 2, mid: 3, enterprise: 5,
+  quick_win: 1, standard: 1, climb: 3,
 };
 
 const SIZE_HEIGHT = { S: 'h-5', M: 'h-6', L: 'h-8', XL: 'h-10' };
@@ -59,6 +69,13 @@ export default function GanttView({ tasks, clients, currentMonth }) {
     return estimateClientSize(client, tasks);
   };
 
+  // Build client lookup for tier computation
+  const clientByName = useMemo(() => {
+    const map = {};
+    (clients || []).forEach(c => { map[c.name] = c; });
+    return map;
+  }, [clients]);
+
   const getTaskPosition = (task) => {
     // Use scheduled_start if available, otherwise derive from Settings-driven execution periods
     const derivedStart = task.scheduled_start
@@ -66,14 +83,39 @@ export default function GanttView({ tasks, clients, currentMonth }) {
       || task.due_date;
     const start = parseISO(derivedStart);
     const end = parseISO(task.due_date);
-    const startDay = Math.max(0, differenceInDays(start, monthStart));
-    const endDay = Math.min(daysInMonth - 1, differenceInDays(end, monthStart));
-    const width = Math.max(1, endDay - startDay + 1);
+    let startDay = Math.max(0, differenceInDays(start, monthStart));
+    let endDay = Math.min(daysInMonth - 1, differenceInDays(end, monthStart));
+    let width = Math.max(1, endDay - startDay + 1);
+
+    // Tier-aware duration: if the task has a known tier, enforce minimum bar width
+    const client = clientByName[task.client_name];
+    const service = getServiceForTask(task);
+    let tierKey = null;
+    if (service?.key === 'payroll' && client) {
+      tierKey = getPayrollTier(client).key;
+    } else if (service?.key === 'vat') {
+      tierKey = getVatEnergyTier(task).key;
+    } else if (service?.key === 'reconciliation' || service?.key === 'annual_reports') {
+      const complexity = getTaskComplexity(task, client);
+      tierKey = complexity === 'high' ? 'climb' : complexity === 'medium' ? 'standard' : 'quick_win';
+    }
+
+    if (tierKey && TIER_DURATION_DAYS[tierKey]) {
+      const tierDays = TIER_DURATION_DAYS[tierKey];
+      // Enforce minimum width from tier, but don't shrink manually-set spans
+      if (width < tierDays) {
+        const newStart = Math.max(0, endDay - tierDays + 1);
+        startDay = newStart;
+        width = tierDays;
+      }
+    }
+
     return {
       left: `${(startDay / daysInMonth) * 100}%`,
       width: `${(width / daysInMonth) * 100}%`,
       startDay,
       durationDays: width,
+      tierKey,
     };
   };
 
@@ -199,7 +241,11 @@ export default function GanttView({ tasks, clients, currentMonth }) {
                       <p className="font-medium">{task.title}</p>
                       <p className="text-xs text-gray-400">
                         {task.category} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}
+                        {pos.tierKey && ` \u2022 ${pos.tierKey}`}
                       </p>
+                      {pos.durationDays > 1 && (
+                        <p className="text-[10px] text-gray-500">{pos.durationDays} ימי עבודה</p>
+                      )}
                       <p className="text-[10px] text-gray-400 mt-0.5">גרור ימינה/שמאלה לשינוי תאריך</p>
                     </TooltipContent>
                   </Tooltip>

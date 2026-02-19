@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Task, Event, Client } from "@/api/entities";
 import { parseISO, format, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
@@ -99,6 +99,20 @@ export default function HomePage() {
     });
   }, []);
   const { insights } = useTaskCascade(allTasksForCascade, setAllTasksForCascade, clients);
+
+  // System readiness: count clients missing critical data
+  const setupIncomplete = useMemo(() => {
+    if (!clients.length) return { missing: 0, total: 0 };
+    const active = clients.filter(c => c.status !== 'inactive' && c.status !== 'deleted');
+    const missing = active.filter(c => {
+      const bi = c.business_info || {};
+      const hasEmployees = (bi.employee_count || c.employee_count || 0) > 0;
+      const hasComplexity = !!(bi.complexity_level || c.complexity_level);
+      const hasVat = (bi.vat_volume || c.vat_volume || 0) > 0;
+      return !(hasEmployees && hasComplexity && hasVat);
+    }).length;
+    return { missing, total: active.length };
+  }, [clients]);
 
   useEffect(() => { loadData(); }, []);
 
@@ -434,6 +448,35 @@ export default function HomePage() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Setup Incomplete Notification */}
+      {setupIncomplete.missing > 0 && (
+        <motion.div initial={{ y: -5, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+          <Card className="bg-amber-50/80 border-amber-200 shadow-sm">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-amber-800">
+                    הגדרת מערכת לא הושלמה: {setupIncomplete.missing} לקוחות חסרים נתונים
+                  </span>
+                  <span className="text-xs text-amber-600 mr-2">
+                    (מתוך {setupIncomplete.total} פעילים)
+                  </span>
+                </div>
+              </div>
+              <Link to={createPageUrl("SystemReadiness")}>
+                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white gap-1 font-bold text-xs">
+                  <Zap className="w-3.5 h-3.5" />
+                  השלם הגדרה
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Quick counters with Zero-Panic colors */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
