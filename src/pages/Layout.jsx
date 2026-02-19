@@ -23,6 +23,7 @@ import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
 import useAutoReminders from "@/hooks/useAutoReminders";
 import useBackupMonitor from "@/hooks/useBackupMonitor";
 import BackupHealthIndicator from "@/components/BackupHealthIndicator";
+import SyncStatusIndicator from "@/components/SyncStatusIndicator";
 import { Task, Client } from "@/api/entities";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import RealityCheck from "@/components/tasks/RealityCheck";
@@ -376,6 +377,7 @@ function LayoutInner({ children }) {
               <Maximize2 className="w-5 h-5" />
             </Button>
 
+            <SyncStatusIndicator />
             <BackupHealthIndicator health={backupHealth} />
           </div>
         </header>

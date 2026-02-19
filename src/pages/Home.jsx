@@ -26,6 +26,7 @@ import { Pencil, Trash2, Pin } from "lucide-react";
 import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
 import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
 import { useApp } from "@/contexts/AppContext";
 
 // ─── Zero-Panic Colors (NO RED) ─────────────────────────────────
@@ -89,6 +90,9 @@ export default function HomePage() {
   const { focusMode } = useApp();
 
   useEffect(() => { loadData(); }, []);
+
+  // Auto-refresh when remote data changes arrive (cross-device sync)
+  useRealtimeRefresh(() => { loadData(); }, ['tasks', 'events', 'clients']);
 
   // Listen for quick capture from desktop app
   useEffect(() => {
