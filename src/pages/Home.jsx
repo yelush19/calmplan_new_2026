@@ -16,8 +16,11 @@ import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   ArrowRight, Target, AlertTriangle, ChevronDown, Sparkles,
-  FileBarChart, Brain, Zap, Plus, CreditCard, List, LayoutGrid, Search
+  FileBarChart, Brain, Zap, Plus, CreditCard, List, LayoutGrid, Search,
+  Network, BarChart3
 } from "lucide-react";
+import MindMapView from "../components/views/MindMapView";
+import GanttView from "../components/views/GanttView";
 import KanbanView from "../components/tasks/KanbanView";
 import TaskEditDialog from "@/components/tasks/TaskEditDialog";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
@@ -413,6 +416,34 @@ export default function HomePage() {
         </Card>
       </div>
 
+      {/* Daily Progress Bar */}
+      {(() => {
+        const todayTotal = data.today.length + (data.overdue?.length || 0);
+        const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
+        return (
+          <motion.div initial={{ y: 5, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
+            <div className="bg-white rounded-xl p-4 border shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">התקדמות יומית</span>
+                <span className="text-sm font-bold text-emerald-600">{Math.round(progress)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">
+                {data.completedToday} מתוך {todayTotal + data.completedToday} משימות הושלמו היום
+                {progress >= 100 && <span className="mr-2 text-emerald-600 font-medium">כל הכבוד!</span>}
+              </p>
+            </div>
+          </motion.div>
+        );
+      })()}
+
       {/* FOCUS AREA: Horizontal Tabs */}
       <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
         <Card>
@@ -424,11 +455,17 @@ export default function HomePage() {
               </CardTitle>
               <div className="flex items-center gap-2">
                 <div className="flex bg-gray-100 rounded-lg p-0.5">
-                  <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('list')}>
+                  <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('list')} title="רשימה">
                     <List className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('kanban')}>
+                  <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('kanban')} title="קנבן">
                     <LayoutGrid className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
+                    <Network className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant={focusView === 'gantt' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('gantt')} title="ציר זמן">
+                    <BarChart3 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
                 <Link to={createPageUrl("Tasks")}>
@@ -477,7 +514,11 @@ export default function HomePage() {
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            {focusView === 'kanban' ? (
+            {focusView === 'mindmap' ? (
+              <MindMapView tasks={filterBySearch([...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])])} clients={[]} />
+            ) : focusView === 'gantt' ? (
+              <GanttView tasks={filterBySearch([...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])])} clients={[]} />
+            ) : focusView === 'kanban' ? (
               <KanbanView
                 tasks={filterBySearch([...(data.overdue || []), ...(data.today || []), ...(data.upcoming || []), ...(data.payment || [])])}
                 onTaskStatusChange={handleStatusChange}

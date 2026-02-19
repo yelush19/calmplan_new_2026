@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   CommandDialog, CommandInput, CommandList, CommandEmpty,
-  CommandGroup, CommandItem, CommandSeparator,
+  CommandGroup, CommandItem,
 } from '@/components/ui/command';
 import {
   CheckSquare, Users, FolderKanban, StickyNote, Search,
-  Calendar, FileText, Target, ArrowLeft,
+  ArrowLeft, Plus, UserCheck, FileBarChart, Calculator, Eye, Zap,
 } from 'lucide-react';
 import { Task, Client, Project, StickyNote as StickyNoteEntity } from '@/api/entities';
 import { createPageUrl } from '@/utils';
@@ -49,7 +49,7 @@ const ENTITY_CONFIGS = [
     color: 'text-amber-600',
     entity: StickyNoteEntity,
     searchFields: ['title', 'content'],
-    getUrl: () => null, // notes don't navigate
+    getUrl: () => null,
     getSubtitle: (item) => item.content?.substring(0, 60) || '',
   },
 ];
@@ -61,6 +61,60 @@ export default function GlobalSearch() {
   const [allData, setAllData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine current page for context-aware boosting
+  const getCurrentPage = () => {
+    const path = location.pathname;
+    if (path.includes('TaxReportsDashboard')) return 'TaxReportsDashboard';
+    if (path.includes('PayrollDashboard')) return 'PayrollDashboard';
+    if (path.includes('ClientsDashboard')) return 'ClientsDashboard';
+    return '';
+  };
+
+  // Quick Actions
+  const QUICK_ACTIONS = [
+    {
+      key: 'new_task',
+      label: 'משימה חדשה',
+      icon: Plus,
+      color: 'text-emerald-600',
+      keywords: ['משימה חדשה', 'צור משימה', 'הוסף משימה', 'new task'],
+      action: () => navigate(createPageUrl('Tasks')),
+    },
+    {
+      key: 'new_client',
+      label: 'קליטת לקוח חדש',
+      icon: UserCheck,
+      color: 'text-blue-600',
+      keywords: ['לקוח חדש', 'קליטה', 'onboarding'],
+      action: () => navigate(createPageUrl('ClientOnboarding')),
+    },
+    {
+      key: 'vat_report',
+      label: 'דיווח מע"מ',
+      icon: FileBarChart,
+      color: 'text-violet-600',
+      keywords: ['מעמ', 'vat', 'דיווח מע"מ', 'מע"מ'],
+      action: () => navigate(createPageUrl('TaxReportsDashboard')),
+    },
+    {
+      key: 'payroll',
+      label: 'שכר ודיווחי רשויות',
+      icon: Calculator,
+      color: 'text-orange-600',
+      keywords: ['שכר', 'payroll', 'תלוש'],
+      action: () => navigate(createPageUrl('PayrollDashboard')),
+    },
+    {
+      key: 'focus',
+      label: 'פוקוס יומי',
+      icon: Eye,
+      color: 'text-sky-600',
+      keywords: ['ריכוז', 'פוקוס', 'focus', 'יומי'],
+      action: () => navigate(createPageUrl('Home')),
+    },
+  ];
 
   // Keyboard shortcut: Ctrl+K or Cmd+K
   useEffect(() => {
@@ -101,7 +155,7 @@ export default function GlobalSearch() {
     loadAll();
   }, [open]);
 
-  // Filter results based on query
+  // Filter results with context-aware boosting
   useEffect(() => {
     if (!query.trim()) {
       setResults({});
@@ -109,21 +163,44 @@ export default function GlobalSearch() {
     }
 
     const q = query.trim().toLowerCase();
+    const currentPage = getCurrentPage();
     const filtered = {};
 
     for (const config of ENTITY_CONFIGS) {
       const items = allData[config.key] || [];
-      const matches = items.filter(item =>
+      let matches = items.filter(item =>
         config.searchFields.some(field => {
           const val = item[field];
           return val && String(val).toLowerCase().includes(q);
         })
-      ).slice(0, 5); // max 5 per category
+      );
 
+      // Context boosting
+      if (currentPage === 'TaxReportsDashboard' && config.key === 'tasks') {
+        matches.sort((a, b) => {
+          const aIsTax = ['מע"מ', 'מקדמות מס'].includes(a.category) ? -1 : 0;
+          const bIsTax = ['מע"מ', 'מקדמות מס'].includes(b.category) ? -1 : 0;
+          return aIsTax - bIsTax;
+        });
+      } else if (currentPage === 'PayrollDashboard' && config.key === 'tasks') {
+        matches.sort((a, b) => {
+          const aIsPayroll = ['שכר', 'ביטוח לאומי', 'ניכויים'].includes(a.category) ? -1 : 0;
+          const bIsPayroll = ['שכר', 'ביטוח לאומי', 'ניכויים'].includes(b.category) ? -1 : 0;
+          return aIsPayroll - bIsPayroll;
+        });
+      }
+
+      matches = matches.slice(0, 5);
       if (matches.length > 0) {
         filtered[config.key] = matches;
       }
     }
+
+    // Match Quick Actions
+    const matchingActions = QUICK_ACTIONS.filter(a =>
+      a.keywords.some(kw => kw.includes(q) || q.includes(kw))
+    );
+    if (matchingActions.length > 0) filtered['actions'] = matchingActions;
 
     setResults(filtered);
   }, [query, allData]);
@@ -140,13 +217,13 @@ export default function GlobalSearch() {
 
   return (
     <>
-      {/* Search trigger button in sidebar */}
+      {/* Search trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-400 bg-gray-100 hover:bg-gray-200 rounded-xl border border-gray-200 transition-colors"
       >
         <Search className="w-4 h-4" />
-        <span className="flex-1 text-right">חיפוש מהיר...</span>
+        <span className="flex-1 text-right">חיפוש או ביצוע פעולה...</span>
         <kbd className="hidden md:inline-flex items-center gap-0.5 rounded border border-gray-300 bg-gray-50 px-1.5 py-0.5 text-[10px] font-mono text-gray-500">
           Ctrl+K
         </kbd>
@@ -155,7 +232,7 @@ export default function GlobalSearch() {
       {/* Command palette dialog */}
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
-          placeholder="חפש לקוחות, משימות, פרויקטים..."
+          placeholder="חפש לקוחות, משימות, פרויקטים או הקלד פעולה..."
           value={query}
           onValueChange={setQuery}
           dir="rtl"
@@ -175,6 +252,28 @@ export default function GlobalSearch() {
             </div>
           )}
 
+          {/* Quick Actions */}
+          {!isLoading && results.actions && (
+            <CommandGroup heading={
+              <span className="flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                פעולות מהירות
+              </span>
+            }>
+              {results.actions.map(action => {
+                const ActionIcon = action.icon;
+                return (
+                  <CommandItem key={action.key} onSelect={() => { action.action(); setOpen(false); }}
+                    className="flex items-center gap-2 cursor-pointer">
+                    <ActionIcon className={`w-4 h-4 ${action.color} shrink-0`} />
+                    <span className="text-sm font-medium">{action.label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
+
+          {/* Entity results */}
           {!isLoading && ENTITY_CONFIGS.map((config) => {
             const items = results[config.key];
             if (!items || items.length === 0) return null;
