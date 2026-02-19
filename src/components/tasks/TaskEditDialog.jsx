@@ -22,6 +22,18 @@ import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
 import { toast } from 'sonner';
 
+// Fix 2-digit year inputs: "26-01-15" -> "2026-01-15"
+const fixShortYear = (value) => {
+  if (!value) return value;
+  const match = value.match(/^(\d{1,2})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const yr = parseInt(match[1], 10);
+    const fullYear = yr < 100 ? (yr < 50 ? 2000 + yr : 1900 + yr) : yr;
+    return `${fullYear}-${match[2]}-${match[3]}`;
+  }
+  return value;
+};
+
 const PRIORITY_OPTIONS = [
   { value: 'urgent', label: 'דחוף', icon: AlertTriangle, color: 'text-red-600' },
   { value: 'high', label: 'גבוה', icon: ArrowUp, color: 'text-orange-500' },
@@ -86,6 +98,8 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
   const [editData, setEditData] = useState({});
   const [newSubTitle, setNewSubTitle] = useState('');
   const [newSubDue, setNewSubDue] = useState('');
+  const [newSubTime, setNewSubTime] = useState('');
+  const [newSubPriority, setNewSubPriority] = useState('medium');
 
   useEffect(() => {
     if (task && open) {
@@ -103,6 +117,8 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
       });
       setNewSubTitle('');
       setNewSubDue('');
+      setNewSubTime('');
+      setNewSubPriority('medium');
     }
   }, [task, open]);
 
@@ -119,11 +135,13 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
     if (!newSubTitle.trim()) return;
     const updated = [
       ...editData.sub_tasks,
-      { id: `st_${Date.now()}`, title: newSubTitle.trim(), due_date: newSubDue || null, done: false }
+      { id: `st_${Date.now()}`, title: newSubTitle.trim(), due_date: newSubDue || null, due_time: newSubTime || null, priority: newSubPriority || 'medium', done: false }
     ];
     setEditData(prev => ({ ...prev, sub_tasks: updated }));
     setNewSubTitle('');
     setNewSubDue('');
+    setNewSubTime('');
+    setNewSubPriority('medium');
   };
 
   const handleToggleSubTask = (subId) => {
@@ -234,6 +252,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
                   type="date"
                   value={editData.scheduled_start}
                   onChange={(e) => setEditData(prev => ({ ...prev, scheduled_start: e.target.value }))}
+                  onBlur={(e) => { const f = fixShortYear(e.target.value); if (f !== e.target.value) setEditData(prev => ({ ...prev, scheduled_start: f })); }}
                   className="text-sm h-9"
                   dir="ltr"
                 />
@@ -244,6 +263,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
                   type="date"
                   value={editData.due_date}
                   onChange={(e) => setEditData(prev => ({ ...prev, due_date: e.target.value }))}
+                  onBlur={(e) => { const f = fixShortYear(e.target.value); if (f !== e.target.value) setEditData(prev => ({ ...prev, due_date: f })); }}
                   className="text-sm h-9"
                   dir="ltr"
                 />
@@ -308,57 +328,95 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
 
             {editData.sub_tasks?.length > 0 && (
               <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                {editData.sub_tasks.map(st => (
-                  <div key={st.id} className="flex items-center gap-2 p-1.5 rounded bg-gray-50 group">
-                    <button onClick={() => handleToggleSubTask(st.id)} className="shrink-0">
-                      {st.done ? (
-                        <CheckSquare className="w-4 h-4 text-emerald-500" />
-                      ) : (
-                        <Square className="w-4 h-4 text-gray-400" />
+                {editData.sub_tasks.map(st => {
+                  const stPri = PRIORITY_OPTIONS.find(p => p.value === st.priority);
+                  return (
+                    <div key={st.id} className="flex items-center gap-2 p-1.5 rounded bg-gray-50 group">
+                      <button onClick={() => handleToggleSubTask(st.id)} className="shrink-0">
+                        {st.done ? (
+                          <CheckSquare className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <Square className="w-4 h-4 text-gray-400" />
+                        )}
+                      </button>
+                      {stPri && (
+                        <stPri.icon className={`w-3 h-3 shrink-0 ${stPri.color}`} />
                       )}
-                    </button>
-                    <span className={`text-xs flex-1 ${st.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                      {st.title}
-                    </span>
-                    {st.due_date && (
-                      <span className="text-[10px] text-gray-400">{st.due_date}</span>
-                    )}
-                    <button
-                      onClick={() => handleDeleteSubTask(st.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                    >
-                      <X className="w-3.5 h-3.5 text-red-400 hover:text-red-600" />
-                    </button>
-                  </div>
-                ))}
+                      <span className={`text-xs flex-1 ${st.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                        {st.title}
+                      </span>
+                      {st.due_time && (
+                        <span className="text-[10px] text-blue-400 flex items-center gap-0.5">
+                          <Clock className="w-2.5 h-2.5" />{st.due_time}
+                        </span>
+                      )}
+                      {st.due_date && (
+                        <span className="text-[10px] text-gray-400">{st.due_date}</span>
+                      )}
+                      <button
+                        onClick={() => handleDeleteSubTask(st.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5 text-red-400 hover:text-red-600" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             {/* Add sub task */}
-            <div className="flex items-center gap-2">
-              <Input
-                value={newSubTitle}
-                onChange={(e) => setNewSubTitle(e.target.value)}
-                placeholder="תת משימה חדשה..."
-                className="text-xs h-8 flex-1"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSubTask()}
-              />
-              <Input
-                type="date"
-                value={newSubDue}
-                onChange={(e) => setNewSubDue(e.target.value)}
-                className="text-xs h-8 w-[130px]"
-                dir="ltr"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-2 shrink-0"
-                onClick={handleAddSubTask}
-                disabled={!newSubTitle.trim()}
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </Button>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newSubTitle}
+                  onChange={(e) => setNewSubTitle(e.target.value)}
+                  placeholder="תת משימה חדשה..."
+                  className="text-xs h-8 flex-1"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSubTask()}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 shrink-0"
+                  onClick={handleAddSubTask}
+                  disabled={!newSubTitle.trim()}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  value={newSubDue}
+                  onChange={(e) => setNewSubDue(e.target.value)}
+                  onBlur={(e) => { const f = fixShortYear(e.target.value); if (f !== e.target.value) setNewSubDue(f); }}
+                  className="text-xs h-8 w-[120px]"
+                  dir="ltr"
+                />
+                <Input
+                  type="time"
+                  value={newSubTime}
+                  onChange={(e) => setNewSubTime(e.target.value)}
+                  className="text-xs h-8 w-[90px]"
+                  dir="ltr"
+                />
+                <Select value={newSubPriority} onValueChange={setNewSubPriority}>
+                  <SelectTrigger className="text-xs h-8 w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRIORITY_OPTIONS.map(p => (
+                      <SelectItem key={p.value} value={p.value} className="text-xs">
+                        <span className={`inline-flex items-center gap-1 ${p.color}`}>
+                          <p.icon className="w-3 h-3" />
+                          {p.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

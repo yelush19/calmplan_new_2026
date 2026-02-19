@@ -75,9 +75,9 @@ export default function TaskTimer({ task, onStop, onCancel }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
-      <Card className="w-full max-w-2xl shadow-2xl">
+      <Card className="w-full max-w-2xl shadow-2xl bg-white">
         <CardHeader className="bg-gradient-to-l from-green-50 to-blue-50 border-b border-green-200">
           <CardTitle className="flex items-center gap-3 text-2xl text-gray-800">
             <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">

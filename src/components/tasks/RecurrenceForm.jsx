@@ -1,4 +1,5 @@
 import React from 'react';
+const fixShortYear = (v) => { if (!v) return v; const m = v.match(/^(\d{1,2})-(\d{2})-(\d{2})$/); if (m) { const yr = parseInt(m[1], 10); return `${yr < 100 ? (yr < 50 ? 2000 + yr : 1900 + yr) : yr}-${m[2]}-${m[3]}`; } return v; };
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -76,10 +77,11 @@ export default function RecurrenceForm({ pattern, setPattern }) {
 
       <div>
         <Label>תאריך סיום (אופציונלי)</Label>
-        <Input 
+        <Input
           type="date"
           value={pattern.end_date || ''}
           onChange={(e) => setPattern({...pattern, end_date: e.target.value})}
+          onBlur={(e) => { const f = fixShortYear(e.target.value); if (f !== e.target.value) setPattern({...pattern, end_date: f}); }}
         />
       </div>
     </div>

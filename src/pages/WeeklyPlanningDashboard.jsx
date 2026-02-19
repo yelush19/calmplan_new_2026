@@ -82,7 +82,7 @@ function MiniStatusDropdown({ task, onStatusChange }) {
 
 function RescheduleDropdown({ task, weekDays, onReschedule }) {
   return (
-    <Select value="" onValueChange={(dayStr) => onReschedule(task, dayStr)}>
+    <Select value={undefined} onValueChange={(dayStr) => onReschedule(task, dayStr)}>
       <SelectTrigger className="h-6 text-[10px] px-1.5 w-auto min-w-[50px] border border-gray-200 bg-white">
         <ArrowLeftRight className="w-3 h-3" />
       </SelectTrigger>
@@ -287,7 +287,7 @@ export default function WeeklyPlanningDashboard() {
 
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
 
-  const { dailyTasks, weekTasks, overdueTasks, stats, weekCategories, weekDaysData } = useMemo(() => {
+  const { dailyTasks, weekTasks, overdueTasks, unassignedTasks, stats, weekCategories, weekDaysData } = useMemo(() => {
     const weekStartStr = format(weekStart, 'yyyy-MM-dd');
     const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
     const todayStr = format(today, 'yyyy-MM-dd');
@@ -548,6 +548,20 @@ export default function WeeklyPlanningDashboard() {
 
   const toggleDay = (dayIndex) => {
     setCollapsedDays(prev => ({ ...prev, [dayIndex]: !prev[dayIndex] }));
+  };
+
+  const expandAllDays = () => {
+    setCollapsedDays({});
+    const all = {};
+    WORK_DAYS.forEach(wd => { all[wd.dayIndex] = true; });
+    setExpandedCompletedDays(all);
+  };
+  const collapseAllDays = () => {
+    const all = {};
+    WORK_DAYS.forEach(wd => { all[wd.dayIndex] = true; });
+    all['overdue'] = true;
+    setCollapsedDays(all);
+    setExpandedCompletedDays({});
   };
 
   const renderTaskRow = (task) => {
@@ -982,6 +996,17 @@ export default function WeeklyPlanningDashboard() {
       )}
 
       {/* Daily breakdown */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-bold text-gray-600">פירוט יומי</span>
+        <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
+          <button onClick={expandAllDays} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 font-medium transition-colors">
+            פתח הכל
+          </button>
+          <button onClick={collapseAllDays} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 font-medium transition-colors">
+            סגור הכל
+          </button>
+        </div>
+      </div>
       <div className="space-y-3">
         {WORK_DAYS.map((wd, idx) => {
           const day = dailyTasks[wd.dayIndex];

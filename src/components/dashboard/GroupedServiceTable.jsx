@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+const fixShortYear = (v) => { if (!v) return v; const m = v.match(/^(\d{1,2})-(\d{2})-(\d{2})$/); if (m) { const yr = parseInt(m[1], 10); return `${yr < 100 ? (yr < 50 ? 2000 + yr : 1900 + yr) : yr}-${m[2]}-${m[3]}`; } return v; };
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -246,6 +247,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
   const [showSubTasks, setShowSubTasks] = useState(false);
   const [newSubTitle, setNewSubTitle] = useState('');
   const [newSubDue, setNewSubDue] = useState('');
+  const [newSubTime, setNewSubTime] = useState('');
 
   const statusOptions = ['not_started', 'in_progress', 'waiting_for_materials', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment', 'completed', 'not_relevant'];
 
@@ -253,10 +255,11 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
 
   const handleAddSubTask = () => {
     if (!newSubTitle.trim()) return;
-    const updated = [...subTasks, { id: `st_${Date.now()}`, title: newSubTitle.trim(), due_date: newSubDue || null, done: false }];
+    const updated = [...subTasks, { id: `st_${Date.now()}`, title: newSubTitle.trim(), due_date: newSubDue || null, due_time: newSubTime || null, done: false }];
     onSubTaskChange(task, updated);
     setNewSubTitle('');
     setNewSubDue('');
+    setNewSubTime('');
   };
 
   const handleToggleSubTask = (subId) => {
@@ -392,6 +395,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                     {st.done && <Check className="w-3 h-3 text-white" />}
                   </button>
                   <span className={`flex-1 ${st.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>{st.title}</span>
+                  {st.due_time && <span className="text-[10px] text-blue-400">{st.due_time}</span>}
                   {st.due_date && <span className="text-[10px] text-gray-400">{new Date(st.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })}</span>}
                   <button onClick={() => handleDeleteSubTask(st.id)} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
                 </div>
@@ -408,7 +412,14 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                   type="date"
                   value={newSubDue}
                   onChange={(e) => setNewSubDue(e.target.value)}
+                  onBlur={(e) => { const f = fixShortYear(e.target.value); if (f !== e.target.value) setNewSubDue(f); }}
                   className="text-xs border border-gray-200 rounded px-1.5 py-1 w-[100px] bg-white"
+                />
+                <input
+                  type="time"
+                  value={newSubTime}
+                  onChange={(e) => setNewSubTime(e.target.value)}
+                  className="text-xs border border-gray-200 rounded px-1.5 py-1 w-[80px] bg-white"
                 />
                 <button onClick={handleAddSubTask} disabled={!newSubTitle.trim()} className="text-indigo-500 hover:text-indigo-700 disabled:text-gray-300">
                   <Plus className="w-4 h-4" />
