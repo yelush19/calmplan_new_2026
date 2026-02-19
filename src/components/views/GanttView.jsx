@@ -18,7 +18,7 @@ const STATUS_COLORS = {
   postponed: 'bg-gray-400',
 };
 
-const SIZE_HEIGHT = { S: 'h-5 2xl:h-6', M: 'h-6 2xl:h-8', L: 'h-8 2xl:h-10', XL: 'h-10 2xl:h-12' };
+const SIZE_HEIGHT = { S: 'h-5', M: 'h-6', L: 'h-8', XL: 'h-10' };
 
 const estimateClientSize = (client, tasks) => {
   if (client?.size) return client.size;
@@ -142,11 +142,11 @@ export default function GanttView({ tasks, clients, currentMonth }) {
     <div className="bg-white rounded-2xl border overflow-x-auto">
       {/* Header - days of month */}
       <div className="flex border-b bg-gray-50 sticky top-0 z-10">
-        <div className="w-40 2xl:w-52 shrink-0 p-2 2xl:p-3 text-sm 2xl:text-base font-medium text-gray-600 border-l">משימה / לקוח</div>
+        <div className="w-40 shrink-0 p-2 text-sm font-medium text-gray-600 border-l">משימה / לקוח</div>
         <div className="flex-1 flex">
           {days.map(day => (
             <div key={day.toISOString()}
-              className={`flex-1 text-center text-[10px] 2xl:text-xs p-1 2xl:p-1.5 border-l border-gray-100
+              className={`flex-1 text-center text-[10px] p-1 border-l border-gray-100
                 ${day.getDay() === 6 ? 'bg-violet-50' : ''}`}>
               {format(day, 'd')}
             </div>
@@ -160,13 +160,13 @@ export default function GanttView({ tasks, clients, currentMonth }) {
         const heightClass = SIZE_HEIGHT[clientSize];
         return (
           <div key={clientName} className="flex border-b hover:bg-gray-50/50 transition-colors">
-            <div className="w-40 2xl:w-52 shrink-0 p-2 2xl:p-3 text-sm 2xl:text-base text-gray-700 border-l flex items-center gap-1.5">
+            <div className="w-40 shrink-0 p-2 text-sm text-gray-700 border-l flex items-center gap-1">
               <span className="font-medium truncate">{clientName}</span>
-              <span className="text-[10px] 2xl:text-xs text-gray-400">({clientSize})</span>
+              <span className="text-[10px] text-gray-400">({clientSize})</span>
             </div>
             <div
               data-timeline
-              className="flex-1 relative min-h-[40px] 2xl:min-h-[48px]"
+              className="flex-1 relative min-h-[40px]"
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
             >
