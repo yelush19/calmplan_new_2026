@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CalmPlan - Reality Check</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Rubik', sans-serif;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    .widget {
+      padding: 14px 18px;
+      background: rgba(255, 255, 255, 0.97);
+      backdrop-filter: blur(20px);
+      border-radius: 14px;
+      box-shadow:
+        0 10px 25px -5px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.1);
+      -webkit-app-region: drag;
+      transition: all 0.3s ease;
+    }
+
+    .widget.flashing {
+      animation: purpleFlash 2s ease-in-out infinite;
+    }
+
+    @keyframes purpleFlash {
+      0%, 100% {
+        border-color: rgba(139, 92, 246, 0.1);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(139, 92, 246, 0.15);
+      }
+      50% {
+        border-color: rgba(139, 92, 246, 0.5);
+        box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.2), 0 0 0 2px rgba(139, 92, 246, 0.4), 0 0 20px rgba(139, 92, 246, 0.15);
+      }
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .task-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .size-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      -webkit-app-region: no-drag;
+    }
+
+    .size-badge.M {
+      background: #dbeafe;
+      color: #2563eb;
+    }
+
+    .size-badge.L {
+      background: #fce7f3;
+      color: #db2777;
+    }
+
+    .size-badge.S {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .timer-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .timer-bar {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+
+    .timer-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #8b5cf6, #6d28d9);
+      transition: width 1s linear;
+    }
+
+    .timer-fill.exceeded {
+      background: linear-gradient(90deg, #a78bfa, #7c3aed);
+    }
+
+    .timer-text {
+      font-size: 12px;
+      font-weight: 500;
+      color: #6b7280;
+      min-width: 45px;
+      text-align: left;
+      direction: ltr;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      -webkit-app-region: no-drag;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn.continue {
+      background: #8b5cf6;
+      color: white;
+    }
+
+    .action-btn.continue:hover {
+      background: #7c3aed;
+    }
+
+    .action-btn.next {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .action-btn.next:hover {
+      background: #e5e7eb;
+    }
+
+    .no-task {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 13px;
+      padding: 8px;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: 18px;
+      height: 18px;
+      border: none;
+      background: #e5e7eb;
+      border-radius: 50%;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+      -webkit-app-region: no-drag;
+    }
+
+    .widget:hover .close-btn {
+      opacity: 1;
+    }
+
+    .close-btn:hover {
+      background: #d1d5db;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget" id="widget">
+    <button class="close-btn" id="closeBtn">✕</button>
+
+    <div id="taskView">
+      <div class="header">
+        <span class="task-name" id="taskName">ממתין למשימה...</span>
+        <span class="size-badge M" id="sizeBadge">M</span>
+      </div>
+      <div class="timer-row">
+        <div class="timer-bar">
+          <div class="timer-fill" id="timerFill" style="width: 0%"></div>
+        </div>
+        <span class="timer-text" id="timerText">00:00</span>
+      </div>
+    </div>
+
+    <div class="actions" id="actions" style="display: none;">
+      <button class="action-btn continue" id="continueBtn">🔥 בשוונג!</button>
+      <button class="action-btn next" id="nextBtn">⏭️ הלאה</button>
+    </div>
+
+    <div class="no-task" id="noTask" style="display: none;">
+      <p>אין משימה פעילה כרגע</p>
+    </div>
+  </div>
+
+  <script>
+    const widget = document.getElementById('widget');
+    const taskName = document.getElementById('taskName');
+    const sizeBadge = document.getElementById('sizeBadge');
+    const timerFill = document.getElementById('timerFill');
+    const timerText = document.getElementById('timerText');
+    const actions = document.getElementById('actions');
+    const taskView = document.getElementById('taskView');
+    const noTask = document.getElementById('noTask');
+    const closeBtn = document.getElementById('closeBtn');
+    const continueBtn = document.getElementById('continueBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    const desktop = window.calmplanDesktop;
+
+    // Since we use contextIsolation, we need to listen via the preload bridge.
+    // The preload exposes onResponse for the response handler,
+    // but for data updates from main→renderer, we need additional channels.
+    // We add these listeners in the preload for the reality check window.
+
+    // Poll for updates - the main process sends data via the preload bridge
+    // For the reality check, we use a custom approach: main sends via webContents.send,
+    // and preload forwards it. Let's add these in a simpler way.
+
+    // Use a MutationObserver-like approach: check for data attributes
+    let lastData = null;
+
+    // The main process will update data via executeJavaScript
+    window.updateRealityCheckData = function(data) {
+      if (!data || !data.taskName) {
+        taskView.style.display = 'none';
+        actions.style.display = 'none';
+        noTask.style.display = 'block';
+        widget.classList.remove('flashing');
+        return;
+      }
+
+      taskView.style.display = 'block';
+      noTask.style.display = 'none';
+
+      taskName.textContent = data.taskName;
+      sizeBadge.textContent = data.size || 'M';
+      sizeBadge.className = `size-badge ${data.size || 'M'}`;
+
+      const progress = Math.min(data.progress || 0, 100);
+      timerFill.style.width = `${progress}%`;
+      timerFill.className = `timer-fill${data.timeExceeded ? ' exceeded' : ''}`;
+
+      timerText.textContent = data.timeRemaining || '00:00';
+
+      if (data.timeExceeded) {
+        actions.style.display = 'flex';
+        widget.classList.add('flashing');
+      } else {
+        actions.style.display = 'none';
+      }
+    };
+
+    window.flashRealityCheck = function() {
+      widget.classList.add('flashing');
+    };
+
+    // Button handlers
+    continueBtn.addEventListener('click', () => {
+      widget.classList.remove('flashing');
+      actions.style.display = 'none';
+      if (desktop) {
+        desktop.realityCheck.respond('continue');
+      }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      widget.classList.remove('flashing');
+      actions.style.display = 'none';
+      if (desktop) {
+        desktop.realityCheck.respond('next');
+      }
+    });
+
+    closeBtn.addEventListener('click', () => {
+      if (desktop) {
+        desktop.realityCheck.toggle();
+      }
+    });
+  </script>
+</body>
+</html>

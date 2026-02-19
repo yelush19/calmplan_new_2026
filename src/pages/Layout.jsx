@@ -27,6 +27,7 @@ import { Task, Client } from "@/api/entities";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import RealityCheck from "@/components/tasks/RealityCheck";
 import CompletionFeedback from "@/components/tasks/CompletionFeedback";
+import DesktopBridge from "@/components/desktop/DesktopBridge";
 
 // Work Modes
 const WORK_MODES = [
@@ -223,6 +224,13 @@ function LayoutInner({ children }) {
 
   return (
     <TooltipProvider>
+    {/* Desktop Bridge - connects React with Electron native features */}
+    {window.calmplanDesktop && (
+      <DesktopBridge
+        currentTask={emergencyTasks[0] || null}
+        tasks={emergencyTasks}
+      />
+    )}
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
       <style>{`
         :root {
