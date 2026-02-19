@@ -69,6 +69,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     business_info: {
       business_size: 'small',
       business_type: 'company',
+      employee_count: 0,
+      complexity_level: 'low',
       estimated_monthly_hours: {
         payroll: 0,
         vat_reporting: 0,
@@ -712,6 +714,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="company">חברה</SelectItem><SelectItem value="freelancer">עצמאי</SelectItem><SelectItem value="nonprofit">עמותה</SelectItem><SelectItem value="partnership">שותפות</SelectItem></SelectContent></Select></div>
                 <div><Label htmlFor="status">סטטוס</Label><Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">פעיל</SelectItem><SelectItem value="inactive">לא פעיל</SelectItem><SelectItem value="potential">פוטנציאלי</SelectItem><SelectItem value="former">לקוח עבר</SelectItem><SelectItem value="onboarding_pending">ממתין לבדיקה</SelectItem><SelectItem value="balance_sheet_only">סגירת מאזן בלבד</SelectItem></SelectContent></Select></div>
                 <div><Label htmlFor="onboarding_year">שנת קליטה</Label><Input id="onboarding_year" type="number" min="2020" max="2030" value={formData.onboarding_year || ''} onChange={(e) => handleInputChange('onboarding_year', e.target.value)} placeholder="2026" /></div>
+                <div><Label htmlFor="employee_count">מס' עובדים</Label><Input id="employee_count" type="number" min="0" max="500" value={formData.business_info?.employee_count || ''} onChange={(e) => handleInputChange('employee_count', parseInt(e.target.value) || 0, 'business_info')} placeholder="0" /></div>
+                <div><Label htmlFor="complexity_level">רמת מורכבות</Label><Select value={formData.business_info?.complexity_level || 'low'} onValueChange={(value) => handleInputChange('complexity_level', value, 'business_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">רגיל</SelectItem><SelectItem value="medium">בינוני</SelectItem><SelectItem value="high">מורכב (ריבוי חשבונות)</SelectItem></SelectContent></Select></div>
               </div>
 
               <div className="border-t pt-4 mt-6">

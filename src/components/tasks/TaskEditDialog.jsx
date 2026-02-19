@@ -41,6 +41,12 @@ const PRIORITY_OPTIONS = [
   { value: 'low', label: 'נמוך', icon: ArrowDown, color: 'text-blue-400' },
 ];
 
+const COMPLEXITY_OPTIONS = [
+  { value: 'low', label: 'רגיל' },
+  { value: 'medium', label: 'בינוני' },
+  { value: 'high', label: 'מורכב' },
+];
+
 function ExecutionTimeline({ startDate, dueDate }) {
   if (!startDate || !dueDate) return null;
 
@@ -114,6 +120,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
         scheduled_start: task.scheduled_start || '',
         notes: task.notes || '',
         sub_tasks: task.sub_tasks || [],
+        complexity: task.complexity || 'low',
       });
       setNewSubTitle('');
       setNewSubDue('');
@@ -179,8 +186,8 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
             />
           </div>
 
-          {/* Status + Priority row */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Status + Priority + Complexity row */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">סטטוס</Label>
               <Select value={editData.status} onValueChange={(v) => setEditData(prev => ({ ...prev, status: v }))}>
@@ -212,6 +219,21 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
                         <p.icon className="w-3 h-3" />
                         {p.label}
                       </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">מורכבות</Label>
+              <Select value={editData.complexity || 'low'} onValueChange={(v) => setEditData(prev => ({ ...prev, complexity: v }))}>
+                <SelectTrigger className="text-xs h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMPLEXITY_OPTIONS.map(c => (
+                    <SelectItem key={c.value} value={c.value} className="text-xs">
+                      {c.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

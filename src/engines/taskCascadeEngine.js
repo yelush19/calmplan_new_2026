@@ -82,7 +82,7 @@ export const PAYROLL_TIERS = {
  * @returns {Object} tier from PAYROLL_TIERS
  */
 export function getPayrollTier(client) {
-  const count = client?.employee_count || 0;
+  const count = client?.employee_count || client?.business_info?.employee_count || 0;
   if (count <= 5) return PAYROLL_TIERS.nano;
   if (count <= 15) return PAYROLL_TIERS.small;
   if (count <= 30) return PAYROLL_TIERS.mid;
@@ -98,11 +98,63 @@ export function getPayrollTier(client) {
  * @returns {'low'|'medium'|'high'}
  */
 export function getTaskComplexity(task, client) {
-  // Task-level override takes precedence
   if (task?.complexity) return task.complexity;
-  // Fall back to client-level complexity
   if (client?.complexity_level) return client.complexity_level;
+  if (client?.business_info?.complexity_level) return client.business_info.complexity_level;
   return 'low';
+}
+
+// ============================================================
+// VAT ENERGY TIERS (ADHD Optimization)
+// ============================================================
+
+/**
+ * VAT energy tiers based on estimated_duration.
+ * Determines UI treatment and auto-split behavior.
+ */
+export const VAT_ENERGY_TIERS = {
+  quick_win:        { key: 'quick_win',        label: 'Quick Win',          range: [0, 20],  emoji: '⚡', autoSplit: false },
+  standard:         { key: 'standard',         label: 'Standard Pomodoro',  range: [20, 45], emoji: '',   autoSplit: false },
+  climb:            { key: 'climb',            label: 'The Climb',          range: [45, 999],emoji: '',   autoSplit: true },
+};
+
+/**
+ * Determine VAT energy tier based on estimated duration.
+ *
+ * @param {Object} task - Task with estimated_duration (minutes)
+ * @returns {Object} tier from VAT_ENERGY_TIERS
+ */
+export function getVatEnergyTier(task) {
+  const duration = task?.estimated_duration || 0;
+  if (duration <= 20) return VAT_ENERGY_TIERS.quick_win;
+  if (duration <= 45) return VAT_ENERGY_TIERS.standard;
+  return VAT_ENERGY_TIERS.climb;
+}
+
+/**
+ * Generate auto-split sub-tasks for "The Climb" tier (45+ min).
+ * Splits a large VAT task into 2-3 batched sub-tasks.
+ *
+ * @param {Object} task - The VAT task to split
+ * @returns {Object[]} sub-tasks array to set on the task
+ */
+export function generateVatAutoSplit(task) {
+  const duration = task?.estimated_duration || 60;
+  const sessionLength = 25; // Pomodoro length
+  const sessions = Math.ceil(duration / sessionLength);
+  const batches = Math.min(sessions, 3); // max 3 sub-tasks
+
+  const subtasks = [];
+  for (let i = 0; i < batches; i++) {
+    const isLast = i === batches - 1;
+    subtasks.push({
+      id: `auto_${Date.now()}_${i}`,
+      title: isLast ? 'סקירה סופית והגשה' : `אצווה ${i + 1} - קליטת נתונים`,
+      done: false,
+      priority: 'medium',
+    });
+  }
+  return subtasks;
 }
 
 // ============================================================
