@@ -718,7 +718,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-semibold">אנשי קשר נוספים</h3><Button type="button" onClick={addContact} variant="outline" size="sm"><Plus className="w-4 h-4 ml-2" />הוסף איש קשר</Button></div>
                 {formData.contacts?.map((contact, index) => (
                   <div key={index} className="bg-gray-50 p-4 rounded-lg mb-4">
-                    <div className="flex justify-between items-center mb-3"><h4 className="font-medium">איש קשר #{index + 1}</h4><Button type="button" onClick={() => removeContactEntry(index)} variant="ghost" size="sm" className="text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></Button></div>
+                    <div className="flex justify-between items-center mb-3"><h4 className="font-medium">איש קשר #{index + 1}</h4><Button type="button" onClick={() => removeContactEntry(index)} variant="ghost" size="sm" className="text-amber-600 hover:text-amber-800"><Trash2 className="w-4 h-4" /></Button></div>
                     <div className="grid md:grid-cols-3 gap-3">
                       <div><Label>שם</Label><Input value={contact.name} onChange={(e) => updateContact(index, 'name', e.target.value)} placeholder="שם מלא" /></div>
                       <div><Label>תפקיד</Label><Select value={contact.role} onValueChange={(value) => updateContact(index, 'role', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(roleLabels).map(([key, label]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}</SelectContent></Select></div>
@@ -1143,16 +1143,16 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                     <h4 className="font-semibold text-gray-800">מזהים שנתיים עדכניים</h4>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
-                        <Label>מזהה מקדמות {formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && <span className="text-red-500">*</span>}</Label>
+                        <Label>מזהה מקדמות {formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && <span className="text-amber-500">*</span>}</Label>
                         <Input
                           value={formData.tax_info?.annual_tax_ids?.tax_advances_id || ''}
                           onChange={(e) => handleTaxInfoChange('tax_advances_id', e.target.value, 'tax_info', 'annual_tax_ids')}
                           placeholder="מזהה מקדמות מס"
-                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.tax_advances_id ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.tax_advances_id ? 'border-amber-300' : ''}
                         />
                       </div>
                       <div>
-                        <Label>אחוז מקדמות {formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && <span className="text-red-500">*</span>}</Label>
+                        <Label>אחוז מקדמות {formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && <span className="text-amber-500">*</span>}</Label>
                         <Input
                           type="number"
                           min="0"
@@ -1161,25 +1161,25 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                           value={formData.tax_info?.annual_tax_ids?.tax_advances_percentage || ''}
                           onChange={(e) => handleTaxInfoChange('tax_advances_percentage', parseFloat(e.target.value) || (e.target.value === '' ? '' : null), 'tax_info', 'annual_tax_ids')}
                           placeholder="אחוז מקדמות (0-100)"
-                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null) ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null) ? 'border-amber-300' : ''}
                         />
                       </div>
                       <div>
-                        <Label>מזהה ביטוח לאומי {formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && <span className="text-red-500">*</span>}</Label>
+                        <Label>מזהה ביטוח לאומי {formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && <span className="text-amber-500">*</span>}</Label>
                         <Input
                           value={formData.tax_info?.annual_tax_ids?.social_security_id || ''}
                           onChange={(e) => handleTaxInfoChange('social_security_id', e.target.value, 'tax_info', 'annual_tax_ids')}
                           placeholder="מזהה ביטוח לאומי שנתי"
-                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.social_security_id ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.social_security_id ? 'border-amber-300' : ''}
                         />
                       </div>
                       <div>
-                        <Label>מזהה ניכויים {formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && <span className="text-red-500">*</span>}</Label>
+                        <Label>מזהה ניכויים {formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && <span className="text-amber-500">*</span>}</Label>
                         <Input
                           value={formData.tax_info?.annual_tax_ids?.deductions_id || ''}
                           onChange={(e) => handleTaxInfoChange('deductions_id', e.target.value, 'tax_info', 'annual_tax_ids')}
                           placeholder="מזהה ניכויים שנתי"
-                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.deductions_id ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.deductions_id ? 'border-amber-300' : ''}
                         />
                       </div>
                     </div>
@@ -1302,7 +1302,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                                   type="button"
                                   title="ביטול שיוך כל החברה"
                                 >
-                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                  <Trash2 className="w-4 h-4 text-amber-500" />
                                 </Button>
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1323,7 +1323,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                                       }}
                                       type="button"
                                     >
-                                      <X className="w-3 h-3 text-red-500" />
+                                      <X className="w-3 h-3 text-amber-500" />
                                     </Button>
                                   </div>
                                 ))}

@@ -777,7 +777,7 @@ export default function TasksPage() {
                           </button>
                           <button
                             onClick={() => handleDeleteTask(task.id)}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
                             title="מחק משימה"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -851,7 +851,7 @@ export default function TasksPage() {
             size="sm"
             onClick={handleClearAllTasks}
             disabled={isClearing}
-            className="text-xs text-gray-400 hover:text-red-500"
+            className="text-xs text-gray-400 hover:text-amber-500"
           >
             <Trash2 className="w-3 h-3 ml-1" />
             {isClearing ? 'מוחק...' : 'מחק הכל'}

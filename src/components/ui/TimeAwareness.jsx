@@ -39,7 +39,7 @@ function getDeadlineStyle(calendarDays, hasIncomplete) {
   if (calendarDays < 0) return 'bg-gray-200 text-gray-400 line-through';
   if (calendarDays === 0) {
     // Today is the deadline day
-    if (hasIncomplete) return 'bg-red-200 text-red-800 font-bold ring-2 ring-red-300';
+    if (hasIncomplete) return 'bg-amber-200 text-amber-800 font-bold ring-2 ring-purple-300';
     return 'bg-emerald-200 text-emerald-800 font-bold';
   }
   if (calendarDays <= 2) return 'bg-amber-200 text-amber-800 font-bold';
@@ -215,7 +215,7 @@ export default function TimeAwareness() {
 
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-xl mb-4 shadow-sm ${
-      hasTodayIncomplete ? 'bg-red-50 border-2 border-red-300' :
+      hasTodayIncomplete ? 'bg-amber-50 border-2 border-amber-300' :
       isUrgent ? 'bg-amber-50 border-2 border-amber-200' :
       'bg-white border border-gray-200'
     }`}>
@@ -267,7 +267,7 @@ export default function TimeAwareness() {
                   )}
                   {d.calendarDays === 0 && d.total > 0 && (
                     <span className={`mr-1 px-1.5 py-0.5 rounded text-xs font-bold ${
-                      hasIncomplete ? 'bg-red-300 text-red-900' : 'bg-emerald-300 text-emerald-900'
+                      hasIncomplete ? 'bg-amber-300 text-amber-900' : 'bg-emerald-300 text-emerald-900'
                     }`}>
                       {d.total - d.incomplete}/{d.total}
                     </span>
@@ -284,7 +284,7 @@ export default function TimeAwareness() {
 
         {/* Warning banner for today's incomplete reports */}
         {upcomingDeadlines.filter(d => d.calendarDays === 0 && d.incomplete > 0).map(d => (
-          <div key={`warn-${d.day}`} className="flex items-center gap-2 bg-red-100 border border-red-300 rounded-lg px-3 py-1.5 text-sm text-red-800 font-semibold animate-pulse">
+          <div key={`warn-${d.day}`} className="flex items-center gap-2 bg-amber-100 border border-amber-300 rounded-lg px-3 py-1.5 text-sm text-amber-800 font-semibold animate-pulse">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>
               {d.label}: {d.incomplete} דיווחים לא הושלמו מתוך {d.total} — היום יום אחרון!

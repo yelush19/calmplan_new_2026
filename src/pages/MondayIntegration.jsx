@@ -193,7 +193,7 @@ const IntegratedBoardCard = ({ board, data, onSync, onPurgeAndResync, onEdit, on
     }
 
     if (syncStatus === 'error') {
-      return { icon: AlertTriangle, text: 'שגיאה', color: 'text-red-500', bgColor: 'bg-red-50', badge: 'destructive' };
+      return { icon: AlertTriangle, text: 'שגיאה', color: 'text-amber-500', bgColor: 'bg-amber-50', badge: 'destructive' };
     }
 
     if (data.count > 0) {
@@ -213,7 +213,7 @@ const IntegratedBoardCard = ({ board, data, onSync, onPurgeAndResync, onEdit, on
   const hasError = syncStatus === 'error' || (data.syncResult?.errors && data.syncResult.errors.length > 0);
 
   return (
-    <Card className={`h-full flex flex-col transition-all duration-300 ${hasError ? 'border-red-200 bg-red-50' : hasData ? 'border-green-200 bg-green-50' : 'border-gray-200'} hover:shadow-lg`}>
+    <Card className={`h-full flex flex-col transition-all duration-300 ${hasError ? 'border-amber-200 bg-amber-50' : hasData ? 'border-green-200 bg-green-50' : 'border-gray-200'} hover:shadow-lg`}>
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
@@ -312,7 +312,7 @@ const IntegratedBoardCard = ({ board, data, onSync, onPurgeAndResync, onEdit, on
                         <span>נמחקו: {data.syncResult.deleted || 0}</span>
                       </div>
                       {data.syncResult.errors && data.syncResult.errors.length > 0 && (
-                        <p className="text-red-600 font-medium">שגיאות: {data.syncResult.errors.length}</p>
+                        <p className="text-amber-600 font-medium">שגיאות: {data.syncResult.errors.length}</p>
                       )}
                     </div>
                   )}
@@ -1186,7 +1186,7 @@ export default function MondayIntegrationPage() {
           variant="destructive"
           size="lg"
           disabled={isLoading}
-          className="bg-red-600 hover:bg-red-700"
+          className="bg-amber-600 hover:bg-amber-700"
         >
           <AlertTriangle className="w-5 h-5 ml-2" />
           ניקוי דחוף - מחק כפילויות
@@ -1230,7 +1230,7 @@ export default function MondayIntegrationPage() {
               <div className={`p-4 rounded-lg border ${
                 addColumnResult.type === 'success' 
                   ? 'bg-green-50 border-green-200 text-green-800' 
-                  : 'bg-red-50 border-red-200 text-red-800'
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
               }`}>
                 <div className="flex items-start gap-2">
                   {addColumnResult.type === 'success' ? (
@@ -1339,7 +1339,7 @@ export default function MondayIntegrationPage() {
               <div className={`p-4 rounded-lg border ${
                 monthlyBoardsResult.type === 'success'
                   ? 'bg-green-50 border-green-200 text-green-800'
-                  : 'bg-red-50 border-red-200 text-red-800'
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
               }`}>
                 <div className="flex items-start gap-2">
                   {monthlyBoardsResult.type === 'success' ? (

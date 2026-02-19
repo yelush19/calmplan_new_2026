@@ -35,7 +35,7 @@ const getPriorityColor = (priority) => {
     low: "border-r-4 border-gray-400",
     medium: "border-r-4 border-yellow-500",
     high: "border-r-4 border-orange-500",
-    urgent: "border-r-4 border-red-600",
+    urgent: "border-r-4 border-amber-600",
   };
   return colors[priority] || "border-r-4 border-gray-300";
 };
@@ -163,7 +163,7 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit }) => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-gray-400 hover:text-red-500"
+                      className="h-7 w-7 text-gray-400 hover:text-amber-500"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDelete(task.id);

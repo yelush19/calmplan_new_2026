@@ -365,7 +365,7 @@ export default function HomeTaskGeneratorPage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => handleRemoveCustomTask(task.id)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-amber-500 hover:text-amber-700"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -447,7 +447,7 @@ const TaskCategoryCard = ({ categoryKey, categoryInfo, tasks, selectedTasks, onT
 const TaskSelectionItem = ({ task, isSelected, onSelectionChange }) => {
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'high': return 'text-red-600';
+      case 'high': return 'text-amber-600';
       case 'medium': return 'text-yellow-600';
       case 'low': return 'text-green-600';
       default: return 'text-gray-600';

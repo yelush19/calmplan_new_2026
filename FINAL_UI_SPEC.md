@@ -62,8 +62,8 @@ import { Task, Client, Event, StickyNote, Project } from "@/api/entities";
   value: overdueTasks.length,
   subtitle: "דורשות טיפול מיידי",
   icon: AlertTriangle,
-  color: "text-red-600",
-  bgColor: "bg-red-100",
+  color: "text-amber-600",
+  bgColor: "bg-amber-100",
   filterKey: "overdue"
 }
 ```
@@ -129,10 +129,10 @@ import { Flame } from "lucide-react";
 // בתוך ה-Header:
 <Sheet>
   <SheetTrigger asChild>
-    <button className="relative p-2 rounded-lg hover:bg-red-50 transition-colors">
-      <Flame className="w-5 h-5 text-red-500" />
+    <button className="relative p-2 rounded-lg hover:bg-violet-50 transition-colors">
+      <Flame className="w-5 h-5 text-amber-500" />
       {emergencyCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
           {emergencyCount}
         </span>
       )}
@@ -140,14 +140,14 @@ import { Flame } from "lucide-react";
   </SheetTrigger>
   <SheetContent side="right" className="w-[380px]">
     <SheetHeader>
-      <SheetTitle className="text-red-600 flex items-center gap-2">
+      <SheetTitle className="text-amber-600 flex items-center gap-2">
         <Flame className="w-5 h-5" /> משימות דחופות
       </SheetTitle>
     </SheetHeader>
     {/* רשימה תמציתית של עד 5 משימות הכי דחופות */}
     <div className="mt-4 space-y-3">
       {emergencyTasks.map(task => (
-        <Card key={task.id} className="border-r-4 border-red-400 cursor-pointer hover:bg-red-50"
+        <Card key={task.id} className="border-r-4 border-amber-400 cursor-pointer hover:bg-violet-50"
               onClick={() => navigateToTask(task)}>
           <CardContent className="p-3">
             <p className="font-medium text-sm">{task.title}</p>
@@ -192,14 +192,14 @@ const [energyLevel, setEnergyLevel] = useState('full'); // 'low' | 'medium' | 'f
 <DropdownMenu>
   <DropdownMenuTrigger asChild>
     <Button variant="ghost" size="icon" className="relative">
-      {energyLevel === 'low' && <BatteryLow className="w-5 h-5 text-red-500" />}
+      {energyLevel === 'low' && <BatteryLow className="w-5 h-5 text-amber-500" />}
       {energyLevel === 'medium' && <BatteryMedium className="w-5 h-5 text-yellow-500" />}
       {energyLevel === 'full' && <BatteryFull className="w-5 h-5 text-green-500" />}
     </Button>
   </DropdownMenuTrigger>
   <DropdownMenuContent align="end">
     <DropdownMenuItem onClick={() => setEnergyLevel('low')}>
-      <BatteryLow className="w-4 h-4 ml-2 text-red-500" />
+      <BatteryLow className="w-4 h-4 ml-2 text-amber-500" />
       סוללה נמוכה — רק משימות של 5-10 דקות
     </DropdownMenuItem>
     <DropdownMenuItem onClick={() => setEnergyLevel('medium')}>
@@ -765,7 +765,7 @@ const [view, setView] = useState("kanban"); // 'list' | 'kanban' | 'mindmap' | '
 ├── מע"מ (ענף סגול)
 │   ├── לקוח A (S) ✅ ירוק
 │   ├── לקוח B (M) 🔵 בתהליך
-│   └── לקוח C (L) 🔴 באיחור
+│   └── לקוח C (L) 🟣 באיחור
 ├── מקדמות מס (ענף כחול)
 │   ├── ...
 ├── שכר (ענף כתום)
@@ -788,7 +788,7 @@ const [view, setView] = useState("kanban"); // 'list' | 'kanban' | 'mindmap' | '
 | completed | `bg-green-400` |
 | in_progress | `bg-blue-400` |
 | not_started | `bg-gray-300` |
-| overdue | `bg-red-500` + pulse animation |
+| overdue | `bg-purple-500` + pulse animation |
 | issue | `bg-yellow-500` |
 
 **יישום בסיסי (CSS Grid Radial):**
@@ -821,7 +821,7 @@ export default function MindMapView({ tasks, clients }) {
     completed: 'bg-green-400 border-green-500',
     in_progress: 'bg-blue-400 border-blue-500',
     not_started: 'bg-gray-300 border-gray-400',
-    overdue: 'bg-red-500 border-red-600 animate-pulse',
+    overdue: 'bg-purple-500 border-purple-600 animate-pulse',
   };
 
   const SIZE_MAP = { S: 32, M: 48, L: 64, XL: 80 };
@@ -947,7 +947,7 @@ const STATUS_COLORS = {
   in_progress: 'bg-blue-400',
   not_started: 'bg-gray-300',
   waiting_for_materials: 'bg-yellow-300',
-  issue: 'bg-red-400',
+  issue: 'bg-amber-400',
   reported_waiting_for_payment: 'bg-purple-300',
 };
 
@@ -998,7 +998,7 @@ export default function GanttView({ tasks, clients, currentMonth }) {
           {days.map(day => (
             <div key={day.toISOString()}
               className={`flex-1 text-center text-[10px] p-1 border-l border-gray-100
-                ${day.getDay() === 6 ? 'bg-red-50' : ''}`}>
+                ${day.getDay() === 6 ? 'bg-violet-50' : ''}`}>
               {format(day, 'd')}
             </div>
           ))}
@@ -1025,7 +1025,7 @@ export default function GanttView({ tasks, clients, currentMonth }) {
                       <motion.div
                         className={`absolute top-1 ${heightClass} rounded-md cursor-pointer
                           ${STATUS_COLORS[task.status] || STATUS_COLORS.not_started}
-                          ${isOverdue ? 'ring-2 ring-red-500 animate-pulse' : ''}`}
+                          ${isOverdue ? 'ring-2 ring-purple-500 animate-pulse' : ''}`}
                         style={{ left: pos.left, width: pos.width }}
                         initial={{ scaleX: 0, originX: 0 }}
                         animate={{ scaleX: 1 }}
@@ -1204,3 +1204,97 @@ import {
 | **חדש** | `src/components/views/MindMapView.jsx` |
 | **חדש** | `src/components/views/GanttView.jsx` |
 | **חדש** | `src/contexts/AppContext.jsx` |
+
+---
+
+## חלק 8: מדיניות "ללא אדום" (No-Red Policy) — תיקון גלובלי
+
+> **כלל מוחלט:** אסור שימוש בצבע אדום (red-*) בשום מקום ב-CalmPlan. פלטת Zero-Panic בלבד.
+
+### מיפוי החלפת צבעים
+
+| שימוש | צבע ישן | צבע חדש | סיבה |
+|---|---|---|---|
+| חירום / בפיגור / Overdue | `red-500`, `red-600` | Amber Orange `amber-500` (#F57C00) | פחות מלחיץ, עדיין בולט |
+| מאוחר / באיחור / Ring | `ring-red-500` | Electric Purple `ring-purple-500` (#7B1FA2) | מבדיל overdue מ-urgent |
+| רקע התראות | `bg-red-50`, `bg-red-100` | `bg-amber-50`, `bg-amber-100` | שמירה על עקביות |
+| שבת (Gantt) | `bg-red-50` | `bg-violet-50` | הבחנה עדינה לסוף שבוע |
+| כפתורי מחיקה | `red-600` | `amber-600` | מפחית חרדה |
+| אסטריסק שדה חובה | `text-red-500` | `text-amber-500` | עקביות |
+
+---
+
+## חלק 9: Mind Map — אינטראקטיביות מלאה (Sec 4.3 תיקון)
+
+> **בעיה:** האפיון המקורי תיאר רק "רינדור" סטטי. **תיקון:** כל Node הוא אינטראקטיבי.
+
+### 9.1 Quick-Edit Popover בלחיצה על Node
+
+**קובץ:** `src/components/views/MindMapView.jsx`
+
+**התנהגות חדשה:**
+- **לחיצה בודדת** על Node פותחת Popover מהיר עם:
+  - שם הלקוח + Badge גודל (S/M/L)
+  - סיכום משימות (X משימות, Y הושלמו, Z באיחור)
+  - שדה "הוסף משימה מהירה" — Enter שולח `Task.create(...)` ישירות ל-DB
+  - כפתור "לוח עבודה" — ניווט לדף הלקוח
+  - כפתור "כל המשימות" — ניווט לדף Tasks עם חיפוש לפי שם הלקוח
+- **לחיצה כפולה** (Double-click) — ניווט ישיר לדף ClientManagement
+
+### 9.2 Ghost Nodes — נקודות חסרות מידע
+
+**התנהגות:**
+- Node עם `dashed border` (קו מקווקו) מופיע כשלכל המשימות של לקוח חסר `due_date`, או שאין `client.size` מוגדר
+- רקע שקוף + צבע Border לפי סטטוס
+- מטרה: סימון ויזואלי ש"הנקודה הזו דורשת השלמת מידע"
+
+---
+
+## חלק 10: Gantt — Drag & Drop אינטראקטיבי (Sec 4.4 תיקון)
+
+> **בעיה:** האפיון המקורי תיאר רק "הצגה" של פסים. **תיקון:** פסים ניתנים לגרירה.
+
+### 10.1 גרירה אופקית לשינוי תאריך
+
+**קובץ:** `src/components/views/GanttView.jsx`
+
+**התנהגות:**
+- Pointer down על פס משימה מתחיל גרירה
+- גרירה אופקית (ימינה/שמאלה) משנה את מיקום הפס בזמן אמת
+- שחרור Pointer → `Task.update(id, { due_date: newDate, scheduled_start: newStart })`
+- Toast הודעה: "[שם משימה] → [תאריך חדש]"
+- משימות `completed` לא ניתנות לגרירה
+
+### 10.2 מזהה ויזואלי בזמן גרירה
+
+- פס נגרר: `opacity-80`, `ring-2 ring-blue-400`, `shadow-lg`
+- Floating indicator בתחתית המסך: "[שם] +X ימים → DD/MM"
+
+---
+
+## חלק 11: חיבור Reality Check ל-estimated_duration
+
+**קובץ:** `src/components/tasks/RealityCheck.jsx`
+
+**התנהגות:** (כבר מיושם)
+- כשמשימה עוברת ל-`in_progress`, הטיימר מתחיל
+- בדיקה כל 30 שניות: `elapsed >= activeTask.estimated_duration`
+- אם חורג → Flash סגול (`#7B1FA2`) עם כפתורי "אני בשוונג" / "עוצרת כאן"
+- Event `calmplan:schedule-push` דוחף את שאר לוח הזמנים
+
+---
+
+## חלק 12: רשימת אימות — "No-Excuses" Audit
+
+| # | בדיקה | סטטוס | הערות |
+|---|---|---|---|
+| 1 | Header: כל קוביות הסטטיסטיקה לחיצות ומסננות | [x] | `QuickStats.jsx` — `onFilterSelect(filterKey)` |
+| 2 | Sidebar: Focus Mode מחביא Sidebar ומרכז תוכן | [x] | `Layout.jsx` — `focusMode` state + `Maximize2` toggle |
+| 3 | Command Bar: `Ctrl+K` פותח חיפוש + Quick Actions | [x] | `GlobalSearch.jsx` — 5 פעולות מהירות |
+| 4 | T-Shirt Sizing: Mind Map nodes: S=30px, M=50px, L=80px | [x] | `MindMapView.jsx` — `SIZE_MAP` |
+| 5 | Sync: שינויים ב-Desktop → DB מיידי | [x] | `base44Client.js` → `localDB.js/supabaseDB.js` |
+| 6 | No-Red: אפס שימוש באדום בכל הקוד | [x] | הוחלף ל-amber/purple |
+| 7 | Mind Map: לחיצה פותחת Quick-Edit Popover | [x] | Popover + Quick-Add Task |
+| 8 | Gantt: גרירה אופקית משנה due_date ב-DB | [x] | Pointer events + `Task.update()` |
+| 9 | Ghost Nodes: קו מקווקו ל-nodes חסרי מידע | [x] | `borderStyle: 'dashed'` |
+| 10 | Reality Check: Flash סגול בחריגת estimated_duration | [x] | `#7B1FA2` PURPLE theme |

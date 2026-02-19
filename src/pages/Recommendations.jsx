@@ -50,7 +50,7 @@ export default function RecommendationsPage() {
         }
         if (totalItems > 20) {
             workload = "כבד";
-            workloadColor = "text-red-600";
+            workloadColor = "text-amber-600";
         }
 
         return {
@@ -226,7 +226,7 @@ export default function RecommendationsPage() {
                     <div className="grid gap-4">
                         {smartRecommendations.map((rec, index) => (
                             <Card key={index} className={`${
-                                rec.type === 'urgent' ? 'border-red-300 bg-red-50 hover:bg-red-100' :
+                                rec.type === 'urgent' ? 'border-amber-300 bg-amber-50 hover:bg-amber-100' :
                                 rec.type === 'celebration' ? 'border-green-300 bg-green-50 hover:bg-green-100' :
                                 rec.type === 'planning' ? 'border-purple-300 bg-purple-50 hover:bg-purple-100' :
                                 'border-blue-300 bg-blue-50 hover:bg-blue-100'
@@ -235,13 +235,13 @@ export default function RecommendationsPage() {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
                                             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                                rec.type === 'urgent' ? 'bg-red-200' :
+                                                rec.type === 'urgent' ? 'bg-amber-200' :
                                                 rec.type === 'celebration' ? 'bg-green-200' :
                                                 rec.type === 'planning' ? 'bg-purple-200' :
                                                 'bg-blue-200'
                                             }`}>
                                                 <rec.icon className={`w-6 h-6 ${
-                                                    rec.type === 'urgent' ? 'text-red-600' :
+                                                    rec.type === 'urgent' ? 'text-amber-600' :
                                                     rec.type === 'celebration' ? 'text-green-600' :
                                                     rec.type === 'planning' ? 'text-purple-600' :
                                                     'text-blue-600'
@@ -256,7 +256,7 @@ export default function RecommendationsPage() {
                                             <Button 
                                                 onClick={rec.onClick}
                                                 className={`${
-                                                    rec.type === 'urgent' ? 'bg-red-500 hover:bg-red-600' :
+                                                    rec.type === 'urgent' ? 'bg-amber-500 hover:bg-amber-600' :
                                                     rec.type === 'celebration' ? 'bg-green-500 hover:bg-green-600' :
                                                     rec.type === 'planning' ? 'bg-purple-500 hover:bg-purple-600' :
                                                     'bg-blue-500 hover:bg-blue-600'
@@ -336,7 +336,7 @@ export default function RecommendationsPage() {
                                ✅ <span className="font-semibold">{completedToday.length}</span> משימות הושלמו
                            </p>
                            <p className="flex items-center gap-2">
-                               ⏰ <span className={`font-semibold ${urgentTasks.length > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                               ⏰ <span className={`font-semibold ${urgentTasks.length > 0 ? 'text-amber-600' : 'text-green-600'}`}>
                                    {urgentTasks.length}
                                </span> משימות דחופות
                            </p>

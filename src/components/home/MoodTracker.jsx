@@ -63,7 +63,7 @@ export default function MoodTracker() {
   const getMoodIcon = (mood) => {
     if (mood >= 8) return <Smile className="w-6 h-6 text-green-500" />;
     if (mood >= 5) return <Meh className="w-6 h-6 text-yellow-500" />;
-    return <Frown className="w-6 h-6 text-red-500" />;
+    return <Frown className="w-6 h-6 text-amber-500" />;
   };
 
   const getMoodText = (mood) => {

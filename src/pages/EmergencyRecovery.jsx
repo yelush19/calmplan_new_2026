@@ -229,15 +229,15 @@ export default function EmergencyRecovery() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center"
       >
-        <Alert className="mb-6 border-red-200 bg-red-50">
-          <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
+        <Alert className="mb-6 border-amber-200 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
             <strong>מצב חירום: אובדן נתונים קריטיים</strong><br />
             דף זה נועד לסייע בשחזור נתוני לקוחות שאבדו במחיקה הלא מכוונת.
           </AlertDescription>
         </Alert>
         
-        <h1 className="text-4xl font-bold text-red-600 mb-4">
+        <h1 className="text-4xl font-bold text-amber-600 mb-4">
           🚨 שחזור נתונים חירום
         </h1>
       </motion.div>

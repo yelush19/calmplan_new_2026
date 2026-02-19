@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Hourglass, Play, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Task } from '@/api/entities';
+import { DEFAULT_EXECUTION_PERIODS } from '@/config/automationRules';
 
 // T-Shirt Size to max duration in minutes
 const SIZE_DURATION_MAP = {
@@ -52,7 +53,14 @@ export default function RealityCheck() {
   useEffect(() => {
     if (!activeTask || !startTime) return;
 
-    const maxDuration = activeTask.estimated_duration || SIZE_DURATION_MAP[activeTask.client_size || 'M'] || 60;
+    // Priority: explicit estimated_duration > size-based > Settings buffer_days > default 60min
+    const bufferDaysDuration = activeTask.category && DEFAULT_EXECUTION_PERIODS[activeTask.category]
+      ? DEFAULT_EXECUTION_PERIODS[activeTask.category].buffer_days * 8 // buffer_days * ~8min per day as proxy
+      : null;
+    const maxDuration = activeTask.estimated_duration
+      || SIZE_DURATION_MAP[activeTask.client_size || 'M']
+      || bufferDaysDuration
+      || 60;
 
     const interval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / (1000 * 60));

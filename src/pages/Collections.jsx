@@ -33,7 +33,7 @@ export default function CollectionsPage() {
         draft: { label: 'טיוטה', color: 'bg-gray-200 text-gray-800', icon: FileText },
         sent: { label: 'נשלחה', color: 'bg-blue-200 text-blue-800', icon: Clock },
         paid: { label: 'שולמה', color: 'bg-green-200 text-green-800', icon: CheckCircle },
-        overdue: { label: 'בפיגור', color: 'bg-red-200 text-red-800', icon: AlertTriangle },
+        overdue: { label: 'בפיגור', color: 'bg-amber-200 text-amber-800', icon: AlertTriangle },
         cancelled: { label: 'בוטלה', color: 'bg-gray-400 text-white', icon: FileText }
     };
 

@@ -52,7 +52,7 @@ const statusColors = {
   completed: 'bg-green-100 text-green-800',
   waiting_for_approval: 'bg-yellow-100 text-yellow-800',
   waiting_for_materials: 'bg-orange-100 text-orange-800',
-  issue: 'bg-red-100 text-red-800',
+  issue: 'bg-amber-100 text-amber-800',
   ready_for_reporting: 'bg-purple-100 text-purple-800',
   reported_waiting_for_payment: 'bg-cyan-100 text-cyan-800',
   postponed: 'bg-gray-200 text-gray-700'
@@ -162,8 +162,8 @@ function TaskGroupedList({ filteredTasks, allTasksCount, clientName, statusTrans
                           <button onClick={() => onEditTask(task)} className="p-1.5 rounded hover:bg-blue-50 transition-colors" title="עריכת משימה">
                             <Pencil className="w-4 h-4 text-gray-400 hover:text-blue-600" />
                           </button>
-                          <button onClick={() => onDeleteTask(task)} className="p-1.5 rounded hover:bg-red-50 transition-colors" title="מחק משימה">
-                            <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
+                          <button onClick={() => onDeleteTask(task)} className="p-1.5 rounded hover:bg-amber-50 transition-colors" title="מחק משימה">
+                            <Trash2 className="w-4 h-4 text-gray-400 hover:text-amber-600" />
                           </button>
                         </div>
                       </div>

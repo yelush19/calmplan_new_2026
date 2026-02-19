@@ -163,7 +163,7 @@ export default function ReminderSystem() {
               <div className="flex items-start gap-4">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                   reminder.isTravel ? 'bg-orange-500' :
-                  reminder.priority === 'urgent' ? 'bg-red-500' :
+                  reminder.priority === 'urgent' ? 'bg-amber-500' :
                   reminder.priority === 'high' ? 'bg-orange-500' :
                   'bg-blue-500'
                 } text-white`}>
@@ -175,7 +175,7 @@ export default function ReminderSystem() {
                       {reminder.type}
                     </span>
                     {reminder.priority === 'urgent' && (
-                      <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold animate-pulse">
+                      <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-bold animate-pulse">
                         דחוף!
                       </span>
                     )}

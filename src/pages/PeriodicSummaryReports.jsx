@@ -86,14 +86,14 @@ function ReportCell({ report, onEdit }) {
       <button
         onClick={() => onEdit(report)}
         className={`w-full p-2 rounded-lg border transition-all hover:shadow-sm text-xs ${
-          isOverdue ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+          isOverdue ? 'border-amber-300 bg-amber-50' : 'border-gray-200 hover:border-gray-300'
         }`}
       >
         <Badge className={`${statusConfig.color} text-[10px] px-1.5 py-0`}>
           {statusConfig.label}
         </Badge>
         {targetDate && (
-          <div className={`text-[10px] mt-1 ${isOverdue ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
+          <div className={`text-[10px] mt-1 ${isOverdue ? 'text-amber-600 font-bold' : 'text-gray-500'}`}>
             {targetDate.toLocaleDateString('he-IL')}
           </div>
         )}
@@ -620,7 +620,7 @@ export default function PeriodicSummaryReports() {
         <Card>
           <CardContent className="p-3 text-center">
             <p className="text-sm text-muted-foreground">באיחור</p>
-            <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
+            <p className="text-2xl font-bold text-amber-600">{stats.overdue}</p>
           </CardContent>
         </Card>
       </div>
@@ -723,7 +723,7 @@ export default function PeriodicSummaryReports() {
                           <span className="flex-1">{client.name}</span>
                           <button
                             onClick={() => handleDeleteClientReports(client.id)}
-                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-0.5"
+                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-amber-500 transition-all p-0.5"
                             title="מחק דיווחים ללקוח"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

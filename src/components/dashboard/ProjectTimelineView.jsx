@@ -63,8 +63,8 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
     if (!due || !isValid(due)) return 'bg-gray-300';
 
     const remaining = differenceInDays(due, today);
-    if (remaining < 0) return 'bg-red-500';
-    if (remaining <= 1) return 'bg-red-400';
+    if (remaining < 0) return 'bg-amber-500';
+    if (remaining <= 1) return 'bg-amber-400';
     if (remaining <= 3) return 'bg-amber-400';
     return 'bg-blue-400';
   };
@@ -150,7 +150,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
                         </Badge>
                         {remaining !== null && (
                           <span className={`text-[9px] font-medium ${
-                            remaining < 0 ? 'text-red-600' : remaining <= 1 ? 'text-red-500' : remaining <= 3 ? 'text-amber-600' : 'text-gray-400'
+                            remaining < 0 ? 'text-amber-600' : remaining <= 1 ? 'text-amber-500' : remaining <= 3 ? 'text-amber-600' : 'text-gray-400'
                           }`}>
                             {remaining < 0 ? `${Math.abs(remaining)}d-` : remaining === 0 ? 'היום' : `${remaining}d`}
                           </span>
@@ -159,7 +159,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
                     </div>
                     {task.status === 'completed' && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                     {remaining !== null && remaining < 0 && task.status !== 'completed' && (
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     )}
                   </div>
 
@@ -203,7 +203,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
         <div className="flex items-center gap-1"><div className="w-3 h-2 rounded bg-emerald-400" /> הושלם</div>
         <div className="flex items-center gap-1"><div className="w-3 h-2 rounded bg-blue-400" /> בעבודה</div>
         <div className="flex items-center gap-1"><div className="w-3 h-2 rounded bg-amber-400" /> קרוב לדדליין</div>
-        <div className="flex items-center gap-1"><div className="w-3 h-2 rounded bg-red-500" /> באיחור</div>
+        <div className="flex items-center gap-1"><div className="w-3 h-2 rounded bg-amber-500" /> באיחור</div>
         <div className="flex items-center gap-1"><div className="w-3 h-2 rounded bg-yellow-400" /> ממתין לתשלום</div>
         <div className="flex items-center gap-1 mr-auto"><div className="w-px h-3 bg-blue-500" /> היום</div>
       </div>

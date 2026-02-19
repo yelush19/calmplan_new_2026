@@ -513,7 +513,7 @@ export default function TaskCard({
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}>
-                    <Trash2 className="w-4 h-4 text-red-500 hover:text-red-600" />
+                    <Trash2 className="w-4 h-4 text-amber-500 hover:text-amber-600" />
                   </Button>
                 </div>
               ) : null}

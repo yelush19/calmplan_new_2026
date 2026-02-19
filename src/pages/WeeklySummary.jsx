@@ -274,7 +274,7 @@ export default function WeeklySummary() {
           { icon: CheckCircle, label: 'הושלמו השבוע', value: analysis.completedCount, color: 'text-emerald-600', bg: 'border-emerald-200 bg-emerald-50' },
           { icon: Clock, label: 'לא הושלמו', value: analysis.failedThisWeek.length, color: analysis.failedThisWeek.length > 0 ? 'text-stone-600' : 'text-gray-400', bg: 'border-stone-200 bg-stone-50' },
           { icon: Target, label: 'שבוע הבא', value: analysis.upcoming.length, color: 'text-sky-600', bg: 'border-sky-200 bg-sky-50' },
-          { icon: Activity, label: 'מגמה', value: analysis.weeklyTrend >= 0 ? `+${analysis.weeklyTrend}` : `${analysis.weeklyTrend}`, color: analysis.weeklyTrend >= 0 ? 'text-emerald-600' : 'text-red-600', bg: analysis.weeklyTrend >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50' },
+          { icon: Activity, label: 'מגמה', value: analysis.weeklyTrend >= 0 ? `+${analysis.weeklyTrend}` : `${analysis.weeklyTrend}`, color: analysis.weeklyTrend >= 0 ? 'text-emerald-600' : 'text-amber-600', bg: analysis.weeklyTrend >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' },
         ].map(({ icon: Icon, label, value, color, bg }, i) => (
           <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className={`${bg} h-full`}>
@@ -378,7 +378,7 @@ export default function WeeklySummary() {
                   <div className="space-y-1">
                     {data.tasks.map(task => (
                       <div key={task.id} className="flex items-center gap-2 p-1.5 rounded bg-white text-xs group">
-                        <div className={`w-1.5 h-1.5 rounded-full ${task.daysOverdue > 7 ? 'bg-red-500' : task.daysOverdue > 3 ? 'bg-amber-500' : 'bg-yellow-400'}`} />
+                        <div className={`w-1.5 h-1.5 rounded-full ${task.daysOverdue > 7 ? 'bg-amber-500' : task.daysOverdue > 3 ? 'bg-amber-500' : 'bg-yellow-400'}`} />
                         <span className="flex-1 truncate">{task.title}</span>
                         <button onClick={() => setEditingTask(task)} className="p-0.5 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity" title="ערוך">
                           <Pencil className="w-3 h-3 text-gray-400" />

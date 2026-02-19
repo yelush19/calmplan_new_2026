@@ -127,8 +127,8 @@ export default function HouseholdTaskCard({ task, index, onStatusChange, onAssig
                                         </button>
                                     )}
                                     {onDelete && (
-                                        <button onClick={(e) => { e.stopPropagation(); onDelete(task); }} className="p-1.5 rounded hover:bg-red-50 transition-colors" title="מחק משימה">
-                                            <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
+                                        <button onClick={(e) => { e.stopPropagation(); onDelete(task); }} className="p-1.5 rounded hover:bg-amber-50 transition-colors" title="מחק משימה">
+                                            <Trash2 className="w-4 h-4 text-gray-400 hover:text-amber-600" />
                                         </button>
                                     )}
                                     <Button onClick={() => onAssign(task)} size="sm" className="bg-primary hover:bg-primary/90 text-white">

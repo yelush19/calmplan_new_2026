@@ -55,7 +55,7 @@ export function ConfirmDialog({ open, onConfirm, onCancel, title, description, c
           <AlertDialogAction
             onClick={onConfirm}
             disabled={countdown > 0}
-            className={destructive ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+            className={destructive ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}
           >
             {countdown > 0 ? `${confirmText || 'אישור'} (${countdown})` : (confirmText || 'אישור')}
           </AlertDialogAction>

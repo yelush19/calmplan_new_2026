@@ -65,7 +65,7 @@ export default function OnboardingForm({ formState, setFormState }) {
                     {(formState.contacts || []).map((contact, index) => (
                         <div key={index} className="bg-gray-50 p-4 rounded-lg border">
                              <div className="flex justify-end mb-2">
-                                <Button type="button" variant="ghost" size="icon" onClick={() => removeContact(index)} className="text-red-500 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => removeContact(index)} className="text-amber-500 hover:bg-amber-50"><Trash2 className="w-4 h-4" /></Button>
                             </div>
                             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div><Label>שם מלא</Label><Input value={contact.name} onChange={e => updateContact(index, 'name', e.target.value)} required /></div>

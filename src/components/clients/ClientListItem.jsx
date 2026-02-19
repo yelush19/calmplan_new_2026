@@ -8,7 +8,7 @@ const statusUI = {
   active: { label: 'פעיל', badge: 'bg-green-100 text-green-800 border-green-200' },
   inactive: { label: 'לא פעיל', badge: 'bg-orange-100 text-orange-800 border-orange-200' },
   potential: { label: 'פוטנציאלי', badge: 'bg-gray-100 text-gray-800 border-gray-200' },
-  former: { label: 'לקוח עבר', badge: 'bg-red-100 text-red-800 border-red-200' },
+  former: { label: 'לקוח עבר', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
   onboarding_pending: { label: 'ממתין לקליטה', badge: 'bg-purple-100 text-purple-800 border-purple-200' },
   balance_sheet_only: { label: 'סגירת מאזן בלבד', badge: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
 };

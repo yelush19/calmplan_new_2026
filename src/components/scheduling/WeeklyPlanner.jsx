@@ -223,7 +223,7 @@ export default function WeeklyPlanner() {
                                 {task.due_date && (
                                   <div className="flex items-center gap-1 mt-1">
                                     <Clock className="w-3 h-3" />
-                                    <span className={`text-xs ${task.isOverdue ? 'text-red-600 font-bold' : ''}`}>
+                                    <span className={`text-xs ${task.isOverdue ? 'text-amber-600 font-bold' : ''}`}>
                                       {task.due_date}
                                     </span>
                                   </div>

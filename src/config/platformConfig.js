@@ -20,7 +20,7 @@ export const DEFAULT_PLATFORMS = [
     id: 'streamlit',
     name: 'Streamlit',
     icon: 'bar-chart',
-    color: 'bg-red-500 text-white',
+    color: 'bg-amber-500 text-white',
     enabled: true,
     fields: [
       { key: 'platform_url', label: 'Streamlit URL', placeholder: 'https://app-name.streamlit.app', type: 'url' },

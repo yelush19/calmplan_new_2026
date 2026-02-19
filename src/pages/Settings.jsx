@@ -212,7 +212,7 @@ function LitaySettings() {
                   {(params[group.key] || []).map((item, idx) => (
                     <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white rounded-full text-xs border shadow-sm group hover:shadow-md transition-shadow">
                       {item}
-                      <button onClick={() => removeItem(group.key, idx)} className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                      <button onClick={() => removeItem(group.key, idx)} className="text-gray-300 hover:text-amber-500 transition-colors opacity-0 group-hover:opacity-100">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -416,7 +416,7 @@ function LenaSettings() {
                 <Switch checked={meal.enabled} onCheckedChange={(checked) => updateMealReminder(index, 'enabled', checked)} />
                 <Input placeholder="שם" value={meal.name} onChange={(e) => updateMealReminder(index, 'name', e.target.value)} className="flex-1 h-7 text-xs" />
                 <Input type="time" value={meal.time} onChange={(e) => updateMealReminder(index, 'time', e.target.value)} className="w-24 h-7 text-xs" />
-                <button onClick={() => removeMealReminder(index)} className="text-gray-300 hover:text-red-500 p-1"><X className="w-3 h-3" /></button>
+                <button onClick={() => removeMealReminder(index)} className="text-gray-300 hover:text-amber-500 p-1"><X className="w-3 h-3" /></button>
               </div>
             ))}
           </CardContent>
@@ -574,7 +574,7 @@ function CloudSyncSection() {
           </div>
         )}
         {connectionTest && (
-          <div className={`flex items-center gap-2 p-2 rounded-lg text-xs ${connectionTest.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          <div className={`flex items-center gap-2 p-2 rounded-lg text-xs ${connectionTest.ok ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
             {connectionTest.ok ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
             {connectionTest.message}
           </div>
@@ -682,7 +682,7 @@ function PlatformManagementSection() {
             <Badge className={`${plat.color} text-[10px]`}>{plat.name}</Badge>
             <span className="text-[10px] text-gray-400 flex-1">{plat.fields.length} שדות</span>
             <button onClick={() => setEditingPlatform({ ...plat })} className="p-1 text-gray-400 hover:text-blue-600"><Pencil className="w-3 h-3" /></button>
-            <button onClick={() => deletePlatform(plat.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+            <button onClick={() => deletePlatform(plat.id)} className="p-1 text-gray-400 hover:text-amber-600"><Trash2 className="w-3 h-3" /></button>
           </div>
         ))}
 
@@ -710,7 +710,7 @@ function PlatformManagementSection() {
                   <div key={idx} className="flex items-center gap-2 text-xs bg-white p-1.5 rounded border">
                     <span className="font-mono text-[10px] text-gray-500 w-24 truncate">{field.key}</span>
                     <span className="flex-1">{field.label}</span>
-                    <button onClick={() => removeFieldFromEditing(idx)} className="text-red-400 hover:text-red-600"><X className="w-3 h-3" /></button>
+                    <button onClick={() => removeFieldFromEditing(idx)} className="text-amber-400 hover:text-amber-600"><X className="w-3 h-3" /></button>
                   </div>
                 ))}
               </div>
@@ -964,18 +964,18 @@ function DataBackupSection() {
           )}
         </div>
         {backupStatus && (
-          <div className={`p-2 rounded-lg text-xs ${backupStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+          <div className={`p-2 rounded-lg text-xs ${backupStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
             {backupStatus.message}
           </div>
         )}
         {migrationResult && (
-          <div className={`p-2 rounded-lg text-xs ${migrationResult.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+          <div className={`p-2 rounded-lg text-xs ${migrationResult.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
             <p className="font-medium">{migrationResult.message}</p>
             {migrationResult.details && (
               <ul className="mt-1 space-y-0.5">
                 {migrationResult.details.map((c, i) => (
                   <li key={i} className="flex items-center gap-1">
-                    <span className={c.status === 'migrated' ? 'text-green-600' : c.status === 'skipped' ? 'text-gray-500' : 'text-red-600'}>
+                    <span className={c.status === 'migrated' ? 'text-green-600' : c.status === 'skipped' ? 'text-gray-500' : 'text-amber-600'}>
                       {c.status === 'migrated' ? '✓' : c.status === 'skipped' ? '−' : '✗'}
                     </span>
                     {c.name} {c.count ? `(${c.count})` : ''} {c.reason || ''}

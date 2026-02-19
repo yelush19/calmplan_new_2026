@@ -46,8 +46,8 @@ export default function ProcessTaskItem({ task, onEdit, onDelete }) {
           </button>
         )}
         {onDelete && (
-          <button onClick={() => onDelete(task)} className="p-1 rounded hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100" title="מחק משימה">
-            <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-600" />
+          <button onClick={() => onDelete(task)} className="p-1 rounded hover:bg-amber-50 transition-colors opacity-0 group-hover:opacity-100" title="מחק משימה">
+            <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-amber-600" />
           </button>
         )}
         {daysLeft !== null && daysLeft <= 3 && task.status !== 'completed' && (

@@ -196,7 +196,7 @@ export default function FileUploader({ clientId, clientName, documentType = 'oth
                         <Progress value={state.progress} className="h-1.5 mt-1" />
                       )}
                       {state?.status === 'error' && (
-                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                           <AlertCircle className="w-3 h-3" />
                           {state.error}
                         </p>

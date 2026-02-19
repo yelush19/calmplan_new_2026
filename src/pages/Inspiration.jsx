@@ -67,9 +67,9 @@ export default function InspirationPage() {
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <Card className="bg-red-50 border-red-200">
+        <Card className="bg-amber-50 border-amber-200">
           <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-red-800">
+            <CardTitle className="flex items-center gap-3 text-amber-800">
               <BookHeart className="w-6 h-6" />
               הספר הבא שלך
             </CardTitle>
@@ -85,13 +85,13 @@ export default function InspirationPage() {
               </Button>
               <Input id="upload-button" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
               
-              <Button onClick={getBookRecommendation} disabled={!bookshelfImage || isLoading} className="flex-1 bg-red-500 hover:bg-red-600">
+              <Button onClick={getBookRecommendation} disabled={!bookshelfImage || isLoading} className="flex-1 bg-amber-500 hover:bg-amber-600">
                 <Lightbulb className="w-4 h-4 ml-2" />
                 {isLoading ? "חושבת..." : "קבלי המלצה"}
               </Button>
             </div>
             {bookshelfImage && (
-              <div className="mt-4 p-2 border border-dashed border-red-300 rounded-lg">
+              <div className="mt-4 p-2 border border-dashed border-amber-300 rounded-lg">
                 <img src={bookshelfImage} alt="מדף ספרים" className="w-full h-auto max-h-60 object-contain rounded-md"/>
               </div>
             )}

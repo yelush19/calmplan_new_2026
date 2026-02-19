@@ -27,16 +27,16 @@ export default function OverdueAlert({ tasks }) {
       animate={{ opacity: 1, y: 0 }}
       className="mb-6"
     >
-      <Card className="border-red-200 bg-red-50">
+      <Card className="border-amber-200 bg-amber-50">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-6 h-6 text-red-600" />
+            <AlertTriangle className="w-6 h-6 text-amber-600" />
             <div>
-              <h3 className="font-semibold text-red-800">
+              <h3 className="font-semibold text-amber-800">
                 יש לך {overdueTasks.length} משימות באיחור
               </h3>
               {criticalOverdue.length > 0 && (
-                <p className="text-sm text-red-600 mt-1">
+                <p className="text-sm text-amber-600 mt-1">
                   {criticalOverdue.length} מהן באיחור קריטי (מעל 3 ימים)
                 </p>
               )}

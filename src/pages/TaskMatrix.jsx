@@ -9,13 +9,13 @@ import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 const importanceColors = {
-    high: 'border-r-4 border-red-500',
+    high: 'border-r-4 border-amber-500',
     medium: 'border-r-4 border-orange-500',
     low: 'border-r-4 border-blue-500',
 };
 
 const priorityColors = {
-    urgent: 'bg-red-100 text-red-800',
+    urgent: 'bg-amber-100 text-amber-800',
     high: 'bg-orange-100 text-orange-800',
     medium: 'bg-yellow-100 text-yellow-800',
     low: 'bg-blue-100 text-blue-800',
@@ -45,8 +45,8 @@ const DraggableTaskItem = ({ task, index, onEdit, onDelete }) => {
                   </button>
                 )}
                 {onDelete && (
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(task); }} className="p-1 rounded hover:bg-red-100 transition-colors" title="מחק משימה">
-                    <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-600" />
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(task); }} className="p-1 rounded hover:bg-amber-100 transition-colors" title="מחק משימה">
+                    <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-amber-600" />
                   </button>
                 )}
               </div>
@@ -159,7 +159,7 @@ export default function TaskMatrixPage() {
   };
   
   const quadrants = [
-    { id: 'q1', title: 'עשה עכשיו', description: 'דחוף וחשוב', importance: 'high', priority: 'urgent', color: 'red' },
+    { id: 'q1', title: 'עשה עכשיו', description: 'דחוף וחשוב', importance: 'high', priority: 'urgent', color: 'amber' },
     { id: 'q2', title: 'תכנן', description: 'לא דחוף אבל חשוב', importance: 'high', priority: 'high', color: 'blue' },
     { id: 'q3', title: 'האצל סמכויות', description: 'דחוף אבל לא חשוב', importance: 'medium', priority: 'medium', color: 'orange' },
     { id: 'q4', title: 'מחק', description: 'לא דחוף ולא חשוב', importance: 'low', priority: 'low', color: 'gray' }

@@ -263,7 +263,7 @@ export default function MondayDataImport({ onComplete }) {
               <span className="text-gray-600">{result.updated} לקוחות עודכנו</span>
               <span className="text-gray-600">{result.created} לקוחות נוצרו</span>
               <span className="text-gray-600">{result.accountsCreated} חשבונות נוצרו</span>
-              {result.errors > 0 && <span className="text-red-600">{result.errors} שגיאות</span>}
+              {result.errors > 0 && <span className="text-amber-600">{result.errors} שגיאות</span>}
             </div>
             <details className="text-xs text-gray-500">
               <summary className="cursor-pointer">פירוט ({result.log.length} שורות)</summary>

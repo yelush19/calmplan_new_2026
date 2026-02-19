@@ -97,7 +97,7 @@ export default function EventDetailsModal({ item, itemType, onClose, onSave }) {
       low: 'bg-blue-100 text-blue-800',
       medium: 'bg-green-100 text-green-800',
       high: 'bg-orange-100 text-orange-800',
-      urgent: 'bg-red-100 text-red-800'
+      urgent: 'bg-amber-100 text-amber-800'
     };
     return colors[priority] || 'bg-gray-100 text-gray-800';
   };
@@ -130,7 +130,7 @@ export default function EventDetailsModal({ item, itemType, onClose, onSave }) {
                     <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                       <Edit3 className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(true)} className="text-red-600 hover:text-red-700">
+                    <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(true)} className="text-amber-600 hover:text-amber-700">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </>

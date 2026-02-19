@@ -1,3 +1,4 @@
+import { Link as RouterLink } from 'react-router-dom';
 import Layout from "./Layout.jsx";
 
 import Calendar from "./Calendar";
@@ -90,7 +91,9 @@ import AdminTasksDashboard from "./AdminTasksDashboard";
 
 import ClientFiles from "./ClientFiles";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import BackupManager from "./BackupManager";
+
+import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
     
@@ -183,6 +186,8 @@ const PAGES = {
     AdminTasksDashboard: AdminTasksDashboard,
 
     ClientFiles: ClientFiles,
+
+    BackupManager: BackupManager,
 
 }
 
@@ -301,11 +306,13 @@ function PagesContent() {
 
                 <Route path="/ClientFiles" element={<ClientFiles />} />
 
+                <Route path="/BackupManager" element={<BackupManager />} />
+
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <h1 className="text-6xl font-bold text-gray-300 mb-4">404</h1>
                         <p className="text-xl text-gray-600 mb-6">העמוד לא נמצא</p>
-                        <a href="/Home" className="text-primary hover:underline font-medium">חזור לדף הבית</a>
+                        <RouterLink to="/Home" className="text-primary hover:underline font-medium">חזור לדף הבית</RouterLink>
                     </div>
                 } />
 

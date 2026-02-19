@@ -774,7 +774,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-gray-300 hover:text-red-500 h-8 w-8 p-0 rounded-lg flex-shrink-0"
+                                      className="text-gray-300 hover:text-amber-500 h-8 w-8 p-0 rounded-lg flex-shrink-0"
                                       onClick={(e) => { e.stopPropagation(); removeFromPreview(task._previewId); }}
                                     >
                                       <Trash2 className="w-4 h-4" />

@@ -29,7 +29,7 @@ const accountStatusConfig = {
     active: { label: 'פעיל', badge: 'bg-green-100 text-green-800 border-green-200' },
     inactive: { label: 'לא פעיל', badge: 'bg-gray-100 text-gray-600 border-gray-200' },
     in_review: { label: 'בבדיקה', badge: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-    problem: { label: 'בעיה', badge: 'bg-red-100 text-red-800 border-red-200' },
+    problem: { label: 'בעיה', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
 };
 
 const loadingSystemLabels = {
@@ -261,7 +261,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className={`p-4 border rounded-lg flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-gray-50/50 ${account.account_status === 'problem' ? 'border-red-300 bg-red-50/30' : account.account_status === 'inactive' ? 'opacity-60' : ''}`}
+                                className={`p-4 border rounded-lg flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-gray-50/50 ${account.account_status === 'problem' ? 'border-amber-300 bg-amber-50/30' : account.account_status === 'inactive' ? 'opacity-60' : ''}`}
                             >
                                 <div className="flex items-center gap-3 flex-1">
                                     <span className="text-blue-600">{accountTypeIcons[account.account_type]}</span>

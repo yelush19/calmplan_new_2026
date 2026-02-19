@@ -217,19 +217,29 @@ export const entities = {
 export { auth };
 
 // Helper: Export/Import all data (for backup/restore)
+// Export uses bare collection names (without calmplan_ prefix) for cross-format compatibility
 export function exportAllData() {
   const allData = {};
   for (const key of Object.keys(localStorage)) {
-    if (key.startsWith(DB_PREFIX) && !key.includes('backup_snapshots')) {
-      allData[key] = JSON.parse(localStorage.getItem(key));
+    if (key.startsWith(DB_PREFIX) && !key.includes('backup_snapshots') && key !== DB_PREFIX + '_user') {
+      const collectionName = key.replace(DB_PREFIX, '');
+      allData[collectionName] = JSON.parse(localStorage.getItem(key));
     }
   }
   return allData;
 }
 
+// Import handles both formats:
+//  - Supabase export: { "clients": [...], "tasks": [...] }
+//  - Old localStorage export: { "calmplan_clients": [...] }
 export function importAllData(data) {
   for (const [key, value] of Object.entries(data)) {
-    localStorage.setItem(key, JSON.stringify(value));
+    if (!Array.isArray(value)) continue;
+    // Normalize: ensure key has the calmplan_ prefix for localStorage
+    const storageKey = key.startsWith(DB_PREFIX) ? key : DB_PREFIX + key;
+    // Skip backup snapshots and internal keys
+    if (storageKey.includes('backup_snapshots') || storageKey === DB_PREFIX + '_user') continue;
+    localStorage.setItem(storageKey, JSON.stringify(value));
   }
 }
 
