@@ -363,7 +363,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }
 
   return (
-    <div ref={containerRef} className="relative w-full overflow-hidden rounded-2xl border border-gray-200" style={{ height: 650, background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' }}>
+    <div ref={containerRef} className="relative w-full overflow-hidden rounded-2xl border border-gray-200" style={{ height: 'max(650px, calc(100vh - 340px))', background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' }}>
       <svg
         width={dimensions.width}
         height={dimensions.height}
