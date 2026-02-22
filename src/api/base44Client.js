@@ -1,5 +1,5 @@
 // Smart data layer - uses Supabase if configured, falls back to localStorage
-import { isSupabaseConfigured, supabase } from './supabaseClient';
+import { isSupabaseConfigured, supabase, testSupabaseConnection } from './supabaseClient';
 import * as localDB from './localDB';
 import * as supabaseDB from './supabaseDB';
 
@@ -9,6 +9,9 @@ const source = isSupabaseConfigured ? supabaseDB : localDB;
 export const syncStatus = {
   isCloud: isSupabaseConfigured,
   source: isSupabaseConfigured ? 'supabase' : 'localStorage',
+  connectionTested: false,
+  connectionOk: false,
+  connectionError: null,
 };
 
 // Warn loudly when running in local-only mode
@@ -17,6 +20,21 @@ if (!isSupabaseConfigured) {
     '[CalmPlan] ⚠️ Running in LOCAL-ONLY mode. Data will NOT sync between devices.\n' +
     'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file to enable cloud sync.'
   );
+}
+
+// Test connection on startup (non-blocking)
+if (isSupabaseConfigured) {
+  testSupabaseConnection().then((result) => {
+    syncStatus.connectionTested = true;
+    syncStatus.connectionOk = result.ok;
+    syncStatus.connectionError = result.error || null;
+    if (result.ok) {
+      console.log('[CalmPlan] ✅ Supabase connection verified');
+    } else {
+      console.error(`[CalmPlan] ❌ Supabase connection failed: ${result.error}`);
+      console.warn('[CalmPlan] Data will still be read from localStorage cache if available');
+    }
+  });
 }
 
 // ── Realtime Subscriptions (cloud sync between devices) ──────────
