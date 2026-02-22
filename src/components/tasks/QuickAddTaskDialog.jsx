@@ -23,6 +23,9 @@ const SERVICE_GROUPS = [
   { key: 'tax', label: 'דיווחי מיסים' },
   { key: 'payroll', label: 'שכר' },
   { key: 'additional', label: 'שירותים נוספים' },
+  { key: 'reconciliation', label: 'התאמות' },
+  { key: 'admin', label: 'אדמיניסטרציה' },
+  { key: 'balance', label: 'מאזנים' },
 ];
 
 const SERVICE_LIST = Object.values(ALL_SERVICES).map(s => ({
@@ -434,7 +437,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
             <Label className="text-xs flex items-center gap-1.5">
               הגש כמות שיש (Submit As-Is)
             </Label>
-            <Switch checked={submitAsIs} onCheckedChange={setSubmitAsIs} />
+            <Switch checked={submitAsIs} onCheckedChange={setSubmitAsIs} className="data-[state=unchecked]:bg-emerald-200" />
           </div>
 
           {/* Critical Deadline Warning */}
