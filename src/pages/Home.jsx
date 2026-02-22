@@ -30,6 +30,41 @@ import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
 import useTaskCascade from "@/hooks/useTaskCascade";
 import { useApp } from "@/contexts/AppContext";
 
+// ─── Draggable panel position hook (localStorage persist) ─────────
+function useDragPosition(key, defaultPos = { x: 0, y: 0 }) {
+  const storageKey = `calmplan_drag_${key}`;
+  const didDrag = React.useRef(false);
+  const [pos, setPos] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return defaultPos;
+  });
+  const onDragStart = useCallback(() => { didDrag.current = false; }, []);
+  const onDrag = useCallback(() => { didDrag.current = true; }, []);
+  const onDragEnd = useCallback((_, info) => {
+    const dist = Math.abs(info.offset.x) + Math.abs(info.offset.y);
+    if (dist < 3) { didDrag.current = false; return; } // too small, treat as click
+    didDrag.current = true;
+    setPos(prev => {
+      const next = { x: prev.x + info.offset.x, y: prev.y + info.offset.y };
+      try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, [storageKey]);
+  const reset = useCallback(() => {
+    setPos(defaultPos);
+    try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+  }, [storageKey, defaultPos]);
+  // Wrap onClick to ignore if drag just happened
+  const guardClick = useCallback((handler) => (e) => {
+    if (didDrag.current) { didDrag.current = false; e.preventDefault(); e.stopPropagation(); return; }
+    handler?.(e);
+  }, []);
+  return { pos, onDragStart, onDrag, onDragEnd, reset, guardClick };
+}
+
 // ─── Zero-Panic Colors (NO RED) ─────────────────────────────────
 const ZERO_PANIC = {
   orange: '#F57C00',
@@ -418,6 +453,12 @@ export default function HomePage() {
     }
   };
 
+  // Draggable panel positions
+  const dragStats = useDragPosition('stats');
+  const dragSwitcher = useDragPosition('switcher');
+  const dragInsights = useDragPosition('insights');
+  const dragQuickActions = useDragPosition('quick_actions');
+
   // Progress calculation for floating panel
   const todayTotal = data.today.length + (data.overdue?.length || 0);
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
@@ -441,10 +482,19 @@ export default function HomePage() {
             focusMode={focusMode}
           />
 
-          {/* ── FLOATING STATS PANEL (glass, left side) ── */}
-          <div
-            className="absolute top-2 right-2 z-30 flex flex-col gap-1.5 p-2 rounded-xl border border-white/40 shadow-lg"
+          {/* ── FLOATING STATS PANEL (glass, draggable) ── */}
+          <motion.div
+            drag
+            dragMomentum={false}
+            dragElastic={0}
+            onDragStart={dragStats.onDragStart}
+            onDrag={dragStats.onDrag}
+            onDragEnd={dragStats.onDragEnd}
+            animate={dragStats.pos}
+            onDoubleClick={dragStats.reset}
+            className="absolute top-2 right-2 z-30 flex flex-col gap-1.5 p-2 rounded-xl border border-white/40 shadow-lg cursor-grab active:cursor-grabbing select-none"
             style={{ backgroundColor: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', maxWidth: '200px' }}
+            title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
           >
             {/* Greeting */}
             <div className="text-xs font-bold text-gray-700 truncate">
@@ -517,12 +567,21 @@ export default function HomePage() {
               <Plus className="w-3 h-3" />
               משימה מהירה
             </Button>
-          </div>
+          </motion.div>
 
-          {/* ── FLOATING VIEW SWITCHER (top center-left) ── */}
-          <div
-            className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-1 rounded-lg border border-white/40 shadow-md"
+          {/* ── FLOATING VIEW SWITCHER (top center-left, draggable) ── */}
+          <motion.div
+            drag
+            dragMomentum={false}
+            dragElastic={0}
+            onDragStart={dragSwitcher.onDragStart}
+            onDrag={dragSwitcher.onDrag}
+            onDragEnd={dragSwitcher.onDragEnd}
+            animate={dragSwitcher.pos}
+            onDoubleClick={dragSwitcher.reset}
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-1 rounded-lg border border-white/40 shadow-md cursor-grab active:cursor-grabbing select-none"
             style={{ backgroundColor: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+            title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
           >
             <Target className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
             <span className="text-[10px] font-semibold text-gray-600 ml-0.5">מרכז השליטה</span>
@@ -543,13 +602,22 @@ export default function HomePage() {
             <Link to={createPageUrl("Tasks")}>
               <span className="text-[9px] text-gray-400 hover:text-gray-600 cursor-pointer whitespace-nowrap">כל המשימות →</span>
             </Link>
-          </div>
+          </motion.div>
 
-          {/* ── FLOATING INSIGHTS (bottom strip, glass) ── */}
+          {/* ── FLOATING INSIGHTS (bottom strip, glass, draggable) ── */}
           {insights.length > 0 && (
-            <div
-              className="absolute bottom-2 left-2 right-[220px] z-30 flex gap-1.5 overflow-x-auto px-2 py-1.5 rounded-lg border border-white/40"
+            <motion.div
+              drag
+              dragMomentum={false}
+              dragElastic={0}
+              onDragStart={dragInsights.onDragStart}
+              onDrag={dragInsights.onDrag}
+              onDragEnd={dragInsights.onDragEnd}
+              animate={dragInsights.pos}
+              onDoubleClick={dragInsights.reset}
+              className="absolute bottom-2 left-2 right-[220px] z-30 flex gap-1.5 overflow-x-auto px-2 py-1.5 rounded-lg border border-white/40 cursor-grab active:cursor-grabbing select-none"
               style={{ backgroundColor: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+              title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
             >
               {insights.slice(0, 4).map((insight, i) => {
                 const colorMap = {
@@ -572,13 +640,22 @@ export default function HomePage() {
                   </div>
                 );
               })}
-            </div>
+            </motion.div>
           )}
 
-          {/* ── FLOATING QUICK ACTIONS (bottom right) ── */}
-          <div
-            className="absolute bottom-2 right-2 z-30 flex gap-1.5 px-2 py-1.5 rounded-lg border border-white/40"
+          {/* ── FLOATING QUICK ACTIONS (bottom right, draggable) ── */}
+          <motion.div
+            drag
+            dragMomentum={false}
+            dragElastic={0}
+            onDragStart={dragQuickActions.onDragStart}
+            onDrag={dragQuickActions.onDrag}
+            onDragEnd={dragQuickActions.onDragEnd}
+            animate={dragQuickActions.pos}
+            onDoubleClick={dragQuickActions.reset}
+            className="absolute bottom-2 right-2 z-30 flex gap-1.5 px-2 py-1.5 rounded-lg border border-white/40 cursor-grab active:cursor-grabbing select-none"
             style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+            title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
           >
             <Link to={createPageUrl("WeeklyPlanningDashboard")}>
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50 cursor-pointer transition-colors">
@@ -598,7 +675,7 @@ export default function HomePage() {
                 <span className="text-[10px] font-medium" style={{ color: '#E65100' }}>אוטומציות</span>
               </div>
             </Link>
-          </div>
+          </motion.div>
         </div>
       ) : (
         /* ═══ NON-MINDMAP VIEWS — use traditional layout ═══ */
@@ -698,15 +775,7 @@ export default function HomePage() {
 
       {ConfirmDialogComponent}
 
-      {/* FAB */}
-      <button
-        onClick={() => setShowQuickAdd(true)}
-        className="fixed bottom-6 left-20 w-14 h-14 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40"
-        style={{ backgroundColor: ZERO_PANIC.blue }}
-        title="הוסף משימה מהירה"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+      {/* FAB — removed, using Layout global FABs instead */}
     </motion.div>
   );
 }
