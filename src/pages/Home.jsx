@@ -30,39 +30,54 @@ import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
 import useTaskCascade from "@/hooks/useTaskCascade";
 import { useApp } from "@/contexts/AppContext";
 
-// ─── Draggable panel position hook (localStorage persist) ─────────
-function useDragPosition(key, defaultPos = { x: 0, y: 0 }) {
-  const storageKey = `calmplan_drag_${key}`;
+// ─── Draggable panel wrapper (localStorage persist) ─────────
+function DraggablePanel({ storageKey, children, className = '', style = {} }) {
+  const fullKey = `calmplan_drag_${storageKey}`;
   const didDrag = React.useRef(false);
-  const [pos, setPos] = useState(() => {
+  const savedPos = React.useRef(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) return JSON.parse(saved);
+      const s = localStorage.getItem(fullKey);
+      if (s) return JSON.parse(s);
     } catch { /* ignore */ }
-    return defaultPos;
+    return { x: 0, y: 0 };
   });
-  const onDragStart = useCallback(() => { didDrag.current = false; }, []);
-  const onDrag = useCallback(() => { didDrag.current = true; }, []);
-  const onDragEnd = useCallback((_, info) => {
+  if (typeof savedPos.current === 'function') savedPos.current = savedPos.current();
+  const [resetKey, setResetKey] = useState(0);
+
+  const handleDragEnd = useCallback((_, info) => {
     const dist = Math.abs(info.offset.x) + Math.abs(info.offset.y);
-    if (dist < 3) { didDrag.current = false; return; } // too small, treat as click
+    if (dist < 3) { didDrag.current = false; return; }
     didDrag.current = true;
-    setPos(prev => {
-      const next = { x: prev.x + info.offset.x, y: prev.y + info.offset.y };
-      try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
-  }, [storageKey]);
-  const reset = useCallback(() => {
-    setPos(defaultPos);
-    try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
-  }, [storageKey, defaultPos]);
-  // Wrap onClick to ignore if drag just happened
-  const guardClick = useCallback((handler) => (e) => {
-    if (didDrag.current) { didDrag.current = false; e.preventDefault(); e.stopPropagation(); return; }
-    handler?.(e);
-  }, []);
-  return { pos, onDragStart, onDrag, onDragEnd, reset, guardClick };
+    const prev = savedPos.current;
+    const next = { x: prev.x + info.offset.x, y: prev.y + info.offset.y };
+    savedPos.current = next;
+    try { localStorage.setItem(fullKey, JSON.stringify(next)); } catch { /* ignore */ }
+  }, [fullKey]);
+
+  const handleReset = useCallback(() => {
+    savedPos.current = { x: 0, y: 0 };
+    try { localStorage.removeItem(fullKey); } catch { /* ignore */ }
+    setResetKey(k => k + 1);
+  }, [fullKey]);
+
+  return (
+    <motion.div
+      key={resetKey}
+      drag
+      dragMomentum={false}
+      dragElastic={0}
+      onDragStart={() => { didDrag.current = false; }}
+      onDrag={() => { didDrag.current = true; }}
+      onDragEnd={handleDragEnd}
+      initial={savedPos.current}
+      onDoubleClick={handleReset}
+      className={`cursor-grab active:cursor-grabbing select-none ${className}`}
+      style={style}
+      title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
+    >
+      {children}
+    </motion.div>
+  );
 }
 
 // ─── Zero-Panic Colors (NO RED) ─────────────────────────────────
@@ -119,6 +134,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState('overdue');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [focusView, setFocusView] = useState('mindmap'); // Default to mind map
+  const [statsExpanded, setStatsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
@@ -453,12 +469,6 @@ export default function HomePage() {
     }
   };
 
-  // Draggable panel positions
-  const dragStats = useDragPosition('stats');
-  const dragSwitcher = useDragPosition('switcher');
-  const dragInsights = useDragPosition('insights');
-  const dragQuickActions = useDragPosition('quick_actions');
-
   // Progress calculation for floating panel
   const todayTotal = data.today.length + (data.overdue?.length || 0);
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
@@ -482,106 +492,141 @@ export default function HomePage() {
             focusMode={focusMode}
           />
 
-          {/* ── FLOATING STATS PANEL (glass, draggable) ── */}
-          <motion.div
-            drag
-            dragMomentum={false}
-            dragElastic={0}
-            onDragStart={dragStats.onDragStart}
-            onDrag={dragStats.onDrag}
-            onDragEnd={dragStats.onDragEnd}
-            animate={dragStats.pos}
-            onDoubleClick={dragStats.reset}
-            className="absolute top-2 right-2 z-30 flex flex-col gap-1.5 p-2 rounded-xl border border-white/40 shadow-lg cursor-grab active:cursor-grabbing select-none"
-            style={{ backgroundColor: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', maxWidth: '200px' }}
-            title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
+          {/* ── FLOATING STATS PANEL (glass, draggable, expandable) ── */}
+          <DraggablePanel
+            storageKey="stats"
+            className="absolute top-2 right-2 z-30"
           >
-            {/* Greeting */}
-            <div className="text-xs font-bold text-gray-700 truncate">
-              {getGreeting()}{userName ? `, ${userName}` : ''}
-            </div>
-            <div className="text-[10px] text-gray-400">
-              {format(new Date(), 'EEEE, d בMMMM', { locale: he })}
-            </div>
+          <div
+            className="flex flex-col rounded-xl border border-gray-200/60 shadow-lg overflow-hidden transition-all duration-300"
+            style={{ backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', width: statsExpanded ? '220px' : '180px' }}
+          >
+            {/* Header — always visible, click to expand/collapse */}
+            <button
+              onClick={() => setStatsExpanded(!statsExpanded)}
+              className="flex items-center justify-between w-full px-3 py-1.5 hover:bg-gray-50/60 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-800">
+                  {getGreeting()}{userName ? `, ${userName}` : ''}
+                </span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${statsExpanded ? 'rotate-180' : ''}`} />
+            </button>
 
-            {/* Stat chips — vertical stack */}
-            <div className="flex flex-col gap-1 mt-0.5">
-              <Link to={createPageUrl("Tasks") + "?tab=active&context=work"}>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md cursor-pointer hover:bg-blue-50 transition-colors" style={{ backgroundColor: '#E3F2FD50' }}>
-                  <Briefcase className="w-3 h-3" style={{ color: ZERO_PANIC.blue }} />
-                  <span className="text-xs font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</span>
-                  <span className="text-[9px]" style={{ color: ZERO_PANIC.blue }}>עבודה</span>
-                </div>
+            {/* Compact bar — always visible: key numbers in a row */}
+            <div className="flex items-center gap-2 px-3 pb-1.5">
+              <Link to={createPageUrl("Tasks") + "?tab=active&context=work"} className="flex items-center gap-1 cursor-pointer hover:opacity-80">
+                <Briefcase className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
+                <span className="text-sm font-extrabold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</span>
               </Link>
-              <Link to={createPageUrl("Tasks") + "?tab=active&context=home"}>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md cursor-pointer hover:bg-green-50 transition-colors" style={{ backgroundColor: '#E8F5E950' }}>
-                  <HomeIcon className="w-3 h-3" style={{ color: ZERO_PANIC.green }} />
-                  <span className="text-xs font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</span>
-                  <span className="text-[9px]" style={{ color: ZERO_PANIC.green }}>בית</span>
-                </div>
+              <div className="w-px h-4 bg-gray-200" />
+              <Link to={createPageUrl("Tasks") + "?tab=active&context=home"} className="flex items-center gap-1 cursor-pointer hover:opacity-80">
+                <HomeIcon className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.green }} />
+                <span className="text-sm font-extrabold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</span>
               </Link>
               {data.overdue.length > 0 && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md" style={{ backgroundColor: '#FFF3E070' }}>
-                  <Clock className="w-3 h-3" style={{ color: ZERO_PANIC.orange }} />
-                  <span className="text-xs font-bold" style={{ color: ZERO_PANIC.orange }}>{data.overdue.length}</span>
-                  <span className="text-[9px]" style={{ color: ZERO_PANIC.orange }}>באיחור</span>
-                </div>
+                <>
+                  <div className="w-px h-4 bg-gray-200" />
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.orange }} />
+                    <span className="text-sm font-extrabold" style={{ color: ZERO_PANIC.orange }}>{data.overdue.length}</span>
+                  </div>
+                </>
               )}
-              <Link to={createPageUrl("Calendar")}>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md cursor-pointer hover:bg-purple-50 transition-colors bg-purple-50/50">
-                  <Calendar className="w-3 h-3 text-purple-600" />
-                  <span className="text-xs font-bold text-purple-700">{data.todayEvents.length}</span>
-                  <span className="text-[9px] text-purple-600">אירועים</span>
+              {/* Progress mini */}
+              <div className="flex-1 mx-1">
+                <div className="bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }} />
                 </div>
-              </Link>
+              </div>
+              <span className="text-[10px] font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
             </div>
 
-            {/* Progress bar */}
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }} />
-              </div>
-              <span className="text-[9px] font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
-            </div>
+            {/* Expanded details */}
+            <AnimatePresence>
+              {statsExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-3 pb-2 pt-1 border-t border-gray-100 flex flex-col gap-1.5">
+                    {/* Date */}
+                    <div className="text-[10px] text-gray-500 font-medium">
+                      {format(new Date(), 'EEEE, d בMMMM yyyy', { locale: he })}
+                    </div>
 
-            {/* Completed badge */}
-            {data.completedToday > 0 && (
-              <div className="flex items-center gap-1 text-[9px]" style={{ color: ZERO_PANIC.green }}>
-                <CheckCircle className="w-2.5 h-2.5" />
-                {data.completedToday} הושלמו היום
-              </div>
-            )}
+                    {/* Stat rows with stronger colors */}
+                    <Link to={createPageUrl("Tasks") + "?tab=active&context=work"}>
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:shadow-sm transition-all" style={{ backgroundColor: '#E3F2FD' }}>
+                        <Briefcase className="w-4 h-4" style={{ color: '#0277BD' }} />
+                        <span className="text-sm font-bold" style={{ color: '#01579B' }}>{data.workCount}</span>
+                        <span className="text-xs font-medium" style={{ color: '#0277BD' }}>משימות עבודה</span>
+                      </div>
+                    </Link>
+                    <Link to={createPageUrl("Tasks") + "?tab=active&context=home"}>
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:shadow-sm transition-all" style={{ backgroundColor: '#E8F5E9' }}>
+                        <HomeIcon className="w-4 h-4" style={{ color: '#2E7D32' }} />
+                        <span className="text-sm font-bold" style={{ color: '#1B5E20' }}>{data.homeCount}</span>
+                        <span className="text-xs font-medium" style={{ color: '#2E7D32' }}>בית ואישי</span>
+                      </div>
+                    </Link>
+                    {data.overdue.length > 0 && (
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ backgroundColor: '#FFF3E0' }}>
+                        <Clock className="w-4 h-4" style={{ color: '#E65100' }} />
+                        <span className="text-sm font-bold" style={{ color: '#BF360C' }}>{data.overdue.length}</span>
+                        <span className="text-xs font-medium" style={{ color: '#E65100' }}>באיחור</span>
+                      </div>
+                    )}
+                    <Link to={createPageUrl("Calendar")}>
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:shadow-sm transition-all bg-purple-50">
+                        <Calendar className="w-4 h-4 text-purple-700" />
+                        <span className="text-sm font-bold text-purple-800">{data.todayEvents.length}</span>
+                        <span className="text-xs font-medium text-purple-700">אירועים היום</span>
+                      </div>
+                    </Link>
 
-            {/* Setup warning */}
-            {setupIncomplete.missing > 0 && (
-              <Link to={createPageUrl("SystemReadiness")}>
-                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors">
-                  <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
-                  <span className="text-[9px] text-amber-700 font-medium">{setupIncomplete.missing} חסרים</span>
-                </div>
-              </Link>
-            )}
+                    {/* Completed today */}
+                    {data.completedToday > 0 && (
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium" style={{ color: ZERO_PANIC.green }}>
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        {data.completedToday} הושלמו היום
+                      </div>
+                    )}
 
-            {/* Quick Add */}
-            <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-primary hover:bg-accent text-white gap-0.5 h-6 text-[10px] px-2 w-full mt-0.5">
-              <Plus className="w-3 h-3" />
-              משימה מהירה
-            </Button>
-          </motion.div>
+                    {/* Setup warning */}
+                    {setupIncomplete.missing > 0 && (
+                      <Link to={createPageUrl("SystemReadiness")}>
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-50 border border-amber-300 cursor-pointer hover:bg-amber-100 transition-colors">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-700" />
+                          <span className="text-xs text-amber-800 font-bold">{setupIncomplete.missing} לקוחות חסרי נתונים</span>
+                        </div>
+                      </Link>
+                    )}
+
+                    {/* Quick Add */}
+                    <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-primary hover:bg-accent text-white gap-1 h-7 text-xs px-3 w-full">
+                      <Plus className="w-3.5 h-3.5" />
+                      משימה מהירה
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          </DraggablePanel>
 
           {/* ── FLOATING VIEW SWITCHER (top center-left, draggable) ── */}
-          <motion.div
-            drag
-            dragMomentum={false}
-            dragElastic={0}
-            onDragStart={dragSwitcher.onDragStart}
-            onDrag={dragSwitcher.onDrag}
-            onDragEnd={dragSwitcher.onDragEnd}
-            animate={dragSwitcher.pos}
-            onDoubleClick={dragSwitcher.reset}
-            className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-1 rounded-lg border border-white/40 shadow-md cursor-grab active:cursor-grabbing select-none"
-            style={{ backgroundColor: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
-            title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
+          <DraggablePanel
+            storageKey="switcher"
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-30"
+          >
+          <div
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-white/40 shadow-md"
+            style={{ backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
           >
             <Target className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
             <span className="text-[10px] font-semibold text-gray-600 ml-0.5">מרכז השליטה</span>
@@ -602,22 +647,19 @@ export default function HomePage() {
             <Link to={createPageUrl("Tasks")}>
               <span className="text-[9px] text-gray-400 hover:text-gray-600 cursor-pointer whitespace-nowrap">כל המשימות →</span>
             </Link>
-          </motion.div>
+          </div>
+          </DraggablePanel>
 
           {/* ── FLOATING INSIGHTS (bottom strip, glass, draggable) ── */}
           {insights.length > 0 && (
-            <motion.div
-              drag
-              dragMomentum={false}
-              dragElastic={0}
-              onDragStart={dragInsights.onDragStart}
-              onDrag={dragInsights.onDrag}
-              onDragEnd={dragInsights.onDragEnd}
-              animate={dragInsights.pos}
-              onDoubleClick={dragInsights.reset}
-              className="absolute bottom-2 left-2 right-[220px] z-30 flex gap-1.5 overflow-x-auto px-2 py-1.5 rounded-lg border border-white/40 cursor-grab active:cursor-grabbing select-none"
-              style={{ backgroundColor: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
-              title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
+            <DraggablePanel
+              storageKey="insights"
+              className="absolute bottom-2 left-2 z-30"
+              style={{ right: '220px' }}
+            >
+            <div
+              className="flex gap-1.5 overflow-x-auto px-2 py-1.5 rounded-lg border border-white/40"
+              style={{ backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
             >
               {insights.slice(0, 4).map((insight, i) => {
                 const colorMap = {
@@ -640,22 +682,18 @@ export default function HomePage() {
                   </div>
                 );
               })}
-            </motion.div>
+            </div>
+            </DraggablePanel>
           )}
 
           {/* ── FLOATING QUICK ACTIONS (bottom right, draggable) ── */}
-          <motion.div
-            drag
-            dragMomentum={false}
-            dragElastic={0}
-            onDragStart={dragQuickActions.onDragStart}
-            onDrag={dragQuickActions.onDrag}
-            onDragEnd={dragQuickActions.onDragEnd}
-            animate={dragQuickActions.pos}
-            onDoubleClick={dragQuickActions.reset}
-            className="absolute bottom-2 right-2 z-30 flex gap-1.5 px-2 py-1.5 rounded-lg border border-white/40 cursor-grab active:cursor-grabbing select-none"
-            style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
-            title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
+          <DraggablePanel
+            storageKey="quick_actions"
+            className="absolute bottom-2 right-2 z-30"
+          >
+          <div
+            className="flex gap-1.5 px-2 py-1.5 rounded-lg border border-white/40"
+            style={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
           >
             <Link to={createPageUrl("WeeklyPlanningDashboard")}>
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50 cursor-pointer transition-colors">
@@ -675,7 +713,8 @@ export default function HomePage() {
                 <span className="text-[10px] font-medium" style={{ color: '#E65100' }}>אוטומציות</span>
               </div>
             </Link>
-          </motion.div>
+          </div>
+          </DraggablePanel>
         </div>
       ) : (
         /* ═══ NON-MINDMAP VIEWS — use traditional layout ═══ */
