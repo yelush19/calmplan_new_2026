@@ -22,11 +22,14 @@ import {
   Clock,
   AlertCircle,
   Eye,
-  UserPlus
+  UserPlus,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { Lead, Client } from '@/api/entities';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
+import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 const statusLabels = {
   new_lead: 'ליד חדש',
@@ -51,9 +54,10 @@ export default function LeadsPage() {
   const [filteredLeads, setFilteredLeads] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
   const [isConverting, setIsConverting] = useState(false);
+  const [collapsedStatuses, setCollapsedStatuses] = useState(new Set(['client_active', 'closed_lost']));
 
   useEffect(() => {
     loadLeads();
@@ -70,8 +74,8 @@ export default function LeadsPage() {
       );
     }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(lead => lead.status === statusFilter);
+    if (statusFilter.length > 0) {
+      filtered = filtered.filter(lead => statusFilter.includes(lead.status));
     }
 
     // מיון לפי תאריך יצירה (החדשים ראשונים)
@@ -305,120 +309,122 @@ export default function LeadsPage() {
                 className="pr-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="סנן לפי סטטוס" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">כל הסטטוסים</SelectItem>
-                {Object.entries(statusLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiStatusFilter
+              options={Object.entries(statusLabels).map(([key, label]) => ({
+                value: key,
+                label,
+                count: leads.filter(l => l.status === key).length,
+              }))}
+              selected={statusFilter}
+              onChange={setStatusFilter}
+              label="סנן לפי סטטוס"
+            />
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4">
-        <AnimatePresence>
-          {isLoading ? (
-            Array(3).fill(0).map((_, i) => (
-              <Card key={i} className="h-32 animate-pulse bg-gray-100" />
-            ))
-          ) : filteredLeads.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">לא נמצאו לידים</h3>
-              <p className="text-gray-500">לידים חדשים יופיעו כאן אוטומטית ממערכת הצעות המחיר.</p>
-            </Card>
-          ) : (
-            filteredLeads.map((lead) => (
-              <motion.div
-                key={lead.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-              >
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {lead.company_name}
-                          </h3>
-                          <Badge className={statusColors[lead.status]}>
-                            {statusLabels[lead.status]}
-                          </Badge>
-                        </div>
-                        
-                        <div className="space-y-1 text-sm text-gray-600 mb-3">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            <span>{lead.contact_person}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            <span>{lead.email}</span>
-                          </div>
-                          {lead.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-4 h-4" />
-                              <span>{lead.phone}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          <Badge variant="outline" className="text-xs">
-                            {lead.source}
-                          </Badge>
-                          {lead.quote_amount && (
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                              ₪{lead.quote_amount.toLocaleString()}
-                            </Badge>
-                          )}
-                          <Badge variant="outline" className="text-xs">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {format(parseISO(lead.created_date), 'dd/MM/yyyy', { locale: he })}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2 mr-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedLead(lead)}
+      {/* Leads grouped by status with collapsible sections */}
+      <div className="space-y-3">
+        {isLoading ? (
+          Array(3).fill(0).map((_, i) => (
+            <Card key={i} className="h-32 animate-pulse bg-gray-100" />
+          ))
+        ) : filteredLeads.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">לא נמצאו לידים</h3>
+            <p className="text-gray-500">לידים חדשים יופיעו כאן אוטומטית ממערכת הצעות המחיר.</p>
+          </Card>
+        ) : (
+          Object.entries(statusLabels).map(([statusKey, statusLabel]) => {
+            const statusLeads = filteredLeads.filter(l => l.status === statusKey);
+            if (statusLeads.length === 0) return null;
+            const isOpen = !collapsedStatuses.has(statusKey);
+            return (
+              <div key={statusKey} className="border rounded-lg overflow-hidden">
+                <button
+                  className={`w-full flex items-center gap-3 px-4 py-3 ${statusColors[statusKey]} hover:opacity-90 transition-all text-right`}
+                  onClick={() => setCollapsedStatuses(prev => {
+                    const next = new Set(prev);
+                    if (next.has(statusKey)) next.delete(statusKey); else next.add(statusKey);
+                    return next;
+                  })}
+                >
+                  {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  <span className="font-semibold">{statusLabel}</span>
+                  <Badge variant="outline" className="text-xs">{statusLeads.length}</Badge>
+                </button>
+                {isOpen && (
+                  <div className="p-3 bg-white space-y-3">
+                    <AnimatePresence>
+                      {statusLeads.map((lead) => (
+                        <motion.div
+                          key={lead.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
                         >
-                          <Eye className="w-4 h-4 mr-2" />
-                          צפייה
-                        </Button>
-                        
-                        {lead.status !== 'client_active' && lead.status !== 'closed_lost' && (
-                          <Select 
-                            value={lead.status} 
-                            onValueChange={(newStatus) => handleStatusUpdate(lead.id, newStatus)}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(statusLabels).map(([key, label]) => (
-                                <SelectItem key={key} value={key}>{label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))
-          )}
-        </AnimatePresence>
+                          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{lead.company_name}</h3>
+                                  <div className="space-y-1 text-sm text-gray-600 mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <User className="w-4 h-4" />
+                                      <span>{lead.contact_person}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Mail className="w-4 h-4" />
+                                      <span>{lead.email}</span>
+                                    </div>
+                                    {lead.phone && (
+                                      <div className="flex items-center gap-2">
+                                        <Phone className="w-4 h-4" />
+                                        <span>{lead.phone}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Badge variant="outline" className="text-xs">{lead.source}</Badge>
+                                    {lead.quote_amount && (
+                                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                        ₪{lead.quote_amount.toLocaleString()}
+                                      </Badge>
+                                    )}
+                                    <Badge variant="outline" className="text-xs">
+                                      <Calendar className="w-3 h-3 mr-1" />
+                                      {format(parseISO(lead.created_date), 'dd/MM/yyyy', { locale: he })}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-2 mr-4">
+                                  <Button variant="outline" size="sm" onClick={() => setSelectedLead(lead)}>
+                                    <Eye className="w-4 h-4 mr-2" /> צפייה
+                                  </Button>
+                                  {lead.status !== 'client_active' && lead.status !== 'closed_lost' && (
+                                    <Select value={lead.status} onValueChange={(newStatus) => handleStatusUpdate(lead.id, newStatus)}>
+                                      <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        {Object.entries(statusLabels).map(([key, label]) => (
+                                          <SelectItem key={key} value={key}>{label}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

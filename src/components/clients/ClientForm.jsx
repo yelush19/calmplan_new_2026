@@ -15,6 +15,8 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Client, ServiceCompany, ServiceProvider, ClientServiceProvider } from '@/api/entities';
+import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
+import { loadAutomationRules, getAutoLinkedServices } from '@/config/automationRules';
 
 
 export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate }) {
@@ -27,13 +29,16 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     contacts: [],
     company: '',
     status: 'active',
+    onboarding_year: String(new Date().getFullYear()),
     entity_number: '',
+    monthly_fee: '',
     service_types: [],
     tax_info: {
       tax_id: '',
       vat_file_number: '',
       tax_deduction_file_number: '',
       social_security_file_number: '',
+      direct_transmission: true,
       annual_tax_ids: {
         current_year: String(new Date().getFullYear()),
         social_security_id: '',
@@ -42,16 +47,30 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         tax_advances_percentage: '',
         last_updated: '',
         updated_by: ''
+      },
+      prev_year_ids: {
+        tax_advances_id: '',
+        tax_advances_percentage: '',
+        social_security_id: '',
+        deductions_id: ''
       }
     },
     reporting_info: {
       vat_reporting_frequency: 'monthly',
       tax_advances_frequency: 'monthly',
-      payroll_frequency: 'monthly'
+      deductions_frequency: 'monthly',
+      social_security_frequency: 'monthly',
+      payroll_frequency: 'monthly',
+      pnl_frequency: 'not_applicable',
+      pnl_target_day: '',
+      masav_suppliers_cycles: 0,
+      masav_suppliers_cycle_dates: []
     },
     business_info: {
       business_size: 'small',
       business_type: 'company',
+      employee_count: 0,
+      complexity_level: 'low',
       estimated_monthly_hours: {
         payroll: 0,
         vat_reporting: 0,
@@ -64,7 +83,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       monday_board_id: '',
       annual_reports_client_id: '',
       lastpass_payment_entry_id: '',
-      calmplan_id: '' // Added calmplan_id to initial state
+      calmplan_id: ''
     },
     communication_preferences: {
       preferred_method: 'email',
@@ -76,13 +95,14 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       fixed_retainer: '',
       billing_notes: ''
     },
+    fee_status: '',
+    paying_client_id: '',
     tags: [],
     notes: ''
   });
 
   const [onboardingLink, setOnboardingLink] = useState('');
 
-  // New state variables from outline
   const [isSyncingAnnualIds, setIsSyncingAnnualIds] = useState(false);
   const [syncAnnualIdsMessage, setSyncAnnualIdsMessage] = useState(null);
 
@@ -91,9 +111,10 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
   const [clientLinks, setClientLinks] = useState([]);
   const [isLoadingLinks, setIsLoadingLinks] = useState(false);
 
-  // New state for linking logic
   const [selectedCompanyToLink, setSelectedCompanyToLink] = useState(null);
   const [selectedProvidersToLink, setSelectedProvidersToLink] = useState([]);
+  const [automationRules, setAutomationRules] = useState([]);
+  const [allClientsForLinking, setAllClientsForLinking] = useState([]);
 
   const isNewClient = !client?.id;
 
@@ -109,11 +130,15 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
             annual_tax_ids: {
               ...prev.tax_info.annual_tax_ids,
               ...(client.tax_info?.annual_tax_ids || {})
+            },
+            prev_year_ids: {
+              ...prev.tax_info.prev_year_ids,
+              ...(client.tax_info?.prev_year_ids || {})
             }
           },
           reporting_info: { ...prev.reporting_info, ...client.reporting_info },
           business_info: { ...prev.business_info, ...client.business_info, estimated_monthly_hours: { ...prev.business_info.estimated_monthly_hours, ...(client.business_info?.estimated_monthly_hours || {}) } },
-          integration_info: { ...prev.integration_info, ...client.integration_info }, // Ensure calmplan_id is merged if it exists on client
+          integration_info: { ...prev.integration_info, ...client.integration_info },
           communication_preferences: { ...prev.communication_preferences, ...client.communication_preferences },
           billing_info: { ...prev.billing_info, ...client.billing_info },
           contacts: client.contacts || [],
@@ -163,6 +188,17 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     loadLinkData();
   }, [client, isNewClient]);
 
+  useEffect(() => {
+    loadAutomationRules().then(({ rules }) => setAutomationRules(rules));
+  }, []);
+
+  useEffect(() => {
+    Client.list(null, 500).then(data => {
+      const filtered = (data || []).filter(c => c.status === 'active' && c.id !== client?.id);
+      setAllClientsForLinking(filtered);
+    }).catch(() => {});
+  }, [client?.id]);
+
   const handleInputChange = (field, value, section = null, subSection = null) => {
     setFormData(prev => {
       let newData = { ...prev };
@@ -184,24 +220,63 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         newData[field] = value;
       }
 
-      if (field === 'entity_number' && value.trim() !== '') {
+      // סנכרון entity_number -> tax_info.tax_id and tax_info.vat_file_number
+      if (field === 'entity_number') {
+        const trimmedValue = (value || '').trim();
+        // This will now correctly set or clear tax_id and vat_file_number based on entity_number's value
         newData.tax_info = {
           ...newData.tax_info,
-          vat_file_number: value.trim()
+          tax_id: trimmedValue,
+          vat_file_number: trimmedValue
         };
       }
+      // The outline suggested a block here for `if (field === 'tax_id' && section === 'tax_info')`.
+      // However, `handleInputChange` is not used for `tax_info` fields; `handleTaxInfoChange` is.
+      // Implementing that block here would result in dead code.
+      // The `handleTaxInfoChange` already handles the `tax_id` -> `entity_number` sync.
+      // Therefore, omitting the dead code block to maintain clarity and avoid redundancy.
 
       return newData;
     });
   };
 
   const handleServiceTypeChange = (serviceType, checked) => {
-    setFormData(prev => ({
-      ...prev,
-      service_types: checked
+    setFormData(prev => {
+      let newServiceTypes = checked
         ? [...(prev.service_types || []), serviceType]
-        : (prev.service_types || []).filter(s => s !== serviceType)
-    }));
+        : (prev.service_types || []).filter(s => s !== serviceType);
+
+      let newReportingInfo = { ...prev.reporting_info };
+
+      // When unchecking payroll, also remove related services and reset frequencies
+      if (serviceType === 'payroll' && !checked) {
+        const payrollLinked = getAutoLinkedServices(automationRules, 'payroll', prev);
+        newServiceTypes = newServiceTypes.filter(s => !payrollLinked.includes(s));
+        newReportingInfo.payroll_frequency = 'not_applicable';
+        newReportingInfo.social_security_frequency = 'not_applicable';
+        newReportingInfo.deductions_frequency = 'not_applicable';
+      }
+
+      // When checking a service, apply automation rules to auto-add linked services
+      if (checked) {
+        const autoAdd = getAutoLinkedServices(automationRules, serviceType, prev);
+        for (const svc of autoAdd) {
+          if (!newServiceTypes.includes(svc)) newServiceTypes.push(svc);
+        }
+        // Set payroll-related frequencies when payroll is selected
+        if (serviceType === 'payroll') {
+          if (newReportingInfo.payroll_frequency === 'not_applicable') newReportingInfo.payroll_frequency = 'monthly';
+          if (newReportingInfo.social_security_frequency === 'not_applicable') newReportingInfo.social_security_frequency = 'monthly';
+          if (newReportingInfo.deductions_frequency === 'not_applicable') newReportingInfo.deductions_frequency = 'monthly';
+        }
+      }
+
+      return {
+        ...prev,
+        service_types: newServiceTypes,
+        reporting_info: newReportingInfo
+      };
+    });
   };
 
   const handleSelectAllServices = (checked) => {
@@ -274,6 +349,15 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         };
       }
 
+      // סנכרון tax_id -> entity_number and potentially vat_file_number
+      if (field === 'tax_id') {
+        newData.entity_number = value.trim();
+        // Also, if vat_file_number is empty, sync it from tax_id as well
+        if (!newData.tax_info.vat_file_number || newData.tax_info.vat_file_number === '') {
+          newData.tax_info.vat_file_number = value.trim();
+        }
+      }
+
       if (field === 'tax_deduction_file_number') {
         const socialSecurityNumber = (value && value.length >= 9) ? (value + '00') : '';
         newData.tax_info.social_security_file_number = socialSecurityNumber;
@@ -309,35 +393,53 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
 
   const validateForm = () => {
     const errors = [];
+    const warnings = [];
+    const isDirectTransmission = formData.tax_info?.direct_transmission;
 
     if (formData.service_types?.includes('tax_advances')) {
       if (!formData.tax_info?.annual_tax_ids?.tax_advances_id) {
-        errors.push('לקוח עם שירות מקדמות חייב להכיל מזהה מקדמות');
+        if (isDirectTransmission) {
+          warnings.push('שים לב: לקוח עם מקדמות ללא מזהה מקדמות (שידור ישיר)');
+        } else {
+          errors.push('לקוח עם שירות מקדמות חייב להכיל מזהה מקדמות');
+        }
       }
-      if (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null) {
+      if (!isDirectTransmission && (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null)) {
         errors.push('לקוח עם שירות מקדמות חייב להכיל אחוז מקדמות');
       }
     }
 
     if (formData.service_types?.includes('payroll')) {
       if (!formData.tax_info?.annual_tax_ids?.social_security_id) {
-        errors.push('לקוח עם שירות שכר חייב להכיל מזהה ביטוח לאומי');
+        if (isDirectTransmission) {
+          warnings.push('שים לב: לקוח עם שכר ללא מזהה ביטוח לאומי (שידור ישיר)');
+        } else {
+          errors.push('לקוח עם שירות שכר חייב להכיל מזהה ביטוח לאומי');
+        }
       }
       if (!formData.tax_info?.annual_tax_ids?.deductions_id) {
-        errors.push('לקוח עם שירות שכר חייב להכיל מזהה ניכויים');
+        if (isDirectTransmission) {
+          warnings.push('שים לב: לקוח עם שכר ללא מזהה ניכויים (שידור ישיר)');
+        } else {
+          errors.push('לקוח עם שירות שכר חייב להכיל מזהה ניכויים');
+        }
       }
     }
 
-    return errors;
+    return { errors, warnings };
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const validationErrors = validateForm();
+    const { errors: validationErrors, warnings: validationWarnings } = validateForm();
     if (validationErrors.length > 0) {
       alert('שגיאות בטופס:\n' + validationErrors.join('\n'));
       return;
+    }
+    if (validationWarnings.length > 0) {
+      const proceed = confirm('תזכורות:\n' + validationWarnings.join('\n') + '\n\nלהמשיך בשמירה?');
+      if (!proceed) return;
     }
 
     const cleanedData = {
@@ -359,9 +461,49 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     onSubmit(cleanedData);
   };
 
-  const serviceTypes = [
-    { value: 'payroll', label: 'שכר' }, { value: 'vat_reporting', label: 'דיווחי מע״מ' }, { value: 'tax_advances', label: 'מקדמות מס' }, { value: 'bookkeeping', label: 'הנהלת חשבונות' }, { value: 'annual_reports', label: 'מאזנים שנתיים' }, { value: 'reconciliation', label: 'התאמות חשבונות' }, { value: 'consulting', label: 'ייעוץ' }
+  const serviceTypeGroups = [
+    {
+      group: 'שירותי ליבה',
+      services: [
+        { value: 'bookkeeping', label: 'הנהלת חשבונות' },
+        { value: 'vat_reporting', label: 'דיווחי מע״מ' },
+        { value: 'tax_advances', label: 'מקדמות מס' },
+        { value: 'payroll', label: 'שכר' },
+        { value: 'social_security', label: 'ביטוח לאומי' },
+        { value: 'deductions', label: 'מ״ה ניכויים' },
+      ]
+    },
+    {
+      group: 'מס"בים ותשלומים',
+      services: [
+        { value: 'masav_employees', label: 'מס״ב עובדים' },
+        { value: 'masav_social', label: 'מס״ב סוציאליות' },
+        { value: 'masav_suppliers', label: 'מס״ב ספקים' },
+        { value: 'authorities_payment', label: 'תשלום רשויות' },
+      ]
+    },
+    {
+      group: 'דיווחים ודוחות',
+      services: [
+        { value: 'pnl_reports', label: 'דוחות רווח והפסד (PNL)' },
+        { value: 'annual_reports', label: 'מאזנים / דוחות שנתיים' },
+        { value: 'reconciliation', label: 'התאמות חשבונות' },
+        { value: 'operator_reporting', label: 'דיווח למתפעל' },
+        { value: 'taml_reporting', label: 'דיווח לטמל' },
+      ]
+    },
+    {
+      group: 'שירותים נוספים',
+      services: [
+        { value: 'payslip_sending', label: 'משלוח תלושים' },
+        { value: 'reserve_claims', label: 'תביעות מילואים' },
+        { value: 'admin', label: 'אדמיניסטרציה' },
+      ]
+    },
   ];
+
+  // Flat list for backward compatibility
+  const serviceTypes = serviceTypeGroups.flatMap(g => g.services);
 
   const serviceProviderTypeLabels = {
     cpa: "רו\"ח",
@@ -400,7 +542,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
 
   const handleCompanySelectForLinking = (companyId) => {
     setSelectedCompanyToLink(companyId);
-    setSelectedProvidersToLink([]); // Reset selected providers for new company
+    setSelectedProvidersToLink([]);
   };
 
   const handleProviderSelection = (providerId, checked) => {
@@ -422,14 +564,14 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         ClientServiceProvider.create({
           client_id: client.id,
           service_provider_id: providerId,
-          relationship_type: 'consultant' // Default or determine as needed
+          relationship_type: 'consultant'
         })
       );
       await Promise.all(linkPromises);
 
       const links = await ClientServiceProvider.filter({ client_id: client.id }, null, 500);
       setClientLinks(links || []);
-      setSelectedCompanyToLink(null); // Clear selection after linking
+      setSelectedCompanyToLink(null);
       setSelectedProvidersToLink([]);
     } catch (error) {
       console.error("Error linking providers:", error);
@@ -476,7 +618,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-3">
               <Building className="w-6 h-6 text-blue-600" />
-              {client?.id ? 'עריכת לקוח' : 'לקוח חדש'}
+              {client?.id ? `עריכת לקוח: ${client.name || formData.name || ''}` : 'לקוח חדש'}
             </CardTitle>
             {client?.id && (
               <Popover>
@@ -508,11 +650,13 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="basic" className="space-y-6">
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-6 w-full">
               <TabsTrigger value="basic">פרטים בסיסיים</TabsTrigger>
               <TabsTrigger value="services">שירותים</TabsTrigger>
+              <TabsTrigger value="reporting">תדירות דיווח</TabsTrigger>
               <TabsTrigger value="tax">פרטי מס</TabsTrigger>
-              <TabsTrigger value="integration">אינטגרציות</TabsTrigger>
+              <TabsTrigger value="accounts">חשבונות בנק</TabsTrigger>
+              <TabsTrigger value="integration">מזהים ואינטגרציות</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4">
@@ -522,20 +666,63 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 <div><Label htmlFor="email">אימייל ראשי</Label><Input id="email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} /></div>
                 <div><Label htmlFor="phone">טלפון ראשי</Label><Input id="phone" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} /></div>
                 <div className="md:col-span-2"><Label htmlFor="address">כתובת</Label><Input id="address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} /></div>
-                <div><Label htmlFor="entity_number">מספר ישות (ח.פ./ע.מ.)</Label><Input id="entity_number" value={formData.entity_number} onChange={(e) => handleInputChange('entity_number', e.target.value)} placeholder="512345678" /></div>
+                <div>
+                  <Label htmlFor="entity_number">מספר ישות (ח.פ./ע.מ.)</Label>
+                  <Input 
+                    id="entity_number" 
+                    value={formData.entity_number || ''} 
+                    onChange={(e) => handleInputChange('entity_number', e.target.value)} 
+                    placeholder="512345678"
+                    className="font-mono"
+                  />
+                  {formData.entity_number && formData.tax_info?.tax_id === formData.entity_number && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <span className="font-bold">✓</span> מסונכרן עם מספר זיהוי מס בפרטי המס
+                    </p>
+                  )}
+                  {formData.entity_number && formData.tax_info?.tax_id !== formData.entity_number && formData.tax_info?.tax_id && (
+                    <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                      <span className="font-bold">⚠</span> שונה ממספר זיהוי מס בפרטי המס: {formData.tax_info.tax_id}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 עדכון כאן יעדכן אוטומטית את מספר זיהוי מס ומספר תיק מע"מ
+                  </p>
+                </div>
               </div>
 
               <div className="grid md:grid-cols-3 gap-4 pt-4 border-t">
                 <div><Label htmlFor="business_size">גודל העסק</Label><Select value={formData.business_info?.business_size} onValueChange={(value) => handleInputChange('business_size', value, 'business_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="small">קטן</SelectItem><SelectItem value="medium">בינוני</SelectItem><SelectItem value="large">גדול</SelectItem></SelectContent></Select></div>
-                <div><Label htmlFor="business_type">סוג העסק</Label><Select value={formData.business_info?.business_type} onValueChange={(value) => handleInputChange('business_type', value, 'business_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="company">חברה</SelectItem><SelectItem value="freelancer">עצמאי</SelectItem><SelectItem value="nonprofit">עמותה</SelectItem><SelectItem value="partnership">שותפות</SelectItem></SelectContent></Select></div>
-                <div><Label htmlFor="status">סטטוס</Label><Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">פעיל</SelectItem><SelectItem value="inactive">לא פעיל</SelectItem><SelectItem value="potential">פוטנציאלי</SelectItem><SelectItem value="former">לקוח עבר</SelectItem><SelectItem value="onboarding_pending">ממתין לבדיקה</SelectItem></SelectContent></Select></div>
+                <div><Label htmlFor="business_type">סוג העסק</Label><Select value={formData.business_info?.business_type} onValueChange={(value) => {
+                  handleInputChange('business_type', value, 'business_info');
+                  // Re-apply automation rules for current services with new business type
+                  const currentServices = formData.service_types || [];
+                  const updatedClientData = { ...formData, business_info: { ...formData.business_info, business_type: value } };
+                  const allAutoAdd = [];
+                  for (const svc of currentServices) {
+                    allAutoAdd.push(...getAutoLinkedServices(automationRules, svc, updatedClientData));
+                  }
+                  if (allAutoAdd.length > 0) {
+                    setFormData(prev => {
+                      const st = [...(prev.service_types || [])];
+                      for (const s of allAutoAdd) {
+                        if (!st.includes(s)) st.push(s);
+                      }
+                      return { ...prev, service_types: st };
+                    });
+                  }
+                }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="company">חברה</SelectItem><SelectItem value="freelancer">עצמאי</SelectItem><SelectItem value="nonprofit">עמותה</SelectItem><SelectItem value="partnership">שותפות</SelectItem></SelectContent></Select></div>
+                <div><Label htmlFor="status">סטטוס</Label><Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">פעיל</SelectItem><SelectItem value="inactive">לא פעיל</SelectItem><SelectItem value="potential">פוטנציאלי</SelectItem><SelectItem value="former">לקוח עבר</SelectItem><SelectItem value="onboarding_pending">ממתין לבדיקה</SelectItem><SelectItem value="balance_sheet_only">סגירת מאזן בלבד</SelectItem></SelectContent></Select></div>
+                <div><Label htmlFor="onboarding_year">שנת קליטה</Label><Input id="onboarding_year" type="number" min="2020" max="2030" value={formData.onboarding_year || ''} onChange={(e) => handleInputChange('onboarding_year', e.target.value)} placeholder="2026" /></div>
+                <div><Label htmlFor="employee_count">מס' עובדים</Label><Input id="employee_count" type="number" min="0" max="500" value={formData.business_info?.employee_count || ''} onChange={(e) => handleInputChange('employee_count', parseInt(e.target.value) || 0, 'business_info')} placeholder="0" /></div>
+                <div><Label htmlFor="complexity_level">רמת מורכבות</Label><Select value={formData.business_info?.complexity_level || 'low'} onValueChange={(value) => handleInputChange('complexity_level', value, 'business_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">רגיל</SelectItem><SelectItem value="medium">בינוני</SelectItem><SelectItem value="high">מורכב (ריבוי חשבונות)</SelectItem></SelectContent></Select></div>
               </div>
 
               <div className="border-t pt-4 mt-6">
                 <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-semibold">אנשי קשר נוספים</h3><Button type="button" onClick={addContact} variant="outline" size="sm"><Plus className="w-4 h-4 ml-2" />הוסף איש קשר</Button></div>
                 {formData.contacts?.map((contact, index) => (
                   <div key={index} className="bg-gray-50 p-4 rounded-lg mb-4">
-                    <div className="flex justify-between items-center mb-3"><h4 className="font-medium">איש קשר #{index + 1}</h4><Button type="button" onClick={() => removeContactEntry(index)} variant="ghost" size="sm" className="text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></Button></div>
+                    <div className="flex justify-between items-center mb-3"><h4 className="font-medium">איש קשר #{index + 1}</h4><Button type="button" onClick={() => removeContactEntry(index)} variant="ghost" size="sm" className="text-amber-600 hover:text-amber-800"><Trash2 className="w-4 h-4" /></Button></div>
                     <div className="grid md:grid-cols-3 gap-3">
                       <div><Label>שם</Label><Input value={contact.name} onChange={(e) => updateContact(index, 'name', e.target.value)} placeholder="שם מלא" /></div>
                       <div><Label>תפקיד</Label><Select value={contact.role} onValueChange={(value) => updateContact(index, 'role', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(roleLabels).map(([key, label]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}</SelectContent></Select></div>
@@ -552,17 +739,56 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
             </TabsContent>
             <TabsContent value="services" className="space-y-4">
               <div>
-                <Label>סוגי שירותים</Label>
-                <div className="grid md:grid-cols-2 gap-3 mt-2">
-                  {serviceTypes.map((service) => (<div key={service.value} className="flex items-center space-x-2 space-x-reverse"><Checkbox id={service.value} checked={formData.service_types.includes(service.value)} onCheckedChange={(checked) => handleServiceTypeChange(service.value, checked)} /><Label htmlFor={service.value}>{service.label}</Label></div>))}
-                  <div className="flex items-center space-x-2 space-x-reverse md:col-span-2 pt-2 border-t border-gray-200"><Checkbox id="select-all-services" onCheckedChange={handleSelectAllServices} checked={formData.service_types.length === serviceTypes.length && serviceTypes.length > 0} /><Label htmlFor="select-all-services" className="font-medium text-blue-600">בחר הכל</Label></div>
+                <Label className="text-lg font-bold">סוגי שירותים</Label>
+                <div className="space-y-4 mt-3">
+                  {serviceTypeGroups.map((group) => (
+                    <div key={group.group} className="border rounded-lg p-3">
+                      <h4 className="font-semibold text-sm text-gray-600 mb-2">{group.group}</h4>
+                      <div className="grid md:grid-cols-3 gap-2">
+                        {group.services.map((service) => (
+                          <div key={service.value} className="flex items-center space-x-2 space-x-reverse">
+                            <Checkbox
+                              id={service.value}
+                              checked={(formData.service_types || []).includes(service.value)}
+                              onCheckedChange={(checked) => handleServiceTypeChange(service.value, checked)}
+                            />
+                            <Label htmlFor={service.value} className="text-sm">{service.label}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex items-center space-x-2 space-x-reverse pt-2 border-t border-gray-200">
+                    <Checkbox id="select-all-services" onCheckedChange={handleSelectAllServices} checked={formData.service_types.length === serviceTypes.length && serviceTypes.length > 0} />
+                    <Label htmlFor="select-all-services" className="font-medium text-blue-600">בחר הכל</Label>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                    סימון "שכר" → אוטומטית מוסיף "ביטוח לאומי" ו"מ״ה ניכויים"
+                    <br />
+                    סימון "הנה״ח" + סוג עסק "חברה" → אוטומטית מוסיף "מאזנים/דוחות שנתיים" ו"התאמות חשבונות"
+                  </div>
+                  {/* אמצעי תשלום רשויות */}
+                  {(formData.service_types || []).includes('authorities_payment') && (
+                    <div className="border-2 border-orange-200 rounded-lg p-3 bg-orange-50/30 space-y-2">
+                      <Label className="font-bold">אמצעי תשלום רשויות</Label>
+                      <Select
+                        value={formData.authorities_payment_method || 'masav'}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, authorities_payment_method: value }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="masav">מס״ב</SelectItem>
+                          <SelectItem value="credit_card">כרטיס אשראי</SelectItem>
+                          <SelectItem value="bank_standing_order">הו״ק בנקאית</SelectItem>
+                          <SelectItem value="standing_order">כתב אישור (כ״א)</SelectItem>
+                          <SelectItem value="check">המחאה</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div><Label>תדירות דיווח מע״מ</Label><Select value={formData.reporting_info.vat_reporting_frequency} onValueChange={(value) => handleInputChange('vat_reporting_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="quarterly">רבעוני</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
-                <div><Label>תדירות מקדמות מס</Label><Select value={formData.reporting_info.tax_advances_frequency} onValueChange={(value) => handleInputChange('tax_advances_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="bimonthly">דו-חודשי</SelectItem><SelectItem value="quarterly">רבעוני</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
-                <div><Label>תדירות שכר</Label><Select value={formData.reporting_info.payroll_frequency} onValueChange={(value) => handleInputChange('payroll_frequency', value, 'reporting_info')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">חודשי</SelectItem><SelectItem value="not_applicable">לא רלוונטי</SelectItem></SelectContent></Select></div>
-              </div>
+              {/* Reporting frequencies moved to dedicated "תדירות דיווח" tab */}
               <div>
                 <Label>שעות עבודה חודשיות משוערות</Label>
                 <div className="grid md:grid-cols-4 gap-4 mt-2">
@@ -616,12 +842,269 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                   </div>
                 </div>
               </div>
+              <div className="border-t pt-4">
+                <Label className="text-lg font-bold">שכ״ט חודשי</Label>
+                <div className="grid md:grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <Label htmlFor="monthly_fee">סכום שכ״ט חודשי (₪)</Label>
+                    <Input
+                      id="monthly_fee"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={formData.monthly_fee || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, monthly_fee: parseFloat(e.target.value) || '' }))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="fee_status">סטטוס שכ״ט</Label>
+                    <Select
+                      value={formData.fee_status || 'normal'}
+                      onValueChange={(value) => setFormData(prev => ({
+                        ...prev,
+                        fee_status: value === 'normal' ? '' : value,
+                        paying_client_id: value !== 'linked_to_parent' ? '' : prev.paying_client_id
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="normal">רגיל - שכ״ט עצמאי</SelectItem>
+                        <SelectItem value="oth">תיק עצמי (OTH) - ללא חיוב</SelectItem>
+                        <SelectItem value="linked_to_parent">מתומחר עם לקוח ראשי</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      OTH = תיק שלך/עצמי. מתומחר = נכלל בשכ״ט של לקוח אחר
+                    </p>
+                  </div>
+                </div>
+                {formData.fee_status === 'linked_to_parent' && (
+                  <div className="mt-3 p-3 bg-violet-50 border border-violet-200 rounded-lg">
+                    <Label htmlFor="paying_client_id">לקוח משלם (ראשי)</Label>
+                    <Select
+                      value={formData.paying_client_id || ''}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, paying_client_id: value }))}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="בחר לקוח ראשי..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allClientsForLinking.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      שכ״ט של לקוח זה נכלל בחיוב הלקוח הראשי
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="reporting" className="space-y-5">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                הגדירי תדירות דיווח לכל סוג. הגדרה זו משפיעה על הפקת משימות חוזרות.
+                <br />
+                שינוי שכר ל"לא רלוונטי" יעדכן אוטומטית גם את ביטוח לאומי וניכויים.
+              </div>
+
+              {/* שכר - FIRST, because it controls social security and deductions */}
+              <div className="border-2 border-blue-200 rounded-xl p-4 space-y-2 bg-blue-50/30">
+                <Label className="text-base font-bold">שכר</Label>
+                <p className="text-xs text-gray-500">תדירות עיבוד שכר — שולט גם על ביטוח לאומי ומ״ה ניכויים</p>
+                <Select value={formData.reporting_info.payroll_frequency} onValueChange={(value) => {
+                  handleInputChange('payroll_frequency', value, 'reporting_info');
+                  // Auto-link: if payroll becomes not_applicable, also set social_security and deductions
+                  if (value === 'not_applicable') {
+                    handleInputChange('social_security_frequency', 'not_applicable', 'reporting_info');
+                    handleInputChange('deductions_frequency', 'not_applicable', 'reporting_info');
+                  }
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">חודשי</SelectItem>
+                    <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-5">
+                {/* מע"מ */}
+                <div className="border rounded-xl p-4 space-y-2">
+                  <Label className="text-base font-bold">מע״מ</Label>
+                  <p className="text-xs text-gray-500">דיווח מע״מ תקופתי</p>
+                  <Select value={formData.reporting_info.vat_reporting_frequency} onValueChange={(value) => handleInputChange('vat_reporting_frequency', value, 'reporting_info')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="pt-2 border-t mt-2">
+                    <Label className="text-sm font-semibold">סוג דוח מע״מ</Label>
+                    <p className="text-xs text-gray-500 mb-1">משפיע על תאריך היעד: תקופתי=19, מפורט 874=23</p>
+                    <Select value={formData.reporting_info.vat_report_type || 'periodic'} onValueChange={(value) => handleInputChange('vat_report_type', value, 'reporting_info')}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="periodic">תקופתי (יעד 19 לחודש)</SelectItem>
+                        <SelectItem value="874">874 מפורט (יעד 23 לחודש)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {/* מקדמות מס */}
+                <div className="border rounded-xl p-4 space-y-2">
+                  <Label className="text-base font-bold">מקדמות מס</Label>
+                  <p className="text-xs text-gray-500">מקדמות מס הכנסה</p>
+                  <Select value={formData.reporting_info.tax_advances_frequency} onValueChange={(value) => handleInputChange('tax_advances_frequency', value, 'reporting_info')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* ב"ל - ביטוח לאומי */}
+                <div className={`border rounded-xl p-4 space-y-2 ${formData.reporting_info.payroll_frequency === 'not_applicable' ? 'opacity-50' : ''}`}>
+                  <Label className="text-base font-bold">ב״ל ניכויים</Label>
+                  <p className="text-xs text-gray-500">ביטוח לאומי {formData.reporting_info.payroll_frequency === 'not_applicable' && '(נשלט ע"י שכר)'}</p>
+                  <Select
+                    value={formData.reporting_info.social_security_frequency}
+                    onValueChange={(value) => handleInputChange('social_security_frequency', value, 'reporting_info')}
+                    disabled={formData.reporting_info.payroll_frequency === 'not_applicable'}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* מ"ה ניכויים */}
+                <div className={`border rounded-xl p-4 space-y-2 ${formData.reporting_info.payroll_frequency === 'not_applicable' ? 'opacity-50' : ''}`}>
+                  <Label className="text-base font-bold">מ״ה ניכויים</Label>
+                  <p className="text-xs text-gray-500">ניכויי מס הכנסה {formData.reporting_info.payroll_frequency === 'not_applicable' && '(נשלט ע"י שכר)'}</p>
+                  <Select
+                    value={formData.reporting_info.deductions_frequency}
+                    onValueChange={(value) => handleInputChange('deductions_frequency', value, 'reporting_info')}
+                    disabled={formData.reporting_info.payroll_frequency === 'not_applicable'}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="semi_annual">חצי שנתי</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* דוחות רווח והפסד PNL */}
+                <div className="border rounded-xl p-4 space-y-2">
+                  <Label className="text-base font-bold">דוחות רווח והפסד (PNL)</Label>
+                  <p className="text-xs text-gray-500">תדירות הפקת דוח PNL</p>
+                  <Select value={formData.reporting_info.pnl_frequency || 'not_applicable'} onValueChange={(value) => handleInputChange('pnl_frequency', value, 'reporting_info')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">חודשי</SelectItem>
+                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                      <SelectItem value="quarterly">רבעוני</SelectItem>
+                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formData.reporting_info.pnl_frequency && formData.reporting_info.pnl_frequency !== 'not_applicable' && (
+                    <div className="pt-2 border-t mt-2">
+                      <Label className="text-sm font-semibold">יום יעד בחודש</Label>
+                      <p className="text-xs text-gray-500 mb-1">באיזה יום בחודש צריך להיות מוכן הדוח</p>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="28"
+                        value={formData.reporting_info.pnl_target_day || ''}
+                        onChange={(e) => handleInputChange('pnl_target_day', parseInt(e.target.value) || '', 'reporting_info')}
+                        placeholder="לדוגמה: 15"
+                        className="w-32"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* מס"ב ספקים - סייקלים */}
+              {(formData.service_types || []).includes('masav_suppliers') && (
+                <div className="border-2 border-purple-200 rounded-xl p-4 space-y-3 bg-purple-50/30">
+                  <Label className="text-base font-bold">מס״ב ספקים - סייקלים</Label>
+                  <p className="text-xs text-gray-500">כמה סייקלים בחודש ובאילו תאריכים</p>
+                  <div className="flex items-center gap-3">
+                    <Label className="text-sm whitespace-nowrap">מספר סייקלים בחודש</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={formData.reporting_info.masav_suppliers_cycles || 0}
+                      onChange={(e) => {
+                        const numCycles = parseInt(e.target.value) || 0;
+                        handleInputChange('masav_suppliers_cycles', numCycles, 'reporting_info');
+                        const currentDates = formData.reporting_info.masav_suppliers_cycle_dates || [];
+                        if (numCycles > currentDates.length) {
+                          const newDates = [...currentDates, ...Array(numCycles - currentDates.length).fill('')];
+                          handleInputChange('masav_suppliers_cycle_dates', newDates, 'reporting_info');
+                        } else {
+                          handleInputChange('masav_suppliers_cycle_dates', currentDates.slice(0, numCycles), 'reporting_info');
+                        }
+                      }}
+                      className="w-20"
+                    />
+                  </div>
+                  {(formData.reporting_info.masav_suppliers_cycles || 0) > 0 && (
+                    <div className="grid md:grid-cols-3 gap-3 mt-2">
+                      {Array.from({ length: formData.reporting_info.masav_suppliers_cycles }).map((_, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Label className="text-sm whitespace-nowrap">סייקל {idx + 1} - יום</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="28"
+                            value={(formData.reporting_info.masav_suppliers_cycle_dates || [])[idx] || ''}
+                            onChange={(e) => {
+                              const dates = [...(formData.reporting_info.masav_suppliers_cycle_dates || [])];
+                              dates[idx] = parseInt(e.target.value) || '';
+                              handleInputChange('masav_suppliers_cycle_dates', dates, 'reporting_info');
+                            }}
+                            placeholder="יום בחודש"
+                            className="w-24"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="tax" className="space-y-4">
               <h3 className="text-lg font-semibold mb-4">פרטי מס בסיסיים</h3>
               <div className="grid md:grid-cols-2 gap-4">
-                <div><Label htmlFor="tax_id">מספר זיהוי מס</Label><Input id="tax_id" value={formData.tax_info.tax_id} onChange={(e) => handleInputChange('tax_id', e.target.value, 'tax_info')} /></div>
-                <div><Label htmlFor="vat_file_number">מספר תיק מע״מ</Label><Input id="vat_file_number" value={formData.tax_info.vat_file_number} onChange={(e) => handleInputChange('vat_file_number', e.target.value, 'tax_info')} placeholder={formData.entity_number ? `יועתק מ: ${formData.entity_number}` : ''} />{formData.entity_number && formData.tax_info.vat_file_number === formData.entity_number && (<p className="text-xs text-green-600 mt-1">✓ הועתק ממספר הישות</p>)}</div>
+                <div>
+                  <Label htmlFor="tax_id">מספר זיהוי מס (ח.פ./ע.מ.)</Label>
+                  <Input 
+                    id="tax_id" 
+                    value={formData.tax_info.tax_id} 
+                    onChange={(e) => handleTaxInfoChange('tax_id', e.target.value, 'tax_info')} 
+                    placeholder="512345678"
+                  />
+                  {formData.tax_info.tax_id && formData.entity_number === formData.tax_info.tax_id && (
+                    <p className="text-xs text-green-600 mt-1">✓ מסונכרן עם מספר ישות</p>
+                  )}
+                  {formData.tax_info.tax_id && formData.entity_number !== formData.tax_info.tax_id && formData.entity_number !== '' && (
+                    <p className="text-xs text-orange-600 mt-1">⚠ שונה ממספר הישות ({formData.entity_number})</p>
+                  )}
+                </div>
+                <div><Label htmlFor="vat_file_number">מספר תיק מע״מ</Label><Input id="vat_file_number" value={formData.tax_info.vat_file_number} onChange={(e) => handleTaxInfoChange('vat_file_number', e.target.value, 'tax_info')} placeholder={formData.entity_number ? `יועתק מ: ${formData.entity_number}` : ''} />{formData.entity_number && formData.tax_info.vat_file_number === formData.entity_number && (<p className="text-xs text-green-600 mt-1">✓ הועתק ממספר הישות</p>)}</div>
                 <div>
                   <Label htmlFor="tax_deduction_file_number">מספר תיק ניכויים</Label>
                   <Input id="tax_deduction_file_number" value={formData.tax_info.tax_deduction_file_number} onChange={(e) => handleTaxInfoChange('tax_deduction_file_number', e.target.value, 'tax_info')} />
@@ -648,20 +1131,32 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                       type="number"
                     />
                   </div>
+                  <div className="flex items-center gap-3 mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <input
+                      type="checkbox"
+                      id="direct_transmission"
+                      checked={formData.tax_info?.direct_transmission || false}
+                      onChange={(e) => handleTaxInfoChange('direct_transmission', e.target.checked, 'tax_info')}
+                      className="w-4 h-4 rounded"
+                    />
+                    <label htmlFor="direct_transmission" className="text-sm font-medium text-blue-800 cursor-pointer">
+                      לקוח מחובר לשידורים ישירים (אין צורך במזהי פנקס)
+                    </label>
+                  </div>
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-800">מזהים שנתיים עדכניים</h4>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
-                        <Label>מזהה מקדמות {formData.service_types?.includes('tax_advances') && <span className="text-red-500">*</span>}</Label>
+                        <Label>מזהה מקדמות {formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && <span className="text-amber-500">*</span>}</Label>
                         <Input
                           value={formData.tax_info?.annual_tax_ids?.tax_advances_id || ''}
                           onChange={(e) => handleTaxInfoChange('tax_advances_id', e.target.value, 'tax_info', 'annual_tax_ids')}
                           placeholder="מזהה מקדמות מס"
-                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.annual_tax_ids?.tax_advances_id ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.tax_advances_id ? 'border-amber-300' : ''}
                         />
                       </div>
                       <div>
-                        <Label>אחוז מקדמות {formData.service_types?.includes('tax_advances') && <span className="text-red-500">*</span>}</Label>
+                        <Label>אחוז מקדמות {formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && <span className="text-amber-500">*</span>}</Label>
                         <Input
                           type="number"
                           min="0"
@@ -670,25 +1165,25 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                           value={formData.tax_info?.annual_tax_ids?.tax_advances_percentage || ''}
                           onChange={(e) => handleTaxInfoChange('tax_advances_percentage', parseFloat(e.target.value) || (e.target.value === '' ? '' : null), 'tax_info', 'annual_tax_ids')}
                           placeholder="אחוז מקדמות (0-100)"
-                          className={formData.service_types?.includes('tax_advances') && (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null) ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('tax_advances') && !formData.tax_info?.direct_transmission && (formData.tax_info?.annual_tax_ids?.tax_advances_percentage === '' || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === undefined || formData.tax_info?.annual_tax_ids?.tax_advances_percentage === null) ? 'border-amber-300' : ''}
                         />
                       </div>
                       <div>
-                        <Label>מזהה ביטוח לאומי {formData.service_types?.includes('payroll') && <span className="text-red-500">*</span>}</Label>
+                        <Label>מזהה ביטוח לאומי {formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && <span className="text-amber-500">*</span>}</Label>
                         <Input
                           value={formData.tax_info?.annual_tax_ids?.social_security_id || ''}
                           onChange={(e) => handleTaxInfoChange('social_security_id', e.target.value, 'tax_info', 'annual_tax_ids')}
                           placeholder="מזהה ביטוח לאומי שנתי"
-                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.annual_tax_ids?.social_security_id ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.social_security_id ? 'border-amber-300' : ''}
                         />
                       </div>
                       <div>
-                        <Label>מזהה ניכויים {formData.service_types?.includes('payroll') && <span className="text-red-500">*</span>}</Label>
+                        <Label>מזהה ניכויים {formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && <span className="text-amber-500">*</span>}</Label>
                         <Input
                           value={formData.tax_info?.annual_tax_ids?.deductions_id || ''}
                           onChange={(e) => handleTaxInfoChange('deductions_id', e.target.value, 'tax_info', 'annual_tax_ids')}
                           placeholder="מזהה ניכויים שנתי"
-                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.annual_tax_ids?.deductions_id ? 'border-red-300' : ''}
+                          className={formData.service_types?.includes('payroll') && !formData.tax_info?.direct_transmission && !formData.tax_info?.annual_tax_ids?.deductions_id ? 'border-amber-300' : ''}
                         />
                       </div>
                     </div>
@@ -696,26 +1191,78 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                   {formData.tax_info.annual_tax_ids?.last_updated && (<div className="mt-3 text-sm text-gray-600">עודכן לאחרונה: {new Date(formData.tax_info.annual_tax_ids.last_updated).toLocaleDateString('he-IL')}</div>)}
                 </div>
               </div>
+              {/* Previous year IDs */}
+              <div className="border-t pt-4 mt-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-semibold text-gray-600">מזהים שנה קודמת ({Number(formData.tax_info.annual_tax_ids?.current_year || new Date().getFullYear()) - 1})</h4>
+                    <p className="text-xs text-gray-400">לשימוש בדיווחים מאוחרים של השנה הקודמת</p>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-gray-600">מזהה מקדמות (שנה קודמת)</Label>
+                      <Input
+                        value={formData.tax_info?.prev_year_ids?.tax_advances_id || formData.tax_info?.annual_tax_ids_history?.[String(Number(formData.tax_info.annual_tax_ids?.current_year || new Date().getFullYear()) - 1)]?.tax_advances_id || ''}
+                        onChange={(e) => handleTaxInfoChange('tax_advances_id', e.target.value, 'tax_info', 'prev_year_ids')}
+                        placeholder="מזהה מקדמות שנה קודמת"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-600">אחוז מקדמות (שנה קודמת)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={formData.tax_info?.prev_year_ids?.tax_advances_percentage || ''}
+                        onChange={(e) => handleTaxInfoChange('tax_advances_percentage', e.target.value, 'tax_info', 'prev_year_ids')}
+                        placeholder="אחוז מקדמות שנה קודמת"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-600">מזהה ביטוח לאומי (שנה קודמת)</Label>
+                      <Input
+                        value={formData.tax_info?.prev_year_ids?.social_security_id || formData.tax_info?.annual_tax_ids_history?.[String(Number(formData.tax_info.annual_tax_ids?.current_year || new Date().getFullYear()) - 1)]?.social_security_id || ''}
+                        onChange={(e) => handleTaxInfoChange('social_security_id', e.target.value, 'tax_info', 'prev_year_ids')}
+                        placeholder="מזהה בל שנה קודמת"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-600">מזהה ניכויים (שנה קודמת)</Label>
+                      <Input
+                        value={formData.tax_info?.prev_year_ids?.deductions_id || formData.tax_info?.annual_tax_ids_history?.[String(Number(formData.tax_info.annual_tax_ids?.current_year || new Date().getFullYear()) - 1)]?.deductions_id || ''}
+                        onChange={(e) => handleTaxInfoChange('deductions_id', e.target.value, 'tax_info', 'prev_year_ids')}
+                        placeholder="מזהה ניכויים שנה קודמת"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div><Label htmlFor="preferred_method">אמצעי תקשורת מועדף</Label><Select value={formData.communication_preferences.preferred_method} onValueChange={(value) => handleInputChange('preferred_method', value, 'communication_preferences')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="email">אימייל</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem><SelectItem value="phone">טלפון</SelectItem><SelectItem value="teams">Teams</SelectItem></SelectContent></Select></div>
               <div><Label htmlFor="notes">הערות</Label><Textarea id="notes" value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} className="h-24" /></div>
             </TabsContent>
+            <TabsContent value="accounts" className="space-y-4">
+              {client?.id ? (
+                <ClientAccountsManager clientId={client.id} clientName={client.name || formData.name} />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>יש לשמור את הלקוח תחילה כדי לנהל חשבונות בנק.</p>
+                </div>
+              )}
+            </TabsContent>
             <TabsContent value="integration" className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
-                <div><Label htmlFor="monday_board_id">מזהה לוח Monday.com</Label><Input id="monday_board_id" value={formData.integration_info.monday_board_id} onChange={(e) => handleInputChange('monday_board_id', e.target.value, 'integration_info')} placeholder="123456789" /></div>
-                <div><Label htmlFor="monday_group_id">מזהה קבוצה Monday.com</Label><Input id="monday_group_id" value={formData.integration_info.monday_group_id} onChange={(e) => handleInputChange('monday_group_id', e.target.value, 'integration_info')} placeholder="group123" /></div>
-                <div><Label htmlFor="annual_reports_client_id">מזהה מערכת מאזנים</Label><Input id="annual_reports_client_id" value={formData.integration_info.annual_reports_client_id} onChange={(e) => handleInputChange('annual_reports_client_id', e.target.value, 'integration_info')} /></div>
                 <div>
-                  <Label htmlFor="calmplan_id">מזהה CalmPlan (נוצר אוטומטית)</Label>
-                  <Input 
-                    id="calmplan_id" 
-                    value={formData.integration_info.calmplan_id || (client?.id ? client.id : 'ייווצר לאחר שמירה')} 
-                    readOnly 
-                    className="bg-gray-50" 
-                    placeholder="מזהה ייווצר אוטומטית לאחר יצירת הלקוח"
+                  <Label htmlFor="calmplan_id">מזהה CalmPlan</Label>
+                  <Input
+                    id="calmplan_id"
+                    value={client?.id || 'ייווצר לאחר שמירה'}
+                    readOnly
+                    className="bg-gray-50"
                   />
-                  <p className="text-xs text-gray-500 mt-1">מזהה זה מסונכרן אוטומטית ל-Monday.com בעמודת "ID CalmPlan"</p>
                 </div>
-                <div><Label htmlFor="lastpass_payment_entry_id">מזהה רשומת תשלומים LastPass (אופציונלי)</Label><Input id="lastpass_payment_entry_id" value={formData.integration_info.lastpass_payment_entry_id} onChange={(e) => handleInputChange('lastpass_payment_entry_id', e.target.value, 'integration_info')} placeholder="entry_id_123" /><p className="text-xs text-gray-500 mt-1">לקישור נוח לפרטי תשלום ברשויות. כרגע זהו רק שדה להתמצאות - לא נעשה שימוש אוטומטי בו.</p></div>
+                <div><Label htmlFor="annual_reports_client_id">מזהה מערכת מאזנים</Label><Input id="annual_reports_client_id" value={formData.integration_info.annual_reports_client_id} onChange={(e) => handleInputChange('annual_reports_client_id', e.target.value, 'integration_info')} /></div>
+                <div><Label htmlFor="lastpass_payment_entry_id">מזהה רשומת תשלומים (אופציונלי)</Label><Input id="lastpass_payment_entry_id" value={formData.integration_info.lastpass_payment_entry_id} onChange={(e) => handleInputChange('lastpass_payment_entry_id', e.target.value, 'integration_info')} placeholder="לקישור נוח לפרטי תשלום ברשויות" /></div>
               </div>
             </TabsContent>
           </Tabs>
@@ -759,7 +1306,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                                   type="button"
                                   title="ביטול שיוך כל החברה"
                                 >
-                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                  <Trash2 className="w-4 h-4 text-amber-500" />
                                 </Button>
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -780,7 +1327,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                                       }}
                                       type="button"
                                     >
-                                      <X className="w-3 h-3 text-red-500" />
+                                      <X className="w-3 h-3 text-amber-500" />
                                     </Button>
                                   </div>
                                 ))}

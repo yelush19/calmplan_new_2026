@@ -1,10 +1,40 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { differenceInDays, startOfDay } from 'date-fns';
 import ProcessTaskItem from './ProcessTaskItem';
 import { motion } from 'framer-motion';
+import { Task } from '@/api/entities';
+import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
-export default function ProcessStatusDashboard({ title, tasks }) {
+export default function ProcessStatusDashboard({ title, tasks, onTasksChange }) {
+  const { confirm, ConfirmDialogComponent } = useConfirm();
+  const [editingTask, setEditingTask] = useState(null);
+
+  const handleEditTask = (task) => setEditingTask(task);
+
+  const handleDeleteTask = async (task) => {
+    const ok = await confirm({ description: `למחוק את "${task.title || task.client_name}"?` });
+    if (ok) {
+      try {
+        await Task.delete(task.id);
+        if (onTasksChange) onTasksChange();
+      } catch (error) {
+        console.error("Error deleting task:", error);
+      }
+    }
+  };
+
+  const handleSaveTask = async (updatedData) => {
+    try {
+      await Task.update(editingTask.id, updatedData);
+      if (onTasksChange) onTasksChange();
+      setEditingTask(null);
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
+  };
+
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
@@ -50,9 +80,9 @@ export default function ProcessStatusDashboard({ title, tasks }) {
         <div className="space-y-4 flex-grow">
           {urgentTasks.length > 0 && (
             <div>
-              <h4 className="font-semibold text-red-600 mb-2">🔴 דחוף ({urgentTasks.length})</h4>
+              <h4 className="font-semibold text-amber-600 mb-2">🔴 דחוף ({urgentTasks.length})</h4>
               <div className="space-y-2">
-                {urgentTasks.map(task => <ProcessTaskItem key={task.id} task={task} />)}
+                {urgentTasks.map(task => <ProcessTaskItem key={task.id} task={task} onEdit={handleEditTask} onDelete={handleDeleteTask} />)}
               </div>
             </div>
           )}
@@ -60,7 +90,7 @@ export default function ProcessStatusDashboard({ title, tasks }) {
             <div>
               <h4 className="font-semibold text-yellow-600 mb-2">🟡 בביצוע ({inProgressTasks.length})</h4>
               <div className="space-y-2">
-                {inProgressTasks.map(task => <ProcessTaskItem key={task.id} task={task} />)}
+                {inProgressTasks.map(task => <ProcessTaskItem key={task.id} task={task} onEdit={handleEditTask} onDelete={handleDeleteTask} />)}
               </div>
             </div>
           )}
@@ -68,7 +98,7 @@ export default function ProcessStatusDashboard({ title, tasks }) {
             <div>
               <h4 className="font-semibold text-green-600 mb-2">🟢 הושלם ({doneTasks.length})</h4>
               <div className="space-y-2">
-                {doneTasks.map(task => <ProcessTaskItem key={task.id} task={task} />)}
+                {doneTasks.map(task => <ProcessTaskItem key={task.id} task={task} onEdit={handleEditTask} onDelete={handleDeleteTask} />)}
               </div>
             </div>
           )}
@@ -77,6 +107,14 @@ export default function ProcessStatusDashboard({ title, tasks }) {
           <p className="text-sm text-center text-gray-700 font-medium">{getRecommendation()}</p>
         </div>
       </CardContent>
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+      />
+      {ConfirmDialogComponent}
     </Card>
   );
 }

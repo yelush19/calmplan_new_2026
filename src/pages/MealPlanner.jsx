@@ -125,7 +125,7 @@ export default function MealPlannerPage() {
                           {item.name}
                         </label>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="w-7 h-7 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="w-7 h-7 text-gray-400 hover:text-amber-500 hover:bg-amber-50">
                         <Trash2 className="w-4 h-4"/>
                     </Button>
                   </div>

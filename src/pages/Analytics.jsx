@@ -349,13 +349,13 @@ export default function AnalyticsPage() {
               <div className="space-y-4">
                 {recommendations.map((rec, index) => (
                   <div key={index} className={`p-4 rounded-lg border-r-4 ${
-                    rec.priority === 'high' ? 'border-r-red-500 bg-red-50' :
+                    rec.priority === 'high' ? 'border-r-amber-500 bg-amber-50' :
                     rec.priority === 'medium' ? 'border-r-yellow-500 bg-yellow-50' :
                     'border-r-green-500 bg-green-50'
                   }`}>
                     <div className="flex items-start gap-3">
                       <rec.icon className={`w-5 h-5 mt-1 ${
-                        rec.priority === 'high' ? 'text-red-600' :
+                        rec.priority === 'high' ? 'text-amber-600' :
                         rec.priority === 'medium' ? 'text-yellow-600' :
                         'text-green-600'
                       }`} />

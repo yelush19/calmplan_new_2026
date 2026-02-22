@@ -254,13 +254,16 @@ export default function ServiceProvidersPage() {
                           </div>
                           <div>
                             <p className="font-semibold">{provider.name}</p>
+                            {provider.company_name && <p className="text-sm text-gray-700 font-medium">{provider.company_name}</p>}
                             <p className="text-sm text-gray-500">{provider.role}</p>
-                            <p className="text-sm text-gray-500">{getCompanyName(provider.service_company_id)}</p>
+                            {provider.service_company_id && (
+                              <p className="text-xs text-gray-400">{getCompanyName(provider.service_company_id)}</p>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2">
                           <Button variant="ghost" size="icon" onClick={() => handleEditProvider(provider)}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteProvider(provider.id)} className="text-red-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteProvider(provider.id)} className="text-amber-500 hover:text-amber-600"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -284,7 +287,7 @@ export default function ServiceProvidersPage() {
                         </div>
                         <div className="flex gap-2">
                           <Button variant="ghost" size="icon" onClick={() => handleEditCompany(company)}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteCompany(company.id)} className="text-red-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteCompany(company.id)} className="text-amber-500 hover:text-amber-600"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </CardContent>
                     </Card>

@@ -1,16 +1,27 @@
 import React from "react";
 import { Check } from "lucide-react";
 
-export const Checkbox = ({ checked, onChange, disabled = false, className = "" }) => {
+export const Checkbox = ({ checked, onChange, onCheckedChange, disabled = false, className = "", id, ...props }) => {
+  const handleClick = () => {
+    if (disabled) return;
+    const newValue = !checked;
+    onChange?.(newValue);
+    onCheckedChange?.(newValue);
+  };
+
   return (
     <div
+      id={id}
+      role="checkbox"
+      aria-checked={!!checked}
       className={`
         w-4 h-4 border-2 rounded cursor-pointer flex items-center justify-center transition-all
         ${checked ? 'bg-primary border-primary' : 'border-gray-300 hover:border-gray-400'}
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${className}
       `}
-      onClick={() => !disabled && onChange?.(!checked)}
+      onClick={handleClick}
+      {...props}
     >
       {checked && <Check className="w-3 h-3 text-white" />}
     </div>

@@ -1,399 +1,728 @@
+
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import {
-  Database, Users, FileText, CheckCircle, AlertTriangle, RefreshCw,
-  Calendar, Target, TrendingUp, Clock, Building, BookUser, Monitor,
-  Activity, Server, HardDrive
-} from 'lucide-react';
-import { Client, Task, Event, ServiceProvider, ServiceCompany, Dashboard, AccountReconciliation, ClientAccount, Lead } from '@/api/entities';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CheckCircle, AlertCircle, XCircle, RefreshCw, Database, Monitor, TriangleAlert } from 'lucide-react';
+import { Client, Task, AccountReconciliation, ClientAccount, Dashboard, WeeklySchedule, Therapist } from '@/api/entities';
+
+const StatusIcon = ({ status }) => {
+  switch (status) {
+    case 'working': return <CheckCircle className="w-4 h-4 text-green-500" />;
+    case 'partial': return <AlertCircle className="w-4 h-4 text-yellow-500" />;
+    case 'broken': return <XCircle className="w-4 h-4 text-amber-500" />;
+    case 'empty': return <AlertCircle className="w-4 h-4 text-gray-400" />;
+    default: return <AlertCircle className="w-4 h-4 text-gray-400" />;
+  }
+};
+
+// Define Monday board categories for configuration (used in loadData)
+const boardCategories = {
+  main: { type: 'main', label: 'ראשי' },
+  clients: { type: 'clients', label: 'לקוחות' },
+  tasks: { type: 'tasks', label: 'משימות' },
+  reconciliations: { type: 'reconciliations', label: 'התאמות' },
+  invoices: { type: 'invoices', label: 'חשבוניות' },
+  payments: { type: 'payments', label: 'תשלומים' },
+  therapists: { type: 'therapists', label: 'מטפלים' },
+  sessions: { type: 'sessions', label: 'פגישות' },
+  events: { type: 'events', label: 'אירועים' },
+  accounting: { type: 'accounting', label: 'הנהלת חשבונות' },
+  admin: { type: 'admin', label: 'אדמין' },
+};
 
 export default function SystemOverviewPage() {
-  const [stats, setStats] = useState({
-    clients: { total: 0, active: 0, loading: true },
-    tasks: { total: 0, completed: 0, pending: 0, loading: true },
-    events: { total: 0, upcoming: 0, loading: true },
-    serviceProviders: { total: 0, companies: 0, loading: true },
-    reconciliations: { total: 0, loading: true },
-    accounts: { total: 0, loading: true },
-    leads: { total: 0, loading: true },
-    dashboards: { total: 0, configured: 0, loading: true }
-  });
+  const [systemStatus, setSystemStatus] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const [lastRefresh, setLastRefresh] = useState(null);
+  const [error, setError] = useState(null);
+  const [boardConfigs, setBoardConfigs] = useState([]); // This state variable is not used after its initial declaration.
 
   useEffect(() => {
-    loadAllStats();
+    loadData();
   }, []);
 
-  const loadAllStats = async () => {
+  const loadData = async () => {
     setIsLoading(true);
+    setError(null);
+    try {
+      const [dashboardsData, clientsData, tasksData, recsData, clientAccountsData, therapistsData] = await Promise.all([
+        Dashboard.list().catch(() => []),
+        Client.filter({}, '-updated_date', 1000).catch(() => []),
+        Task.filter({}, '-updated_date', 2000).catch(() => []),
+        AccountReconciliation.filter({}, '-updated_date', 1000).catch(() => []),
+        ClientAccount.filter({}, '-updated_date', 1000).catch(() => []),
+        Therapist.list(null, 1000).catch(() => [])
+      ]);
 
-    // Load all data in parallel
-    const [
-      clientsData,
-      tasksData,
-      eventsData,
-      providersData,
-      companiesData,
-      recsData,
-      accountsData,
-      leadsData,
-      dashboardsData
-    ] = await Promise.all([
-      Client.list().catch(() => []),
-      Task.list().catch(() => []),
-      Event.list().catch(() => []),
-      ServiceProvider.list().catch(() => []),
-      ServiceCompany.list().catch(() => []),
-      AccountReconciliation.list().catch(() => []),
-      ClientAccount.list().catch(() => []),
-      Lead.list().catch(() => []),
-      Dashboard.list().catch(() => [])
-    ]);
+      // Function to analyze ID fields for any entity
+      const analyzeEntityIds = (entities, entityName) => {
+        const analysis = {
+          total: entities.length,
+          withCalmPlanId: entities.filter(e => e.id).length, // All should have this
+          withMondayBoardId: entities.filter(e => e.monday_board_id).length,
+          withMondayItemId: entities.filter(e => e.monday_item_id).length,
+          withAllIds: entities.filter(e => e.id && e.monday_board_id && e.monday_item_id).length,
+          missingBoardId: entities.filter(e => e.id && !e.monday_board_id),
+          missingItemId: entities.filter(e => e.id && e.monday_board_id && !e.monday_item_id),
+          missingBoth: entities.filter(e => e.id && !e.monday_board_id && !e.monday_item_id)
+        };
 
-    setStats({
-      clients: {
-        total: clientsData?.length || 0,
-        active: clientsData?.filter(c => c.status === 'active').length || 0,
-        potential: clientsData?.filter(c => c.status === 'potential').length || 0,
-        loading: false
-      },
-      tasks: {
-        total: tasksData?.length || 0,
-        completed: tasksData?.filter(t => t.status === 'completed').length || 0,
-        pending: tasksData?.filter(t => ['not_started', 'pending', 'in_progress'].includes(t.status)).length || 0,
-        loading: false
-      },
-      events: {
-        total: eventsData?.length || 0,
-        upcoming: eventsData?.filter(e => new Date(e.start) > new Date()).length || 0,
-        loading: false
-      },
-      serviceProviders: {
-        total: providersData?.length || 0,
-        companies: companiesData?.length || 0,
-        loading: false
-      },
-      reconciliations: {
-        total: recsData?.length || 0,
-        loading: false
-      },
-      accounts: {
-        total: accountsData?.length || 0,
-        loading: false
-      },
-      leads: {
-        total: leadsData?.length || 0,
-        loading: false
-      },
-      dashboards: {
-        total: dashboardsData?.length || 0,
-        configured: dashboardsData?.filter(d => d.monday_board_id).length || 0,
-        loading: false
+        // Show samples of problematic records
+        return analysis;
+      };
+
+      // Create board mapping for analysis
+      const boardMappings = {
+        'clients': 'לקוחות',
+        'reports_main': 'תהליכי דיווח',
+        'reports_126_856_2025': '126+856-2025',
+        'reports_126_856_2024': '126+856-2024',
+        'weekly_tasks': 'משימות שבועיות ופגישות',
+        'balance_sheets': 'מאזנים',
+        'reconciliations': 'התאמות בנק וסליקה',
+        'client_accounts': 'חשבונות בנק וסליקה',
+        'family_tasks': 'משימות משפחה',
+        'weekly_planning': 'לוח טיפולים', // FIXED: was weekly_planer
+        'wellbeing': 'מעקב רווחה',
+        'therapists': 'לוח מטפלים'
+      };
+
+      // Expected counts per your message
+      const expectedCounts = {
+        'clients': 30,
+        'reports_main': 94,
+        'reports_126_856_2025': 14,
+        'reports_126_856_2024': 16,
+        'weekly_tasks': 62, // Should be 62, not 50
+        'balance_sheets': 25,
+        'reconciliations': 8,
+        'client_accounts': 35, // Should be 35, not 34
+        'family_tasks': 2,
+        'weekly_planning': 10, // FIXED: was weekly_planer
+        'wellbeing': 1,
+        'therapists': 13
+      };
+
+      const configs = dashboardsData || [];
+      let totalExpected = 0;
+      let totalActual = 0;
+      const actualCountsByBoardType = {}; // To store actual counts for boardBreakdown
+
+      for (const config of configs) {
+        let count = 0;
+        let actualEntities = [];
+
+        const expected = expectedCounts[config.type] || 0;
+        totalExpected += expected;
+
+        if (config.monday_board_id) {
+            const boardIdStr = String(config.monday_board_id);
+
+            switch(config.type) {
+                case 'clients':
+                    actualEntities = (clientsData || []).filter(c => String(c.monday_board_id) === boardIdStr);
+                    break;
+
+                case 'reports_main':
+                case 'reports_126_856_2025':
+                case 'reports_126_856_2024':
+                case 'weekly_tasks':
+                case 'balance_sheets':
+                case 'family_tasks':
+                case 'wellbeing':
+                case 'weekly_planning': // FIXED: was weekly_planer
+                    actualEntities = (tasksData || []).filter(t => String(t.monday_board_id) === boardIdStr);
+                    break;
+
+                case 'reconciliations':
+                    actualEntities = (recsData || []).filter(r => String(r.monday_board_id) === boardIdStr);
+                    break;
+
+                case 'client_accounts':
+                    actualEntities = (clientAccountsData || []).filter(a => String(a.monday_board_id) === boardIdStr);
+                    break;
+
+                case 'therapists':
+                    actualEntities = (therapistsData || []).filter(t => String(t.monday_board_id) === boardIdStr);
+                    break;
+            }
+
+            count = actualEntities.length;
+            actualCountsByBoardType[config.type] = count; // Store for boardBreakdown
+            totalActual += count;
+
+        } else {
+            // No board ID set for this config type
+        }
       }
-    });
 
-    setLastRefresh(new Date());
+      // Continue with rest of analysis...
+      // Analyze each entity type using the existing analyzeEntityIds function
+      const analyses = {
+        tasks: analyzeEntityIds(tasksData, 'TASKS'),
+        clients: analyzeEntityIds(clientsData, 'CLIENTS'),
+        reconciliations: analyzeEntityIds(recsData, 'RECONCILIATIONS'),
+        clientAccounts: analyzeEntityIds(clientAccountsData, 'CLIENT_ACCOUNTS'),
+        therapists: analyzeEntityIds(therapistsData, 'THERAPISTS')
+      };
+
+      // Special analysis for tasks - check for demo/protected flags (existing logic)
+      const taskFlags = {
+        isDemo: tasksData.filter(t => t.isDemo === true).length,
+        isProtected: tasksData.filter(t => t.isProtected === true).length,
+        isFromMonday: tasksData.filter(t => t.isFromMonday === true).length,
+        noFlags: tasksData.filter(t => !t.isDemo && !t.isProtected && !t.isFromMonday).length
+      };
+      // Update system status with detailed analysis, incorporating new and existing data
+      const status = {
+        tasks: {
+          ...analyses.tasks, // Includes all ID analysis properties from analyzeEntityIds
+          details: `${analyses.tasks.withAllIds}/${analyses.tasks.total} עם 3 מזהים`,
+          status: analyses.tasks.withAllIds > 0 ? 'partial' : 'broken',
+          taskFlags: taskFlags // Includes the special flag analysis
+        },
+        clients: {
+          ...analyses.clients,
+          details: `${analyses.clients.withAllIds}/${analyses.clients.total} עם 3 מזהים`,
+          status: analyses.clients.withAllIds > 0 ? 'partial' : 'broken'
+        },
+        reconciliations: {
+          ...analyses.reconciliations,
+          details: `${analyses.reconciliations.withAllIds}/${analyses.reconciliations.total} עם 3 מזהים`,
+          status: analyses.reconciliations.withAllIds > 0 ? 'partial' : 'broken'
+        },
+        clientAccounts: {
+          ...analyses.clientAccounts,
+          details: `${analyses.clientAccounts.withAllIds}/${analyses.clientAccounts.total} עם 3 מזהים`,
+          status: analyses.clientAccounts.withAllIds > 0 ? 'partial' : 'broken'
+        },
+        therapists: { // Added therapists to systemStatus
+            ...analyses.therapists,
+            details: `${analyses.therapists.withAllIds}/${analyses.therapists.total} עם 3 מזהים`,
+            status: analyses.therapists.withAllIds > 0 ? 'partial' : 'broken'
+        },
+        dashboards: { // Existing dashboard structure, adjusted status check
+          totalDashboards: dashboardsData.length,
+          configured: dashboardsData.filter(d => d.monday_board_id).length,
+          details: `${dashboardsData.filter(d => d.monday_board_id).length}/${dashboardsData.length} מוגדרים`,
+          status: dashboardsData.length === Object.keys(boardMappings).length ? 'working' : 'broken' // Check against the number of defined board mappings
+        },
+        // New properties from the outline
+        expectedTotal: totalExpected,
+        actualTotal: totalActual,
+        boardBreakdown: configs.map(config => ({
+          type: config.type,
+          name: boardMappings[config.type],
+          expected: expectedCounts[config.type] || 0,
+          actual: actualCountsByBoardType[config.type] || 0
+        }))
+      };
+
+      setSystemStatus(status);
+    } catch (error) {
+      console.error("❌ Error loading data:", error);
+      setError("שגיאה בטעינת נתונים: " + error.message);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  // The analyzeEntitySync and analyzeBoards functions are no longer used as per outline and are removed.
+
+  // Cleanup functions
+  const cleanupDashboardDuplicates = async () => {
+    if (!window.confirm('⚠️ זה ימחק רשומות Dashboard כפולות. המשך?')) return;
+    
+    setIsLoading(true);
+    try {
+      const allDashboards = await Dashboard.list();
+      
+      const typeGroups = {};
+      allDashboards.forEach(d => {
+        if (!typeGroups[d.type]) {
+          typeGroups[d.type] = [];
+        }
+        typeGroups[d.type].push(d);
+      });
+      
+      let deletedCount = 0;
+      for (const [type, dashboards] of Object.entries(typeGroups)) {
+        if (dashboards.length > 1 && boardCategories[type]) {
+          const toDelete = dashboards.slice(1);
+          
+          for (const dashboard of toDelete) {
+            await Dashboard.delete(dashboard.id);
+            deletedCount++;
+          }
+        } else if (!boardCategories[type] && dashboards.length > 0) {
+            console.warn(`Found unknown dashboard type "${type}". Deleting all ${dashboards.length} records.`);
+            for (const dashboard of dashboards) {
+                await Dashboard.delete(dashboard.id);
+                deletedCount++;
+            }
+        }
+      }
+      
+      alert(`✅ נמחקו ${deletedCount} רשומות Dashboard כפולות או לא מזוהות`);
+      
+      await loadData();
+      
+    } catch (error) {
+      console.error('❌ Error cleaning dashboards:', error);
+      alert(`❌ שגיאה בניקוי: ${error.message}`);
+    }
     setIsLoading(false);
   };
 
-  const StatCard = ({ title, icon: Icon, value, subValue, subLabel, color, link, loading }) => (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Link to={link || '#'}>
-        <Card className="hover:shadow-lg transition-all cursor-pointer border-l-4" style={{ borderLeftColor: color }}>
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">{title}</p>
-                {loading ? (
-                  <div className="animate-pulse h-8 w-16 bg-gray-200 rounded" />
-                ) : (
-                  <>
-                    <p className="text-3xl font-bold" style={{ color }}>{value}</p>
-                    {subValue !== undefined && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {subValue} {subLabel}
-                      </p>
+  const cleanupDemoTasks = async () => {
+    if (!window.confirm('⚠️ זה ימחק את כל משימות הדמו. המשך?')) return;
+    
+    setIsLoading(true);
+    try {
+      const demoTasks = await Task.filter({ isDemo: true });
+      
+      let deletedCount = 0;
+      for (const task of demoTasks) {
+        await Task.delete(task.id);
+        deletedCount++;
+      }
+      
+      alert(`✅ נמחקו ${deletedCount} משימות דמו`);
+      
+      await loadData();
+      
+    } catch (error) {
+      console.error('❌ Error cleaning demo tasks:', error);
+      alert(`❌ שגיאה בניקוי: ${error.message}`);
+    }
+    setIsLoading(false);
+  };
+
+  const showOrphanedTasks = async () => {
+    const orphanedTasks = await Task.filter({
+      monday_board_id: null,
+      monday_item_id: null,
+      isDemo: { $ne: true }
+    }, '-updated_date', 100);
+    
+    alert(`נמצאו ${orphanedTasks.length} משימות מקומיות (לא מקושרות ל-Monday ולא נתוני דמו).`);
+  };
+
+  const showDuplicateTasks = () => {
+    // This now relies on the `duplicates` property that was calculated in the old loadData.
+    // The new loadData doesn't calculate `duplicates` directly within the systemStatus.
+    // If this functionality is to be preserved, `duplicates` calculation needs to be re-introduced
+    // into the new `loadData` structure and then passed to `systemStatus.tasks.duplicates`.
+    // For now, I'll adapt it based on the analysis output, or remove if not possible.
+    // The outline did not include calculation of `taskAnalysis.duplicates` in the new `loadData`'s `systemStatus`.
+    // I will remove the UI check for `systemStatus.tasks?.taskAnalysis?.duplicates?.length > 50` and the corresponding button,
+    // as the data is no longer available in `systemStatus` as per the outline.
+    // If needed, the old logic for `duplicates` in `loadData` could be re-added specifically.
+    
+    // As per the provided outline, `systemStatus.tasks.taskAnalysis.duplicates` is no longer populated.
+    // Instead, the new `tasks` analysis has `missingBoth`, `missingItemId` etc.
+    // The `duplicates` check was part of the old, more verbose task breakdown.
+    // To enable this function, `duplicates` would need to be added to the `analyses.tasks` object.
+    // Given the outline, this specific cleanup action is currently not supported by the new data structure.
+    console.warn("Function showDuplicateTasks is currently not supported by the current data structure in systemStatus.");
+    alert("פונקציית בדיקת כפילויות משימות אינה נתמכת כרגע במבנה הנתונים הנוכחי.");
+  };
+
+  const cleanupMondayDuplicates = async () => {
+    if (!window.confirm('⚠️ זה ימחק משימות מכפילות Monday (שיש להן דגל From Monday אבל חסר להן Board/Item ID). המשך?')) return;
+    
+    setIsLoading(true);
+    try {
+      const allTasks = await Task.list(null, 2000);
+      
+      const fromMondayTasks = allTasks.filter(t => t.isFromMonday === true);
+      const protectedTasks = allTasks.filter(t => t.isProtected === true);
+      const tasksWithBothIds = allTasks.filter(t => t.monday_board_id && t.monday_item_id);
+
+      // Find tasks that are either:
+      // 1. From Monday but missing IDs
+      // 2. Protected but missing IDs (since they seem to be the same)
+      const duplicateTasks = allTasks.filter(task => 
+        (task.isFromMonday === true || task.isProtected === true) &&
+        (!task.monday_board_id || !task.monday_item_id)
+      );
+      
+      if (duplicateTasks.length === 0) {
+        // Alternative: Look for any tasks missing Monday connection
+        const alternativeDuplicates = allTasks.filter(task => 
+          !task.monday_board_id && 
+          !task.monday_item_id && 
+          !task.isDemo &&
+          task.created_date
+        );
+        
+        if (alternativeDuplicates.length > 0) {
+          if (window.confirm(`❓ נמצאו ${alternativeDuplicates.length} משימות ללא חיבור Monday (כולל מוגנות). האם למחוק גם משימות מוגנות?`)) {
+            let deletedCount = 0;
+            for (const task of alternativeDuplicates) {
+              await Task.delete(task.id);
+              deletedCount++;
+            }
+            alert(`✅ נמחקו ${deletedCount} משימות לא מחוברות (כולל מוגנות)`);
+            await loadData();
+          }
+        } else {
+          alert('לא נמצאו משימות כפולות למחיקה');
+        }
+        return;
+      }
+      
+      const finalConfirm = window.confirm(`⚠️ נמצאו ${duplicateTasks.length} משימות כפולות. חלקן מסומנות כמוגנות. האם למחוק בכל זאת?`);
+      if (!finalConfirm) {
+        alert('פעולה בוטלה');
+        setIsLoading(false);
+        return;
+      }
+      
+      let deletedCount = 0;
+      for (const task of duplicateTasks) {
+        await Task.delete(task.id);
+        deletedCount++;
+      }
+      
+      alert(`✅ נמחקו ${deletedCount} משימות כפולות (כולל מוגנות)`);
+      
+      await loadData();
+      
+    } catch (error) {
+      console.error('❌ Error cleaning duplicates:', error);
+      alert(`❌ שגיאה בניקוי כפילויות: ${error.message}`);
+    }
+    setIsLoading(false);
+  };
+
+  const cleanupOrphanedTasks = async () => {
+    if (!window.confirm('⚠️ זה ימחק משימות יתומות (ללא דגלים מיוחדים וללא חיבור Monday). המשך?')) return;
+    
+    setIsLoading(true);
+    try {
+      // Find tasks without any Monday connection and no special flags
+      const orphanedTasks = await Task.filter({
+        monday_board_id: null,
+        monday_item_id: null,
+        isDemo: { $ne: true },
+        isProtected: { $ne: true },
+        isFromMonday: { $ne: true }
+      });
+      
+      if (orphanedTasks.length === 0) {
+        alert('לא נמצאו משימות יתומות למחיקה');
+        return;
+      }
+      
+      let deletedCount = 0;
+      for (const task of orphanedTasks) {
+        await Task.delete(task.id);
+        deletedCount++;
+      }
+      
+      alert(`✅ נמחקו ${deletedCount} משימות יתומות`);
+      
+      await loadData();
+      
+    } catch (error) {
+      console.error('❌ Error cleaning orphaned tasks:', error);
+      alert(`❌ שגיאה בניקוי משימות יתומות: ${error.message}`);
+    }
+    setIsLoading(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Database className="w-8 h-8 text-primary" />
+        <div>
+          <h1 className="text-3xl font-bold">מצב המערכת</h1>
+          <p className="text-gray-600">בדיקה מפורטת של כל הסנכרונים עם Monday.com</p>
+        </div>
+        <Button onClick={loadData} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          רענן
+        </Button>
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <TriangleAlert className="h-4 w-4" />
+          <AlertTitle>שגיאה!</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Object.entries(systemStatus).filter(([key]) => 
+          ['tasks', 'clients', 'reconciliations', 'clientAccounts', 'therapists', 'dashboards'].includes(key)
+        ).map(([key, data]) => (
+          <Card key={key} className={`border-2 ${
+            data.status === 'working' ? 'border-green-200 bg-green-50' :
+            data.status === 'partial' ? 'border-yellow-200 bg-yellow-50' :
+            data.status === 'empty' ? 'border-gray-200 bg-gray-50' :
+            'border-amber-200 bg-amber-50'
+          }`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <StatusIcon status={data.status} />
+                {key === 'clients' ? 'לקוחות' :
+                 key === 'tasks' ? 'משימות' :
+                 key === 'reconciliations' ? 'התאמות' :
+                 key === 'clientAccounts' ? 'חשבונות בנק' :
+                 key === 'therapists' ? 'מטפלים' : // Added Therapist display name
+                 key === 'dashboards' ? 'לוחות Monday' : key}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">{data.details}</p>
+                
+                {key !== 'dashboards' && (
+                  <div className="space-y-2">
+                    {/* ID Status Breakdown */}
+                    <div className="bg-white p-3 rounded border space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">סה"כ רשומות:</span>
+                        <Badge variant="outline" className="font-bold">{data.total || 0}</Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-green-700">עם 3 מזהים (מלא):</span>
+                        <Badge className="bg-green-100 text-green-800 font-bold">{data.withAllIds || 0}</Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-orange-700">חסר Monday Item ID:</span>
+                        <Badge className="bg-orange-100 text-orange-800 font-bold">{data.missingItemId?.length || 0}</Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-amber-700">חסר חיבור Monday:</span>
+                        <Badge className="bg-amber-100 text-amber-800 font-bold">{data.missingBoth?.length || 0}</Badge>
+                      </div>
+                    </div>
+                    
+                    {/* Special flags for tasks */}
+                    {key === 'tasks' && data.taskFlags && (
+                      <div className="bg-blue-50 p-3 rounded border space-y-1">
+                        <h5 className="text-sm font-medium text-blue-800">דגלים מיוחדים:</h5>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <span>Demo: {data.taskFlags.isDemo}</span>
+                          <span>Protected: {data.taskFlags.isProtected}</span>
+                          <span>From Monday: {data.taskFlags.isFromMonday}</span>
+                          <span>No flags: {data.taskFlags.noFlags}</span>
+                        </div>
+                      </div>
                     )}
-                  </>
+                  </div>
+                )}
+
+                {key === 'dashboards' && (
+                  <div className="space-y-2">
+                    <div className="bg-white p-3 rounded border space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">סה"כ רשומות Dashboard:</span>
+                        <Badge variant="outline" className="font-bold text-amber-600">{data.totalDashboards}</Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">לוחות מוגדרים:</span>
+                        <Badge className="bg-green-100 text-green-800 font-bold">{data.configured}</Badge>
+                      </div>
+                      {/* Duplicate types display removed as per outline */}
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="p-3 rounded-full" style={{ backgroundColor: `${color}20` }}>
-                <Icon className="w-6 h-6" style={{ color }} />
+            </CardContent>
+          </Card>
+        ))}
+        {/* New cards for total expected/actual and board breakdown */}
+        {systemStatus.expectedTotal !== undefined && (
+          <Card key="total-sync" className="border-2 border-purple-200 bg-purple-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Monitor className="w-4 h-4 text-purple-500" />
+                סיכום סנכרון כללי
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-white p-3 rounded border space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">סה"כ פריטים צפויים (מ-Monday):</span>
+                  <Badge variant="outline" className="font-bold">{systemStatus.expectedTotal}</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">סה"כ פריטים בפועל (בבסיס נתונים):</span>
+                  <Badge className={`font-bold ${systemStatus.actualTotal === systemStatus.expectedTotal ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                    {systemStatus.actualTotal}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">הפרש (חיובי = עודף, שלילי = חסר):</span>
+                  <Badge className={`font-bold ${systemStatus.actualTotal - systemStatus.expectedTotal === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                    {systemStatus.actualTotal - systemStatus.expectedTotal}
+                  </Badge>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+        {systemStatus.boardBreakdown && systemStatus.boardBreakdown.length > 0 && (
+          <Card key="board-breakdown" className="md:col-span-2 lg:col-span-3 border-2 border-blue-200 bg-blue-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Database className="w-4 h-4 text-blue-500" />
+                פירוט סנכרון לוחות Monday
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {systemStatus.boardBreakdown.map(board => (
+                  <div key={board.type} className="bg-white p-3 rounded border">
+                    <h5 className="font-semibold text-sm mb-1">{board.name} ({board.type})</h5>
+                    <div className="text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span>צפוי:</span>
+                        <Badge variant="outline">{board.expected}</Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>בפועל:</span>
+                        <Badge className={`${board.actual === board.expected ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {board.actual}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>הפרש:</span>
+                        <Badge className={`${board.actual - board.expected === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {board.actual - board.expected}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Summary Alert */}
+      <Alert>
+        <Monitor className="h-4 w-4" />
+        <AlertDescription>
+          <strong>מצב כללי:</strong> בדוק את הכרטיסים למעלה כדי לראות מה עובד ומה צריך תיקון. 
+          ירוק = עובד מושלם (ללוחות Monday), צהוב = עובד חלקית (חלק מהרשומות מסונכרנות), אדום = לא עובד.
+        </AlertDescription>
+      </Alert>
+
+      {/* Cleanup Actions */}
+      <div className="mt-8 space-y-4">
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="text-orange-800">🧹 פעולות ניקוי נדרשות</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {systemStatus.tasks?.taskFlags && (systemStatus.tasks.taskFlags.isFromMonday - systemStatus.tasks.withAllIds > 0) && (
+              <div className="p-4 bg-white rounded border border-amber-300">
+                <h4 className="font-semibold text-amber-700 mb-2">🔄 כפילויות Monday - דחוף!</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  <strong>בעיה קריטית:</strong> יש {systemStatus.tasks.taskFlags.isFromMonday} משימות מסומנות "From Monday" 
+                  אבל רק {systemStatus.tasks.withAllIds} עם IDs מלאים. 
+                  <br/>
+                  <strong>כלומר: {systemStatus.tasks.taskFlags.isFromMonday - systemStatus.tasks.withAllIds} כפילויות שצריך למחוק!</strong>
+                </p>
+                <div className="bg-amber-50 p-3 rounded mb-3 text-sm">
+                  <strong>מה זה אומר:</strong> המערכת סנכרנה משימות מ-Monday פעמיים - פעם אחת עם IDs נכונים, 
+                  ופעם שנייה בלי IDs. הכפילויות מבלבלות את המערכת.
+                </div>
+                <Button 
+                  onClick={cleanupMondayDuplicates}
+                  variant="destructive" 
+                  size="lg"
+                  disabled={isLoading}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                >
+                  🗑️ נקה כפילויות Monday ({systemStatus.tasks.taskFlags.isFromMonday - systemStatus.tasks.withAllIds} משימות)
+                </Button>
+              </div>
+            )}
+
+            {systemStatus.tasks?.missingBoth?.length > 50 && (
+              <div className="p-4 bg-white rounded border border-orange-300">
+                <h4 className="font-semibold text-orange-700 mb-2">👻 משימות יתומות</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  יש {systemStatus.tasks.missingBoth.length} משימות ללא חיבור Monday וללא דגלים מיוחדים.
+                  זה כנראה משימות ישנות או נתוני בדיקה.
+                </p>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={showOrphanedTasks}
+                    variant="outline" 
+                    size="sm"
+                  >
+                    🔍 בדוק משימות יתומות
+                  </Button>
+                  <Button 
+                    onClick={cleanupOrphanedTasks}
+                    variant="destructive" 
+                    size="sm"
+                    disabled={isLoading}
+                  >
+                    🗑️ נקה משימות יתומות
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {systemStatus.dashboards?.totalDashboards > 12 && (
+              <div className="p-4 bg-white rounded border">
+                <h4 className="font-semibold text-amber-700 mb-2">🚨 Dashboard כפילויות</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  יש {systemStatus.dashboards.totalDashboards} רשומות Dashboard במקום 12. יש לנקות כפילויות.
+                </p>
+                <Button 
+                  onClick={cleanupDashboardDuplicates}
+                  variant="destructive" 
+                  size="sm"
+                  disabled={isLoading}
+                >
+                  🗑️ נקה כפילויות Dashboard
+                </Button>
+              </div>
+            )}
+
+            {/* Emergency reset button */}
+            <div className="p-4 bg-amber-100 rounded border border-amber-300">
+              <h4 className="font-semibold text-amber-800 mb-2">⚠️ ניקוי כללי - אפשרות גרעין</h4>
+              <p className="text-sm text-gray-700 mb-3">
+                אם הכל מבולבל - אפשר למחוק את כל המשימות שלא מסונכרנות כמו שצריך ולהתחיל מחדש עם סנכרון נקי.
+              </p>
+              <Button 
+                onClick={() => {
+                  if (window.confirm('⚠️⚠️⚠️ זה ימחק את כל המשימות שלא מסונכרנות מושלם עם Monday (כולל יתומות וכפילויות). רק משימות מסונכרנות יישארו. האם אתה בטוח?')) {
+                    // Execute sequentially
+                    cleanupMondayDuplicates().then(() => cleanupOrphanedTasks());
+                  }
+                }}
+                variant="destructive" 
+                size="lg"
+                disabled={isLoading}
+                className="w-full bg-amber-800 hover:bg-amber-900"
+              >
+                🔥 ניקוי כללי - השאר רק משימות מסונכרנות
+              </Button>
             </div>
           </CardContent>
         </Card>
-      </Link>
-    </motion.div>
-  );
-
-  const getHealthStatus = () => {
-    const issues = [];
-
-    if (stats.tasks.pending > 50) {
-      issues.push({ text: 'יש הרבה משימות פתוחות', severity: 'warning' });
-    }
-
-    if (stats.dashboards.configured === 0) {
-      issues.push({ text: 'לא הוגדרו לוחות Monday', severity: 'error' });
-    }
-
-    if (stats.clients.active === 0) {
-      issues.push({ text: 'אין לקוחות פעילים', severity: 'warning' });
-    }
-
-    return issues;
-  };
-
-  const healthIssues = getHealthStatus();
-  const healthScore = Math.max(0, 100 - (healthIssues.length * 20));
-
-  return (
-    <div className="p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-      >
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <Monitor className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-neutral-dark">סקירת מערכת</h1>
-            <p className="text-neutral-medium">מצב כללי של כל המערכות</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {lastRefresh && (
-            <p className="text-sm text-muted-foreground">
-              עדכון אחרון: {lastRefresh.toLocaleTimeString('he-IL')}
-            </p>
-          )}
-          <Button onClick={loadAllStats} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? 'animate-spin' : ''}`} />
-            רענן
-          </Button>
-        </div>
-      </motion.div>
-
-      {/* System Health */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="w-5 h-5" />
-            בריאות המערכת
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="text-center">
-              <div className="relative w-32 h-32">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    fill="none"
-                    stroke="#e5e7eb"
-                    strokeWidth="12"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    fill="none"
-                    stroke={healthScore >= 80 ? '#22c55e' : healthScore >= 50 ? '#eab308' : '#ef4444'}
-                    strokeWidth="12"
-                    strokeDasharray={`${healthScore * 3.52} 352`}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-3xl font-bold">{healthScore}%</span>
-                </div>
-              </div>
-              <p className="mt-2 font-medium">
-                {healthScore >= 80 ? 'מצב תקין' : healthScore >= 50 ? 'דורש תשומת לב' : 'יש בעיות'}
-              </p>
-            </div>
-
-            <div className="flex-1">
-              {healthIssues.length === 0 ? (
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="w-5 h-5" />
-                  <span>כל המערכות פועלות תקין</span>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {healthIssues.map((issue, index) => (
-                    <div
-                      key={index}
-                      className={`flex items-center gap-2 p-2 rounded ${issue.severity === 'error' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
-                        }`}
-                    >
-                      <AlertTriangle className="w-4 h-4" />
-                      <span>{issue.text}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          title="לקוחות"
-          icon={Users}
-          value={stats.clients.total}
-          subValue={stats.clients.active}
-          subLabel="פעילים"
-          color="#10b981"
-          link={createPageUrl("ClientManagement")}
-          loading={stats.clients.loading}
-        />
-        <StatCard
-          title="משימות"
-          icon={Target}
-          value={stats.tasks.total}
-          subValue={stats.tasks.pending}
-          subLabel="פתוחות"
-          color="#6366f1"
-          link={createPageUrl("Tasks")}
-          loading={stats.tasks.loading}
-        />
-        <StatCard
-          title="אירועים"
-          icon={Calendar}
-          value={stats.events.total}
-          subValue={stats.events.upcoming}
-          subLabel="קרובים"
-          color="#f59e0b"
-          link={createPageUrl("Calendar")}
-          loading={stats.events.loading}
-        />
-        <StatCard
-          title="נותני שירות"
-          icon={BookUser}
-          value={stats.serviceProviders.total}
-          subValue={stats.serviceProviders.companies}
-          subLabel="חברות"
-          color="#8b5cf6"
-          link={createPageUrl("ServiceProviders")}
-          loading={stats.serviceProviders.loading}
-        />
-        <StatCard
-          title="התאמות בנק"
-          icon={FileText}
-          value={stats.reconciliations.total}
-          color="#ec4899"
-          link={createPageUrl("Reconciliations")}
-          loading={stats.reconciliations.loading}
-        />
-        <StatCard
-          title="חשבונות בנק"
-          icon={Building}
-          value={stats.accounts.total}
-          color="#14b8a6"
-          link={createPageUrl("ClientManagement")}
-          loading={stats.accounts.loading}
-        />
-        <StatCard
-          title="לידים"
-          icon={TrendingUp}
-          value={stats.leads.total}
-          color="#f97316"
-          link={createPageUrl("Leads")}
-          loading={stats.leads.loading}
-        />
-        <StatCard
-          title="לוחות Monday"
-          icon={Database}
-          value={stats.dashboards.total}
-          subValue={stats.dashboards.configured}
-          subLabel="מוגדרים"
-          color="#0ea5e9"
-          link={createPageUrl("MondayIntegration")}
-          loading={stats.dashboards.loading}
-        />
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>פעולות מהירות</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link to={createPageUrl("MondayIntegration")}>
-              <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-2">
-                <RefreshCw className="w-6 h-6" />
-                <span>סנכרן Monday</span>
-              </Button>
-            </Link>
-            <Link to={createPageUrl("Tasks")}>
-              <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-2">
-                <Target className="w-6 h-6" />
-                <span>משימות חדשות</span>
-              </Button>
-            </Link>
-            <Link to={createPageUrl("ClientManagement")}>
-              <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-2">
-                <Users className="w-6 h-6" />
-                <span>הוסף לקוח</span>
-              </Button>
-            </Link>
-            <Link to={createPageUrl("Dashboards")}>
-              <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-2">
-                <TrendingUp className="w-6 h-6" />
-                <span>דשבורדים</span>
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* System Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Server className="w-5 h-5" />
-            מידע על המערכת
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-3 gap-4 text-sm">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-muted-foreground mb-1">פלטפורמה</p>
-              <p className="font-medium">Base44 + React</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-muted-foreground mb-1">אינטגרציות</p>
-              <p className="font-medium">Monday.com</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-muted-foreground mb-1">גרסה</p>
-              <p className="font-medium">CalmPlan v1.0</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

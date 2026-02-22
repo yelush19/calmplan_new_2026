@@ -59,13 +59,13 @@ const treatmentRoomOptions = [
 const statusOptions = [
   { value: 'planned', label: 'מתוכנן', color: 'bg-orange-100 text-orange-800' },
   { value: 'completed', label: 'הושלם', color: 'bg-green-100 text-green-800' },
-  { value: 'cancelled', label: 'בוטל', color: 'bg-red-100 text-red-800' }
+  { value: 'cancelled', label: 'בוטל', color: 'bg-amber-100 text-amber-800' }
 ];
 
 const cognitiveLoadOptions = [
   { value: 'low', label: 'נמוך', color: 'bg-green-100 text-green-800' },
   { value: 'medium', label: 'בינוני', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'high', label: 'גבוה', color: 'bg-red-100 text-red-800' }
+  { value: 'high', label: 'גבוה', color: 'bg-amber-100 text-amber-800' }
 ];
 
 const patientOptions = [
@@ -497,7 +497,7 @@ export default function TreatmentInput({ onPlanCreated, onCancel }) {
   const SaveStatusIcon = () => {
     const statusMap = {
       saving: <RotateCcw className="w-4 h-4 animate-spin text-blue-500" />,
-      error: <AlertCircleIcon className="w-4 h-4 text-red-500" />,
+      error: <AlertCircleIcon className="w-4 h-4 text-amber-500" />,
       saved: <Cloud className="w-4 h-4 text-green-500" />,
       null: <Cloud className="w-4 h-4 text-gray-400" />, // Initial state before any save action
     };
@@ -611,7 +611,7 @@ export default function TreatmentInput({ onPlanCreated, onCancel }) {
                   });
 
                   return (
-                  <div key={treatment.id} className={`p-4 rounded-lg border space-y-3 ${conflicts[treatment.id] ? 'border-red-500 bg-red-50' : 'border-gray-200'} ${treatment.isFromMonday ? 'bg-blue-50 border-blue-200' : ''}`}>
+                  <div key={treatment.id} className={`p-4 rounded-lg border space-y-3 ${conflicts[treatment.id] ? 'border-amber-500 bg-amber-50' : 'border-gray-200'} ${treatment.isFromMonday ? 'bg-blue-50 border-blue-200' : ''}`}>
                     <div className="flex justify-between items-center">
                       <h4 className="font-semibold flex items-center gap-2">
                           טיפול #{index + 1}
@@ -627,7 +627,7 @@ export default function TreatmentInput({ onPlanCreated, onCancel }) {
                             {statusOptions.find(s => s.value === treatment.status)?.label || treatment.status}
                           </Badge>
                         )}
-                        <Button onClick={() => handleRemoveTreatment(treatment.id)} size="icon" variant="ghost" className="text-red-500"><XCircle className="w-4 h-4" /></Button>
+                        <Button onClick={() => handleRemoveTreatment(treatment.id)} size="icon" variant="ghost" className="text-amber-500"><XCircle className="w-4 h-4" /></Button>
                       </div>
                     </div>
 

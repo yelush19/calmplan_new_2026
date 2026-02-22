@@ -1,0 +1,1492 @@
+[
+  {
+    "name": "אורי סאן בע\"מ",
+    "status": "active",
+    "entity_number": "515961571",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "משלוח תלושים",
+    "tax_info": {
+      "tax_id": "515961571",
+      "vat_file_number": "515961571",
+      "tax_deduction_file_number": "923819353",
+      "social_security_file_number": "92381935300",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "052063",
+        "social_security_id": "160910",
+        "deductions_id": "165023"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "monthly",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "19_לחודש (דיגיטלי)",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbdbfeddeaaf105f980"
+    }
+  },
+  {
+    "name": "אנתין ילנה-ע.מורשה",
+    "status": "active",
+    "entity_number": "314580036",
+    "service_types": [
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "314580036",
+      "vat_file_number": "314580036",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "116926",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "bimonthly",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "19_לחודש (דיגיטלי)",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "ניר כהן",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbdd3e9347d3341c4ad"
+    }
+  },
+  {
+    "name": "אקספולוג [אקספוליאג'י ] בע\"מ",
+    "status": "active",
+    "entity_number": "513464735",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "דיווח למתפעל",
+    "tax_info": {
+      "tax_id": "513464735",
+      "vat_file_number": "513464735",
+      "tax_deduction_file_number": "925236382",
+      "social_security_file_number": "92523638200",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "114015",
+        "social_security_id": "550765",
+        "deductions_id": "194455"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "monthly",
+      "deductions_frequency": "monthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "15_לחודש (רגיל)",
+      "deductions": "15_לחודש (רגיל)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbecb741c9317d797ab"
+    }
+  },
+  {
+    "name": "אר.אס סולישנס בע\"מ",
+    "status": "active",
+    "entity_number": "516939428",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "516939428",
+      "vat_file_number": "516939428",
+      "tax_deduction_file_number": "936487974",
+      "social_security_file_number": "93648797400",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "001684",
+        "social_security_id": "690419",
+        "deductions_id": "432384"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "monthly",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "19_לחודש (דיגיטלי)",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc20a4c0f9ed946acce"
+    }
+  },
+  {
+    "name": "בראנדלייט בינה מלאכותית בעמ",
+    "status": "active",
+    "entity_number": "517057576",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "דיווח למתפעל, מס\"ב סוציאליות, מס\"ב עובדים, מס\"ב רשויות, משלוח תלושים",
+    "tax_info": {
+      "tax_id": "517057576",
+      "vat_file_number": "517057576",
+      "tax_deduction_file_number": "936481167",
+      "social_security_file_number": "93648116700",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "324299",
+        "deductions_id": "420136"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "לאנקרי שרון",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "68b6827ed0b2727066402b16"
+    }
+  },
+  {
+    "name": "ד\"ר וון דייק בע\"מ",
+    "status": "active",
+    "entity_number": "513381780",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "דיווח לטמל, משלוח תלושים",
+    "tax_info": {
+      "tax_id": "513381780",
+      "vat_file_number": "513381780",
+      "tax_deduction_file_number": "924322530",
+      "social_security_file_number": "92432253000",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "094935",
+        "social_security_id": "145738",
+        "deductions_id": "173129"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "monthly",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "15_לחודש (רגיל)",
+      "deductions": "15_לחודש (רגיל)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbe273fea034ed40083"
+    }
+  },
+  {
+    "name": "השחקן מס' 1 בעמ",
+    "status": "active",
+    "entity_number": "516936838",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "516936838",
+      "vat_file_number": "516936838",
+      "tax_deduction_file_number": "936456490",
+      "social_security_file_number": "93645649000",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "364101",
+        "deductions_id": "294156"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc2bfeddeaaf105f988"
+    }
+  },
+  {
+    "name": "השחקן-עמרי דנאור- עוסק-317500270",
+    "status": "active",
+    "entity_number": "317500270",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "317500270",
+      "vat_file_number": "317500270",
+      "tax_deduction_file_number": "936321686",
+      "social_security_file_number": "93632168600",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "116742",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "19_לחודש (דיגיטלי)",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc36120762e78df5dd9"
+    }
+  },
+  {
+    "name": "ליתאי ניהול שירותים בע\"מ",
+    "status": "active",
+    "entity_number": "516004264",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "516004264",
+      "vat_file_number": "516004264",
+      "tax_deduction_file_number": "925487597",
+      "social_security_file_number": "92548759700",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "104267",
+        "social_security_id": "968209",
+        "deductions_id": "203451"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "monthly",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "19_לחודש (דיגיטלי)",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "ניר כהן",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbf6120762e78df5dd3"
+    }
+  },
+  {
+    "name": "מאי הירש-ע.מורשה",
+    "status": "active",
+    "entity_number": "66585381",
+    "service_types": [
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "66585381",
+      "vat_file_number": "66585381",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "022608",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "bimonthly",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "19_לחודש (דיגיטלי)",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "גליצר ארי",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbfbfeddeaaf105f985"
+    }
+  },
+  {
+    "name": "מאי רוקה פרוג'קט בע\"מ",
+    "status": "active",
+    "entity_number": "515198992",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "515198992",
+      "vat_file_number": "515198992",
+      "tax_deduction_file_number": "952562775",
+      "social_security_file_number": "95256277500",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "052063",
+        "social_security_id": "813671",
+        "deductions_id": "401570"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "semi_annual",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שמעון אבנעים",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbf1194f30490cfd003"
+    }
+  },
+  {
+    "name": "מודיבודי ישראל בעמ",
+    "status": "active",
+    "entity_number": "516220365",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "משלוח תלושים",
+    "tax_info": {
+      "tax_id": "516220365",
+      "vat_file_number": "516220365",
+      "tax_deduction_file_number": "921658688",
+      "social_security_file_number": "92165868800",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "535099",
+        "deductions_id": "145470"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "monthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "ניר כהן",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc63d8a72a9bab46748"
+    }
+  },
+  {
+    "name": "סמארט קליק טכנולוגיס בעמ",
+    "status": "active",
+    "entity_number": "516968021",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "דיווח למתפעל, מס\"ב סוציאליות, מס\"ב עובדים",
+    "tax_info": {
+      "tax_id": "516968021",
+      "vat_file_number": "516968021",
+      "tax_deduction_file_number": "911022564",
+      "social_security_file_number": "91102256400",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "monthly",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "19_לחודש (דיגיטלי)",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "ניר כהן",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc7925b34bb9d46b745"
+    }
+  },
+  {
+    "name": "פומט בע\"מ",
+    "status": "active",
+    "entity_number": "510297179",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "דיווח לטמל",
+    "tax_info": {
+      "tax_id": "510297179",
+      "vat_file_number": "510297179",
+      "tax_deduction_file_number": "930211388",
+      "social_security_file_number": "93021138800",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "114474",
+        "deductions_id": "237009"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "monthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "15_לחודש (רגיל)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc1ce67a9cb6504b310"
+    }
+  },
+  {
+    "name": "פנדה טק בע\"מ",
+    "status": "active",
+    "entity_number": "513707026",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "דיווח למתפעל, משלוח תלושים",
+    "tax_info": {
+      "tax_id": "513707026",
+      "vat_file_number": "513707026",
+      "tax_deduction_file_number": "924375868",
+      "social_security_file_number": "92437586800",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "858022",
+        "deductions_id": "174205"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "monthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc19ad971203c39b98a"
+    }
+  },
+  {
+    "name": "רחל מור -עוסק- מעמ נסגר",
+    "status": "active",
+    "entity_number": "37218658",
+    "service_types": [
+      "payroll",
+      "bookkeeping"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "37218658",
+      "vat_file_number": "37218658",
+      "tax_deduction_file_number": "918012543",
+      "social_security_file_number": "91801254300",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc3dea3624fea70f5a3"
+    }
+  },
+  {
+    "name": "רחל מור בע\"מ",
+    "status": "active",
+    "entity_number": "516983103",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "516983103",
+      "vat_file_number": "516983103",
+      "tax_deduction_file_number": "918175647",
+      "social_security_file_number": "91817564700",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "028163",
+        "social_security_id": "500482",
+        "deductions_id": "133561"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "monthly",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "19_לחודש (דיגיטלי)",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc3d16cd58b7c531a6e"
+    }
+  },
+  {
+    "name": "ד.מ פוסט בע\"מ",
+    "status": "active",
+    "entity_number": "516686086",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "דיווח למתפעל, מס\"ב סוציאליות, מס\"ב עובדים, מס\"ב רשויות, מס\"ב ספקים",
+    "tax_info": {
+      "tax_id": "516686086",
+      "vat_file_number": "516686086",
+      "tax_deduction_file_number": "936436492",
+      "social_security_file_number": "93643649200",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "358261",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "monthly",
+      "deductions_frequency": "monthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "ניר כהן",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "690715567dffdbca021579f8"
+    }
+  },
+  {
+    "name": "א.מ לוג שרמן בע\"מ",
+    "status": "active",
+    "entity_number": "516892387",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "516892387",
+      "vat_file_number": "516892387",
+      "tax_deduction_file_number": "907592067",
+      "social_security_file_number": "90759206700",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "ניר כהן",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbdbfeddeaaf105f98082"
+    }
+  },
+  {
+    "name": "אמוביז בעמ",
+    "status": "active",
+    "entity_number": "516516838",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting",
+      "tax_advances"
+    ],
+    "extra_services": "דיווח למתפעל, מס\"ב סוציאליות, מס\"ב ספקים, מס\"ב עובדים, מס\"ב רשויות, משלוח תלושים",
+    "tax_info": {
+      "tax_id": "516516838",
+      "vat_file_number": "516516838",
+      "tax_deduction_file_number": "923865661",
+      "social_security_file_number": "92386566100",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "monthly",
+      "deductions_frequency": "monthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "19_לחודש (דיגיטלי)",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "ניר כהן",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbdbfeddeaaf105f98083"
+    }
+  },
+  {
+    "name": "הקהילה הפתוחה",
+    "status": "active",
+    "entity_number": "",
+    "service_types": [
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "check_needed",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "ניר כהן",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbdbfeddeaaf105f98084"
+    }
+  },
+  {
+    "name": "ליתאי -שיפורים וסיום PRICEWISE",
+    "status": "development",
+    "entity_number": "",
+    "service_types": [],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "אחר",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "ליתאי -CALMPLAN",
+    "status": "development",
+    "entity_number": "",
+    "service_types": [],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "אחר",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "ליתאי פיתוח- PANDA PAYROLL",
+    "status": "development",
+    "entity_number": "",
+    "service_types": [],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "אחר",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "ליתאי פיתוח-BALANCEVIEW",
+    "status": "development",
+    "entity_number": "",
+    "service_types": [],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "אחר",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "לקוחות 2024",
+    "status": "former",
+    "is_group": true,
+    "entity_number": "",
+    "service_types": [],
+    "extra_services": "",
+    "notes": "קבוצה - לקוחות שסיימו ב-2024",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "",
+      "tax_advances": "",
+      "deductions": "",
+      "social_security": ""
+    },
+    "auditor": "",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "אנארמד בעמ",
+    "status": "former",
+    "entity_number": "",
+    "service_types": [
+      "bookkeeping"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "זהר דיאלוג בעמ",
+    "status": "former",
+    "entity_number": "",
+    "service_types": [
+      "payroll",
+      "bookkeeping"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "921486718",
+      "social_security_file_number": "92148671800",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "מאיה וון דייק",
+    "status": "former",
+    "entity_number": "",
+    "service_types": [
+      "bookkeeping"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "סקארה בעמ",
+    "status": "former",
+    "entity_number": "",
+    "service_types": [
+      "bookkeeping"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "פרשהאב בעמ",
+    "status": "former",
+    "entity_number": "",
+    "service_types": [
+      "payroll",
+      "bookkeeping"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "924474752",
+      "social_security_file_number": "92447475200",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "י.אראל הנדסה בע\"מ",
+    "status": "active",
+    "entity_number": "514085943",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "514085943",
+      "vat_file_number": "514085943",
+      "tax_deduction_file_number": "923576623",
+      "social_security_file_number": "92357662300",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "446339",
+        "deductions_id": "159560"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "monthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "23_לחודש (874)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bbe767103c85af7b05b"
+    }
+  },
+  {
+    "name": "עוזי רוזן ניהול ושיווק בע\"מ",
+    "status": "active",
+    "entity_number": "514821768",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "514821768",
+      "vat_file_number": "514821768",
+      "tax_deduction_file_number": "926607482",
+      "social_security_file_number": "92660748200",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "722897",
+        "deductions_id": "220973"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc0500357f817dc41ed"
+    }
+  },
+  {
+    "name": "פיץ ניהול ואחזקות",
+    "status": "active",
+    "entity_number": "",
+    "service_types": [
+      "bookkeeping"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "",
+      "vat_file_number": "",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "not_applicable",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "לא רלוונטי",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  },
+  {
+    "name": "רייזמן יזמות בע\"מ",
+    "status": "active",
+    "entity_number": "516502671",
+    "service_types": [
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "516502671",
+      "vat_file_number": "516502671",
+      "tax_deduction_file_number": "",
+      "social_security_file_number": "",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "",
+        "deductions_id": ""
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "לא רלוונטי",
+      "social_security": "לא רלוונטי"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": "687e3bc64faec0416bcf8443"
+    }
+  },
+  {
+    "name": "רייזמן יעוץ ומיקור בע\"מ",
+    "status": "active",
+    "entity_number": "516179397",
+    "service_types": [
+      "payroll",
+      "bookkeeping",
+      "vat_reporting"
+    ],
+    "extra_services": "",
+    "tax_info": {
+      "tax_id": "516179397",
+      "vat_file_number": "516179397",
+      "tax_deduction_file_number": "923840284",
+      "social_security_file_number": "92384028400",
+      "annual_tax_ids_2025": {
+        "tax_advances_id": "",
+        "social_security_id": "369300",
+        "deductions_id": "165719"
+      }
+    },
+    "reporting_info": {
+      "vat_reporting_frequency": "bimonthly",
+      "tax_advances_frequency": "not_applicable",
+      "deductions_frequency": "bimonthly",
+      "social_security_frequency": "monthly",
+      "payroll_frequency": "monthly"
+    },
+    "deadlines": {
+      "vat": "19_לחודש (דיגיטלי)",
+      "tax_advances": "לא רלוונטי",
+      "deductions": "19_לחודש (דיגיטלי)",
+      "social_security": "15_לחודש (רגיל)"
+    },
+    "auditor": "שטיינמץ ושות'",
+    "contact_person": "",
+    "contact_email": "",
+    "notes": "",
+    "integration_info": {
+      "calmplan_id": ""
+    }
+  }
+]

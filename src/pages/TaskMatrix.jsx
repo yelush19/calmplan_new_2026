@@ -4,22 +4,24 @@ import { motion } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Target, Clock, Home, Briefcase } from 'lucide-react';
+import { Target, Clock, Home, Briefcase, Pencil, Trash2 } from 'lucide-react';
+import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 const importanceColors = {
-    high: 'border-r-4 border-red-500',
+    high: 'border-r-4 border-amber-500',
     medium: 'border-r-4 border-orange-500',
     low: 'border-r-4 border-blue-500',
 };
 
 const priorityColors = {
-    urgent: 'bg-red-100 text-red-800',
+    urgent: 'bg-amber-100 text-amber-800',
     high: 'bg-orange-100 text-orange-800',
     medium: 'bg-yellow-100 text-yellow-800',
     low: 'bg-blue-100 text-blue-800',
 };
 
-const DraggableTaskItem = ({ task, index }) => {
+const DraggableTaskItem = ({ task, index, onEdit, onDelete }) => {
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided, snapshot) => (
@@ -27,15 +29,29 @@ const DraggableTaskItem = ({ task, index }) => {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`p-3 mb-2 rounded-lg shadow-sm cursor-grab ${snapshot.isDragging ? 'opacity-50' : 'opacity-100'} ${importanceColors[task.importance]}`}
-          style={{ 
+          className={`group p-3 mb-2 rounded-lg shadow-sm cursor-grab ${snapshot.isDragging ? 'opacity-50' : 'opacity-100'} ${importanceColors[task.importance]}`}
+          style={{
             backgroundColor: 'rgba(255, 255, 255, 0.9)',
             ...provided.draggableProps.style,
           }}
         >
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-gray-800">{task.title}</h4>
-            {task.context === 'work' ? <Briefcase className="w-4 h-4 text-blue-500"/> : <Home className="w-4 h-4 text-green-500"/>}
+            <div className="flex items-center gap-1">
+              <div className="hidden group-hover:flex items-center gap-1">
+                {onEdit && (
+                  <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1 rounded hover:bg-blue-100 transition-colors" title="עריכת משימה">
+                    <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-blue-600" />
+                  </button>
+                )}
+                {onDelete && (
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(task); }} className="p-1 rounded hover:bg-amber-100 transition-colors" title="מחק משימה">
+                    <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-amber-600" />
+                  </button>
+                )}
+              </div>
+              {task.context === 'work' ? <Briefcase className="w-4 h-4 text-blue-500"/> : <Home className="w-4 h-4 text-green-500"/>}
+            </div>
           </div>
           <div className="flex items-center gap-2 mt-2 text-xs">
               <Badge variant="outline" className={priorityColors[task.priority]}>{task.priority}</Badge>
@@ -47,7 +63,7 @@ const DraggableTaskItem = ({ task, index }) => {
   );
 };
 
-const DroppableQuadrant = ({ quadrant, tasks }) => {
+const DroppableQuadrant = ({ quadrant, tasks, onEdit, onDelete }) => {
   return (
     <div className={`rounded-xl shadow-lg h-[400px] flex flex-col bg-white/80`}>
       <CardHeader className={`border-b-4 border-${quadrant.color}-400 rounded-t-xl`}>
@@ -62,7 +78,7 @@ const DroppableQuadrant = ({ quadrant, tasks }) => {
             className={`p-2 pt-4 flex-grow overflow-y-auto rounded-b-xl ${snapshot.isDraggingOver ? `bg-${quadrant.color}-100` : ''}`}
           >
             {tasks.map((task, index) => (
-              <DraggableTaskItem key={task.id} task={task} index={index} />
+              <DraggableTaskItem key={task.id} task={task} index={index} onEdit={onEdit} onDelete={onDelete} />
             ))}
             {provided.placeholder}
           </CardContent>
@@ -73,8 +89,10 @@ const DroppableQuadrant = ({ quadrant, tasks }) => {
 };
 
 export default function TaskMatrixPage() {
+  const { confirm, ConfirmDialogComponent } = useConfirm();
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingTask, setEditingTask] = useState(null);
 
   useEffect(() => {
     loadTasks();
@@ -82,9 +100,33 @@ export default function TaskMatrixPage() {
 
   const loadTasks = async () => {
     setIsLoading(true);
-    const allTasks = await Task.filter({ status_ne: 'completed' });
+    const allTasks = await Task.filter({ status: { '$ne': 'completed' } });
     setTasks(allTasks || []);
     setIsLoading(false);
+  };
+
+  const handleEditTask = (task) => setEditingTask(task);
+
+  const handleDeleteTask = async (task) => {
+    const ok = await confirm({ description: `למחוק את "${task.title}"?` });
+    if (ok) {
+      try {
+        await Task.delete(task.id);
+        setTasks(prev => prev.filter(t => t.id !== task.id));
+      } catch (error) {
+        console.error("Error deleting task:", error);
+      }
+    }
+  };
+
+  const handleSaveTask = async (updatedData) => {
+    try {
+      await Task.update(editingTask.id, updatedData);
+      setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...updatedData } : t));
+      setEditingTask(null);
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
   };
 
   const handleDragEnd = async (result) => {
@@ -117,7 +159,7 @@ export default function TaskMatrixPage() {
   };
   
   const quadrants = [
-    { id: 'q1', title: 'עשה עכשיו', description: 'דחוף וחשוב', importance: 'high', priority: 'urgent', color: 'red' },
+    { id: 'q1', title: 'עשה עכשיו', description: 'דחוף וחשוב', importance: 'high', priority: 'urgent', color: 'amber' },
     { id: 'q2', title: 'תכנן', description: 'לא דחוף אבל חשוב', importance: 'high', priority: 'high', color: 'blue' },
     { id: 'q3', title: 'האצל סמכויות', description: 'דחוף אבל לא חשוב', importance: 'medium', priority: 'medium', color: 'orange' },
     { id: 'q4', title: 'מחק', description: 'לא דחוף ולא חשוב', importance: 'low', priority: 'low', color: 'gray' }
@@ -149,15 +191,25 @@ export default function TaskMatrixPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {quadrants.map(q => (
-              <DroppableQuadrant 
+              <DroppableQuadrant
                 key={q.id}
                 quadrant={q}
                 tasks={getQuadrantTasks(q.importance, q.priority)}
+                onEdit={handleEditTask}
+                onDelete={handleDeleteTask}
               />
             ))}
           </div>
         )}
       </motion.div>
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+      />
+      {ConfirmDialogComponent}
     </DragDropContext>
   );
 }
