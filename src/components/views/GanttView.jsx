@@ -42,7 +42,7 @@ const estimateClientSize = (client, tasks) => {
   return 'S';
 };
 
-export default function GanttView({ tasks, clients, currentMonth }) {
+export default function GanttView({ tasks, clients, currentMonth, onEditTask }) {
   const [viewMonth, setViewMonth] = useState(currentMonth || new Date());
   const monthStart = startOfMonth(viewMonth);
   const monthEnd = endOfMonth(monthStart);
@@ -52,6 +52,7 @@ export default function GanttView({ tasks, clients, currentMonth }) {
   const [dragPreviewDay, setDragPreviewDay] = useState(null);
   const dragStartX = useRef(0);
   const dragStartDay = useRef(0);
+  const hasDragged = useRef(false);
 
   const goToPrevMonth = () => setViewMonth(prev => subMonths(prev, 1));
   const goToNextMonth = () => setViewMonth(prev => addMonths(prev, 1));
@@ -138,14 +139,19 @@ export default function GanttView({ tasks, clients, currentMonth }) {
 
   // ── Drag & Drop: horizontal drag to change due_date ──
   const handlePointerDown = useCallback((e, task, pos) => {
-    if (task.status === 'completed') return;
+    if (task.status === 'completed') {
+      // Completed tasks: just open edit on click
+      if (onEditTask) onEditTask(task);
+      return;
+    }
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     dragStartX.current = e.clientX;
     dragStartDay.current = pos.startDay;
+    hasDragged.current = false;
     setDraggingTask(task);
     setDragPreviewDay(null);
-  }, []);
+  }, [onEditTask]);
 
   const handlePointerMove = useCallback((e) => {
     if (!draggingTask) return;
@@ -154,6 +160,8 @@ export default function GanttView({ tasks, clients, currentMonth }) {
     const rect = timelineEl.getBoundingClientRect();
     const dayWidth = rect.width / daysInMonth;
     const dx = e.clientX - dragStartX.current;
+    // Mark as dragged if pointer moved more than 5px
+    if (Math.abs(dx) > 5) hasDragged.current = true;
     const dayOffset = Math.round(dx / dayWidth);
     if (dayOffset !== 0) {
       setDragPreviewDay(dayOffset);
@@ -163,7 +171,18 @@ export default function GanttView({ tasks, clients, currentMonth }) {
   }, [draggingTask, daysInMonth]);
 
   const handlePointerUp = useCallback(async (e) => {
-    if (!draggingTask || dragPreviewDay === null || dragPreviewDay === 0) {
+    if (!draggingTask) return;
+
+    // If pointer didn't move → it's a click → open edit dialog
+    if (!hasDragged.current) {
+      const task = draggingTask;
+      setDraggingTask(null);
+      setDragPreviewDay(null);
+      if (onEditTask) onEditTask(task);
+      return;
+    }
+
+    if (dragPreviewDay === null || dragPreviewDay === 0) {
       setDraggingTask(null);
       setDragPreviewDay(null);
       return;
@@ -187,7 +206,7 @@ export default function GanttView({ tasks, clients, currentMonth }) {
 
     setDraggingTask(null);
     setDragPreviewDay(null);
-  }, [draggingTask, dragPreviewDay]);
+  }, [draggingTask, dragPreviewDay, onEditTask]);
 
   const isCurrentMonth = monthStart.getMonth() === new Date().getMonth() && monthStart.getFullYear() === new Date().getFullYear();
 
@@ -301,7 +320,7 @@ export default function GanttView({ tasks, clients, currentMonth }) {
                       <motion.div
                         onPointerDown={(e) => handlePointerDown(e, task, pos)}
                         className={`absolute top-1 ${heightClass} rounded-md touch-none
-                          ${task.status === 'completed' ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
+                          ${task.status === 'completed' ? 'cursor-pointer' : 'cursor-pointer active:cursor-grabbing'}
                           ${STATUS_COLORS[task.status] || STATUS_COLORS.not_started}
                           ${isOverdue ? 'ring-2 ring-purple-500 animate-pulse' : ''}
                           ${isDragging ? 'opacity-80 z-20 ring-2 ring-blue-400 shadow-lg' : ''}`}
@@ -321,7 +340,7 @@ export default function GanttView({ tasks, clients, currentMonth }) {
                       {pos.durationDays > 1 && (
                         <p className="text-[10px] text-gray-500">{pos.durationDays} ימי עבודה</p>
                       )}
-                      <p className="text-[10px] text-gray-400 mt-0.5">גרור ימינה/שמאלה לשינוי תאריך</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">לחץ לעריכה | גרור לשינוי תאריך</p>
                     </TooltipContent>
                   </Tooltip>
                 );

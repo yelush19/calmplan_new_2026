@@ -868,9 +868,9 @@ export default function TasksPage() {
           </Card>
         )
       ) : view === 'mindmap' ? (
-        <MindMapView tasks={filteredTasks} clients={clientsList} />
+        <MindMapView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} onTaskCreated={loadTasks} />
       ) : view === 'gantt' ? (
-        <GanttView tasks={filteredTasks} clients={clientsList} />
+        <GanttView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} />
       ) : (
         <KanbanView
           tasks={filteredTasks}

@@ -4,9 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move } from 'lucide-react';
+import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus } from 'lucide-react';
 import { Task } from '@/api/entities';
 import { toast } from 'sonner';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
+import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import { computeComplexityTier, getBubbleRadius, getTierInfo } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 
@@ -177,7 +181,7 @@ const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.12;
 
 // ─── Main Component ─────────────────────────────────────────────
-export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDismiss, focusMode = false }) {
+export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDismiss, focusMode = false, onEditTask, onTaskCreated }) {
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -186,6 +190,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [dimensions, setDimensions] = useState({ width: 800, height: 700 });
   const [editPopover, setEditPopover] = useState(null); // { client, x, y }
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
+  const [drawerClient, setDrawerClient] = useState(null);
+  const [drawerQuickAdd, setDrawerQuickAdd] = useState(false); // show QuickAddTaskDialog from drawer
+  const [drawerSubTaskParent, setDrawerSubTaskParent] = useState(null); // for sub-task creation
+  const [showDrawerCompleted, setShowDrawerCompleted] = useState(false);
 
   // ── Pan & Zoom state ──
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -580,9 +588,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     setSelectedBranch(prev => prev === category ? null : category);
   }, []);
 
-  // Single-click opens quick-edit popover
+  // Single-click opens client task drawer
   const handleClientClick = useCallback((client, x, y) => {
-    setEditPopover(prev => prev?.name === client.name ? null : { ...client, x, y });
+    setDrawerClient(client);
+    setEditPopover(null);
+    setShowDrawerCompleted(false);
   }, []);
 
   // Quick-add task from popover
@@ -1072,93 +1082,163 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         )}
       </AnimatePresence>
 
-      {/* ── Quick-Edit Popover ── */}
-      <AnimatePresence>
-        {editPopover && (
-          <motion.div
-            data-popover
-            className="fixed z-[10000] bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 w-[280px]"
-            style={{
-              left: Math.min(editPopover.x + 10, window.innerWidth - 300),
-              top: Math.max(editPopover.y - 20, 10),
-            }}
-            initial={{ opacity: 0, scale: 0.9, y: 5 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.15 }}
-            dir="rtl"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: editPopover.color }} />
-                <span className="font-bold text-sm text-gray-800">{editPopover.name}</span>
-                <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{editPopover.tierIcon} {editPopover.tierLabel}</span>
-              </div>
-              <button onClick={() => setEditPopover(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
+      {/* ── Client Task Drawer (Sheet) ── */}
+      <Sheet open={!!drawerClient} onOpenChange={(open) => { if (!open) setDrawerClient(null); }}>
+        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col" dir="rtl">
+          {drawerClient && (() => {
+            const clientTasks = tasks.filter(t => t.client_name === drawerClient.name);
+            const activeTasks = clientTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
+            const completedTasks = clientTasks.filter(t => t.status === 'completed' || t.status === 'not_relevant');
 
-            {/* Task summary */}
-            <div className="flex items-center gap-3 text-[11px] text-gray-500 mb-3 pb-3 border-b border-gray-100">
-              <span>{editPopover.totalTasks} משימות</span>
-              <span className="text-green-600">{editPopover.completedTasks} הושלמו</span>
-              {editPopover.overdueTasks > 0 && (
-                <span style={{ color: ZERO_PANIC.purple }}>{editPopover.overdueTasks} באיחור</span>
-              )}
-            </div>
+            // Build parent→children map
+            const childMap = {};
+            clientTasks.forEach(t => {
+              if (t.parent_id) {
+                if (!childMap[t.parent_id]) childMap[t.parent_id] = [];
+                childMap[t.parent_id].push(t);
+              }
+            });
+            const rootActive = activeTasks.filter(t => !t.parent_id || !clientTasks.some(ct => ct.id === t.parent_id));
 
-            {/* Quick-add task */}
-            <div className="mb-3">
-              <div className="flex gap-1.5">
-                <input
-                  data-popover
-                  type="text"
-                  value={quickTaskTitle}
-                  onChange={(e) => setQuickTaskTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleQuickAddTask()}
-                  placeholder="הוסף משימה מהירה..."
-                  className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-                />
-                <button
-                  data-popover
-                  onClick={handleQuickAddTask}
-                  disabled={!quickTaskTitle.trim()}
-                  className="p-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+            const renderTask = (task, depth = 0) => {
+              const sts = statusConfig[task.status] || statusConfig.not_started;
+              const children = childMap[task.id] || [];
+              return (
+                <React.Fragment key={task.id}>
+                  <div
+                    className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group"
+                    style={{ paddingRight: `${16 + depth * 20}px` }}
+                    onClick={() => onEditTask?.(task)}
+                  >
+                    {depth > 0 && <GitBranchPlus className="w-3 h-3 text-violet-400 shrink-0" />}
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${sts.dot}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-800 truncate">{task.title}</p>
+                      {task.due_date && (
+                        <p className="text-[10px] text-gray-400">{format(new Date(task.due_date), 'd/M', { locale: he })}</p>
+                      )}
+                    </div>
+                    <Badge className={`${sts.color} text-[9px] px-1.5 py-0 shrink-0`}>{sts.text}</Badge>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDrawerSubTaskParent(task);
+                      }}
+                      className="p-1 rounded hover:bg-emerald-50 text-gray-300 hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                      title="הוסף תת-משימה"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {children.filter(c => c.status !== 'completed' && c.status !== 'not_relevant').map(child => renderTask(child, depth + 1))}
+                </React.Fragment>
+              );
+            };
 
-            {/* Quick actions */}
-            <div className="flex gap-1.5">
-              <button
-                data-popover
-                onClick={() => {
-                  handleClientDoubleClick(editPopover);
-                  setEditPopover(null);
-                }}
-                className="flex-1 flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-              >
-                <ExternalLink className="w-3 h-3" />
-                לוח עבודה
-              </button>
-              <button
-                data-popover
-                onClick={() => {
-                  navigate(createPageUrl('Tasks') + `?search=${encodeURIComponent(editPopover.name)}`);
-                  setEditPopover(null);
-                }}
-                className="flex-1 flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                <CheckCircle className="w-3 h-3" />
-                כל המשימות
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            return (
+              <>
+                {/* Drawer Header */}
+                <div className="px-5 pt-5 pb-3 border-b bg-gradient-to-l from-gray-50 to-white">
+                  <SheetHeader className="text-right">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: drawerClient.color }} />
+                      <SheetTitle className="text-base">{drawerClient.displayName || drawerClient.name}</SheetTitle>
+                      <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{drawerClient.tierIcon} {drawerClient.tierLabel}</span>
+                    </div>
+                    <SheetDescription className="text-right">
+                      <span className="text-xs text-gray-500">{activeTasks.length} פעילות · {completedTasks.length} הושלמו</span>
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => setDrawerQuickAdd(true)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      הוסף משימה
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleClientDoubleClick(drawerClient);
+                        setDrawerClient(null);
+                      }}
+                      className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-xs hover:bg-blue-100 transition-colors"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      כרטיס לקוח
+                    </button>
+                  </div>
+                </div>
+
+                {/* Active Tasks List */}
+                <div className="flex-1 overflow-y-auto">
+                  {rootActive.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <CheckCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                      <p className="text-sm">אין משימות פעילות</p>
+                    </div>
+                  ) : (
+                    rootActive.map(task => renderTask(task, 0))
+                  )}
+
+                  {/* Completed tasks — collapsible */}
+                  {completedTasks.length > 0 && (
+                    <div className="border-t mt-2">
+                      <button
+                        onClick={() => setShowDrawerCompleted(!showDrawerCompleted)}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+                      >
+                        <ChevronDown className={`w-3 h-3 transition-transform ${showDrawerCompleted ? '' : 'rotate-[-90deg]'}`} />
+                        <CheckCircle className="w-3 h-3 text-green-500" />
+                        <span>הושלמו ({completedTasks.length})</span>
+                      </button>
+                      {showDrawerCompleted && completedTasks.map(task => {
+                        const sts = statusConfig[task.status] || statusConfig.completed;
+                        return (
+                          <div
+                            key={task.id}
+                            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 opacity-50"
+                            onClick={() => onEditTask?.(task)}
+                          >
+                            <div className={`w-2 h-2 rounded-full shrink-0 ${sts.dot}`} />
+                            <p className="text-xs text-gray-400 flex-1 truncate line-through">{task.title}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
+
+      {/* ── QuickAddTaskDialog for drawer ── */}
+      <QuickAddTaskDialog
+        open={drawerQuickAdd}
+        onOpenChange={setDrawerQuickAdd}
+        defaultClientId={drawerClient?.clientId || null}
+        lockedClient={!!drawerClient?.clientId}
+        onCreated={() => {
+          setDrawerQuickAdd(false);
+          onTaskCreated?.();
+        }}
+      />
+
+      {/* ── QuickAddTaskDialog for sub-task from drawer ── */}
+      <QuickAddTaskDialog
+        open={!!drawerSubTaskParent}
+        onOpenChange={(val) => { if (!val) setDrawerSubTaskParent(null); }}
+        defaultParentId={drawerSubTaskParent?.id || null}
+        defaultClientId={drawerClient?.clientId || null}
+        lockedParent={true}
+        lockedClient={!!drawerClient?.clientId}
+        onCreated={() => {
+          setDrawerSubTaskParent(null);
+          onTaskCreated?.();
+        }}
+      />
 
       {/* ── Focus Mode Indicator ── */}
       {focusMode && selectedBranch && (
