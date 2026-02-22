@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus } from 'lucide-react';
+import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal } from 'lucide-react';
 import { Task } from '@/api/entities';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -203,6 +203,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoFitDone, setAutoFitDone] = useState(false);
 
+  // ── Spacing slider (global distance multiplier) ──
+  const [spacingFactor, setSpacingFactor] = useState(1.0);
+
+  // ── Draggable nodes: manual position overrides ──
+  // Key: "category-clientName", Value: { x, y }
+  const [manualPositions, setManualPositions] = useState({});
+  const draggingNode = useRef(null); // { key, startX, startY, origX, origY }
+  const nodeHasDragged = useRef(false);
+
   // Measure container
   useEffect(() => {
     if (!containerRef.current) return;
@@ -300,8 +309,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     // Use slightly wider horizontal spread since monitors are landscape
     const padX = 80; // padding from edges
     const padY = 60;
-    const scaleX = (w - padX * 2) * 0.42;
-    const scaleY = (h - padY * 2) * 0.42;
+    const scaleX = (w - padX * 2) * 0.42 * spacingFactor;
+    const scaleY = (h - padY * 2) * 0.42 * spacingFactor;
     // Leaf distance: increased for wider pill nodes
     const baseLeafDist = Math.min(scaleX, scaleY) * 0.58;
 
@@ -402,8 +411,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       });
     });
 
+    // Apply manual position overrides (from user dragging)
+    branchPositions.forEach(branch => {
+      branch.clientPositions.forEach(cp => {
+        const key = `${branch.category}-${cp.name}`;
+        if (manualPositions[key]) {
+          cp.x = manualPositions[key].x;
+          cp.y = manualPositions[key].y;
+        }
+      });
+    });
+
     return { cx, cy, centerR, branchPositions, virtualW: w, virtualH: h, isWide };
-  }, [branches, dimensions]);
+  }, [branches, dimensions, spacingFactor, manualPositions]);
 
   // ── Auto-Fit: compute zoom + pan to show all nodes ──
   useEffect(() => {
@@ -456,26 +476,76 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     setAutoFitDone(false);
   }, [tasks.length, branches.length]);
 
+  // Reset auto-fit + manual positions when spacing changes
+  useEffect(() => {
+    setAutoFitDone(false);
+    setManualPositions({});
+  }, [spacingFactor]);
+
   // ── Pan handlers ──
   const handlePointerDown = useCallback((e) => {
-    // Don't start panning on interactive elements
+    // Don't start panning on interactive elements or when dragging a node
     if (e.target.closest('[data-popover]') || e.target.closest('input') || e.target.closest('button')) return;
+    if (e.target.closest('[data-node-draggable]')) return; // node handles its own drag
     setIsPanning(true);
     panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
     e.currentTarget.style.cursor = 'grabbing';
   }, [pan]);
 
   const handlePointerMove = useCallback((e) => {
+    // Node dragging takes priority
+    if (draggingNode.current) {
+      const dx = (e.clientX - draggingNode.current.startX) / zoom;
+      const dy = (e.clientY - draggingNode.current.startY) / zoom;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) nodeHasDragged.current = true;
+      setManualPositions(prev => ({
+        ...prev,
+        [draggingNode.current.key]: {
+          x: draggingNode.current.origX + dx,
+          y: draggingNode.current.origY + dy,
+        },
+      }));
+      return;
+    }
     if (!isPanning) return;
     const dx = e.clientX - panStart.current.x;
     const dy = e.clientY - panStart.current.y;
     setPan({ x: panStart.current.panX + dx, y: panStart.current.panY + dy });
-  }, [isPanning]);
+  }, [isPanning, zoom]);
 
   const handlePointerUp = useCallback((e) => {
+    if (draggingNode.current) {
+      // Node drag ended without going through node's own onPointerUp
+      draggingNode.current = null;
+      nodeHasDragged.current = false;
+      return;
+    }
     setIsPanning(false);
     if (e.currentTarget) e.currentTarget.style.cursor = 'grab';
   }, []);
+
+  // ── Node drag handlers ──
+  const handleNodePointerDown = useCallback((e, nodeKey, currentX, currentY) => {
+    e.stopPropagation();
+    nodeHasDragged.current = false;
+    draggingNode.current = {
+      key: nodeKey,
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: currentX,
+      origY: currentY,
+    };
+  }, []);
+
+  const handleNodePointerUp = useCallback((e, client) => {
+    const wasDragging = nodeHasDragged.current;
+    draggingNode.current = null;
+    nodeHasDragged.current = false;
+    // If it was a click (not drag), open drawer
+    if (!wasDragging) {
+      handleClientClick(client, e.clientX, e.clientY);
+    }
+  }, [handleClientClick]);
 
   // ── Zoom handler (mouse wheel) ──
   const handleWheel = useCallback((e) => {
@@ -803,10 +873,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const borderStyle = isGhost ? 'dashed' : isWaitingOnClient ? 'solid' : 'solid';
               const borderWidth = isWaitingOnClient ? 2.5 : isFilingReady ? 3 : 1.5;
 
+              const nodeKey = `${branch.category}-${client.name}`;
+              const isDragging = draggingNode.current?.key === nodeKey;
+
               return (
                 <motion.div
-                  key={`${branch.category}-${client.name}`}
-                  className={`absolute z-10 flex flex-col items-center justify-center cursor-pointer select-none overflow-hidden
+                  key={nodeKey}
+                  data-node-draggable
+                  className={`absolute z-10 flex flex-col items-center justify-center select-none overflow-hidden touch-none
                     ${client.shouldPulse ? 'animate-pulse' : ''}`}
                   style={{
                     width: finalW,
@@ -822,6 +896,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     boxShadow: isHovered ? hoverGlow : normalShadow,
                     opacity: isSpotlit(branch.category) ? (isAllDone ? 0.35 : 1) : 0.12,
                     filter: isAllDone ? 'saturate(0.3) brightness(0.85)' : 'none',
+                    cursor: isDragging ? 'grabbing' : 'grab',
                     transition: 'opacity 0.4s ease-in-out, box-shadow 0.3s ease, border-color 0.2s ease, filter 0.4s ease',
                   }}
                   initial={{ opacity: 0, scale: 0 }}
@@ -838,9 +913,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   whileHover={{ scale: 1.08, zIndex: 50 }}
                   onMouseEnter={(e) => handleClientHover(client, e.clientX, e.clientY)}
                   onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
-                  onClick={(e) => { e.stopPropagation(); handleClientClick(client, e.clientX, e.clientY); }}
+                  onPointerDown={(e) => handleNodePointerDown(e, nodeKey, client.x, client.y)}
+                  onPointerUp={(e) => handleNodePointerUp(e, client)}
                   onDoubleClick={() => handleClientDoubleClick(client)}
-                  title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''}${isWaitingOnClient ? ' [ממתין ללקוח]' : ''} - לחיצה לעריכה`}
+                  title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''}${isWaitingOnClient ? ' [ממתין ללקוח]' : ''} - גרור להזיז · לחיצה לעריכה`}
                 >
                   {/* Client display name (nickname || name) */}
                   <span
@@ -984,6 +1060,34 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         <div className="flex items-center justify-center h-7 rounded-lg bg-white/80 backdrop-blur-sm shadow border border-gray-100 text-[10px] text-gray-500 font-medium">
           {Math.round(zoom * 100)}%
         </div>
+
+        {/* Spacing / Distance slider */}
+        <div className="mt-2 flex flex-col items-center gap-1 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 px-2 py-2" onClick={(e) => e.stopPropagation()}>
+          <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500" />
+          <input
+            type="range"
+            min="0.5"
+            max="2.0"
+            step="0.05"
+            value={spacingFactor}
+            onChange={(e) => setSpacingFactor(parseFloat(e.target.value))}
+            className="w-16 h-1 accent-indigo-500 cursor-pointer"
+            style={{ writingMode: 'horizontal-tb' }}
+            title={`מרווח: ${Math.round(spacingFactor * 100)}%`}
+          />
+          <span className="text-[9px] text-gray-400">{Math.round(spacingFactor * 100)}%</span>
+        </div>
+
+        {/* Reset manual positions button */}
+        {Object.keys(manualPositions).length > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setManualPositions({}); setAutoFitDone(false); }}
+            className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200 text-gray-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all text-[10px] font-medium"
+            title="איפוס מיקומים ידניים"
+          >
+            ↺
+          </button>
+        )}
       </div>
 
       {/* ── Legend (stays fixed in viewport) ── */}
@@ -1077,7 +1181,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 <span style={{ color: ZERO_PANIC.purple }}>{tooltip.overdue} באיחור</span>
               )}
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">לחיצה כפולה → לוח העבודה</p>
+            <p className="text-[10px] text-gray-400 mt-1">גרור להזיז · לחיצה כפולה → לוח העבודה</p>
           </motion.div>
         )}
       </AnimatePresence>
