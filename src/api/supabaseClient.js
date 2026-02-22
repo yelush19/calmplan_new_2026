@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
 
-// Check that credentials are real (not placeholder values)
+// Check that credentials are real (not placeholder values) and URL is valid
 const isPlaceholder = (val) =>
   !val ||
   val === 'your-anon-key' ||
@@ -11,16 +11,35 @@ const isPlaceholder = (val) =>
   val.includes('your-project') ||
   val.includes('your-anon');
 
+const isValidUrl = (val) => {
+  try {
+    const u = new URL(val);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 export const isSupabaseConfigured = !!(
   supabaseUrl &&
   supabaseAnonKey &&
   !isPlaceholder(supabaseUrl) &&
-  !isPlaceholder(supabaseAnonKey)
+  !isPlaceholder(supabaseAnonKey) &&
+  isValidUrl(supabaseUrl)
 );
 
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+// Safely create client — catch SDK validation errors so the app never crashes
+let _supabase = null;
+if (isSupabaseConfigured) {
+  try {
+    _supabase = createClient(supabaseUrl, supabaseAnonKey);
+  } catch (e) {
+    console.error('[CalmPlan] Failed to create Supabase client:', e.message);
+    console.warn('[CalmPlan] Falling back to localStorage mode.');
+    _supabase = null;
+  }
+}
+export const supabase = _supabase;
 
 /**
  * Runtime check: is Supabase client available and configured?
