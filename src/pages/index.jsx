@@ -91,6 +91,10 @@ import BackupManager from "./BackupManager";
 
 import SystemReadiness from "./SystemReadiness";
 
+import ClientContracts from "./ClientContracts";
+
+import BatchSetup from "./BatchSetup";
+
 import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -184,6 +188,10 @@ const PAGES = {
     BackupManager: BackupManager,
 
     SystemReadiness: SystemReadiness,
+
+    ClientContracts: ClientContracts,
+
+    BatchSetup: BatchSetup,
 
 }
 
@@ -301,6 +309,10 @@ function PagesContent() {
                 <Route path="/BackupManager" element={<BackupManager />} />
 
                 <Route path="/SystemReadiness" element={<SystemReadiness />} />
+
+                <Route path="/ClientContracts" element={<ClientContracts />} />
+
+                <Route path="/BatchSetup" element={<BatchSetup />} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">

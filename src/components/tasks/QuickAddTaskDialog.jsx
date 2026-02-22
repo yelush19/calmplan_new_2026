@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Briefcase, Home as HomeIcon, Search, ChevronDown, X, Clock, Calendar as CalendarIcon } from 'lucide-react';
-import { Task, Client } from '@/api/entities';
+import { Plus, Briefcase, Home as HomeIcon, Search, ChevronDown, X, Clock, Calendar as CalendarIcon, AlertTriangle } from 'lucide-react';
+import { Task, Client, Dashboard } from '@/api/entities';
+import { Switch } from '@/components/ui/switch';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { getScheduledStartForCategory } from '@/config/automationRules';
 import { format, parseISO, subMonths } from 'date-fns';
@@ -169,6 +170,13 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
   const [serviceKey, setServiceKey] = useState(defaultCategory || '__none__');
   const [clientId, setClientId] = useState('__none__');
   const [clients, setClients] = useState([]);
+  const [boardId, setBoardId] = useState('__none__');
+  const [dashboards, setDashboards] = useState([]);
+  const [parentId, setParentId] = useState('__none__');
+  const [parentTasks, setParentTasks] = useState([]);
+  const [status, setStatus] = useState('not_started');
+  const [reportingDeadline, setReportingDeadline] = useState('');
+  const [submitAsIs, setSubmitAsIs] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -176,6 +184,12 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
       Client.list(null, 500).then(list => {
         setClients((list || []).filter(c => c.status === 'active' || c.status === 'onboarding_pending' || c.status === 'balance_sheet_only').sort((a, b) => a.name?.localeCompare(b.name, 'he')));
       }).catch(() => setClients([]));
+      Dashboard.list(null, 200).then(list => {
+        setDashboards((list || []).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')));
+      }).catch(() => setDashboards([]));
+      Task.list('-created_date', 200).then(list => {
+        setParentTasks((list || []).filter(t => t.status !== 'completed' && t.status !== 'not_relevant'));
+      }).catch(() => setParentTasks([]));
       setTitle('');
       setDueDate(format(new Date(), 'yyyy-MM-dd'));
       setDueTime('');
@@ -183,11 +197,27 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
       setContext(defaultContext);
       setServiceKey(defaultCategory || '__none__');
       setClientId('__none__');
+      setBoardId('__none__');
+      setParentId('__none__');
+      setStatus('not_started');
+      setReportingDeadline('');
+      setSubmitAsIs(false);
     }
   }, [open, defaultContext, defaultCategory]);
 
   const selectedService = serviceKey !== '__none__' ? SERVICE_LIST.find(s => s.key === serviceKey) : null;
   const selectedClient = clientId !== '__none__' ? clients.find(c => c.id === clientId) : null;
+  const selectedBoard = boardId !== '__none__' ? dashboards.find(d => d.id === boardId) : null;
+  const selectedParent = parentId !== '__none__' ? parentTasks.find(t => t.id === parentId) : null;
+
+  // Deadline warning: status is 'waiting_on_client' AND reportingDeadline within 24h or overdue
+  const isDeadlineCritical = useMemo(() => {
+    if (status !== 'waiting_on_client' || !reportingDeadline) return false;
+    const deadlineDate = parseISO(reportingDeadline);
+    const now = new Date();
+    const hoursUntil = (deadlineDate - now) / (1000 * 60 * 60);
+    return hoursUntil <= 24;
+  }, [status, reportingDeadline]);
 
   const handleSave = async () => {
     if (!title.trim() || isSaving) return;
@@ -212,7 +242,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
 
       await Task.create({
         title: taskTitle,
-        status: 'not_started',
+        status: status,
         due_date: dueDate,
         due_time: dueTime || undefined,
         estimated_duration: duration ? parseInt(duration) : undefined,
@@ -222,8 +252,19 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         client_name: selectedClient?.name || undefined,
         client_id: selectedClient?.id || undefined,
         client_related: !!selectedClient,
-        priority: 'medium',
+        priority: isDeadlineCritical ? 'critical' : 'medium',
         ...(reportingMonth && { reporting_month: reportingMonth }),
+        ...(selectedBoard && {
+          board_id: selectedBoard.id,
+          board_name: selectedBoard.name || selectedBoard.board_name,
+          monday_board_id: selectedBoard.monday_board_id || undefined,
+        }),
+        ...(selectedParent && {
+          parent_id: selectedParent.id,
+          parent_title: selectedParent.title,
+        }),
+        ...(reportingDeadline && { reporting_deadline: reportingDeadline }),
+        ...(submitAsIs && { submit_as_is: true }),
       });
 
       toast.success('משימה נוצרה בהצלחה');
@@ -306,6 +347,95 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
               noneLabel="ללא לקוח"
             />
           </div>
+
+          {/* Board (Dashboard) + Parent Task */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">לוח (דשבורד)</Label>
+              <SearchableSelect
+                value={boardId}
+                onChange={setBoardId}
+                items={dashboards}
+                placeholder="בחר לוח"
+                renderItem={(item) => item.name || item.board_name || 'לוח ללא שם'}
+                allowNone
+                noneLabel="ללא לוח"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">משימת אב</Label>
+              <SearchableSelect
+                value={parentId}
+                onChange={setParentId}
+                items={parentTasks}
+                placeholder="בחר משימת אב"
+                renderItem={(item) => item.title}
+                allowNone
+                noneLabel="ללא משימת אב"
+              />
+            </div>
+          </div>
+
+          {/* Status + Reporting Deadline */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">סטטוס</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="text-xs h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_started" className="text-xs">טרם התחיל</SelectItem>
+                  <SelectItem value="in_progress" className="text-xs">בביצוע</SelectItem>
+                  <SelectItem value="waiting_on_client" className="text-xs">ממתין ללקוח</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">דדליין דיווח</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="w-full h-9 justify-start text-xs font-normal px-3"
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5 ml-1.5 shrink-0" />
+                    {reportingDeadline ? format(parseISO(reportingDeadline), 'd בMMM yyyy', { locale: he }) : 'ללא'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={reportingDeadline ? parseISO(reportingDeadline) : undefined}
+                    onSelect={(date) => date && setReportingDeadline(format(date, 'yyyy-MM-dd'))}
+                    locale={he}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* Submit As-Is toggle (only shown when status = waiting_on_client) */}
+          {status === 'waiting_on_client' && (
+            <div className="flex items-center justify-between px-1">
+              <Label className="text-xs flex items-center gap-1.5">
+                הגש כמות שיש (Submit As-Is)
+              </Label>
+              <Switch checked={submitAsIs} onCheckedChange={setSubmitAsIs} />
+            </div>
+          )}
+
+          {/* Critical Deadline Warning */}
+          {isDeadlineCritical && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-300 rounded-lg text-red-700">
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+              <div className="text-xs font-bold">
+                ⚠️ DEADLINE: הגש כמות שיש — הדדליין תוך 24 שעות או שעבר!
+              </div>
+            </div>
+          )}
 
           {/* Due date + Time + Duration */}
           <div className="grid grid-cols-3 gap-3">

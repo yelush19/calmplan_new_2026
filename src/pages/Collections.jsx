@@ -4,9 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Plus, Filter, FileText, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
-
-// Mock data until entities are properly set up
-const mockInvoices = [];
+import { Invoice, Client } from '@/api/entities';
 
 export default function CollectionsPage() {
     const [invoices, setInvoices] = useState([]);
@@ -20,9 +18,12 @@ export default function CollectionsPage() {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            // Mock data for now
-            setInvoices(mockInvoices);
-            setClients([]);
+            const [invoiceList, clientList] = await Promise.all([
+                Invoice.list('-created_date', 500).catch(() => []),
+                Client.list(null, 500).catch(() => []),
+            ]);
+            setInvoices(invoiceList || []);
+            setClients(clientList || []);
         } catch (error) {
             console.error("Error loading collections data:", error);
         }
@@ -37,8 +38,8 @@ export default function CollectionsPage() {
         cancelled: { label: 'בוטלה', color: 'bg-gray-400 text-white', icon: FileText }
     };
 
-    const totalRevenue = invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0);
-    const outstandingRevenue = invoices.filter(inv => ['sent', 'overdue'].includes(inv.status)).reduce((sum, inv) => sum + inv.amount, 0);
+    const totalRevenue = invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.amount || 0), 0);
+    const outstandingRevenue = invoices.filter(inv => ['sent', 'overdue'].includes(inv.status)).reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
     return (
         <div className="space-y-6">
@@ -97,18 +98,19 @@ export default function CollectionsPage() {
                             </div>
                         ) : (
                             invoices.map(invoice => {
-                                const StatusIcon = statusConfig[invoice.status].icon;
+                                const config = statusConfig[invoice.status] || statusConfig.draft;
+                                const StatusIcon = config.icon;
                                 return (
                                     <div key={invoice.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-center gap-4">
                                         <div>
-                                            <p className="font-bold text-lg">{invoice.client_name}</p>
-                                            <p className="text-sm text-gray-600">חשבונית #{invoice.invoice_number} מתאריך {new Date(invoice.issue_date).toLocaleDateString('he-IL')}</p>
+                                            <p className="font-bold text-lg">{invoice.client_name || 'לקוח לא ידוע'}</p>
+                                            <p className="text-sm text-gray-600">חשבונית #{invoice.invoice_number || '—'} {invoice.issue_date ? `מתאריך ${new Date(invoice.issue_date).toLocaleDateString('he-IL')}` : ''}</p>
                                         </div>
                                         <div className="flex items-center gap-4">
-                                            <p className="font-bold text-xl">₪{invoice.amount.toLocaleString()}</p>
-                                            <Badge className={statusConfig[invoice.status].color}>
+                                            <p className="font-bold text-xl">₪{(invoice.amount || 0).toLocaleString()}</p>
+                                            <Badge className={config.color}>
                                                 <StatusIcon className="w-4 h-4 ml-2" />
-                                                {statusConfig[invoice.status].label}
+                                                {config.label}
                                             </Badge>
                                         </div>
                                     </div>

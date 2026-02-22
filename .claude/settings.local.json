@@ -21,7 +21,17 @@
       "Bash(gh api:*)",
       "Bash(git fetch:*)",
       "Bash(git ls-tree:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npx vercel:*)",
+      "Bash(vercel ls:*)",
+      "Bash(vercel env:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh:*)",
+      "Bash(where:*)",
+      "Bash(vercel inspect:*)",
+      "Bash(findstr:*)",
+      "Bash(cd:*)",
+      "Bash(git -C C:calm-plan-647d49d5 status)"
     ],
     "deny": [],
     "ask": []

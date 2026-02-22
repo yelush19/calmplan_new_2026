@@ -91,47 +91,49 @@ export default function FullSyncPage() {
                                 <CheckCircle className="w-5 h-5" />
                                 <span className="font-medium">סנכרון הושלם בהצלחה</span>
                             </div>
-                            
+
                             <div className="grid grid-cols-3 gap-4 text-center">
                                 <div>
-                                    <div className="text-2xl font-bold text-green-700">{results.summary.boardsSynced}</div>
+                                    <div className="text-2xl font-bold text-green-700">{results.results ? Object.keys(results.results).length : 0}</div>
                                     <div className="text-sm text-green-600">לוחות סונכרנו</div>
                                 </div>
                                 <div>
-                                    <div className="text-2xl font-bold text-blue-700">{results.summary.totalCreated}</div>
+                                    <div className="text-2xl font-bold text-blue-700">{results.totalCreated || 0}</div>
                                     <div className="text-sm text-blue-600">פריטים נוצרו</div>
                                 </div>
                                 <div>
-                                    <div className="text-2xl font-bold text-amber-700">{results.summary.totalDeleted}</div>
-                                    <div className="text-sm text-amber-600">פריטים נמחקו</div>
+                                    <div className="text-2xl font-bold text-amber-700">{results.totalUpdated || 0}</div>
+                                    <div className="text-sm text-amber-600">פריטים עודכנו</div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
                     <div className="space-y-3">
-                        {results.results.map((result, index) => (
-                            <Card key={index} className="max-w-2xl mx-auto">
+                        {results.results && Object.entries(results.results).map(([boardType, result]) => (
+                            <Card key={boardType} className="max-w-2xl mx-auto">
                                 <CardContent className="p-4">
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <span className="font-medium">{result.boardType}</span>
-                                            <span className="text-sm text-gray-500 ml-2">({result.boardId})</span>
+                                            <span className="font-medium">{result.boardName || boardType}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {result.success ? (
-                                                <Badge className="bg-green-100 text-green-800">
-                                                    הצליח
-                                                </Badge>
-                                            ) : (
+                                            {result.error ? (
                                                 <Badge className="bg-amber-100 text-amber-800">
                                                     נכשל
                                                 </Badge>
+                                            ) : (
+                                                <Badge className="bg-green-100 text-green-800">
+                                                    הצליח
+                                                </Badge>
                                             )}
-                                            {result.success && (
+                                            {!result.error && (
                                                 <span className="text-sm text-gray-600">
-                                                    {result.syncResult.created} נוצרו, {result.syncResult.deleted} נמחקו
+                                                    {result.created || 0} נוצרו, {result.updated || 0} עודכנו
                                                 </span>
+                                            )}
+                                            {result.error && (
+                                                <span className="text-sm text-amber-600">{result.error}</span>
                                             )}
                                         </div>
                                     </div>
@@ -139,6 +141,20 @@ export default function FullSyncPage() {
                             </Card>
                         ))}
                     </div>
+
+                    {/* Sync log */}
+                    {results.log && results.log.length > 0 && (
+                        <Card className="max-w-2xl mx-auto">
+                            <CardContent className="p-4">
+                                <h3 className="font-medium mb-2 text-sm text-gray-700">לוג סנכרון</h3>
+                                <div className="bg-gray-50 rounded-lg p-3 max-h-48 overflow-y-auto text-xs text-gray-600 space-y-1 font-mono" dir="ltr">
+                                    {results.log.map((entry, i) => (
+                                        <div key={i}>{entry}</div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             )}
         </div>
