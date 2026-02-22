@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Briefcase, Home as HomeIcon, Search, ChevronDown, X, Clock, Calendar as CalendarIcon, AlertTriangle } from 'lucide-react';
+import { Plus, Briefcase, Home as HomeIcon, Search, ChevronDown, ChevronLeft, X, Clock, Calendar as CalendarIcon, AlertTriangle } from 'lucide-react';
 import { Task, Client, Dashboard } from '@/api/entities';
 import { Switch } from '@/components/ui/switch';
 import { ALL_SERVICES } from '@/config/processTemplates';
@@ -36,7 +36,7 @@ const SERVICE_LIST = Object.values(ALL_SERVICES).map(s => ({
 }));
 
 // Searchable dropdown component
-function SearchableSelect({ value, onChange, items, placeholder, renderItem, groupBy, groupLabels, allowNone, noneLabel = 'ללא' }) {
+function SearchableSelect({ value, onChange, items, placeholder, renderItem, groupBy, groupLabels, allowNone, noneLabel = 'ללא', disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const containerRef = useRef(null);
@@ -72,8 +72,9 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => { setIsOpen(!isOpen); setTimeout(() => inputRef.current?.focus(), 50); }}
-        className="w-full flex items-center justify-between h-9 px-3 text-xs border border-gray-200 rounded-md bg-white hover:bg-gray-50 transition-colors"
+        onClick={() => { if (!disabled) { setIsOpen(!isOpen); setTimeout(() => inputRef.current?.focus(), 50); } }}
+        disabled={disabled}
+        className={`w-full flex items-center justify-between h-9 px-3 text-xs border border-gray-200 rounded-md transition-colors ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white hover:bg-gray-50'}`}
       >
         <span className={`truncate ${!selectedItem && value === '__none__' ? 'text-gray-400' : 'text-gray-800'}`}>
           {displayLabel}
@@ -164,7 +165,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
   );
 }
 
-export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defaultContext = 'work', defaultCategory = '' }) {
+export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defaultContext = 'work', defaultCategory = '', defaultParentId = null, defaultClientId = null, lockedParent = false, lockedClient = false }) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [dueTime, setDueTime] = useState('');
@@ -211,19 +212,35 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
       setDuration('');
       setContext(defaultContext);
       setServiceKey(defaultCategory || '__none__');
-      setClientId('__none__');
+      setClientId(defaultClientId || '__none__');
       setBoardId('__none__');
-      setParentId('__none__');
+      setParentId(defaultParentId || '__none__');
       setStatus('not_started');
       setReportingDeadline('');
       setSubmitAsIs(false);
     }
-  }, [open, defaultContext, defaultCategory]);
+  }, [open, defaultContext, defaultCategory, defaultParentId, defaultClientId]);
 
   const selectedService = serviceKey !== '__none__' ? SERVICE_LIST.find(s => s.key === serviceKey) : null;
   const selectedClient = clientId !== '__none__' ? clients.find(c => c.id === clientId) : null;
   const selectedBoard = boardId !== '__none__' ? dashboards.find(d => d.id === boardId) : null;
   const selectedParent = parentId !== '__none__' ? parentTasks.find(t => t.id === parentId) : null;
+
+  // Build ancestor breadcrumb chain (max 4 levels) when a parent is selected
+  const ancestorChain = useMemo(() => {
+    if (!selectedParent) return [];
+    const chain = [{ id: selectedParent.id, title: selectedParent.title }];
+    let current = selectedParent;
+    let depth = 0;
+    while (current?.parent_id && depth < 4) {
+      const parent = parentTasks.find(t => t.id === current.parent_id);
+      if (!parent) break;
+      chain.unshift({ id: parent.id, title: parent.title });
+      current = parent;
+      depth++;
+    }
+    return chain;
+  }, [selectedParent, parentTasks]);
 
   // Deadline warning: status is 'waiting_on_client' AND reportingDeadline within 24h or overdue
   const isDeadlineCritical = useMemo(() => {
@@ -298,10 +315,25 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5" />
-            הוספת משימה מהירה
+            {defaultParentId ? 'הוספת תת-משימה' : 'הוספת משימה מהירה'}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
+          {/* Parent breadcrumb */}
+          {ancestorChain.length > 0 && (
+            <div className="flex items-center flex-wrap gap-1 px-2 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+              {ancestorChain.map((ancestor, i) => (
+                <React.Fragment key={ancestor.id}>
+                  <span className="text-xs text-blue-600 font-medium truncate max-w-[120px]" title={ancestor.title}>
+                    {ancestor.title}
+                  </span>
+                  <ChevronLeft className="w-3 h-3 text-blue-300 shrink-0" />
+                </React.Fragment>
+              ))}
+              <span className="text-xs text-blue-800 font-bold">תת-משימה חדשה</span>
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <Label htmlFor="qa-title" className="text-xs">תיאור המשימה</Label>
@@ -360,6 +392,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
               renderItem={(item) => item.name}
               allowNone
               noneLabel="ללא לקוח"
+              disabled={lockedClient}
             />
           </div>
 
@@ -387,6 +420,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
                 renderItem={(item) => item.title}
                 allowNone
                 noneLabel="ללא משימת אב"
+                disabled={lockedParent}
               />
             </div>
           </div>
