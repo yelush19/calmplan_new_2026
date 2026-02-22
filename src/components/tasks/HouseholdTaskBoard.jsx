@@ -2,7 +2,7 @@ import React from 'react';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import HouseholdTaskCard from './HouseholdTaskCard';
 
-export default function HouseholdTaskBoard({ tasks, onDragEnd, onStatusChange, onAssign, onTaskClick }) {
+export default function HouseholdTaskBoard({ tasks, onDragEnd, onStatusChange, onAssign, onTaskClick, onEdit, onDelete }) {
     return (
         <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="householdTasks">
@@ -16,6 +16,8 @@ export default function HouseholdTaskBoard({ tasks, onDragEnd, onStatusChange, o
                                 onStatusChange={onStatusChange}
                                 onAssign={onAssign}
                                 onClick={onTaskClick}
+                                onEdit={onEdit}
+                                onDelete={onDelete}
                             />
                         ))}
                         {provided.placeholder}

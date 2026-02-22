@@ -283,7 +283,7 @@ export default function ClientOnboardingPage() {
                   <div key={index} className="bg-gray-50 p-4 rounded-lg mb-4">
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="font-medium">איש קשר #{index + 1}</h4>
-                      <Button type="button" onClick={() => removeContact(index)} variant="ghost" size="sm" className="text-red-600">
+                      <Button type="button" onClick={() => removeContact(index)} variant="ghost" size="sm" className="text-amber-600">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>

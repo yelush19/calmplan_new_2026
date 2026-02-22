@@ -1,17 +1,27 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Task } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar, Clock, CheckCircle, AlertCircle, Search, Filter } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertCircle, Search, Filter, Pencil, Trash2, ChevronDown } from 'lucide-react';
+import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
+import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
+
+const STATUS_GROUP_ORDER = [
+  'issue', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'waiting_for_approval',
+  'not_started', 'ready_for_reporting', 'postponed', 'reported_waiting_for_payment', 'pending_external',
+  'completed', 'not_relevant',
+];
 
 const statusTranslations = {
-  not_started: 'ממתין לתחילת עבודה',
+  not_started: 'טרם התחיל',
+  remaining_completions: 'נותרו השלמות',
   in_progress: 'בעבודה',
   completed: 'דווח ושולם',
   postponed: 'נדחה',
@@ -20,7 +30,9 @@ const statusTranslations = {
   waiting_for_materials: 'ממתין לחומרים',
   issue: 'בעיה',
   ready_for_reporting: 'מוכן לדיווח',
-  reported_waiting_for_payment: 'ממתין לתשלום'
+  reported_waiting_for_payment: 'ממתין לתשלום',
+  pending_external: "מחכה לצד ג'",
+  not_relevant: 'לא רלוונטי'
 };
 
 const categoryTranslations = {
@@ -41,17 +53,141 @@ const statusColors = {
   completed: 'bg-green-100 text-green-800',
   waiting_for_approval: 'bg-yellow-100 text-yellow-800',
   waiting_for_materials: 'bg-orange-100 text-orange-800',
-  issue: 'bg-red-100 text-red-800',
+  issue: 'bg-amber-100 text-amber-800',
   ready_for_reporting: 'bg-purple-100 text-purple-800',
   reported_waiting_for_payment: 'bg-cyan-100 text-cyan-800',
+  pending_external: 'bg-blue-100 text-blue-800',
   postponed: 'bg-gray-200 text-gray-700'
 };
 
+const DEFAULT_COLLAPSED = new Set(['completed', 'not_relevant']);
+
+function TaskGroupedList({ filteredTasks, allTasksCount, clientName, statusTranslations, statusColors, categoryTranslations, onEditTask, onDeleteTask }) {
+  const [collapsed, setCollapsed] = useState(() => {
+    const init = {};
+    DEFAULT_COLLAPSED.forEach(s => { init[s] = true; });
+    return init;
+  });
+
+  const toggleGroup = (status) => {
+    setCollapsed(prev => ({ ...prev, [status]: !prev[status] }));
+  };
+
+  const grouped = useMemo(() => {
+    const groups = {};
+    filteredTasks.forEach(task => {
+      const s = task.status || 'not_started';
+      if (!groups[s]) groups[s] = [];
+      groups[s].push(task);
+    });
+    return STATUS_GROUP_ORDER
+      .filter(s => groups[s] && groups[s].length > 0)
+      .map(s => ({ status: s, tasks: groups[s] }));
+  }, [filteredTasks]);
+
+  if (filteredTasks.length === 0) {
+    return (
+      <Card className="p-8 text-center">
+        <CheckCircle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <h3 className="text-xl font-semibold text-gray-600 mb-2">
+          {allTasksCount === 0
+            ? `אין משימות עבור ${clientName}`
+            : 'לא נמצאו משימות תואמות'
+          }
+        </h3>
+        <p className="text-gray-500">
+          {allTasksCount === 0
+            ? 'כשתיווצרנה משימות חדשות עבור הלקוח, הן יופיעו כאן.'
+            : 'נסה לשנות את פרמטרי החיפוש.'
+          }
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {grouped.map(({ status, tasks }) => {
+        const isCollapsed = !!collapsed[status];
+        return (
+          <div key={status}>
+            {/* Status group header */}
+            <button
+              onClick={() => toggleGroup(status)}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isCollapsed ? 'rotate-[-90deg]' : ''}`} />
+              <Badge className={`${statusColors[status] || 'bg-gray-100'} text-xs`}>
+                {statusTranslations[status] || status}
+              </Badge>
+              <span className="text-xs text-gray-500 font-medium">{tasks.length} משימות</span>
+            </button>
+
+            {/* Task cards */}
+            {!isCollapsed && (
+              <div className="space-y-2 mt-2 mr-4">
+                {tasks.map(task => (
+                  <Card key={task.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="text-lg font-semibold text-gray-900">{task.title}</h4>
+                            <Badge className={statusColors[task.status]}>
+                              {statusTranslations[task.status]}
+                            </Badge>
+                          </div>
+                          {task.description && (
+                            <p className="text-gray-600 mb-3">{task.description}</p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                            {task.category && (
+                              <Badge variant="outline">
+                                {categoryTranslations[task.category] || task.category}
+                              </Badge>
+                            )}
+                            {task.due_date && (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                <span>יעד: {format(parseISO(task.due_date), 'd בMMM yyyy', { locale: he })}</span>
+                              </div>
+                            )}
+                            {task.estimated_duration && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                <span>{task.estimated_duration} דק'</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => onEditTask(task)} className="p-1.5 rounded hover:bg-blue-50 transition-colors" title="עריכת משימה">
+                            <Pencil className="w-4 h-4 text-gray-400 hover:text-blue-600" />
+                          </button>
+                          <button onClick={() => onDeleteTask(task)} className="p-1.5 rounded hover:bg-amber-50 transition-colors" title="מחק משימה">
+                            <Trash2 className="w-4 h-4 text-gray-400 hover:text-amber-600" />
+                          </button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ClientTasksTab({ clientId, clientName }) {
+  const { confirm, ConfirmDialogComponent } = useConfirm();
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingTask, setEditingTask] = useState(null);
 
   useEffect(() => {
     loadClientTasks();
@@ -70,8 +206,32 @@ export default function ClientTasksTab({ clientId, clientName }) {
     setIsLoading(false);
   };
 
+  const handleEditTask = (task) => setEditingTask(task);
+
+  const handleDeleteTask = async (task) => {
+    const ok = await confirm({ description: `למחוק את "${task.title}"?` });
+    if (ok) {
+      try {
+        await Task.delete(task.id);
+        setTasks(prev => prev.filter(t => t.id !== task.id));
+      } catch (error) {
+        console.error("Error deleting task:", error);
+      }
+    }
+  };
+
+  const handleSaveTask = async (taskId, updatedData) => {
+    try {
+      await Task.update(taskId, updatedData);
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updatedData } : t));
+      setEditingTask(null);
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
+  };
+
   const filteredTasks = tasks.filter(task => {
-    const statusMatch = statusFilter === 'all' || task.status === statusFilter;
+    const statusMatch = statusFilter.length === 0 || statusFilter.includes(task.status);
     const searchMatch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
     return statusMatch && searchMatch;
@@ -148,89 +308,38 @@ export default function ClientTasksTab({ clientId, clientName }) {
                 className="pr-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="סנן לפי סטטוס" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">כל הסטטוסים</SelectItem>
-                {Object.entries(statusTranslations).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiStatusFilter
+              options={Object.entries(statusTranslations).map(([key, label]) => ({
+                value: key, label,
+                count: tasks.filter(t => t.status === key).length,
+              }))}
+              selected={statusFilter}
+              onChange={setStatusFilter}
+              label="סנן לפי סטטוס"
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* רשימת משימות */}
-      <div className="space-y-4">
-        {filteredTasks.length === 0 ? (
-          <Card className="p-8 text-center">
-            <CheckCircle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              {tasks.length === 0 
-                ? `אין משימות עבור ${clientName}`
-                : 'לא נמצאו משימות תואמות'
-              }
-            </h3>
-            <p className="text-gray-500">
-              {tasks.length === 0 
-                ? 'כשתיווצרנה משימות חדשות עבור הלקוח, הן יופיעו כאן.'
-                : 'נסה לשנות את פרמטרי החיפוש.'
-              }
-            </p>
-          </Card>
-        ) : (
-          filteredTasks.map((task) => (
-            <Card key={task.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="text-lg font-semibold text-gray-900">{task.title}</h4>
-                      <Badge className={statusColors[task.status]}>
-                        {statusTranslations[task.status]}
-                      </Badge>
-                    </div>
-                    {task.description && (
-                      <p className="text-gray-600 mb-3">{task.description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                      {task.category && (
-                        <Badge variant="outline">
-                          {categoryTranslations[task.category] || task.category}
-                        </Badge>
-                      )}
-                      {task.due_date && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>יעד: {format(parseISO(task.due_date), 'd בMMM yyyy', { locale: he })}</span>
-                        </div>
-                      )}
-                      {task.estimated_duration && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span>{task.estimated_duration} דק'</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {task.external_app_link && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(task.external_app_link, '_blank')}
-                    >
-                      פתח ב-Monday
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      {/* רשימת משימות - מקובצות לפי סטטוס */}
+      <TaskGroupedList
+        filteredTasks={filteredTasks}
+        allTasksCount={tasks.length}
+        clientName={clientName}
+        statusTranslations={statusTranslations}
+        statusColors={statusColors}
+        categoryTranslations={categoryTranslations}
+        onEditTask={handleEditTask}
+        onDeleteTask={handleDeleteTask}
+      />
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+      />
+      {ConfirmDialogComponent}
     </div>
   );
 }

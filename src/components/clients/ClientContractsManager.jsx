@@ -190,7 +190,7 @@ export default function ClientContractsManager({ clientId, clientName }) {
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => removeContract(contract.id)}
-                                                className="text-red-600 hover:bg-red-50"
+                                                className="text-amber-600 hover:bg-amber-50"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>

@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vite build)",
+      "Bash(npm run dev:*)",
+      "Bash(dir:*)",
+      "Bash(ls -la \"C:\\\\calm-plan-647d49d5\\\\src\\\\pages\"\" | grep -i \"board|dashboard|board \")",
+      "Bash(powershell -Command:*)",
+      "Bash(git status:*)",
+      "Bash(git -C \"C:\\\\calm-plan-647d49d5\" status -u)",
+      "Bash(git --git-dir=\"C:/calm-plan-647d49d5/.git\" --work-tree=\"C:/calm-plan-647d49d5\" status -u)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(find:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(gh api:*)",
+      "Bash(git fetch:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git checkout:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

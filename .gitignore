@@ -24,4 +24,6 @@ dist-ssr
 *.sw?
 
 .env
-nul
+
+# Electron build artifacts
+release/nul

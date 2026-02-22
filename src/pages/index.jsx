@@ -1,3 +1,4 @@
+import { Link as RouterLink } from 'react-router-dom';
 import Layout from "./Layout.jsx";
 
 import Calendar from "./Calendar";
@@ -42,15 +43,15 @@ import ClientOnboarding from "./ClientOnboarding";
 
 import PayrollDashboard from "./PayrollDashboard";
 
+import ClientsDashboard from "./ClientsDashboard";
+
+import TaxReportsDashboard from "./TaxReportsDashboard";
+
 import Leads from "./Leads";
 
 import Roadmap from "./Roadmap";
 
 import HomeTaskGenerator from "./HomeTaskGenerator";
-
-import WeeklyPlanner from "./WeeklyPlanner";
-
-import TreatmentInput from "./TreatmentInput";
 
 import TestDataManager from "./TestDataManager";
 
@@ -66,83 +67,124 @@ import WeeklyPlanningDashboard from "./WeeklyPlanningDashboard";
 
 import BalanceSheets from "./BalanceSheets";
 
-import ClientContracts from "./ClientContracts";
+import WeeklySummary from "./WeeklySummary";
 
-import BatchSetup from "./BatchSetup";
+import RecurringTasks from "./RecurringTasks";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import DataImportTool from "./DataImportTool";
+
+import FeeManagement from "./FeeManagement";
+
+import Projects from "./Projects";
+
+import PeriodicSummaryReports from "./PeriodicSummaryReports";
+
+import AutomationRules from "./AutomationRules";
+
+import AdditionalServicesDashboard from "./AdditionalServicesDashboard";
+
+import AdminTasksDashboard from "./AdminTasksDashboard";
+
+import ClientFiles from "./ClientFiles";
+
+import BackupManager from "./BackupManager";
+
+import SystemReadiness from "./SystemReadiness";
+
+import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
-
+    
     Calendar: Calendar,
-
+    
     NewEvent: NewEvent,
-
+    
     Print: Print,
-
+    
     Tasks: Tasks,
-
+    
     Analytics: Analytics,
-
+    
     TaskMatrix: TaskMatrix,
-
+    
     Settings: Settings,
-
+    
     MondayIntegration: MondayIntegration,
-
+    
     Recommendations: Recommendations,
-
+    
     Dashboards: Dashboards,
-
+    
     LifeSettings: LifeSettings,
-
+    
     Reconciliations: Reconciliations,
-
+    
     Home: Home,
-
+    
     BusinessHub: BusinessHub,
-
+    
     MealPlanner: MealPlanner,
-
+    
     Inspiration: Inspiration,
-
+    
     ClientManagement: ClientManagement,
-
+    
     Collections: Collections,
-
+    
     ServiceProviders: ServiceProviders,
-
+    
     ClientOnboarding: ClientOnboarding,
-
+    
     PayrollDashboard: PayrollDashboard,
 
-    Leads: Leads,
+    ClientsDashboard: ClientsDashboard,
 
+    TaxReportsDashboard: TaxReportsDashboard,
+
+    Leads: Leads,
+    
     Roadmap: Roadmap,
 
     HomeTaskGenerator: HomeTaskGenerator,
-
-    WeeklyPlanner: WeeklyPlanner,
-
-    TreatmentInput: TreatmentInput,
-
+    
     TestDataManager: TestDataManager,
-
+    
     EmergencyRecovery: EmergencyRecovery,
-
+    
     SystemOverview: SystemOverview,
-
+    
     EmergencyReset: EmergencyReset,
-
+    
     FullSync: FullSync,
-
+    
     WeeklyPlanningDashboard: WeeklyPlanningDashboard,
-
+    
     BalanceSheets: BalanceSheets,
 
-    ClientContracts: ClientContracts,
+    WeeklySummary: WeeklySummary,
 
-    BatchSetup: BatchSetup,
+    RecurringTasks: RecurringTasks,
+
+    DataImportTool: DataImportTool,
+
+    FeeManagement: FeeManagement,
+
+    Projects: Projects,
+
+    PeriodicSummaryReports: PeriodicSummaryReports,
+
+    AutomationRules: AutomationRules,
+
+    AdditionalServicesDashboard: AdditionalServicesDashboard,
+
+    AdminTasksDashboard: AdminTasksDashboard,
+
+    ClientFiles: ClientFiles,
+
+    BackupManager: BackupManager,
+
+    SystemReadiness: SystemReadiness,
+
 }
 
 function _getCurrentPage(url) {
@@ -155,90 +197,118 @@ function _getCurrentPage(url) {
     }
 
     const pageName = Object.keys(PAGES).find(page => page.toLowerCase() === urlLastPart.toLowerCase());
-    return pageName || Object.keys(PAGES)[0];
+    return pageName || 'Home';
 }
 
 // Create a wrapper component that uses useLocation inside the Router context
 function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
-
+    
     return (
         <Layout currentPageName={currentPage}>
-            <Routes>
-
-                    <Route path="/" element={<Calendar />} />
-
-
+            <Routes>            
+                
+                    <Route path="/" element={<Home />} />
+                
+                
                 <Route path="/Calendar" element={<Calendar />} />
-
+                
                 <Route path="/NewEvent" element={<NewEvent />} />
-
+                
                 <Route path="/Print" element={<Print />} />
-
+                
                 <Route path="/Tasks" element={<Tasks />} />
-
+                
                 <Route path="/Analytics" element={<Analytics />} />
-
+                
                 <Route path="/TaskMatrix" element={<TaskMatrix />} />
-
+                
                 <Route path="/Settings" element={<Settings />} />
-
+                
                 <Route path="/MondayIntegration" element={<MondayIntegration />} />
-
+                
                 <Route path="/Recommendations" element={<Recommendations />} />
-
+                
                 <Route path="/Dashboards" element={<Dashboards />} />
-
+                
                 <Route path="/LifeSettings" element={<LifeSettings />} />
-
+                
                 <Route path="/Reconciliations" element={<Reconciliations />} />
-
+                
                 <Route path="/Home" element={<Home />} />
-
+                
                 <Route path="/BusinessHub" element={<BusinessHub />} />
-
+                
                 <Route path="/MealPlanner" element={<MealPlanner />} />
-
+                
                 <Route path="/Inspiration" element={<Inspiration />} />
-
+                
                 <Route path="/ClientManagement" element={<ClientManagement />} />
-
+                
                 <Route path="/Collections" element={<Collections />} />
-
+                
                 <Route path="/ServiceProviders" element={<ServiceProviders />} />
-
+                
                 <Route path="/ClientOnboarding" element={<ClientOnboarding />} />
-
+                
                 <Route path="/PayrollDashboard" element={<PayrollDashboard />} />
 
-                <Route path="/Leads" element={<Leads />} />
+                <Route path="/ClientsDashboard" element={<ClientsDashboard />} />
 
+                <Route path="/TaxReportsDashboard" element={<TaxReportsDashboard />} />
+
+                <Route path="/Leads" element={<Leads />} />
+                
                 <Route path="/Roadmap" element={<Roadmap />} />
 
                 <Route path="/HomeTaskGenerator" element={<HomeTaskGenerator />} />
-
-                <Route path="/WeeklyPlanner" element={<WeeklyPlanner />} />
-
-                <Route path="/TreatmentInput" element={<TreatmentInput />} />
-
+                
                 <Route path="/TestDataManager" element={<TestDataManager />} />
-
+                
                 <Route path="/EmergencyRecovery" element={<EmergencyRecovery />} />
-
+                
                 <Route path="/SystemOverview" element={<SystemOverview />} />
-
+                
                 <Route path="/EmergencyReset" element={<EmergencyReset />} />
-
+                
                 <Route path="/FullSync" element={<FullSync />} />
-
+                
                 <Route path="/WeeklyPlanningDashboard" element={<WeeklyPlanningDashboard />} />
-
+                
                 <Route path="/BalanceSheets" element={<BalanceSheets />} />
 
-                <Route path="/ClientContracts" element={<ClientContracts />} />
+                <Route path="/WeeklySummary" element={<WeeklySummary />} />
 
-                <Route path="/BatchSetup" element={<BatchSetup />} />
+                <Route path="/RecurringTasks" element={<RecurringTasks />} />
+
+                <Route path="/DataImportTool" element={<DataImportTool />} />
+
+                <Route path="/FeeManagement" element={<FeeManagement />} />
+
+                <Route path="/Projects" element={<Projects />} />
+
+                <Route path="/PeriodicSummaryReports" element={<PeriodicSummaryReports />} />
+
+                <Route path="/AutomationRules" element={<AutomationRules />} />
+
+                <Route path="/AdditionalServicesDashboard" element={<AdditionalServicesDashboard />} />
+
+                <Route path="/AdminTasksDashboard" element={<AdminTasksDashboard />} />
+
+                <Route path="/ClientFiles" element={<ClientFiles />} />
+
+                <Route path="/BackupManager" element={<BackupManager />} />
+
+                <Route path="/SystemReadiness" element={<SystemReadiness />} />
+
+                <Route path="*" element={
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <h1 className="text-6xl font-bold text-gray-300 mb-4">404</h1>
+                        <p className="text-xl text-gray-600 mb-6">העמוד לא נמצא</p>
+                        <RouterLink to="/Home" className="text-primary hover:underline font-medium">חזור לדף הבית</RouterLink>
+                    </div>
+                } />
 
             </Routes>
         </Layout>

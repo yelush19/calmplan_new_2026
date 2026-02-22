@@ -244,7 +244,7 @@ export default function NewEventPage() {
     { value: "low", label: "נמוכה", color: "text-gray-600" },
     { value: "medium", label: "בינונית", color: "text-yellow-600" },
     { value: "high", label: "גבוהה", color: "text-orange-600" },
-    { value: "urgent", label: "דחוף", color: "text-red-600" }
+    { value: "urgent", label: "דחוף", color: "text-amber-600" }
   ];
 
   const importances = [
@@ -285,7 +285,7 @@ export default function NewEventPage() {
               <div className="grid md:grid-cols-1 gap-6">
                 <div>
                   <Label htmlFor="title" className="text-lg font-semibold text-gray-700 mb-2 block">
-                    כותרת האירוע <span className="text-red-500">*</span>
+                    כותרת האירוע <span className="text-amber-500">*</span>
                   </Label>
                   <Input
                     id="title"
@@ -331,7 +331,7 @@ export default function NewEventPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="start_date" className="text-base font-medium text-gray-700 mb-2 block">
-                      {event.is_all_day ? "תאריך" : "תאריך ושעת התחלה"} <span className="text-red-500">*</span>
+                      {event.is_all_day ? "תאריך" : "תאריך ושעת התחלה"} <span className="text-amber-500">*</span>
                     </Label>
                     <Input
                       id="start_date"
@@ -512,7 +512,7 @@ export default function NewEventPage() {
                         onClick={() => removeReminder(index)} 
                         variant="ghost" 
                         size="icon"
-                        className="text-red-500 hover:text-red-700"
+                        className="text-amber-500 hover:text-amber-700"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -604,7 +604,7 @@ export default function NewEventPage() {
                         onClick={() => removeTask(task.id)} 
                         variant="ghost" 
                         size="icon"
-                        className="text-red-500 hover:text-red-700"
+                        className="text-amber-500 hover:text-amber-700"
                       >
                         <X className="w-4 h-4" />
                       </Button>

@@ -29,6 +29,7 @@ export const ToggleGroupItem = ({ children, value, onToggle, selectedValues, cla
   
   return (
     <Button
+      type="button"
       variant={isSelected ? "default" : "outline"}
       size="sm"
       onClick={() => onToggle(value)}

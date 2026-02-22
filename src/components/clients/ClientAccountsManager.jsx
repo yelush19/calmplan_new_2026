@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Banknote, CreditCard, BookUser, Building2 } from 'lucide-react';
 import { ClientAccount } from '@/api/entities';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,13 +25,29 @@ const accountTypeLabels = {
     clearing: 'סליקה'
 };
 
+const accountStatusConfig = {
+    active: { label: 'פעיל', badge: 'bg-green-100 text-green-800 border-green-200' },
+    inactive: { label: 'לא פעיל', badge: 'bg-gray-100 text-gray-600 border-gray-200' },
+    in_review: { label: 'בבדיקה', badge: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+    problem: { label: 'בעיה', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
+};
+
+const loadingSystemLabels = {
+    bizibox: 'BIZIBOX',
+    summit: 'SUMMIT',
+    manual: 'ידני',
+    other: 'אחר',
+};
+
 const AccountForm = ({ account, onSave, onCancel, clientId }) => {
     const [formData, setFormData] = useState({
         account_type: account?.account_type || 'bank',
+        account_status: account?.account_status || 'active',
         account_name: account?.account_name || '',
         account_number: account?.account_number || '',
         bank_name: account?.bank_name || '',
         loading_system: account?.loading_system || 'bizibox',
+        loading_system_notes: account?.loading_system_notes || '',
         reconciliation_frequency: account?.reconciliation_frequency || 'monthly',
         bookkeeping_card_number: account?.bookkeeping_card_number || '',
         last_reconciliation_date: account?.last_reconciliation_date || '',
@@ -68,6 +85,17 @@ const AccountForm = ({ account, onSave, onCancel, clientId }) => {
                         </Select>
                     </div>
                     <div>
+                        <Label htmlFor="account_status">סטטוס חשבון</Label>
+                        <Select value={formData.account_status} onValueChange={(value) => handleSelectChange('account_status', value)}>
+                            <SelectTrigger id="account_status"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(accountStatusConfig).map(([key, config]) => (
+                                    <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
                         <Label htmlFor="account_name">שם החשבון</Label>
                         <Input id="account_name" value={formData.account_name} onChange={handleInputChange} placeholder="לדוגמה: בנק לאומי - עסקי" required />
                     </div>
@@ -84,12 +112,31 @@ const AccountForm = ({ account, onSave, onCancel, clientId }) => {
                         <Input id="bookkeeping_card_number" value={formData.bookkeeping_card_number} onChange={handleInputChange} />
                     </div>
                     <div>
+                        <Label htmlFor="loading_system">אופן טעינה</Label>
+                        <Select value={formData.loading_system} onValueChange={(value) => handleSelectChange('loading_system', value)}>
+                            <SelectTrigger id="loading_system"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(loadingSystemLabels).map(([key, label]) => (
+                                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {formData.loading_system === 'other' && (
+                        <div>
+                            <Label htmlFor="loading_system_notes">פירוט שיטת טעינה</Label>
+                            <Input id="loading_system_notes" value={formData.loading_system_notes} onChange={handleInputChange} placeholder="תאר את שיטת הטעינה..." />
+                        </div>
+                    )}
+                    <div>
                         <Label htmlFor="reconciliation_frequency">תדירות התאמה</Label>
                         <Select value={formData.reconciliation_frequency} onValueChange={(value) => handleSelectChange('reconciliation_frequency', value)}>
                             <SelectTrigger id="reconciliation_frequency"><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="monthly">חודשי</SelectItem>
+                                <SelectItem value="bimonthly">דו-חודשי</SelectItem>
                                 <SelectItem value="quarterly">רבעוני</SelectItem>
+                                <SelectItem value="semi_annual">חצי שנתי</SelectItem>
                                 <SelectItem value="yearly">שנתי</SelectItem>
                             </SelectContent>
                         </Select>
@@ -170,11 +217,16 @@ export default function ClientAccountsManager({ clientId, clientName }) {
         setShowAddForm(false);
         setEditingAccount(null);
     };
-    
+
     const handleAddNew = () => {
         setEditingAccount(null);
         setShowAddForm(true);
     }
+
+    const getStatusBadge = (status) => {
+        const config = accountStatusConfig[status] || accountStatusConfig.active;
+        return <Badge variant="outline" className={`text-xs ${config.badge}`}>{config.label}</Badge>;
+    };
 
     return (
         <Card>
@@ -209,16 +261,23 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="p-4 border rounded-lg flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-gray-50/50"
+                                className={`p-4 border rounded-lg flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-gray-50/50 ${account.account_status === 'problem' ? 'border-amber-300 bg-amber-50/30' : account.account_status === 'inactive' ? 'opacity-60' : ''}`}
                             >
                                 <div className="flex items-center gap-3 flex-1">
                                     <span className="text-blue-600">{accountTypeIcons[account.account_type]}</span>
                                     <div>
-                                        <p className="font-bold">{account.account_name}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-bold">{account.account_name}</p>
+                                            {getStatusBadge(account.account_status)}
+                                        </div>
                                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mt-1">
                                             <span>{account.bank_name}</span>
                                             {account.account_number && <span>****{account.account_number.slice(-4)}</span>}
                                             {account.bookkeeping_card_number && <span className="bg-gray-100 px-2 py-0.5 rounded">כרטיס הנה״ח: {account.bookkeeping_card_number}</span>}
+                                            <span className="bg-blue-50 px-2 py-0.5 rounded text-blue-700">
+                                                {loadingSystemLabels[account.loading_system] || account.loading_system || 'לא הוגדר'}
+                                                {account.loading_system === 'other' && account.loading_system_notes && ` - ${account.loading_system_notes}`}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>

@@ -1,16 +1,42 @@
 
-import React, { useState, useEffect, useCallback } from "react";
-import { Task, Event, User, Dashboard, Client, AccountReconciliation } from "@/api/entities";
-import { isToday, isPast, parseISO, format } from "date-fns";
-import { motion } from "framer-motion";
-import { GlassCard } from "@/components/ui/glass-card";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Task, Event, Client } from "@/api/entities";
+import { parseISO, format, isToday, isTomorrow, differenceInDays } from "date-fns";
+import { he } from "date-fns/locale";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
-  Briefcase, Home as HomeIcon, Calendar, AlertTriangle, Clock
+  Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
+  ArrowRight, Target, AlertTriangle, ChevronDown, Sparkles,
+  FileBarChart, Brain, Zap, Plus, CreditCard, List, LayoutGrid, Search,
+  Network, BarChart3, Eye, EyeOff
 } from "lucide-react";
-import MindMapCanvas from "@/components/mindmap/MindMapCanvas";
-import { BOARD_CATEGORIES } from "@/lib/theme-constants";
+import MindMapView from "../components/views/MindMapView";
+import GanttView from "../components/views/GanttView";
+import KanbanView from "../components/tasks/KanbanView";
+import TaskEditDialog from "@/components/tasks/TaskEditDialog";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { Pencil, Trash2, Pin } from "lucide-react";
+import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
+import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
+import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
+import useTaskCascade from "@/hooks/useTaskCascade";
+import { useApp } from "@/contexts/AppContext";
+
+// ─── Zero-Panic Colors (NO RED) ─────────────────────────────────
+const ZERO_PANIC = {
+  orange: '#F57C00',
+  purple: '#7B1FA2',
+  green:  '#2E7D32',
+  blue:   '#0288D1',
+};
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -19,136 +45,165 @@ const getGreeting = () => {
   return "ערב טוב";
 };
 
+function getTaskContext(task) {
+  if (task.context === 'work' || task.context === 'home') return task.context;
+  const cat = task.category || '';
+  if (['מע"מ','מקדמות מס','ניכויים','ביטוח לאומי','שכר'].includes(cat)) return 'work';
+  if (cat === 'home' || cat === 'personal') return 'home';
+  if (task.client_name) return 'work';
+  return 'other';
+}
+
+const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+function sortByPriority(tasks) {
+  return [...tasks].sort((a, b) => {
+    const pa = PRIORITY_ORDER[a.priority] ?? 2;
+    const pb = PRIORITY_ORDER[b.priority] ?? 2;
+    if (pa !== pb) return pa - pb;
+    return new Date(a.due_date || 0) - new Date(b.due_date || 0);
+  });
+}
+
+import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+
+const FOCUS_TABS = [
+  { key: 'overdue', label: 'באיחור', icon: AlertTriangle, color: 'text-[#7B1FA2]', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
+  { key: 'today', label: 'היום', icon: Target, color: 'text-[#F57C00]', activeBg: 'bg-orange-50 border-orange-300 text-orange-700', badgeColor: 'bg-orange-100 text-orange-700' },
+  { key: 'upcoming', label: '3 ימים', icon: Clock, color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-300 text-gray-700', badgeColor: 'bg-gray-100 text-gray-700' },
+  { key: 'events', label: 'אירועים', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
+  { key: 'payment', label: 'ממתין לתשלום', icon: CreditCard, color: 'text-yellow-600', activeBg: 'bg-yellow-50 border-yellow-300 text-yellow-700', badgeColor: 'bg-yellow-100 text-yellow-700' },
+];
+
 export default function HomePage() {
-  // ======= PRESERVED: All existing state variables =======
-  const [tasks, setTasks] = useState({ today: [], overdue: [], upcoming: [], total: 0, completed: 0, completionRate: 0 });
-  const [events, setEvents] = useState({ today: [], upcoming: [] });
-  const [workTasksCount, setWorkTasksCount] = useState(0);
-  const [homeTasksCount, setHomeTasksCount] = useState(0);
-  const [workBoardIds, setWorkBoardIds] = useState([]);
-  const [homeBoardIds, setHomeBoardIds] = useState([]);
+  const [data, setData] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [inboxItems, setInboxItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userName, setUserName] = useState("משתמש");
+  const [userName, setUserName] = useState("");
+  const [activeTab, setActiveTab] = useState('overdue');
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [focusView, setFocusView] = useState('mindmap'); // Default to mind map
+  const [searchTerm, setSearchTerm] = useState('');
+  const [editingTask, setEditingTask] = useState(null);
+  const [noteTask, setNoteTask] = useState(null);
+  const { confirm, ConfirmDialogComponent } = useConfirm();
+  const { focusMode } = useApp();
+  // Cascade engine for proactive insights
+  const allTasksForCascade = data?.allTasks || [];
+  const setAllTasksForCascade = useCallback((updater) => {
+    setData(prev => {
+      if (!prev) return prev;
+      const updated = typeof updater === 'function' ? updater(prev.allTasks) : updater;
+      return { ...prev, allTasks: updated };
+    });
+  }, []);
+  const { insights } = useTaskCascade(allTasksForCascade, setAllTasksForCascade, clients);
 
-  // ======= NEW: MindMap data state =======
-  const [allClients, setAllClients] = useState([]);
-  const [allTasksRaw, setAllTasksRaw] = useState([]);
-  const [allReconciliations, setAllReconciliations] = useState([]);
+  // System readiness: count clients missing critical data
+  const setupIncomplete = useMemo(() => {
+    if (!clients.length) return { missing: 0, total: 0 };
+    const active = clients.filter(c => c.status !== 'inactive' && c.status !== 'deleted');
+    const missing = active.filter(c => {
+      const bi = c.business_info || {};
+      const hasEmployees = (bi.employee_count || c.employee_count || 0) > 0;
+      const hasComplexity = !!(bi.complexity_level || c.complexity_level);
+      const hasVat = (bi.vat_volume || c.vat_volume || 0) > 0;
+      return !(hasEmployees && hasComplexity && hasVat);
+    }).length;
+    return { missing, total: active.length };
+  }, [clients]);
 
+  useEffect(() => { loadData(); }, []);
+
+  // Auto-refresh when remote data changes arrive (cross-device sync)
+  useRealtimeRefresh(() => { loadData(); }, ['tasks', 'events', 'clients']);
+
+  // Listen for quick capture from desktop app
   useEffect(() => {
-    loadData();
+    const handler = (e) => {
+      const { task } = e.detail || {};
+      if (task) {
+        setInboxItems(prev => [...prev, task]);
+      }
+    };
+    window.addEventListener('calmplan:inbox-item', handler);
+    return () => window.removeEventListener('calmplan:inbox-item', handler);
   }, []);
 
-  // ======= PRESERVED: Complete existing loadData logic + NEW entity loads =======
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Get user info
       try {
-        const user = await User.me();
-        if (user && user.full_name) {
-          setUserName(user.full_name.split(" ")[0]);
+        const displayName = localStorage.getItem('calmplan_display_name');
+        if (displayName) {
+          setUserName(displayName);
+        } else {
+          setUserName('לנה');
         }
-      } catch (error) {
-        console.log("No user data available");
-      }
+      } catch { setUserName('לנה'); }
 
-      // 1. קריאת הגדרות הלוחות, בדיוק כמו בדף המשימות
-      const boardConfigs = await Dashboard.list() || [];
-      const workBoardTypes = ['reports', 'reconciliations', 'client_accounts', 'payroll', 'clients'];
-      const homeBoardTypes = ['family_tasks', 'wellbeing'];
-
-      // 2. איסוף כל ה-IDs של הלוחות הרלוונטיים ושמירה ב-State
-      const currentWorkBoardIds = boardConfigs
-        .filter(config => workBoardTypes.includes(config.type) && config.monday_board_id)
-        .map(config => config.monday_board_id);
-      setWorkBoardIds(currentWorkBoardIds);
-
-      const currentHomeBoardIds = boardConfigs
-        .filter(config => homeBoardTypes.includes(config.type) && config.monday_board_id)
-        .map(config => config.monday_board_id);
-      setHomeBoardIds(currentHomeBoardIds);
-
-      const allRelevantBoardIds = [...currentWorkBoardIds, ...currentHomeBoardIds];
-
-      // 3. Load ALL data in parallel: tasks (filtered), events, clients, reconciliations
-      const [tasksData, eventsData, clientsData, reconciliationsData] = await Promise.all([
-        allRelevantBoardIds.length > 0 ? Task.filter({
-          'monday_board_id': { '$in': allRelevantBoardIds }
-        }, "-created_date", 2000).catch(() => []) : Promise.resolve([]),
-        Event.list("-start_date", 1000).catch(() => []),
-        Client.list().catch(() => []),
-        AccountReconciliation.list().catch(() => []),
+      const [tasksData, eventsData, clientsData] = await Promise.all([
+        Task.list("-due_date", 5000).catch(() => []),
+        Event.list("-start_date", 500).catch(() => []),
+        Client.list("name", 1000).catch(() => []),
       ]);
 
-      const allTasks = Array.isArray(tasksData) ? tasksData : [];
+      setClients(Array.isArray(clientsData) ? clientsData : []);
 
-      // NEW: Store raw data for MindMap
-      setAllClients(Array.isArray(clientsData) ? clientsData : []);
-      setAllTasksRaw(allTasks);
-      setAllReconciliations(Array.isArray(reconciliationsData) ? reconciliationsData : []);
-
-      // 4. חלוקת המשימות לפי קונטקסט לספירה נכונה
-      const workTasks = allTasks.filter(task => task.monday_board_id && currentWorkBoardIds.includes(task.monday_board_id));
-      const homeTasks = allTasks.filter(task => task.monday_board_id && currentHomeBoardIds.includes(task.monday_board_id));
-
-      setWorkTasksCount(workTasks.length);
-      setHomeTasksCount(homeTasks.length);
-
-      // --- PRESERVED: Date processing logic ---
+      const rawTasks = Array.isArray(tasksData) ? tasksData : [];
+      const nowMs = Date.now();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
+      const in3Days = new Date(today);
+      in3Days.setDate(in3Days.getDate() + 3);
 
-      const nextWeek = new Date(today);
-      nextWeek.setDate(nextWeek.getDate() + 7);
-
-      const todayTasks = allTasks.filter(task => {
-        const dateString = task.due_date || task.scheduled_start;
-        if (!dateString) return false;
-        try {
-            const taskDate = parseISO(dateString);
-            taskDate.setHours(0, 0, 0, 0);
-            return taskDate.getTime() === today.getTime();
-        } catch(e) {
-            return false;
-        }
+      const allTasks = rawTasks.filter(task => {
+        const taskDate = task.due_date || task.created_date;
+        if (!taskDate) return true;
+        const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (task.status === 'completed' && daysSince > 7) return false;
+        if (task.status !== 'completed' && daysSince > 30) return false;
+        return true;
       });
 
-      const overdueTasksList = allTasks.filter(task => {
-        if (task.status === 'completed') return false;
-        const dateString = task.due_date || task.scheduled_start;
-        if (!dateString) return false;
-        try {
-            const taskDate = parseISO(dateString);
-            taskDate.setHours(23, 59, 59, 999);
-            return taskDate < today;
-        } catch(e) {
-            return false;
-        }
+      const activeTasks = allTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
+
+      // Inbox items = tasks with source 'quick-capture' that have no category/client
+      const inbox = activeTasks.filter(t =>
+        t.source === 'quick-capture' && !t.client_name && !t.category
+      );
+      setInboxItems(inbox);
+
+      const overdue = activeTasks.filter(task => {
+        const d = task.due_date;
+        if (!d) return false;
+        const taskDate = parseISO(d);
+        taskDate.setHours(23, 59, 59, 999);
+        return taskDate < today;
       });
 
-      const upcomingTasks = allTasks.filter(task => {
-        if (task.status === 'completed') return false;
-        const dateString = task.due_date || task.scheduled_start;
-        if (!dateString) return false;
-        try {
-            const taskDate = parseISO(dateString);
-            taskDate.setHours(0, 0, 0, 0);
-            return taskDate >= tomorrow && taskDate <= nextWeek;
-        } catch(e) {
-            return false;
-        }
-      }).sort((a, b) => {
-          const dateA = new Date(a.due_date || a.scheduled_start);
-          const dateB = new Date(b.due_date || b.scheduled_start);
-          return dateA - dateB;
+      const todayTasks = activeTasks.filter(task => {
+        const d = task.due_date;
+        if (!d) return false;
+        const taskDate = parseISO(d);
+        taskDate.setHours(0, 0, 0, 0);
+        return taskDate.getTime() === today.getTime();
       });
+
+      const upcoming = activeTasks.filter(task => {
+        const d = task.due_date;
+        if (!d) return false;
+        const taskDate = parseISO(d);
+        taskDate.setHours(0, 0, 0, 0);
+        return taskDate >= tomorrow && taskDate <= in3Days;
+      });
+
+      const waitingPayment = activeTasks.filter(t => t.status === 'reported_waiting_for_payment');
 
       const allEvents = Array.isArray(eventsData) ? eventsData : [];
-
       const todayEvents = allEvents.filter(event => {
         if (!event.start_date) return false;
         const eventDate = parseISO(event.start_date);
@@ -156,38 +211,33 @@ export default function HomePage() {
         return eventDate.getTime() === today.getTime();
       });
 
-      const upcomingEvents = allEvents.filter(event => {
-        if (!event.start_date) return false;
-        const eventDate = parseISO(event.start_date);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= tomorrow && eventDate <= nextWeek;
-      }).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+      const workCount = activeTasks.filter(t => getTaskContext(t) === 'work').length;
+      const homeCount = activeTasks.filter(t => getTaskContext(t) === 'home').length;
 
-      const totalTasks = allTasks.length;
-      const completedTasks = allTasks.filter(t => t.status === 'completed').length;
-      const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-      setTasks({
-        today: todayTasks,
-        overdue: overdueTasksList,
-        upcoming: upcomingTasks,
-        total: totalTasks,
-        completed: completedTasks,
-        completionRate
+      setData({
+        allTasks,
+        activeTasks,
+        overdue: sortByPriority(overdue),
+        today: sortByPriority(todayTasks),
+        upcoming: sortByPriority(upcoming),
+        payment: sortByPriority(waitingPayment),
+        todayEvents,
+        workCount,
+        homeCount,
+        totalActive: activeTasks.length,
+        completedToday: allTasks.filter(t => {
+          if (t.status !== 'completed') return false;
+          const d = t.updated_date || t.due_date;
+          if (!d) return false;
+          try { return isToday(parseISO(d)); } catch { return false; }
+        }).length,
       });
 
-      setEvents({
-        today: todayEvents,
-        upcoming: upcomingEvents
-      });
-
-      console.log('🏠 HOME PAGE DEBUG:');
-      console.log('- Total tasks loaded:', totalTasks);
-      console.log('- Work tasks:', workTasks.length);
-      console.log('- Home tasks:', homeTasks.length);
-      console.log('- Clients loaded:', (clientsData || []).length);
-      console.log('- Reconciliations loaded:', (reconciliationsData || []).length);
-
+      if (overdue.length > 0) setActiveTab('overdue');
+      else if (todayTasks.length > 0) setActiveTab('today');
+      else if (upcoming.length > 0) setActiveTab('upcoming');
+      else if (todayEvents.length > 0) setActiveTab('events');
+      else setActiveTab('today');
     } catch (error) {
       console.error("Error loading home page data:", error);
     } finally {
@@ -195,154 +245,711 @@ export default function HomePage() {
     }
   };
 
-  const handleNodeClick = useCallback((node) => {
-    console.log('Node clicked:', node);
-    // Future: open detail panel, navigate to client, etc.
+  const handleStatusChange = async (task, newStatus) => {
+    try {
+      const updatePayload = { status: newStatus };
+      await Task.update(task.id, updatePayload);
+      syncNotesWithTaskStatus(task.id, newStatus);
+
+      // Dispatch completion event for CompletionFeedback
+      if (newStatus === 'completed') {
+        window.dispatchEvent(new CustomEvent('calmplan:task-completed', { detail: { task } }));
+      }
+
+      setData(prev => {
+        if (!prev) return prev;
+        const updateInList = (list) => list.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
+        const filterCompleted = (list) => list.filter(t => !(t.id === task.id && (newStatus === 'completed' || newStatus === 'not_relevant')));
+        return {
+          ...prev,
+          overdue: filterCompleted(updateInList(prev.overdue)),
+          today: filterCompleted(updateInList(prev.today)),
+          upcoming: filterCompleted(updateInList(prev.upcoming)),
+          payment: newStatus === 'reported_waiting_for_payment'
+            ? [...prev.payment, { ...task, status: newStatus }]
+            : prev.payment.filter(t => t.id !== task.id),
+          completedToday: newStatus === 'completed' ? prev.completedToday + 1 : prev.completedToday,
+        };
+      });
+    } catch (err) {
+      console.error('שגיאה בעדכון סטטוס:', err);
+    }
+  };
+
+  const handlePaymentDateChange = async (task, paymentDate) => {
+    try {
+      await Task.update(task.id, { payment_due_date: paymentDate });
+      setData(prev => {
+        if (!prev) return prev;
+        const updateDate = (list) => list.map(t => t.id === task.id ? { ...t, payment_due_date: paymentDate } : t);
+        return { ...prev, overdue: updateDate(prev.overdue), today: updateDate(prev.today), upcoming: updateDate(prev.upcoming), payment: updateDate(prev.payment) };
+      });
+    } catch (err) {
+      console.error('שגיאה בעדכון תאריך תשלום:', err);
+    }
+  };
+
+  const handleEditTask = async (taskId, updatedData) => {
+    try {
+      await Task.update(taskId, updatedData);
+      loadData();
+    } catch (err) {
+      console.error('שגיאה בעדכון משימה:', err);
+    }
+  };
+
+  const handleDeleteTask = async (task) => {
+    setEditingTask(null);
+    const ok = await confirm({
+      title: 'מחיקת משימה',
+      description: `האם למחוק את המשימה "${task.title}"?`,
+      confirmText: 'מחק',
+      cancelText: 'ביטול',
+    });
+    if (ok) {
+      try {
+        await Task.delete(task.id);
+        loadData();
+      } catch (err) {
+        console.error('שגיאה במחיקת משימה:', err);
+      }
+    }
+  };
+
+  const handleInboxDismiss = useCallback(async (item) => {
+    // Move item out of inbox by assigning it a category
+    try {
+      await Task.update(item.id, { source: 'assigned', category: 'אחר' });
+      setInboxItems(prev => prev.filter(i => i.id !== item.id));
+    } catch { /* ignore */ }
   }, []);
 
-  // ======= LOADING STATE =======
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
-      <div className="w-full h-full flex items-center justify-center"
-        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f172a 100%)' }}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
-        >
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full"
-            style={{
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              animation: 'calm-pulse 2s ease-in-out infinite',
-            }}
-          />
-          <p className="text-white/60 text-sm">טוען את המוח החיצוני...</p>
-        </motion.div>
+      <div className="space-y-6 p-6">
+        <div className="h-16 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-gray-200 rounded-lg animate-pulse" />)}
+        </div>
+        <div className="h-64 bg-gray-200 rounded-lg animate-pulse" />
       </div>
     );
   }
 
-  // ======= MAIN RENDER: MindMap Canvas with Floating Overlays =======
-  return (
-    <div className="relative w-full h-full" style={{ minHeight: 'calc(100vh - 0px)' }}>
-      {/* MindMap fills the entire area */}
-      <MindMapCanvas
-        clients={allClients}
-        tasks={allTasksRaw}
-        reconciliations={allReconciliations}
-        onNodeClick={handleNodeClick}
-      />
+  const filterBySearch = (items, isEvent = false) => {
+    if (!searchTerm) return items;
+    const lower = searchTerm.toLowerCase();
+    return items.filter(item =>
+      item.title?.toLowerCase().includes(lower) ||
+      (!isEvent && item.client_name?.toLowerCase().includes(lower)) ||
+      (!isEvent && item.category?.toLowerCase().includes(lower)) ||
+      (isEvent && item.description?.toLowerCase().includes(lower))
+    );
+  };
 
-      {/* === FLOATING GLASS OVERLAYS === */}
+  const getTabCount = (tabKey) => {
+    if (tabKey === 'events') return filterBySearch(data.todayEvents, true).length;
+    return filterBySearch(data[tabKey] || []).length;
+  };
 
-      {/* Top-Right: Greeting */}
-      <motion.div
-        className="absolute top-4 right-4 z-10"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <GlassCard className="px-5 py-3">
-          <h2 className="text-white font-bold text-lg leading-tight">
-            {getGreeting()}, {userName}
-          </h2>
-          <p className="text-white/60 text-xs mt-0.5">
-            {format(new Date(), 'EEEE, d בMMMM yyyy')}
-          </p>
-        </GlassCard>
-      </motion.div>
+  const allFocusTasks = filterBySearch([
+    ...(data.overdue || []),
+    ...(data.today || []),
+    ...(data.upcoming || []),
+    ...(data.payment || []),
+  ]);
 
-      {/* Top-Left: Quick Stats Row */}
-      <motion.div
-        className="absolute top-4 left-4 z-10 flex gap-2"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <Link to={createPageUrl("Tasks?context=work")}>
-          <GlassCard className="px-3 py-2 flex items-center gap-2 hover:bg-white/20 cursor-pointer">
-            <Briefcase className="w-4 h-4 text-blue-400" />
-            <span className="text-white font-bold text-sm">{workTasksCount}</span>
-            <span className="text-white/50 text-xs hidden lg:inline">עבודה</span>
-          </GlassCard>
-        </Link>
-
-        <Link to={createPageUrl("Tasks?context=home")}>
-          <GlassCard className="px-3 py-2 flex items-center gap-2 hover:bg-white/20 cursor-pointer">
-            <HomeIcon className="w-4 h-4 text-green-400" />
-            <span className="text-white font-bold text-sm">{homeTasksCount}</span>
-            <span className="text-white/50 text-xs hidden lg:inline">בית</span>
-          </GlassCard>
-        </Link>
-
-        <Link to={createPageUrl("Calendar")}>
-          <GlassCard className="px-3 py-2 flex items-center gap-2 hover:bg-white/20 cursor-pointer">
-            <Calendar className="w-4 h-4 text-purple-400" />
-            <span className="text-white font-bold text-sm">{events.today.length}</span>
-            <span className="text-white/50 text-xs hidden lg:inline">אירועים</span>
-          </GlassCard>
-        </Link>
-
-        {tasks.overdue.length > 0 && (
-          <GlassCard className="px-3 py-2 flex items-center gap-2" style={{ borderColor: 'rgba(239,68,68,0.3)' }}>
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="text-red-400 font-bold text-sm">{tasks.overdue.length}</span>
-            <span className="text-red-400/50 text-xs hidden lg:inline">באיחור</span>
-          </GlassCard>
-        )}
-      </motion.div>
-
-      {/* Bottom-Right: Daily Progress */}
-      <motion.div
-        className="absolute bottom-4 right-4 z-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
-        <GlassCard className="px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="text-white/60 text-xs">התקדמות יומית</div>
-            <div className="w-24 h-2 rounded-full bg-white/10 overflow-hidden">
-              <motion.div
-                className="h-full rounded-full"
-                style={{ background: 'linear-gradient(90deg, #10b981, #059669)' }}
-                initial={{ width: 0 }}
-                animate={{ width: `${tasks.completionRate}%` }}
-                transition={{ duration: 1, delay: 0.8 }}
-              />
-            </div>
-            <div className="text-white font-bold text-sm">{tasks.completionRate}%</div>
-          </div>
-          {tasks.today.length > 0 && (
-            <div className="text-white/40 text-xs mt-1">
-              {tasks.today.filter(t => t.status === 'completed').length}/{tasks.today.length} משימות היום
-            </div>
-          )}
-        </GlassCard>
-      </motion.div>
-
-      {/* Bottom-Left: Category Legend (compact) */}
-      <motion.div
-        className="absolute bottom-12 left-4 z-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-      >
-        <GlassCard className="px-3 py-2">
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {BOARD_CATEGORIES.map(cat => (
-              <div key={cat.id} className="flex items-center gap-1.5">
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ background: `linear-gradient(135deg, ${cat.gradient.from}, ${cat.gradient.to})` }}
-                />
-                <span className="text-white/50 text-[10px]">{cat.label}</span>
+  const getTabContent = () => {
+    switch (activeTab) {
+      case 'overdue': {
+        const filtered = filterBySearch(data.overdue);
+        return filtered.length === 0 ? (
+          <EmptyState icon={<CheckCircle className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />} text="אין משימות באיחור" />
+        ) : (
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDeadlineContext />
+        );
+      }
+      case 'today': {
+        const filtered = filterBySearch(data.today);
+        return filtered.length === 0 ? (
+          <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />} text="אין משימות להיום - כל הכבוד!" />
+        ) : (
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDeadlineContext />
+        );
+      }
+      case 'upcoming': {
+        const filtered = filterBySearch(data.upcoming);
+        return filtered.length === 0 ? (
+          <EmptyState icon={<Clock className="w-10 h-10 text-gray-300" />} text="אין משימות ל-3 ימים הקרובים" />
+        ) : (
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDate />
+        );
+      }
+      case 'events': {
+        const filtered = filterBySearch(data.todayEvents, true);
+        return filtered.length === 0 ? (
+          <EmptyState icon={<Calendar className="w-10 h-10 text-purple-300" />} text="אין אירועים היום" />
+        ) : (
+          <div className="space-y-2">
+            {filtered.map(event => (
+              <div key={event.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-purple-50 border border-purple-100">
+                <div className="text-sm font-mono font-semibold text-purple-700 min-w-[50px]">
+                  {format(parseISO(event.start_date), 'HH:mm')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm text-purple-900 truncate">{event.title}</div>
+                  {event.description && <div className="text-xs text-purple-600 truncate">{event.description}</div>}
+                </div>
               </div>
             ))}
           </div>
-        </GlassCard>
+        );
+      }
+      case 'payment': {
+        const filtered = filterBySearch(data.payment);
+        return filtered.length === 0 ? (
+          <EmptyState icon={<CreditCard className="w-10 h-10 text-yellow-300" />} text="אין משימות ממתינות לתשלום" />
+        ) : (
+          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showPaymentDate />
+        );
+      }
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <motion.div
+      className="p-3 md:p-4 space-y-3"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
+      {/* Greeting */}
+      <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {getGreeting()}{userName ? `, ${userName}` : ''}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {format(new Date(), 'EEEE, d בMMMM', { locale: he })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {data.completedToday > 0 && (
+            <Badge className="border-green-200 gap-1" style={{ backgroundColor: '#E8F5E9', color: ZERO_PANIC.green }}>
+              <CheckCircle className="w-3.5 h-3.5" />
+              {data.completedToday} הושלמו היום
+            </Badge>
+          )}
+          <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-primary hover:bg-accent text-white gap-1">
+            <Plus className="w-4 h-4" />
+            משימה מהירה
+          </Button>
+        </div>
       </motion.div>
+
+      {/* Setup Incomplete Notification */}
+      {setupIncomplete.missing > 0 && (
+        <motion.div initial={{ y: -5, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+          <Card className="bg-amber-50/80 border-amber-200 shadow-sm">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-amber-800">
+                    הגדרת מערכת לא הושלמה: {setupIncomplete.missing} לקוחות חסרים נתונים
+                  </span>
+                  <span className="text-xs text-amber-600 mr-2">
+                    (מתוך {setupIncomplete.total} פעילים)
+                  </span>
+                </div>
+              </div>
+              <Link to={createPageUrl("SystemReadiness")}>
+                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white gap-1 font-bold text-xs">
+                  <Zap className="w-3.5 h-3.5" />
+                  השלם הגדרה
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Quick counters with Zero-Panic colors */}
+      <div className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-5 gap-3">
+        <Link to={createPageUrl("Tasks") + "?tab=active&context=work"}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD70' }}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <Briefcase className="w-5 h-5" style={{ color: ZERO_PANIC.blue }} />
+              <div>
+                <div className="text-xl font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</div>
+                <div className="text-[11px]" style={{ color: ZERO_PANIC.blue }}>משימות עבודה</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to={createPageUrl("Tasks") + "?tab=active&context=home"}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#C8E6C9', backgroundColor: '#E8F5E970' }}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <HomeIcon className="w-5 h-5" style={{ color: ZERO_PANIC.green }} />
+              <div>
+                <div className="text-xl font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</div>
+                <div className="text-[11px]" style={{ color: ZERO_PANIC.green }}>משימות בית</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to={createPageUrl("Calendar")}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200 bg-purple-50/70">
+            <CardContent className="p-3 flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-purple-600" />
+              <div>
+                <div className="text-xl font-bold text-purple-700">{data.todayEvents.length}</div>
+                <div className="text-[11px] text-purple-600">אירועים היום</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Card className="border-2" style={{
+          borderColor: data.overdue.length > 0 ? '#FFE0B2' : '#e5e7eb',
+          backgroundColor: data.overdue.length > 0 ? '#FFF3E070' : '#f9fafb70',
+        }}>
+          <CardContent className="p-3 flex items-center gap-3">
+            <Clock className="w-5 h-5" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }} />
+            <div>
+              <div className="text-xl font-bold" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }}>
+                {data.overdue.length}
+              </div>
+              <div className="text-[11px]" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#6B7280' }}>באיחור</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Daily Progress Bar */}
+      {(() => {
+        const todayTotal = data.today.length + (data.overdue?.length || 0);
+        const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
+        return (
+          <motion.div initial={{ y: 5, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
+            <div className="bg-white rounded-xl p-3 border shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm font-medium text-gray-600">התקדמות יומית</span>
+                <span className="text-sm font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3.5 overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">
+                {data.completedToday} מתוך {todayTotal + data.completedToday} משימות הושלמו היום
+                {progress >= 100 && <span className="mr-2 font-medium" style={{ color: ZERO_PANIC.green }}>כל הכבוד!</span>}
+              </p>
+            </div>
+          </motion.div>
+        );
+      })()}
+
+      {/* PROACTIVE INSIGHTS COCKPIT */}
+      {insights.length > 0 && (
+        <motion.div initial={{ y: 5, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.17 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
+            {insights.slice(0, 6).map((insight, i) => {
+              const colorMap = {
+                teal: { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', icon: 'text-teal-500' },
+                amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: 'text-amber-500' },
+                blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'text-blue-500' },
+                emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: 'text-emerald-500' },
+              };
+              const c = colorMap[insight.color] || colorMap.teal;
+              return (
+                <div key={i} className={`${c.bg} ${c.border} border rounded-lg p-2.5 flex items-start gap-2`}>
+                  <div className={`${c.icon} mt-0.5 flex-shrink-0`}>
+                    {insight.type === 'warning' && <AlertTriangle className="w-4 h-4" />}
+                    {insight.type === 'action' && <Zap className="w-4 h-4" />}
+                    {insight.type === 'progress' && <Clock className="w-4 h-4" />}
+                    {insight.type === 'info' && <Eye className="w-4 h-4" />}
+                    {insight.type === 'celebration' && <Sparkles className="w-4 h-4" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-medium ${c.text} leading-tight`}>{insight.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{insight.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {/* FOCUS AREA */}
+      <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
+        <Card>
+          <CardHeader className="pb-0">
+            <div className="flex items-center justify-between mb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Target className="w-5 h-5" style={{ color: ZERO_PANIC.blue }} />
+                <span>מרכז השליטה</span>
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                {/* View Switcher */}
+                <div className="flex bg-gray-100 rounded-lg p-0.5">
+                  <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
+                    <Network className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('kanban')} title="קנבן">
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('list')} title="רשימה">
+                    <List className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant={focusView === 'gantt' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('gantt')} title="ציר זמן">
+                    <BarChart3 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+                <Link to={createPageUrl("Tasks")}>
+                  <Button variant="ghost" size="sm" className="text-xs text-gray-500 gap-1">
+                    כל המשימות <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            {/* Search */}
+            {focusView !== 'mindmap' && (
+              <>
+                <div className="relative mb-2">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="חיפוש לפי שם לקוח, משימה..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pr-10 h-8 text-sm"
+                  />
+                </div>
+                {/* Horizontal Tab Bar */}
+                <div className="flex gap-1.5 overflow-x-auto pb-2 border-b border-gray-100">
+                  {FOCUS_TABS.map(tab => {
+                    const count = getTabCount(tab.key);
+                    const isActive = activeTab === tab.key;
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-sm font-medium transition-all whitespace-nowrap border-b-2 ${
+                          isActive
+                            ? `${tab.activeBg} border-current`
+                            : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 ${isActive ? '' : tab.color}`} />
+                        <span>{tab.label}</span>
+                        {count > 0 && (
+                          <Badge className={`text-[10px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>
+                            {count}
+                          </Badge>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </CardHeader>
+          <CardContent className={focusView === 'mindmap' ? 'pt-2 px-0 pb-2' : 'pt-4'}>
+            {focusView === 'mindmap' ? (
+              <div className="relative">
+                <MindMapView
+                  tasks={data.activeTasks || allFocusTasks}
+                  clients={clients}
+                  inboxItems={inboxItems}
+                  onInboxDismiss={handleInboxDismiss}
+                  focusMode={focusMode}
+                />
+                {/* Prominent Gantt toggle on MindMap */}
+                <button
+                  onClick={() => setFocusView('gantt')}
+                  className="absolute bottom-4 right-4 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300 transition-all text-sm font-medium"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>הצג כגאנט</span>
+                </button>
+              </div>
+            ) : focusView === 'gantt' ? (
+              <div className="relative">
+                <GanttView tasks={allFocusTasks} clients={clients} />
+                {/* Back to MindMap button */}
+                <button
+                  onClick={() => setFocusView('mindmap')}
+                  className="absolute bottom-4 right-4 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all text-sm font-medium"
+                >
+                  <Network className="w-4 h-4" />
+                  <span>חזרה למפה</span>
+                </button>
+              </div>
+            ) : focusView === 'kanban' ? (
+              <KanbanView
+                tasks={allFocusTasks}
+                onTaskStatusChange={handleStatusChange}
+                onDeleteTask={(taskId) => handleDeleteTask({ id: taskId })}
+                onEditTask={handleEditTask}
+              />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {getTabContent()}
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Quick Actions */}
+      <motion.div
+        initial={{ y: 10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.35 }}
+        className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-5 gap-3"
+      >
+        <Link to={createPageUrl("WeeklyPlanningDashboard")}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD50' }}>
+            <CardContent className="p-4 text-center">
+              <Brain className="w-6 h-6 mx-auto mb-2" style={{ color: ZERO_PANIC.blue }} />
+              <h3 className="font-medium text-sm" style={{ color: '#1565C0' }}>תכנון שבועי</h3>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to={createPageUrl("PayrollDashboard")}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-gray-200 bg-gray-50/50 h-full">
+            <CardContent className="p-4 text-center">
+              <Briefcase className="w-6 h-6 mx-auto mb-2 text-gray-600" />
+              <h3 className="font-medium text-sm text-gray-800">שכר ודיווחים</h3>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to={createPageUrl("AutomationRules")}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#FFE0B2', backgroundColor: '#FFF3E050' }}>
+            <CardContent className="p-4 text-center">
+              <Zap className="w-6 h-6 mx-auto mb-2" style={{ color: ZERO_PANIC.orange }} />
+              <h3 className="font-medium text-sm" style={{ color: '#E65100' }}>אוטומציות</h3>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to={createPageUrl("WeeklySummary")}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#CE93D8', backgroundColor: '#F3E5F550' }}>
+            <CardContent className="p-4 text-center">
+              <FileBarChart className="w-6 h-6 mx-auto mb-2" style={{ color: ZERO_PANIC.purple }} />
+              <h3 className="font-medium text-sm" style={{ color: '#6A1B9A' }}>סיכום שבועי</h3>
+            </CardContent>
+          </Card>
+        </Link>
+      </motion.div>
+
+      {/* Quick Add Task Dialog */}
+      <QuickAddTaskDialog
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onCreated={loadData}
+      />
+
+      {/* Task Edit Dialog */}
+      <TaskEditDialog
+        task={editingTask}
+        open={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleEditTask}
+        onDelete={handleDeleteTask}
+      />
+
+      <TaskToNoteDialog
+        task={noteTask}
+        open={!!noteTask}
+        onClose={() => setNoteTask(null)}
+      />
+
+      {ConfirmDialogComponent}
+
+      {/* FAB */}
+      <button
+        onClick={() => setShowQuickAdd(true)}
+        className="fixed bottom-6 left-20 w-14 h-14 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40"
+        style={{ backgroundColor: ZERO_PANIC.blue }}
+        title="הוסף משימה מהירה"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+    </motion.div>
+  );
+}
+
+function EmptyState({ icon, text }) {
+  return (
+    <div className="text-center py-8">
+      <div className="mb-2">{icon}</div>
+      <p className="text-sm text-gray-500">{text}</p>
+    </div>
+  );
+}
+
+function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
+  const [showAll, setShowAll] = useState(false);
+  const visibleTasks = showAll ? tasks : tasks.slice(0, 15);
+
+  return (
+    <div className="space-y-2">
+      {visibleTasks.map(task => (
+        <TaskRow
+          key={task.id}
+          task={task}
+          onStatusChange={onStatusChange}
+          onPaymentDateChange={onPaymentDateChange}
+          onEdit={onEdit}
+          onNote={onNote}
+          showDeadlineContext={showDeadlineContext}
+          showDate={showDate}
+          showPaymentDate={showPaymentDate}
+        />
+      ))}
+      {tasks.length > 15 && (
+        <Button variant="ghost" size="sm" className="w-full text-gray-500" onClick={() => setShowAll(!showAll)}>
+          <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showAll ? 'rotate-180' : ''}`} />
+          {showAll ? 'הצג פחות' : `עוד ${tasks.length - 15} משימות`}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// Zero-Panic priority styles (NO RED)
+const priorityStyles = {
+  urgent: 'border-r-4 border-r-[#F57C00]',  // Orange, not red
+  high: 'border-r-4 border-r-[#FF8F00]',     // Amber
+  medium: 'border-r-4 border-r-[#FFB300]',   // Yellow-amber
+  low: 'border-r-4 border-r-gray-300',
+};
+
+function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
+  const ctx = getTaskContext(task);
+  const isWork = ctx === 'work';
+  const isHome = ctx === 'home';
+
+  // Ghost node: missing due date or complexity
+  const isMissingData = !task.due_date || !task.client_size;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysFromDue = task.due_date ? differenceInDays(today, parseISO(task.due_date)) : 0;
+  const isOverdue = daysFromDue > 0;
+
+  const statusCfg = statusConfig[task.status] || statusConfig.not_started;
+
+  const paymentDaysLeft = task.payment_due_date
+    ? differenceInDays(parseISO(task.payment_due_date), today)
+    : null;
+
+  return (
+    <div className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-orange-50/30' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm text-gray-800 truncate">{task.title}</span>
+          {task.priority === 'urgent' && (
+            <Badge style={{ backgroundColor: '#FFF3E0', color: '#E65100' }} className="text-[10px] px-1.5 py-0">דחוף</Badge>
+          )}
+          {isMissingData && (
+            <Badge className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 border border-dashed border-gray-300">חסר מידע</Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          {task.client_name && (
+            <span className="text-[11px] text-gray-500 truncate max-w-[120px]">{task.client_name}</span>
+          )}
+          {task.category && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{task.category}</Badge>
+          )}
+          {task.client_size && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-bold">{task.client_size}</Badge>
+          )}
+          {showDeadlineContext && isOverdue && (
+            <Badge style={{ backgroundColor: '#F3E5F5', color: '#7B1FA2' }} className="text-[10px] px-1.5 py-0">
+              {daysFromDue === 1 ? 'אתמול' : `${daysFromDue} ימים באיחור`}
+            </Badge>
+          )}
+          {showDeadlineContext && !isOverdue && task.due_date && (
+            <span className="text-[10px] text-gray-400">היום - {format(parseISO(task.due_date), 'd/M')}</span>
+          )}
+          {showDate && task.due_date && (
+            <span className="text-[10px] text-gray-400">
+              {isTomorrow(parseISO(task.due_date)) ? 'מחר' : format(parseISO(task.due_date), 'd/M')}
+            </span>
+          )}
+          {showPaymentDate && task.payment_due_date && (
+            <Badge className={`text-[10px] px-1.5 py-0 ${paymentDaysLeft <= 0 ? 'bg-purple-100 text-purple-700' : paymentDaysLeft <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
+              {paymentDaysLeft < 0 ? `${Math.abs(paymentDaysLeft)} ימים באיחור תשלום` : paymentDaysLeft === 0 ? 'תשלום היום' : `${paymentDaysLeft} ימים לתשלום`}
+            </Badge>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {onNote && (
+          <button
+            onClick={() => onNote(task)}
+            className="p-1 rounded hover:bg-amber-100 transition-colors"
+            title="הוסף לפתק דביק"
+          >
+            <Pin className="w-3.5 h-3.5 text-gray-400 hover:text-amber-600" />
+          </button>
+        )}
+        {onEdit && (
+          <button
+            onClick={() => onEdit(task)}
+            className="p-1 rounded hover:bg-gray-200 transition-colors"
+            title="ערוך משימה"
+          >
+            <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+          </button>
+        )}
+        {task.status === 'reported_waiting_for_payment' && onPaymentDateChange && (
+          <input
+            type="date"
+            value={task.payment_due_date || ''}
+            onChange={(e) => onPaymentDateChange(task, e.target.value)}
+            className="h-7 text-[10px] px-1.5 w-[110px] border border-yellow-300 rounded bg-yellow-50 text-yellow-800"
+            title="תאריך יעד לתשלום"
+          />
+        )}
+        {onStatusChange && (
+          <Select value={task.status || 'not_started'} onValueChange={(newStatus) => onStatusChange(task, newStatus)}>
+            <SelectTrigger className={`h-7 text-[10px] px-2 w-auto min-w-[90px] border-0 ${statusCfg.color}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(statusConfig).map(([key, { text }]) => (
+                <SelectItem key={key} value={key} className="text-xs">{text}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {isWork ? (
+          <Briefcase className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
+        ) : isHome ? (
+          <HomeIcon className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.green }} />
+        ) : null}
+      </div>
     </div>
   );
 }

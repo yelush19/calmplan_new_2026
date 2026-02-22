@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,101 @@ import {
 import { Input } from '@/components/ui/input';
 import {
   Monitor, RefreshCw, CheckCircle, AlertCircle, Users, Settings, ExternalLink, Database, Plus,
-  FileText, BookCheck, Home, Calendar, Heart, Clock, BarChart3, Edit, Save, X, AlertTriangle, CreditCard, Trash2, BookUser
+  FileText, BookCheck, Home, Calendar, Heart, Clock, BarChart3, Edit, Save, X, AlertTriangle, CreditCard, Trash2, BookUser, Upload
 } from 'lucide-react';
 import { Client, Dashboard, Task, AccountReconciliation, WeeklySchedule, ClientAccount, Therapist } from '@/api/entities';
 import { mondayApi } from '@/api/functions';
 import { mondayBoardApi } from '@/api/functions';
+import { mondayReportsAutomation } from "@/api/functions";
+import { getMondayToken, setMondayToken, hasMondayToken } from '@/api/mondayClient';
+
+// Token Configuration Component
+const TokenConfig = ({ onTokenSaved }) => {
+  const [token, setToken] = useState(getMondayToken());
+  const [showToken, setShowToken] = useState(false);
+  const [saved, setSaved] = useState(hasMondayToken());
+
+  const handleSave = () => {
+    if (token.trim()) {
+      setMondayToken(token.trim());
+      setSaved(true);
+      if (onTokenSaved) onTokenSaved();
+      setTimeout(() => setSaved(false), 3000);
+    }
+  };
+
+  const isConnected = hasMondayToken();
+
+  return (
+    <Card className={`border-2 ${isConnected ? 'border-green-200 bg-gradient-to-br from-green-50 to-emerald-50' : 'border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50'}`}>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${isConnected ? 'bg-green-100' : 'bg-amber-100'}`}>
+            <Settings className={`w-6 h-6 ${isConnected ? 'text-green-600' : 'text-amber-600'}`} />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold">
+              {isConnected ? 'Monday.com מחובר' : 'חיבור ל-Monday.com'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {isConnected ? 'ה-API Token שלך מוגדר ופעיל' : 'הזיני את ה-API Token שלך מ-Monday.com'}
+            </p>
+          </div>
+          {isConnected && (
+            <Badge className="bg-green-500 text-white mr-auto">
+              <CheckCircle className="w-3 h-3 ml-1" />
+              מחובר
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Input
+              type={showToken ? 'text' : 'password'}
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="eyJhbGciOiJIUzI1NiJ9..."
+              className="h-10 font-mono text-sm"
+              dir="ltr"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10"
+            onClick={() => setShowToken(!showToken)}
+          >
+            {showToken ? 'הסתר' : 'הצג'}
+          </Button>
+          <Button
+            onClick={handleSave}
+            className="h-10"
+            disabled={!token.trim()}
+          >
+            {saved ? (
+              <>
+                <CheckCircle className="w-4 h-4 ml-1" />
+                נשמר!
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 ml-1" />
+                שמור
+              </>
+            )}
+          </Button>
+        </div>
+
+        {!isConnected && (
+          <p className="text-xs text-amber-700 mt-2">
+            ניתן למצוא את ה-Token ב-Monday.com: הגדרות &gt; Developer &gt; My Access Tokens
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 // Component for selecting a board with search functionality
 const BoardSelector = ({ availableBoards, selectedBoardId, onBoardChange }) => {
@@ -88,9 +178,9 @@ const boardCategories = {
   reconciliations: { label: 'התאמות בנק וסליקה', icon: BookCheck, color: 'text-purple-600', description: 'נתונים כספיים מפורטים מלוח ההתאמות' },
   client_accounts: { label: 'חשבונות בנק וסליקה', icon: CreditCard, color: 'text-yellow-600', description: 'ניהול חשבונות בנק וכרטיסי אשראי של לקוחות' },
   family_tasks: { label: 'משימות משפחה', icon: Home, color: 'text-orange-600', description: 'משימות בית ומשפחה' },
-  weekly_planning: { label: 'לוח טיפולים', icon: Calendar, color: 'text-indigo-600', description: 'תכנון זמנים וטיפולים' },
+  weekly_planning: { label: 'תכנון שבועי', icon: Calendar, color: 'text-indigo-600', description: 'תכנון משימות שבועי' },
   wellbeing: { label: 'מעקב רווחה', icon: Heart, color: 'text-pink-600', description: 'מעקב אחר בריאות ומצב רוח' },
-  therapists: { label: 'לוח מטפלים', icon: BookUser, color: 'text-teal-600', description: 'ניהול וסנכרון רשימת המטפלים' }
+  therapists: { label: 'לוח מטפלים', icon: BookUser, color: 'text-teal-600', description: 'ניהול וסנכרון רשימת מטפלים' }
 };
 
 const IntegratedBoardCard = ({ board, data, onSync, onPurgeAndResync, onEdit, onSave, syncStatus, isEditing, availableBoards, onBoardIdChange, logs }) => {
@@ -103,7 +193,7 @@ const IntegratedBoardCard = ({ board, data, onSync, onPurgeAndResync, onEdit, on
     }
 
     if (syncStatus === 'error') {
-      return { icon: AlertTriangle, text: 'שגיאה', color: 'text-red-500', bgColor: 'bg-red-50', badge: 'destructive' };
+      return { icon: AlertTriangle, text: 'שגיאה', color: 'text-amber-500', bgColor: 'bg-amber-50', badge: 'destructive' };
     }
 
     if (data.count > 0) {
@@ -123,7 +213,7 @@ const IntegratedBoardCard = ({ board, data, onSync, onPurgeAndResync, onEdit, on
   const hasError = syncStatus === 'error' || (data.syncResult?.errors && data.syncResult.errors.length > 0);
 
   return (
-    <Card className={`h-full flex flex-col transition-all duration-300 ${hasError ? 'border-red-200 bg-red-50' : hasData ? 'border-green-200 bg-green-50' : 'border-gray-200'} hover:shadow-lg`}>
+    <Card className={`h-full flex flex-col transition-all duration-300 ${hasError ? 'border-amber-200 bg-amber-50' : hasData ? 'border-green-200 bg-green-50' : 'border-gray-200'} hover:shadow-lg`}>
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
@@ -222,7 +312,7 @@ const IntegratedBoardCard = ({ board, data, onSync, onPurgeAndResync, onEdit, on
                         <span>נמחקו: {data.syncResult.deleted || 0}</span>
                       </div>
                       {data.syncResult.errors && data.syncResult.errors.length > 0 && (
-                        <p className="text-red-600 font-medium">שגיאות: {data.syncResult.errors.length}</p>
+                        <p className="text-amber-600 font-medium">שגיאות: {data.syncResult.errors.length}</p>
                       )}
                     </div>
                   )}
@@ -289,24 +379,21 @@ export default function MondayIntegrationPage() {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [error, setError] = useState(null);
   const [logs, setLogs] = useState({});
+  const [reportMonth, setReportMonth] = useState(8);
+  const [reportYear, setReportYear] = useState(2025);
+  const [isCreatingReports, setIsCreatingReports] = useState(false);
+  const [isQuickSyncing, setIsQuickSyncing] = useState(false);
+  const [quickClientBoardId, setQuickClientBoardId] = useState("");
+  const [isReverseSyncing, setIsReverseSyncing] = useState(false);
+  const [isCreatingMonthlyBoards, setIsCreatingMonthlyBoards] = useState(false);
+  const [monthlyBoardsYear, setMonthlyBoardsYear] = useState(new Date().getFullYear() + 1);
+  const [monthlyBoardsResult, setMonthlyBoardsResult] = useState(null);
+  const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [addColumnResult, setAddColumnResult] = useState(null);
+  const [selectedProcessTypes, setSelectedProcessTypes] = useState(['reports']);
 
-  useEffect(() => {
-    loadPageData();
-  }, []);
-
-  const loadPageData = async () => {
-    setIsLoading(true);
-    await Promise.all([
-      loadData(),
-      loadAvailableBoards()
-    ]);
-    setIsLoading(false);
-  };
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      console.log('🔄 Loading all data for Monday Integration page...');
-
       const [dashboardsData, clientsData, tasksData, recsData, schedulesData, clientAccountsData, therapistsData] = await Promise.all([
         Dashboard.list().catch(e => { console.warn('Failed to load dashboards:', e); return []; }),
         Client.filter({}, '-updated_date', 1000).catch(e => { console.warn('Failed to load clients:', e); return []; }),
@@ -316,20 +403,6 @@ export default function MondayIntegrationPage() {
         ClientAccount.filter({}, '-updated_date', 1000).catch(e => { console.warn('Failed to load client accounts:', e); return []; }),
         Therapist.list().catch(e => { console.warn('Failed to load therapists:', e); return []; })
       ]);
-
-      console.log('🔍 COMPLETE DATA DEBUG:');
-      console.log('- Dashboards:', dashboardsData);
-      console.log('- Tasks (full):', tasksData);
-      console.log('- Tasks with monday_board_id:', tasksData?.filter(t => t.monday_board_id));
-
-      // Group tasks by board_id for debugging
-      const tasksByBoard = {};
-      (tasksData || []).forEach(task => {
-          const boardId = String(task.monday_board_id || 'no-board');
-          if (!tasksByBoard[boardId]) tasksByBoard[boardId] = [];
-          tasksByBoard[boardId].push(task.title);
-      });
-      console.log('🔍 Tasks grouped by board_id:', tasksByBoard);
 
       const configs = Object.keys(boardCategories).map(type => {
         const existing = (dashboardsData || []).find(d => d.type === type);
@@ -346,8 +419,6 @@ export default function MondayIntegrationPage() {
 
         if (config.monday_board_id) {
             const boardIdStr = String(config.monday_board_id);
-            console.log(`🔍 PROCESSING: ${config.type} with board_id "${boardIdStr}"`);
-
             switch(config.type) {
                 case 'clients':
                     const boardClients = (clientsData || []).filter(c =>
@@ -367,7 +438,6 @@ export default function MondayIntegrationPage() {
                 case 'weekly_planning':
                     const boardTasks = (tasksData || []).filter(t => String(t.monday_board_id) === boardIdStr);
                     count = boardTasks.length;
-                    console.log(`🔍 DEBUG: ${config.type} - Found ${count} tasks matching board_id "${boardIdStr}"`);
                     if(count > 0) lastSync = Math.max(...boardTasks.map(t => new Date(t.updated_date).getTime()));
                     break;
 
@@ -390,7 +460,6 @@ export default function MondayIntegrationPage() {
                     break;
             }
 
-            console.log(`✅ Final count for ${config.type}: ${count}`);
         }
 
         setBoardData(prev => ({
@@ -409,16 +478,152 @@ export default function MondayIntegrationPage() {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, [setBoardConfigs, setBoardData, setError, setIsLoading]);
 
-  const loadAvailableBoards = async () => {
+  const loadAvailableBoards = useCallback(async () => {
     try {
       const response = await mondayBoardApi({ action: 'getAllBoards' });
-      if (response?.data?.success) {
-        setAvailableBoards(response.data.boards || []);
+      const data = response?.data;
+
+      if (data?.rate_limited) {
+        console.warn('Rate limited when loading boards. Retry after seconds:', data?.retry_after_seconds || 15);
+        setError(`המערכת עמוסה (Rate Limit). נסה שוב בעוד ~${data?.retry_after_seconds || 15} שניות.`);
+        return;
+      }
+
+      if (data?.forbidden) {
+        setError('גישה ל-Monday נחסמה (403). בדוק את מפתח ה-API והרשאות הלוח.');
+        return;
+      }
+
+      if (data?.success) {
+        setAvailableBoards(data.boards || []);
+      } else if (data?.error) {
+        setError(data.error);
       }
     } catch (error) {
       console.error("Error loading available boards:", error);
+      setError('שגיאה בטעינת רשימת לוחות מ-Monday');
+    }
+  }, [setAvailableBoards, setError]);
+
+  const loadPageData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null); // Clear previous errors on reload
+    await Promise.all([
+      loadData(),
+      loadAvailableBoards()
+    ]);
+    setIsLoading(false);
+  }, [loadData, loadAvailableBoards, setIsLoading]);
+
+  useEffect(() => {
+    loadPageData();
+  }, [loadPageData]);
+
+  const handleAddServicesColumn = async () => {
+    if (!window.confirm('האם להוסיף עמודת "שירותים" ללוח הלקוחות?')) {
+      return;
+    }
+
+    setIsAddingColumn(true);
+    setAddColumnResult(null);
+    
+    try {
+      const response = await mondayApi({
+        action: 'addColumnToBoard',
+        boardId: '1923441265', // CLIENTS_BOARD_ID (this ID must be correct for the specific monday.com account)
+        columnTitle: 'שירותים',
+        columnType: 'dropdown',
+        columnSettings: JSON.stringify({
+          labels: {
+            0: "הנהלת חשבונות מלאה",
+            1: "שכר",
+            2: "מאזנים שנתיים",
+            3: "דוחות מיוחדים",
+            4: "ייעוץ",
+            5: "דיווחי מע״מ",
+            6: "מקדמות מס",
+            7: "התאמות חשבונות",
+            8: "שליחת תלושי שכר לעובדים",
+            9: "העלאת מס״ב עובדים",
+            10: "שליחת דוח אחיד למתפעל",
+            11: "העלאת מס״ב סוציאליות",
+            12: "שידור אחיד באמצעות טמל",
+            13: "העלאת תשלומי רשויות לבנק",
+            14: "סגירה ל-PNL"
+          }
+        })
+      });
+      
+      if (response.data.success) {
+        setAddColumnResult({
+          type: 'success',
+          message: `✅ עמודת "שירותים" נוספה בהצלחה ללוח הלקוחות עם 15 סוגי שירותים!`,
+          columnId: response.data.column.id
+        });
+      } else {
+        setAddColumnResult({
+          type: 'error',
+          message: 'שגיאה בהוספת העמודה'
+        });
+      }
+    } catch (error) {
+      console.error("Error adding column:", error);
+      setAddColumnResult({
+        type: 'error',
+        message: `שגיאה: ${error?.response?.data?.error || error.message}`
+      });
+    } finally {
+      setIsAddingColumn(false);
+    }
+  };
+
+  const handleCreateMonthlyBoards = async () => {
+    if (selectedProcessTypes.length === 0) {
+      alert('יש לבחור לפחות סוג תהליך אחד');
+      return;
+    }
+    const typeLabels = { reports: 'דיווחים', reconciliations: 'התאמות', balance_sheets: 'מאזנים' };
+    const selectedLabels = selectedProcessTypes.map(t => typeLabels[t]).join(', ');
+    const totalBoards = selectedProcessTypes.length * 12;
+
+    if (!window.confirm(`האם ליצור ${totalBoards} לוחות חודשיים (${selectedLabels}) עבור שנת ${monthlyBoardsYear}?`)) {
+      return;
+    }
+
+    setIsCreatingMonthlyBoards(true);
+    setMonthlyBoardsResult(null);
+
+    try {
+      const response = await mondayApi({
+        action: 'createMonthlyBoards',
+        year: monthlyBoardsYear,
+        processTypes: selectedProcessTypes
+      });
+
+      if (response.data.success) {
+        setMonthlyBoardsResult({
+          type: 'success',
+          message: `נוצרו ${response.data.createdBoards.length} לוחות חודשיים לשנת ${response.data.year}!`,
+          boards: response.data.createdBoards.map(b => ({ month: b.month, monthName: b.monthName, processType: b.processType }))
+        });
+
+        await loadData();
+      } else {
+        setMonthlyBoardsResult({
+          type: 'error',
+          message: 'שגיאה ביצירת לוחות חודשיים'
+        });
+      }
+    } catch (error) {
+      console.error("Error creating monthly boards:", error);
+      setMonthlyBoardsResult({
+        type: 'error',
+        message: `שגיאה: ${error?.response?.data?.error || error.message}`
+      });
+    } finally {
+      setIsCreatingMonthlyBoards(false);
     }
   };
 
@@ -445,7 +650,6 @@ export default function MondayIntegrationPage() {
         // Important: Update local state with the new database ID
         setBoardConfigs(prev => prev.map(c => c.type === board.type ? { ...c, id: newBoard.id } : c));
       }
-      console.log(`[UI] Config for ${board.type} saved successfully before sync.`);
     } catch (error) {
       console.error("Error saving board config before sync:", error);
       setError(`שגיאה בשמירת הגדרות לפני סנכרון: ${error.message}`);
@@ -453,7 +657,6 @@ export default function MondayIntegrationPage() {
     }
     // End New Save Logic
 
-    console.log(`[UI] 🔄 Starting sync for ${board.type} (${board.monday_board_id})`);
     setSyncStatuses(prev => ({ ...prev, [board.type]: 'syncing' }));
     setLogs(prev => ({ ...prev, [board.type]: [`[${new Date().toLocaleTimeString('he-IL')}] מתחיל סנכרון...`] }));
     setError(null);
@@ -482,7 +685,6 @@ export default function MondayIntegrationPage() {
         response = { data: { success: true, created: [], updated: [], skipped:[], errors:[], log: [`אין פונקציית סנכרון ללוח מסוג '${board.type}'`] } };
       }
 
-      console.log(`[UI] ✅ Sync response for ${board.type}:`, response);
       setLogs(prev => ({ ...prev, [board.type]: response.data.log || ['לא התקבל יומן מהשרת.'] }));
 
       if (response?.data?.success) {
@@ -574,7 +776,6 @@ export default function MondayIntegrationPage() {
         // Important: Update local state with the new database ID
         setBoardConfigs(prev => prev.map(c => c.type === board.type ? { ...c, id: newBoard.id } : c));
       }
-      console.log(`[UI] Config for ${board.type} saved successfully before purge and resync.`);
     } catch (error) {
       console.error("Error saving board config before purge and resync:", error);
       setError(`שגיאה בשמירת הגדרות לפני סנכרון: ${error.message}`);
@@ -582,7 +783,6 @@ export default function MondayIntegrationPage() {
     }
     // End New Save Logic
 
-    console.log(`[UI] 🔄 Starting PURGE AND RESYNC for ${board.type} (${board.monday_board_id})`);
     setSyncStatuses(prev => ({ ...prev, [board.type]: 'syncing' }));
     setLogs(prev => ({ ...prev, [board.type]: [`[${new Date().toLocaleTimeString('he-IL')}] מתחיל מחיקה וסנכרון מחדש...`] }));
     setError(null);
@@ -590,7 +790,6 @@ export default function MondayIntegrationPage() {
     try {
         const response = await mondayApi({ action: 'purgeAndResync', boardId: board.monday_board_id, type: board.type });
 
-        console.log(`[UI] ✅ Purge and Resync response for ${board.type}:`, response);
         setLogs(prev => ({ ...prev, [board.type]: response.data.log || ['לא התקבל יומן מהשרת.'] }));
 
         if (response?.data?.success) {
@@ -664,7 +863,6 @@ export default function MondayIntegrationPage() {
       return;
     }
 
-    console.log('[UI] 🚀 Starting sync for all boards using bulk sync');
     setIsLoading(true);
     setError(null);
 
@@ -714,7 +912,6 @@ export default function MondayIntegrationPage() {
         
         alert(message);
 
-        console.log('[UI] 📊 Bulk sync results:', results);
         await loadData();
         setLastSyncTime(new Date());
       } else {
@@ -752,6 +949,120 @@ export default function MondayIntegrationPage() {
       setError(`שגיאה בניקוי: ${error.message}`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCreateReportsForMonth = async () => {
+    setIsCreatingReports(true);
+    setError(null);
+    try {
+      const response = await mondayReportsAutomation({ targetYear: reportYear, targetMonth: reportMonth });
+      const res = response?.data;
+      if (res?.success) {
+        alert(res.message || `נוצרו דיווחים לחודש ${String(reportMonth).padStart(2,'0')}.${reportYear}`);
+        setLastSyncTime(new Date());
+      } else {
+        throw new Error(res?.error || 'שגיאה לא ידועה ביצירת דיווחים');
+      }
+    } catch (err) {
+      console.error('Create reports error:', err);
+      setError(`שגיאה ביצירת דיווחים: ${err?.response?.data?.error || err.message}`);
+    } finally {
+      setIsCreatingReports(false);
+    }
+  };
+
+  // סנכרון מהיר של לקוחות מלוח Monday לפי Board ID
+  const handleQuickClientSync = async () => {
+    if (!quickClientBoardId || String(quickClientBoardId).trim() === "") {
+      alert("אנא הזן Board ID של לוח הלקוחות ב-Monday");
+      return;
+    }
+    setIsQuickSyncing(true);
+    setError(null);
+    setLogs(prev => ({ 
+      ...prev, 
+      clients: [...(prev.clients || []), `[${new Date().toLocaleTimeString('he-IL')}] מתחיל סנכרון לקוחות מלוח ${quickClientBoardId}...`] 
+    }));
+
+    try {
+      const response = await mondayApi({ action: 'syncClients', boardId: String(quickClientBoardId).trim() });
+
+      if (response?.data?.success) {
+        const created = response?.data?.created || 0;
+        const updated = response?.data?.updated || 0;
+        setLogs(prev => ({ 
+          ...prev, 
+          clients: [...(prev.clients || []), `הסתיים: נוצרו ${created}, עודכנו ${updated}`] 
+        }));
+        alert(`סנכרון הושלם בהצלחה!\nנוצרו: ${created}\nעודכנו: ${updated}`);
+        await loadData();
+      } else {
+        const msg = response?.data?.error || 'שגיאה לא ידועה בסנכרון';
+        setLogs(prev => ({ 
+          ...prev, 
+          clients: [...(prev.clients || []), `שגיאה: ${msg}`] 
+        }));
+        setError(`שגיאה בסנכרון לקוחות: ${msg}`);
+        alert(`שגיאה בסנכרון: ${msg}`);
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.message || 'שגיאה לא ידועה';
+      setLogs(prev => ({ 
+        ...prev, 
+        clients: [...(prev.clients || []), `שגיאה קריטית: ${msg}`] 
+      }));
+      setError(`שגיאה בסנכרון לקוחות: ${msg}`);
+      alert(`שגיאה בסנכרון: ${msg}`);
+    } finally {
+      setIsQuickSyncing(false);
+    }
+  };
+
+  const handleReverseSyncAll = async () => {
+    if (!window.confirm('האם לבצע סנכרון הפוך (CalmPlan → Monday) לכל הלוחות הפעילים?')) return;
+    setIsReverseSyncing(true);
+    setError(null);
+    try {
+      const response = await mondayApi({ action: 'reverseSyncAllBoards' });
+      const data = response?.data;
+      if (data?.success) {
+        const updated = data.totalUpdated || 0;
+        const skipped = data.totalSkipped || 0;
+        alert(`סנכרון הפוך הושלם!\nעודכנו ${updated} פריטים ב-Monday\nדולגו ${skipped}`);
+        setLastSyncTime(new Date());
+      } else {
+        throw new Error(data?.error || 'כשל בסנכרון הפוך');
+      }
+    } catch (e) {
+      setError(`שגיאה בסנכרון הפוך: ${e?.response?.data?.error || e.message}`);
+    } finally {
+      setIsReverseSyncing(false);
+    }
+  };
+
+  // ניקוי מטמון מקומי (בטוח): מוחק רק נתוני דפדפן לא-קריטיים
+  const handleClearLocalCache = () => {
+    try {
+      const lsKeys = Object.keys(localStorage);
+      lsKeys.forEach(k => {
+        const lower = k.toLowerCase();
+        if (lower.includes('monday') || lower.includes('calmplan') || lower.includes('cache')) {
+          localStorage.removeItem(k);
+        }
+      });
+      const ssKeys = Object.keys(sessionStorage);
+      ssKeys.forEach(k => {
+        const lower = k.toLowerCase();
+        if (lower.includes('monday') || lower.includes('calmplan') || lower.includes('cache')) {
+          sessionStorage.removeItem(k);
+        }
+      });
+      // אפס לוגים ממסך האינטגרציה (UI בלבד)
+      setLogs({});
+      alert('מטמון מקומי נוקה בהצלחה (local/session storage). אין השפעה על נתוני השרת.');
+    } catch (e) {
+      alert('שגיאה בניקוי מטמון: ' + (e?.message || e));
     }
   };
 
@@ -815,6 +1126,11 @@ export default function MondayIntegrationPage() {
         )}
       </AnimatePresence>
 
+      {/* Token Configuration */}
+      <div className="max-w-3xl mx-auto w-full">
+        <TokenConfig onTokenSaved={() => loadPageData()} />
+      </div>
+
       {/* Summary Cards */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -842,7 +1158,7 @@ export default function MondayIntegrationPage() {
           <CardContent className="p-4 text-center">
             <Clock className="w-8 h-8 text-orange-500 mx-auto mb-2" />
             <p className="text-2xl font-bold">
-              {lastSyncTime ? lastSyncTime.toLocaleTimeString('he-IL', { 
+              {lastSyncTime ? lastSyncTime.toLocaleString('he-IL', { 
                 hour: '2-digit', 
                 minute: '2-digit',
                 day: '2-digit',
@@ -870,11 +1186,379 @@ export default function MondayIntegrationPage() {
           variant="destructive"
           size="lg"
           disabled={isLoading}
-          className="bg-red-600 hover:bg-red-700"
+          className="bg-amber-600 hover:bg-amber-700"
         >
           <AlertTriangle className="w-5 h-5 ml-2" />
           ניקוי דחוף - מחק כפילויות
         </Button>
+
+        <Button
+          onClick={handleReverseSyncAll}
+          variant="outline"
+          size="lg"
+          disabled={isReverseSyncing || isLoading}
+        >
+          <Upload className={`w-5 h-5 ml-2 ${isReverseSyncing ? 'animate-pulse' : ''}`} />
+          {isReverseSyncing ? 'מעלה ל-Monday...' : 'סנכרון הפוך ל-Monday'}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={handleClearLocalCache}
+          disabled={isLoading}
+        >
+          נקה מטמון
+        </Button>
+      </div>
+
+      {/* Add Services Column Section */}
+      <div className="max-w-3xl mx-auto w-full">
+        <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+          <CardContent className="p-6 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Plus className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-green-900">הוספת עמודת שירותים ללוח לקוחות</h3>
+                <p className="text-sm text-green-700">הוסף עמודת Dropdown עם 15 סוגי שירותים לבחירה</p>
+              </div>
+            </div>
+
+            {addColumnResult && (
+              <div className={`p-4 rounded-lg border ${
+                addColumnResult.type === 'success' 
+                  ? 'bg-green-50 border-green-200 text-green-800' 
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}>
+                <div className="flex items-start gap-2">
+                  {addColumnResult.type === 'success' ? (
+                    <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p className="font-medium">{addColumnResult.message}</p>
+                    {addColumnResult.columnId && (
+                      <p className="text-sm mt-1">Column ID: {addColumnResult.columnId}</p>
+                    )}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setAddColumnResult(null)}
+                    className="flex-shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-green-100/50 p-3 rounded-lg">
+              <p className="text-sm text-green-800 font-semibold mb-2">
+                השירותים שיתווספו (15 סוגים):
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-green-700">
+                <div className="space-y-1">
+                  <p className="font-medium text-green-800">שירותים כלליים:</p>
+                  <ul className="mr-4 space-y-0.5">
+                    <li>• הנהלת חשבונות מלאה</li>
+                    <li>• שכר</li>
+                    <li>• מאזנים שנתיים</li>
+                    <li>• דוחות מיוחדים</li>
+                    <li>• ייעוץ</li>
+                    <li>• דיווחי מע״מ</li>
+                    <li>• מקדמות מס</li>
+                  </ul>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-green-800">שירותי שכר ודיווח:</p>
+                  <ul className="mr-4 space-y-0.5">
+                    <li>• התאמות חשבונות</li>
+                    <li>• שליחת תלושי שכר לעובדים</li>
+                    <li>• העלאת מס״ב עובדים</li>
+                    <li>• שליחת דוח אחיד למתפעל</li>
+                    <li>• העלאת מס״ב סוציאליות</li>
+                    <li>• שידור אחיד באמצעות טמל</li>
+                    <li>• העלאת תשלומי רשויות לבנק</li>
+                    <li>• סגירה ל-PNL</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleAddServicesColumn}
+              disabled={isAddingColumn}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              size="lg"
+            >
+              {isAddingColumn ? (
+                <>
+                  <RefreshCw className="w-5 h-5 ml-2 animate-spin" />
+                  מוסיף עמודה...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5 ml-2" />
+                  הוסף עמודת שירותים (15 סוגים)
+                </>
+              )}
+            </Button>
+
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+              <p className="text-sm text-amber-800 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong>שים לב:</strong> פעולה זו תוסיף עמודה חדשה ללוח הלקוחות ב-Monday.com 
+                  עם 15 סוגי שירותים. תוכל לבחור מספר שירותים לכל לקוח (multi-select).
+                </span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Create Monthly Boards Section */}
+      <div className="max-w-3xl mx-auto w-full">
+        <Card className="mt-6 border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50">
+          <CardContent className="p-6 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-indigo-900">יצירת לוחות חודשיים</h3>
+                <p className="text-sm text-indigo-700">צור 12 לוחות חדשים לכל סוג תהליך - אחד לכל חודש בשנה</p>
+              </div>
+            </div>
+
+            {monthlyBoardsResult && (
+              <div className={`p-4 rounded-lg border ${
+                monthlyBoardsResult.type === 'success'
+                  ? 'bg-green-50 border-green-200 text-green-800'
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}>
+                <div className="flex items-start gap-2">
+                  {monthlyBoardsResult.type === 'success' ? (
+                    <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p className="font-medium mb-2">{monthlyBoardsResult.message}</p>
+
+                    {monthlyBoardsResult.boards && monthlyBoardsResult.boards.length > 0 && (
+                      <div className="mt-3 space-y-1">
+                        <p className="text-sm font-semibold">לוחות שנוצרו:</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                          {monthlyBoardsResult.boards.map((board, index) => (
+                            <div key={index} className="bg-white/50 p-2 rounded">
+                              {board.monthName} {board.processType && board.processType !== 'reports' ? `(${board.processType === 'reconciliations' ? 'התאמות' : 'מאזנים'})` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMonthlyBoardsResult(null)}
+                    className="flex-shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="text-sm font-medium text-indigo-800 mb-2 block">סוגי תהליכים ליצירה</label>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { value: 'reports', label: 'דיווחים', desc: 'שכר, מע"מ, מקדמות' },
+                  { value: 'reconciliations', label: 'התאמות', desc: 'בנק וסליקה' },
+                  { value: 'balance_sheets', label: 'מאזנים', desc: 'דוחות שנתיים' },
+                ].map(pt => (
+                  <label key={pt.value} className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                    selectedProcessTypes.includes(pt.value)
+                      ? 'border-indigo-400 bg-indigo-100'
+                      : 'border-gray-200 bg-white hover:border-indigo-200'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedProcessTypes.includes(pt.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedProcessTypes(prev => [...prev, pt.value]);
+                        } else {
+                          setSelectedProcessTypes(prev => prev.filter(t => t !== pt.value));
+                        }
+                      }}
+                      className="w-4 h-4 text-indigo-600"
+                    />
+                    <div>
+                      <span className="font-medium text-sm">{pt.label}</span>
+                      <span className="text-xs text-gray-500 block">{pt.desc}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+              <div>
+                <label className="text-sm font-medium text-indigo-800 mb-2 block">
+                  שנה ליצירת לוחות
+                </label>
+                <Input
+                  type="number"
+                  min={2024}
+                  max={2030}
+                  value={monthlyBoardsYear}
+                  onChange={(e) => setMonthlyBoardsYear(Number(e.target.value))}
+                  className="h-10 bg-white"
+                />
+              </div>
+              <Button
+                onClick={handleCreateMonthlyBoards}
+                disabled={isCreatingMonthlyBoards || selectedProcessTypes.length === 0}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white h-10"
+                size="lg"
+              >
+                {isCreatingMonthlyBoards ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 ml-2 animate-spin" />
+                    יוצר לוחות...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5 ml-2" />
+                    צור {selectedProcessTypes.length * 12} לוחות חדשים
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="bg-indigo-100/50 p-3 rounded-lg">
+              <p className="text-sm text-indigo-800 flex items-start gap-2">
+                <span className="font-bold text-lg">💡</span>
+                <span>
+                  פעולה זו תיצור {selectedProcessTypes.length * 12} לוחות חדשים ב-Monday.com (ינואר-דצמבר {monthlyBoardsYear}),
+                  כולל כל העמודות הנדרשות לכל סוג תהליך.
+                  הלוחות יישמרו אוטומטית במערכת CalmPlan.
+                </span>
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+              <p className="text-sm text-amber-800 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong>חשוב:</strong> לאחר יצירת הלוחות, תוכל לעבור ל-Monday.com ולבצע Move של משימות 
+                  מהלוח הישן ללוחות החדשים. המערכת תזהה אוטומטית את הלוח החודשי המתאים לכל דיווח חדש.
+                </span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* סנכרון מהיר ללוח לקוחות לפי Board ID */}
+      <div className="max-w-3xl mx-auto w-full">
+        <Card className="mt-2">
+          <CardContent className="p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Users className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">סנכרון מהיר - לקוחות</h3>
+                <p className="text-sm text-muted-foreground">סנכרן לקוחות מלוח Monday לפי Board ID, ללא הגדרות נוספות.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+              <div>
+                <label className="text-xs text-gray-600">Board ID של לוח הלקוחות</label>
+                <Input
+                  placeholder="למשל: 1923441265"
+                  value={quickClientBoardId}
+                  onChange={(e) => setQuickClientBoardId(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleQuickClientSync}
+                  disabled={isQuickSyncing || !quickClientBoardId}
+                  className="w-full sm:w-auto"
+                >
+                  <RefreshCw className={`w-4 h-4 ml-2 ${isQuickSyncing ? 'animate-spin' : ''}`} />
+                  {isQuickSyncing ? 'מסנכרן...' : 'סנכרן לקוחות'}
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              טיפ: אם תרצה לשמור את הלוח הזה כ"לוח לקוחות" קבוע במערכת – ערוך את הכרטיס של "לוח לקוחות" למעלה ושמור את ה-Board ID שם.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* כפתור יצירת דיווחים לחודש נבחר (MDAY) */}
+      <div className="max-w-3xl mx-auto w-full">
+        <Card className="mt-6">
+          <CardContent className="p-4 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">יצירת דיווחים חודשיים ל-Monday</h3>
+                <p className="text-sm text-muted-foreground">בחר חודש ושנה ולחץ על הכפתור ליצירת משימות דיווח בקבוצת החודש</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+              <div>
+                <label className="text-xs text-gray-600">חודש</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={reportMonth}
+                  onChange={(e) => setReportMonth(Math.max(1, Math.min(12, Number(e.target.value) || 1)))}
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600">שנה</label>
+                <Input
+                  type="number"
+                  min={2023}
+                  max={2030}
+                  value={reportYear}
+                  onChange={(e) => setReportYear(Math.max(2023, Math.min(2030, Number(e.target.value) || 2025)))}
+                  className="h-9"
+                />
+              </div>
+              <div className="col-span-2">
+                <Button
+                  onClick={handleCreateReportsForMonth}
+                  disabled={isCreatingReports}
+                  className="w-full sm:w-auto"
+                >
+                  <Calendar className={`w-4 h-4 ml-2 ${isCreatingReports ? 'animate-spin' : ''}`} />
+                  {isCreatingReports ? 'יוצר דיווחים...' : `צור דיווחים לחודש ${String(reportMonth).padStart(2,'0')}.${reportYear}`}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Board Cards */}

@@ -467,7 +467,7 @@ export default function LifeSettingsPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => removeMealTime(index)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-amber-500 hover:text-amber-700"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -529,7 +529,7 @@ export default function LifeSettingsPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => removeBreakReminder(index)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-amber-500 hover:text-amber-700"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -609,7 +609,7 @@ export default function LifeSettingsPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => removeDayOff(date)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-amber-500 hover:text-amber-700"
                     >
                       <X className="w-4 h-4" />
                     </Button>

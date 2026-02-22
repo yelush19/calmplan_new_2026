@@ -8,6 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Filter, Users, Calendar as CalendarIcon } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { he } from "date-fns/locale";
+import { STATUS_CONFIG } from '@/config/processTemplates';
 
 export default function TaskFilters({ filters, setFilters, context, clients }) {
   const handleFilterChange = (type, value) => {
@@ -45,17 +46,9 @@ export default function TaskFilters({ filters, setFilters, context, clients }) {
 
   const currentCategories = context === 'work' ? workCategories : homeCategories;
 
-  const statusOptions = [
-    { value: 'not_started', label: 'ממתין לתחילת עבודה' },
-    { value: 'waiting_for_materials', label: 'ממתין לחומרים' },
-    { value: 'in_progress', label: 'בעבודה' },
-    { value: 'issue', label: 'בעיה' },
-    { value: 'waiting_for_approval', label: 'לבדיקה' },
-    { value: 'ready_for_reporting', label: 'מוכן לדיווח' },
-    { value: 'reported_waiting_for_payment', label: 'ממתין לתשלום' },
-    { value: 'completed', label: 'דווח ושולם' },
-    { value: 'postponed', label: 'נדחה' },
-  ];
+  const statusOptions = Object.entries(STATUS_CONFIG)
+    .filter(([k]) => k !== 'issues')
+    .map(([value, cfg]) => ({ value, label: cfg.label }));
 
   return (
     <div className="flex flex-wrap gap-4 p-6 bg-white rounded-xl shadow-sm border border-gray-100">
