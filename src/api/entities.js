@@ -27,6 +27,7 @@ export const TaxReport2025 = createSupabaseEntity('TaxReport2025');
 export const TaxReport2024 = createSupabaseEntity('TaxReport2024');
 export const WeeklyTask = createSupabaseEntity('WeeklyTask');
 export const BalanceSheet = createSupabaseEntity('BalanceSheet');
+export const StickyNote = createSupabaseEntity('StickyNote');
 
 // auth sdk (still local - no Supabase auth for now):
 export const User = auth;

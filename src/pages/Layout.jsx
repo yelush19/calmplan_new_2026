@@ -16,6 +16,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import FloatingActionHub from "@/components/floating/FloatingActionHub";
 
 const navigationGroups = [
   {
@@ -372,6 +373,9 @@ export default function Layout({ children, currentPageName }) {
         </main>
       </div>
        {isMobileMenuOpen && <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)}></div>}
+
+      {/* Floating Action Hub - always visible on ALL pages (Quick-Add + Sticky Notes) */}
+      <FloatingActionHub />
     </div>
   );
 }
