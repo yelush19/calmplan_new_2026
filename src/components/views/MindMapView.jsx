@@ -7,6 +7,8 @@ import { he } from 'date-fns/locale';
 import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Task } from '@/api/entities';
 import { toast } from 'sonner';
+import { computeComplexityTier, getBubbleRadius, getTierInfo } from '@/lib/complexity';
+import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 
 // ─── Zero-Panic Palette (NO RED) ────────────────────────────────
 const ZERO_PANIC = {
@@ -57,17 +59,29 @@ const BRANCH_CONFIG = {
   'אחר':         { color: '#607D8B', icon: '📁', label: 'Other' },
 };
 
-// ─── Node Scaling by Complexity (base sizes, scaled up for wide screens in layout) ──
-const SIZE_MAP = { S: 30, M: 50, L: 80 };
-const SIZE_MAP_WIDE = { S: 40, M: 65, L: 100 };
+// ─── Node Scaling by Complexity Tier (3:1 ratio from Enterprise to Nano) ──
+// Base radius: tier 0 (Nano) = 22px → tier 3 (Complex) = 66px  (3:1)
+// Wide screen base: 30px → tier 3 = 90px
+const BASE_RADIUS = 22;
+const BASE_RADIUS_WIDE = 30;
 
-function estimateSize(client, tasks) {
-  if (client?.size) return client.size;
-  const services = client?.service_types?.length || 0;
-  const taskCount = tasks.filter(t => t.client_name === client?.name).length;
-  if (services >= 4 || taskCount >= 8) return 'L';
-  if (services >= 2 || taskCount >= 3) return 'M';
-  return 'S';
+// Legacy S/M/L kept for tooltip display only
+const SIZE_LABELS = { 0: 'ננו', 1: 'פשוט', 2: 'בינוני', 3: 'מורכב' };
+
+function getComplexityTier(client, tasks) {
+  // If client entity available, use full computation (respects manual override)
+  if (client) return computeComplexityTier(client);
+  // Fallback: estimate from task count when no client entity
+  const taskCount = tasks.length;
+  if (taskCount >= 8) return 3;
+  if (taskCount >= 4) return 2;
+  if (taskCount >= 2) return 1;
+  return 0;
+}
+
+function getNodeRadius(tier, isWide = false) {
+  const base = isWide ? BASE_RADIUS_WIDE : BASE_RADIUS;
+  return getBubbleRadius(tier, base);
 }
 
 function getNodeColor(task) {
@@ -99,7 +113,7 @@ function getNodeColor(task) {
  */
 function getClientAggregateState(clientTasks) {
   if (!clientTasks || clientTasks.length === 0) {
-    return { color: ZERO_PANIC.gray, shouldPulse: false, completionRatio: 0 };
+    return { color: ZERO_PANIC.gray, shouldPulse: false, completionRatio: 0, statusRing: 0 };
   }
 
   const today = new Date();
@@ -110,12 +124,13 @@ function getClientAggregateState(clientTasks) {
   const total = active.length;
   const completionRatio = total > 0 ? completed / total : 0;
 
-  // All completed = green (shrink effect handled in rendering)
+  // All completed = green (ADHD Focus: pushed to edges, statusRing 0 = outermost)
   if (total > 0 && completed === total) {
-    return { color: ZERO_PANIC.green, shouldPulse: false, completionRatio: 1 };
+    return { color: ZERO_PANIC.green, shouldPulse: false, completionRatio: 1, statusRing: 0 };
   }
 
   // Priority: overdue > due today > pending_external > ready_for_reporting > active
+  // statusRing: higher = closer to center (ADHD Focus)
   const hasOverdue = clientTasks.some(t => {
     if (t.status === 'completed' || t.status === 'not_relevant') return false;
     if (!t.due_date) return false;
@@ -123,7 +138,7 @@ function getClientAggregateState(clientTasks) {
     due.setHours(23, 59, 59, 999);
     return due < today;
   });
-  if (hasOverdue) return { color: ZERO_PANIC.purple, shouldPulse: true, completionRatio };
+  if (hasOverdue) return { color: ZERO_PANIC.purple, shouldPulse: true, completionRatio, statusRing: 4 };
 
   const hasDueToday = clientTasks.some(t => {
     if (t.status === 'completed' || t.status === 'not_relevant') return false;
@@ -132,22 +147,22 @@ function getClientAggregateState(clientTasks) {
     dueDay.setHours(0, 0, 0, 0);
     return dueDay.getTime() === today.getTime();
   });
-  if (hasDueToday) return { color: ZERO_PANIC.orange, shouldPulse: false, completionRatio };
+  if (hasDueToday) return { color: ZERO_PANIC.orange, shouldPulse: false, completionRatio, statusRing: 4 };
 
-  // Pending external = blue (ball is not in Lena's court)
+  // Pending external = blue (ball is not in Lena's court) - mid ring
   const hasPendingExternal = clientTasks.some(t => t.status === 'pending_external');
-  if (hasPendingExternal) return { color: '#1565C0', shouldPulse: false, completionRatio };
+  if (hasPendingExternal) return { color: '#1565C0', shouldPulse: false, completionRatio, statusRing: 1 };
 
-  // Ready for reporting = indigo/amber glow
+  // Ready for reporting = AMBER GLOW (ADHD Focus: pull toward center)
   const hasReadyForReporting = clientTasks.some(t => t.status === 'ready_for_reporting');
-  if (hasReadyForReporting) return { color: ZERO_PANIC.amber, shouldPulse: false, completionRatio };
+  if (hasReadyForReporting) return { color: ZERO_PANIC.amber, shouldPulse: false, completionRatio, isFilingReady: true, statusRing: 3 };
 
   const hasActive = clientTasks.some(t =>
     t.status !== 'completed' && t.status !== 'not_relevant'
   );
-  if (hasActive) return { color: ZERO_PANIC.blue, shouldPulse: false, completionRatio };
+  if (hasActive) return { color: ZERO_PANIC.blue, shouldPulse: false, completionRatio, statusRing: 2 };
 
-  return { color: ZERO_PANIC.green, shouldPulse: false, completionRatio };
+  return { color: ZERO_PANIC.green, shouldPulse: false, completionRatio, statusRing: 0 };
 }
 
 // Backwards-compatible wrapper
@@ -210,18 +225,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       catClientMap[cat][clientName].push(task);
     });
 
-    // Build branch data
+    // Build branch data with complexity-tier sizing
     const branches = Object.entries(catClientMap).map(([category, clientsObj]) => ({
       category,
       config: BRANCH_CONFIG[category] || BRANCH_CONFIG['אחר'],
       clients: Object.entries(clientsObj).map(([name, clientTasks]) => {
         const client = clients?.find(c => c.name === name);
-        const size = estimateSize(client, tasks);
+        const tier = getComplexityTier(client, clientTasks);
+        const tierInfo = getTierInfo(tier);
         return {
           name,
           clientId: client?.id,
-          size,
-          radius: size, // resolved to px in layout useMemo
+          tier,
+          tierLabel: tierInfo.label,
+          tierIcon: tierInfo.icon,
           ...getClientAggregateState(clientTasks),
           tasks: clientTasks,
           totalTasks: clientTasks.length,
@@ -248,45 +265,69 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     return { branches, clientNodes, centerLabel };
   }, [tasks, clients]);
 
-  // ── Layout Calculation (uses a large virtual canvas so nothing is clipped) ──
+  // ── Layout Calculation: Complexity + ADHD Focus + Collision Detection + 27" Optimization ──
   const layout = useMemo(() => {
-    // Use a generous virtual canvas so branches are never cropped
-    const virtualW = Math.max(dimensions.width, 1400);
-    const virtualH = Math.max(dimensions.height, 900);
+    // 27" monitor optimization: generous virtual canvas for 2560x1440+
+    const isWide = dimensions.width >= 1800;
+    const virtualW = Math.max(dimensions.width, isWide ? 2200 : 1400);
+    const virtualH = Math.max(dimensions.height, isWide ? 1200 : 900);
     const cx = virtualW / 2;
     const cy = virtualH / 2;
-    const centerR = 65;
+    const centerR = isWide ? 75 : 65;
 
-    // Use elliptical distances that exploit wide screens
-    const sizeMap = SIZE_MAP_WIDE;
-    const scaleX = virtualW * 0.34;
-    const scaleY = virtualH * 0.32;
-    const leafDistance = Math.max(scaleX, scaleY) * 0.65;
+    // Elliptical scaling optimized for wide monitors
+    const scaleX = virtualW * (isWide ? 0.36 : 0.34);
+    const scaleY = virtualH * (isWide ? 0.34 : 0.32);
+    const baseLeafDist = Math.max(scaleX, scaleY) * 0.65;
 
     const angleStep = (2 * Math.PI) / Math.max(branches.length, 1);
 
+    // ─── Phase 1: Position all nodes ───
+    const allClientNodes = []; // collect for collision detection
+
     const branchPositions = branches.map((branch, i) => {
       const angle = i * angleStep - Math.PI / 2;
-      // Elliptical positioning: branches spread wider horizontally
       const bx = cx + Math.cos(angle) * scaleX;
       const by = cy + Math.sin(angle) * scaleY;
 
-      // Spread clients around the branch node
       const clientCount = branch.clients.length;
       const clientAngleSpread = Math.min(Math.PI * 0.7, clientCount * 0.4);
-      const baseLeafDist = leafDistance * 1.1;
-      const clientPositions = branch.clients.map((client, j) => {
+
+      // Sort clients: filing-ready & urgent first (closer to branch), completed last (pushed out)
+      const sortedClients = [...branch.clients].sort((a, b) => (b.statusRing || 0) - (a.statusRing || 0));
+
+      const clientPositions = sortedClients.map((client, j) => {
         const clientAngle = angle + (j - (clientCount - 1) / 2) * (clientAngleSpread / Math.max(clientCount - 1, 1));
-        const dist = baseLeafDist + (j % 2) * 35; // stagger
-        const resolvedRadius = sizeMap[client.radius] || sizeMap.S;
-        return {
+
+        // ADHD Focus: distance from branch based on status
+        // statusRing 4 (overdue/due today) → closest (0.85x)
+        // statusRing 3 (filing ready) → close (0.90x)
+        // statusRing 2 (active) → normal (1.0x)
+        // statusRing 1 (external) → normal (1.0x)
+        // statusRing 0 (completed) → pushed OUT (1.35x)
+        const statusDistMultiplier = {
+          4: 0.85,  // Overdue / Due Today → pull in
+          3: 0.90,  // Filing Ready → pull in
+          2: 1.0,   // Active → normal
+          1: 1.0,   // External → normal
+          0: 1.35,  // Completed → push out
+        }[client.statusRing || 2] || 1.0;
+
+        const dist = (baseLeafDist * 1.1 + (j % 2) * 35) * statusDistMultiplier;
+
+        // Complexity-tier based radius (3:1 ratio)
+        const nodeRadius = getNodeRadius(client.tier, isWide);
+
+        const node = {
           ...client,
-          radius: resolvedRadius,
+          radius: nodeRadius,
           x: bx + Math.cos(clientAngle) * dist,
           y: by + Math.sin(clientAngle) * dist,
           branchX: bx,
           branchY: by,
         };
+        allClientNodes.push(node);
+        return node;
       });
 
       return {
@@ -298,7 +339,48 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       };
     });
 
-    return { cx, cy, centerR, branchPositions, virtualW, virtualH };
+    // ─── Phase 2: Collision Detection & Resolution ───
+    // Iterative push-apart: 5 passes to resolve overlaps
+    const MIN_GAP = 8; // minimum pixel gap between nodes
+    for (let pass = 0; pass < 5; pass++) {
+      let hadCollision = false;
+      for (let i = 0; i < allClientNodes.length; i++) {
+        for (let j = i + 1; j < allClientNodes.length; j++) {
+          const a = allClientNodes[i];
+          const b = allClientNodes[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = a.radius / 2 + b.radius / 2 + MIN_GAP;
+
+          if (dist < minDist && dist > 0) {
+            hadCollision = true;
+            const overlap = (minDist - dist) / 2;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            // Push apart equally
+            a.x -= nx * overlap;
+            a.y -= ny * overlap;
+            b.x += nx * overlap;
+            b.y += ny * overlap;
+          }
+        }
+      }
+      if (!hadCollision) break;
+    }
+
+    // Sync collision-resolved positions back to branchPositions
+    branchPositions.forEach(branch => {
+      branch.clientPositions.forEach(cp => {
+        const resolved = allClientNodes.find(n => n.name === cp.name && n.category === cp.category);
+        if (resolved) {
+          cp.x = resolved.x;
+          cp.y = resolved.y;
+        }
+      });
+    });
+
+    return { cx, cy, centerR, branchPositions, virtualW, virtualH, isWide };
   }, [branches, dimensions]);
 
   // ── Auto-Fit: compute zoom + pan to show all nodes ──
@@ -462,8 +544,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       total: client.totalTasks,
       completed: client.completedTasks,
       overdue: client.overdueTasks,
-      size: client.size,
+      tier: client.tier,
+      tierLabel: client.tierLabel,
+      tierIcon: client.tierIcon,
       color: client.color,
+      isFilingReady: client.isFilingReady,
     });
   }, []);
 
@@ -527,7 +612,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   const containerStyle = isFullscreen
     ? { background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' }
-    : { height: 'max(650px, calc(100vh - 340px))', background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' };
+    : { height: 'max(700px, calc(100vh - 280px))', background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' };
 
   return (
     <div
@@ -652,13 +737,24 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <span className="bg-white/25 rounded-full px-1.5 text-[10px]">{branch.clients.length}</span>
             </motion.div>
 
-            {/* ── Client Leaf Nodes ── */}
+            {/* ── Client Leaf Nodes (Complexity-Tier Sized) ── */}
             {branch.clientPositions.map((client, j) => {
               const isHovered = hoveredNode === client.name;
               const isAllDone = client.completionRatio === 1 && client.totalTasks > 0;
-              const nodeRadius = isAllDone ? Math.max(client.radius * 0.7, 20) : client.radius;
-              // Ghost Node: dashed border if missing due_date on all tasks or no explicit size
-              const isGhost = client.tasks.every(t => !t.due_date) || !clients?.find(c => c.name === client.name)?.size;
+              const isFilingReady = client.isFilingReady;
+              // Completed: shrink slightly + dim
+              const nodeRadius = isAllDone ? Math.max(client.radius * 0.7, 16) : client.radius;
+              // Ghost Node: dashed border if no due_date on all tasks
+              const isGhost = client.tasks.every(t => !t.due_date);
+
+              // ADHD Focus: Filing-ready gets strong amber glow
+              const amberGlow = isFilingReady
+                ? `0 0 24px ${ZERO_PANIC.amber}88, 0 0 48px ${ZERO_PANIC.amber}44`
+                : '';
+              const hoverGlow = `0 0 20px ${client.color}66, 0 4px 12px rgba(0,0,0,0.2)`;
+              const normalShadow = isFilingReady
+                ? `0 0 16px ${ZERO_PANIC.amber}66, 0 2px 6px rgba(0,0,0,0.12)`
+                : '0 2px 6px rgba(0,0,0,0.12)';
 
               return (
                 <motion.div
@@ -671,20 +767,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     left: client.x - nodeRadius / 2,
                     top: client.y - nodeRadius / 2,
                     backgroundColor: isGhost ? 'transparent' : client.color,
-                    borderColor: isGhost ? client.color : (isHovered ? '#fff' : client.color),
+                    borderColor: isGhost ? client.color : (isFilingReady ? ZERO_PANIC.amber : (isHovered ? '#fff' : client.color)),
                     borderStyle: isGhost ? 'dashed' : 'solid',
+                    borderWidth: isFilingReady ? 3 : 2,
                     color: isGhost ? client.color : '#fff',
-                    fontSize: nodeRadius < 40 ? '8px' : nodeRadius < 60 ? '10px' : '12px',
-                    boxShadow: isHovered
-                      ? `0 0 20px ${client.color}66, 0 4px 12px rgba(0,0,0,0.2)`
-                      : '0 2px 6px rgba(0,0,0,0.12)',
-                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.45 : 1) : 0.12,
-                    filter: isAllDone ? 'saturate(0.4)' : 'none',
-                    transition: 'opacity 0.4s ease-in-out, box-shadow 0.2s ease, border-color 0.2s ease, filter 0.4s ease',
+                    fontSize: nodeRadius < 30 ? '7px' : nodeRadius < 45 ? '9px' : nodeRadius < 65 ? '11px' : '13px',
+                    boxShadow: isHovered ? hoverGlow : normalShadow,
+                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.35 : 1) : 0.12,
+                    filter: isAllDone ? 'saturate(0.3) brightness(0.85)' : 'none',
+                    transition: 'opacity 0.4s ease-in-out, box-shadow 0.3s ease, border-color 0.2s ease, filter 0.4s ease',
                   }}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{
-                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.45 : 1) : 0.12,
+                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.35 : 1) : 0.12,
                     scale: 1,
                   }}
                   transition={{
@@ -693,14 +788,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     stiffness: 180,
                     damping: 14,
                   }}
-                  whileHover={{ scale: 1.3, zIndex: 50 }}
+                  whileHover={{ scale: 1.25, zIndex: 50 }}
                   onMouseEnter={(e) => handleClientHover(client, e.clientX, e.clientY)}
                   onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
                   onClick={(e) => { e.stopPropagation(); handleClientClick(client, e.clientX, e.clientY); }}
                   onDoubleClick={() => handleClientDoubleClick(client)}
-                  title={`${client.name} (${client.size})${isGhost ? ' [חסר תאריך/גודל]' : ''} - לחיצה לעריכה`}
+                  title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''} - לחיצה לעריכה`}
                 >
-                  {client.name?.substring(0, nodeRadius < 40 ? 2 : 4)}
+                  {client.name?.substring(0, nodeRadius < 35 ? 2 : nodeRadius < 55 ? 3 : 4)}
                   {/* Completion ring */}
                   {client.totalTasks > 0 && (
                     <svg
@@ -715,15 +810,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         r={nodeRadius / 2 - 2}
                         fill="none"
                         stroke="rgba(255,255,255,0.3)"
-                        strokeWidth={2}
+                        strokeWidth={isFilingReady ? 3 : 2}
                       />
                       <circle
                         cx={nodeRadius / 2}
                         cy={nodeRadius / 2}
                         r={nodeRadius / 2 - 2}
                         fill="none"
-                        stroke="rgba(255,255,255,0.8)"
-                        strokeWidth={2}
+                        stroke={isFilingReady ? ZERO_PANIC.amber : 'rgba(255,255,255,0.8)'}
+                        strokeWidth={isFilingReady ? 3 : 2}
                         strokeDasharray={`${(client.completedTasks / client.totalTasks) * Math.PI * (nodeRadius - 4)} ${Math.PI * (nodeRadius - 4)}`}
                         strokeLinecap="round"
                         transform={`rotate(-90 ${nodeRadius / 2} ${nodeRadius / 2})`}
@@ -731,18 +826,27 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     </svg>
                   )}
                   {/* Task count badge */}
-                  {client.totalTasks > 0 && nodeRadius >= 40 && (
+                  {client.totalTasks > 0 && nodeRadius >= 35 && (
                     <span
                       className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white font-bold pointer-events-none"
                       style={{
-                        width: 18,
-                        height: 18,
-                        fontSize: '9px',
+                        width: nodeRadius >= 50 ? 20 : 16,
+                        height: nodeRadius >= 50 ? 20 : 16,
+                        fontSize: nodeRadius >= 50 ? '9px' : '8px',
                         backgroundColor: client.overdueTasks > 0 ? ZERO_PANIC.purple : client.color,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                       }}
                     >
                       {client.totalTasks - client.completedTasks}
+                    </span>
+                  )}
+                  {/* Tier indicator for larger nodes */}
+                  {nodeRadius >= 50 && (
+                    <span
+                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] bg-black/30 rounded-full px-1 pointer-events-none"
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {client.tierIcon}
                     </span>
                   )}
                 </motion.div>
@@ -832,26 +936,33 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {[
           { color: ZERO_PANIC.orange, label: 'להיום' },
           { color: ZERO_PANIC.purple, label: 'באיחור' },
+          { color: ZERO_PANIC.amber, label: 'מוכן לדיווח', glow: true },
           { color: '#1565C0', label: "צד ג'" },
           { color: ZERO_PANIC.blue, label: 'פעיל' },
           { color: ZERO_PANIC.green, label: 'הושלם' },
         ].map(item => (
           <div key={item.label} className="flex items-center gap-1 text-[10px] text-gray-500 bg-white/70 backdrop-blur-sm rounded px-1.5 py-0.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{
+              backgroundColor: item.color,
+              boxShadow: item.glow ? `0 0 6px ${item.color}88` : 'none',
+            }} />
             <span>{item.label}</span>
           </div>
         ))}
       </div>
 
-      {/* ── Size Legend ── */}
+      {/* ── Complexity Tier Legend ── */}
       <div className="absolute bottom-3 right-3 z-30 flex items-center gap-2 text-[10px] text-gray-400 bg-white/70 backdrop-blur-sm rounded-lg px-2 py-1">
-        <span>גודל:</span>
-        {Object.entries(SIZE_MAP).map(([label, px]) => (
-          <div key={label} className="flex items-center gap-0.5">
-            <div className="rounded-full bg-gray-300" style={{ width: px / 3, height: px / 3 }} />
-            <span>{label}</span>
-          </div>
-        ))}
+        <span>מורכבות:</span>
+        {Object.entries(COMPLEXITY_TIERS).map(([tier, info]) => {
+          const r = getNodeRadius(Number(tier), layout.isWide);
+          return (
+            <div key={tier} className="flex items-center gap-0.5">
+              <div className="rounded-full bg-gray-300" style={{ width: Math.max(r / 3, 6), height: Math.max(r / 3, 6) }} />
+              <span>{info.icon} {info.label}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Pan hint (shows briefly on first load) ── */}
@@ -881,7 +992,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             <div className="flex items-center gap-2 mb-1.5">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tooltip.color }} />
               <span className="font-bold text-sm text-gray-800">{tooltip.name}</span>
-              <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{tooltip.size}</span>
+              <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{tooltip.tierIcon} {tooltip.tierLabel}</span>
+              {tooltip.isFilingReady && (
+                <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded font-semibold">מוכן לדיווח</span>
+              )}
             </div>
             <div className="flex items-center gap-3 text-[11px] text-gray-600">
               <span>{tooltip.total} משימות</span>
@@ -915,7 +1029,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: editPopover.color }} />
                 <span className="font-bold text-sm text-gray-800">{editPopover.name}</span>
-                <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{editPopover.size}</span>
+                <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{editPopover.tierIcon} {editPopover.tierLabel}</span>
               </div>
               <button onClick={() => setEditPopover(null)} className="text-gray-400 hover:text-gray-600 p-1">
                 <X className="w-3.5 h-3.5" />
