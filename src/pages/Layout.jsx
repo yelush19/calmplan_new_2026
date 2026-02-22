@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -146,6 +147,40 @@ const getNextDeadline = () => {
   return { daysLeft, label: 'דיווח מע"מ' };
 };
 
+// ─── Draggable position hook (localStorage persist) ─────────
+function useDragPosition(key, defaultPos = { x: 0, y: 0 }) {
+  const storageKey = `calmplan_drag_${key}`;
+  const didDrag = React.useRef(false);
+  const [pos, setPos] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return defaultPos;
+  });
+  const onDragStart = useCallback(() => { didDrag.current = false; }, []);
+  const onDrag = useCallback(() => { didDrag.current = true; }, []);
+  const onDragEnd = useCallback((_, info) => {
+    const dist = Math.abs(info.offset.x) + Math.abs(info.offset.y);
+    if (dist < 3) { didDrag.current = false; return; }
+    didDrag.current = true;
+    setPos(prev => {
+      const next = { x: prev.x + info.offset.x, y: prev.y + info.offset.y };
+      try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, [storageKey]);
+  const reset = useCallback(() => {
+    setPos(defaultPos);
+    try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+  }, [storageKey, defaultPos]);
+  const guardClick = useCallback((handler) => (e) => {
+    if (didDrag.current) { didDrag.current = false; e.preventDefault(); e.stopPropagation(); return; }
+    handler?.(e);
+  }, []);
+  return { pos, onDragStart, onDrag, onDragEnd, reset, guardClick };
+}
+
 function LayoutInner({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -160,6 +195,10 @@ function LayoutInner({ children }) {
   const [recentClients, setRecentClients] = useState([]);
   const [importStatus, setImportStatus] = useState(null); // {type, message}
   const importFileRef = useRef(null);
+
+  // Draggable FAB positions
+  const dragQuickAddFab = useDragPosition('fab_quick_add');
+  const dragNotesFab = useDragPosition('fab_notes');
 
   useAutoReminders();
   const backupHealth = useBackupMonitor();
@@ -672,27 +711,45 @@ function LayoutInner({ children }) {
       <RealityCheck />
       <CompletionFeedback />
 
-      {/* Floating Quick Add Task FAB — always visible above everything */}
-      <button
-        onClick={() => setShowQuickAdd(true)}
-        className="fixed bottom-5 left-[4.5rem] z-[60] w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-110 ring-2 ring-white/50"
-        title="משימה מהירה"
+      {/* Floating Quick Add Task FAB — draggable, always visible */}
+      <motion.button
+        drag
+        dragMomentum={false}
+        dragElastic={0}
+        onDragStart={dragQuickAddFab.onDragStart}
+        onDrag={dragQuickAddFab.onDrag}
+        onDragEnd={dragQuickAddFab.onDragEnd}
+        animate={dragQuickAddFab.pos}
+        onDoubleClick={dragQuickAddFab.reset}
+        onClick={dragQuickAddFab.guardClick(() => setShowQuickAdd(true))}
+        className="fixed bottom-5 left-[4.5rem] z-[60] w-11 h-11 rounded-full shadow-xl flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white ring-2 ring-white/50 cursor-grab active:cursor-grabbing select-none"
+        title="משימה מהירה • גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
+        whileTap={{ scale: 0.95 }}
       >
         <Plus className="w-5 h-5" />
-      </button>
+      </motion.button>
 
-      {/* Floating Sticky Notes FAB — always visible above everything */}
-      <button
-        onClick={() => setNotesOpen(!notesOpen)}
-        className={`fixed bottom-5 left-5 z-[60] w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 ring-2 ring-white/50 ${
+      {/* Floating Sticky Notes FAB — draggable, always visible */}
+      <motion.button
+        drag
+        dragMomentum={false}
+        dragElastic={0}
+        onDragStart={dragNotesFab.onDragStart}
+        onDrag={dragNotesFab.onDrag}
+        onDragEnd={dragNotesFab.onDragEnd}
+        animate={dragNotesFab.pos}
+        onDoubleClick={dragNotesFab.reset}
+        onClick={dragNotesFab.guardClick(() => setNotesOpen(!notesOpen))}
+        className={`fixed bottom-5 left-5 z-[60] w-11 h-11 rounded-full shadow-xl flex items-center justify-center ring-2 ring-white/50 cursor-grab active:cursor-grabbing select-none ${
           notesOpen
-            ? 'bg-gray-500 hover:bg-gray-600 text-white scale-90'
+            ? 'bg-gray-500 hover:bg-gray-600 text-white'
             : 'bg-amber-500 hover:bg-amber-600 text-white'
         }`}
-        title={notesOpen ? 'סגור פתקים' : 'פתח פתקים'}
+        title={notesOpen ? 'סגור פתקים' : 'פתח פתקים • גרור לשינוי מיקום • לחיצה כפולה לאיפוס'}
+        whileTap={{ scale: 0.95 }}
       >
         {notesOpen ? <X className="w-4 h-4" /> : <StickyNote className="w-4 h-4" />}
-      </button>
+      </motion.button>
 
       {/* Global Quick Add Task Dialog */}
       <QuickAddTaskDialog
