@@ -13,9 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Pencil, Save, X, Plus, Trash2, CheckSquare, Square,
   AlertTriangle, ArrowUp, ArrowRight, ArrowDown, ListChecks, StickyNote,
-  Calendar, Clock, Timer, Wand2, Paperclip
+  Calendar, Clock, Timer, Wand2, Paperclip, GitBranchPlus, ChevronLeft
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
+import { Task } from '@/api/entities';
 import { differenceInDays, format, parseISO, isValid } from 'date-fns';
 import { getScheduledStartForCategory } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
@@ -100,12 +102,13 @@ function ExecutionTimeline({ startDate, dueDate }) {
   );
 }
 
-export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }) {
+export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, allTasks = [], onTaskCreated }) {
   const [editData, setEditData] = useState({});
   const [newSubTitle, setNewSubTitle] = useState('');
   const [newSubDue, setNewSubDue] = useState('');
   const [newSubTime, setNewSubTime] = useState('');
   const [newSubPriority, setNewSubPriority] = useState('medium');
+  const [showChildTaskDialog, setShowChildTaskDialog] = useState(false);
 
   useEffect(() => {
     if (task && open) {
@@ -442,6 +445,49 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
             </div>
           </div>
 
+          {/* Full Child Tasks (entity hierarchy via parent_id) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium flex items-center gap-1.5">
+                <GitBranchPlus className="w-3.5 h-3.5" />
+                תתי-משימות מלאות
+              </Label>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                onClick={() => setShowChildTaskDialog(true)}
+              >
+                <Plus className="w-3 h-3" />
+                הוסף תת-משימה
+              </Button>
+            </div>
+
+            {/* List existing child tasks */}
+            {(() => {
+              const childTasks = allTasks.filter(t => t.parent_id === task.id);
+              if (childTasks.length === 0) return (
+                <p className="text-xs text-gray-400 text-center py-2">אין תתי-משימות מלאות</p>
+              );
+              return (
+                <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                  {childTasks.map(child => {
+                    const childStatus = statusConfig[child.status] || statusConfig.not_started;
+                    return (
+                      <div key={child.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${childStatus.dot}`} />
+                        <span className="text-xs text-gray-700 flex-1 truncate">{child.title}</span>
+                        <Badge className={`${childStatus.color} text-[9px] px-1.5 py-0`}>
+                          {childStatus.text}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+
           {/* File Attachments */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium flex items-center gap-1.5">
@@ -491,6 +537,20 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete }
           </div>
         </div>
       </DialogContent>
+
+      {/* Sub-task creation dialog */}
+      <QuickAddTaskDialog
+        open={showChildTaskDialog}
+        onOpenChange={setShowChildTaskDialog}
+        defaultParentId={task.id}
+        defaultClientId={task.client_id || null}
+        lockedParent={true}
+        lockedClient={!!task.client_id}
+        onCreated={() => {
+          setShowChildTaskDialog(false);
+          onTaskCreated?.();
+        }}
+      />
     </Dialog>
   );
 }

@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, User, Calendar, Briefcase, Home, Trash2, Pencil, ChevronDown, ChevronUp, Zap, FastForward } from 'lucide-react';
+import { Clock, User, Calendar, Briefcase, Home, Trash2, Pencil, ChevronDown, ChevronUp, Zap, FastForward, Plus, GitBranchPlus } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { STATUS_CONFIG } from '@/config/processTemplates';
 import { getVatEnergyTier, getPayrollTier } from '@/engines/taskCascadeEngine';
+import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 
 const columnMapping = {
   todo: ['not_started', 'postponed', 'waiting_for_materials', 'issue'],
@@ -41,7 +42,7 @@ const getPriorityColor = (priority) => {
   return colors[priority] || "border-r-4 border-gray-300";
 };
 
-const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients }) => {
+const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allTasks = [], onAddSubTask }) => {
   const [expanded, setExpanded] = useState(false);
   const statusCfg = STATUS_CONFIG[task?.status] || STATUS_CONFIG.not_started;
 
@@ -169,6 +170,33 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients }) =>
                 </div>
               )}
 
+              {/* Child tasks count + add sub-task */}
+              {(() => {
+                const childCount = allTasks.filter(t => t.parent_id === task.id).length;
+                return (
+                  <div className="flex items-center justify-between">
+                    {childCount > 0 && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1 text-violet-600 border-violet-200">
+                        <GitBranchPlus className="w-3 h-3" />
+                        {childCount} תת-משימות
+                      </Badge>
+                    )}
+                    {onAddSubTask && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddSubTask(task);
+                        }}
+                        className="flex items-center gap-1 text-[10px] text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md transition-colors mr-auto"
+                      >
+                        <Plus className="w-3 h-3" />
+                        תת-משימה
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Status dropdown */}
               <div className="flex items-center justify-between gap-2 pt-1">
                 <Select
@@ -230,9 +258,10 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients }) =>
   );
 };
 
-export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask, onEditTask, clients = [] }) {
+export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask, onEditTask, clients = [], onTaskCreated }) {
   const [board, setBoard] = useState(columnsConfig);
   const [collapsed, setCollapsed] = useState({ completed: true });
+  const [subTaskParent, setSubTaskParent] = useState(null);
   const [collapsedStatuses, setCollapsedStatuses] = useState(() => {
     const init = {};
     DEFAULT_COLLAPSED_STATUSES.forEach(s => { init[s] = true; });
@@ -404,6 +433,8 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                                 onDelete={onDeleteTask}
                                 onEdit={onEditTask}
                                 clients={clients}
+                                allTasks={tasks}
+                                onAddSubTask={setSubTaskParent}
                               />
                             ))}
                           </div>
@@ -429,6 +460,19 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
           );
         })}
       </div>
+      {/* Sub-task creation dialog from Kanban */}
+      <QuickAddTaskDialog
+        open={!!subTaskParent}
+        onOpenChange={(val) => { if (!val) setSubTaskParent(null); }}
+        defaultParentId={subTaskParent?.id || null}
+        defaultClientId={subTaskParent?.client_id || null}
+        lockedParent={true}
+        lockedClient={!!subTaskParent?.client_id}
+        onCreated={() => {
+          setSubTaskParent(null);
+          onTaskCreated?.();
+        }}
+      />
     </DragDropContext>
   );
 }
