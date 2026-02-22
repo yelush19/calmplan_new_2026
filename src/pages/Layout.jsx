@@ -104,6 +104,7 @@ const getSidebarSections = () => ({
       { name: "לידים", href: createPageUrl("Leads"), icon: Target },
       { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
       { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
+      { name: "ניהול גבייה", href: createPageUrl("Collections"), icon: DollarSign },
       { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
       { name: "ניהול חוזים", href: createPageUrl("ClientContracts"), icon: FileText },
     ]

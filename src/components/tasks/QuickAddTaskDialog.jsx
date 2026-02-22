@@ -185,8 +185,20 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         setClients((list || []).filter(c => c.status === 'active' || c.status === 'onboarding_pending' || c.status === 'balance_sheet_only').sort((a, b) => a.name?.localeCompare(b.name, 'he')));
       }).catch(() => setClients([]));
       Dashboard.list(null, 200).then(list => {
-        setDashboards((list || []).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')));
-      }).catch(() => setDashboards([]));
+        const dbBoards = (list || []).map(d => ({ ...d, source: 'db' }));
+        // Always include built-in SERVICE_GROUPS as board options
+        const builtInBoards = SERVICE_GROUPS.map(g => ({
+          id: `board_${g.key}`, key: g.key, name: g.label, source: 'builtin',
+        }));
+        const dbKeys = new Set(dbBoards.map(d => d.key || d.board_key));
+        const merged = [...dbBoards, ...builtInBoards.filter(b => !dbKeys.has(b.key))];
+        setDashboards(merged.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')));
+      }).catch(() => {
+        // On error, still show built-in boards
+        setDashboards(SERVICE_GROUPS.map(g => ({
+          id: `board_${g.key}`, key: g.key, name: g.label, source: 'builtin',
+        })));
+      });
       Task.list('-created_date', 200).then(list => {
         setParentTasks((list || []).filter(t => t.status !== 'completed' && t.status !== 'not_relevant'));
       }).catch(() => setParentTasks([]));
@@ -417,15 +429,13 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
             </div>
           </div>
 
-          {/* Submit As-Is toggle (only shown when status = waiting_on_client) */}
-          {status === 'waiting_on_client' && (
-            <div className="flex items-center justify-between px-1">
-              <Label className="text-xs flex items-center gap-1.5">
-                הגש כמות שיש (Submit As-Is)
-              </Label>
-              <Switch checked={submitAsIs} onCheckedChange={setSubmitAsIs} />
-            </div>
-          )}
+          {/* Submit As-Is toggle */}
+          <div className="flex items-center justify-between px-1">
+            <Label className="text-xs flex items-center gap-1.5">
+              הגש כמות שיש (Submit As-Is)
+            </Label>
+            <Switch checked={submitAsIs} onCheckedChange={setSubmitAsIs} />
+          </div>
 
           {/* Critical Deadline Warning */}
           {isDeadlineCritical && (
