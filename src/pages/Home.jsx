@@ -485,8 +485,7 @@ export default function HomePage() {
 
   return (
     <motion.div
-      className="relative w-full"
-      style={{ height: 'calc(100vh - 100px)' }}
+      className="relative w-full h-full flex-1"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}

@@ -177,7 +177,7 @@ export default function TaskMatrixPage() {
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen"
+        className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-50 to-blue-50"
       >
         <div className="text-center mb-8">
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
