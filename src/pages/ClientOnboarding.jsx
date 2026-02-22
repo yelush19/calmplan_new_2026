@@ -16,6 +16,7 @@ export default function ClientOnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    nickname: '',
     entity_number: '',
     email: '',
     phone: '',
@@ -207,6 +208,15 @@ export default function ClientOnboardingPage() {
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="nickname">כינוי (אופציונלי)</Label>
+                  <Input
+                    id="nickname"
+                    value={formData.nickname}
+                    onChange={(e) => handleInputChange('nickname', e.target.value)}
+                    placeholder="שם מקוצר / כינוי"
                   />
                 </div>
                 <div>

@@ -22,6 +22,7 @@ import { loadAutomationRules, getAutoLinkedServices } from '@/config/automationR
 export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate }) {
   const [formData, setFormData] = useState({
     name: '',
+    nickname: '',
     email: '',
     phone: '',
     address: '',
@@ -662,6 +663,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
             <TabsContent value="basic" className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div><Label htmlFor="name">שם הלקוח *</Label><Input id="name" value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)} required /></div>
+                <div><Label htmlFor="nickname">כינוי (מוצג במפה)</Label><Input id="nickname" value={formData.nickname || ''} onChange={(e) => handleInputChange('nickname', e.target.value)} placeholder="שם מקוצר / כינוי" /><p className="text-xs text-gray-500 mt-1">אם ריק, יוצג שם הלקוח המלא</p></div>
                 <div><Label htmlFor="contact_person">איש קשר ראשי</Label><Input id="contact_person" value={formData.contact_person} onChange={(e) => handleInputChange('contact_person', e.target.value)} /></div>
                 <div><Label htmlFor="email">אימייל ראשי</Label><Input id="email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} /></div>
                 <div><Label htmlFor="phone">טלפון ראשי</Label><Input id="phone" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} /></div>
