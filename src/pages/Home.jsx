@@ -418,299 +418,261 @@ export default function HomePage() {
     }
   };
 
+  // Progress calculation for floating panel
+  const todayTotal = data.today.length + (data.overdue?.length || 0);
+  const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
+
   return (
     <motion.div
-      className="p-2 md:p-2.5 flex flex-col gap-1.5"
-      style={{ minHeight: 'calc(100vh - 52px)' }}
+      className="relative w-full"
+      style={{ height: 'calc(100vh - 42px)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {/* ═══ COMPACT TOP SHELL ═══ */}
-      {/* Row 1: Greeting + Quick Stats (single line) */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <h1 className="text-lg font-bold text-gray-800 whitespace-nowrap">
-            {getGreeting()}{userName ? `, ${userName}` : ''}
-          </h1>
-          <span className="text-xs text-gray-400 hidden md:block whitespace-nowrap">
-            {format(new Date(), 'EEEE, d בMMMM', { locale: he })}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {data.completedToday > 0 && (
-            <Badge className="border-green-200 gap-0.5 text-[10px] py-0 h-5" style={{ backgroundColor: '#E8F5E9', color: ZERO_PANIC.green }}>
-              <CheckCircle className="w-3 h-3" />
-              {data.completedToday} הושלמו
-            </Badge>
-          )}
-          <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-primary hover:bg-accent text-white gap-0.5 h-7 text-xs px-2">
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">משימה</span>
-          </Button>
-        </div>
-      </div>
+      {/* ═══ MINDMAP VIEW — FULL BLEED, TAKES 100% OF SPACE ═══ */}
+      {focusView === 'mindmap' ? (
+        <div className="w-full h-full relative">
+          <MindMapView
+            tasks={data.activeTasks || allFocusTasks}
+            clients={clients}
+            inboxItems={inboxItems}
+            onInboxDismiss={handleInboxDismiss}
+            focusMode={focusMode}
+          />
 
-      {/* Setup Incomplete Notification — compact inline */}
-      {setupIncomplete.missing > 0 && (
-        <div className="flex items-center justify-between gap-2 bg-amber-50/80 border border-amber-200 rounded-lg px-2.5 py-1">
-          <div className="flex items-center gap-2 min-w-0">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span className="text-xs font-medium text-amber-800 truncate">
-              הגדרה לא הושלמה: {setupIncomplete.missing} לקוחות חסרים נתונים
-            </span>
-            <span className="text-[10px] text-amber-600 hidden md:inline">(מתוך {setupIncomplete.total} פעילים)</span>
-          </div>
-          <Link to={createPageUrl("SystemReadiness")}>
-            <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white gap-0.5 font-bold text-[10px] h-6 px-2">
-              <Zap className="w-3 h-3" />
-              השלם
+          {/* ── FLOATING STATS PANEL (glass, left side) ── */}
+          <div
+            className="absolute top-2 right-2 z-30 flex flex-col gap-1.5 p-2 rounded-xl border border-white/40 shadow-lg"
+            style={{ backgroundColor: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', maxWidth: '200px' }}
+          >
+            {/* Greeting */}
+            <div className="text-xs font-bold text-gray-700 truncate">
+              {getGreeting()}{userName ? `, ${userName}` : ''}
+            </div>
+            <div className="text-[10px] text-gray-400">
+              {format(new Date(), 'EEEE, d בMMMM', { locale: he })}
+            </div>
+
+            {/* Stat chips — vertical stack */}
+            <div className="flex flex-col gap-1 mt-0.5">
+              <Link to={createPageUrl("Tasks") + "?tab=active&context=work"}>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md cursor-pointer hover:bg-blue-50 transition-colors" style={{ backgroundColor: '#E3F2FD50' }}>
+                  <Briefcase className="w-3 h-3" style={{ color: ZERO_PANIC.blue }} />
+                  <span className="text-xs font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</span>
+                  <span className="text-[9px]" style={{ color: ZERO_PANIC.blue }}>עבודה</span>
+                </div>
+              </Link>
+              <Link to={createPageUrl("Tasks") + "?tab=active&context=home"}>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md cursor-pointer hover:bg-green-50 transition-colors" style={{ backgroundColor: '#E8F5E950' }}>
+                  <HomeIcon className="w-3 h-3" style={{ color: ZERO_PANIC.green }} />
+                  <span className="text-xs font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</span>
+                  <span className="text-[9px]" style={{ color: ZERO_PANIC.green }}>בית</span>
+                </div>
+              </Link>
+              {data.overdue.length > 0 && (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md" style={{ backgroundColor: '#FFF3E070' }}>
+                  <Clock className="w-3 h-3" style={{ color: ZERO_PANIC.orange }} />
+                  <span className="text-xs font-bold" style={{ color: ZERO_PANIC.orange }}>{data.overdue.length}</span>
+                  <span className="text-[9px]" style={{ color: ZERO_PANIC.orange }}>באיחור</span>
+                </div>
+              )}
+              <Link to={createPageUrl("Calendar")}>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md cursor-pointer hover:bg-purple-50 transition-colors bg-purple-50/50">
+                  <Calendar className="w-3 h-3 text-purple-600" />
+                  <span className="text-xs font-bold text-purple-700">{data.todayEvents.length}</span>
+                  <span className="text-[9px] text-purple-600">אירועים</span>
+                </div>
+              </Link>
+            </div>
+
+            {/* Progress bar */}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }} />
+              </div>
+              <span className="text-[9px] font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
+            </div>
+
+            {/* Completed badge */}
+            {data.completedToday > 0 && (
+              <div className="flex items-center gap-1 text-[9px]" style={{ color: ZERO_PANIC.green }}>
+                <CheckCircle className="w-2.5 h-2.5" />
+                {data.completedToday} הושלמו היום
+              </div>
+            )}
+
+            {/* Setup warning */}
+            {setupIncomplete.missing > 0 && (
+              <Link to={createPageUrl("SystemReadiness")}>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors">
+                  <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                  <span className="text-[9px] text-amber-700 font-medium">{setupIncomplete.missing} חסרים</span>
+                </div>
+              </Link>
+            )}
+
+            {/* Quick Add */}
+            <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-primary hover:bg-accent text-white gap-0.5 h-6 text-[10px] px-2 w-full mt-0.5">
+              <Plus className="w-3 h-3" />
+              משימה מהירה
             </Button>
-          </Link>
+          </div>
+
+          {/* ── FLOATING VIEW SWITCHER (top center-left) ── */}
+          <div
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-1 rounded-lg border border-white/40 shadow-md"
+            style={{ backgroundColor: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+          >
+            <Target className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
+            <span className="text-[10px] font-semibold text-gray-600 ml-0.5">מרכז השליטה</span>
+            <div className="flex bg-gray-100/80 rounded-md p-0.5 mr-1">
+              <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-5 w-5" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
+                <Network className="w-2.5 h-2.5" />
+              </Button>
+              <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-5 w-5" onClick={() => setFocusView('kanban')} title="קנבן">
+                <LayoutGrid className="w-2.5 h-2.5" />
+              </Button>
+              <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-5 w-5" onClick={() => setFocusView('list')} title="רשימה">
+                <List className="w-2.5 h-2.5" />
+              </Button>
+              <Button variant={focusView === 'gantt' ? 'secondary' : 'ghost'} size="icon" className="h-5 w-5" onClick={() => setFocusView('gantt')} title="ציר זמן">
+                <BarChart3 className="w-2.5 h-2.5" />
+              </Button>
+            </div>
+            <Link to={createPageUrl("Tasks")}>
+              <span className="text-[9px] text-gray-400 hover:text-gray-600 cursor-pointer whitespace-nowrap">כל המשימות →</span>
+            </Link>
+          </div>
+
+          {/* ── FLOATING INSIGHTS (bottom strip, glass) ── */}
+          {insights.length > 0 && (
+            <div
+              className="absolute bottom-2 left-2 right-[220px] z-30 flex gap-1.5 overflow-x-auto px-2 py-1.5 rounded-lg border border-white/40"
+              style={{ backgroundColor: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+            >
+              {insights.slice(0, 4).map((insight, i) => {
+                const colorMap = {
+                  teal: { bg: 'bg-teal-50/80', text: 'text-teal-700', icon: 'text-teal-500' },
+                  amber: { bg: 'bg-amber-50/80', text: 'text-amber-700', icon: 'text-amber-500' },
+                  blue: { bg: 'bg-blue-50/80', text: 'text-blue-700', icon: 'text-blue-500' },
+                  emerald: { bg: 'bg-emerald-50/80', text: 'text-emerald-700', icon: 'text-emerald-500' },
+                };
+                const c = colorMap[insight.color] || colorMap.teal;
+                return (
+                  <div key={i} className={`${c.bg} rounded-md px-2 py-0.5 flex items-center gap-1 shrink-0`}>
+                    <div className={`${c.icon} flex-shrink-0`}>
+                      {insight.type === 'warning' && <AlertTriangle className="w-2.5 h-2.5" />}
+                      {insight.type === 'action' && <Zap className="w-2.5 h-2.5" />}
+                      {insight.type === 'progress' && <Clock className="w-2.5 h-2.5" />}
+                      {insight.type === 'info' && <Eye className="w-2.5 h-2.5" />}
+                      {insight.type === 'celebration' && <Sparkles className="w-2.5 h-2.5" />}
+                    </div>
+                    <p className={`text-[10px] font-medium ${c.text} truncate max-w-[180px]`}>{insight.title}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── FLOATING QUICK ACTIONS (bottom right) ── */}
+          <div
+            className="absolute bottom-2 right-2 z-30 flex gap-1.5 px-2 py-1.5 rounded-lg border border-white/40"
+            style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+          >
+            <Link to={createPageUrl("WeeklyPlanningDashboard")}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50 cursor-pointer transition-colors">
+                <Brain className="w-3 h-3" style={{ color: ZERO_PANIC.blue }} />
+                <span className="text-[10px] font-medium" style={{ color: '#1565C0' }}>תכנון</span>
+              </div>
+            </Link>
+            <Link to={createPageUrl("PayrollDashboard")}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-gray-100 cursor-pointer transition-colors">
+                <Briefcase className="w-3 h-3 text-gray-500" />
+                <span className="text-[10px] font-medium text-gray-700">שכר</span>
+              </div>
+            </Link>
+            <Link to={createPageUrl("AutomationRules")}>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-orange-50 cursor-pointer transition-colors">
+                <Zap className="w-3 h-3" style={{ color: ZERO_PANIC.orange }} />
+                <span className="text-[10px] font-medium" style={{ color: '#E65100' }}>אוטומציות</span>
+              </div>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        /* ═══ NON-MINDMAP VIEWS — use traditional layout ═══ */
+        <div className="h-full flex flex-col p-2 gap-2 overflow-auto">
+          <Card className="flex-1 flex flex-col overflow-hidden">
+            <CardHeader className="pb-0 py-1.5 px-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-1.5 text-sm">
+                  <Target className="w-4 h-4" style={{ color: ZERO_PANIC.blue }} />
+                  <span>מרכז השליטה</span>
+                </CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex bg-gray-100 rounded-lg p-0.5">
+                    <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
+                      <Network className="w-3 h-3" />
+                    </Button>
+                    <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('kanban')} title="קנבן">
+                      <LayoutGrid className="w-3 h-3" />
+                    </Button>
+                    <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('list')} title="רשימה">
+                      <List className="w-3 h-3" />
+                    </Button>
+                    <Button variant={focusView === 'gantt' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('gantt')} title="ציר זמן">
+                      <BarChart3 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <Link to={createPageUrl("Tasks")}>
+                    <Button variant="ghost" size="sm" className="text-[10px] text-gray-500 gap-0.5 h-6 px-1.5">
+                      כל המשימות <ArrowRight className="w-3 h-3" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="relative mt-1.5 mb-1">
+                <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                <Input placeholder="חיפוש..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pr-8 h-7 text-xs" />
+              </div>
+              <div className="flex gap-1 overflow-x-auto pb-1 border-b border-gray-100">
+                {FOCUS_TABS.map(tab => {
+                  const count = getTabCount(tab.key);
+                  const isActive = activeTab === tab.key;
+                  const Icon = tab.icon;
+                  return (
+                    <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-t-md text-xs font-medium whitespace-nowrap border-b-2 ${isActive ? `${tab.activeBg} border-current` : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>
+                      <Icon className={`w-3 h-3 ${isActive ? '' : tab.color}`} />
+                      <span>{tab.label}</span>
+                      {count > 0 && <Badge className={`text-[9px] px-1 py-0 h-3.5 ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>{count}</Badge>}
+                    </button>
+                  );
+                })}
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 min-h-0 pt-2 pb-2">
+              {focusView === 'gantt' ? (
+                <div className="relative h-full">
+                  <GanttView tasks={allFocusTasks} clients={clients} />
+                  <button onClick={() => setFocusView('mindmap')} className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 shadow-md border border-emerald-200 text-emerald-700 text-xs font-medium">
+                    <Network className="w-3.5 h-3.5" /><span>חזרה למפה</span>
+                  </button>
+                </div>
+              ) : focusView === 'kanban' ? (
+                <KanbanView tasks={allFocusTasks} onTaskStatusChange={handleStatusChange} onDeleteTask={(taskId) => handleDeleteTask({ id: taskId })} onEditTask={handleEditTask} />
+              ) : (
+                <AnimatePresence mode="wait">
+                  <motion.div key={activeTab} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.12 }}>
+                    {getTabContent()}
+                  </motion.div>
+                </AnimatePresence>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
-
-      {/* Row 2: Compact counter strip — horizontal inline chips */}
-      <div className="flex items-center gap-2 overflow-x-auto">
-        <Link to={createPageUrl("Tasks") + "?tab=active&context=work"} className="shrink-0">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD70' }}>
-            <Briefcase className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
-            <span className="text-sm font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</span>
-            <span className="text-[10px]" style={{ color: ZERO_PANIC.blue }}>עבודה</span>
-          </div>
-        </Link>
-        <Link to={createPageUrl("Tasks") + "?tab=active&context=home"} className="shrink-0">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#C8E6C9', backgroundColor: '#E8F5E970' }}>
-            <HomeIcon className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.green }} />
-            <span className="text-sm font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</span>
-            <span className="text-[10px]" style={{ color: ZERO_PANIC.green }}>בית</span>
-          </div>
-        </Link>
-        <Link to={createPageUrl("Calendar")} className="shrink-0">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50/70 cursor-pointer hover:shadow-sm transition-shadow">
-            <Calendar className="w-3.5 h-3.5 text-purple-600" />
-            <span className="text-sm font-bold text-purple-700">{data.todayEvents.length}</span>
-            <span className="text-[10px] text-purple-600">אירועים</span>
-          </div>
-        </Link>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border-2 shrink-0" style={{
-          borderColor: data.overdue.length > 0 ? '#FFE0B2' : '#e5e7eb',
-          backgroundColor: data.overdue.length > 0 ? '#FFF3E070' : '#f9fafb70',
-        }}>
-          <Clock className="w-3.5 h-3.5" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }} />
-          <span className="text-sm font-bold" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }}>{data.overdue.length}</span>
-          <span className="text-[10px]" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#6B7280' }}>באיחור</span>
-        </div>
-
-        {/* Inline progress bar */}
-        {(() => {
-          const todayTotal = data.today.length + (data.overdue?.length || 0);
-          const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
-          return (
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white border shrink-0 min-w-[140px]">
-              <span className="text-[10px] text-gray-500 whitespace-nowrap">התקדמות יומית</span>
-              <div className="flex-1 bg-gray-200 rounded-full h-2 min-w-[50px] overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                />
-              </div>
-              <span className="text-[10px] font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
-            </div>
-          );
-        })()}
-      </div>
-
-      {/* Insights: Compact horizontal scroll strip */}
-      {insights.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-          {insights.slice(0, 6).map((insight, i) => {
-            const colorMap = {
-              teal: { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', icon: 'text-teal-500' },
-              amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: 'text-amber-500' },
-              blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'text-blue-500' },
-              emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: 'text-emerald-500' },
-            };
-            const c = colorMap[insight.color] || colorMap.teal;
-            return (
-              <div key={i} className={`${c.bg} ${c.border} border rounded-md px-2 py-1 flex items-center gap-1.5 shrink-0 max-w-[240px]`}>
-                <div className={`${c.icon} flex-shrink-0`}>
-                  {insight.type === 'warning' && <AlertTriangle className="w-3 h-3" />}
-                  {insight.type === 'action' && <Zap className="w-3 h-3" />}
-                  {insight.type === 'progress' && <Clock className="w-3 h-3" />}
-                  {insight.type === 'info' && <Eye className="w-3 h-3" />}
-                  {insight.type === 'celebration' && <Sparkles className="w-3 h-3" />}
-                </div>
-                <p className={`text-[11px] font-medium ${c.text} truncate`}>{insight.title}</p>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ═══ FOCUS AREA — Takes ALL remaining space ═══ */}
-      <motion.div
-        className="flex-1 flex flex-col min-h-0"
-        initial={{ y: 5, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.15 }}
-      >
-        <Card className="flex-1 flex flex-col overflow-hidden">
-          <CardHeader className="pb-0 py-1.5 px-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-1.5 text-sm">
-                <Target className="w-4 h-4" style={{ color: ZERO_PANIC.blue }} />
-                <span>מרכז השליטה</span>
-              </CardTitle>
-              <div className="flex items-center gap-1.5">
-                {/* View Switcher */}
-                <div className="flex bg-gray-100 rounded-lg p-0.5">
-                  <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
-                    <Network className="w-3 h-3" />
-                  </Button>
-                  <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('kanban')} title="קנבן">
-                    <LayoutGrid className="w-3 h-3" />
-                  </Button>
-                  <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('list')} title="רשימה">
-                    <List className="w-3 h-3" />
-                  </Button>
-                  <Button variant={focusView === 'gantt' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('gantt')} title="ציר זמן">
-                    <BarChart3 className="w-3 h-3" />
-                  </Button>
-                </div>
-                <Link to={createPageUrl("Tasks")}>
-                  <Button variant="ghost" size="sm" className="text-[10px] text-gray-500 gap-0.5 h-6 px-1.5">
-                    כל המשימות <ArrowRight className="w-3 h-3" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            {/* Search (non-mindmap views only) */}
-            {focusView !== 'mindmap' && (
-              <>
-                <div className="relative mt-1.5 mb-1">
-                  <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
-                  <Input
-                    placeholder="חיפוש לפי שם לקוח, משימה..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pr-8 h-7 text-xs"
-                  />
-                </div>
-                {/* Horizontal Tab Bar */}
-                <div className="flex gap-1 overflow-x-auto pb-1 border-b border-gray-100">
-                  {FOCUS_TABS.map(tab => {
-                    const count = getTabCount(tab.key);
-                    const isActive = activeTab === tab.key;
-                    const Icon = tab.icon;
-                    return (
-                      <button
-                        key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-t-md text-xs font-medium transition-all whitespace-nowrap border-b-2 ${
-                          isActive
-                            ? `${tab.activeBg} border-current`
-                            : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <Icon className={`w-3 h-3 ${isActive ? '' : tab.color}`} />
-                        <span>{tab.label}</span>
-                        {count > 0 && (
-                          <Badge className={`text-[9px] px-1 py-0 h-3.5 min-w-[16px] ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>
-                            {count}
-                          </Badge>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </CardHeader>
-          <CardContent className={`flex-1 min-h-0 ${focusView === 'mindmap' ? 'pt-1 px-0 pb-0' : 'pt-2 pb-2'}`}>
-            {focusView === 'mindmap' ? (
-              <div className="relative h-full">
-                <MindMapView
-                  tasks={data.activeTasks || allFocusTasks}
-                  clients={clients}
-                  inboxItems={inboxItems}
-                  onInboxDismiss={handleInboxDismiss}
-                  focusMode={focusMode}
-                />
-                {/* Prominent Gantt toggle on MindMap */}
-                <button
-                  onClick={() => setFocusView('gantt')}
-                  className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm shadow-md border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-medium"
-                >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  <span>הצג כגאנט</span>
-                </button>
-              </div>
-            ) : focusView === 'gantt' ? (
-              <div className="relative h-full">
-                <GanttView tasks={allFocusTasks} clients={clients} />
-                <button
-                  onClick={() => setFocusView('mindmap')}
-                  className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm shadow-md border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-medium"
-                >
-                  <Network className="w-3.5 h-3.5" />
-                  <span>חזרה למפה</span>
-                </button>
-              </div>
-            ) : focusView === 'kanban' ? (
-              <KanbanView
-                tasks={allFocusTasks}
-                onTaskStatusChange={handleStatusChange}
-                onDeleteTask={(taskId) => handleDeleteTask({ id: taskId })}
-                onEditTask={handleEditTask}
-              />
-            ) : (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.12 }}
-                >
-                  {getTabContent()}
-                </motion.div>
-              </AnimatePresence>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Quick Actions — compact row below canvas */}
-      <div className="flex gap-2 overflow-x-auto pb-0.5">
-        <Link to={createPageUrl("WeeklyPlanningDashboard")} className="shrink-0">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD50' }}>
-            <Brain className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
-            <span className="text-xs font-medium" style={{ color: '#1565C0' }}>תכנון שבועי</span>
-          </div>
-        </Link>
-        <Link to={createPageUrl("PayrollDashboard")} className="shrink-0">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50/50 cursor-pointer hover:shadow-sm transition-shadow">
-            <Briefcase className="w-3.5 h-3.5 text-gray-600" />
-            <span className="text-xs font-medium text-gray-800">שכר ודיווחים</span>
-          </div>
-        </Link>
-        <Link to={createPageUrl("AutomationRules")} className="shrink-0">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#FFE0B2', backgroundColor: '#FFF3E050' }}>
-            <Zap className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.orange }} />
-            <span className="text-xs font-medium" style={{ color: '#E65100' }}>אוטומציות</span>
-          </div>
-        </Link>
-        <Link to={createPageUrl("WeeklySummary")} className="shrink-0">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#CE93D8', backgroundColor: '#F3E5F550' }}>
-            <FileBarChart className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.purple }} />
-            <span className="text-xs font-medium" style={{ color: '#6A1B9A' }}>סיכום שבועי</span>
-          </div>
-        </Link>
-      </div>
 
       {/* Quick Add Task Dialog */}
       <QuickAddTaskDialog
