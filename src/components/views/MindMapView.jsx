@@ -265,20 +265,25 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     return { branches, clientNodes, centerLabel };
   }, [tasks, clients]);
 
-  // ── Layout Calculation: Complexity + ADHD Focus + Collision Detection + 27" Optimization ──
+  // ── Layout Calculation: Container-Aware + Complexity + ADHD Focus + Collision Detection ──
   const layout = useMemo(() => {
-    // 27" monitor optimization: generous virtual canvas for 2560x1440+
-    const isWide = dimensions.width >= 1800;
-    const virtualW = Math.max(dimensions.width, isWide ? 2200 : 1400);
-    const virtualH = Math.max(dimensions.height, isWide ? 1200 : 900);
-    const cx = virtualW / 2;
-    const cy = virtualH / 2;
-    const centerR = isWide ? 75 : 65;
+    // USE ACTUAL CONTAINER DIMENSIONS — not a virtual oversized canvas
+    // This ensures nodes are positioned within the visible viewport at 100% zoom
+    const w = Math.max(dimensions.width, 600);
+    const h = Math.max(dimensions.height, 400);
+    const isWide = w >= 1600;
+    const cx = w / 2;
+    const cy = h / 2;
+    const centerR = isWide ? 55 : 48;
 
-    // Elliptical scaling optimized for wide monitors
-    const scaleX = virtualW * (isWide ? 0.36 : 0.34);
-    const scaleY = virtualH * (isWide ? 0.34 : 0.32);
-    const baseLeafDist = Math.max(scaleX, scaleY) * 0.65;
+    // Elliptical scaling: fit branches within 80% of actual visible area
+    // Use slightly wider horizontal spread since monitors are landscape
+    const padX = 80; // padding from edges
+    const padY = 60;
+    const scaleX = (w - padX * 2) * 0.42;
+    const scaleY = (h - padY * 2) * 0.42;
+    // Leaf distance: relative to the smaller axis so nodes don't overflow
+    const baseLeafDist = Math.min(scaleX, scaleY) * 0.48;
 
     const angleStep = (2 * Math.PI) / Math.max(branches.length, 1);
 
@@ -291,7 +296,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const by = cy + Math.sin(angle) * scaleY;
 
       const clientCount = branch.clients.length;
-      const clientAngleSpread = Math.min(Math.PI * 0.7, clientCount * 0.4);
+      const clientAngleSpread = Math.min(Math.PI * 0.65, clientCount * 0.35);
 
       // Sort clients: filing-ready & urgent first (closer to branch), completed last (pushed out)
       const sortedClients = [...branch.clients].sort((a, b) => (b.statusRing || 0) - (a.statusRing || 0));
@@ -300,20 +305,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         const clientAngle = angle + (j - (clientCount - 1) / 2) * (clientAngleSpread / Math.max(clientCount - 1, 1));
 
         // ADHD Focus: distance from branch based on status
-        // statusRing 4 (overdue/due today) → closest (0.85x)
-        // statusRing 3 (filing ready) → close (0.90x)
-        // statusRing 2 (active) → normal (1.0x)
-        // statusRing 1 (external) → normal (1.0x)
-        // statusRing 0 (completed) → pushed OUT (1.35x)
         const statusDistMultiplier = {
-          4: 0.85,  // Overdue / Due Today → pull in
-          3: 0.90,  // Filing Ready → pull in
+          4: 0.82,  // Overdue / Due Today → pull in
+          3: 0.88,  // Filing Ready → pull in
           2: 1.0,   // Active → normal
           1: 1.0,   // External → normal
-          0: 1.35,  // Completed → push out
+          0: 1.3,   // Completed → push out
         }[client.statusRing || 2] || 1.0;
 
-        const dist = (baseLeafDist * 1.1 + (j % 2) * 35) * statusDistMultiplier;
+        const stagger = (j % 2) * Math.min(20, baseLeafDist * 0.15);
+        const dist = (baseLeafDist + stagger) * statusDistMultiplier;
 
         // Complexity-tier based radius (3:1 ratio)
         const nodeRadius = getNodeRadius(client.tier, isWide);
@@ -340,8 +341,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     });
 
     // ─── Phase 2: Collision Detection & Resolution ───
-    // Iterative push-apart: 5 passes to resolve overlaps
-    const MIN_GAP = 8; // minimum pixel gap between nodes
+    const MIN_GAP = 6;
     for (let pass = 0; pass < 5; pass++) {
       let hadCollision = false;
       for (let i = 0; i < allClientNodes.length; i++) {
@@ -358,7 +358,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             const overlap = (minDist - dist) / 2;
             const nx = dx / dist;
             const ny = dy / dist;
-            // Push apart equally
             a.x -= nx * overlap;
             a.y -= ny * overlap;
             b.x += nx * overlap;
@@ -380,7 +379,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       });
     });
 
-    return { cx, cy, centerR, branchPositions, virtualW, virtualH, isWide };
+    return { cx, cy, centerR, branchPositions, virtualW: w, virtualH: h, isWide };
   }, [branches, dimensions]);
 
   // ── Auto-Fit: compute zoom + pan to show all nodes ──
@@ -396,7 +395,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       minY = Math.min(minY, branch.y - 30);
       maxY = Math.max(maxY, branch.y + 30);
       branch.clientPositions.forEach(client => {
-        const r = client.radius || 40;
+        const r = client.radius || 30;
         minX = Math.min(minX, client.x - r);
         maxX = Math.max(maxX, client.x + r);
         minY = Math.min(minY, client.y - r);
@@ -406,19 +405,23 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     const contentW = maxX - minX;
     const contentH = maxY - minY;
-    const padding = 60;
+    const padding = 30;
     const viewW = dimensions.width - padding * 2;
     const viewH = dimensions.height - padding * 2;
 
     if (contentW <= 0 || contentH <= 0) return;
 
-    const fitScale = Math.min(viewW / contentW, viewH / contentH, 1);
+    // Since layout already fits in container, fitScale should be near 1.0
+    // Cap at 1.0 max to avoid zooming in too much; allow slight shrink if nodes overflow
+    const fitScale = Math.min(viewW / contentW, viewH / contentH, 1.0);
+    // Floor at 0.7 so it never gets too tiny
+    const clampedScale = Math.max(fitScale, 0.7);
     const contentCX = (minX + maxX) / 2;
     const contentCY = (minY + maxY) / 2;
-    const fitPanX = dimensions.width / 2 - contentCX * fitScale;
-    const fitPanY = dimensions.height / 2 - contentCY * fitScale;
+    const fitPanX = dimensions.width / 2 - contentCX * clampedScale;
+    const fitPanY = dimensions.height / 2 - contentCY * clampedScale;
 
-    setZoom(fitScale);
+    setZoom(clampedScale);
     setPan({ x: fitPanX, y: fitPanY });
     setAutoFitDone(true);
   }, [layout, dimensions, autoFitDone]);

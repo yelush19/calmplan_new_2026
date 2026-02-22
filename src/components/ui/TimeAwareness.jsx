@@ -214,59 +214,59 @@ export default function TimeAwareness() {
   const hasTodayIncomplete = upcomingDeadlines.some(d => d.calendarDays === 0 && d.incomplete > 0);
 
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-xl mb-4 shadow-sm ${
+    <div className={`flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-lg mb-1.5 shadow-sm ${
       hasTodayIncomplete ? 'bg-amber-50 border-2 border-amber-300' :
       isUrgent ? 'bg-amber-50 border-2 border-amber-200' :
       'bg-white border border-gray-200'
     }`}>
-      {/* Date & Time - bigger text */}
-      <div className="flex items-center gap-4 relative">
+      {/* Date & Time — compact */}
+      <div className="flex items-center gap-3 relative">
         <button
           onClick={() => setShowCalendar(!showCalendar)}
-          className="flex items-center gap-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 hover:bg-gray-50 rounded-md px-1.5 py-0.5 transition-colors cursor-pointer"
         >
-          <Calendar className="w-5 h-5 text-emerald-600" />
-          <span className="font-bold text-lg text-gray-900">{dayOfWeek}</span>
-          <span className="text-base text-gray-600">{dateStr}</span>
+          <Calendar className="w-4 h-4 text-emerald-600" />
+          <span className="font-bold text-sm text-gray-900">{dayOfWeek}</span>
+          <span className="text-xs text-gray-600">{dateStr}</span>
         </button>
 
         {showCalendar && <MiniCalendar now={now} onClose={() => setShowCalendar(false)} />}
 
-        <div className="flex items-center gap-1.5 border-r border-gray-300 pr-4">
-          <Clock className="w-4 h-4 text-gray-400" />
-          <span className="font-mono text-lg font-semibold text-gray-700 tabular-nums">{timeStr}</span>
+        <div className="flex items-center gap-1 border-r border-gray-300 pr-3">
+          <Clock className="w-3.5 h-3.5 text-gray-400" />
+          <span className="font-mono text-sm font-semibold text-gray-700 tabular-nums">{timeStr}</span>
         </div>
 
         {daysLeftThisWeek > 0 && !isShabbat && (
-          <span className="text-sm text-gray-600">
+          <span className="text-xs text-gray-600">
             <span className="font-bold text-gray-800">{daysLeftThisWeek}</span> ימי עבודה עד שישי
           </span>
         )}
         {isShabbat && (
-          <span className="text-purple-600 font-bold text-sm">שבת שלום</span>
+          <span className="text-purple-600 font-bold text-xs">שבת שלום</span>
         )}
       </div>
 
-      {/* Reporting Deadlines - bigger badges */}
-      <div className="flex flex-col items-end gap-1.5">
-        <div className="flex items-center gap-2">
+      {/* Reporting Deadlines — compact badges */}
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-1.5">
           {upcomingDeadlines.length > 0 ? (
             upcomingDeadlines.map((d) => {
               const hasIncomplete = d.incomplete > 0;
               return (
                 <span
                   key={d.day}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap text-sm ${getDeadlineStyle(d.calendarDays, hasIncomplete)}`}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md whitespace-nowrap text-xs ${getDeadlineStyle(d.calendarDays, hasIncomplete)}`}
                 >
-                  {d.calendarDays === 0 && hasIncomplete && <AlertTriangle className="w-4 h-4" />}
-                  {d.calendarDays <= 2 && !(d.calendarDays === 0 && hasIncomplete) && <Clock className="w-4 h-4" />}
+                  {d.calendarDays === 0 && hasIncomplete && <AlertTriangle className="w-3 h-3" />}
+                  {d.calendarDays <= 2 && !(d.calendarDays === 0 && hasIncomplete) && <Clock className="w-3 h-3" />}
                   {d.calendarDays === 0 ? (
                     <span>היום! {d.label} (ה-{d.day})</span>
                   ) : (
                     <span>{d.workDays} ימ"ע {d.label} (ה-{d.day})</span>
                   )}
                   {d.calendarDays === 0 && d.total > 0 && (
-                    <span className={`mr-1 px-1.5 py-0.5 rounded text-xs font-bold ${
+                    <span className={`mr-0.5 px-1 py-0 rounded text-[10px] font-bold ${
                       hasIncomplete ? 'bg-amber-300 text-amber-900' : 'bg-emerald-300 text-emerald-900'
                     }`}>
                       {d.total - d.incomplete}/{d.total}
@@ -276,7 +276,7 @@ export default function TimeAwareness() {
               );
             })
           ) : (
-            <span className="text-sm text-gray-500 px-3 py-1.5 rounded-lg bg-emerald-50">
+            <span className="text-xs text-gray-500 px-2 py-0.5 rounded-md bg-emerald-50">
               {differenceInCalendarDays(endOfMonth(now), now)} ימים לסוף חודש - כל הדיווחים הוגשו
             </span>
           )}
@@ -284,8 +284,8 @@ export default function TimeAwareness() {
 
         {/* Warning banner for today's incomplete reports */}
         {upcomingDeadlines.filter(d => d.calendarDays === 0 && d.incomplete > 0).map(d => (
-          <div key={`warn-${d.day}`} className="flex items-center gap-2 bg-amber-100 border border-amber-300 rounded-lg px-3 py-1.5 text-sm text-amber-800 font-semibold animate-pulse">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+          <div key={`warn-${d.day}`} className="flex items-center gap-1.5 bg-amber-100 border border-amber-300 rounded-md px-2 py-1 text-xs text-amber-800 font-semibold animate-pulse">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
             <span>
               {d.label}: {d.incomplete} דיווחים לא הושלמו מתוך {d.total} — היום יום אחרון!
             </span>
