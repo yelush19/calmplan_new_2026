@@ -541,11 +541,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const wasDragging = nodeHasDragged.current;
     draggingNode.current = null;
     nodeHasDragged.current = false;
-    // If it was a click (not drag), open drawer
+    // If it was a click (not drag), open drawer directly (no dependency on handleClientClick)
     if (!wasDragging) {
-      handleClientClick(client, e.clientX, e.clientY);
+      setDrawerClient(client);
+      setEditPopover(null);
+      setShowDrawerCompleted(false);
     }
-  }, [handleClientClick]);
+  }, []);
 
   // ── Zoom handler (mouse wheel) ──
   const handleWheel = useCallback((e) => {
