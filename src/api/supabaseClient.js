@@ -28,6 +28,14 @@ export const isSupabaseConfigured = !!(
   isValidUrl(supabaseUrl)
 );
 
+// Debug: log config state on load (helps diagnose Vercel env issues)
+console.log('[CalmPlan] Supabase config:', {
+  configured: isSupabaseConfigured,
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  urlStart: supabaseUrl ? supabaseUrl.substring(0, 25) + '...' : '(empty)',
+});
+
 // Safely create client — catch SDK validation errors so the app never crashes
 let _supabase = null;
 if (isSupabaseConfigured) {

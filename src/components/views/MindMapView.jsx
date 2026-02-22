@@ -22,18 +22,18 @@ const ZERO_PANIC = {
 };
 
 const STATUS_TO_COLOR = {
-  completed:                       ZERO_PANIC.green,
-  in_progress:                     ZERO_PANIC.blue,
-  not_started:                     ZERO_PANIC.gray,
-  remaining_completions:           ZERO_PANIC.amber,
-  postponed:                       ZERO_PANIC.gray,
-  waiting_for_approval:            ZERO_PANIC.amber,
-  waiting_for_materials:           ZERO_PANIC.amber,
-  issue:                           ZERO_PANIC.amber,
-  ready_for_reporting:             ZERO_PANIC.indigo,
-  reported_waiting_for_payment:    ZERO_PANIC.purple,
-  pending_external:                '#1565C0',  // Deep blue - ball is with external party
-  not_relevant:                    ZERO_PANIC.gray,
+  completed:                       ZERO_PANIC.green,      // הושלם
+  in_progress:                     ZERO_PANIC.blue,       // בעבודה
+  not_started:                     ZERO_PANIC.gray,       // טרם התחיל
+  remaining_completions:           '#00ACC1',             // נותרו השלמות - cyan
+  postponed:                       '#78909C',             // נדחה - blue-gray
+  waiting_for_approval:            '#AB47BC',             // לבדיקה - purple
+  waiting_for_materials:           ZERO_PANIC.amber,      // ממתין לחומרים
+  issue:                           '#E91E63',             // דורש טיפול - pink (attention!)
+  ready_for_reporting:             ZERO_PANIC.indigo,     // מוכן לדיווח
+  reported_waiting_for_payment:    '#FBC02D',             // ממתין לתשלום - yellow
+  pending_external:                '#1565C0',             // מחכה לצד ג' - deep blue
+  not_relevant:                    '#B0BEC5',             // לא רלוונטי - light gray
 };
 
 // Cascade-aware color overrides for client nodes
@@ -936,21 +936,29 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       </div>
 
       {/* ── Legend (stays fixed in viewport) ── */}
-      <div className="absolute top-3 right-3 z-30 flex flex-wrap gap-2">
+      <div className="absolute top-3 right-3 z-30 flex flex-wrap gap-x-2 gap-y-1 max-w-[340px] justify-end">
         {[
-          { color: ZERO_PANIC.orange, label: 'להיום' },
-          { color: ZERO_PANIC.purple, label: 'באיחור' },
-          { color: ZERO_PANIC.amber, label: 'מוכן לדיווח', glow: true },
-          { color: '#1565C0', label: "צד ג'" },
-          { color: ZERO_PANIC.blue, label: 'פעיל' },
-          { color: ZERO_PANIC.green, label: 'הושלם' },
+          // Date-based overrides (priority)
+          { color: ZERO_PANIC.orange, label: 'להיום', glow: true },
+          { color: ZERO_PANIC.purple, label: 'באיחור', glow: true },
+          // Task statuses
+          { color: STATUS_TO_COLOR.in_progress, label: 'בעבודה' },
+          { color: STATUS_TO_COLOR.not_started, label: 'טרם התחיל' },
+          { color: STATUS_TO_COLOR.ready_for_reporting, label: 'מוכן לדיווח' },
+          { color: STATUS_TO_COLOR.waiting_for_approval, label: 'לבדיקה' },
+          { color: STATUS_TO_COLOR.waiting_for_materials, label: 'ממתין לחומרים' },
+          { color: STATUS_TO_COLOR.remaining_completions, label: 'נותרו השלמות' },
+          { color: STATUS_TO_COLOR.pending_external, label: "צד ג'" },
+          { color: STATUS_TO_COLOR.issue, label: 'דורש טיפול' },
+          { color: STATUS_TO_COLOR.reported_waiting_for_payment, label: 'ממתין לתשלום' },
+          { color: STATUS_TO_COLOR.completed, label: 'הושלם' },
         ].map(item => (
           <div key={item.label} className="flex items-center gap-1 text-[10px] text-gray-500 bg-white/70 backdrop-blur-sm rounded px-1.5 py-0.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{
+            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{
               backgroundColor: item.color,
               boxShadow: item.glow ? `0 0 6px ${item.color}88` : 'none',
             }} />
-            <span>{item.label}</span>
+            <span className="whitespace-nowrap">{item.label}</span>
           </div>
         ))}
       </div>
