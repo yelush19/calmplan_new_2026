@@ -332,12 +332,15 @@ export default function GanttView({ tasks, clients, currentMonth }) {
       })}
 
       {/* Today line */}
-      {isCurrentMonth && (
-        <div
-          className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10 pointer-events-none"
-          style={{ left: `calc(160px + ${((differenceInDays(new Date(), monthStart)) / daysInMonth) * 100}% * (100% - 160px) / 100%)` }}
-        />
-      )}
+      {isCurrentMonth && (() => {
+        const todayFraction = differenceInDays(new Date(), monthStart) / daysInMonth;
+        return (
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10 pointer-events-none"
+            style={{ left: `calc(${todayFraction * 100}% + ${160 * (1 - todayFraction)}px)` }}
+          />
+        );
+      })()}
 
       {/* Drag preview indicator */}
       {draggingTask && dragPreviewDay !== null && dragPreviewDay !== 0 && (

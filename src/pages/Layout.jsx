@@ -316,53 +316,7 @@ function LayoutInner({ children }) {
       />
     )}
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
-      <style>{`
-        :root {
-          --primary: 160 80% 39%;
-          --primary-foreground: 0 0% 100%;
-          --secondary: 158 92% 30%;
-          --secondary-foreground: 0 0% 100%;
-          --accent: 158 92% 30%;
-          --accent-foreground: 0 0% 100%;
-          --neutral-dark: #2d3436;
-          --neutral-medium: #636e72;
-          --neutral-light: #b2bec3;
-          --neutral-bg: #f5f6fa;
-          --background: #ffffff;
-          --status-success: #10b981; /* emerald-500: completed */
-          --status-warning: #f59e0b; /* amber-500: today/urgent */
-          --status-error: #8b5cf6;   /* violet-500: overdue (calm purple) */
-          --status-info: #0ea5e9;    /* sky-500: in progress */
-          --status-pending: #6366f1; /* indigo-500: pending */
-          --muted: 228 25% 97%;
-          --muted-foreground: 200 7% 42%;
-          --card: 0 0% 100%;
-          --card-foreground: 192 9% 19%;
-          --popover: 0 0% 100%;
-          --popover-foreground: 192 9% 19%;
-          --border: 200 16% 85%;
-          --input: 200 16% 85%;
-          --ring: 160 80% 39%;
-          --foreground: 192 9% 19%;
-          --destructive: 5 79% 57%;
-          --destructive-foreground: 0 0% 100%;
-        }
-        body {
-          font-family: 'Varela Round', 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
-          background-color: var(--neutral-bg);
-        }
-        h1, h2, h3, h4, h5, h6, .heading {
-          font-family: 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
-          font-weight: 600;
-          color: var(--neutral-dark);
-        }
-        .btn, button {
-          font-family: 'Assistant', 'Varela Round', 'Heebo', sans-serif;
-          font-weight: 600;
-        }
-      `}</style>
-
-      <div className="min-h-screen flex flex-col">
+      <div className="h-screen flex flex-col">
         {/* === TOP HEADER BAR === */}
         <header className="bg-white border-b border-gray-200 px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-sm">
           {/* Right: Logo + Mobile menu */}

@@ -172,7 +172,7 @@ export default function ServiceProvidersPage() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen" dir="rtl">
+    <div className="p-6 bg-gray-50" dir="rtl">
       <Card className="max-w-7xl mx-auto">
         <CardHeader>
           <div className="flex justify-between items-center">

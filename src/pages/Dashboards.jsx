@@ -96,7 +96,7 @@ export default function DashboardsPage() {
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen"
+            className="p-4 sm:p-6 md:p-8 bg-gray-50"
         >
             <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">דשבורד ניתוח נתונים</h1>
             
