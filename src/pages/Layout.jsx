@@ -672,26 +672,26 @@ function LayoutInner({ children }) {
       <RealityCheck />
       <CompletionFeedback />
 
-      {/* Floating Quick Add Task FAB */}
+      {/* Floating Quick Add Task FAB — always visible above everything */}
       <button
         onClick={() => setShowQuickAdd(true)}
-        className="fixed bottom-6 left-20 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-105"
+        className="fixed bottom-5 left-[4.5rem] z-[60] w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-110 ring-2 ring-white/50"
         title="משימה מהירה"
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-5 h-5" />
       </button>
 
-      {/* Floating Sticky Notes FAB */}
+      {/* Floating Sticky Notes FAB — always visible above everything */}
       <button
         onClick={() => setNotesOpen(!notesOpen)}
-        className={`fixed bottom-6 left-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
+        className={`fixed bottom-5 left-5 z-[60] w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 ring-2 ring-white/50 ${
           notesOpen
             ? 'bg-gray-500 hover:bg-gray-600 text-white scale-90'
-            : 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse hover:animate-none'
+            : 'bg-amber-500 hover:bg-amber-600 text-white'
         }`}
         title={notesOpen ? 'סגור פתקים' : 'פתח פתקים'}
       >
-        {notesOpen ? <X className="w-5 h-5" /> : <StickyNote className="w-5 h-5" />}
+        {notesOpen ? <X className="w-4 h-4" /> : <StickyNote className="w-4 h-4" />}
       </button>
 
       {/* Global Quick Add Task Dialog */}
