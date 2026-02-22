@@ -60,6 +60,15 @@ function DraggablePanel({ storageKey, children, className = '', style = {} }) {
     setResetKey(k => k + 1);
   }, [fullKey]);
 
+  // Guard click: suppresses click events on children when user just finished dragging
+  const handleClickCapture = useCallback((e) => {
+    if (didDrag.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      didDrag.current = false;
+    }
+  }, []);
+
   return (
     <motion.div
       key={resetKey}
@@ -71,6 +80,7 @@ function DraggablePanel({ storageKey, children, className = '', style = {} }) {
       onDragEnd={handleDragEnd}
       initial={savedPos.current}
       onDoubleClick={handleReset}
+      onClickCapture={handleClickCapture}
       className={`cursor-grab active:cursor-grabbing select-none ${className}`}
       style={style}
       title="גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
@@ -476,7 +486,7 @@ export default function HomePage() {
   return (
     <motion.div
       className="relative w-full"
-      style={{ height: 'calc(100vh - 42px)' }}
+      style={{ height: 'calc(100vh - 100px)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
