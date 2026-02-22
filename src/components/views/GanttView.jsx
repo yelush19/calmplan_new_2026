@@ -1,12 +1,14 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, addDays } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, addDays, addMonths, subMonths, isWithinInterval } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Task } from '@/api/entities';
 import { toast } from 'sonner';
 import { getScheduledStartForCategory } from '@/config/automationRules';
 import { getPayrollTier, getVatEnergyTier, getTaskComplexity } from '@/engines/taskCascadeEngine';
 import { getServiceForTask } from '@/config/processTemplates';
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 
 const STATUS_COLORS = {
   completed: 'bg-emerald-400',
@@ -41,7 +43,8 @@ const estimateClientSize = (client, tasks) => {
 };
 
 export default function GanttView({ tasks, clients, currentMonth }) {
-  const monthStart = startOfMonth(currentMonth || new Date());
+  const [viewMonth, setViewMonth] = useState(currentMonth || new Date());
+  const monthStart = startOfMonth(viewMonth);
   const monthEnd = endOfMonth(monthStart);
   const daysInMonth = differenceInDays(monthEnd, monthStart) + 1;
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -50,9 +53,13 @@ export default function GanttView({ tasks, clients, currentMonth }) {
   const dragStartX = useRef(0);
   const dragStartDay = useRef(0);
 
+  const goToPrevMonth = () => setViewMonth(prev => subMonths(prev, 1));
+  const goToNextMonth = () => setViewMonth(prev => addMonths(prev, 1));
+  const goToCurrentMonth = () => setViewMonth(new Date());
+
   const grouped = useMemo(() => {
     const groups = {};
-    tasks.forEach(task => {
+    monthTasks.forEach(task => {
       const key = task.client_name || 'ללא לקוח';
       if (!groups[key]) groups[key] = [];
       groups[key].push(task);
@@ -62,7 +69,7 @@ export default function GanttView({ tasks, clients, currentMonth }) {
       const bOverdue = b.some(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date());
       return bOverdue - aOverdue;
     });
-  }, [tasks]);
+  }, [monthTasks]);
 
   const getClientSize = (clientName) => {
     const client = clients?.find(c => c.name === clientName);
@@ -172,27 +179,96 @@ export default function GanttView({ tasks, clients, currentMonth }) {
     setDragPreviewDay(null);
   }, [draggingTask, dragPreviewDay]);
 
-  if (tasks.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px] text-gray-400">
-        <p>אין משימות להצגה בציר הזמן</p>
-      </div>
-    );
-  }
+  // Filter tasks relevant to this month (have due_date or scheduled_start in range)
+  const monthTasks = useMemo(() => {
+    return tasks.filter(t => {
+      if (!t.due_date) return false;
+      const due = parseISO(t.due_date);
+      const start = t.scheduled_start ? parseISO(t.scheduled_start) : due;
+      // Task overlaps with viewed month if start <= monthEnd AND due >= monthStart
+      return start <= monthEnd && due >= monthStart;
+    });
+  }, [tasks, monthStart, monthEnd]);
+
+  const isCurrentMonth = monthStart.getMonth() === new Date().getMonth() && monthStart.getFullYear() === new Date().getFullYear();
+
+  // Count tasks per adjacent months for navigation hints
+  const prevMonthCount = useMemo(() => {
+    const ps = startOfMonth(subMonths(viewMonth, 1));
+    const pe = endOfMonth(ps);
+    return tasks.filter(t => t.due_date && parseISO(t.due_date) >= ps && parseISO(t.due_date) <= pe).length;
+  }, [tasks, viewMonth]);
+  const nextMonthCount = useMemo(() => {
+    const ns = startOfMonth(addMonths(viewMonth, 1));
+    const ne = endOfMonth(ns);
+    return tasks.filter(t => t.due_date && parseISO(t.due_date) >= ns && parseISO(t.due_date) <= ne).length;
+  }, [tasks, viewMonth]);
 
   return (
     <div className="bg-white rounded-2xl border overflow-x-auto">
+      {/* ── Month navigation header ── */}
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-l from-gray-50 to-white">
+        <div className="flex items-center gap-2">
+          <button onClick={goToPrevMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 text-xs">
+            <ChevronRight className="w-4 h-4" />
+            {prevMonthCount > 0 && <span className="text-gray-400">({prevMonthCount})</span>}
+          </button>
+          <div className="flex items-center gap-1.5">
+            <CalendarDays className="w-4 h-4 text-blue-500" />
+            <span className="text-sm font-bold text-gray-800">
+              {format(monthStart, 'MMMM yyyy', { locale: he })}
+            </span>
+            <span className="text-xs text-gray-400">
+              ({monthTasks.length} משימות)
+            </span>
+          </div>
+          <button onClick={goToNextMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 text-xs">
+            <ChevronLeft className="w-4 h-4" />
+            {nextMonthCount > 0 && <span className="text-gray-400">({nextMonthCount})</span>}
+          </button>
+        </div>
+        {!isCurrentMonth && (
+          <button onClick={goToCurrentMonth} className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium transition-colors">
+            חזור להיום
+          </button>
+        )}
+      </div>
+
+      {monthTasks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+          <CalendarDays className="w-8 h-8 text-gray-300" />
+          <p className="text-sm">אין משימות בחודש {format(monthStart, 'MMMM', { locale: he })}</p>
+          <div className="flex gap-2 mt-2">
+            {prevMonthCount > 0 && (
+              <button onClick={goToPrevMonth} className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs transition-colors">
+                ← {format(subMonths(monthStart, 1), 'MMMM', { locale: he })} ({prevMonthCount})
+              </button>
+            )}
+            {nextMonthCount > 0 && (
+              <button onClick={goToNextMonth} className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs transition-colors">
+                {format(addMonths(monthStart, 1), 'MMMM', { locale: he })} ({nextMonthCount}) →
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+      <>
+
       {/* Header - days of month */}
       <div className="flex border-b bg-gray-50 sticky top-0 z-10">
         <div className="w-40 shrink-0 p-2 text-sm font-medium text-gray-600 border-l">משימה / לקוח</div>
         <div className="flex-1 flex">
-          {days.map(day => (
-            <div key={day.toISOString()}
-              className={`flex-1 text-center text-[10px] p-1 border-l border-gray-100
-                ${day.getDay() === 6 ? 'bg-violet-50' : ''}`}>
-              {format(day, 'd')}
-            </div>
-          ))}
+          {days.map(day => {
+            const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+            return (
+              <div key={day.toISOString()}
+                className={`flex-1 text-center text-[10px] p-1 border-l border-gray-100
+                  ${day.getDay() === 6 ? 'bg-violet-50' : ''}
+                  ${isToday ? 'bg-blue-100 font-bold text-blue-700' : ''}`}>
+                {format(day, 'd')}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -256,11 +332,21 @@ export default function GanttView({ tasks, clients, currentMonth }) {
         );
       })}
 
+      {/* Today line */}
+      {isCurrentMonth && (
+        <div
+          className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10 pointer-events-none"
+          style={{ left: `calc(160px + ${((differenceInDays(new Date(), monthStart)) / daysInMonth) * 100}% * (100% - 160px) / 100%)` }}
+        />
+      )}
+
       {/* Drag preview indicator */}
       {draggingTask && dragPreviewDay !== null && dragPreviewDay !== 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white text-xs px-3 py-1.5 rounded-full shadow-lg pointer-events-none">
           {draggingTask.title}: {dragPreviewDay > 0 ? `+${dragPreviewDay}` : dragPreviewDay} ימים → {format(addDays(parseISO(draggingTask.due_date), dragPreviewDay), 'dd/MM')}
         </div>
+      )}
+      </>
       )}
     </div>
   );
