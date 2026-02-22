@@ -305,17 +305,17 @@ function LayoutInner({ children }) {
 
       <div className="min-h-screen flex flex-col">
         {/* === TOP HEADER BAR === */}
-        <header className="bg-white border-b border-gray-200 px-4 py-1.5 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+        <header className="bg-white border-b border-gray-200 px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-sm">
           {/* Right: Logo + Mobile menu */}
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="md:hidden h-7 w-7" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+              {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </Button>
-            <Link to={createPageUrl("Home")} className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center shadow-md">
-                <Brain className="w-5 h-5 text-primary-foreground" />
+            <Link to={createPageUrl("Home")} className="flex items-center gap-1.5">
+              <div className="w-7 h-7 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center shadow-sm">
+                <Brain className="w-4 h-4 text-primary-foreground" />
               </div>
-              <h1 className="text-lg font-bold text-foreground hidden md:block">CalmPlan</h1>
+              <h1 className="text-sm font-bold text-foreground hidden md:block">CalmPlan</h1>
             </Link>
           </div>
 
