@@ -409,8 +409,8 @@ function LayoutInner({ children }) {
         <div className="flex-1 flex flex-row">
           {/* === SIDEBAR === */}
           {!focusMode && (
-            <aside className={`hidden md:flex flex-col border-l border-gray-200 bg-white transition-all duration-300
-              ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
+            <aside className={`hidden md:flex flex-col border-l border-gray-200 bg-white transition-all duration-300 shrink-0
+              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`}>
 
               {/* Toggle button */}
               <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -613,7 +613,7 @@ function LayoutInner({ children }) {
               </div>
             )}
 
-            <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-5 bg-neutral-bg/30">
+            <div className="flex-1 overflow-auto p-1.5 md:p-2 bg-neutral-bg/30">
               <div className="w-full">
                 <TimeAwareness />
 

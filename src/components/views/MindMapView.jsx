@@ -610,9 +610,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     ? "fixed inset-0 z-[9999] bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100"
     : "relative w-full rounded-2xl border border-gray-200";
 
+  // MindMap takes all available vertical space: 180px accounts for compact header + stats strip + card header
   const containerStyle = isFullscreen
     ? { background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' }
-    : { height: 'max(700px, calc(100vh - 280px))', background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' };
+    : { height: 'calc(100vh - 180px)', minHeight: '420px', background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f1f5f9 50%, #e8eef5 100%)' };
 
   return (
     <div
