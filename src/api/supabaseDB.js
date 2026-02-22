@@ -5,14 +5,27 @@
  */
 
 import { supabase, isSupabaseAvailable } from './supabaseClient';
+import { toast } from 'sonner';
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
+// Throttled error toast — avoid spamming the user with repeated errors
+let lastErrorToastTime = 0;
+const ERROR_TOAST_COOLDOWN = 5000; // 5 seconds
+function showErrorToast(title, description) {
+  const now = Date.now();
+  if (now - lastErrorToastTime > ERROR_TOAST_COOLDOWN) {
+    lastErrorToastTime = now;
+    toast.error(title, { description, duration: 5000 });
+  }
+}
+
 function guardSupabase(operation) {
   if (!isSupabaseAvailable()) {
     console.error(`[CalmPlan] Supabase not available for ${operation}. Returning empty result.`);
+    showErrorToast('המערכת לא מחוברת לענן', 'הנתונים לא נטענו. בדוק את החיבור.');
     return false;
   }
   return true;
@@ -41,6 +54,7 @@ function createEntity(collectionName) {
       const { data, error } = await query;
       if (error) {
         console.error(`Supabase list error (${collectionName}):`, error);
+        showErrorToast('שגיאה בטעינת נתונים', `לא ניתן לטעון ${collectionName}. נסה לרענן.`);
         return [];
       }
 

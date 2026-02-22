@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Home, Brain, CheckSquare, Target, BookCheck, DollarSign,
-  BarChart3, Settings, Menu, X, Users, Scaling,
+  BarChart3, Settings, Menu, X, Users, Scaling, FileText,
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, Database,
   ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote,
   ChevronLeft, ChevronRight, Plus, Hourglass, Maximize2, Star,
@@ -105,6 +105,7 @@ const getSidebarSections = () => ({
       { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
       { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
       { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
+      { name: "ניהול חוזים", href: createPageUrl("ClientContracts"), icon: FileText },
     ]
   },
   system: {
@@ -112,6 +113,7 @@ const getSidebarSections = () => ({
     icon: Settings,
     items: [
       { name: "אשף הגדרת נתונים", href: createPageUrl("SystemReadiness"), icon: Zap },
+      { name: "הגדרת מורכבות לקוחות", href: createPageUrl("BatchSetup"), icon: Scaling },
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
       { name: "גיבוי ושחזור", href: createPageUrl("BackupManager"), icon: Shield },
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
