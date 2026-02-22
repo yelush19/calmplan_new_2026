@@ -32,6 +32,7 @@ const STATUS_TO_COLOR = {
   issue:                           '#E91E63',             // דורש טיפול - pink (attention!)
   ready_for_reporting:             ZERO_PANIC.indigo,     // מוכן לדיווח
   reported_waiting_for_payment:    '#FBC02D',             // ממתין לתשלום - yellow
+  waiting_on_client:               '#F59E0B',             // ממתין ללקוח - amber
   pending_external:                '#1565C0',             // מחכה לצד ג' - deep blue
   not_relevant:                    '#B0BEC5',             // לא רלוונטי - light gray
 };
@@ -233,14 +234,25 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         const client = clients?.find(c => c.name === name);
         const tier = getComplexityTier(client, clientTasks);
         const tierInfo = getTierInfo(tier);
+        // Display name: nickname || full name
+        const displayName = (client?.nickname || name || '').trim();
+        // Top active task for pill display
+        const activeTasks = clientTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
+        const topTask = activeTasks[0] || null;
+        // Check for waiting_on_client status
+        const hasWaitingOnClient = clientTasks.some(t => t.status === 'waiting_on_client');
         return {
           name,
+          displayName,
+          nickname: client?.nickname || '',
           clientId: client?.id,
           tier,
           tierLabel: tierInfo.label,
           tierIcon: tierInfo.icon,
           ...getClientAggregateState(clientTasks),
           tasks: clientTasks,
+          topTask,
+          hasWaitingOnClient,
           totalTasks: clientTasks.length,
           completedTasks: clientTasks.filter(t => t.status === 'completed').length,
           overdueTasks: clientTasks.filter(t => {
@@ -282,8 +294,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const padY = 60;
     const scaleX = (w - padX * 2) * 0.42;
     const scaleY = (h - padY * 2) * 0.42;
-    // Leaf distance: relative to the smaller axis so nodes don't overflow
-    const baseLeafDist = Math.min(scaleX, scaleY) * 0.48;
+    // Leaf distance: increased for wider pill nodes
+    const baseLeafDist = Math.min(scaleX, scaleY) * 0.58;
 
     const angleStep = (2 * Math.PI) / Math.max(branches.length, 1);
 
@@ -296,7 +308,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const by = cy + Math.sin(angle) * scaleY;
 
       const clientCount = branch.clients.length;
-      const clientAngleSpread = Math.min(Math.PI * 0.65, clientCount * 0.35);
+      const clientAngleSpread = Math.min(Math.PI * 0.75, clientCount * 0.42);
 
       // Sort clients: filing-ready & urgent first (closer to branch), completed last (pushed out)
       const sortedClients = [...branch.clients].sort((a, b) => (b.statusRing || 0) - (a.statusRing || 0));
@@ -340,9 +352,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       };
     });
 
-    // ─── Phase 2: Collision Detection & Resolution ───
-    const MIN_GAP = 6;
-    for (let pass = 0; pass < 5; pass++) {
+    // ─── Phase 2: Collision Detection & Resolution (pill-aware) ───
+    // Pill nodes are wider than circles: width ≈ radius*2.8, height ≈ radius*1.1
+    // Use the larger dimension (half-width) as effective collision radius
+    const MIN_GAP = 10;
+    const getPillHalfWidth = (r) => Math.max(r * 1.4, 45);
+    for (let pass = 0; pass < 8; pass++) {
       let hadCollision = false;
       for (let i = 0; i < allClientNodes.length; i++) {
         for (let j = i + 1; j < allClientNodes.length; j++) {
@@ -351,7 +366,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const minDist = a.radius / 2 + b.radius / 2 + MIN_GAP;
+          const minDist = getPillHalfWidth(a.radius) + getPillHalfWidth(b.radius) + MIN_GAP;
 
           if (dist < minDist && dist > 0) {
             hadCollision = true;
@@ -395,11 +410,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       minY = Math.min(minY, branch.y - 30);
       maxY = Math.max(maxY, branch.y + 30);
       branch.clientPositions.forEach(client => {
-        const r = client.radius || 30;
-        minX = Math.min(minX, client.x - r);
-        maxX = Math.max(maxX, client.x + r);
-        minY = Math.min(minY, client.y - r);
-        maxY = Math.max(maxY, client.y + r);
+        // Account for pill width (wider than height)
+        const pillHalfW = Math.max((client.radius || 30) * 1.4, 45);
+        const pillHalfH = Math.max((client.radius || 30) * 0.55, 18);
+        minX = Math.min(minX, client.x - pillHalfW);
+        maxX = Math.max(maxX, client.x + pillHalfW);
+        minY = Math.min(minY, client.y - pillHalfH);
+        maxY = Math.max(maxY, client.y + pillHalfH);
       });
     });
 
@@ -544,6 +561,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     setTooltip({
       x, y,
       name: client.name,
+      displayName: client.displayName,
+      nickname: client.nickname,
       total: client.totalTasks,
       completed: client.completedTasks,
       overdue: client.overdueTasks,
@@ -552,6 +571,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       tierIcon: client.tierIcon,
       color: client.color,
       isFilingReady: client.isFilingReady,
+      hasWaitingOnClient: client.hasWaitingOnClient,
+      topTaskTitle: client.topTask?.title || '',
     });
   }, []);
 
@@ -741,41 +762,53 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <span className="bg-white/25 rounded-full px-1.5 text-[10px]">{branch.clients.length}</span>
             </motion.div>
 
-            {/* ── Client Leaf Nodes (Complexity-Tier Sized) ── */}
+            {/* ── Client Leaf Nodes (Pill / Mini-Card Shape) ── */}
             {branch.clientPositions.map((client, j) => {
               const isHovered = hoveredNode === client.name;
               const isAllDone = client.completionRatio === 1 && client.totalTasks > 0;
               const isFilingReady = client.isFilingReady;
-              // Completed: shrink slightly + dim
-              const nodeRadius = isAllDone ? Math.max(client.radius * 0.7, 16) : client.radius;
+              const isWaitingOnClient = client.hasWaitingOnClient;
               // Ghost Node: dashed border if no due_date on all tasks
               const isGhost = client.tasks.every(t => !t.due_date);
 
-              // ADHD Focus: Filing-ready gets strong amber glow
-              const amberGlow = isFilingReady
-                ? `0 0 24px ${ZERO_PANIC.amber}88, 0 0 48px ${ZERO_PANIC.amber}44`
-                : '';
+              // Pill dimensions based on complexity tier
+              const pillHeight = Math.max(client.radius * 1.1, 36);
+              const pillWidth = Math.max(client.radius * 2.8, 90);
+              // Completed: shrink slightly + dim
+              const finalW = isAllDone ? pillWidth * 0.85 : pillWidth;
+              const finalH = isAllDone ? pillHeight * 0.85 : pillHeight;
+
+              // Shadows
               const hoverGlow = `0 0 20px ${client.color}66, 0 4px 12px rgba(0,0,0,0.2)`;
               const normalShadow = isFilingReady
                 ? `0 0 16px ${ZERO_PANIC.amber}66, 0 2px 6px rgba(0,0,0,0.12)`
-                : '0 2px 6px rgba(0,0,0,0.12)';
+                : '0 2px 8px rgba(0,0,0,0.12)';
+
+              // Top task title (truncated)
+              const topTaskTitle = client.topTask?.title || '';
+              const truncatedTask = topTaskTitle.length > 18 ? topTaskTitle.substring(0, 16) + '...' : topTaskTitle;
+
+              // Border: amber for filing-ready, orange-dashed for waiting_on_client, normal otherwise
+              const borderColor = isWaitingOnClient ? '#f59e0b' : isFilingReady ? ZERO_PANIC.amber : isGhost ? client.color : (isHovered ? '#fff' : 'rgba(255,255,255,0.4)');
+              const borderStyle = isGhost ? 'dashed' : isWaitingOnClient ? 'solid' : 'solid';
+              const borderWidth = isWaitingOnClient ? 2.5 : isFilingReady ? 3 : 1.5;
 
               return (
                 <motion.div
                   key={`${branch.category}-${client.name}`}
-                  className={`absolute z-10 flex items-center justify-center rounded-full border-2 text-white font-medium cursor-pointer select-none
+                  className={`absolute z-10 flex flex-col items-center justify-center cursor-pointer select-none overflow-hidden
                     ${client.shouldPulse ? 'animate-pulse' : ''}`}
                   style={{
-                    width: nodeRadius,
-                    height: nodeRadius,
-                    left: client.x - nodeRadius / 2,
-                    top: client.y - nodeRadius / 2,
-                    backgroundColor: isGhost ? 'transparent' : client.color,
-                    borderColor: isGhost ? client.color : (isFilingReady ? ZERO_PANIC.amber : (isHovered ? '#fff' : client.color)),
-                    borderStyle: isGhost ? 'dashed' : 'solid',
-                    borderWidth: isFilingReady ? 3 : 2,
+                    width: finalW,
+                    height: finalH,
+                    left: client.x - finalW / 2,
+                    top: client.y - finalH / 2,
+                    backgroundColor: isGhost ? 'rgba(255,255,255,0.85)' : client.color,
+                    borderColor,
+                    borderStyle,
+                    borderWidth,
+                    borderRadius: finalH / 2,
                     color: isGhost ? client.color : '#fff',
-                    fontSize: nodeRadius < 30 ? '7px' : nodeRadius < 45 ? '9px' : nodeRadius < 65 ? '11px' : '13px',
                     boxShadow: isHovered ? hoverGlow : normalShadow,
                     opacity: isSpotlit(branch.category) ? (isAllDone ? 0.35 : 1) : 0.12,
                     filter: isAllDone ? 'saturate(0.3) brightness(0.85)' : 'none',
@@ -792,65 +825,73 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     stiffness: 180,
                     damping: 14,
                   }}
-                  whileHover={{ scale: 1.25, zIndex: 50 }}
+                  whileHover={{ scale: 1.08, zIndex: 50 }}
                   onMouseEnter={(e) => handleClientHover(client, e.clientX, e.clientY)}
                   onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
                   onClick={(e) => { e.stopPropagation(); handleClientClick(client, e.clientX, e.clientY); }}
                   onDoubleClick={() => handleClientDoubleClick(client)}
-                  title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''} - לחיצה לעריכה`}
+                  title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''}${isWaitingOnClient ? ' [ממתין ללקוח]' : ''} - לחיצה לעריכה`}
                 >
-                  {client.name?.substring(0, nodeRadius < 35 ? 2 : nodeRadius < 55 ? 3 : 4)}
-                  {/* Completion ring */}
-                  {client.totalTasks > 0 && (
-                    <svg
-                      className="absolute inset-0 pointer-events-none"
-                      width={nodeRadius}
-                      height={nodeRadius}
-                      viewBox={`0 0 ${nodeRadius} ${nodeRadius}`}
-                    >
-                      <circle
-                        cx={nodeRadius / 2}
-                        cy={nodeRadius / 2}
-                        r={nodeRadius / 2 - 2}
-                        fill="none"
-                        stroke="rgba(255,255,255,0.3)"
-                        strokeWidth={isFilingReady ? 3 : 2}
-                      />
-                      <circle
-                        cx={nodeRadius / 2}
-                        cy={nodeRadius / 2}
-                        r={nodeRadius / 2 - 2}
-                        fill="none"
-                        stroke={isFilingReady ? ZERO_PANIC.amber : 'rgba(255,255,255,0.8)'}
-                        strokeWidth={isFilingReady ? 3 : 2}
-                        strokeDasharray={`${(client.completedTasks / client.totalTasks) * Math.PI * (nodeRadius - 4)} ${Math.PI * (nodeRadius - 4)}`}
-                        strokeLinecap="round"
-                        transform={`rotate(-90 ${nodeRadius / 2} ${nodeRadius / 2})`}
-                      />
-                    </svg>
-                  )}
-                  {/* Task count badge */}
-                  {client.totalTasks > 0 && nodeRadius >= 35 && (
+                  {/* Client display name (nickname || name) */}
+                  <span
+                    className="font-bold leading-tight text-center px-2 truncate w-full"
+                    style={{
+                      fontSize: finalH < 40 ? '9px' : finalH < 50 ? '10px' : '11px',
+                      textShadow: isGhost ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
+                      maxWidth: finalW - 12,
+                    }}
+                  >
+                    {isWaitingOnClient && <span title="ממתין ללקוח" style={{ marginInlineEnd: '3px' }}>⏳</span>}
+                    {client.displayName}
+                  </span>
+
+                  {/* Top task title */}
+                  {truncatedTask && (
                     <span
-                      className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white font-bold pointer-events-none"
+                      className="leading-tight text-center px-2 truncate w-full"
                       style={{
-                        width: nodeRadius >= 50 ? 20 : 16,
-                        height: nodeRadius >= 50 ? 20 : 16,
-                        fontSize: nodeRadius >= 50 ? '9px' : '8px',
+                        fontSize: finalH < 40 ? '7px' : '8px',
+                        opacity: isGhost ? 0.7 : 0.75,
+                        maxWidth: finalW - 12,
+                        marginTop: '1px',
+                      }}
+                    >
+                      {truncatedTask}
+                    </span>
+                  )}
+
+                  {/* Progress bar (thin, at bottom of pill) */}
+                  {client.totalTasks > 0 && (
+                    <div
+                      className="absolute bottom-0 left-0 right-0 pointer-events-none"
+                      style={{ height: '3px', borderRadius: '0 0 999px 999px', overflow: 'hidden' }}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${(client.completedTasks / client.totalTasks) * 100}%`,
+                          backgroundColor: isFilingReady ? ZERO_PANIC.amber : 'rgba(255,255,255,0.6)',
+                          borderRadius: '0 0 999px 999px',
+                          transition: 'width 0.3s ease',
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Task count badge */}
+                  {client.totalTasks > 0 && (
+                    <span
+                      className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-white font-bold pointer-events-none"
+                      style={{
+                        width: 18,
+                        height: 18,
+                        fontSize: '8px',
                         backgroundColor: client.overdueTasks > 0 ? ZERO_PANIC.purple : client.color,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                        border: '1.5px solid rgba(255,255,255,0.8)',
                       }}
                     >
                       {client.totalTasks - client.completedTasks}
-                    </span>
-                  )}
-                  {/* Tier indicator for larger nodes */}
-                  {nodeRadius >= 50 && (
-                    <span
-                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] bg-black/30 rounded-full px-1 pointer-events-none"
-                      style={{ whiteSpace: 'nowrap' }}
-                    >
-                      {client.tierIcon}
                     </span>
                   )}
                 </motion.div>
@@ -947,6 +988,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           { color: STATUS_TO_COLOR.ready_for_reporting, label: 'מוכן לדיווח' },
           { color: STATUS_TO_COLOR.waiting_for_approval, label: 'לבדיקה' },
           { color: STATUS_TO_COLOR.waiting_for_materials, label: 'ממתין לחומרים' },
+          { color: STATUS_TO_COLOR.waiting_on_client, label: 'ממתין ללקוח' },
           { color: STATUS_TO_COLOR.remaining_completions, label: 'נותרו השלמות' },
           { color: STATUS_TO_COLOR.pending_external, label: "צד ג'" },
           { color: STATUS_TO_COLOR.issue, label: 'דורש טיפול' },
@@ -1003,12 +1045,21 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           >
             <div className="flex items-center gap-2 mb-1.5">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tooltip.color }} />
-              <span className="font-bold text-sm text-gray-800">{tooltip.name}</span>
+              <span className="font-bold text-sm text-gray-800">{tooltip.displayName || tooltip.name}</span>
+              {tooltip.nickname && tooltip.nickname !== tooltip.name && (
+                <span className="text-[10px] text-gray-400">({tooltip.name})</span>
+              )}
               <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{tooltip.tierIcon} {tooltip.tierLabel}</span>
               {tooltip.isFilingReady && (
                 <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded font-semibold">מוכן לדיווח</span>
               )}
+              {tooltip.hasWaitingOnClient && (
+                <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 rounded font-semibold">⏳ ממתין ללקוח</span>
+              )}
             </div>
+            {tooltip.topTaskTitle && (
+              <p className="text-[11px] text-gray-500 mb-1 truncate max-w-[200px]">📋 {tooltip.topTaskTitle}</p>
+            )}
             <div className="flex items-center gap-3 text-[11px] text-gray-600">
               <span>{tooltip.total} משימות</span>
               <span className="text-green-600">{tooltip.completed} הושלמו</span>

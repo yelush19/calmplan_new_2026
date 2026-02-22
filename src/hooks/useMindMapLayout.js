@@ -13,9 +13,9 @@ const HUB_RADIUS = 55;
 const CATEGORY_RADIUS = 42;
 const CLIENT_BASE_RADIUS = 22;
 const RING1_DISTANCE = 240;       // Distance from center to category nodes
-const RING2_BASE_DISTANCE = 140;  // Base distance from category to client nodes
-const MIN_CLIENT_GAP = 14;        // Minimum gap between client bubble edges
-const COLLISION_ITERATIONS = 3;   // Number of collision resolution passes
+const RING2_BASE_DISTANCE = 170;  // Base distance from category to pill nodes (wider)
+const MIN_CLIENT_GAP = 20;        // Minimum gap between pill node edges
+const COLLISION_ITERATIONS = 5;   // Number of collision resolution passes
 
 // ---------- STATUS-DRIVEN PRIORITY ----------
 // Higher priority = closer to center; issue/filing are highest
@@ -112,7 +112,8 @@ function resolveCollisions(nodes, iterations = COLLISION_ITERATIONS) {
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const minDist = a.radius + b.radius + MIN_CLIENT_GAP;
+        // Pill-aware: use wider collision radius (half-width of pill ≈ radius * 1.4)
+        const minDist = Math.max(a.radius * 1.4, 45) + Math.max(b.radius * 1.4, 45) + MIN_CLIENT_GAP;
 
         if (dist < minDist && dist > 0) {
           const overlap = (minDist - dist) / 2;
@@ -297,7 +298,9 @@ export function useMindMapLayout({ clients, tasks, reconciliations }) {
           x,
           y,
           radius,
-          label: client.name,
+          label: client.nickname || client.name,
+          fullName: client.name,
+          nickname: client.nickname || '',
           categoryId: catId,
           gradientFrom: catNode.gradientFrom,
           gradientTo: catNode.gradientTo,
