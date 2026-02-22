@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { isSupabaseConfigured } from '@/api/supabaseClient';
+import { isSupabaseConfigured, testSupabaseConnection } from '@/api/supabaseClient';
 import {
   saveDailyBackupToSupabase,
   listBackupSnapshots,
@@ -11,7 +11,7 @@ import {
 import { exportAllData, importAllData } from '@/api/base44Client';
 import {
   Shield, Download, Upload, RefreshCw, Clock, CheckCircle,
-  AlertTriangle, Database, HardDrive, RotateCcw
+  AlertTriangle, Database, HardDrive, RotateCcw, Wifi, WifiOff
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -24,10 +24,22 @@ export default function BackupManager() {
   const [isBacking, setIsBacking] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [lastAction, setLastAction] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState(null); // null = testing, true = ok, string = error
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    loadSnapshots();
+    // Test connection first, then load snapshots
+    if (isSupabaseConfigured) {
+      testSupabaseConnection().then((result) => {
+        if (result.ok) {
+          setConnectionStatus(true);
+          loadSnapshots();
+        } else {
+          setConnectionStatus(result.error || 'חיבור נכשל');
+          setIsLoading(false);
+        }
+      });
+    }
   }, []);
 
   const loadSnapshots = async () => {
@@ -129,11 +141,88 @@ export default function BackupManager() {
       <div className="p-6 max-w-3xl mx-auto" dir="rtl">
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="p-6 text-center">
-            <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+            <WifiOff className="w-12 h-12 text-amber-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-amber-800 mb-2">ענן לא מחובר</h2>
-            <p className="text-amber-700">מערכת הגיבוי דורשת חיבור ל-Supabase. הגדר את משתני הסביבה בקובץ .env</p>
+            <p className="text-amber-700 mb-3">מערכת הגיבוי דורשת חיבור ל-Supabase. הגדר את משתני הסביבה בקובץ .env</p>
+            <p className="text-sm text-amber-600">
+              נדרש: <code className="bg-amber-100 px-1 rounded">VITE_SUPABASE_URL</code> ו-<code className="bg-amber-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code>
+            </p>
           </CardContent>
         </Card>
+
+        {/* Still allow local file export/import even without Supabase */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200" onClick={handleExportFile}>
+            <CardContent className="p-5 text-center">
+              <Download className="w-10 h-10 mx-auto mb-3 text-green-600" />
+              <h3 className="font-bold text-gray-800 mb-1">הורד גיבוי מקומי</h3>
+              <p className="text-xs text-gray-500">ייצוא נתונים מ-localStorage לקובץ JSON</p>
+              <Button variant="outline" className="mt-3 w-full border-green-300 text-green-700 hover:bg-green-50">
+                הורדה
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200" onClick={() => fileInputRef.current?.click()}>
+            <CardContent className="p-5 text-center">
+              <Upload className="w-10 h-10 mx-auto mb-3 text-orange-600" />
+              <h3 className="font-bold text-gray-800 mb-1">ייבוא מקובץ</h3>
+              <p className="text-xs text-gray-500">שחזור נתונים מקובץ JSON</p>
+              <Button variant="outline" className="mt-3 w-full border-orange-300 text-orange-700 hover:bg-orange-50">
+                בחר קובץ
+              </Button>
+              <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Supabase configured but connection failed
+  if (connectionStatus !== null && connectionStatus !== true) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto" dir="rtl">
+        <Card className="border-red-300 bg-red-50">
+          <CardContent className="p-6 text-center">
+            <WifiOff className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-red-800 mb-2">שגיאת חיבור ל-Supabase</h2>
+            <p className="text-red-700 mb-2">החיבור לענן נכשל. הנתונים נשמרים מקומית.</p>
+            <p className="text-sm text-red-600 bg-red-100 rounded p-2 font-mono">{connectionStatus}</p>
+            <Button
+              className="mt-4 bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                setConnectionStatus(null);
+                testSupabaseConnection().then((r) => {
+                  if (r.ok) { setConnectionStatus(true); loadSnapshots(); }
+                  else setConnectionStatus(r.error || 'חיבור נכשל');
+                });
+              }}
+            >
+              <RefreshCw className="w-4 h-4 ml-2" />
+              נסה שוב
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Still allow local file export/import */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200" onClick={handleExportFile}>
+            <CardContent className="p-5 text-center">
+              <Download className="w-10 h-10 mx-auto mb-3 text-green-600" />
+              <h3 className="font-bold text-gray-800 mb-1">הורד גיבוי מקומי</h3>
+              <Button variant="outline" className="mt-3 w-full border-green-300 text-green-700 hover:bg-green-50">הורדה</Button>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200" onClick={() => fileInputRef.current?.click()}>
+            <CardContent className="p-5 text-center">
+              <Upload className="w-10 h-10 mx-auto mb-3 text-orange-600" />
+              <h3 className="font-bold text-gray-800 mb-1">ייבוא מקובץ</h3>
+              <Button variant="outline" className="mt-3 w-full border-orange-300 text-orange-700 hover:bg-orange-50">בחר קובץ</Button>
+              <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -146,6 +235,10 @@ export default function BackupManager() {
           גיבוי ושחזור
         </h1>
         <p className="text-gray-600">ניהול גיבויים אוטומטיים ושחזור נתונים</p>
+        <div className="mt-2 inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-green-50 border border-green-200 text-green-700">
+          <Wifi className="w-4 h-4" />
+          מחובר ל-Supabase
+        </div>
       </div>
 
       {/* Status Banner */}

@@ -4,15 +4,25 @@
  * Uses a single generic table (app_data) with JSONB data column.
  */
 
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseAvailable } from './supabaseClient';
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
+function guardSupabase(operation) {
+  if (!isSupabaseAvailable()) {
+    console.error(`[CalmPlan] Supabase not available for ${operation}. Returning empty result.`);
+    return false;
+  }
+  return true;
+}
+
 function createEntity(collectionName) {
   return {
     async list(sortField = null, limit = 1000) {
+      if (!guardSupabase(`list(${collectionName})`)) return [];
+
       let query = supabase
         .from('app_data')
         .select('*')
@@ -43,6 +53,8 @@ function createEntity(collectionName) {
     },
 
     async create(itemData) {
+      if (!guardSupabase(`create(${collectionName})`)) throw new Error('Supabase not available');
+
       const id = generateId();
       const now = new Date().toISOString();
       // Strip id from data to avoid duplication
@@ -69,6 +81,8 @@ function createEntity(collectionName) {
     },
 
     async update(id, updateData) {
+      if (!guardSupabase(`update(${collectionName})`)) throw new Error('Supabase not available');
+
       // Strip metadata fields from update data
       const { id: _id, created_date: _cd, updated_date: _ud, ...cleanUpdate } = updateData;
 
@@ -104,6 +118,8 @@ function createEntity(collectionName) {
     },
 
     async delete(id) {
+      if (!guardSupabase(`delete(${collectionName})`)) throw new Error('Supabase not available');
+
       const { error } = await supabase
         .from('app_data')
         .delete()
@@ -119,6 +135,8 @@ function createEntity(collectionName) {
     },
 
     async deleteAll() {
+      if (!guardSupabase(`deleteAll(${collectionName})`)) throw new Error('Supabase not available');
+
       const { error } = await supabase
         .from('app_data')
         .delete()
@@ -221,6 +239,10 @@ export { auth };
  * Call this once after setting up Supabase to move existing data
  */
 export async function migrateFromLocalStorage() {
+  if (!guardSupabase('migrateFromLocalStorage')) {
+    throw new Error('Supabase not available for migration');
+  }
+
   const DB_PREFIX = 'calmplan_';
   const results = { migrated: 0, skipped: 0, errors: 0, collections: [] };
 
@@ -277,6 +299,8 @@ export async function migrateFromLocalStorage() {
  * Export all Supabase data as JSON (backup)
  */
 export async function exportAllData() {
+  if (!guardSupabase('exportAllData')) throw new Error('Supabase not available');
+
   const { data, error } = await supabase
     .from('app_data')
     .select('*')
@@ -305,6 +329,8 @@ export async function exportAllData() {
  * Returns { saved: boolean, date: string } or throws on error.
  */
 export async function saveDailyBackupToSupabase() {
+  if (!guardSupabase('saveDailyBackupToSupabase')) throw new Error('Supabase not available');
+
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
   // Check if today's backup already exists
@@ -360,6 +386,8 @@ export async function saveDailyBackupToSupabase() {
  * List available backup snapshots
  */
 export async function listBackupSnapshots() {
+  if (!guardSupabase('listBackupSnapshots')) return [];
+
   const { data, error } = await supabase
     .from('app_data')
     .select('id, data, created_date')
@@ -381,6 +409,8 @@ export async function listBackupSnapshots() {
  * Restore from a specific backup snapshot
  */
 export async function restoreFromBackupSnapshot(backupId) {
+  if (!guardSupabase('restoreFromBackupSnapshot')) throw new Error('Supabase not available');
+
   const { data, error } = await supabase
     .from('app_data')
     .select('data')
@@ -399,6 +429,8 @@ export async function restoreFromBackupSnapshot(backupId) {
  * Delete all data from Supabase (except backup_snapshots)
  */
 export async function clearAllData() {
+  if (!guardSupabase('clearAllData')) throw new Error('Supabase not available');
+
   const { error } = await supabase
     .from('app_data')
     .delete()
@@ -445,6 +477,8 @@ function normalizeCollectionName(key) {
  * Cleans zombie numeric keys from all records.
  */
 export async function importAllData(allData) {
+  if (!guardSupabase('importAllData')) throw new Error('Supabase not available');
+
   const rows = [];
   for (const [rawKey, items] of Object.entries(allData)) {
     const collection = normalizeCollectionName(rawKey);
