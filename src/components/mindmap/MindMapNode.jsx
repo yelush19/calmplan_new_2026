@@ -1,37 +1,40 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { STATUS_STYLES } from '@/lib/theme-constants';
+import { STATUS_STYLES, COMPLEXITY_TIERS } from '@/lib/theme-constants';
 
 // SVG glass orb node with gradient, glow, and status-driven visuals
+// Bubble radius is pre-computed by the layout engine based on complexity tier
 export function MindMapNode({ node, isSelected, onClick }) {
   const gradientId = `grad-${node.id}`;
   const glowFilterId = `glow-${node.id}`;
   const highlightId = `highlight-${node.id}`;
 
   const statusStyle = STATUS_STYLES[node.status] || STATUS_STYLES.not_started;
-  const glowIntensity = statusStyle.glowIntensity || 0;
+  const baseGlow = statusStyle.glowIntensity || 0;
   const isRelayState = node.status === 'waiting_for_materials' || node.status === 'waiting_for_external' || node.status === 'waiting_for_approval';
   const isIssue = node.status === 'issue';
   const isFilingReady = node.status === 'ready_for_reporting';
   const isCompleted = node.status === 'completed';
 
-  // Dynamic opacity: completed nodes are muted
-  const baseOpacity = isCompleted ? 0.5 : 1;
+  // Completed nodes are much more muted for ADHD focus
+  const baseOpacity = isCompleted ? 0.35 : 1;
 
-  // Relay state overrides gradient to ocean blue
+  // Filing-ready gets MUCH stronger glow (amber ring)
+  const glowIntensity = isFilingReady ? 1.0 : isIssue ? 0.9 : baseGlow;
+
+  // Status-driven gradient overrides
   const effectiveFrom = isRelayState ? '#3b82f6' : node.gradientFrom;
   const effectiveTo = isRelayState ? '#0ea5e9' : node.gradientTo;
-
-  // Issue overrides to red
   const issueFrom = '#ef4444';
   const issueTo = '#dc2626';
-
-  // Filing ready overrides to amber
   const filingFrom = '#f59e0b';
   const filingTo = '#fbbf24';
 
   const finalFrom = isIssue ? issueFrom : isFilingReady ? filingFrom : effectiveFrom;
   const finalTo = isIssue ? issueTo : isFilingReady ? filingTo : effectiveTo;
+
+  // Glow color: filing = amber, issue = red, default = gradient start
+  const glowColor = isFilingReady ? '#f59e0b' : isIssue ? '#ef4444' : finalFrom;
 
   // Animation variants based on status
   const getAnimationProps = () => {
@@ -48,10 +51,22 @@ export function MindMapNode({ node, isSelected, onClick }) {
         },
       };
     }
-    if (isIssue || isFilingReady) {
+    if (isIssue) {
       return {
         animate: {
-          scale: [1, 1.04, 1],
+          scale: [1, 1.06, 1],
+        },
+        transition: {
+          duration: 1.5,
+          ease: 'easeInOut',
+          repeat: Infinity,
+        },
+      };
+    }
+    if (isFilingReady) {
+      return {
+        animate: {
+          scale: [1, 1.05, 1],
         },
         transition: {
           duration: 2,
@@ -69,10 +84,14 @@ export function MindMapNode({ node, isSelected, onClick }) {
   const animProps = getAnimationProps();
 
   // Label font size scales with node radius
-  const fontSize = node.type === 'hub' ? 14 : node.type === 'category' ? 12 : Math.max(9, Math.min(11, node.radius * 0.45));
-  const labelHeight = node.type === 'hub' ? 40 : node.type === 'category' ? 32 : 24;
+  const fontSize = node.type === 'hub' ? 14
+    : node.type === 'category' ? 12
+    : Math.max(8, Math.min(12, node.radius * 0.42));
+  const labelHeight = node.type === 'hub' ? 44
+    : node.type === 'category' ? 36
+    : Math.max(20, node.radius * 0.9);
 
-  // Sub-label for stats (category nodes show progress, hub shows counts)
+  // Sub-label: stats for categories, task counts for clients
   const getSubLabel = () => {
     if (node.type === 'hub' && node.data) {
       return `${node.data.clientCount} לקוחות`;
@@ -88,7 +107,16 @@ export function MindMapNode({ node, isSelected, onClick }) {
     return '';
   };
 
+  // Tier badge for client nodes
+  const getTierBadge = () => {
+    if (node.type !== 'client' || node.tier === undefined) return null;
+    const tierInfo = COMPLEXITY_TIERS[node.tier];
+    if (!tierInfo) return null;
+    return tierInfo.icon;
+  };
+
   const subLabel = getSubLabel();
+  const tierBadge = getTierBadge();
 
   return (
     <motion.g
@@ -104,32 +132,46 @@ export function MindMapNode({ node, isSelected, onClick }) {
       {/* Definitions: gradient, glow filter */}
       <defs>
         <radialGradient id={gradientId} cx="35%" cy="35%" r="65%">
-          <stop offset="0%" stopColor={finalFrom} stopOpacity="0.9" />
-          <stop offset="100%" stopColor={finalTo} stopOpacity="0.65" />
+          <stop offset="0%" stopColor={finalFrom} stopOpacity={isCompleted ? 0.5 : 0.9} />
+          <stop offset="100%" stopColor={finalTo} stopOpacity={isCompleted ? 0.3 : 0.65} />
         </radialGradient>
 
-        <filter id={glowFilterId} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation={3 + glowIntensity * 5} result="blur" />
+        <filter id={glowFilterId} x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation={4 + glowIntensity * 8} result="blur" />
           <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
 
         <radialGradient id={highlightId} cx="35%" cy="30%" r="50%">
-          <stop offset="0%" stopColor="white" stopOpacity="0.35" />
+          <stop offset="0%" stopColor="white" stopOpacity={isCompleted ? 0.15 : 0.35} />
           <stop offset="100%" stopColor="white" stopOpacity="0" />
         </radialGradient>
       </defs>
 
-      {/* Outer glow ring */}
+      {/* Outer glow ring — stronger for filing/issue */}
       {glowIntensity > 0 && (
         <circle
           cx={node.x}
           cy={node.y}
-          r={node.radius + 6}
+          r={node.radius + (isFilingReady ? 10 : isIssue ? 8 : 6)}
           fill="none"
-          stroke={finalFrom}
-          strokeWidth={2}
-          strokeOpacity={glowIntensity * 0.5}
+          stroke={glowColor}
+          strokeWidth={isFilingReady ? 3 : 2}
+          strokeOpacity={glowIntensity * 0.6}
           filter={`url(#${glowFilterId})`}
+        />
+      )}
+
+      {/* Filing-ready gets a second outer ring for extra emphasis */}
+      {isFilingReady && (
+        <circle
+          cx={node.x}
+          cy={node.y}
+          r={node.radius + 16}
+          fill="none"
+          stroke="#f59e0b"
+          strokeWidth={1}
+          strokeOpacity={0.25}
+          strokeDasharray="4 3"
         />
       )}
 
@@ -138,16 +180,16 @@ export function MindMapNode({ node, isSelected, onClick }) {
         cx={node.x + 2}
         cy={node.y + 3}
         r={node.radius}
-        fill="rgba(0,0,0,0.15)"
+        fill={isCompleted ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.15)'}
       />
 
-      {/* Main bubble with gradient */}
+      {/* Main bubble with gradient — completed gets desaturated border */}
       <circle
         cx={node.x}
         cy={node.y}
         r={node.radius}
         fill={`url(#${gradientId})`}
-        stroke="rgba(255,255,255,0.25)"
+        stroke={isCompleted ? 'rgba(255,255,255,0.1)' : isSelected ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.25)'}
         strokeWidth={isSelected ? 2.5 : 1.2}
       />
 
@@ -178,12 +220,21 @@ export function MindMapNode({ node, isSelected, onClick }) {
             justifyContent: 'center',
             textAlign: 'center',
             fontFamily: "'Varela Round', 'Assistant', sans-serif",
-            color: 'white',
-            textShadow: '0 1px 4px rgba(0,0,0,0.4)',
+            color: isCompleted ? 'rgba(255,255,255,0.5)' : 'white',
+            textShadow: isCompleted ? 'none' : '0 1px 4px rgba(0,0,0,0.4)',
             lineHeight: 1.2,
             overflow: 'hidden',
           }}
         >
+          {/* Tier badge above name for larger client nodes */}
+          {tierBadge && node.radius > 28 && (
+            <span style={{
+              fontSize: `${Math.max(8, fontSize - 3)}px`,
+              marginBottom: '-1px',
+            }}>
+              {tierBadge}
+            </span>
+          )}
           <span style={{
             fontSize: `${fontSize}px`,
             fontWeight: 600,
@@ -198,8 +249,8 @@ export function MindMapNode({ node, isSelected, onClick }) {
           </span>
           {subLabel && (
             <span style={{
-              fontSize: `${Math.max(8, fontSize - 2)}px`,
-              opacity: 0.8,
+              fontSize: `${Math.max(7, fontSize - 2)}px`,
+              opacity: isCompleted ? 0.5 : 0.8,
               fontWeight: 400,
             }}>
               {subLabel}
