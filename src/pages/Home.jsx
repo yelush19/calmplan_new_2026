@@ -420,127 +420,96 @@ export default function HomePage() {
 
   return (
     <motion.div
-      className="p-3 md:p-4 space-y-3"
+      className="p-2 md:p-2.5 flex flex-col gap-1.5"
+      style={{ minHeight: 'calc(100vh - 52px)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.3 }}
     >
-      {/* Greeting */}
-      <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">
+      {/* ═══ COMPACT TOP SHELL ═══ */}
+      {/* Row 1: Greeting + Quick Stats (single line) */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <h1 className="text-lg font-bold text-gray-800 whitespace-nowrap">
             {getGreeting()}{userName ? `, ${userName}` : ''}
           </h1>
-          <p className="text-sm text-gray-500">
+          <span className="text-xs text-gray-400 hidden md:block whitespace-nowrap">
             {format(new Date(), 'EEEE, d בMMMM', { locale: he })}
-          </p>
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           {data.completedToday > 0 && (
-            <Badge className="border-green-200 gap-1" style={{ backgroundColor: '#E8F5E9', color: ZERO_PANIC.green }}>
-              <CheckCircle className="w-3.5 h-3.5" />
-              {data.completedToday} הושלמו היום
+            <Badge className="border-green-200 gap-0.5 text-[10px] py-0 h-5" style={{ backgroundColor: '#E8F5E9', color: ZERO_PANIC.green }}>
+              <CheckCircle className="w-3 h-3" />
+              {data.completedToday} הושלמו
             </Badge>
           )}
-          <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-primary hover:bg-accent text-white gap-1">
-            <Plus className="w-4 h-4" />
-            משימה מהירה
+          <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-primary hover:bg-accent text-white gap-0.5 h-7 text-xs px-2">
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">משימה</span>
           </Button>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Setup Incomplete Notification */}
+      {/* Setup Incomplete Notification — compact inline */}
       {setupIncomplete.missing > 0 && (
-        <motion.div initial={{ y: -5, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <Card className="bg-amber-50/80 border-amber-200 shadow-sm">
-            <CardContent className="p-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-amber-800">
-                    הגדרת מערכת לא הושלמה: {setupIncomplete.missing} לקוחות חסרים נתונים
-                  </span>
-                  <span className="text-xs text-amber-600 mr-2">
-                    (מתוך {setupIncomplete.total} פעילים)
-                  </span>
-                </div>
-              </div>
-              <Link to={createPageUrl("SystemReadiness")}>
-                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white gap-1 font-bold text-xs">
-                  <Zap className="w-3.5 h-3.5" />
-                  השלם הגדרה
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <div className="flex items-center justify-between gap-2 bg-amber-50/80 border border-amber-200 rounded-lg px-2.5 py-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="text-xs font-medium text-amber-800 truncate">
+              הגדרה לא הושלמה: {setupIncomplete.missing} לקוחות חסרים נתונים
+            </span>
+            <span className="text-[10px] text-amber-600 hidden md:inline">(מתוך {setupIncomplete.total} פעילים)</span>
+          </div>
+          <Link to={createPageUrl("SystemReadiness")}>
+            <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white gap-0.5 font-bold text-[10px] h-6 px-2">
+              <Zap className="w-3 h-3" />
+              השלם
+            </Button>
+          </Link>
+        </div>
       )}
 
-      {/* Quick counters with Zero-Panic colors */}
-      <div className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-5 gap-3">
-        <Link to={createPageUrl("Tasks") + "?tab=active&context=work"}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD70' }}>
-            <CardContent className="p-3 flex items-center gap-3">
-              <Briefcase className="w-5 h-5" style={{ color: ZERO_PANIC.blue }} />
-              <div>
-                <div className="text-xl font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</div>
-                <div className="text-[11px]" style={{ color: ZERO_PANIC.blue }}>משימות עבודה</div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Row 2: Compact counter strip — horizontal inline chips */}
+      <div className="flex items-center gap-2 overflow-x-auto">
+        <Link to={createPageUrl("Tasks") + "?tab=active&context=work"} className="shrink-0">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD70' }}>
+            <Briefcase className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
+            <span className="text-sm font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</span>
+            <span className="text-[10px]" style={{ color: ZERO_PANIC.blue }}>עבודה</span>
+          </div>
         </Link>
-        <Link to={createPageUrl("Tasks") + "?tab=active&context=home"}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" style={{ borderColor: '#C8E6C9', backgroundColor: '#E8F5E970' }}>
-            <CardContent className="p-3 flex items-center gap-3">
-              <HomeIcon className="w-5 h-5" style={{ color: ZERO_PANIC.green }} />
-              <div>
-                <div className="text-xl font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</div>
-                <div className="text-[11px]" style={{ color: ZERO_PANIC.green }}>משימות בית</div>
-              </div>
-            </CardContent>
-          </Card>
+        <Link to={createPageUrl("Tasks") + "?tab=active&context=home"} className="shrink-0">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#C8E6C9', backgroundColor: '#E8F5E970' }}>
+            <HomeIcon className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.green }} />
+            <span className="text-sm font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</span>
+            <span className="text-[10px]" style={{ color: ZERO_PANIC.green }}>בית</span>
+          </div>
         </Link>
-        <Link to={createPageUrl("Calendar")}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200 bg-purple-50/70">
-            <CardContent className="p-3 flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-purple-600" />
-              <div>
-                <div className="text-xl font-bold text-purple-700">{data.todayEvents.length}</div>
-                <div className="text-[11px] text-purple-600">אירועים היום</div>
-              </div>
-            </CardContent>
-          </Card>
+        <Link to={createPageUrl("Calendar")} className="shrink-0">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50/70 cursor-pointer hover:shadow-sm transition-shadow">
+            <Calendar className="w-3.5 h-3.5 text-purple-600" />
+            <span className="text-sm font-bold text-purple-700">{data.todayEvents.length}</span>
+            <span className="text-[10px] text-purple-600">אירועים</span>
+          </div>
         </Link>
-        <Card className="border-2" style={{
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border-2 shrink-0" style={{
           borderColor: data.overdue.length > 0 ? '#FFE0B2' : '#e5e7eb',
           backgroundColor: data.overdue.length > 0 ? '#FFF3E070' : '#f9fafb70',
         }}>
-          <CardContent className="p-3 flex items-center gap-3">
-            <Clock className="w-5 h-5" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }} />
-            <div>
-              <div className="text-xl font-bold" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }}>
-                {data.overdue.length}
-              </div>
-              <div className="text-[11px]" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#6B7280' }}>באיחור</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Clock className="w-3.5 h-3.5" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }} />
+          <span className="text-sm font-bold" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#9CA3AF' }}>{data.overdue.length}</span>
+          <span className="text-[10px]" style={{ color: data.overdue.length > 0 ? ZERO_PANIC.orange : '#6B7280' }}>באיחור</span>
+        </div>
 
-      {/* Daily Progress Bar */}
-      {(() => {
-        const todayTotal = data.today.length + (data.overdue?.length || 0);
-        const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
-        return (
-          <motion.div initial={{ y: 5, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>
-            <div className="bg-white rounded-xl p-3 border shadow-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm font-medium text-gray-600">התקדמות יומית</span>
-                <span className="text-sm font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3.5 overflow-hidden">
+        {/* Inline progress bar */}
+        {(() => {
+          const todayTotal = data.today.length + (data.overdue?.length || 0);
+          const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
+          return (
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white border shrink-0 min-w-[140px]">
+              <span className="text-[10px] text-gray-500 whitespace-nowrap">התקדמות יומית</span>
+              <div className="flex-1 bg-gray-200 rounded-full h-2 min-w-[50px] overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
                   style={{ background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }}
@@ -549,93 +518,90 @@ export default function HomePage() {
                   transition={{ duration: 0.8, ease: "easeOut" }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1.5">
-                {data.completedToday} מתוך {todayTotal + data.completedToday} משימות הושלמו היום
-                {progress >= 100 && <span className="mr-2 font-medium" style={{ color: ZERO_PANIC.green }}>כל הכבוד!</span>}
-              </p>
+              <span className="text-[10px] font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
             </div>
-          </motion.div>
-        );
-      })()}
+          );
+        })()}
+      </div>
 
-      {/* PROACTIVE INSIGHTS COCKPIT */}
+      {/* Insights: Compact horizontal scroll strip */}
       {insights.length > 0 && (
-        <motion.div initial={{ y: 5, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.17 }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
-            {insights.slice(0, 6).map((insight, i) => {
-              const colorMap = {
-                teal: { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', icon: 'text-teal-500' },
-                amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: 'text-amber-500' },
-                blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'text-blue-500' },
-                emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: 'text-emerald-500' },
-              };
-              const c = colorMap[insight.color] || colorMap.teal;
-              return (
-                <div key={i} className={`${c.bg} ${c.border} border rounded-lg p-2.5 flex items-start gap-2`}>
-                  <div className={`${c.icon} mt-0.5 flex-shrink-0`}>
-                    {insight.type === 'warning' && <AlertTriangle className="w-4 h-4" />}
-                    {insight.type === 'action' && <Zap className="w-4 h-4" />}
-                    {insight.type === 'progress' && <Clock className="w-4 h-4" />}
-                    {insight.type === 'info' && <Eye className="w-4 h-4" />}
-                    {insight.type === 'celebration' && <Sparkles className="w-4 h-4" />}
-                  </div>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-medium ${c.text} leading-tight`}>{insight.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">{insight.description}</p>
-                  </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+          {insights.slice(0, 6).map((insight, i) => {
+            const colorMap = {
+              teal: { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', icon: 'text-teal-500' },
+              amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: 'text-amber-500' },
+              blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: 'text-blue-500' },
+              emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: 'text-emerald-500' },
+            };
+            const c = colorMap[insight.color] || colorMap.teal;
+            return (
+              <div key={i} className={`${c.bg} ${c.border} border rounded-md px-2 py-1 flex items-center gap-1.5 shrink-0 max-w-[240px]`}>
+                <div className={`${c.icon} flex-shrink-0`}>
+                  {insight.type === 'warning' && <AlertTriangle className="w-3 h-3" />}
+                  {insight.type === 'action' && <Zap className="w-3 h-3" />}
+                  {insight.type === 'progress' && <Clock className="w-3 h-3" />}
+                  {insight.type === 'info' && <Eye className="w-3 h-3" />}
+                  {insight.type === 'celebration' && <Sparkles className="w-3 h-3" />}
                 </div>
-              );
-            })}
-          </div>
-        </motion.div>
+                <p className={`text-[11px] font-medium ${c.text} truncate`}>{insight.title}</p>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {/* FOCUS AREA */}
-      <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-        <Card>
-          <CardHeader className="pb-0">
-            <div className="flex items-center justify-between mb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Target className="w-5 h-5" style={{ color: ZERO_PANIC.blue }} />
+      {/* ═══ FOCUS AREA — Takes ALL remaining space ═══ */}
+      <motion.div
+        className="flex-1 flex flex-col min-h-0"
+        initial={{ y: 5, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.15 }}
+      >
+        <Card className="flex-1 flex flex-col overflow-hidden">
+          <CardHeader className="pb-0 py-1.5 px-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-1.5 text-sm">
+                <Target className="w-4 h-4" style={{ color: ZERO_PANIC.blue }} />
                 <span>מרכז השליטה</span>
               </CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {/* View Switcher */}
                 <div className="flex bg-gray-100 rounded-lg p-0.5">
-                  <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
-                    <Network className="w-3.5 h-3.5" />
+                  <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
+                    <Network className="w-3 h-3" />
                   </Button>
-                  <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('kanban')} title="קנבן">
-                    <LayoutGrid className="w-3.5 h-3.5" />
+                  <Button variant={focusView === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('kanban')} title="קנבן">
+                    <LayoutGrid className="w-3 h-3" />
                   </Button>
-                  <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('list')} title="רשימה">
-                    <List className="w-3.5 h-3.5" />
+                  <Button variant={focusView === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('list')} title="רשימה">
+                    <List className="w-3 h-3" />
                   </Button>
-                  <Button variant={focusView === 'gantt' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setFocusView('gantt')} title="ציר זמן">
-                    <BarChart3 className="w-3.5 h-3.5" />
+                  <Button variant={focusView === 'gantt' ? 'secondary' : 'ghost'} size="icon" className="h-6 w-6" onClick={() => setFocusView('gantt')} title="ציר זמן">
+                    <BarChart3 className="w-3 h-3" />
                   </Button>
                 </div>
                 <Link to={createPageUrl("Tasks")}>
-                  <Button variant="ghost" size="sm" className="text-xs text-gray-500 gap-1">
-                    כל המשימות <ArrowRight className="w-3.5 h-3.5" />
+                  <Button variant="ghost" size="sm" className="text-[10px] text-gray-500 gap-0.5 h-6 px-1.5">
+                    כל המשימות <ArrowRight className="w-3 h-3" />
                   </Button>
                 </Link>
               </div>
             </div>
-            {/* Search */}
+            {/* Search (non-mindmap views only) */}
             {focusView !== 'mindmap' && (
               <>
-                <div className="relative mb-2">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <div className="relative mt-1.5 mb-1">
+                  <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                   <Input
                     placeholder="חיפוש לפי שם לקוח, משימה..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pr-10 h-8 text-sm"
+                    className="pr-8 h-7 text-xs"
                   />
                 </div>
                 {/* Horizontal Tab Bar */}
-                <div className="flex gap-1.5 overflow-x-auto pb-2 border-b border-gray-100">
+                <div className="flex gap-1 overflow-x-auto pb-1 border-b border-gray-100">
                   {FOCUS_TABS.map(tab => {
                     const count = getTabCount(tab.key);
                     const isActive = activeTab === tab.key;
@@ -644,16 +610,16 @@ export default function HomePage() {
                       <button
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-sm font-medium transition-all whitespace-nowrap border-b-2 ${
+                        className={`flex items-center gap-1 px-2 py-1 rounded-t-md text-xs font-medium transition-all whitespace-nowrap border-b-2 ${
                           isActive
                             ? `${tab.activeBg} border-current`
                             : 'bg-transparent border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                         }`}
                       >
-                        <Icon className={`w-4 h-4 ${isActive ? '' : tab.color}`} />
+                        <Icon className={`w-3 h-3 ${isActive ? '' : tab.color}`} />
                         <span>{tab.label}</span>
                         {count > 0 && (
-                          <Badge className={`text-[10px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>
+                          <Badge className={`text-[9px] px-1 py-0 h-3.5 min-w-[16px] ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>
                             {count}
                           </Badge>
                         )}
@@ -664,9 +630,9 @@ export default function HomePage() {
               </>
             )}
           </CardHeader>
-          <CardContent className={focusView === 'mindmap' ? 'pt-2 px-0 pb-2' : 'pt-4'}>
+          <CardContent className={`flex-1 min-h-0 ${focusView === 'mindmap' ? 'pt-1 px-0 pb-0' : 'pt-2 pb-2'}`}>
             {focusView === 'mindmap' ? (
-              <div className="relative">
+              <div className="relative h-full">
                 <MindMapView
                   tasks={data.activeTasks || allFocusTasks}
                   clients={clients}
@@ -677,21 +643,20 @@ export default function HomePage() {
                 {/* Prominent Gantt toggle on MindMap */}
                 <button
                   onClick={() => setFocusView('gantt')}
-                  className="absolute bottom-4 right-4 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300 transition-all text-sm font-medium"
+                  className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm shadow-md border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-medium"
                 >
-                  <BarChart3 className="w-4 h-4" />
+                  <BarChart3 className="w-3.5 h-3.5" />
                   <span>הצג כגאנט</span>
                 </button>
               </div>
             ) : focusView === 'gantt' ? (
-              <div className="relative">
+              <div className="relative h-full">
                 <GanttView tasks={allFocusTasks} clients={clients} />
-                {/* Back to MindMap button */}
                 <button
                   onClick={() => setFocusView('mindmap')}
-                  className="absolute bottom-4 right-4 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all text-sm font-medium"
+                  className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm shadow-md border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-medium"
                 >
-                  <Network className="w-4 h-4" />
+                  <Network className="w-3.5 h-3.5" />
                   <span>חזרה למפה</span>
                 </button>
               </div>
@@ -706,10 +671,10 @@ export default function HomePage() {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.15 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.12 }}
                 >
                   {getTabContent()}
                 </motion.div>
@@ -719,46 +684,33 @@ export default function HomePage() {
         </Card>
       </motion.div>
 
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ y: 10, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.35 }}
-        className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-5 gap-3"
-      >
-        <Link to={createPageUrl("WeeklyPlanningDashboard")}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD50' }}>
-            <CardContent className="p-4 text-center">
-              <Brain className="w-6 h-6 mx-auto mb-2" style={{ color: ZERO_PANIC.blue }} />
-              <h3 className="font-medium text-sm" style={{ color: '#1565C0' }}>תכנון שבועי</h3>
-            </CardContent>
-          </Card>
+      {/* Quick Actions — compact row below canvas */}
+      <div className="flex gap-2 overflow-x-auto pb-0.5">
+        <Link to={createPageUrl("WeeklyPlanningDashboard")} className="shrink-0">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#BBDEFB', backgroundColor: '#E3F2FD50' }}>
+            <Brain className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
+            <span className="text-xs font-medium" style={{ color: '#1565C0' }}>תכנון שבועי</span>
+          </div>
         </Link>
-        <Link to={createPageUrl("PayrollDashboard")}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-gray-200 bg-gray-50/50 h-full">
-            <CardContent className="p-4 text-center">
-              <Briefcase className="w-6 h-6 mx-auto mb-2 text-gray-600" />
-              <h3 className="font-medium text-sm text-gray-800">שכר ודיווחים</h3>
-            </CardContent>
-          </Card>
+        <Link to={createPageUrl("PayrollDashboard")} className="shrink-0">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50/50 cursor-pointer hover:shadow-sm transition-shadow">
+            <Briefcase className="w-3.5 h-3.5 text-gray-600" />
+            <span className="text-xs font-medium text-gray-800">שכר ודיווחים</span>
+          </div>
         </Link>
-        <Link to={createPageUrl("AutomationRules")}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#FFE0B2', backgroundColor: '#FFF3E050' }}>
-            <CardContent className="p-4 text-center">
-              <Zap className="w-6 h-6 mx-auto mb-2" style={{ color: ZERO_PANIC.orange }} />
-              <h3 className="font-medium text-sm" style={{ color: '#E65100' }}>אוטומציות</h3>
-            </CardContent>
-          </Card>
+        <Link to={createPageUrl("AutomationRules")} className="shrink-0">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#FFE0B2', backgroundColor: '#FFF3E050' }}>
+            <Zap className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.orange }} />
+            <span className="text-xs font-medium" style={{ color: '#E65100' }}>אוטומציות</span>
+          </div>
         </Link>
-        <Link to={createPageUrl("WeeklySummary")}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full" style={{ borderColor: '#CE93D8', backgroundColor: '#F3E5F550' }}>
-            <CardContent className="p-4 text-center">
-              <FileBarChart className="w-6 h-6 mx-auto mb-2" style={{ color: ZERO_PANIC.purple }} />
-              <h3 className="font-medium text-sm" style={{ color: '#6A1B9A' }}>סיכום שבועי</h3>
-            </CardContent>
-          </Card>
+        <Link to={createPageUrl("WeeklySummary")} className="shrink-0">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow" style={{ borderColor: '#CE93D8', backgroundColor: '#F3E5F550' }}>
+            <FileBarChart className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.purple }} />
+            <span className="text-xs font-medium" style={{ color: '#6A1B9A' }}>סיכום שבועי</span>
+          </div>
         </Link>
-      </motion.div>
+      </div>
 
       {/* Quick Add Task Dialog */}
       <QuickAddTaskDialog
