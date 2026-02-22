@@ -57,6 +57,16 @@ export default function GanttView({ tasks, clients, currentMonth }) {
   const goToNextMonth = () => setViewMonth(prev => addMonths(prev, 1));
   const goToCurrentMonth = () => setViewMonth(new Date());
 
+  // Filter tasks relevant to this month (must be defined BEFORE grouped)
+  const monthTasks = useMemo(() => {
+    return tasks.filter(t => {
+      if (!t.due_date) return false;
+      const due = parseISO(t.due_date);
+      const start = t.scheduled_start ? parseISO(t.scheduled_start) : due;
+      return start <= monthEnd && due >= monthStart;
+    });
+  }, [tasks, monthStart, monthEnd]);
+
   const grouped = useMemo(() => {
     const groups = {};
     monthTasks.forEach(task => {
@@ -178,17 +188,6 @@ export default function GanttView({ tasks, clients, currentMonth }) {
     setDraggingTask(null);
     setDragPreviewDay(null);
   }, [draggingTask, dragPreviewDay]);
-
-  // Filter tasks relevant to this month (have due_date or scheduled_start in range)
-  const monthTasks = useMemo(() => {
-    return tasks.filter(t => {
-      if (!t.due_date) return false;
-      const due = parseISO(t.due_date);
-      const start = t.scheduled_start ? parseISO(t.scheduled_start) : due;
-      // Task overlaps with viewed month if start <= monthEnd AND due >= monthStart
-      return start <= monthEnd && due >= monthStart;
-    });
-  }, [tasks, monthStart, monthEnd]);
 
   const isCurrentMonth = monthStart.getMonth() === new Date().getMonth() && monthStart.getFullYear() === new Date().getFullYear();
 
