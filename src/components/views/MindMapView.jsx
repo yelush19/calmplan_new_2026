@@ -54,18 +54,18 @@ const NODE_COLOR_MAP = {
   slate:   '#90A4AE',
 };
 
-// Department folder nodes – professional muted palette (Navy, Forest, Slate)
+// Department folder nodes – Glassmorphism Teal/Cyan palette
 const BRANCH_CONFIG = {
-  'שכר':          { color: '#1B2A4A', icon: '👥', label: 'Payroll' },
-  'מע"מ':         { color: '#2C3E6B', icon: '📊', label: 'VAT' },
-  'ב"ל':          { color: '#1A3C34', icon: '🏛️', label: 'NI' },
-  'ניכויים':       { color: '#3D4F5F', icon: '📋', label: 'Deduct' },
-  'מקדמות':       { color: '#2D3436', icon: '💰', label: 'Advances' },
-  'התאמות':       { color: '#1A4040', icon: '🔄', label: 'Reconcile' },
-  'מאזנים':       { color: '#1E3A5F', icon: '⚖️', label: 'Balance' },
-  'אדמיניסטרציה': { color: '#404B5A', icon: '📁', label: 'Admin' },
+  'שכר':          { color: '#0288D1', icon: '👥', label: 'Payroll' },
+  'מע"מ':         { color: '#00838F', icon: '📊', label: 'VAT' },
+  'ב"ל':          { color: '#00695C', icon: '🏛️', label: 'NI' },
+  'ניכויים':       { color: '#00897B', icon: '📋', label: 'Deduct' },
+  'מקדמות':       { color: '#00796B', icon: '💰', label: 'Advances' },
+  'התאמות':       { color: '#0097A7', icon: '🔄', label: 'Reconcile' },
+  'מאזנים':       { color: '#006064', icon: '⚖️', label: 'Balance' },
+  'אדמיניסטרציה': { color: '#546E7A', icon: '📁', label: 'Admin' },
   'בית':          {
-    color: '#5C4033', icon: '🏠', label: 'Home',
+    color: '#6D4C41', icon: '🏠', label: 'Home',
     subFolders: [
       { key: 'שוטף', icon: '🔄', label: 'Routine' },
       { key: 'פסח/פרויקטים', icon: '🔨', label: 'Projects' },
@@ -1107,18 +1107,24 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               onPointerUp={(e) => handleFolderPointerUp(e, branch.category)}
             >
               <svg width="120" height="48" viewBox="0 0 120 48" style={{ overflow: 'visible' }}>
-                <path
-                  d="M0,12 L0,46 Q0,48 2,48 L118,48 Q120,48 120,46 L120,12 L50,12 L44,0 L2,0 Q0,0 0,2 Z"
+                <rect x="0" y="0" width="120" height="48" rx="20" ry="20"
                   fill={branch.config.color}
-                  opacity={0.9}
-                  stroke="rgba(255,255,255,0.3)"
+                  opacity={0.85}
+                  stroke="rgba(255,255,255,0.4)"
                   strokeWidth={1.5}
+                  filter="url(#folderGlow)"
                 />
-                <text x="60" y="34" textAnchor="middle" fill="white" fontSize="12" fontWeight="600" style={{ pointerEvents: 'none' }}>
+                <defs>
+                  <filter id="folderGlow">
+                    <feGaussianBlur stdDeviation="3" result="glow" />
+                    <feMerge><feMergeNode in="glow" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </defs>
+                <text x="52" y="30" textAnchor="middle" fill="white" fontSize="12" fontWeight="600" style={{ pointerEvents: 'none' }}>
                   {branch.config.icon} {branch.category}
                 </text>
-                <circle cx="108" cy="10" r="10" fill="rgba(255,255,255,0.25)" />
-                <text x="108" y="14" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                <circle cx="106" cy="14" r="10" fill="rgba(255,255,255,0.3)" />
+                <text x="106" y="18" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                   {branch.clients.length}
                 </text>
               </svg>
@@ -1143,14 +1149,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 onClick={(e) => { e.stopPropagation(); handleBranchClick(branch.category); }}
               >
                 <svg width="90" height="36" viewBox="0 0 90 36" style={{ overflow: 'visible' }}>
-                  <path
-                    d="M0,10 L0,34 Q0,36 2,36 L88,36 Q90,36 90,34 L90,10 L38,10 L34,0 L2,0 Q0,0 0,2 Z"
+                  <rect x="0" y="0" width="90" height="36" rx="16" ry="16"
                     fill={branch.config.color}
                     opacity={0.7}
-                    stroke="rgba(255,255,255,0.25)"
+                    stroke="rgba(255,255,255,0.3)"
                     strokeWidth={1}
                   />
-                  <text x="45" y="26" textAnchor="middle" fill="white" fontSize="10" fontWeight="600" style={{ pointerEvents: 'none' }}>
+                  <text x="45" y="22" textAnchor="middle" fill="white" fontSize="10" fontWeight="600" style={{ pointerEvents: 'none' }}>
                     {sub.icon} {sub.key}
                   </text>
                 </svg>
@@ -1590,7 +1595,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               {tooltip.nickname && tooltip.nickname !== tooltip.name && (
                 <span className="text-[10px] text-gray-400">({tooltip.name})</span>
               )}
-              <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{tooltip.tierIcon} {tooltip.tierLabel}</span>
+              <span className="text-[10px] bg-white/50 text-[#008291] px-1.5 rounded-full">{tooltip.tierIcon} {tooltip.tierLabel}</span>
               {tooltip.isFilingReady && (
                 <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded font-semibold">מוכן לדיווח</span>
               )}
@@ -1725,10 +1730,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               return (
                 <React.Fragment key={task.id}>
                   <div
-                    className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group ${isHighlighted ? 'bg-cyan-100 ring-2 ring-cyan-500 rounded-lg' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 bg-white/70 rounded-[24px] shadow-sm mb-2 mx-2 hover:bg-white/90 hover:shadow-md transition-all cursor-pointer group ${isHighlighted ? 'ring-2 ring-cyan-500 bg-cyan-50/70' : ''}`}
                     style={{ paddingRight: `${16 + depth * 20}px` }}
                     onClick={(e) => {
-                      // Delayed single-click: opens modal ONLY if not cancelled by double-click
+                      // Single-click: open full edit dialog immediately
                       if (isEditing) return;
                       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
                       clickTimerRef.current = setTimeout(() => {
@@ -1798,51 +1803,21 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         {(task.reschedule_count || 0) > 5 ? '🧊 קפוא' : `🐌 ×${task.reschedule_count}`}
                       </span>
                     )}
-                    {/* Feature 5: Add sub-task button → opens inline input instead of modal */}
+                    {/* Feature 5: Add sub-task button → opens full QuickAddTaskDialog with parent pre-filled */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null; }
-                        setInlineSubTaskParentId(prev => prev === task.id ? null : task.id);
-                        setInlineSubTaskTitle('');
+                        setDrawerSubTaskParent(task);
                       }}
-                      className="p-1 rounded hover:bg-emerald-50 text-gray-300 hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                      className="p-1 rounded-[32px] hover:bg-emerald-50 text-gray-300 hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-all shrink-0"
                       title="הוסף תת-משימה"
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  {/* Feature 5: Inline sub-task input */}
-                  {isSubTaskInputOpen && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50/50 border-b border-emerald-100" style={{ paddingRight: `${36 + depth * 20}px` }}>
-                      <GitBranchPlus className="w-3 h-3 text-emerald-400 shrink-0" />
-                      <input
-                        autoFocus
-                        placeholder="שם תת-משימה..."
-                        className="flex-1 text-sm bg-white border border-emerald-300 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-200"
-                        value={inlineSubTaskTitle}
-                        onChange={(e) => setInlineSubTaskTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') createInlineSubTask(task);
-                          if (e.key === 'Escape') { setInlineSubTaskParentId(null); setInlineSubTaskTitle(''); }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <button
-                        onClick={() => createInlineSubTask(task)}
-                        className="px-2 py-1 rounded bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors"
-                      >
-                        הוסף
-                      </button>
-                      <button
-                        onClick={() => { setInlineSubTaskParentId(null); setInlineSubTaskTitle(''); }}
-                        className="p-1 rounded hover:bg-gray-100 text-gray-400"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
+                  {/* Sub-task creation is now handled by QuickAddTaskDialog modal via drawerSubTaskParent */}
 
                   {children.filter(c => c.status !== 'completed' && c.status !== 'not_relevant').map(child => renderTask(child, depth + 1))}
                 </React.Fragment>
@@ -1857,10 +1832,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: drawerClient.color }} />
                       <SheetTitle className="text-base">{drawerClient.displayName || drawerClient.name}</SheetTitle>
-                      <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{drawerClient.tierIcon} {drawerClient.tierLabel}</span>
+                      <span className="text-[10px] bg-white/50 text-[#008291] px-1.5 rounded-full">{drawerClient.tierIcon} {drawerClient.tierLabel}</span>
                       <button
                         onClick={() => toggleClientFocus(drawerClient.name)}
-                        className={`p-1 rounded-full transition-colors ${focusedClients.has(drawerClient.name) ? 'bg-cyan-100 text-cyan-600' : 'bg-gray-100 text-gray-400 hover:text-cyan-500'}`}
+                        className={`p-1 rounded-full transition-colors ${focusedClients.has(drawerClient.name) ? 'bg-cyan-100 text-cyan-600' : 'bg-white/50 text-gray-400 hover:text-cyan-500'}`}
                         title={focusedClients.has(drawerClient.name) ? 'הסר מפוקוס' : 'סמן כפוקוס'}
                       >
                         <Star className="w-3.5 h-3.5" style={{ fill: focusedClients.has(drawerClient.name) ? 'currentColor' : 'none' }} />
@@ -1892,7 +1867,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 </div>
 
                 {/* Active Tasks List */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto px-1 py-2">
                   {rootActive.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
                       <CheckCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
@@ -1901,7 +1876,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   ) : zoneGroups ? (
                     zoneGroups.map(group => (
                       <div key={group.zone}>
-                        <div className="px-4 py-1.5 text-[10px] font-bold text-gray-400 bg-gray-50 sticky top-0 border-b border-gray-100">
+                        <div className="px-4 py-1.5 text-[10px] font-bold text-[#008291]/60 bg-white/30 backdrop-blur-sm sticky top-0 border-b border-white/20">
                           📍 {group.zone}
                         </div>
                         {group.tasks.map(task => renderTask(task, 0))}
@@ -1916,7 +1891,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <div className="border-t mt-2">
                       <button
                         onClick={() => setShowDrawerCompleted(!showDrawerCompleted)}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-gray-500 hover:bg-white/40 transition-colors rounded-[32px] mx-2"
                       >
                         <ChevronDown className={`w-3 h-3 transition-transform ${showDrawerCompleted ? '' : 'rotate-[-90deg]'}`} />
                         <CheckCircle className="w-3 h-3 text-green-500" />
@@ -1927,7 +1902,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         return (
                           <div
                             key={task.id}
-                            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 opacity-50"
+                            className="flex items-center gap-2 px-4 py-2 bg-white/40 rounded-[24px] mx-2 mb-1.5 hover:bg-white/60 cursor-pointer opacity-50 transition-all"
                             onClick={() => onEditTask?.(task)}
                           >
                             <button
