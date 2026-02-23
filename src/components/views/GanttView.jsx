@@ -334,14 +334,14 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                         whileHover={!isDragging ? { y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' } : undefined}
                       />
                     </TooltipTrigger>
-                    <TooltipContent className="bg-gray-900/95 backdrop-blur-sm border-gray-700 text-white">
-                      <p className="font-medium text-white">{task.title}</p>
-                      <p className="text-xs text-gray-300">
+                    <TooltipContent className="!bg-gray-900/95 backdrop-blur-sm !border-gray-700 !text-white">
+                      <p className="font-medium !text-white">{task.title}</p>
+                      <p className="text-xs !text-gray-300">
                         {task.category} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}
                         {pos.tierKey && ` \u2022 ${pos.tierKey}`}
                       </p>
                       {pos.durationDays > 1 && (
-                        <p className="text-[10px] text-gray-400">{pos.durationDays} ימי עבודה</p>
+                        <p className="text-[10px] !text-gray-400">{pos.durationDays} ימי עבודה</p>
                       )}
                       {(task.reschedule_count || 0) > 0 && (
                         <p className="text-[10px] text-amber-400">נדחה {task.reschedule_count} פעמים {task.reschedule_count > 3 ? '🐌' : ''}</p>

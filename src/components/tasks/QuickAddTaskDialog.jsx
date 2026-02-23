@@ -182,6 +182,32 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
   const [reportingDeadline, setReportingDeadline] = useState('');
   const [submitAsIs, setSubmitAsIs] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadWarning, setLoadWarning] = useState(null);
+
+  // SMART Anchor: daily load feasibility check
+  useEffect(() => {
+    if (!dueDate || !open) { setLoadWarning(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const allTasks = await Task.list('-due_date', 5000).catch(() => []);
+        if (cancelled) return;
+        const threshold = parseInt(localStorage.getItem('calmplan_daily_capacity') || '240', 10);
+        const sameDayTasks = (allTasks || []).filter(
+          t => t.due_date === dueDate && t.status !== 'completed' && t.status !== 'not_relevant'
+        );
+        const totalMinutes = sameDayTasks.reduce((sum, t) => sum + (t.estimated_duration || 15), 0);
+        const currentDuration = parseInt(duration) || 15;
+        const projected = totalMinutes + currentDuration;
+        if (projected > threshold) {
+          setLoadWarning({ totalMinutes: projected, threshold, taskCount: sameDayTasks.length });
+        } else {
+          setLoadWarning(null);
+        }
+      } catch { if (!cancelled) setLoadWarning(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [dueDate, duration, open]);
 
   useEffect(() => {
     if (open) {
@@ -536,6 +562,16 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
               />
             </div>
           </div>
+
+          {/* SMART Anchor: Daily Load Warning */}
+          {loadWarning && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>
+                עומס יומי: {Math.round(loadWarning.totalMinutes / 60 * 10) / 10} שעות ({loadWarning.taskCount} משימות) — מעל הסף של {loadWarning.threshold / 60} שעות
+              </span>
+            </div>
+          )}
 
           <Button
             onClick={handleSave}

@@ -109,6 +109,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
   const [newSubTime, setNewSubTime] = useState('');
   const [newSubPriority, setNewSubPriority] = useState('medium');
   const [showChildTaskDialog, setShowChildTaskDialog] = useState(false);
+  const [loadWarning, setLoadWarning] = useState(null);
 
   useEffect(() => {
     if (task && open) {
@@ -131,6 +132,23 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
       setNewSubPriority('medium');
     }
   }, [task, open]);
+
+  // SMART Anchor: daily load feasibility check
+  useEffect(() => {
+    if (!editData.due_date || !allTasks?.length) { setLoadWarning(null); return; }
+    const threshold = parseInt(localStorage.getItem('calmplan_daily_capacity') || '240', 10);
+    const sameDayTasks = allTasks.filter(
+      t => t.due_date === editData.due_date && t.id !== task?.id && t.status !== 'completed' && t.status !== 'not_relevant'
+    );
+    const totalMinutes = sameDayTasks.reduce((sum, t) => sum + (t.estimated_duration || 15), 0);
+    const currentDuration = parseInt(editData.estimated_duration) || 15;
+    const projected = totalMinutes + currentDuration;
+    if (projected > threshold) {
+      setLoadWarning({ totalMinutes: projected, threshold, taskCount: sameDayTasks.length });
+    } else {
+      setLoadWarning(null);
+    }
+  }, [editData.due_date, editData.estimated_duration, allTasks, task?.id]);
 
   if (!task) return null;
 
@@ -326,6 +344,16 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
               </div>
             </div>
           </div>
+
+          {/* SMART Anchor: Daily Load Warning */}
+          {loadWarning && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>
+                עומס יומי: {Math.round(loadWarning.totalMinutes / 60 * 10) / 10} שעות ({loadWarning.taskCount} משימות) — מעל הסף של {loadWarning.threshold / 60} שעות. מומלץ לדחות משימות לא דחופות.
+              </span>
+            </div>
+          )}
 
           {/* Execution Timeline Visual */}
           <ExecutionTimeline startDate={editData.scheduled_start} dueDate={editData.due_date} />
