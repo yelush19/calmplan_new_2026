@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal } from 'lucide-react';
+import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star } from 'lucide-react';
 import { Task } from '@/api/entities';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -67,8 +67,8 @@ const BRANCH_CONFIG = {
 // ─── Node Scaling by Complexity Tier (3:1 ratio from Enterprise to Nano) ──
 // Base radius: tier 0 (Nano) = 22px → tier 3 (Complex) = 66px  (3:1)
 // Wide screen base: 30px → tier 3 = 90px
-const BASE_RADIUS = 22;
-const BASE_RADIUS_WIDE = 30;
+const BASE_RADIUS = 28;
+const BASE_RADIUS_WIDE = 36;
 
 // Legacy S/M/L kept for tooltip display only
 const SIZE_LABELS = { 0: 'ננו', 1: 'פשוט', 2: 'בינוני', 3: 'מורכב' };
@@ -194,6 +194,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [drawerQuickAdd, setDrawerQuickAdd] = useState(false); // show QuickAddTaskDialog from drawer
   const [drawerSubTaskParent, setDrawerSubTaskParent] = useState(null); // for sub-task creation
   const [showDrawerCompleted, setShowDrawerCompleted] = useState(false);
+  const [focusedClients, setFocusedClients] = useState(new Set());
 
   // ── Pan & Zoom state ──
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -373,7 +374,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     // Pill nodes are wider than circles: width ≈ radius*2.8, height ≈ radius*1.1
     // Use the larger dimension (half-width) as effective collision radius
     const MIN_GAP = 10;
-    const getPillHalfWidth = (r) => Math.max(r * 1.4, 45);
+    const getPillHalfWidth = (r) => Math.max(r * 1.5, 60);
     for (let pass = 0; pass < 8; pass++) {
       let hadCollision = false;
       for (let i = 0; i < allClientNodes.length; i++) {
@@ -439,8 +440,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       maxY = Math.max(maxY, branch.y + 30);
       branch.clientPositions.forEach(client => {
         // Account for pill width (wider than height)
-        const pillHalfW = Math.max((client.radius || 30) * 1.4, 45);
-        const pillHalfH = Math.max((client.radius || 30) * 0.55, 18);
+        const pillHalfW = Math.max((client.radius || 30) * 1.5, 60);
+        const pillHalfH = Math.max((client.radius || 30) * 0.6, 28);
         minX = Math.min(minX, client.x - pillHalfW);
         maxX = Math.max(maxX, client.x + pillHalfW);
         minY = Math.min(minY, client.y - pillHalfH);
@@ -493,17 +494,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, [pan]);
 
   const handlePointerMove = useCallback((e) => {
-    // Node dragging takes priority
-    if (draggingNode.current) {
-      const dx = (e.clientX - draggingNode.current.startX) / zoom;
-      const dy = (e.clientY - draggingNode.current.startY) / zoom;
+    // Node dragging takes priority — snapshot ref to avoid null race
+    const node = draggingNode.current;
+    if (node) {
+      const dx = (e.clientX - node.startX) / zoom;
+      const dy = (e.clientY - node.startY) / zoom;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) nodeHasDragged.current = true;
       setManualPositions(prev => ({
         ...prev,
-        [draggingNode.current.key]: {
-          x: draggingNode.current.origX + dx,
-          y: draggingNode.current.origY + dy,
-        },
+        [node.key]: { x: node.origX + dx, y: node.origY + dy },
       }));
       return;
     }
@@ -547,6 +546,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       setEditPopover(null);
       setShowDrawerCompleted(false);
     }
+  }, []);
+
+  const toggleClientFocus = useCallback((clientName, e) => {
+    e?.stopPropagation();
+    setFocusedClients(prev => {
+      const next = new Set(prev);
+      next.has(clientName) ? next.delete(clientName) : next.add(clientName);
+      return next;
+    });
   }, []);
 
   // ── Zoom handler (mouse wheel) ──
@@ -854,14 +862,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const isGhost = client.tasks.every(t => !t.due_date);
 
               // Pill dimensions based on complexity tier
-              const pillHeight = Math.max(client.radius * 1.1, 36);
-              const pillWidth = Math.max(client.radius * 2.8, 90);
+              const pillHeight = Math.max(client.radius * 1.2, 55);
+              const pillWidth = Math.max(client.radius * 3.0, 120);
               // Completed: shrink slightly + dim
               const finalW = isAllDone ? pillWidth * 0.85 : pillWidth;
               const finalH = isAllDone ? pillHeight * 0.85 : pillHeight;
 
               // Shadows
               const hoverGlow = `0 0 20px ${client.color}66, 0 4px 12px rgba(0,0,0,0.2)`;
+              const focusGlow = '0 0 18px #06B6D466, 0 0 6px #06B6D433, 0 2px 8px rgba(0,0,0,0.12)';
               const normalShadow = isFilingReady
                 ? `0 0 16px ${ZERO_PANIC.amber}66, 0 2px 6px rgba(0,0,0,0.12)`
                 : '0 2px 8px rgba(0,0,0,0.12)';
@@ -870,10 +879,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const topTaskTitle = client.topTask?.title || '';
               const truncatedTask = topTaskTitle.length > 18 ? topTaskTitle.substring(0, 16) + '...' : topTaskTitle;
 
-              // Border: amber for filing-ready, orange-dashed for waiting_on_client, normal otherwise
-              const borderColor = isWaitingOnClient ? '#f59e0b' : isFilingReady ? ZERO_PANIC.amber : isGhost ? client.color : (isHovered ? '#fff' : 'rgba(255,255,255,0.4)');
-              const borderStyle = isGhost ? 'dashed' : isWaitingOnClient ? 'solid' : 'solid';
-              const borderWidth = isWaitingOnClient ? 2.5 : isFilingReady ? 3 : 1.5;
+              // Focus state
+              const isFocused = focusedClients.has(client.name);
+
+              // Border: focus > waiting > filing-ready > ghost > normal
+              const borderColor = isFocused ? '#06B6D4' : isWaitingOnClient ? '#f59e0b' : isFilingReady ? ZERO_PANIC.amber : isGhost ? client.color : (isHovered ? '#fff' : 'rgba(255,255,255,0.4)');
+              const borderStyle = isGhost ? 'dashed' : 'solid';
+              const borderWidth = isFocused ? 3.5 : isWaitingOnClient ? 2.5 : isFilingReady ? 3 : 1.5;
 
               const nodeKey = `${branch.category}-${client.name}`;
               const isDragging = draggingNode.current?.key === nodeKey;
@@ -883,7 +895,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   key={nodeKey}
                   data-node-draggable
                   className={`absolute z-10 flex flex-col items-center justify-center select-none overflow-hidden touch-none
-                    ${client.shouldPulse ? 'animate-pulse' : ''}`}
+                    ${client.shouldPulse || isFocused ? 'animate-pulse' : ''}`}
                   style={{
                     width: finalW,
                     height: finalH,
@@ -895,7 +907,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     borderWidth,
                     borderRadius: finalH / 2,
                     color: isGhost ? client.color : '#fff',
-                    boxShadow: isHovered ? hoverGlow : normalShadow,
+                    boxShadow: isHovered ? hoverGlow : isFocused ? focusGlow : normalShadow,
                     opacity: isSpotlit(branch.category) ? (isAllDone ? 0.35 : 1) : 0.12,
                     filter: isAllDone ? 'saturate(0.3) brightness(0.85)' : 'none',
                     cursor: isDragging ? 'grabbing' : 'grab',
@@ -924,7 +936,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   <span
                     className="font-bold leading-tight text-center px-2 truncate w-full"
                     style={{
-                      fontSize: finalH < 40 ? '9px' : finalH < 50 ? '10px' : '11px',
+                      fontSize: finalH < 45 ? '10px' : finalH < 55 ? '11px' : '12px',
                       textShadow: isGhost ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
                       maxWidth: finalW - 12,
                     }}
@@ -938,7 +950,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <span
                       className="leading-tight text-center px-2 truncate w-full"
                       style={{
-                        fontSize: finalH < 40 ? '7px' : '8px',
+                        fontSize: finalH < 45 ? '8px' : '9px',
                         opacity: isGhost ? 0.7 : 0.75,
                         maxWidth: finalW - 12,
                         marginTop: '1px',
@@ -971,9 +983,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <span
                       className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-white font-bold pointer-events-none"
                       style={{
-                        width: 18,
-                        height: 18,
-                        fontSize: '8px',
+                        width: 20,
+                        height: 20,
+                        fontSize: '9px',
                         backgroundColor: client.overdueTasks > 0 ? ZERO_PANIC.purple : client.color,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                         border: '1.5px solid rgba(255,255,255,0.8)',
@@ -982,6 +994,22 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       {client.totalTasks - client.completedTasks}
                     </span>
                   )}
+
+                  {/* Focus star toggle */}
+                  <button
+                    className="absolute -top-1.5 -left-1.5 flex items-center justify-center rounded-full pointer-events-auto"
+                    style={{
+                      width: 20,
+                      height: 20,
+                      backgroundColor: isFocused ? '#06B6D4' : 'rgba(255,255,255,0.85)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      border: isFocused ? '1.5px solid #0891B2' : '1.5px solid rgba(0,0,0,0.1)',
+                    }}
+                    onClick={(e) => toggleClientFocus(client.name, e)}
+                    title={isFocused ? 'הסר מפוקוס' : 'סמן כפוקוס'}
+                  >
+                    <Star className="w-2.5 h-2.5" style={{ color: isFocused ? '#fff' : '#9CA3AF', fill: isFocused ? '#fff' : 'none' }} />
+                  </button>
                 </motion.div>
               );
             })}
@@ -1250,6 +1278,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: drawerClient.color }} />
                       <SheetTitle className="text-base">{drawerClient.displayName || drawerClient.name}</SheetTitle>
                       <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded">{drawerClient.tierIcon} {drawerClient.tierLabel}</span>
+                      <button
+                        onClick={() => toggleClientFocus(drawerClient.name)}
+                        className={`p-1 rounded-full transition-colors ${focusedClients.has(drawerClient.name) ? 'bg-cyan-100 text-cyan-600' : 'bg-gray-100 text-gray-400 hover:text-cyan-500'}`}
+                        title={focusedClients.has(drawerClient.name) ? 'הסר מפוקוס' : 'סמן כפוקוס'}
+                      >
+                        <Star className="w-3.5 h-3.5" style={{ fill: focusedClients.has(drawerClient.name) ? 'currentColor' : 'none' }} />
+                      </button>
                     </div>
                     <SheetDescription className="text-right">
                       <span className="text-xs text-gray-500">{activeTasks.length} פעילות · {completedTasks.length} הושלמו</span>
