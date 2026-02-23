@@ -51,17 +51,30 @@ const NODE_COLOR_MAP = {
   slate:   '#90A4AE',
 };
 
-// Service category branches – each with distinct color + icon
+// Department folder nodes – professional dark palette
 const BRANCH_CONFIG = {
-  'מע"מ':        { color: '#7C4DFF', icon: '📊', label: 'VAT' },
-  'מקדמות מס':   { color: '#00BCD4', icon: '💰', label: 'Tax' },
-  'שכר':         { color: '#FF9800', icon: '👥', label: 'Payroll' },
-  'ביטוח לאומי':  { color: '#4CAF50', icon: '🏛️', label: 'NI' },
-  'ניכויים':      { color: '#009688', icon: '📋', label: 'Deduct' },
-  'הנחש':        { color: '#795548', icon: '📑', label: 'Hashna' },
-  'home':        { color: '#8D6E63', icon: '🏠', label: 'Home' },
-  'personal':    { color: '#78909C', icon: '👤', label: 'Personal' },
-  'אחר':         { color: '#607D8B', icon: '📁', label: 'Other' },
+  'שכר':          { color: '#5B21B6', icon: '👥', label: 'Payroll' },
+  'מע"מ':         { color: '#1E40AF', icon: '📊', label: 'VAT' },
+  'ב"ל':          { color: '#065F46', icon: '🏛️', label: 'NI' },
+  'ניכויים':       { color: '#92400E', icon: '📋', label: 'Deduct' },
+  'מקדמות':       { color: '#7C2D12', icon: '💰', label: 'Advances' },
+  'התאמות':       { color: '#4C1D95', icon: '🔄', label: 'Reconcile' },
+  'מאזנים':       { color: '#1E3A5F', icon: '⚖️', label: 'Balance' },
+  'אדמיניסטרציה': { color: '#374151', icon: '📁', label: 'Admin' },
+  'בית':          { color: '#78350F', icon: '🏠', label: 'Home' },
+};
+
+// Map legacy task categories to new department keys
+const CATEGORY_TO_DEPARTMENT = {
+  'מע"מ': 'מע"מ',
+  'מקדמות מס': 'מקדמות',
+  'שכר': 'שכר',
+  'ביטוח לאומי': 'ב"ל',
+  'ניכויים': 'ניכויים',
+  'הנחש': 'התאמות',
+  'home': 'בית',
+  'personal': 'אדמיניסטרציה',
+  'אחר': 'אדמיניסטרציה',
 };
 
 // ─── Node Scaling by Complexity Tier (3:1 ratio from Enterprise to Nano) ──
@@ -237,7 +250,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const activeTasks = tasks.filter(t => t.status !== 'not_relevant');
 
     activeTasks.forEach(task => {
-      const cat = task.category || 'אחר';
+      const rawCat = task.category || 'אחר';
+      const cat = CATEGORY_TO_DEPARTMENT[rawCat] || rawCat;
       if (!catClientMap[cat]) catClientMap[cat] = {};
       const clientName = task.client_name || 'ללא לקוח';
       if (!catClientMap[cat][clientName]) catClientMap[cat][clientName] = [];
@@ -247,7 +261,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     // Build branch data with complexity-tier sizing
     const branches = Object.entries(catClientMap).map(([category, clientsObj]) => ({
       category,
-      config: BRANCH_CONFIG[category] || BRANCH_CONFIG['אחר'],
+      config: BRANCH_CONFIG[category] || BRANCH_CONFIG['אדמיניסטרציה'],
       clients: Object.entries(clientsObj).map(([name, clientTasks]) => {
         const client = clients?.find(c => c.name === name);
         const tier = getComplexityTier(client, clientTasks);
@@ -434,10 +448,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     let minX = layout.cx, maxX = layout.cx, minY = layout.cy, maxY = layout.cy;
 
     layout.branchPositions.forEach(branch => {
-      minX = Math.min(minX, branch.x - 30);
-      maxX = Math.max(maxX, branch.x + 30);
-      minY = Math.min(minY, branch.y - 30);
-      maxY = Math.max(maxY, branch.y + 30);
+      minX = Math.min(minX, branch.x - 60);
+      maxX = Math.max(maxX, branch.x + 60);
+      minY = Math.min(minY, branch.y - 24);
+      maxY = Math.max(maxY, branch.y + 24);
       branch.clientPositions.forEach(client => {
         // Account for pill width (wider than height)
         const pillHalfW = Math.max((client.radius || 30) * 1.5, 60);
@@ -831,10 +845,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {/* ── Branch (Category) Nodes ── */}
         {layout.branchPositions.map((branch, i) => (
           <React.Fragment key={branch.category}>
+            {/* Folder-shaped department node */}
             <motion.div
-              className="absolute z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-semibold shadow-lg cursor-pointer select-none"
+              className="absolute z-10 cursor-pointer select-none"
               style={{
-                backgroundColor: branch.config.color,
                 left: branch.x,
                 top: branch.y,
                 transform: 'translate(-50%, -50%)',
@@ -847,9 +861,25 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               whileHover={{ scale: 1.1 }}
               onClick={(e) => { e.stopPropagation(); handleBranchClick(branch.category); }}
             >
-              <span>{branch.config.icon}</span>
-              <span>{branch.category}</span>
-              <span className="bg-white/25 rounded-full px-1.5 text-[10px]">{branch.clients.length}</span>
+              <svg width="120" height="48" viewBox="0 0 120 48" style={{ overflow: 'visible' }}>
+                {/* Folder tab + body */}
+                <path
+                  d="M0,12 L0,46 Q0,48 2,48 L118,48 Q120,48 120,46 L120,12 L50,12 L44,0 L2,0 Q0,0 0,2 Z"
+                  fill={branch.config.color}
+                  opacity={0.9}
+                  stroke="rgba(255,255,255,0.3)"
+                  strokeWidth={1.5}
+                />
+                {/* Icon + label */}
+                <text x="60" y="34" textAnchor="middle" fill="white" fontSize="12" fontWeight="600" style={{ pointerEvents: 'none' }}>
+                  {branch.config.icon} {branch.category}
+                </text>
+                {/* Count badge */}
+                <circle cx="108" cy="10" r="10" fill="rgba(255,255,255,0.25)" />
+                <text x="108" y="14" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                  {branch.clients.length}
+                </text>
+              </svg>
             </motion.div>
 
             {/* ── Client Leaf Nodes (Pill / Mini-Card Shape) ── */}
@@ -860,6 +890,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const isWaitingOnClient = client.hasWaitingOnClient;
               // Ghost Node: dashed border if no due_date on all tasks
               const isGhost = client.tasks.every(t => !t.due_date);
+
+              // Procrastination detection
+              const procrastinatedCount = client.tasks.filter(t => (t.reschedule_count || 0) > 3).length;
+              const isFrozen = client.tasks.length > 0 && client.tasks.every(t => (t.reschedule_count || 0) > 5);
 
               // Pill dimensions based on complexity tier
               const pillHeight = Math.max(client.radius * 1.2, 55);
@@ -882,10 +916,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               // Focus state
               const isFocused = focusedClients.has(client.name);
 
-              // Border: focus > waiting > filing-ready > ghost > normal
-              const borderColor = isFocused ? '#06B6D4' : isWaitingOnClient ? '#f59e0b' : isFilingReady ? ZERO_PANIC.amber : isGhost ? client.color : (isHovered ? '#fff' : 'rgba(255,255,255,0.4)');
-              const borderStyle = isGhost ? 'dashed' : 'solid';
-              const borderWidth = isFocused ? 3.5 : isWaitingOnClient ? 2.5 : isFilingReady ? 3 : 1.5;
+              // Border: frozen > focus > waiting > filing-ready > ghost > normal
+              const borderColor = isFrozen ? '#6B7280' : isFocused ? '#06B6D4' : isWaitingOnClient ? '#f59e0b' : isFilingReady ? ZERO_PANIC.amber : isGhost ? client.color : (isHovered ? '#fff' : 'rgba(255,255,255,0.4)');
+              const borderStyle = isFrozen ? 'dashed' : isGhost ? 'dashed' : 'solid';
+              const borderWidth = isFrozen ? 2.5 : isFocused ? 3.5 : isWaitingOnClient ? 2.5 : isFilingReady ? 3 : 1.5;
 
               const nodeKey = `${branch.category}-${client.name}`;
               const isDragging = draggingNode.current?.key === nodeKey;
@@ -908,8 +942,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     borderRadius: finalH / 2,
                     color: isGhost ? client.color : '#fff',
                     boxShadow: isHovered ? hoverGlow : isFocused ? focusGlow : normalShadow,
-                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.35 : 1) : 0.12,
-                    filter: isAllDone ? 'saturate(0.3) brightness(0.85)' : 'none',
+                    opacity: isSpotlit(branch.category) ? (isFrozen ? 0.4 : isAllDone ? 0.35 : 1) : 0.12,
+                    filter: isFrozen ? 'saturate(0.15) brightness(0.7)' : isAllDone ? 'saturate(0.3) brightness(0.85)' : 'none',
                     cursor: isDragging ? 'grabbing' : 'grab',
                     transition: 'opacity 0.4s ease-in-out, box-shadow 0.3s ease, border-color 0.2s ease, filter 0.4s ease',
                   }}
@@ -941,6 +975,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       maxWidth: finalW - 12,
                     }}
                   >
+                    {isFrozen && <span title="קפוא - כל המשימות נדחו" style={{ marginInlineEnd: '3px' }}>🧊</span>}
+                    {!isFrozen && procrastinatedCount > 0 && <span title={`${procrastinatedCount} משימות נדחו יותר מ-3 פעמים`} style={{ marginInlineEnd: '3px' }}>🐌</span>}
                     {isWaitingOnClient && <span title="ממתין ללקוח" style={{ marginInlineEnd: '3px' }}>⏳</span>}
                     {client.displayName}
                   </span>
@@ -1253,6 +1289,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       )}
                     </div>
                     <Badge className={`${sts.color} text-[9px] px-1.5 py-0 shrink-0`}>{sts.text}</Badge>
+                    {(task.reschedule_count || 0) > 3 && (
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full shrink-0 font-bold ${(task.reschedule_count || 0) > 5 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                        {(task.reschedule_count || 0) > 5 ? '🧊 קפוא' : `🐌 ×${task.reschedule_count}`}
+                      </span>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

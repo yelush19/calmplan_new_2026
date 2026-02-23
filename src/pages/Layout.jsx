@@ -217,6 +217,8 @@ function LayoutInner({ children }) {
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
+  const [myMenu, setMyMenu] = useState([]);
+  const [dailyFocusTasks, setDailyFocusTasks] = useState([]);
   const [importStatus, setImportStatus] = useState(null); // {type, message}
   const importFileRef = useRef(null);
 
@@ -289,6 +291,43 @@ function LayoutInner({ children }) {
     };
     loadRecent();
   }, [pinnedClients]);
+
+  // Load My Menu from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('calmplan_my_menu');
+    if (saved) {
+      try { setMyMenu(JSON.parse(saved)); } catch { /* ignore */ }
+    } else {
+      // Default items
+      const defaults = [createPageUrl("Tasks"), createPageUrl("Calendar"), createPageUrl("Home")];
+      setMyMenu(defaults);
+      localStorage.setItem('calmplan_my_menu', JSON.stringify(defaults));
+    }
+  }, []);
+
+  // Load Daily Focus tasks (due today, not done)
+  useEffect(() => {
+    const loadDailyFocus = async () => {
+      try {
+        const allTasks = await Task.list("-due_date", 5000).catch(() => []);
+        const tasks = Array.isArray(allTasks) ? allTasks : [];
+        const today = new Date().toISOString().split('T')[0];
+        const todayTasks = tasks
+          .filter(t => t.status !== 'completed' && t.status !== 'not_relevant' && t.due_date === today)
+          .slice(0, 5);
+        setDailyFocusTasks(todayTasks);
+      } catch { setDailyFocusTasks([]); }
+    };
+    loadDailyFocus();
+  }, []);
+
+  const toggleMyMenu = useCallback((href) => {
+    setMyMenu(prev => {
+      const next = prev.includes(href) ? prev.filter(h => h !== href) : [...prev, href];
+      localStorage.setItem('calmplan_my_menu', JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   const isActive = (href) => location.pathname.startsWith(href);
 
@@ -486,19 +525,66 @@ function LayoutInner({ children }) {
                     </div>
                   </div>
 
-                  {/* Pinned / Recent Clients */}
-                  {(pinnedClients.length > 0 || recentClients.length > 0) && (
+                  {/* Pinned Clients (pin-only, no auto-recent) */}
+                  {pinnedClients.length > 0 && (
                     <div className="px-3 py-2 border-b border-gray-200">
                       <h3 className="text-xs font-bold text-gray-400 mb-2 flex items-center gap-1">
                         <Star className="w-3 h-3" /> גישה מהירה
                       </h3>
-                      {[...pinnedClients, ...recentClients].slice(0, 5).map(client => (
+                      {pinnedClients.slice(0, 8).map(client => (
                         <Link key={client.id}
                           to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
                           onClick={() => setIsMobileMenuOpen(false)}
                           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">
                           <div className="w-2 h-2 rounded-full bg-emerald-400" />
                           {client.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* "התפריט שלי" — user-customized menu */}
+                  {myMenu.length > 0 && (
+                    <div className="px-3 py-2 border-b border-gray-200">
+                      <h3 className="text-xs font-bold text-gray-400 mb-2 flex items-center gap-1">
+                        <Star className="w-3 h-3 text-amber-400" /> התפריט שלי
+                      </h3>
+                      {myMenu.map(href => {
+                        let menuItem = null;
+                        for (const section of Object.values(sidebarSections)) {
+                          menuItem = section.items.find(i => i.href === href);
+                          if (menuItem) break;
+                        }
+                        if (!menuItem) return null;
+                        return (
+                          <Link key={href} to={href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors
+                              ${isActive(href) ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
+                            <menuItem.icon className="w-3.5 h-3.5" />
+                            {menuItem.name}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Daily Focus — top 5 tasks due today */}
+                  {dailyFocusTasks.length > 0 && (
+                    <div className="px-3 py-2 border-b border-gray-200">
+                      <h3 className="text-xs font-bold text-gray-400 mb-2 flex items-center gap-1">
+                        <Target className="w-3 h-3 text-rose-400" /> מיקוד יומי
+                      </h3>
+                      {dailyFocusTasks.map(task => (
+                        <Link key={task.id}
+                          to={createPageUrl("Tasks")}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors">
+                          <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                          <span className="truncate flex-1">{task.title}</span>
+                          {task.client_name && (
+                            <span className="text-[9px] bg-gray-100 text-gray-500 px-1 rounded shrink-0">{task.client_name}</span>
+                          )}
                         </Link>
                       ))}
                     </div>
@@ -514,13 +600,22 @@ function LayoutInner({ children }) {
                             <section.icon className="w-3 h-3" /> {section.title}
                           </h3>
                           {section.items.map(item => (
-                            <Link key={item.href} to={item.href}
-                              onClick={() => setIsMobileMenuOpen(false)}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
-                                ${isActive(item.href) ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
-                              <item.icon className="w-4 h-4" />
-                              {item.name}
-                            </Link>
+                            <div key={item.href} className="flex items-center group">
+                              <Link to={item.href}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
+                                  ${isActive(item.href) ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                <item.icon className="w-4 h-4" />
+                                {item.name}
+                              </Link>
+                              <button
+                                onClick={() => toggleMyMenu(item.href)}
+                                className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-amber-50"
+                                title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
+                              >
+                                <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
+                              </button>
+                            </div>
                           ))}
                         </div>
                       ))}
