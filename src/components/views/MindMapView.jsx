@@ -51,18 +51,35 @@ const NODE_COLOR_MAP = {
   slate:   '#90A4AE',
 };
 
-// Department folder nodes – professional dark palette
+// Department folder nodes – professional muted palette (Navy, Forest, Slate)
 const BRANCH_CONFIG = {
-  'שכר':          { color: '#5B21B6', icon: '👥', label: 'Payroll' },
-  'מע"מ':         { color: '#1E40AF', icon: '📊', label: 'VAT' },
-  'ב"ל':          { color: '#065F46', icon: '🏛️', label: 'NI' },
-  'ניכויים':       { color: '#92400E', icon: '📋', label: 'Deduct' },
-  'מקדמות':       { color: '#7C2D12', icon: '💰', label: 'Advances' },
-  'התאמות':       { color: '#4C1D95', icon: '🔄', label: 'Reconcile' },
+  'שכר':          { color: '#1B2A4A', icon: '👥', label: 'Payroll' },
+  'מע"מ':         { color: '#2C3E6B', icon: '📊', label: 'VAT' },
+  'ב"ל':          { color: '#1A3C34', icon: '🏛️', label: 'NI' },
+  'ניכויים':       { color: '#3D4F5F', icon: '📋', label: 'Deduct' },
+  'מקדמות':       { color: '#2D3436', icon: '💰', label: 'Advances' },
+  'התאמות':       { color: '#1A4040', icon: '🔄', label: 'Reconcile' },
   'מאזנים':       { color: '#1E3A5F', icon: '⚖️', label: 'Balance' },
-  'אדמיניסטרציה': { color: '#374151', icon: '📁', label: 'Admin' },
-  'בית':          { color: '#78350F', icon: '🏠', label: 'Home' },
+  'אדמיניסטרציה': { color: '#404B5A', icon: '📁', label: 'Admin' },
+  'בית':          {
+    color: '#5C4033', icon: '🏠', label: 'Home',
+    subFolders: [
+      { key: 'שוטף', icon: '🔄', label: 'Routine' },
+      { key: 'פסח/פרויקטים', icon: '🔨', label: 'Projects' },
+      { key: 'משפטי/אישי', icon: '⚖️', label: 'Legal' },
+    ],
+  },
 };
+
+// Keyword mapping for Home sub-categories
+const HOME_SUB_CATEGORY_MAP = {
+  'פסח': 'פסח/פרויקטים', 'פרויקט': 'פסח/פרויקטים', 'שיפוץ': 'פסח/פרויקטים',
+  'משפטי': 'משפטי/אישי', 'אישי': 'משפטי/אישי', 'עו"ד': 'משפטי/אישי',
+  'בית משפט': 'משפטי/אישי', 'תביעה': 'משפטי/אישי',
+};
+
+// Zone labels for Home brain dump
+const HOME_ZONES = ['מטבח', 'משרד', 'חדר שינה', 'סלון', 'חצר', 'כללי'];
 
 // Map legacy task categories to new department keys
 const CATEGORY_TO_DEPARTMENT = {
@@ -226,6 +243,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const draggingNode = useRef(null); // { key, startX, startY, origX, origY }
   const nodeHasDragged = useRef(false);
 
+  // ── Crisis Mode ──
+  const [crisisMode, setCrisisMode] = useState(() => localStorage.getItem('mindmap-crisis-mode') === 'true');
+  useEffect(() => { localStorage.setItem('mindmap-crisis-mode', String(crisisMode)); }, [crisisMode]);
+
   // Measure container
   useEffect(() => {
     if (!containerRef.current) return;
@@ -247,7 +268,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     // Group tasks by category → client
     const catClientMap = {};
-    const activeTasks = tasks.filter(t => t.status !== 'not_relevant');
+    const activeTasks = tasks.filter(t => {
+      if (t.status === 'not_relevant') return false;
+      if (!crisisMode) return true;
+      // Crisis mode: keep only urgent/high priority tasks
+      const dept = CATEGORY_TO_DEPARTMENT[t.category || 'אחר'] || t.category;
+      if (dept === 'בית') return t.priority === 'urgent' || t.priority === 'high';
+      return t.priority !== 'low';
+    });
 
     activeTasks.forEach(task => {
       const rawCat = task.category || 'אחר';
@@ -307,7 +335,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     });
 
     return { branches, clientNodes, centerLabel };
-  }, [tasks, clients]);
+  }, [tasks, clients, crisisMode]);
 
   // ── Layout Calculation: Container-Aware + Complexity + ADHD Focus + Collision Detection ──
   const layout = useMemo(() => {
@@ -375,12 +403,44 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         return node;
       });
 
+      // Compute sub-folder positions for departments with subFolders (e.g. 'בית')
+      let subFolderPositions = null;
+      if (branch.config.subFolders) {
+        const subCount = branch.config.subFolders.length;
+        const subSpread = Math.PI * 0.5;
+        const subDist = baseLeafDist * 0.35;
+        subFolderPositions = branch.config.subFolders.map((sub, si) => {
+          const subAngle = angle + (si - (subCount - 1) / 2) * (subSpread / Math.max(subCount - 1, 1));
+          return {
+            ...sub,
+            x: bx + Math.cos(subAngle) * subDist,
+            y: by + Math.sin(subAngle) * subDist,
+          };
+        });
+
+        // Classify clients into sub-folders by keyword scan and reposition
+        clientPositions.forEach(cp => {
+          const titleText = cp.tasks?.map(t => t.title).join(' ') || '';
+          let matchedSubKey = 'שוטף'; // default
+          for (const [keyword, subKey] of Object.entries(HOME_SUB_CATEGORY_MAP)) {
+            if (titleText.includes(keyword)) { matchedSubKey = subKey; break; }
+          }
+          const subFolder = subFolderPositions.find(s => s.key === matchedSubKey) || subFolderPositions[0];
+          if (subFolder) {
+            // Store sub-folder reference for connection lines
+            cp._subFolderX = subFolder.x;
+            cp._subFolderY = subFolder.y;
+          }
+        });
+      }
+
       return {
         ...branch,
         x: bx,
         y: by,
         angle,
         clientPositions,
+        subFolderPositions,
       };
     });
 
@@ -426,7 +486,33 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       });
     });
 
-    // Apply manual position overrides (from user dragging)
+    // Apply folder manual position overrides (from folder dragging)
+    branchPositions.forEach(branch => {
+      const folderKey = `folder-${branch.category}`;
+      if (manualPositions[folderKey]) {
+        const deltaX = manualPositions[folderKey].x - branch.x;
+        const deltaY = manualPositions[folderKey].y - branch.y;
+        branch.x = manualPositions[folderKey].x;
+        branch.y = manualPositions[folderKey].y;
+        // Shift sub-folders too
+        if (branch.subFolderPositions) {
+          branch.subFolderPositions.forEach(sub => {
+            sub.x += deltaX;
+            sub.y += deltaY;
+          });
+        }
+        // Shift children that don't have their own manual position
+        branch.clientPositions.forEach(cp => {
+          const childKey = `${branch.category}-${cp.name}`;
+          if (!manualPositions[childKey]) {
+            cp.x += deltaX;
+            cp.y += deltaY;
+          }
+        });
+      }
+    });
+
+    // Apply client manual position overrides (from user dragging)
     branchPositions.forEach(branch => {
       branch.clientPositions.forEach(cp => {
         const key = `${branch.category}-${cp.name}`;
@@ -514,10 +600,26 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const dx = (e.clientX - node.startX) / zoom;
       const dy = (e.clientY - node.startY) / zoom;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) nodeHasDragged.current = true;
-      setManualPositions(prev => ({
-        ...prev,
-        [node.key]: { x: node.origX + dx, y: node.origY + dy },
-      }));
+
+      if (node.isFolder) {
+        // Folder drag: move folder + all children without their own manual override
+        setManualPositions(prev => {
+          const next = { ...prev, [node.key]: { x: node.origX + dx, y: node.origY + dy } };
+          if (node.childPositions) {
+            node.childPositions.forEach(child => {
+              if (!prev[child.key]) {
+                next[child.key] = { x: child.x + dx, y: child.y + dy };
+              }
+            });
+          }
+          return next;
+        });
+      } else {
+        setManualPositions(prev => ({
+          ...prev,
+          [node.key]: { x: node.origX + dx, y: node.origY + dy },
+        }));
+      }
       return;
     }
     if (!isPanning) return;
@@ -561,6 +663,28 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       setShowDrawerCompleted(false);
     }
   }, []);
+
+  // ── Folder drag handlers ──
+  const handleFolderPointerDown = useCallback((e, folderKey, currentX, currentY) => {
+    e.stopPropagation();
+    nodeHasDragged.current = false;
+    const category = folderKey.replace('folder-', '');
+    const branch = layout.branchPositions.find(b => b.category === category);
+    const childPositions = branch ? branch.clientPositions.map(cp => ({
+      key: `${category}-${cp.name}`, x: cp.x, y: cp.y,
+    })) : [];
+    draggingNode.current = {
+      key: folderKey, startX: e.clientX, startY: e.clientY,
+      origX: currentX, origY: currentY, isFolder: true, childPositions,
+    };
+  }, [layout]);
+
+  const handleFolderPointerUp = useCallback((e, category) => {
+    const wasDragging = nodeHasDragged.current;
+    draggingNode.current = null;
+    nodeHasDragged.current = false;
+    if (!wasDragging) handleBranchClick(category);
+  }, [handleBranchClick]);
 
   const toggleClientFocus = useCallback((clientName, e) => {
     e?.stopPropagation();
@@ -793,31 +917,69 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           {/* ── Connection Lines ── */}
           {layout.branchPositions.map((branch) => (
             <g key={`lines-${branch.category}`}>
-              {/* Center → Branch */}
+              {/* Center → Folder: dashed structural connector */}
               <motion.line
                 x1={layout.cx} y1={layout.cy}
                 x2={branch.x} y2={branch.y}
                 stroke={branch.config.color}
-                strokeWidth={2.5}
-                strokeOpacity={isSpotlit(branch.category) ? 0.4 : 0.08}
+                strokeWidth={3}
+                strokeDasharray="8 4"
+                strokeLinecap="round"
+                strokeOpacity={isSpotlit(branch.category) ? 0.35 : 0.06}
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 0.6, ease: 'easeInOut' }}
               />
-              {/* Branch → Client leaves */}
-              {branch.clientPositions.map((client) => (
+              {/* Folder → Sub-folders (if any) */}
+              {branch.subFolderPositions?.map((sub) => (
                 <motion.line
-                  key={`line-${client.name}`}
+                  key={`sub-line-${sub.key}`}
                   x1={branch.x} y1={branch.y}
-                  x2={client.x} y2={client.y}
-                  stroke={client.color}
-                  strokeWidth={1.5}
+                  x2={sub.x} y2={sub.y}
+                  stroke={branch.config.color}
+                  strokeWidth={2}
                   strokeOpacity={isSpotlit(branch.category) ? 0.3 : 0.06}
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.5, delay: 0.3, ease: 'easeInOut' }}
+                  transition={{ duration: 0.4, delay: 0.2, ease: 'easeInOut' }}
                 />
               ))}
+              {/* Folder → Client leaves: curved bezier paths */}
+              {branch.clientPositions.map((client) => {
+                const mx = (branch.x + client.x) / 2;
+                const my = (branch.y + client.y) / 2;
+                const cdx = client.x - branch.x;
+                const cdy = client.y - branch.y;
+                const len = Math.sqrt(cdx * cdx + cdy * cdy);
+                const curveAmt = Math.min(20, len * 0.15);
+                const perpX = len > 0 ? (-cdy / len) * curveAmt : 0;
+                const perpY = len > 0 ? (cdx / len) * curveAmt : 0;
+                // If client has a sub-folder parent, draw from sub-folder instead
+                const startX = client._subFolderX || branch.x;
+                const startY = client._subFolderY || branch.y;
+                const smx = (startX + client.x) / 2;
+                const smy = (startY + client.y) / 2;
+                const sdx = client.x - startX;
+                const sdy = client.y - startY;
+                const slen = Math.sqrt(sdx * sdx + sdy * sdy);
+                const sCurve = Math.min(20, slen * 0.15);
+                const sPerpX = slen > 0 ? (-sdy / slen) * sCurve : 0;
+                const sPerpY = slen > 0 ? (sdx / slen) * sCurve : 0;
+
+                return (
+                  <motion.path
+                    key={`line-${client.name}`}
+                    d={`M ${startX} ${startY} Q ${smx + sPerpX} ${smy + sPerpY} ${client.x} ${client.y}`}
+                    stroke={client.color}
+                    strokeWidth={1.8}
+                    fill="none"
+                    strokeOpacity={isSpotlit(branch.category) ? 0.35 : 0.06}
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.5, delay: 0.3, ease: 'easeInOut' }}
+                  />
+                );
+              })}
             </g>
           ))}
         </svg>
@@ -845,24 +1007,26 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {/* ── Branch (Category) Nodes ── */}
         {layout.branchPositions.map((branch, i) => (
           <React.Fragment key={branch.category}>
-            {/* Folder-shaped department node */}
+            {/* Folder-shaped department node — draggable */}
             <motion.div
-              className="absolute z-10 cursor-pointer select-none"
+              data-node-draggable
+              className="absolute z-10 select-none touch-none"
               style={{
                 left: branch.x,
                 top: branch.y,
                 transform: 'translate(-50%, -50%)',
                 opacity: isSpotlit(branch.category) ? 1 : 0.15,
                 transition: 'opacity 0.4s ease-in-out',
+                cursor: draggingNode.current?.key === `folder-${branch.category}` ? 'grabbing' : 'grab',
               }}
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: isSpotlit(branch.category) ? 1 : 0.15, scale: 1 }}
               transition={{ delay: i * 0.08, type: 'spring', stiffness: 200 }}
               whileHover={{ scale: 1.1 }}
-              onClick={(e) => { e.stopPropagation(); handleBranchClick(branch.category); }}
+              onPointerDown={(e) => handleFolderPointerDown(e, `folder-${branch.category}`, branch.x, branch.y)}
+              onPointerUp={(e) => handleFolderPointerUp(e, branch.category)}
             >
               <svg width="120" height="48" viewBox="0 0 120 48" style={{ overflow: 'visible' }}>
-                {/* Folder tab + body */}
                 <path
                   d="M0,12 L0,46 Q0,48 2,48 L118,48 Q120,48 120,46 L120,12 L50,12 L44,0 L2,0 Q0,0 0,2 Z"
                   fill={branch.config.color}
@@ -870,17 +1034,48 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   stroke="rgba(255,255,255,0.3)"
                   strokeWidth={1.5}
                 />
-                {/* Icon + label */}
                 <text x="60" y="34" textAnchor="middle" fill="white" fontSize="12" fontWeight="600" style={{ pointerEvents: 'none' }}>
                   {branch.config.icon} {branch.category}
                 </text>
-                {/* Count badge */}
                 <circle cx="108" cy="10" r="10" fill="rgba(255,255,255,0.25)" />
                 <text x="108" y="14" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                   {branch.clients.length}
                 </text>
               </svg>
             </motion.div>
+
+            {/* Sub-folder nodes (for 'בית' department) */}
+            {branch.subFolderPositions?.map((sub, si) => (
+              <motion.div
+                key={`sub-${branch.category}-${sub.key}`}
+                className="absolute z-10 cursor-pointer select-none"
+                style={{
+                  left: sub.x,
+                  top: sub.y,
+                  transform: 'translate(-50%, -50%)',
+                  opacity: isSpotlit(branch.category) ? 0.9 : 0.12,
+                  transition: 'opacity 0.4s ease-in-out',
+                }}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: isSpotlit(branch.category) ? 0.9 : 0.12, scale: 1 }}
+                transition={{ delay: i * 0.08 + si * 0.05 + 0.1, type: 'spring', stiffness: 200 }}
+                whileHover={{ scale: 1.08 }}
+                onClick={(e) => { e.stopPropagation(); handleBranchClick(branch.category); }}
+              >
+                <svg width="90" height="36" viewBox="0 0 90 36" style={{ overflow: 'visible' }}>
+                  <path
+                    d="M0,10 L0,34 Q0,36 2,36 L88,36 Q90,36 90,34 L90,10 L38,10 L34,0 L2,0 Q0,0 0,2 Z"
+                    fill={branch.config.color}
+                    opacity={0.7}
+                    stroke="rgba(255,255,255,0.25)"
+                    strokeWidth={1}
+                  />
+                  <text x="45" y="26" textAnchor="middle" fill="white" fontSize="10" fontWeight="600" style={{ pointerEvents: 'none' }}>
+                    {sub.icon} {sub.key}
+                  </text>
+                </svg>
+              </motion.div>
+            ))}
 
             {/* ── Client Leaf Nodes (Pill / Mini-Card Shape) ── */}
             {branch.clientPositions.map((client, j) => {
@@ -1144,6 +1339,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           <span className="text-[9px] text-gray-400">{Math.round(spacingFactor * 100)}%</span>
         </div>
 
+        {/* Crisis Mode toggle */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setCrisisMode(prev => !prev); }}
+          className={`flex items-center justify-center w-9 h-9 rounded-xl backdrop-blur-sm shadow-lg border transition-all ${
+            crisisMode
+              ? 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600'
+              : 'bg-white/90 text-gray-600 border-gray-200 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200'
+          }`}
+          title={crisisMode ? 'מצב חירום פעיל — לחץ לביטול' : 'מצב חירום — סנן משימות לא דחופות'}
+        >
+          ⚡
+        </button>
+
         {/* Reset manual positions button */}
         {Object.keys(manualPositions).length > 0 && (
           <button
@@ -1198,6 +1406,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           );
         })}
       </div>
+
+      {/* ── Crisis Mode Banner ── */}
+      {crisisMode && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 bg-amber-500/90 backdrop-blur-sm text-white rounded-full px-4 py-1.5 shadow-lg text-xs font-bold flex items-center gap-2">
+          <span>⚡</span>
+          <span>מצב חירום — מוצגות רק משימות דחופות</span>
+          <button onClick={() => setCrisisMode(false)} className="hover:bg-amber-600 rounded-full p-0.5 ml-1">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ── Pan hint (shows briefly on first load) ── */}
       {!autoFitDone && (
@@ -1269,6 +1488,29 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               }
             });
             const rootActive = activeTasks.filter(t => !t.parent_id || !clientTasks.some(ct => ct.id === t.parent_id));
+
+            // Zone brain dump: group Home tasks by room/zone
+            const isHomeClient = clientTasks.some(t => {
+              const dept = CATEGORY_TO_DEPARTMENT[t.category || 'אחר'] || t.category;
+              return dept === 'בית' || t.category === 'home';
+            });
+            const zoneGroups = isHomeClient ? (() => {
+              const groups = [];
+              const matchedIds = new Set();
+              HOME_ZONES.filter(z => z !== 'כללי').forEach(zone => {
+                const zoneTasks = rootActive.filter(t => {
+                  const text = (t.title + ' ' + (t.notes || '')).toLowerCase();
+                  return text.includes(zone);
+                });
+                if (zoneTasks.length > 0) {
+                  groups.push({ zone, tasks: zoneTasks });
+                  zoneTasks.forEach(t => matchedIds.add(t.id));
+                }
+              });
+              const unmatched = rootActive.filter(t => !matchedIds.has(t.id));
+              if (unmatched.length > 0) groups.push({ zone: 'כללי', tasks: unmatched });
+              return groups.length > 0 ? groups : null;
+            })() : null;
 
             const renderTask = (task, depth = 0) => {
               const sts = statusConfig[task.status] || statusConfig.not_started;
@@ -1359,6 +1601,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       <CheckCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                       <p className="text-sm">אין משימות פעילות</p>
                     </div>
+                  ) : zoneGroups ? (
+                    zoneGroups.map(group => (
+                      <div key={group.zone}>
+                        <div className="px-4 py-1.5 text-[10px] font-bold text-gray-400 bg-gray-50 sticky top-0 border-b border-gray-100">
+                          📍 {group.zone}
+                        </div>
+                        {group.tasks.map(task => renderTask(task, 0))}
+                      </div>
+                    ))
                   ) : (
                     rootActive.map(task => renderTask(task, 0))
                   )}
