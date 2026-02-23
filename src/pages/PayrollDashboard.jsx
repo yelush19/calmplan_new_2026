@@ -271,7 +271,7 @@ export default function PayrollDashboardPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-5 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]">
       <div className="flex items-center gap-2 flex-wrap">
         <Link to={createPageUrl('ClientsDashboard')}>
           <Button variant="outline" size="sm" className="gap-2 text-gray-600 hover:text-emerald-700">

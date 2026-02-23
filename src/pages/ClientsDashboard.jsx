@@ -418,7 +418,7 @@ export default function ClientsDashboardPage() {
   }, [isUpdating]);
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className="p-4 md:p-6 space-y-4 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

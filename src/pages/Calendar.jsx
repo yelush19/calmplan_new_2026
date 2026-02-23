@@ -380,76 +380,80 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
     weeks.push(week);
   }
 
+  const rowCount = weeks.length;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
     >
-      <Card className="shadow-sm overflow-hidden">
-        <CardContent className="p-0">
+      <Card className="shadow-sm overflow-hidden backdrop-blur-xl bg-white/45 border-white/20 rounded-[32px]">
+        <CardContent className="p-0" style={{ height: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
           {/* Day headers */}
-          <div className="grid grid-cols-7 border-b border-gray-100">
+          <div className="grid grid-cols-7 border-b border-white/20 shrink-0">
             {DAYS_HE.map((d, i) => (
-              <div key={i} className="p-2 text-center text-xs font-semibold text-gray-500 bg-gray-50">
+              <div key={i} className="p-2 text-center text-xs font-semibold text-[#008291] bg-white/30">
                 {d}
               </div>
             ))}
           </div>
-          {/* Weeks */}
-          {weeks.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 border-b border-gray-50 last:border-b-0">
-              {week.map((d, di) => {
-                const items = getItemsForDate(d);
-                const inMonth = isSameMonth(d, currentDate);
-                const isSelected = isSameDay(d, selectedDate);
-                const isTodayDate = isToday(d);
-                const MAX_DOTS = 4;
+          {/* Weeks — fixed height grid, no scroll */}
+          <div className="flex-1 grid" style={{ gridTemplateRows: `repeat(${rowCount}, 1fr)` }}>
+            {weeks.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7 border-b border-white/10 last:border-b-0 min-h-0">
+                {week.map((d, di) => {
+                  const items = getItemsForDate(d);
+                  const inMonth = isSameMonth(d, currentDate);
+                  const isSelected = isSameDay(d, selectedDate);
+                  const isTodayDate = isToday(d);
+                  const MAX_DOTS = 4;
 
-                return (
-                  <button
-                    key={di}
-                    onClick={() => onSelectDate(d)}
-                    className={`relative min-h-[70px] md:min-h-[90px] p-1.5 border-l border-gray-50 first:border-l-0 text-right transition-colors ${
-                      !inMonth ? 'bg-gray-50/50 opacity-40' :
-                      isSelected ? 'bg-emerald-50' :
-                      isTodayDate ? 'bg-amber-50/50' :
-                      'hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className={`text-sm font-semibold ${
-                      isTodayDate ? 'w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center' :
-                      isSelected ? 'text-emerald-600' :
-                      'text-gray-700'
-                    }`}>
-                      {format(d, 'd')}
-                    </span>
-                    {/* Item dots */}
-                    {items.length > 0 && (
-                      <div className="flex flex-wrap gap-0.5 mt-1">
-                        {items.slice(0, MAX_DOTS).map((item, idx) => {
-                          const ctx = getItemContext(item);
-                          const config = contextConfig[ctx] || contextConfig.personal;
-                          return (
-                            <div key={idx} className={`w-2 h-2 rounded-full ${config.dot}`} />
-                          );
-                        })}
-                        {items.length > MAX_DOTS && (
-                          <span className="text-[10px] text-gray-400 leading-none">+{items.length - MAX_DOTS}</span>
-                        )}
-                      </div>
-                    )}
-                    {/* Capacity indicator for work days */}
-                    {inMonth && items.length >= 5 && (
-                      <div className="absolute bottom-1 left-1 right-1">
-                        <div className="h-0.5 bg-amber-400 rounded-full" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+                  return (
+                    <button
+                      key={di}
+                      onClick={() => onSelectDate(d)}
+                      className={`relative p-1.5 border-l border-white/10 first:border-l-0 text-right transition-colors overflow-hidden rounded-lg m-0.5 ${
+                        !inMonth ? 'bg-white/10 opacity-40' :
+                        isSelected ? 'bg-emerald-100/50 backdrop-blur-sm' :
+                        isTodayDate ? 'bg-amber-50/50 backdrop-blur-sm' :
+                        'bg-white/20 hover:bg-white/40 backdrop-blur-sm'
+                      }`}
+                    >
+                      <span className={`text-sm font-semibold ${
+                        isTodayDate ? 'w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs' :
+                        isSelected ? 'text-emerald-600' :
+                        'text-gray-700'
+                      }`}>
+                        {format(d, 'd')}
+                      </span>
+                      {/* Item dots */}
+                      {items.length > 0 && (
+                        <div className="flex flex-wrap gap-0.5 mt-0.5">
+                          {items.slice(0, MAX_DOTS).map((item, idx) => {
+                            const ctx = getItemContext(item);
+                            const config = contextConfig[ctx] || contextConfig.personal;
+                            return (
+                              <div key={idx} className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+                            );
+                          })}
+                          {items.length > MAX_DOTS && (
+                            <span className="text-[9px] text-gray-400 leading-none">+{items.length - MAX_DOTS}</span>
+                          )}
+                        </div>
+                      )}
+                      {/* Capacity indicator for work days */}
+                      {inMonth && items.length >= 5 && (
+                        <div className="absolute bottom-0.5 left-0.5 right-0.5">
+                          <div className="h-0.5 bg-amber-400 rounded-full" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </motion.div>

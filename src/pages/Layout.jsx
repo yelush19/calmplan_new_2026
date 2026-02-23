@@ -10,7 +10,8 @@ import {
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, Database,
   ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote,
   ChevronLeft, ChevronRight, Plus, Hourglass, Maximize2, Star,
-  BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle
+  BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
+  CalendarPlus, LayoutGrid
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -81,7 +82,7 @@ const getSidebarSections = () => ({
       { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
       { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
       { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
-      { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: Settings },
+      { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
       { name: "אדמיניסטרטיבי", href: createPageUrl("AdminTasksDashboard"), icon: FolderKanban },
     ]
   },
@@ -150,20 +151,20 @@ const getNextDeadline = () => {
   return { daysLeft, label: 'דיווח מע"מ' };
 };
 
-// ─── Draggable FAB component (localStorage persist) ─────────
-function DraggableFab({ storageKey, children, className = '', onDoubleClick: externalDblClick }) {
+// ─── Draggable FAB component (state-based localStorage persist) ─────────
+function DraggableFab({ storageKey, children, className = '' }) {
   const fullKey = `calmplan_drag_${storageKey}`;
   const didDrag = React.useRef(false);
-  const nodeRef = React.useRef(null);
-  const savedPos = React.useRef(() => {
+
+  const readPos = () => {
     try {
       const s = localStorage.getItem(fullKey);
       if (s) return JSON.parse(s);
     } catch { /* ignore */ }
     return { x: 0, y: 0 };
-  });
-  if (typeof savedPos.current === 'function') savedPos.current = savedPos.current();
-  const [resetKey, setResetKey] = useState(0);
+  };
+
+  const [pos, setPos] = useState(readPos);
 
   const handleDragStart = useCallback(() => { didDrag.current = false; }, []);
   const handleDrag = useCallback(() => { didDrag.current = true; }, []);
@@ -171,15 +172,15 @@ function DraggableFab({ storageKey, children, className = '', onDoubleClick: ext
     const dist = Math.abs(info.offset.x) + Math.abs(info.offset.y);
     if (dist < 3) { didDrag.current = false; return; }
     didDrag.current = true;
-    const prev = savedPos.current;
-    const next = { x: prev.x + info.offset.x, y: prev.y + info.offset.y };
-    savedPos.current = next;
-    try { localStorage.setItem(fullKey, JSON.stringify(next)); } catch { /* ignore */ }
+    setPos(prev => {
+      const next = { x: prev.x + info.offset.x, y: prev.y + info.offset.y };
+      try { localStorage.setItem(fullKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
   }, [fullKey]);
   const handleReset = useCallback(() => {
-    savedPos.current = { x: 0, y: 0 };
+    setPos({ x: 0, y: 0 });
     try { localStorage.removeItem(fullKey); } catch { /* ignore */ }
-    setResetKey(k => k + 1); // force re-mount to re-apply initial={0,0}
   }, [fullKey]);
   const guardClick = useCallback((handler) => (e) => {
     if (didDrag.current) { didDrag.current = false; e.preventDefault(); e.stopPropagation(); return; }
@@ -188,15 +189,13 @@ function DraggableFab({ storageKey, children, className = '', onDoubleClick: ext
 
   return (
     <motion.div
-      key={resetKey}
-      ref={nodeRef}
       drag
       dragMomentum={false}
       dragElastic={0}
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
-      initial={savedPos.current}
+      style={{ x: pos.x, y: pos.y }}
       onDoubleClick={handleReset}
       className={`cursor-grab active:cursor-grabbing ${className}`}
     >
@@ -790,8 +789,21 @@ function LayoutInner({ children }) {
       <RealityCheck />
       <CompletionFeedback />
 
+      {/* Floating Add Event FAB — draggable, always visible */}
+      <DraggableFab storageKey="fab_add_event" className="fixed bottom-5 left-[8.5rem] z-[100]">
+        {({ guardClick }) => (
+          <button
+            onClick={guardClick(() => navigate(createPageUrl("NewEvent")))}
+            className="w-11 h-11 rounded-full shadow-xl flex items-center justify-center bg-[#006064] hover:bg-[#004d40] text-white ring-2 ring-white/50 select-none"
+            title="הוסף אירוע • גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
+          >
+            <CalendarPlus className="w-5 h-5" />
+          </button>
+        )}
+      </DraggableFab>
+
       {/* Floating Quick Add Task FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_quick_add" className="fixed bottom-5 left-[4.5rem] z-[60]">
+      <DraggableFab storageKey="fab_quick_add" className="fixed bottom-5 left-[4.5rem] z-[100]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => setShowQuickAdd(true))}
@@ -804,7 +816,7 @@ function LayoutInner({ children }) {
       </DraggableFab>
 
       {/* Floating Sticky Notes FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_notes" className="fixed bottom-5 left-5 z-[60]">
+      <DraggableFab storageKey="fab_notes" className="fixed bottom-5 left-5 z-[100]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => setNotesOpen(!notesOpen))}
