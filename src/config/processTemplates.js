@@ -576,6 +576,7 @@ export const STATUS_CONFIG = {
   ready_for_reporting:           { label: 'מוכן לדיווח',    bg: 'bg-teal-200',       text: 'text-teal-900',     border: 'border-teal-300',    priority: 3 },
   reported_waiting_for_payment:  { label: 'ממתין לתשלום',   bg: 'bg-sky-200',        text: 'text-sky-900',      border: 'border-sky-300',     priority: 4 },
   pending_external:              { label: "מחכה לצד ג'",    bg: 'bg-blue-200',       text: 'text-blue-900',     border: 'border-blue-300',    priority: 3 },
+  waiting_on_client:             { label: 'ממתין ללקוח',    bg: 'bg-amber-200',      text: 'text-amber-800',    border: 'border-amber-300',   priority: 1 },
   not_relevant:                  { label: 'לא רלוונטי',     bg: 'bg-gray-100',       text: 'text-gray-400',     border: 'border-gray-200',    priority: 6 },
 };
 
@@ -592,5 +593,6 @@ export const TASK_STATUS_CONFIG = {
   ready_for_reporting:           { text: 'מוכן לדיווח',     color: 'bg-teal-100 text-teal-700',       dot: 'bg-teal-500' },
   reported_waiting_for_payment:  { text: 'ממתין לתשלום',    color: 'bg-yellow-100 text-yellow-700',   dot: 'bg-yellow-500' },
   pending_external:              { text: "מחכה לצד ג'",     color: 'bg-blue-100 text-blue-700',       dot: 'bg-blue-500' },
+  waiting_on_client:             { text: 'ממתין ללקוח',     color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-400' },
   not_relevant:                  { text: 'לא רלוונטי',      color: 'bg-gray-50 text-gray-400',        dot: 'bg-gray-300' },
 };
