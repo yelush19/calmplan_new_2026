@@ -701,7 +701,7 @@ function LayoutInner({ children }) {
           <main className="flex-1 flex flex-col min-h-0">
             {/* Desktop sub-header (page title + back) */}
             {!isHomePage && (
-              <div className="hidden md:block p-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
+              <div className="hidden md:block p-4 border-b border-white/20 bg-gradient-to-r from-primary/5 to-secondary/5">
                 <div className="max-w-full mx-auto flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-foreground">{findPageTitle()}</h2>
                   <Link to={createPageUrl("Home")}>
@@ -716,7 +716,7 @@ function LayoutInner({ children }) {
 
             {/* Mobile sub-header */}
             {!isHomePage && (
-              <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-border">
+              <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-white/20">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold text-foreground">{findPageTitle()}</h2>
                   <Link to={createPageUrl("Home")}>
@@ -758,8 +758,8 @@ function LayoutInner({ children }) {
                           <Upload className="w-7 h-7 text-orange-600" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-800">ייבוא גיבוי JSON</h3>
-                          <p className="text-sm text-gray-500">לחצי כאן לבחור קובץ גיבוי (.json) ולשחזר את כל הנתונים</p>
+                          <h3 className="text-lg font-bold text-foreground">ייבוא גיבוי JSON</h3>
+                          <p className="text-sm text-muted-foreground">לחצי כאן לבחור קובץ גיבוי (.json) ולשחזר את כל הנתונים</p>
                         </div>
                         <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6">
                           <Upload className="w-4 h-4 ml-2" />
