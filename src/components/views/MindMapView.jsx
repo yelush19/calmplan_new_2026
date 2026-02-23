@@ -319,7 +319,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── Data Processing ──
   const { branches, clientNodes, centerLabel } = useMemo(() => {
-    try {
     const today = new Date();
     const centerLabel = format(today, 'EEEE, d/M', { locale: he });
 
@@ -392,11 +391,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     });
 
     return { branches, clientNodes, centerLabel };
-    } catch (err) {
-      console.error('MindMapView data processing error:', err);
-      setRenderError(err?.message || 'Data processing failed');
-      return { branches: [], clientNodes: [], centerLabel: '' };
-    }
   }, [tasks, clients, crisisMode]);
 
   // ── Feature 8: Auto-open drawer from search deep-link ──
@@ -944,42 +938,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     if (!selectedBranch) return true;
     return category === selectedBranch;
   }, [focusMode, selectedBranch]);
-
-  // ── Runtime Error State ──
-  const [renderError, setRenderError] = useState(null);
-
-  // Reset localStorage and recover from crash
-  const handleResetPositions = useCallback(() => {
-    try { localStorage.removeItem(POSITIONS_STORAGE_KEY); } catch {}
-    setManualPositions({});
-    setAutoFitDone(false);
-    setRenderError(null);
-    toast.success('מיקומים אופסו — המפה תטען מחדש');
-  }, []);
-
-  if (renderError) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500 gap-4 p-8">
-        <div className="text-4xl">⚠️</div>
-        <p className="text-lg font-bold text-gray-700">שגיאה בטעינת המפה</p>
-        <p className="text-sm text-gray-500 max-w-md text-center">{String(renderError)}</p>
-        <div className="flex gap-3">
-          <button
-            onClick={handleResetPositions}
-            className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-bold hover:bg-cyan-700 transition-colors"
-          >
-            אפס מיקומים ונסה שוב
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-bold hover:bg-gray-300 transition-colors"
-          >
-            רענן דף
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (tasks.length === 0 && inboxItems.length === 0) {
     return (

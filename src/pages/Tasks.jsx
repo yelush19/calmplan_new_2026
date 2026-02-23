@@ -71,7 +71,7 @@ class ViewErrorBoundary extends React.Component {
 // Display order for status groups in list view
 const STATUS_GROUP_ORDER = [
   'issue', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'waiting_for_approval',
-  'not_started', 'ready_for_reporting', 'pending_external', 'postponed', 'reported_waiting_for_payment',
+  'not_started', 'ready_for_reporting', 'pending_external', 'waiting_on_client', 'postponed', 'reported_waiting_for_payment',
   'completed', 'not_relevant',
 ];
 const DEFAULT_COLLAPSED_STATUSES = new Set(['completed', 'not_relevant']);
@@ -113,6 +113,7 @@ const mondayStatusMapping = {
   'ביצוע': 'in_progress',
   'ממתין לתשלום': 'reported_waiting_for_payment',
   'ממתין לאישור': 'waiting_for_approval',
+  'ממתין ללקוח': 'waiting_on_client',
 };
 
 // Time period tabs
