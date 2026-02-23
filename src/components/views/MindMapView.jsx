@@ -15,14 +15,16 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import { computeComplexityTier, getBubbleRadius, getTierInfo } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 
-// ─── Zero-Panic Palette (NO RED) ────────────────────────────────
+// ─── Zero-Panic Palette (Cyan/Teal — NO RED) ───────────────────
 const ZERO_PANIC = {
-  orange:  '#F57C00',  // Due Today / Critical
-  purple:  '#7B1FA2',  // Overdue / Late
+  orange:  '#00acc1',  // Cyan for focus (Due Today / Critical)
+  purple:  '#008291',  // Teal for importance (Overdue / Late)
   green:   '#2E7D32',  // Done
-  blue:    '#0288D1',  // Active / In Progress
+  blue:    '#008291',  // Teal — Active / In Progress
   gray:    '#90A4AE',  // Not Started
   amber:   '#FF8F00',  // Waiting / Issue
+  teal:    '#008291',  // Primary teal
+  cyan:    '#00acc1',  // Secondary cyan
   indigo:  '#3949AB',  // Ready for Reporting
 };
 
@@ -250,7 +252,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [autoFitDone, setAutoFitDone] = useState(false);
+  const [autoFitDone, setAutoFitDone] = useState(() => {
+    try {
+      return !!localStorage.getItem(POSITIONS_STORAGE_KEY);
+    } catch { return false; }
+  });
 
   // ── Spacing slider (global distance multiplier) ──
   const [spacingFactor, setSpacingFactor] = useState(1.0);
@@ -729,7 +735,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       setEditPopover(null);
       setShowDrawerCompleted(false);
       nodeClickTimerRef.current = null;
-    }, 250);
+    }, 400);
   }, [savePositionsToStorage, renamingNodeKey]);
 
   // ── Folder drag handlers ──
@@ -1724,7 +1730,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       clickTimerRef.current = setTimeout(() => {
                         onEditTask?.(task);
                         clickTimerRef.current = null;
-                      }, 250);
+                      }, 400);
                     }}
                   >
                     {depth > 0 && <GitBranchPlus className="w-3 h-3 text-violet-400 shrink-0" />}

@@ -508,9 +508,9 @@ function LayoutInner({ children }) {
               ) : (
                 /* Expanded: full sidebar */
                 <div className="flex flex-col flex-1 overflow-y-auto">
-                  {/* Mantra — fixed at top of sidebar */}
-                  <div className="px-3 py-2.5 text-center border-b" style={{ borderColor: '#00acc133', background: 'linear-gradient(135deg, #f0fafa, #e8f7f7)' }}>
-                    <p className="text-[13px] font-bold" style={{ color: '#008291' }}>✨ עשוי טוב יותר ממושלם</p>
+                  {/* Mantra — very top of sidebar */}
+                  <div className="px-3 pt-3 pb-1 text-center">
+                    <p className="font-bold text-[#008291] mb-4">✨ עשוי טוב יותר ממושלם</p>
                   </div>
 
                   {/* Work Mode Selector */}
@@ -646,8 +646,8 @@ function LayoutInner({ children }) {
                     <X className="w-5 h-5" />
                   </Button>
                 </div>
-                <div className="px-4 py-2 text-center border-b" style={{ borderColor: '#00acc133', background: 'linear-gradient(135deg, #f0fafa, #e8f7f7)' }}>
-                  <p className="text-[13px] font-bold" style={{ color: '#008291' }}>✨ עשוי טוב יותר ממושלם</p>
+                <div className="px-4 pt-2 pb-0 text-center">
+                  <p className="font-bold text-[#008291] mb-4">✨ עשוי טוב יותר ממושלם</p>
                 </div>
 
                 {/* Mobile search */}
