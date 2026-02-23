@@ -220,6 +220,7 @@ const POSITIONS_STORAGE_KEY = 'mindmap-positions';
 export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDismiss, focusMode = false, onEditTask, onTaskCreated, focusTaskId = null, focusClientName = null, onFocusHandled }) {
   const navigate = useNavigate();
   const containerRef = useRef(null);
+  const spacingMountGuard = useRef(false); // ← prevents spacing effect from wiping localStorage on mount
   const [hoveredNode, setHoveredNode] = useState(null);
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [tooltip, setTooltip] = useState(null);
@@ -676,8 +677,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     if (!hasSavedPositions && !hasSavedViewport) setAutoFitDone(false);
   }, [tasks.length, branches.length]);
 
-  // Reset auto-fit + manual positions when spacing changes
+  // Reset auto-fit + manual positions when spacing changes (NOT on mount!)
   useEffect(() => {
+    if (!spacingMountGuard.current) { spacingMountGuard.current = true; return; }
     setAutoFitDone(false);
     setManualPositions({});
     localStorage.removeItem(POSITIONS_STORAGE_KEY);
