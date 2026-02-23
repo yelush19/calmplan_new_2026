@@ -357,19 +357,18 @@ function LayoutInner({ children }) {
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
       <div className="h-screen flex flex-col">
         {/* === TOP HEADER BAR === */}
-        <header className="bg-white border-b border-gray-200 px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+        <header className="border-b border-gray-200 px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-sm" style={{ backgroundColor: '#f8fdfd' }}>
           {/* Right: Logo + Mobile menu */}
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="md:hidden h-7 w-7" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
               {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </Button>
             <Link to={createPageUrl("Home")} className="flex items-center gap-1.5">
-              <div className="w-7 h-7 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center shadow-sm">
-                <Brain className="w-4 h-4 text-primary-foreground" />
+              <div className="w-7 h-7 rounded-md flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #008291, #00acc1)' }}>
+                <Brain className="w-4 h-4 text-white" />
               </div>
-              <h1 className="text-sm font-bold text-foreground hidden md:block">CalmPlan</h1>
+              <h1 className="text-sm font-bold hidden md:block" style={{ color: '#008291' }}>CalmPlan</h1>
             </Link>
-            <span className="hidden md:block text-[12px] font-bold text-gray-500 mr-2">✨ עשוי טוב יותר ממושלם</span>
           </div>
 
           {/* Center: Global Search */}
@@ -462,8 +461,8 @@ function LayoutInner({ children }) {
         <div className="flex-1 flex flex-row">
           {/* === SIDEBAR === */}
           {!focusMode && (
-            <aside className={`hidden md:flex flex-col border-l border-gray-200 bg-white transition-all duration-300 shrink-0
-              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`}>
+            <aside className={`hidden md:flex flex-col border-l transition-all duration-300 shrink-0
+              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`} style={{ backgroundColor: '#f6fdfd', borderColor: '#00acc133' }}>
 
               {/* Toggle button */}
               <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -509,6 +508,11 @@ function LayoutInner({ children }) {
               ) : (
                 /* Expanded: full sidebar */
                 <div className="flex flex-col flex-1 overflow-y-auto">
+                  {/* Mantra — fixed at top of sidebar */}
+                  <div className="px-3 py-2.5 text-center border-b" style={{ borderColor: '#00acc133', background: 'linear-gradient(135deg, #f0fafa, #e8f7f7)' }}>
+                    <p className="text-[13px] font-bold" style={{ color: '#008291' }}>✨ עשוי טוב יותר ממושלם</p>
+                  </div>
+
                   {/* Work Mode Selector */}
                   <div className="px-3 py-2 border-b border-gray-200">
                     <div className="flex gap-1">
@@ -524,7 +528,6 @@ function LayoutInner({ children }) {
                         </button>
                       ))}
                     </div>
-                    <p className="text-[11px] italic text-gray-400 text-center mt-2">✨ עשוי טוב יותר ממושלם</p>
                   </div>
 
                   {/* Pinned Clients (pin-only, no auto-recent) */}
@@ -643,7 +646,9 @@ function LayoutInner({ children }) {
                     <X className="w-5 h-5" />
                   </Button>
                 </div>
-                <p className="px-4 text-[11px] italic text-gray-400">✨ עשוי טוב יותר ממושלם</p>
+                <div className="px-4 py-2 text-center border-b" style={{ borderColor: '#00acc133', background: 'linear-gradient(135deg, #f0fafa, #e8f7f7)' }}>
+                  <p className="text-[13px] font-bold" style={{ color: '#008291' }}>✨ עשוי טוב יותר ממושלם</p>
+                </div>
 
                 {/* Mobile search */}
                 <div className="px-4 py-2">
