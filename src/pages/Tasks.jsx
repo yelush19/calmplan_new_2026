@@ -28,6 +28,46 @@ import ResizableTable from '@/components/ui/ResizableTable';
 
 import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/processTemplates';
 
+// Error Boundary to prevent white screen crashes
+class ViewErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('ViewErrorBoundary caught:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[300px] text-gray-500 gap-4 p-8">
+          <div className="text-4xl">⚠️</div>
+          <p className="text-lg font-bold text-gray-700">שגיאה בטעינת התצוגה</p>
+          <p className="text-sm text-gray-500 max-w-md text-center">{String(this.state.error?.message || this.state.error)}</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { try { localStorage.removeItem('mindmap-positions'); } catch {} this.setState({ hasError: false, error: null }); }}
+              className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-bold hover:bg-cyan-700"
+            >
+              אפס ונסה שוב
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-bold hover:bg-gray-300"
+            >
+              רענן דף
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Display order for status groups in list view
 const STATUS_GROUP_ORDER = [
   'issue', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'waiting_for_approval',
@@ -639,6 +679,7 @@ export default function TasksPage() {
       )}
 
       {/* Content */}
+      <ViewErrorBoundary>
       {view === 'list' ? (
         sortedTasks.length === 0 ? (
           <Card className="border-0 shadow-sm">
@@ -883,7 +924,9 @@ export default function TasksPage() {
           </Card>
         )
       ) : view === 'mindmap' ? (
-        <MindMapView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} onTaskCreated={loadTasks} focusTaskId={focusTaskId} focusClientName={focusClientName} onFocusHandled={() => { setFocusTaskId(null); setFocusClientName(null); }} />
+        <ViewErrorBoundary>
+          <MindMapView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} onTaskCreated={loadTasks} focusTaskId={focusTaskId} focusClientName={focusClientName} onFocusHandled={() => { setFocusTaskId(null); setFocusClientName(null); }} />
+        </ViewErrorBoundary>
       ) : view === 'gantt' ? (
         <GanttView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} />
       ) : (
@@ -901,6 +944,7 @@ export default function TasksPage() {
           onTaskCreated={loadTasks}
         />
       )}
+      </ViewErrorBoundary>
 
       <QuickAddTaskDialog
         open={showQuickAdd}

@@ -592,5 +592,6 @@ export const TASK_STATUS_CONFIG = {
   ready_for_reporting:           { text: 'מוכן לדיווח',     color: 'bg-teal-100 text-teal-700',       dot: 'bg-teal-500' },
   reported_waiting_for_payment:  { text: 'ממתין לתשלום',    color: 'bg-yellow-100 text-yellow-700',   dot: 'bg-yellow-500' },
   pending_external:              { text: "מחכה לצד ג'",     color: 'bg-blue-100 text-blue-700',       dot: 'bg-blue-500' },
+  waiting_on_client:             { text: 'ממתין ללקוח',     color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-400' },
   not_relevant:                  { text: 'לא רלוונטי',      color: 'bg-gray-50 text-gray-400',        dot: 'bg-gray-300' },
 };

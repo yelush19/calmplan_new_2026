@@ -141,7 +141,7 @@ function getNodeColor(task) {
     if (dueDay.getTime() === today.getTime()) return ZERO_PANIC.orange;  // Due today = orange
   }
 
-  return STATUS_TO_COLOR[task.status] || ZERO_PANIC.blue;
+  return STATUS_TO_COLOR[task.status] || ZERO_PANIC.blue || '#90A4AE';
 }
 
 /**
@@ -254,7 +254,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoFitDone, setAutoFitDone] = useState(() => {
     try {
-      return !!localStorage.getItem(POSITIONS_STORAGE_KEY);
+      const raw = localStorage.getItem(POSITIONS_STORAGE_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length > 0;
     } catch { return false; }
   });
 
@@ -267,8 +270,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [manualPositions, setManualPositions] = useState(() => {
     try {
       const saved = localStorage.getItem(POSITIONS_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
+      if (!saved) return {};
+      const parsed = JSON.parse(saved);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+      // Validate every entry has numeric x and y
+      const clean = {};
+      Object.entries(parsed).forEach(([key, val]) => {
+        if (val && typeof val.x === 'number' && typeof val.y === 'number' && isFinite(val.x) && isFinite(val.y)) {
+          clean[key] = val;
+        }
+      });
+      return clean;
+    } catch { localStorage.removeItem(POSITIONS_STORAGE_KEY); return {}; }
   });
   const draggingNode = useRef(null); // { key, startX, startY, origX, origY }
   const nodeHasDragged = useRef(false);
@@ -306,6 +319,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── Data Processing ──
   const { branches, clientNodes, centerLabel } = useMemo(() => {
+    try {
     const today = new Date();
     const centerLabel = format(today, 'EEEE, d/M', { locale: he });
 
@@ -335,8 +349,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       config: BRANCH_CONFIG[category] || BRANCH_CONFIG['אדמיניסטרציה'],
       clients: Object.entries(clientsObj).map(([name, clientTasks]) => {
         const client = clients?.find(c => c.name === name);
-        const tier = getComplexityTier(client, clientTasks);
-        const tierInfo = getTierInfo(tier);
+        const tier = getComplexityTier(client, clientTasks) || 0;
+        const tierInfo = getTierInfo(tier) || { label: 'Unknown', icon: '❓', bubbleScale: 1.0 };
         // Display name: nickname || full name
         const displayName = (client?.nickname || name || '').trim();
         // Top active task for pill display
@@ -378,6 +392,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     });
 
     return { branches, clientNodes, centerLabel };
+    } catch (err) {
+      console.error('MindMapView data processing error:', err);
+      setRenderError(err?.message || 'Data processing failed');
+      return { branches: [], clientNodes: [], centerLabel: '' };
+    }
   }, [tasks, clients, crisisMode]);
 
   // ── Feature 8: Auto-open drawer from search deep-link ──
@@ -549,11 +568,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     // Apply folder manual position overrides (from folder dragging)
     branchPositions.forEach(branch => {
       const folderKey = `folder-${branch.category}`;
-      if (manualPositions[folderKey]) {
-        const deltaX = manualPositions[folderKey].x - branch.x;
-        const deltaY = manualPositions[folderKey].y - branch.y;
-        branch.x = manualPositions[folderKey].x;
-        branch.y = manualPositions[folderKey].y;
+      const folderPos = manualPositions[folderKey];
+      if (folderPos && typeof folderPos.x === 'number' && typeof folderPos.y === 'number') {
+        const deltaX = folderPos.x - branch.x;
+        const deltaY = folderPos.y - branch.y;
+        branch.x = folderPos.x;
+        branch.y = folderPos.y;
         // Shift sub-folders too
         if (branch.subFolderPositions) {
           branch.subFolderPositions.forEach(sub => {
@@ -576,9 +596,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     branchPositions.forEach(branch => {
       branch.clientPositions.forEach(cp => {
         const key = `${branch.category}-${cp.name}`;
-        if (manualPositions[key]) {
-          cp.x = manualPositions[key].x;
-          cp.y = manualPositions[key].y;
+        const pos = manualPositions[key];
+        if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
+          cp.x = pos.x;
+          cp.y = pos.y;
         }
       });
     });
@@ -923,6 +944,42 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     if (!selectedBranch) return true;
     return category === selectedBranch;
   }, [focusMode, selectedBranch]);
+
+  // ── Runtime Error State ──
+  const [renderError, setRenderError] = useState(null);
+
+  // Reset localStorage and recover from crash
+  const handleResetPositions = useCallback(() => {
+    try { localStorage.removeItem(POSITIONS_STORAGE_KEY); } catch {}
+    setManualPositions({});
+    setAutoFitDone(false);
+    setRenderError(null);
+    toast.success('מיקומים אופסו — המפה תטען מחדש');
+  }, []);
+
+  if (renderError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500 gap-4 p-8">
+        <div className="text-4xl">⚠️</div>
+        <p className="text-lg font-bold text-gray-700">שגיאה בטעינת המפה</p>
+        <p className="text-sm text-gray-500 max-w-md text-center">{String(renderError)}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={handleResetPositions}
+            className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-bold hover:bg-cyan-700 transition-colors"
+          >
+            אפס מיקומים ונסה שוב
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-bold hover:bg-gray-300 transition-colors"
+          >
+            רענן דף
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (tasks.length === 0 && inboxItems.length === 0) {
     return (
