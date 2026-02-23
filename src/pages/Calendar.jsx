@@ -544,131 +544,157 @@ function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, ge
 }
 
 // ========================================
-// DAY VIEW (detailed)
+// DAY VIEW — Vertical Time Grid (00:00 – 23:00)
 // ========================================
 function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
   const isTodayDate = isToday(date);
+  const HOUR_HEIGHT = 56; // px per hour row
+  const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-  // Group items by context
-  const grouped = {};
+  // Parse time from an item: returns hour (0-23) or null
+  const getItemHour = (item) => {
+    // Try due_time first (HH:mm)
+    if (item.due_time) {
+      const h = parseInt(item.due_time.split(':')[0], 10);
+      if (!isNaN(h) && h >= 0 && h <= 23) return h;
+    }
+    // Try start_date / scheduled_start (ISO with time)
+    const dateStr = item.start_date || item.scheduled_start;
+    if (dateStr) {
+      const parsed = safeParseDateString(dateStr);
+      if (parsed) {
+        const h = parsed.getHours();
+        // Only use if time component is non-midnight (to avoid false positives from date-only values)
+        if (h !== 0 || parsed.getMinutes() !== 0) return h;
+      }
+    }
+    return null;
+  };
+
+  // Split items: timed vs all-day
+  const timedItems = [];
+  const allDayItems = [];
   items.forEach(item => {
-    const ctx = getItemContext(item);
-    if (!grouped[ctx]) grouped[ctx] = [];
-    grouped[ctx].push(item);
+    const hour = getItemHour(item);
+    if (hour !== null) {
+      timedItems.push({ ...item, _hour: hour });
+    } else {
+      allDayItems.push(item);
+    }
   });
+
+  // Now indicator
+  const nowHour = new Date().getHours();
+  const nowMinute = new Date().getMinutes();
+  const nowOffset = isTodayDate ? (nowHour * HOUR_HEIGHT + (nowMinute / 60) * HOUR_HEIGHT) : null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="space-y-4"
+      className="space-y-3"
     >
       {/* Day header */}
-      <Card className={`shadow-sm ${isTodayDate ? 'border-emerald-200 bg-emerald-50/50' : ''}`}>
+      <Card className={`shadow-sm backdrop-blur-xl bg-white/45 border-white/20 rounded-[32px] ${isTodayDate ? 'ring-1 ring-emerald-200' : ''}`}>
         <CardContent className="p-4 text-center">
-          <h2 className="text-2xl font-bold text-gray-800">
+          <h2 className="text-xl font-bold text-gray-800">
             {format(date, 'EEEE', { locale: he })}
           </h2>
-          <p className="text-lg text-gray-500">
+          <p className="text-sm text-gray-500">
             {format(date, 'd בMMMM yyyy', { locale: he })}
           </p>
-          {items.length > 0 && (
-            <div className="flex justify-center gap-3 mt-3">
-              {Object.entries(grouped).map(([ctx, ctxItems]) => {
-                const config = contextConfig[ctx] || contextConfig.personal;
-                return (
-                  <Badge key={ctx} className={`${config.bg} ${config.text} ${config.border}`}>
-                    {config.label}: {ctxItems.length}
-                  </Badge>
-                );
-              })}
-            </div>
-          )}
-          {/* Capacity */}
-          {items.length > 0 && (
-            <div className="flex items-center justify-center gap-2 mt-3">
-              <span className="text-sm text-gray-400">עומס:</span>
-              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${
-                    items.length > 5 ? 'bg-amber-500' : items.length > 3 ? 'bg-sky-400' : 'bg-emerald-400'
-                  }`}
-                  style={{ width: `${Math.min(items.length / 5 * 100, 100)}%` }}
-                />
-              </div>
-              <span className="text-sm text-gray-500">{items.length}/5</span>
-            </div>
-          )}
+          <div className="flex justify-center gap-2 mt-2">
+            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">{items.length} פריטים</Badge>
+            {allDayItems.length > 0 && <Badge className="bg-violet-100 text-violet-700 border-violet-200">{allDayItems.length} כל היום</Badge>}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Items by context */}
-      {Object.entries(grouped).map(([ctx, ctxItems]) => {
-        const config = contextConfig[ctx] || contextConfig.personal;
-        const Icon = config.icon;
-
-        return (
-          <Card key={ctx} className={`shadow-sm border ${config.border}`}>
-            <CardHeader className="pb-2">
-              <CardTitle className={`flex items-center gap-2 text-base ${config.text}`}>
-                <Icon className="w-4 h-4" />
-                {config.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {ctxItems.map(item => (
-                <div
-                  key={item.id}
-                  className={`p-3 rounded-xl ${config.bg} border ${config.border} cursor-pointer hover:shadow-sm transition-all group`}
-                  onClick={() => onItemClick(item)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className={`font-semibold text-base ${config.text}`}>{item.title}</h4>
-                      {item.description && (
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                        {item.client_name && <span>{item.client_name}</span>}
-                        {item.priority && (
-                          <div className="flex items-center gap-1">
-                            <div className={`w-2 h-2 rounded-full ${priorityDots[item.priority] || priorityDots.low}`} />
-                            <span>{item.priority}</span>
-                          </div>
-                        )}
-                        {(item.start_date || item.scheduled_start) && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {format(safeParseDateString(item.start_date || item.scheduled_start), 'HH:mm', { locale: he })}
-                          </span>
-                        )}
-                        {item.location && <span>📍 {item.location}</span>}
-                      </div>
-                    </div>
+      {/* All-day items */}
+      {allDayItems.length > 0 && (
+        <Card className="shadow-sm backdrop-blur-xl bg-white/45 border-white/20 rounded-[24px]">
+          <CardContent className="p-3">
+            <p className="text-xs font-bold text-[#008291] mb-2">כל היום</p>
+            <div className="space-y-1.5">
+              {allDayItems.map(item => {
+                const ctx = getItemContext(item);
+                const config = contextConfig[ctx] || contextConfig.personal;
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl ${config.bg} ${config.text} cursor-pointer hover:shadow-sm transition-all group`}
+                    onClick={() => onItemClick(item)}
+                  >
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
+                    <span className="flex-1 text-sm font-medium truncate">{item.title}</span>
+                    {item.client_name && <span className="text-[10px] text-gray-400">{item.client_name}</span>}
                     {item.itemType === 'task' && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-white/50 transition-all"
-                        title="העבר לפתק"
-                      >
-                        <Pin className="w-4 h-4 text-amber-600" />
-                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/50"><Pin className="w-3 h-3 text-amber-600" /></button>
                     )}
                   </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Time grid */}
+      <Card className="shadow-sm backdrop-blur-xl bg-white/45 border-white/20 rounded-[24px] overflow-hidden">
+        <CardContent className="p-0">
+          <div className="relative overflow-y-auto" style={{ height: 'calc(100vh - 380px)' }}>
+            {/* Hour rows */}
+            {HOURS.map(h => (
+              <div
+                key={h}
+                className="flex border-b border-white/15"
+                style={{ height: HOUR_HEIGHT }}
+              >
+                <div className="w-14 shrink-0 text-[10px] font-semibold text-[#008291]/60 text-center pt-1 border-l border-white/15">
+                  {String(h).padStart(2, '0')}:00
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        );
-      })}
+                <div className="flex-1 relative">
+                  {/* Timed items in this hour */}
+                  {timedItems.filter(item => item._hour === h).map(item => {
+                    const ctx = getItemContext(item);
+                    const config = contextConfig[ctx] || contextConfig.personal;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`absolute inset-x-1 top-1 bottom-1 flex items-center gap-2 px-3 rounded-xl ${config.bg} ${config.text} cursor-pointer hover:shadow-md transition-all group border ${config.border}`}
+                        onClick={() => onItemClick(item)}
+                      >
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
+                        <span className="flex-1 text-sm font-medium truncate">{item.title}</span>
+                        {item.client_name && <span className="text-[10px] text-gray-400 hidden md:inline">{item.client_name}</span>}
+                        {item.itemType === 'task' && (
+                          <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/50"><Pin className="w-3 h-3 text-amber-600" /></button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            {/* Now indicator */}
+            {nowOffset !== null && (
+              <div
+                className="absolute left-14 right-0 h-0.5 bg-emerald-500 z-10 pointer-events-none"
+                style={{ top: nowOffset }}
+              >
+                <div className="absolute -left-1.5 -top-1.5 w-3 h-3 rounded-full bg-emerald-500" />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {items.length === 0 && (
-        <Card className="shadow-sm">
+        <Card className="shadow-sm backdrop-blur-xl bg-white/45 border-white/20 rounded-[24px]">
           <CardContent className="p-8 text-center">
             <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p className="text-lg text-gray-400">יום פנוי</p>
-            <p className="text-sm text-gray-300 mt-1">אפשר לנשום 🌿</p>
             <Link to={createPageUrl("NewEvent")} className="inline-block mt-4">
               <Button variant="outline" className="border-emerald-200 text-emerald-600 hover:bg-emerald-50">
                 <Plus className="w-4 h-4 ml-1" />

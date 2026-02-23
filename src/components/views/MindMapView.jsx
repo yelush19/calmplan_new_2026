@@ -228,6 +228,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [drawerClient, setDrawerClient] = useState(null);
   const [drawerQuickAdd, setDrawerQuickAdd] = useState(false); // show QuickAddTaskDialog from drawer
+  const [drawerEditTask, setDrawerEditTask] = useState(null); // task being edited via QuickAdd
   const [drawerSubTaskParent, setDrawerSubTaskParent] = useState(null); // for sub-task creation
   const [showDrawerCompleted, setShowDrawerCompleted] = useState(false);
   const [focusedClients, setFocusedClients] = useState(new Set());
@@ -882,12 +883,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── Handlers ──
   const handleClientDoubleClick = useCallback((client) => {
-    if (client.clientId) {
-      navigate(createPageUrl('ClientManagement') + `?clientId=${client.clientId}`);
-    } else {
-      navigate(createPageUrl('Tasks') + `?search=${encodeURIComponent(client.name)}`);
-    }
-  }, [navigate]);
+    // Double-click opens QuickAddTaskDialog for this client
+    setDrawerClient(client);
+    setDrawerQuickAdd(true);
+  }, []);
 
   const handleClientHover = useCallback((client, x, y) => {
     setHoveredNode(client.name);
@@ -1726,8 +1725,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     className={`flex items-center gap-2 px-4 py-2.5 bg-white/70 rounded-[24px] shadow-sm mb-2 mx-2 hover:bg-white/90 hover:shadow-md transition-all cursor-pointer group ${isHighlighted ? 'ring-2 ring-cyan-500 bg-cyan-50/70' : ''}`}
                     style={{ paddingRight: `${16 + depth * 20}px` }}
                     onClick={() => {
-                      // Modal Law: click always opens full edit dialog
-                      onEditTask?.(task);
+                      // Modal Law: click opens QuickAdd in edit mode
+                      setDrawerEditTask(task);
                     }}
                   >
                     {depth > 0 && <GitBranchPlus className="w-3 h-3 text-violet-400 shrink-0" />}
@@ -1865,7 +1864,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                           <div
                             key={task.id}
                             className="flex items-center gap-2 px-4 py-2 bg-white/40 rounded-[24px] mx-2 mb-1.5 hover:bg-white/60 cursor-pointer opacity-50 transition-all"
-                            onClick={() => onEditTask?.(task)}
+                            onClick={() => setDrawerEditTask(task)}
                           >
                             <button
                               onClick={(e) => cycleStatus(task, e)}
@@ -1909,6 +1908,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         lockedClient={!!drawerClient?.clientId}
         onCreated={() => {
           setDrawerSubTaskParent(null);
+          onTaskCreated?.();
+        }}
+      />
+
+      {/* ── QuickAddTaskDialog for editing a task from drawer ── */}
+      <QuickAddTaskDialog
+        open={!!drawerEditTask}
+        onOpenChange={(val) => { if (!val) setDrawerEditTask(null); }}
+        taskToEdit={drawerEditTask}
+        defaultClientId={drawerEditTask?.client_id || drawerClient?.clientId || null}
+        lockedClient={!!drawerEditTask?.client_id}
+        onCreated={() => {
+          setDrawerEditTask(null);
           onTaskCreated?.();
         }}
       />

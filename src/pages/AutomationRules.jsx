@@ -89,7 +89,7 @@ function RuleEditor({ rule, onSave, onCancel }) {
       : (editRule.trigger_services || []).length > 0);
 
   return (
-    <DialogContent className="bg-white max-w-xl max-h-[85vh] overflow-y-auto">
+    <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{rule.name ? 'עריכת חוק' : 'חוק חדש'}</DialogTitle>
         <DialogDescription>
@@ -1338,7 +1338,7 @@ export default function AutomationRules() {
 
       {/* Rule Picker Dialog - Step 0: Choose which rules to run */}
       <Dialog open={showRulePicker} onOpenChange={(open) => { if (!open) setShowRulePicker(false); }}>
-        <DialogContent className="bg-white max-w-lg" dir="rtl">
+        <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-yellow-500" />
@@ -1435,7 +1435,7 @@ export default function AutomationRules() {
 
       {/* Bulk Preview Dialog */}
       <Dialog open={!!bulkPreview} onOpenChange={(open) => { if (!open && !bulkExecuting) setBulkPreview(null); }}>
-        <DialogContent className="bg-white max-w-3xl max-h-[85vh] overflow-hidden flex flex-col" dir="rtl">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Play className="w-5 h-5 text-yellow-500" />

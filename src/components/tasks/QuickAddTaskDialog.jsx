@@ -165,7 +165,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
   );
 }
 
-export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defaultContext = 'work', defaultCategory = '', defaultParentId = null, defaultClientId = null, lockedParent = false, lockedClient = false }) {
+export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defaultContext = 'work', defaultCategory = '', defaultParentId = null, defaultClientId = null, lockedParent = false, lockedClient = false, taskToEdit = null }) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [dueTime, setDueTime] = useState('');
@@ -232,20 +232,35 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
       Task.list('-created_date', 200).then(list => {
         setParentTasks((list || []).filter(t => t.status !== 'completed' && t.status !== 'not_relevant'));
       }).catch(() => setParentTasks([]));
-      setTitle('');
-      setDueDate(format(new Date(), 'yyyy-MM-dd'));
-      setDueTime('');
-      setDuration('');
-      setContext(defaultContext);
-      setServiceKey(defaultCategory || '__none__');
-      setClientId(defaultClientId || '__none__');
-      setBoardId('__none__');
-      setParentId(defaultParentId || '__none__');
-      setStatus('not_started');
-      setReportingDeadline('');
-      setSubmitAsIs(false);
+      if (taskToEdit) {
+        setTitle(taskToEdit.title || '');
+        setDueDate(taskToEdit.due_date || format(new Date(), 'yyyy-MM-dd'));
+        setDueTime(taskToEdit.due_time || '');
+        setDuration(taskToEdit.estimated_duration ? String(taskToEdit.estimated_duration) : '');
+        setContext(taskToEdit.context || defaultContext);
+        setServiceKey(taskToEdit.category || '__none__');
+        setClientId(taskToEdit.client_id || defaultClientId || '__none__');
+        setBoardId(taskToEdit.board_id || '__none__');
+        setParentId(taskToEdit.parent_id || defaultParentId || '__none__');
+        setStatus(taskToEdit.status || 'not_started');
+        setReportingDeadline(taskToEdit.reporting_deadline || '');
+        setSubmitAsIs(false);
+      } else {
+        setTitle('');
+        setDueDate(format(new Date(), 'yyyy-MM-dd'));
+        setDueTime('');
+        setDuration('');
+        setContext(defaultContext);
+        setServiceKey(defaultCategory || '__none__');
+        setClientId(defaultClientId || '__none__');
+        setBoardId('__none__');
+        setParentId(defaultParentId || '__none__');
+        setStatus('not_started');
+        setReportingDeadline('');
+        setSubmitAsIs(false);
+      }
     }
-  }, [open, defaultContext, defaultCategory, defaultParentId, defaultClientId]);
+  }, [open, defaultContext, defaultCategory, defaultParentId, defaultClientId, taskToEdit]);
 
   const selectedService = serviceKey !== '__none__' ? SERVICE_LIST.find(s => s.key === serviceKey) : null;
   const selectedClient = clientId !== '__none__' ? clients.find(c => c.id === clientId) : null;
@@ -298,7 +313,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         reportingMonth = format(subMonths(dueDateObj, 1), 'yyyy-MM');
       }
 
-      await Task.create({
+      const taskPayload = {
         title: taskTitle,
         status: status,
         due_date: dueDate,
@@ -323,9 +338,15 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         }),
         ...(reportingDeadline && { reporting_deadline: reportingDeadline }),
         ...(submitAsIs && { submit_as_is: true }),
-      });
+      };
 
-      toast.success('משימה נוצרה בהצלחה');
+      if (taskToEdit?.id) {
+        await Task.update(taskToEdit.id, taskPayload);
+        toast.success('משימה עודכנה');
+      } else {
+        await Task.create(taskPayload);
+        toast.success('משימה נוצרה בהצלחה');
+      }
       onOpenChange(false);
       onCreated?.();
     } catch (err) {
@@ -341,7 +362,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5" />
-            {defaultParentId ? 'הוספת תת-משימה' : 'הוספת משימה מהירה'}
+            {taskToEdit ? 'עריכת משימה' : defaultParentId ? 'הוספת תת-משימה' : 'הוספת משימה מהירה'}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
