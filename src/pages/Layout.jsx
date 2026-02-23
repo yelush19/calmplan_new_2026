@@ -357,7 +357,7 @@ function LayoutInner({ children }) {
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
       <div className="h-screen flex flex-col">
         {/* === TOP HEADER BAR === */}
-        <header className="border-b border-white/20 px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-sm backdrop-blur-xl" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}>
+        <header className="border-b border-white/20 px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-xl backdrop-blur-xl" style={{ backgroundColor: 'rgba(255,255,255,0.45)' }}>
           {/* Right: Logo + Mobile menu */}
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="md:hidden h-7 w-7" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -461,8 +461,8 @@ function LayoutInner({ children }) {
         <div className="flex-1 flex flex-row">
           {/* === SIDEBAR === */}
           {!focusMode && (
-            <aside className={`hidden md:flex flex-col border-l border-white/20 backdrop-blur-xl transition-all duration-300 shrink-0
-              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`} style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
+            <aside className={`hidden md:flex flex-col border-l border-white/20 backdrop-blur-xl shadow-xl transition-all duration-300 shrink-0
+              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`} style={{ backgroundColor: 'rgba(255,255,255,0.45)' }}>
 
               {/* Toggle button */}
               <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -634,7 +634,7 @@ function LayoutInner({ children }) {
           {isMobileMenuOpen && (
             <>
               <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)} />
-              <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 backdrop-blur-xl bg-white/60 border-l border-white/20 shadow-xl overflow-y-auto">
+              <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 backdrop-blur-xl bg-white/45 border-l border-white/20 shadow-xl overflow-y-auto">
                 <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                   <Link to={createPageUrl("Home")} className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">

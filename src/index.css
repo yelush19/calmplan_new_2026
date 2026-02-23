@@ -164,9 +164,10 @@ button:focus-visible {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
     font-family: 'Varela Round', 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
-    background-color: var(--neutral-bg);
+    background: linear-gradient(135deg, #e0f7fa 0%, #f1f8e9 35%, #e8eaf6 65%, #e0f2f1 100%);
+    min-height: 100vh;
   }
   h1, h2, h3, h4, h5, h6, .heading {
     font-family: 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
@@ -186,17 +187,17 @@ button:focus-visible {
    ═══════════════════════════════════════════════════════════════ */
 
 @layer components {
-  /* Kill ALL bg-gray-xx everywhere — override with glass */
+  /* Kill ALL bg-gray-xx everywhere — override with glass (Visual Constitution: bg-white/45) */
   .bg-gray-50, .bg-gray-100, .bg-gray-200 {
-    background-color: rgba(255, 255, 255, 0.4) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
+    background-color: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
   }
   .bg-gray-300, .bg-gray-400, .bg-gray-500,
   .bg-gray-600, .bg-gray-700, .bg-gray-800, .bg-gray-900 {
-    background-color: rgba(255, 255, 255, 0.3) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
+    background-color: rgba(255, 255, 255, 0.35) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
     color: var(--neutral-dark) !important;
   }
 
@@ -251,9 +252,9 @@ button:focus-visible {
     box-shadow: 0 0 20px rgba(0, 172, 193, 0.35), 0 2px 12px rgba(0, 0, 0, 0.1);
   }
 
-  /* Override any remaining flat white backgrounds in page content areas */
+  /* Override any remaining flat white backgrounds → glass (Visual Constitution) */
   .bg-white {
-    background-color: rgba(255, 255, 255, 0.7) !important;
+    background-color: rgba(255, 255, 255, 0.45) !important;
   }
 
   /* Ensure all divide lines use glass borders */
@@ -293,11 +294,18 @@ button:focus-visible {
     -webkit-backdrop-filter: blur(8px) !important;
   }
 
-  /* Slate grays too */
+  /* Slate grays too — full range */
   .bg-slate-50, .bg-slate-100, .bg-slate-200 {
-    background-color: rgba(255, 255, 255, 0.4) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
+    background-color: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+  }
+  .bg-slate-300, .bg-slate-400, .bg-slate-500,
+  .bg-slate-600, .bg-slate-700, .bg-slate-800, .bg-slate-900 {
+    background-color: rgba(255, 255, 255, 0.35) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    color: var(--neutral-dark) !important;
   }
   .border-slate-100, .border-slate-200, .border-slate-300 {
     border-color: rgba(255, 255, 255, 0.2) !important;
