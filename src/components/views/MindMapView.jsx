@@ -1504,48 +1504,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         )}
       </div>
 
-      {/* ── Legend (stays fixed in viewport) ── */}
-      <div className="absolute top-3 right-3 z-30 flex flex-wrap gap-x-2 gap-y-1 max-w-[340px] justify-end">
-        {[
-          // Date-based overrides (priority)
-          { color: ZERO_PANIC.orange, label: 'להיום', glow: true },
-          { color: ZERO_PANIC.purple, label: 'באיחור', glow: true },
-          // Task statuses
-          { color: STATUS_TO_COLOR.in_progress, label: 'בעבודה' },
-          { color: STATUS_TO_COLOR.not_started, label: 'טרם התחיל' },
-          { color: STATUS_TO_COLOR.ready_for_reporting, label: 'מוכן לדיווח' },
-          { color: STATUS_TO_COLOR.waiting_for_approval, label: 'לבדיקה' },
-          { color: STATUS_TO_COLOR.waiting_for_materials, label: 'ממתין לחומרים' },
-          { color: STATUS_TO_COLOR.waiting_on_client, label: 'ממתין ללקוח' },
-          { color: STATUS_TO_COLOR.remaining_completions, label: 'נותרו השלמות' },
-          { color: STATUS_TO_COLOR.pending_external, label: "צד ג'" },
-          { color: STATUS_TO_COLOR.issue, label: 'דורש טיפול' },
-          { color: STATUS_TO_COLOR.reported_waiting_for_payment, label: 'ממתין לתשלום' },
-          { color: STATUS_TO_COLOR.completed, label: 'הושלם' },
-        ].map(item => (
-          <div key={item.label} className="flex items-center gap-1 text-[10px] text-gray-500 bg-white/70 backdrop-blur-sm rounded px-1.5 py-0.5">
-            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{
-              backgroundColor: item.color,
-              boxShadow: item.glow ? `0 0 6px ${item.color}88` : 'none',
-            }} />
-            <span className="whitespace-nowrap">{item.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Complexity Tier Legend ── */}
-      <div className="absolute bottom-3 right-3 z-30 flex items-center gap-2 text-[10px] text-gray-400 bg-white/70 backdrop-blur-sm rounded-[32px] px-3 py-1.5">
-        <span>מורכבות:</span>
-        {Object.entries(COMPLEXITY_TIERS).map(([tier, info]) => {
-          const r = getNodeRadius(Number(tier), layout.isWide);
-          return (
-            <div key={tier} className="flex items-center gap-0.5">
-              <div className="rounded-full bg-gray-300" style={{ width: Math.max(r / 3, 6), height: Math.max(r / 3, 6) }} />
-              <span>{info.icon} {info.label}</span>
-            </div>
-          );
-        })}
-      </div>
+      {/* Legends removed — node colors and sizes are self-explanatory via tooltip */}
 
       {/* ── Crisis Mode Banner ── */}
       {crisisMode && (
