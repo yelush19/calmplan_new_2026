@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star, Trash2, Check } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Task } from '@/api/entities';
+import { Task, Client } from '@/api/entities';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -307,8 +307,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, []);
 
   // ── Data Processing ──
-  const { branches, clientNodes, centerLabel } = useMemo(() => {
+  const { branches, clientNodes, centerLabel, todayTasks } = useMemo(() => {
     const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
     const centerLabel = format(today, 'EEEE, d/M', { locale: he });
 
     // Group tasks by category → client
@@ -324,9 +325,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     activeTasks.forEach(task => {
       const rawCat = task.category || 'אחר';
-      const cat = CATEGORY_TO_DEPARTMENT[rawCat] || rawCat;
-      if (!catClientMap[cat]) catClientMap[cat] = {};
+      let cat = CATEGORY_TO_DEPARTMENT[rawCat] || rawCat;
       const clientName = task.client_name || 'ללא לקוח';
+      // No-client tasks → dedicated Admin branch (not scattered across categories)
+      if (!task.client_name) cat = 'אדמיניסטרציה';
+      if (!catClientMap[cat]) catClientMap[cat] = {};
       if (!catClientMap[cat][clientName]) catClientMap[cat][clientName] = [];
       catClientMap[cat][clientName].push(task);
     });
@@ -379,7 +382,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       });
     });
 
-    return { branches, clientNodes, centerLabel };
+    // Today-only: tasks whose due_date is exactly today (for center node)
+    const todayTasks = tasks.filter(t => {
+      if (t.status === 'completed' || t.status === 'not_relevant') return false;
+      return t.due_date === todayStr;
+    });
+
+    return { branches, clientNodes, centerLabel, todayTasks };
   }, [tasks, clients, crisisMode]);
 
   // ── Feature 8: Auto-open drawer from search deep-link ──
@@ -589,6 +598,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     return { cx, cy, centerR, branchPositions, virtualW: w, virtualH: h, isWide };
   }, [branches, dimensions, spacingFactor, manualPositions]);
+
+  // ── Draggable center: effective position respects manual drag override ──
+  const centerPos = useMemo(() => {
+    const manual = manualPositions['center-node'];
+    if (manual && typeof manual.x === 'number' && typeof manual.y === 'number') {
+      return { x: manual.x, y: manual.y };
+    }
+    return { x: layout.cx, y: layout.cy };
+  }, [layout.cx, layout.cy, manualPositions]);
 
   // ── Auto-Fit: compute zoom + pan to show all nodes ──
   // Feature 6: Skip auto-fit entirely when user has saved positions
@@ -997,33 +1015,55 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           {/* ── Connection Lines ── */}
           {layout.branchPositions.map((branch) => (
             <g key={`lines-${branch.category}`}>
-              {/* Center → Folder: dashed structural connector */}
-              <motion.line
-                x1={layout.cx} y1={layout.cy}
-                x2={branch.x} y2={branch.y}
-                stroke={branch.config.color}
-                strokeWidth={3}
-                strokeDasharray="8 4"
-                strokeLinecap="round"
-                strokeOpacity={isSpotlit(branch.category) ? 0.35 : 0.06}
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.6, ease: 'easeInOut' }}
-              />
-              {/* Folder → Sub-folders (if any) */}
-              {branch.subFolderPositions?.map((sub) => (
-                <motion.line
-                  key={`sub-line-${sub.key}`}
-                  x1={branch.x} y1={branch.y}
-                  x2={sub.x} y2={sub.y}
-                  stroke={branch.config.color}
-                  strokeWidth={2}
-                  strokeOpacity={isSpotlit(branch.category) ? 0.3 : 0.06}
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.4, delay: 0.2, ease: 'easeInOut' }}
-                />
-              ))}
+              {/* Center → Folder: curved bezier connector */}
+              {(() => {
+                const dx = branch.x - centerPos.x;
+                const dy = branch.y - centerPos.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                const curve = Math.min(35, len * 0.15);
+                const mx = (centerPos.x + branch.x) / 2;
+                const my = (centerPos.y + branch.y) / 2;
+                const px = len > 0 ? (-dy / len) * curve : 0;
+                const py = len > 0 ? (dx / len) * curve : 0;
+                return (
+                  <motion.path
+                    d={`M ${centerPos.x} ${centerPos.y} Q ${mx + px} ${my + py} ${branch.x} ${branch.y}`}
+                    stroke={branch.config.color}
+                    strokeWidth={3}
+                    strokeDasharray="8 4"
+                    strokeLinecap="round"
+                    fill="none"
+                    strokeOpacity={isSpotlit(branch.category) ? 0.5 : 0.08}
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.6, ease: 'easeInOut' }}
+                  />
+                );
+              })()}
+              {/* Folder → Sub-folders: curved bezier */}
+              {branch.subFolderPositions?.map((sub) => {
+                const sdx = sub.x - branch.x;
+                const sdy = sub.y - branch.y;
+                const slen = Math.sqrt(sdx * sdx + sdy * sdy);
+                const sCurve = Math.min(15, slen * 0.12);
+                const smx = (branch.x + sub.x) / 2;
+                const smy = (branch.y + sub.y) / 2;
+                const spx = slen > 0 ? (-sdy / slen) * sCurve : 0;
+                const spy = slen > 0 ? (sdx / slen) * sCurve : 0;
+                return (
+                  <motion.path
+                    key={`sub-line-${sub.key}`}
+                    d={`M ${branch.x} ${branch.y} Q ${smx + spx} ${smy + spy} ${sub.x} ${sub.y}`}
+                    stroke={branch.config.color}
+                    strokeWidth={2}
+                    fill="none"
+                    strokeOpacity={isSpotlit(branch.category) ? 0.45 : 0.08}
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.4, delay: 0.2, ease: 'easeInOut' }}
+                  />
+                );
+              })}
               {/* Folder → Client leaves: curved bezier paths */}
               {branch.clientPositions.map((client) => {
                 const mx = (branch.x + client.x) / 2;
@@ -1050,10 +1090,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   <motion.path
                     key={`line-${client.name}`}
                     d={`M ${startX} ${startY} Q ${smx + sPerpX} ${smy + sPerpY} ${client.x} ${client.y}`}
-                    stroke={client.color}
-                    strokeWidth={1.8}
+                    stroke={branch.config.color}
+                    strokeWidth={2.2}
                     fill="none"
-                    strokeOpacity={isSpotlit(branch.category) ? 0.35 : 0.06}
+                    strokeOpacity={isSpotlit(branch.category) ? 0.55 : 0.08}
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ duration: 0.5, delay: 0.3, ease: 'easeInOut' }}
@@ -1064,24 +1104,38 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           ))}
         </svg>
 
-        {/* ── Center Node: "היום שלי" ── */}
+        {/* ── Center Node: "היום שלי" — draggable, today-only ── */}
         <motion.div
-          className="absolute z-20 flex flex-col items-center justify-center rounded-full text-white shadow-xl cursor-default select-none"
+          data-node-draggable
+          className="absolute z-20 flex flex-col items-center justify-center rounded-full text-white shadow-xl select-none"
           style={{
             width: layout.centerR * 2,
             height: layout.centerR * 2,
-            left: layout.cx - layout.centerR,
-            top: layout.cy - layout.centerR,
+            left: centerPos.x - layout.centerR,
+            top: centerPos.y - layout.centerR,
             background: 'linear-gradient(135deg, #0288D1, #00897B)',
             boxShadow: '0 4px 20px rgba(2,136,209,0.35), 0 2px 8px rgba(0,0,0,0.15)',
+            cursor: draggingNode.current?.key === 'center-node' ? 'grabbing' : 'grab',
           }}
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            handleNodePointerDown(e, 'center-node', centerPos.x, centerPos.y);
+          }}
+          onPointerUp={(e) => {
+            const wasDragging = nodeHasDragged.current;
+            draggingNode.current = null;
+            nodeHasDragged.current = false;
+            if (wasDragging) {
+              setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
+            }
+          }}
         >
           <span className="font-bold leading-tight text-base">היום שלי</span>
-          <span className="opacity-80 mt-0.5 text-xs">{layout.branchPositions.reduce((sum, b) => sum + b.clients.length, 0)} לקוחות</span>
-          <span className="opacity-60 text-[11px]">{tasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant').length} משימות</span>
+          <span className="opacity-80 mt-0.5 text-xs">{todayTasks.length} משימות להיום</span>
+          <span className="opacity-60 text-[11px]">{centerLabel}</span>
         </motion.div>
 
         {/* ── Branch (Category) Nodes ── */}
@@ -1251,7 +1305,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     // Cancel the pending single-click (drawer open)
                     if (nodeClickTimerRef.current) { clearTimeout(nodeClickTimerRef.current); nodeClickTimerRef.current = null; }
                     setRenamingNodeKey(nodeKey);
-                    setRenameValue(client.topTask?.title || '');
+                    setRenameValue(client.displayName || client.name || '');
                   }}
                   title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''}${isWaitingOnClient ? ' [ממתין ללקוח]' : ''} - גרור להזיז · לחיצה כפולה לעריכה`}
                 >
@@ -1291,9 +1345,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       onChange={(e) => setRenameValue(e.target.value)}
                       onBlur={async () => {
                         const trimmed = renameValue.trim();
-                        if (trimmed && client.topTask && trimmed !== client.topTask.title) {
+                        if (trimmed && trimmed !== client.displayName) {
                           try {
-                            await Task.update(client.topTask.id, { title: trimmed });
+                            // Persist nickname on the Client entity (survives refresh)
+                            if (client.clientId) {
+                              await Client.update(client.clientId, { nickname: trimmed });
+                            }
                             onTaskCreated?.();
                             toast.success('שם עודכן');
                           } catch { toast.error('שגיאה בעדכון'); }
