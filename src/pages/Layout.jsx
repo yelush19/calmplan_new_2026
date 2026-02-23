@@ -369,7 +369,7 @@ function LayoutInner({ children }) {
               </div>
               <h1 className="text-sm font-bold text-foreground hidden md:block">CalmPlan</h1>
             </Link>
-            <span className="hidden md:block text-[11px] italic text-gray-400 mr-2">עשוי &gt; מושלם</span>
+            <span className="hidden md:block text-[12px] font-bold text-gray-500 mr-2">✨ עשוי טוב יותר ממושלם</span>
           </div>
 
           {/* Center: Global Search */}

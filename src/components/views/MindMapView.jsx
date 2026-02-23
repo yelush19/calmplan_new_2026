@@ -230,6 +230,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // ── Feature 3: Drawer Inline Editing ──
   const [inlineEditTaskId, setInlineEditTaskId] = useState(null);
   const [inlineEditValue, setInlineEditValue] = useState('');
+  const clickTimerRef = useRef(null); // debounce single-click vs double-click
 
   // ── Feature 5: Quick Sub-Task inline input ──
   const [inlineSubTaskParentId, setInlineSubTaskParentId] = useState(null);
@@ -372,10 +373,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     if (!focusClientName || !clientNodes || clientNodes.length === 0) return;
     const clientNode = clientNodes.find(c => c.name === focusClientName);
     if (clientNode) {
-      setDrawerClient(clientNode);
-      setShowDrawerCompleted(false);
+      // Delay slightly to let drawer mount
+      setTimeout(() => {
+        setDrawerClient(clientNode);
+        setShowDrawerCompleted(false);
+      }, 100);
     }
-    if (focusTaskId) setHighlightTaskId(focusTaskId);
+    if (focusTaskId) {
+      setHighlightTaskId(String(focusTaskId));
+      // Auto-clear highlight after 5s
+      setTimeout(() => setHighlightTaskId(null), 5000);
+    }
     onFocusHandled?.();
   }, [focusClientName, focusTaskId, clientNodes]);
 
@@ -569,8 +577,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, [branches, dimensions, spacingFactor, manualPositions]);
 
   // ── Auto-Fit: compute zoom + pan to show all nodes ──
+  // Feature 6: Skip auto-fit entirely when user has saved positions
+  const hasSavedPositions = Object.keys(manualPositions).length > 0;
   useEffect(() => {
     if (autoFitDone || !layout.branchPositions.length) return;
+    if (hasSavedPositions) { setAutoFitDone(true); return; }
 
     // Compute bounding box of all nodes
     let minX = layout.cx, maxX = layout.cx, minY = layout.cy, maxY = layout.cy;
@@ -614,9 +625,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     setAutoFitDone(true);
   }, [layout, dimensions, autoFitDone]);
 
-  // Reset auto-fit when tasks change significantly
+  // Reset auto-fit when tasks change significantly — but NOT if user has saved positions
   useEffect(() => {
-    setAutoFitDone(false);
+    if (!hasSavedPositions) setAutoFitDone(false);
   }, [tasks.length, branches.length]);
 
   // Reset auto-fit + manual positions when spacing changes
@@ -695,15 +706,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     };
   }, []);
 
+  const nodeClickTimerRef = useRef(null);
   const handleNodePointerUp = useCallback((e, client) => {
     const wasDragging = nodeHasDragged.current;
     draggingNode.current = null;
     nodeHasDragged.current = false;
-    // If it was a click (not drag), open drawer directly (no dependency on handleClientClick)
+    // If it was a click (not drag), delay drawer open so double-click can cancel it
     if (!wasDragging) {
-      setDrawerClient(client);
-      setEditPopover(null);
-      setShowDrawerCompleted(false);
+      if (nodeClickTimerRef.current) clearTimeout(nodeClickTimerRef.current);
+      nodeClickTimerRef.current = setTimeout(() => {
+        setDrawerClient(client);
+        setEditPopover(null);
+        setShowDrawerCompleted(false);
+        nodeClickTimerRef.current = null;
+      }, 250);
     }
   }, []);
 
@@ -1207,6 +1223,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     // Feature 7: Double-click on node label → inline rename
                     if (e.target.closest('[data-node-rename-input]')) return;
                     e.stopPropagation();
+                    // Cancel the pending single-click (drawer open)
+                    if (nodeClickTimerRef.current) { clearTimeout(nodeClickTimerRef.current); nodeClickTimerRef.current = null; }
                     setRenamingNodeKey(nodeKey);
                     setRenameValue(client.topTask?.title || '');
                   }}
@@ -1674,7 +1692,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const children = childMap[task.id] || [];
               const isEditing = inlineEditTaskId === task.id;
               const isSubTaskInputOpen = inlineSubTaskParentId === task.id;
-              const isHighlighted = highlightTaskId === task.id; // Feature 8
+              const isHighlighted = highlightTaskId && String(highlightTaskId) === String(task.id); // Feature 8
 
               // Feature 4: Status dot color classes for cycling
               const statusDotStyle = task.status === 'completed'
@@ -1684,23 +1702,35 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               return (
                 <React.Fragment key={task.id}>
                   <div
-                    className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group ${isHighlighted ? 'bg-blue-50 ring-2 ring-blue-300 ring-inset' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group ${isHighlighted ? 'bg-blue-100 border-blue-300 shadow-[inset_0_0_0_2px_#3B82F6]' : ''}`}
                     style={{ paddingRight: `${16 + depth * 20}px` }}
-                    onClick={() => !isEditing && onEditTask?.(task)}
+                    onClick={(e) => {
+                      // Delayed single-click: opens modal ONLY if not cancelled by double-click
+                      if (isEditing) return;
+                      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+                      clickTimerRef.current = setTimeout(() => {
+                        onEditTask?.(task);
+                        clickTimerRef.current = null;
+                      }, 250);
+                    }}
                   >
                     {depth > 0 && <GitBranchPlus className="w-3 h-3 text-violet-400 shrink-0" />}
 
                     {/* Feature 4: Clickable status toggle */}
                     <button
-                      onClick={(e) => cycleStatus(task, e)}
-                      className={`w-3.5 h-3.5 rounded-full shrink-0 border-2 transition-all hover:scale-125 flex items-center justify-center ${
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null; }
+                        cycleStatus(task, e);
+                      }}
+                      className={`w-4 h-4 rounded-full shrink-0 border-2 transition-all hover:scale-125 flex items-center justify-center cursor-pointer ${
                         task.status === 'completed' ? 'bg-emerald-500 border-emerald-500' :
                         task.status === 'in_progress' ? 'bg-sky-500 border-sky-500' :
                         'bg-white border-slate-300 hover:border-sky-400'
                       }`}
                       title={`סטטוס: ${sts.text} — לחץ לשנות`}
                     >
-                      {task.status === 'completed' && <Check className="w-2 h-2 text-white" />}
+                      {task.status === 'completed' && <Check className="w-2.5 h-2.5 text-white" />}
                       {task.status === 'in_progress' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </button>
 
@@ -1724,6 +1754,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                           className="text-sm text-gray-800 truncate"
                           onDoubleClick={(e) => {
                             e.stopPropagation();
+                            // Cancel the pending single-click (modal open)
+                            if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null; }
                             setInlineEditTaskId(task.id);
                             setInlineEditValue(task.title);
                           }}
@@ -1746,6 +1778,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null; }
                         setInlineSubTaskParentId(prev => prev === task.id ? null : task.id);
                         setInlineSubTaskTitle('');
                       }}
