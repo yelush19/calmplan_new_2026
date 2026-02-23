@@ -232,18 +232,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [showDrawerCompleted, setShowDrawerCompleted] = useState(false);
   const [focusedClients, setFocusedClients] = useState(new Set());
 
-  // ── Feature 3: Drawer Inline Editing ──
-  const [inlineEditTaskId, setInlineEditTaskId] = useState(null);
-  const [inlineEditValue, setInlineEditValue] = useState('');
-  const clickTimerRef = useRef(null); // debounce single-click vs double-click
-
-  // ── Feature 5: Quick Sub-Task inline input ──
-  const [inlineSubTaskParentId, setInlineSubTaskParentId] = useState(null);
-  const [inlineSubTaskTitle, setInlineSubTaskTitle] = useState('');
-
-  // ── Feature 7: Node Rename on Map ──
-  const [renamingNodeKey, setRenamingNodeKey] = useState(null);
-  const [renameValue, setRenameValue] = useState('');
+  // clickTimerRef no longer needed — modal law: every click opens full dialog
+  const clickTimerRef = useRef(null); // kept for status-cycle cancel only
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: 'task'|'client', id, name }
 
   // ── Pan & Zoom state ──
@@ -749,16 +739,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
       return;
     }
-    // Single click (not drag): delay drawer open so double-click can cancel it
-    if (nodeClickTimerRef.current) clearTimeout(nodeClickTimerRef.current);
-    nodeClickTimerRef.current = setTimeout(() => {
-      if (renamingNodeKey) return; // don't open drawer while renaming
-      setDrawerClient(client);
-      setEditPopover(null);
-      setShowDrawerCompleted(false);
-      nodeClickTimerRef.current = null;
-    }, 400);
-  }, [savePositionsToStorage, renamingNodeKey]);
+    // Modal Law: single click opens drawer immediately (no double-click distinction)
+    setDrawerClient(client);
+    setEditPopover(null);
+    setShowDrawerCompleted(false);
+  }, [savePositionsToStorage]);
 
   // ── Folder drag handlers ──
   const handleFolderPointerDown = useCallback((e, folderKey, currentX, currentY) => {
@@ -1298,16 +1283,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   onPointerDown={(e) => handleNodePointerDown(e, nodeKey, client.x, client.y)}
                   onPointerUp={(e) => handleNodePointerUp(e, client)}
                   onDoubleClick={(e) => {
-                    // Feature 7: Double-click on node label → inline rename
-                    if (e.target.closest('[data-node-rename-input]')) return;
+                    // Modal Law: double-click opens drawer (same as single click)
                     e.stopPropagation();
                     e.preventDefault();
-                    // Cancel the pending single-click (drawer open)
-                    if (nodeClickTimerRef.current) { clearTimeout(nodeClickTimerRef.current); nodeClickTimerRef.current = null; }
-                    setRenamingNodeKey(nodeKey);
-                    setRenameValue(client.displayName || client.name || '');
+                    setDrawerClient(client);
+                    setEditPopover(null);
+                    setShowDrawerCompleted(false);
                   }}
-                  title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''}${isWaitingOnClient ? ' [ממתין ללקוח]' : ''} - גרור להזיז · לחיצה כפולה לעריכה`}
+                  title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''}${isWaitingOnClient ? ' [ממתין ללקוח]' : ''} - לחץ לפתיחת כרטיס`}
                 >
                   {/* Feature 7: Hover delete button */}
                   <button
@@ -1334,51 +1317,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <Trash2 className="w-2.5 h-2.5 text-gray-500 hover:text-red-500" />
                   </button>
 
-                  {/* Client display name (nickname || name) */}
-                  {renamingNodeKey === nodeKey ? (
-                    <input
-                      data-node-rename-input
-                      autoFocus
-                      className="font-bold leading-tight text-center bg-white/90 text-gray-800 border border-blue-300 rounded px-1 py-0.5 outline-none focus:ring-2 focus:ring-blue-200 w-[90%]"
-                      style={{ fontSize: finalH < 45 ? '10px' : finalH < 55 ? '11px' : '12px' }}
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={async () => {
-                        const trimmed = renameValue.trim();
-                        if (trimmed && trimmed !== client.displayName) {
-                          try {
-                            // Persist nickname on the Client entity (survives refresh)
-                            if (client.clientId) {
-                              await Client.update(client.clientId, { nickname: trimmed });
-                            }
-                            onTaskCreated?.();
-                            toast.success('שם עודכן');
-                          } catch { toast.error('שגיאה בעדכון'); }
-                        }
-                        setRenamingNodeKey(null);
-                      }}
-                      onKeyDown={async (e) => {
-                        if (e.key === 'Enter') e.target.blur();
-                        if (e.key === 'Escape') setRenamingNodeKey(null);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <span
-                      className="font-bold leading-tight text-center px-2 truncate w-full"
-                      style={{
-                        fontSize: finalH < 45 ? '10px' : finalH < 55 ? '11px' : '12px',
-                        textShadow: isGhost ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
-                        maxWidth: finalW - 12,
-                      }}
-                    >
-                      {isFrozen && <span title="קפוא - כל המשימות נדחו" style={{ marginInlineEnd: '3px' }}>🧊</span>}
-                      {!isFrozen && procrastinatedCount > 0 && <span title={`${procrastinatedCount} משימות נדחו יותר מ-3 פעמים`} style={{ marginInlineEnd: '3px' }}>🐌</span>}
-                      {isWaitingOnClient && <span title="ממתין ללקוח" style={{ marginInlineEnd: '3px' }}>⏳</span>}
-                      {client.displayName}
-                    </span>
-                  )}
+                  {/* Client display name — Modal Law: no inline rename */}
+                  <span
+                    className="font-bold leading-tight text-center px-2 truncate w-full"
+                    style={{
+                      fontSize: finalH < 45 ? '10px' : finalH < 55 ? '11px' : '12px',
+                      textShadow: isGhost ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
+                      maxWidth: finalW - 12,
+                    }}
+                  >
+                    {isFrozen && <span title="קפוא - כל המשימות נדחו" style={{ marginInlineEnd: '3px' }}>🧊</span>}
+                    {!isFrozen && procrastinatedCount > 0 && <span title={`${procrastinatedCount} משימות נדחו יותר מ-3 פעמים`} style={{ marginInlineEnd: '3px' }}>🐌</span>}
+                    {isWaitingOnClient && <span title="ממתין ללקוח" style={{ marginInlineEnd: '3px' }}>⏳</span>}
+                    {client.displayName}
+                  </span>
 
                   {/* Top task title */}
                   {truncatedTask && (
@@ -1734,50 +1686,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               }
             };
 
-            // ── Feature 3: Inline title save ──
-            const saveInlineTitle = async (task) => {
-              const trimmed = inlineEditValue.trim();
-              if (!trimmed || trimmed === task.title) {
-                setInlineEditTaskId(null);
-                return;
-              }
-              try {
-                await Task.update(task.id, { title: trimmed });
-                onTaskCreated?.();
-                toast.success('שם עודכן');
-              } catch (err) {
-                toast.error('שגיאה בעדכון שם');
-              }
-              setInlineEditTaskId(null);
-            };
-
-            // ── Feature 5: Inline sub-task create ──
-            const createInlineSubTask = async (parentTask) => {
-              const trimmed = inlineSubTaskTitle.trim();
-              if (!trimmed) { setInlineSubTaskParentId(null); return; }
-              try {
-                await Task.create({
-                  title: trimmed,
-                  parent_id: parentTask.id,
-                  client_name: drawerClient.name,
-                  category: parentTask.category || 'אחר',
-                  status: 'not_started',
-                });
-                setInlineSubTaskTitle('');
-                setInlineSubTaskParentId(null);
-                onTaskCreated?.();
-                toast.success('תת-משימה נוספה');
-              } catch (err) {
-                toast.error('שגיאה בהוספת תת-משימה');
-              }
-            };
-
             const renderTask = (task, depth = 0) => {
               const sts = statusConfig[task.status] || statusConfig.not_started;
               const children = childMap[task.id] || [];
-              const isEditing = inlineEditTaskId === task.id;
-              const isSubTaskInputOpen = inlineSubTaskParentId === task.id;
-              const isHighlighted = highlightTaskId && String(highlightTaskId) === String(task.id); // Feature 8
+              const isHighlighted = highlightTaskId && String(highlightTaskId) === String(task.id);
 
               // Feature 4: Status dot color classes for cycling
               const statusDotStyle = task.status === 'completed'
@@ -1789,14 +1701,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   <div
                     className={`flex items-center gap-2 px-4 py-2.5 bg-white/70 rounded-[24px] shadow-sm mb-2 mx-2 hover:bg-white/90 hover:shadow-md transition-all cursor-pointer group ${isHighlighted ? 'ring-2 ring-cyan-500 bg-cyan-50/70' : ''}`}
                     style={{ paddingRight: `${16 + depth * 20}px` }}
-                    onClick={(e) => {
-                      // Single-click: open full edit dialog immediately
-                      if (isEditing) return;
-                      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-                      clickTimerRef.current = setTimeout(() => {
-                        onEditTask?.(task);
-                        clickTimerRef.current = null;
-                      }, 400);
+                    onClick={() => {
+                      // Modal Law: click always opens full edit dialog
+                      onEditTask?.(task);
                     }}
                   >
                     {depth > 0 && <GitBranchPlus className="w-3 h-3 text-violet-400 shrink-0" />}
@@ -1820,36 +1727,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     </button>
 
                     <div className="flex-1 min-w-0">
-                      {/* Feature 3: Inline editing on double-click */}
-                      {isEditing ? (
-                        <input
-                          autoFocus
-                          className="text-sm text-gray-800 bg-white border border-blue-300 rounded px-1.5 py-0.5 w-full outline-none focus:ring-2 focus:ring-blue-200"
-                          value={inlineEditValue}
-                          onChange={(e) => setInlineEditValue(e.target.value)}
-                          onBlur={() => saveInlineTitle(task)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveInlineTitle(task);
-                            if (e.key === 'Escape') setInlineEditTaskId(null);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      ) : (
-                        <p
-                          className="text-sm text-gray-800 truncate"
-                          onDoubleClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            // Cancel the pending single-click (modal open)
-                            if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null; }
-                            setInlineEditTaskId(task.id);
-                            setInlineEditValue(task.title);
-                          }}
-                          title="לחיצה כפולה לעריכת שם"
-                        >
-                          {task.title}
-                        </p>
-                      )}
+                      {/* Modal Law: no inline editing — click row to open full dialog */}
+                      <p className="text-sm text-gray-800 truncate">
+                        {task.title}
+                      </p>
                       {task.due_date && (
                         <p className="text-[10px] text-gray-400">{format(new Date(task.due_date), 'd/M', { locale: he })}</p>
                       )}

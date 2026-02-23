@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AccountReconciliation, Client, ClientAccount } from '@/api/entities';
+import { AccountReconciliation, Client, ClientAccount, Task } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,63 +9,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
-  BookCheck, Plus, Filter, Banknote, MoreHorizontal, CheckCircle,
-  Clock, AlertCircle, Landmark, CreditCard, AlertTriangle,
-  Calendar, ArrowLeft, Pencil, Search, BookUser, Building2, ChevronDown
+  BookCheck, Plus, CheckCircle, Clock, AlertCircle, Landmark, CreditCard,
+  AlertTriangle, Calendar, Search, BookUser, Building2, ChevronDown, ChevronUp,
+  ArrowUpDown, Loader, ExternalLink
 } from 'lucide-react';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
+// ─── Status Configuration — Glassmorphism Pill Styles ──────────
 const statusConfig = {
-  not_started: { label: 'לא התחיל', color: 'bg-gray-200 text-gray-800', icon: Clock },
-  waiting_for_materials: { label: 'ממתין לחומרים', color: 'bg-yellow-200 text-yellow-800', icon: AlertCircle },
-  in_progress: { label: 'בתהליך', color: 'bg-blue-200 text-blue-800', icon: Clock },
-  completed: { label: 'הושלם', color: 'bg-green-200 text-green-800', icon: CheckCircle },
-  issues: { label: 'בעיות', color: 'bg-amber-200 text-amber-800', icon: AlertCircle },
+  not_started:            { label: 'לא התחיל',       pill: 'bg-white/40 text-gray-700 border border-white/30 backdrop-blur-sm', icon: Clock },
+  waiting_for_materials:  { label: 'ממתין לחומרים',   pill: 'bg-amber-100/80 text-amber-800 border border-amber-200',            icon: AlertCircle },
+  in_progress:            { label: 'בתהליך',          pill: 'bg-sky-100/80 text-sky-800 border border-sky-200',                  icon: Clock },
+  completed:              { label: 'הושלם',           pill: 'bg-teal-100/80 text-teal-800 border border-teal-200',               icon: CheckCircle },
+  issues:                 { label: 'בעיות',           pill: 'bg-rose-100/80 text-rose-800 border border-rose-200',               icon: AlertCircle },
 };
 
 const frequencyLabels = {
-  monthly: 'חודשי',
-  bimonthly: 'דו-חודשי',
-  quarterly: 'רבעוני',
-  semi_annual: 'חצי שנתי',
-  yearly: 'שנתי',
+  monthly: 'חודשי', bimonthly: 'דו-חודשי', quarterly: 'רבעוני',
+  semi_annual: 'חצי שנתי', yearly: 'שנתי',
 };
 
 const frequencyMonths = {
-  monthly: 1,
-  bimonthly: 2,
-  quarterly: 3,
-  semi_annual: 6,
-  yearly: 12,
-};
-
-const loadingSystemLabels = {
-  bizibox: 'BIZIBOX',
-  summit: 'SUMMIT',
-  manual: 'ידני',
-  other: 'אחר',
+  monthly: 1, bimonthly: 2, quarterly: 3, semi_annual: 6, yearly: 12,
 };
 
 const accountTypeIcons = {
-  bank: Landmark,
-  credit_card: CreditCard,
-  bookkeeping: BookUser,
-  clearing: Building2,
+  bank: Landmark, credit_card: CreditCard, bookkeeping: BookUser, clearing: Building2,
 };
-
 const accountTypeLabels = {
-  bank: 'בנק',
-  credit_card: 'אשראי',
-  bookkeeping: 'הנה"ח',
-  clearing: 'סליקה',
+  bank: 'בנק', credit_card: 'אשראי', bookkeeping: 'הנה"ח', clearing: 'סליקה',
 };
 
 function calcNextDate(lastDate, frequency) {
@@ -87,275 +63,76 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('he-IL');
 }
 
-const STATUS_GROUP_ORDER_REC = ['issues', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'not_started', 'completed'];
-const DEFAULT_COLLAPSED_REC = new Set(['completed']);
-
-// --- Status Table Tab ---
-function StatusTable({ accounts, clients, reconciliations, onUpdateAccount, searchTerm, statusFilter }) {
-  const [collapsedGroups, setCollapsedGroups] = useState(() => {
-    const init = {};
-    DEFAULT_COLLAPSED_REC.forEach(s => { init[s] = true; });
-    return init;
-  });
-  const toggleGroup = useCallback((status) => {
-    setCollapsedGroups(prev => ({ ...prev, [status]: !prev[status] }));
-  }, []);
-
-  const clientMap = useMemo(() => {
-    const m = {};
-    clients.forEach(c => { m[c.id] = c; });
-    return m;
-  }, [clients]);
-
-  // Build rows: each account as a row, enriched with client info and latest reconciliation
-  const rows = useMemo(() => {
-    return accounts
-      .filter(acc => {
-        const client = clientMap[acc.client_id];
-        if (!client) return false;
-        if (acc.account_status === 'inactive') return false;
-        if (searchTerm && !client.name?.includes(searchTerm) && !acc.account_name?.includes(searchTerm)) return false;
-        return true;
-      })
-      .map(acc => {
-        const client = clientMap[acc.client_id];
-        const nextDate = acc.next_reconciliation_due || calcNextDate(acc.last_reconciliation_date, acc.reconciliation_frequency);
-        const daysOverdue = getDaysOverdue(nextDate);
-        // Find latest reconciliation for this account
-        const accountRecs = reconciliations
-          .filter(r => r.client_account_id === acc.id)
-          .sort((a, b) => (b.created_date || '').localeCompare(a.created_date || ''));
-        const latestRec = accountRecs[0];
-        const latestStatus = latestRec?.status || 'not_started';
-
-        return {
-          account: acc,
-          client,
-          nextDate,
-          daysOverdue,
-          latestRec,
-          latestStatus,
-        };
-      })
-      .filter(row => {
-        if (statusFilter.length === 0) return true;
-        if (statusFilter.includes('overdue') && row.daysOverdue > 0) return true;
-        if (statusFilter.some(f => f !== 'overdue' && row.latestStatus === f)) return true;
-        return false;
-      })
-      .sort((a, b) => {
-        // Overdue first, then by next date
-        if (a.daysOverdue > 0 && b.daysOverdue === 0) return -1;
-        if (b.daysOverdue > 0 && a.daysOverdue === 0) return 1;
-        return (a.nextDate || '').localeCompare(b.nextDate || '');
-      });
-  }, [accounts, clientMap, reconciliations, searchTerm, statusFilter]);
-
-  const overdueCount = rows.filter(r => r.daysOverdue > 0).length;
-
-  // Group rows by status
-  const groupedRows = useMemo(() => {
-    const groups = {};
-    rows.forEach(row => {
-      const s = row.latestStatus || 'not_started';
-      if (!groups[s]) groups[s] = [];
-      groups[s].push(row);
-    });
-    return STATUS_GROUP_ORDER_REC
-      .filter(s => groups[s] && groups[s].length > 0)
-      .map(s => ({ status: s, rows: groups[s] }));
-  }, [rows]);
+// ─── Sortable Table Header ──────────────────────────────────────
+function SortableHeader({ label, sortKey, currentSort, onSort }) {
+  const isActive = currentSort.key === sortKey;
+  const isAsc = currentSort.dir === 'asc';
 
   return (
-    <div>
-      {overdueCount > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-center gap-2 text-amber-800">
-          <AlertTriangle className="w-5 h-5" />
-          <span className="font-medium">{overdueCount} חשבונות בפיגור התאמה!</span>
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-slate-100 border-b-2 border-slate-300">
-              <th className="text-right p-3 font-bold">לקוח</th>
-              <th className="text-right p-3 font-bold">חשבון</th>
-              <th className="text-center p-3 font-bold">סוג</th>
-              <th className="text-center p-3 font-bold">אופן טעינה</th>
-              <th className="text-center p-3 font-bold">תדירות</th>
-              <th className="text-center p-3 font-bold">התאמה אחרונה</th>
-              <th className="text-center p-3 font-bold">התאמה הבאה</th>
-              <th className="text-center p-3 font-bold">סטטוס</th>
-              <th className="text-center p-3 font-bold">פעולה</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={9} className="text-center py-8 text-gray-400">אין חשבונות להצגה</td></tr>
-            ) : groupedRows.map(({ status, rows: groupRows }) => {
-              const cfg = statusConfig[status] || statusConfig.not_started;
-              const isCollapsed = !!collapsedGroups[status];
-              return (
-                <React.Fragment key={status}>
-                  {/* Group header */}
-                  <tr
-                    className="cursor-pointer select-none hover:bg-gray-100 bg-gray-50/80 transition-colors"
-                    onClick={() => toggleGroup(status)}
-                  >
-                    <td colSpan={9} className="p-2.5 border-b border-gray-200">
-                      <div className="flex items-center gap-2.5">
-                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isCollapsed ? 'rotate-[-90deg]' : ''}`} />
-                        <Badge className={`text-xs ${cfg.color}`}>{cfg.label}</Badge>
-                        <span className="text-xs text-gray-500 font-medium">{groupRows.length} חשבונות</span>
-                      </div>
-                    </td>
-                  </tr>
-                  {/* Rows */}
-                  {!isCollapsed && groupRows.map(({ account, client, nextDate, daysOverdue, latestRec, latestStatus }) => {
-              const isOverdue = daysOverdue > 0;
-              const AccIcon = accountTypeIcons[account.account_type] || Landmark;
-              return (
-                <tr key={account.id} className={`border-b hover:bg-slate-50 ${isOverdue ? 'bg-amber-50' : ''}`}>
-                  <td className="p-3 font-medium">{client.name}</td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-1">
-                      <AccIcon className="w-4 h-4 text-slate-500" />
-                      {account.account_name || account.bank_name}
-                    </div>
-                  </td>
-                  <td className="p-3 text-center">
-                    <Badge variant="outline" className="text-xs">{accountTypeLabels[account.account_type] || account.account_type}</Badge>
-                  </td>
-                  <td className="p-3 text-center text-xs">{loadingSystemLabels[account.loading_system] || account.loading_system || '-'}</td>
-                  <td className="p-3 text-center">
-                    <Badge variant="secondary" className="text-xs">{frequencyLabels[account.reconciliation_frequency] || 'חודשי'}</Badge>
-                  </td>
-                  <td className="p-3 text-center text-xs">{formatDate(account.last_reconciliation_date)}</td>
-                  <td className="p-3 text-center">
-                    <span className={`text-xs font-medium ${isOverdue ? 'text-amber-700' : 'text-gray-600'}`}>
-                      {formatDate(nextDate)}
-                      {isOverdue && (
-                        <span className="block text-amber-600 font-bold">{daysOverdue} ימי פיגור</span>
-                      )}
-                    </span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <Badge className={`text-xs ${statusConfig[latestStatus]?.color || 'bg-gray-200'}`}>
-                      {statusConfig[latestStatus]?.label || 'לא התחיל'}
-                    </Badge>
-                  </td>
-                  <td className="p-3 text-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs gap-1"
-                      onClick={() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        const newNext = calcNextDate(today, account.reconciliation_frequency);
-                        onUpdateAccount(account.id, {
-                          last_reconciliation_date: today,
-                          next_reconciliation_due: newNext,
-                        });
-                      }}
-                    >
-                      <CheckCircle className="w-3 h-3" /> סמן כהושלם
-                    </Button>
-                  </td>
-                </tr>
-              );
-                  })}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+    <th
+      className="p-3 font-bold text-white cursor-pointer select-none hover:brightness-110 transition-all"
+      style={{ backgroundColor: '#008291' }}
+      onClick={() => onSort(sortKey)}
+    >
+      <div className="flex items-center justify-center gap-1.5">
+        <span>{label}</span>
+        {isActive ? (
+          isAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+        ) : (
+          <ArrowUpDown className="w-3 h-3 opacity-50" />
+        )}
       </div>
-    </div>
+    </th>
   );
 }
 
-// --- Tasks Kanban Tab ---
-function TasksKanban({ reconciliations, onStatusChange, onEdit }) {
-  const columns = [
-    { key: 'not_started', label: 'לא התחיל', color: 'border-gray-300 bg-gray-50' },
-    { key: 'waiting_for_materials', label: 'ממתין לחומרים', color: 'border-yellow-300 bg-yellow-50' },
-    { key: 'in_progress', label: 'בתהליך', color: 'border-blue-300 bg-blue-50' },
-    { key: 'completed', label: 'הושלם', color: 'border-green-300 bg-green-50' },
-  ];
-  const [collapsed, setCollapsed] = useState({ completed: true });
-  const toggleCol = (key) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
+// ─── Client Drawer ──────────────────────────────────────────────
+function ClientDrawer({ client, tasks, open, onClose }) {
+  if (!client) return null;
+  const clientTasks = tasks.filter(t =>
+    t.client_name === client.name && t.status !== 'completed' && t.status !== 'not_relevant'
+  );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {columns.map(col => {
-        const items = reconciliations.filter(r => r.status === col.key);
-        const isCollapsed = !!collapsed[col.key];
-        return (
-          <div key={col.key} className={`rounded-lg border-2 ${col.color} p-3 ${isCollapsed ? '' : 'min-h-[200px]'}`}>
-            <h3
-              className="font-bold text-sm mb-3 flex items-center justify-between cursor-pointer select-none"
-              onClick={() => toggleCol(col.key)}
-            >
-              <div className="flex items-center gap-1.5">
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isCollapsed ? 'rotate-[-90deg]' : ''}`} />
-                {col.label}
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="right" className="w-[400px] backdrop-blur-xl bg-white/60 border-l border-white/20 rounded-l-[32px]">
+        <SheetHeader className="text-right">
+          <SheetTitle className="text-lg flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-[#008291]" />
+            {client.nickname || client.name}
+          </SheetTitle>
+          <SheetDescription className="text-right text-sm text-gray-500">
+            {clientTasks.length} משימות פעילות
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-4 space-y-3">
+          {clientTasks.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">אין משימות פעילות ללקוח זה</p>
+          ) : (
+            clientTasks.map(task => (
+              <div key={task.id} className="p-3 bg-white/70 rounded-[16px] shadow-sm border border-white/30">
+                <p className="font-medium text-sm text-gray-800">{task.title}</p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Badge className={`text-[10px] rounded-full px-2 ${statusConfig[task.status]?.pill || statusConfig.not_started.pill}`}>
+                    {statusConfig[task.status]?.label || task.status}
+                  </Badge>
+                  {task.due_date && (
+                    <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                      <Calendar className="w-2.5 h-2.5" /> {formatDate(task.due_date)}
+                    </span>
+                  )}
+                </div>
               </div>
-              <Badge variant="secondary" className="text-xs">{items.length}</Badge>
-            </h3>
-            {!isCollapsed && (
-            <div className="space-y-2">
-              <AnimatePresence>
-                {items.map(rec => (
-                  <motion.div
-                    key={rec.id}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="bg-white rounded-lg border p-3 shadow-sm"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-medium text-sm">{rec.client_name}</div>
-                        <div className="text-xs text-gray-500">{rec.account_name} - {rec.period}</div>
-                        {rec.due_date && (
-                          <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> {formatDate(rec.due_date)}
-                          </div>
-                        )}
-                        {rec.notes && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{rec.notes}</p>}
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-6 w-6"><MoreHorizontal className="w-3 h-3" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-white">
-                          {Object.entries(statusConfig).filter(([k]) => k !== rec.status).map(([key, cfg]) => (
-                            <DropdownMenuItem key={key} onClick={() => onStatusChange(rec.id, key)}>
-                              העבר ל"{cfg.label}"
-                            </DropdownMenuItem>
-                          ))}
-                          <DropdownMenuItem onClick={() => onEdit(rec)}>
-                            <Pencil className="w-3 h-3 ml-1" /> ערוך
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              {items.length === 0 && (
-                <p className="text-xs text-gray-400 text-center py-4">אין משימות</p>
-              )}
-            </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+            ))
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
-// --- Edit Dialog ---
+// ─── Edit Dialog ────────────────────────────────────────────────
 function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSave }) {
   const [formData, setFormData] = useState({
     client_id: '', client_account_id: '', period: '',
@@ -405,7 +182,7 @@ function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSa
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="bg-white max-w-lg">
+      <DialogContent className="backdrop-blur-xl bg-white/80 border-white/30 rounded-[24px] max-w-lg">
         <DialogHeader>
           <DialogTitle>{reconciliation?.id ? 'עריכת התאמה' : 'הוספת התאמה חדשה'}</DialogTitle>
           <DialogDescription>פרטי התאמת חשבון</DialogDescription>
@@ -461,52 +238,55 @@ function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSa
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>ביטול</Button>
-          <Button onClick={handleSubmit}>שמור</Button>
+          <Button onClick={handleSubmit} className="bg-[#008291] hover:bg-[#006d7a] text-white">שמור</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-// --- Main Page ---
+// ─── Main Page ──────────────────────────────────────────────────
 export default function ReconciliationsPage() {
   const [reconciliations, setReconciliations] = useState([]);
   const [clients, setClients] = useState([]);
   const [allAccounts, setAllAccounts] = useState([]);
+  const [allTasks, setAllTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState([]);
   const [editingRec, setEditingRec] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('status_table');
+  const [drawerClient, setDrawerClient] = useState(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Sorting state
+  const [sort, setSort] = useState({ key: 'daysOverdue', dir: 'desc' });
+
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [recsData, clientsData, accountsData] = await Promise.all([
+      const [recsData, clientsData, accountsData, tasksData] = await Promise.all([
         AccountReconciliation.list(null, 500).catch(() => []),
         Client.list(null, 500).catch(() => []),
         ClientAccount.list(null, 2000).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
       ]);
       setReconciliations(recsData || []);
       setClients((clientsData || []).filter(c => c.status === 'active'));
       setAllAccounts(accountsData || []);
+      setAllTasks(tasksData || []);
     } catch (error) {
       console.error("Error loading data:", error);
     }
     setIsLoading(false);
   };
 
-  const handleStatusChange = async (id, status) => {
+  const handleUpdateAccount = async (accountId, updates) => {
     try {
-      await AccountReconciliation.update(id, { status });
+      await ClientAccount.update(accountId, updates);
       loadData();
     } catch (error) {
-      console.error("Error updating status:", error);
+      console.error("Error updating account:", error);
     }
   };
 
@@ -525,139 +305,255 @@ export default function ReconciliationsPage() {
     }
   };
 
-  const handleUpdateAccount = async (accountId, updates) => {
-    try {
-      await ClientAccount.update(accountId, updates);
-      loadData();
-    } catch (error) {
-      console.error("Error updating account:", error);
-    }
-  };
+  const handleSort = useCallback((key) => {
+    setSort(prev => ({
+      key,
+      dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc',
+    }));
+  }, []);
+
+  // Build client map
+  const clientMap = useMemo(() => {
+    const m = {};
+    clients.forEach(c => { m[c.id] = c; });
+    return m;
+  }, [clients]);
+
+  // Build enriched rows
+  const rows = useMemo(() => {
+    return allAccounts
+      .filter(acc => {
+        const client = clientMap[acc.client_id];
+        if (!client) return false;
+        if (acc.account_status === 'inactive') return false;
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase();
+          if (!client.name?.toLowerCase().includes(term) && !acc.account_name?.toLowerCase().includes(term)) return false;
+        }
+        return true;
+      })
+      .map(acc => {
+        const client = clientMap[acc.client_id];
+        const nextDate = acc.next_reconciliation_due || calcNextDate(acc.last_reconciliation_date, acc.reconciliation_frequency);
+        const daysOverdue = getDaysOverdue(nextDate);
+        const accountRecs = reconciliations
+          .filter(r => r.client_account_id === acc.id)
+          .sort((a, b) => (b.created_date || '').localeCompare(a.created_date || ''));
+        const latestRec = accountRecs[0];
+        const latestStatus = latestRec?.status || 'not_started';
+
+        return {
+          id: acc.id,
+          clientName: client.name,
+          client,
+          accountName: acc.account_name || acc.bank_name || '-',
+          accountType: acc.account_type,
+          frequency: acc.reconciliation_frequency,
+          lastDate: acc.last_reconciliation_date,
+          nextDate,
+          daysOverdue,
+          latestStatus,
+          latestRec,
+          account: acc,
+        };
+      });
+  }, [allAccounts, clientMap, reconciliations, searchTerm]);
+
+  // Sort rows
+  const sortedRows = useMemo(() => {
+    const sorted = [...rows];
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    sorted.sort((a, b) => {
+      switch (sort.key) {
+        case 'clientName': return dir * (a.clientName || '').localeCompare(b.clientName || '');
+        case 'accountName': return dir * (a.accountName || '').localeCompare(b.accountName || '');
+        case 'accountType': return dir * (a.accountType || '').localeCompare(b.accountType || '');
+        case 'frequency': return dir * ((frequencyMonths[a.frequency] || 1) - (frequencyMonths[b.frequency] || 1));
+        case 'lastDate': return dir * (a.lastDate || '').localeCompare(b.lastDate || '');
+        case 'nextDate': return dir * (a.nextDate || '').localeCompare(b.nextDate || '');
+        case 'daysOverdue': return dir * (a.daysOverdue - b.daysOverdue);
+        case 'latestStatus': return dir * (a.latestStatus || '').localeCompare(b.latestStatus || '');
+        default: return 0;
+      }
+    });
+    return sorted;
+  }, [rows, sort]);
 
   // Stats
-  const activeAccounts = allAccounts.filter(a => a.account_status !== 'inactive');
-  const overdueAccounts = activeAccounts.filter(acc => {
-    const nextDate = acc.next_reconciliation_due || calcNextDate(acc.last_reconciliation_date, acc.reconciliation_frequency);
-    return getDaysOverdue(nextDate) > 0;
-  });
-  const completedRecs = reconciliations.filter(r => r.status === 'completed').length;
-  const pendingRecs = reconciliations.filter(r => r.status !== 'completed').length;
+  const overdueCount = rows.filter(r => r.daysOverdue > 0).length;
+  const completedCount = rows.filter(r => r.latestStatus === 'completed').length;
+  const pendingCount = rows.filter(r => r.latestStatus !== 'completed').length;
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6 p-4 md:p-6 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]" dir="rtl">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-teal-100 rounded-full">
-            <BookCheck className="w-8 h-8 text-teal-700" />
+          <div className="p-3 rounded-full" style={{ backgroundColor: 'rgba(0,130,145,0.15)' }}>
+            <BookCheck className="w-8 h-8 text-[#008291]" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-800">התאמות חשבונות</h1>
-            <p className="text-gray-600">מעקב ובקרה על כל ההתאמות</p>
+            <p className="text-gray-500 text-sm">מעקב ובקרה על כל ההתאמות</p>
           </div>
         </div>
-        <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => { setEditingRec(null); setShowEditDialog(true); }}>
+        <Button className="bg-[#008291] hover:bg-[#006d7a] text-white rounded-[16px]" onClick={() => { setEditingRec(null); setShowEditDialog(true); }}>
           <Plus className="w-4 h-4 ml-2" />
           הוסף התאמה
         </Button>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards — glass style */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-slate-400">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{activeAccounts.length}</div>
-            <div className="text-xs text-gray-500">חשבונות פעילים</div>
-          </CardContent>
-        </Card>
-        <Card className={`border-l-4 ${overdueAccounts.length > 0 ? 'border-l-amber-500' : 'border-l-green-500'}`}>
-          <CardContent className="p-4">
-            <div className={`text-2xl font-bold ${overdueAccounts.length > 0 ? 'text-amber-600' : 'text-green-600'}`}>{overdueAccounts.length}</div>
-            <div className="text-xs text-gray-500">בפיגור</div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-blue-400">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{pendingRecs}</div>
-            <div className="text-xs text-gray-500">משימות פתוחות</div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-green-400">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{completedRecs}</div>
-            <div className="text-xs text-gray-500">הושלמו</div>
-          </CardContent>
-        </Card>
+        <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
+          <div className="text-2xl font-bold text-[#008291]">{rows.length}</div>
+          <div className="text-xs text-gray-500">חשבונות פעילים</div>
+        </div>
+        <div className={`p-4 rounded-[20px] backdrop-blur-sm border shadow-sm ${overdueCount > 0 ? 'bg-amber-50/60 border-amber-200' : 'bg-white/50 border-white/30'}`}>
+          <div className={`text-2xl font-bold ${overdueCount > 0 ? 'text-amber-600' : 'text-[#008291]'}`}>{overdueCount}</div>
+          <div className="text-xs text-gray-500">בפיגור</div>
+        </div>
+        <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
+          <div className="text-2xl font-bold text-sky-600">{pendingCount}</div>
+          <div className="text-xs text-gray-500">פתוחות</div>
+        </div>
+        <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
+          <div className="text-2xl font-bold text-teal-600">{completedCount}</div>
+          <div className="text-xs text-gray-500">הושלמו</div>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="status_table">טבלת מצב</TabsTrigger>
-          <TabsTrigger value="tasks_kanban">משימות התאמה</TabsTrigger>
-        </TabsList>
+      {/* Overdue Alert */}
+      {overdueCount > 0 && (
+        <div className="bg-amber-50/60 backdrop-blur-sm border border-amber-200 rounded-[16px] p-3 flex items-center gap-2 text-amber-800">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <span className="font-medium text-sm">{overdueCount} חשבונות בפיגור התאמה!</span>
+        </div>
+      )}
 
-        <TabsContent value="status_table">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col md:flex-row gap-3 items-center">
-                <div className="relative flex-1">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input placeholder="חיפוש לקוח או חשבון..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pr-10" />
-                </div>
-                <MultiStatusFilter
-                  options={[
-                    { value: 'overdue', label: 'בפיגור בלבד' },
-                    ...Object.entries(statusConfig).map(([k, c]) => ({
-                      value: k, label: c.label,
-                    })),
-                  ]}
-                  selected={statusFilter}
-                  onChange={setStatusFilter}
-                  label="סנן סטטוס"
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="animate-pulse space-y-3">
-                  {Array(5).fill(0).map((_, i) => <div key={i} className="h-12 bg-gray-100 rounded" />)}
-                </div>
-              ) : (
-                <StatusTable
-                  accounts={allAccounts}
-                  clients={clients}
-                  reconciliations={reconciliations}
-                  onUpdateAccount={handleUpdateAccount}
-                  searchTerm={searchTerm}
-                  statusFilter={statusFilter}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+      {/* Search Bar */}
+      <div className="relative max-w-md">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          placeholder="חיפוש לקוח או חשבון..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pr-10 rounded-[16px] bg-white/60 border-white/30 backdrop-blur-sm"
+        />
+      </div>
 
-        <TabsContent value="tasks_kanban">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">משימות התאמה</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="animate-pulse grid grid-cols-4 gap-4">
-                  {Array(4).fill(0).map((_, i) => <div key={i} className="h-48 bg-gray-100 rounded" />)}
-                </div>
+      {/* Dynamic Sortable Table */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader className="w-8 h-8 animate-spin text-[#008291]" />
+          <span className="mr-3 text-gray-500">טוען נתונים...</span>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-[20px] border border-white/30 shadow-sm">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr>
+                <SortableHeader label="לקוח" sortKey="clientName" currentSort={sort} onSort={handleSort} />
+                <SortableHeader label="חשבון" sortKey="accountName" currentSort={sort} onSort={handleSort} />
+                <SortableHeader label="סוג" sortKey="accountType" currentSort={sort} onSort={handleSort} />
+                <SortableHeader label="תדירות" sortKey="frequency" currentSort={sort} onSort={handleSort} />
+                <SortableHeader label="התאמה אחרונה" sortKey="lastDate" currentSort={sort} onSort={handleSort} />
+                <SortableHeader label="התאמה הבאה" sortKey="nextDate" currentSort={sort} onSort={handleSort} />
+                <SortableHeader label="פיגור (ימים)" sortKey="daysOverdue" currentSort={sort} onSort={handleSort} />
+                <SortableHeader label="סטטוס" sortKey="latestStatus" currentSort={sort} onSort={handleSort} />
+                <th className="p-3 font-bold text-white text-center" style={{ backgroundColor: '#008291' }}>פעולה</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedRows.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="text-center py-12 text-gray-400">
+                    <BookCheck className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                    אין חשבונות להצגה
+                  </td>
+                </tr>
               ) : (
-                <TasksKanban
-                  reconciliations={reconciliations}
-                  onStatusChange={handleStatusChange}
-                  onEdit={(rec) => { setEditingRec(rec); setShowEditDialog(true); }}
-                />
+                sortedRows.map((row, idx) => {
+                  const AccIcon = accountTypeIcons[row.accountType] || Landmark;
+                  const stsCfg = statusConfig[row.latestStatus] || statusConfig.not_started;
+                  return (
+                    <motion.tr
+                      key={row.id}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.02 }}
+                      className={`border-b border-white/20 cursor-pointer transition-colors ${
+                        row.daysOverdue > 0 ? 'bg-amber-50/30 hover:bg-amber-50/60' : 'bg-white/20 hover:bg-white/40'
+                      }`}
+                      onClick={() => setDrawerClient(row.client)}
+                    >
+                      <td className="p-3 font-medium text-gray-800">{row.clientName}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1.5">
+                          <AccIcon className="w-4 h-4 text-[#008291]" />
+                          <span className="text-gray-700">{row.accountName}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-center">
+                        <Badge className="text-[10px] rounded-full bg-white/50 text-gray-600 border border-white/30">
+                          {accountTypeLabels[row.accountType] || row.accountType}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-center">
+                        <Badge className="text-[10px] rounded-full bg-white/50 text-gray-600 border border-white/30">
+                          {frequencyLabels[row.frequency] || 'חודשי'}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-center text-xs text-gray-600">{formatDate(row.lastDate)}</td>
+                      <td className="p-3 text-center text-xs text-gray-600">{formatDate(row.nextDate)}</td>
+                      <td className="p-3 text-center">
+                        {row.daysOverdue > 0 ? (
+                          <span className="text-xs font-bold text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded-full">
+                            {row.daysOverdue} ימים
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        <Badge className={`text-[10px] rounded-full px-2.5 py-0.5 ${stsCfg.pill}`}>
+                          {stsCfg.label}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-[10px] gap-1 rounded-full bg-white/50 border-white/30 hover:bg-teal-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const today = new Date().toISOString().split('T')[0];
+                            const newNext = calcNextDate(today, row.frequency);
+                            handleUpdateAccount(row.id, {
+                              last_reconciliation_date: today,
+                              next_reconciliation_due: newNext,
+                            });
+                          }}
+                        >
+                          <CheckCircle className="w-3 h-3 text-teal-600" /> סמן הושלם
+                        </Button>
+                      </td>
+                    </motion.tr>
+                  );
+                })
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Client Drawer */}
+      <ClientDrawer
+        client={drawerClient}
+        tasks={allTasks}
+        open={!!drawerClient}
+        onClose={() => setDrawerClient(null)}
+      />
 
       {/* Edit Dialog */}
       <ReconciliationEditDialog
