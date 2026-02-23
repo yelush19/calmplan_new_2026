@@ -236,17 +236,39 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const clickTimerRef = useRef(null); // kept for status-cycle cancel only
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: 'task'|'client', id, name }
 
-  // ── Pan & Zoom state ──
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  // ── Viewport Persistence Key ──
+  const VIEWPORT_KEY = 'calmplan_map_viewport';
+
+  // ── Pan & Zoom state — restore from localStorage on mount ──
+  const [pan, setPan] = useState(() => {
+    try {
+      const saved = localStorage.getItem(VIEWPORT_KEY);
+      if (saved) { const v = JSON.parse(saved); if (typeof v.x === 'number') return { x: v.x, y: v.y }; }
+    } catch {}
+    return { x: 0, y: 0 };
+  });
+  const [zoom, setZoom] = useState(() => {
+    try {
+      const saved = localStorage.getItem(VIEWPORT_KEY);
+      if (saved) { const v = JSON.parse(saved); if (typeof v.zoom === 'number') return v.zoom; }
+    } catch {}
+    return 1;
+  });
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoFitDone, setAutoFitDone] = useState(() => {
     try {
-      return !!localStorage.getItem(POSITIONS_STORAGE_KEY);
+      return !!localStorage.getItem(POSITIONS_STORAGE_KEY) || !!localStorage.getItem(VIEWPORT_KEY);
     } catch { return false; }
   });
+
+  // ── Viewport Persistence: save pan+zoom on every change ──
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEWPORT_KEY, JSON.stringify({ x: pan.x, y: pan.y, zoom }));
+    } catch {}
+  }, [pan.x, pan.y, zoom]);
 
   // ── Spacing slider (global distance multiplier) ──
   const [spacingFactor, setSpacingFactor] = useState(1.0);
@@ -316,7 +338,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     activeTasks.forEach(task => {
       const rawCat = task.category || 'אחר';
       let cat = CATEGORY_TO_DEPARTMENT[rawCat] || rawCat;
-      const clientName = task.client_name || 'ללא לקוח';
+      const clientName = task.client_name || 'אדמיניסטרציה';
       // No-client tasks → dedicated Admin branch (not scattered across categories)
       if (!task.client_name) cat = 'אדמיניסטרציה';
       if (!catClientMap[cat]) catClientMap[cat] = {};
@@ -599,11 +621,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, [layout.cx, layout.cy, manualPositions]);
 
   // ── Auto-Fit: compute zoom + pan to show all nodes ──
-  // Feature 6: Skip auto-fit entirely when user has saved positions
+  // Feature 6: Skip auto-fit entirely when user has saved positions or viewport
   const hasSavedPositions = Object.keys(manualPositions).length > 0;
+  const hasSavedViewport = (() => { try { return !!localStorage.getItem(VIEWPORT_KEY); } catch { return false; } })();
   useEffect(() => {
     if (autoFitDone || !layout.branchPositions.length) return;
-    if (hasSavedPositions) { setAutoFitDone(true); return; }
+    if (hasSavedPositions || hasSavedViewport) { setAutoFitDone(true); return; }
 
     // Compute bounding box of all nodes
     let minX = layout.cx, maxX = layout.cx, minY = layout.cy, maxY = layout.cy;
@@ -647,9 +670,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     setAutoFitDone(true);
   }, [layout, dimensions, autoFitDone]);
 
-  // Reset auto-fit when tasks change significantly — but NOT if user has saved positions
+  // Reset auto-fit when tasks change significantly — but NOT if user has saved positions/viewport
   useEffect(() => {
-    if (!hasSavedPositions) setAutoFitDone(false);
+    if (!hasSavedPositions && !hasSavedViewport) setAutoFitDone(false);
   }, [tasks.length, branches.length]);
 
   // Reset auto-fit + manual positions when spacing changes
@@ -657,6 +680,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     setAutoFitDone(false);
     setManualPositions({});
     localStorage.removeItem(POSITIONS_STORAGE_KEY);
+    localStorage.removeItem(VIEWPORT_KEY);
   }, [spacingFactor]);
 
   // ── Pan handlers ──
@@ -1013,12 +1037,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 return (
                   <motion.path
                     d={`M ${centerPos.x} ${centerPos.y} Q ${mx + px} ${my + py} ${branch.x} ${branch.y}`}
-                    stroke={branch.config.color}
+                    stroke="#008291"
                     strokeWidth={3}
                     strokeDasharray="8 4"
                     strokeLinecap="round"
                     fill="none"
-                    strokeOpacity={isSpotlit(branch.category) ? 0.5 : 0.08}
+                    strokeOpacity={isSpotlit(branch.category) ? 0.85 : 0.15}
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ duration: 0.6, ease: 'easeInOut' }}
@@ -1039,10 +1063,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   <motion.path
                     key={`sub-line-${sub.key}`}
                     d={`M ${branch.x} ${branch.y} Q ${smx + spx} ${smy + spy} ${sub.x} ${sub.y}`}
-                    stroke={branch.config.color}
-                    strokeWidth={2}
+                    stroke="#008291"
+                    strokeWidth={2.5}
                     fill="none"
-                    strokeOpacity={isSpotlit(branch.category) ? 0.45 : 0.08}
+                    strokeOpacity={isSpotlit(branch.category) ? 0.8 : 0.15}
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ duration: 0.4, delay: 0.2, ease: 'easeInOut' }}
@@ -1075,10 +1099,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   <motion.path
                     key={`line-${client.name}`}
                     d={`M ${startX} ${startY} Q ${smx + sPerpX} ${smy + sPerpY} ${client.x} ${client.y}`}
-                    stroke={branch.config.color}
-                    strokeWidth={2.2}
+                    stroke="#008291"
+                    strokeWidth={2.5}
                     fill="none"
-                    strokeOpacity={isSpotlit(branch.category) ? 0.55 : 0.08}
+                    strokeOpacity={isSpotlit(branch.category) ? 0.8 : 0.15}
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ duration: 0.5, delay: 0.3, ease: 'easeInOut' }}
@@ -1629,7 +1653,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
       {/* ── Client Task Drawer (Sheet) ── */}
       <Sheet open={!!drawerClient} onOpenChange={(open) => { if (!open) { setDrawerClient(null); setHighlightTaskId(null); } }}>
-        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col backdrop-blur-xl bg-white/60 border-l border-white/20 rounded-l-[32px]" dir="rtl">
+        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col border-l border-white/20 rounded-l-[32px]" dir="rtl" style={{ backgroundColor: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           {drawerClient && (() => {
             const clientTasks = tasks.filter(t => t.client_name === drawerClient.name);
             const activeTasks = clientTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');

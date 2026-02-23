@@ -461,111 +461,84 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
 }
 
 // ========================================
-// WEEK VIEW (Israeli work week Sun-Thu focus)
+// WEEK VIEW — compact 7-column CSS grid (like month, but with item pills)
 // ========================================
 function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, getItemContext, onItemClick, onMoveToNote }) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const MAX_VISIBLE = 4;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="space-y-2"
     >
-      {days.map((day, idx) => {
-        const items = getItemsForDate(day);
-        const isTodayDate = isToday(day);
-        const isWeekend = idx >= 5; // Friday & Saturday
-        const capacity = Math.min(items.length / 5 * 100, 100);
+      <Card className="shadow-sm overflow-hidden backdrop-blur-xl bg-white/45 border-white/20 rounded-[32px]">
+        <CardContent className="p-0" style={{ height: 'calc(100vh - 280px)', display: 'flex', flexDirection: 'column' }}>
+          {/* Day headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }} className="border-b border-white/20 shrink-0">
+            {DAYS_HE.map((d, i) => (
+              <div key={i} className="p-2 text-center text-xs font-semibold text-[#008291] bg-white/30">
+                {d}
+              </div>
+            ))}
+          </div>
+          {/* 7 day columns */}
+          <div className="flex-1 min-h-0" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+            {days.map((day, idx) => {
+              const items = getItemsForDate(day);
+              const isTodayDate = isToday(day);
+              const isWeekend = idx >= 5;
 
-        return (
-          <Card
-            key={idx}
-            className={`shadow-sm transition-all ${
-              isTodayDate ? 'border-emerald-300 bg-emerald-50/30 ring-1 ring-emerald-200' :
-              isWeekend ? 'opacity-60 bg-gray-50/50' :
-              'hover:shadow-md'
-            }`}
-          >
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onSelectDate(day)}
-                    className={`flex items-center gap-2 transition-colors ${isTodayDate ? 'text-emerald-700' : 'text-gray-700 hover:text-emerald-600'}`}
-                  >
-                    <span className={`text-lg font-bold ${
-                      isTodayDate ? 'w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm' : ''
+              return (
+                <button
+                  key={idx}
+                  onClick={() => onSelectDate(day)}
+                  className={`flex flex-col p-1.5 border-l border-white/10 first:border-l-0 transition-colors overflow-hidden ${
+                    isTodayDate ? 'bg-emerald-100/50 backdrop-blur-sm' :
+                    isWeekend ? 'bg-white/10 opacity-60' :
+                    'bg-white/20 hover:bg-white/40 backdrop-blur-sm'
+                  }`}
+                >
+                  {/* Day number */}
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-sm font-bold ${
+                      isTodayDate ? 'w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs' :
+                      'text-gray-700'
                     }`}>
                       {format(day, 'd')}
                     </span>
-                    <span className="text-sm font-semibold">{DAYS_FULL[idx]}</span>
-                  </button>
-                  {isTodayDate && (
-                    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">היום</Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* Capacity bar */}
-                  {items.length > 0 && !isWeekend && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-gray-400">{items.length}/5</span>
-                      <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    {items.length > 0 && (
+                      <span className="text-[9px] text-gray-400 font-medium">{items.length}</span>
+                    )}
+                  </div>
+                  {/* Item pills */}
+                  <div className="flex-1 space-y-0.5 overflow-hidden">
+                    {items.slice(0, MAX_VISIBLE).map((item) => {
+                      const ctx = getItemContext(item);
+                      const config = contextConfig[ctx] || contextConfig.personal;
+                      return (
                         <div
-                          className={`h-full rounded-full transition-all ${
-                            capacity > 80 ? 'bg-amber-500' : capacity > 50 ? 'bg-sky-400' : 'bg-emerald-400'
-                          }`}
-                          style={{ width: `${capacity}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {items.length > 0 ? (
-                <div className="space-y-1.5">
-                  {items.map((item) => {
-                    const ctx = getItemContext(item);
-                    const config = contextConfig[ctx] || contextConfig.personal;
-                    return (
-                      <div
-                        key={item.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg ${config.bg} ${config.border} border cursor-pointer hover:shadow-sm transition-all group`}
-                        onClick={() => onItemClick(item)}
-                      >
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
-                        <span className={`flex-1 text-sm font-medium ${config.text} truncate`}>{item.title}</span>
-                        {item.priority && (
-                          <div className={`w-2 h-2 rounded-full ${priorityDots[item.priority] || priorityDots.low}`} />
-                        )}
-                        {item.client_name && (
-                          <span className="text-xs text-gray-500 hidden md:inline">{item.client_name}</span>
-                        )}
-                        {item.itemType === 'task' && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/50 transition-all"
-                            title="העבר לפתק"
-                          >
-                            <Pin className="w-3.5 h-3.5 text-amber-600" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400 text-center py-2">
-                  {isWeekend ? '🌿' : 'יום פנוי'}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+                          key={item.id}
+                          className={`flex items-center gap-1 px-1 py-0.5 rounded text-[10px] leading-tight truncate ${config.bg} ${config.text} cursor-pointer`}
+                          onClick={(e) => { e.stopPropagation(); onItemClick(item); }}
+                        >
+                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${config.dot}`} />
+                          <span className="truncate">{item.title}</span>
+                        </div>
+                      );
+                    })}
+                    {items.length > MAX_VISIBLE && (
+                      <span className="text-[9px] text-gray-400 block text-center">+{items.length - MAX_VISIBLE}</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }

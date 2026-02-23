@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useMotionValue } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -151,37 +151,39 @@ const getNextDeadline = () => {
   return { daysLeft, label: 'דיווח מע"מ' };
 };
 
-// ─── Draggable FAB component (state-based localStorage persist) ─────────
+// ─── Draggable FAB component (useMotionValue localStorage persist) ─────────
 function DraggableFab({ storageKey, children, className = '' }) {
   const fullKey = `calmplan_drag_${storageKey}`;
   const didDrag = React.useRef(false);
 
-  const readPos = () => {
+  // Read saved position once on mount via useMemo (stable across re-renders)
+  const initPos = React.useMemo(() => {
     try {
       const s = localStorage.getItem(fullKey);
-      if (s) return JSON.parse(s);
+      if (s) { const p = JSON.parse(s); if (typeof p.x === 'number') return p; }
     } catch { /* ignore */ }
     return { x: 0, y: 0 };
-  };
+  }, [fullKey]);
 
-  const [pos, setPos] = useState(readPos);
+  // MotionValues: Framer Motion's drag mutates these directly — no React state needed
+  const mx = useMotionValue(initPos.x);
+  const my = useMotionValue(initPos.y);
 
   const handleDragStart = useCallback(() => { didDrag.current = false; }, []);
   const handleDrag = useCallback(() => { didDrag.current = true; }, []);
-  const handleDragEnd = useCallback((_, info) => {
-    const dist = Math.abs(info.offset.x) + Math.abs(info.offset.y);
-    if (dist < 3) { didDrag.current = false; return; }
+  const handleDragEnd = useCallback(() => {
+    const cx = mx.get();
+    const cy = my.get();
     didDrag.current = true;
-    setPos(prev => {
-      const next = { x: prev.x + info.offset.x, y: prev.y + info.offset.y };
-      try { localStorage.setItem(fullKey, JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
-  }, [fullKey]);
+    try { localStorage.setItem(fullKey, JSON.stringify({ x: cx, y: cy })); } catch { /* ignore */ }
+  }, [fullKey, mx, my]);
+
   const handleReset = useCallback(() => {
-    setPos({ x: 0, y: 0 });
+    mx.set(0);
+    my.set(0);
     try { localStorage.removeItem(fullKey); } catch { /* ignore */ }
-  }, [fullKey]);
+  }, [fullKey, mx, my]);
+
   const guardClick = useCallback((handler) => (e) => {
     if (didDrag.current) { didDrag.current = false; e.preventDefault(); e.stopPropagation(); return; }
     handler?.(e);
@@ -195,7 +197,7 @@ function DraggableFab({ storageKey, children, className = '' }) {
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
-      style={{ x: pos.x, y: pos.y }}
+      style={{ x: mx, y: my }}
       onDoubleClick={handleReset}
       className={`cursor-grab active:cursor-grabbing ${className}`}
     >
@@ -419,7 +421,7 @@ function LayoutInner({ children }) {
                   )}
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[380px] backdrop-blur-xl bg-white/60 border-l border-white/20 rounded-l-[32px]">
+              <SheetContent side="right" className="w-[380px] border-l border-white/20 rounded-l-[32px]" style={{ backgroundColor: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
                 <SheetHeader>
                   <SheetTitle className="text-purple-700 flex items-center gap-2">
                     <Hourglass className="w-5 h-5" /> משימות ממתינות לטיפול
@@ -790,7 +792,7 @@ function LayoutInner({ children }) {
       <CompletionFeedback />
 
       {/* Floating Add Event FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_add_event" className="fixed bottom-5 left-[8.5rem] z-[100]">
+      <DraggableFab storageKey="fab_add_event" className="fixed bottom-5 left-[8.5rem] z-[9999]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => navigate(createPageUrl("NewEvent")))}
@@ -803,7 +805,7 @@ function LayoutInner({ children }) {
       </DraggableFab>
 
       {/* Floating Quick Add Task FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_quick_add" className="fixed bottom-5 left-[4.5rem] z-[100]">
+      <DraggableFab storageKey="fab_quick_add" className="fixed bottom-5 left-[4.5rem] z-[9999]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => setShowQuickAdd(true))}
@@ -816,7 +818,7 @@ function LayoutInner({ children }) {
       </DraggableFab>
 
       {/* Floating Sticky Notes FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_notes" className="fixed bottom-5 left-5 z-[100]">
+      <DraggableFab storageKey="fab_notes" className="fixed bottom-5 left-5 z-[9999]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => setNotesOpen(!notesOpen))}

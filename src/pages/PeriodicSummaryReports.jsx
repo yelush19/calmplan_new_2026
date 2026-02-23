@@ -144,7 +144,7 @@ function EditReportDialog({ report, open, onClose, onSave }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px] bg-white">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
             {report.client_name}
@@ -257,7 +257,7 @@ function BulkStatusDialog({ open, onClose, selectedCount, columns, onApply }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[420px] bg-white">
+      <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
           <DialogTitle>עדכון סטטוס מרוכז</DialogTitle>
           <DialogDescription>
@@ -789,7 +789,7 @@ export default function PeriodicSummaryReports() {
 
       {/* Add Client Dialog */}
       <Dialog open={showAddClientDialog} onOpenChange={(open) => { setShowAddClientDialog(open); if (!open) setAddClientSearch(''); }}>
-        <DialogContent className="sm:max-w-[420px] bg-white">
+        <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle>הוספת לקוח לדיווחים מרכזים</DialogTitle>
             <DialogDescription>בחר לקוח להוספה לטבלת דיווחי 126 לשנת {selectedYear}</DialogDescription>
