@@ -254,22 +254,26 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── Draggable nodes: manual position overrides ──
   // Key: "category-clientName", Value: { x, y }
-  // Feature 6: Load saved positions from localStorage on mount
+  // PERSISTENCE: Hydrate from localStorage on mount
+  const POSITIONS_KEY = 'calmplan-map-positions';
   const [manualPositions, setManualPositions] = useState(() => {
     try {
-      const saved = localStorage.getItem('mindmap-node-positions');
+      const saved = localStorage.getItem(POSITIONS_KEY);
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
   const draggingNode = useRef(null); // { key, startX, startY, origX, origY }
   const nodeHasDragged = useRef(false);
 
-  // ── Feature 6: Persist node positions to localStorage ──
+  // PERSISTENCE: Save to localStorage on EVERY position change (immediate)
+  const savePositionsToStorage = useCallback((positions) => {
+    try { localStorage.setItem(POSITIONS_KEY, JSON.stringify(positions)); } catch {}
+  }, []);
   useEffect(() => {
     if (Object.keys(manualPositions).length > 0) {
-      localStorage.setItem('mindmap-node-positions', JSON.stringify(manualPositions));
+      savePositionsToStorage(manualPositions);
     }
-  }, [manualPositions]);
+  }, [manualPositions, savePositionsToStorage]);
 
   // ── Crisis Mode ──
   const [crisisMode, setCrisisMode] = useState(() => localStorage.getItem('mindmap-crisis-mode') === 'true');
@@ -634,7 +638,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   useEffect(() => {
     setAutoFitDone(false);
     setManualPositions({});
-    localStorage.removeItem('mindmap-node-positions');
+    localStorage.removeItem(POSITIONS_KEY);
   }, [spacingFactor]);
 
   // ── Pan handlers ──
@@ -684,14 +688,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   const handlePointerUp = useCallback((e) => {
     if (draggingNode.current) {
-      // Node drag ended without going through node's own onPointerUp
+      // onNodeDragStop: save positions immediately
       draggingNode.current = null;
       nodeHasDragged.current = false;
+      setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
       return;
     }
     setIsPanning(false);
     if (e.currentTarget) e.currentTarget.style.cursor = 'grab';
-  }, []);
+  }, [savePositionsToStorage]);
 
   // ── Node drag handlers ──
   const handleNodePointerDown = useCallback((e, nodeKey, currentX, currentY) => {
@@ -711,17 +716,21 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const wasDragging = nodeHasDragged.current;
     draggingNode.current = null;
     nodeHasDragged.current = false;
-    // If it was a click (not drag), delay drawer open so double-click can cancel it
-    if (!wasDragging) {
-      if (nodeClickTimerRef.current) clearTimeout(nodeClickTimerRef.current);
-      nodeClickTimerRef.current = setTimeout(() => {
-        setDrawerClient(client);
-        setEditPopover(null);
-        setShowDrawerCompleted(false);
-        nodeClickTimerRef.current = null;
-      }, 250);
+    if (wasDragging) {
+      // onNodeDragStop: save positions immediately to localStorage
+      setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
+      return;
     }
-  }, []);
+    // Single click (not drag): delay drawer open so double-click can cancel it
+    if (nodeClickTimerRef.current) clearTimeout(nodeClickTimerRef.current);
+    nodeClickTimerRef.current = setTimeout(() => {
+      if (renamingNodeKey) return; // don't open drawer while renaming
+      setDrawerClient(client);
+      setEditPopover(null);
+      setShowDrawerCompleted(false);
+      nodeClickTimerRef.current = null;
+    }, 250);
+  }, [savePositionsToStorage, renamingNodeKey]);
 
   // ── Folder drag handlers ──
   const handleFolderPointerDown = useCallback((e, folderKey, currentX, currentY) => {
@@ -1223,6 +1232,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     // Feature 7: Double-click on node label → inline rename
                     if (e.target.closest('[data-node-rename-input]')) return;
                     e.stopPropagation();
+                    e.preventDefault();
                     // Cancel the pending single-click (drawer open)
                     if (nodeClickTimerRef.current) { clearTimeout(nodeClickTimerRef.current); nodeClickTimerRef.current = null; }
                     setRenamingNodeKey(nodeKey);
@@ -1477,7 +1487,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {/* Reset manual positions button */}
         {Object.keys(manualPositions).length > 0 && (
           <button
-            onClick={(e) => { e.stopPropagation(); setManualPositions({}); setAutoFitDone(false); localStorage.removeItem('mindmap-node-positions'); }}
+            onClick={(e) => { e.stopPropagation(); setManualPositions({}); setAutoFitDone(false); localStorage.removeItem(POSITIONS_KEY); }}
             className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200 text-gray-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all text-[10px] font-medium"
             title="איפוס מיקומים ידניים"
           >
@@ -1702,7 +1712,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               return (
                 <React.Fragment key={task.id}>
                   <div
-                    className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group ${isHighlighted ? 'bg-blue-100 border-blue-300 shadow-[inset_0_0_0_2px_#3B82F6]' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group ${isHighlighted ? 'animate-pulse bg-cyan-100 border-2 border-cyan-500' : ''}`}
                     style={{ paddingRight: `${16 + depth * 20}px` }}
                     onClick={(e) => {
                       // Delayed single-click: opens modal ONLY if not cancelled by double-click
@@ -1754,6 +1764,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                           className="text-sm text-gray-800 truncate"
                           onDoubleClick={(e) => {
                             e.stopPropagation();
+                            e.preventDefault();
                             // Cancel the pending single-click (modal open)
                             if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null; }
                             setInlineEditTaskId(task.id);
