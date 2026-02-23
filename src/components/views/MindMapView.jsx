@@ -683,8 +683,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const wasDragging = nodeHasDragged.current;
     draggingNode.current = null;
     nodeHasDragged.current = false;
-    if (!wasDragging) handleBranchClick(category);
-  }, [handleBranchClick]);
+    if (!wasDragging) {
+      setSelectedBranch(prev => prev === category ? null : category);
+    }
+  }, []);
 
   const toggleClientFocus = useCallback((clientName, e) => {
     e?.stopPropagation();
