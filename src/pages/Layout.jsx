@@ -420,7 +420,7 @@ function LayoutInner({ children }) {
                   )}
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[380px]">
+              <SheetContent side="right" className="w-[380px] backdrop-blur-xl bg-white/60 border-l border-white/20 rounded-l-[32px]">
                 <SheetHeader>
                   <SheetTitle className="text-purple-700 flex items-center gap-2">
                     <Hourglass className="w-5 h-5" /> משימות ממתינות לטיפול
@@ -461,8 +461,8 @@ function LayoutInner({ children }) {
         <div className="flex-1 flex flex-row">
           {/* === SIDEBAR === */}
           {!focusMode && (
-            <aside className={`hidden md:flex flex-col border-l transition-all duration-300 shrink-0
-              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`} style={{ backgroundColor: '#f6fdfd', borderColor: '#00acc133' }}>
+            <aside className={`hidden md:flex flex-col border-l border-white/20 backdrop-blur-xl transition-all duration-300 shrink-0
+              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`} style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
 
               {/* Toggle button */}
               <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -510,7 +510,7 @@ function LayoutInner({ children }) {
                 <div className="flex flex-col flex-1 overflow-y-auto">
                   {/* Mantra — very top of sidebar */}
                   <div className="px-3 pt-3 pb-1 text-center">
-                    <p className="font-bold text-[#008291] mb-4">✨ עשוי טוב יותר ממושלם</p>
+                    <p className="block font-black text-xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
                   </div>
 
                   {/* Work Mode Selector */}
@@ -634,7 +634,7 @@ function LayoutInner({ children }) {
           {isMobileMenuOpen && (
             <>
               <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)} />
-              <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 bg-white shadow-xl overflow-y-auto">
+              <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 backdrop-blur-xl bg-white/60 border-l border-white/20 shadow-xl overflow-y-auto">
                 <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                   <Link to={createPageUrl("Home")} className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
@@ -647,7 +647,7 @@ function LayoutInner({ children }) {
                   </Button>
                 </div>
                 <div className="px-4 pt-2 pb-0 text-center">
-                  <p className="font-bold text-[#008291] mb-4">✨ עשוי טוב יותר ממושלם</p>
+                  <p className="block font-black text-xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
                 </div>
 
                 {/* Mobile search */}
