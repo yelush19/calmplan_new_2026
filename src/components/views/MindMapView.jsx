@@ -1022,88 +1022,47 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             </filter>
           </defs>
 
-          {/* ── Connection Lines ── */}
+          {/* ── Connection Lines — straight, center-to-center ── */}
           {layout.branchPositions.map((branch) => (
             <g key={`lines-${branch.category}`}>
-              {/* Center → Folder: curved bezier connector */}
-              {(() => {
-                const dx = branch.x - centerPos.x;
-                const dy = branch.y - centerPos.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                const curve = Math.min(35, len * 0.15);
-                const mx = (centerPos.x + branch.x) / 2;
-                const my = (centerPos.y + branch.y) / 2;
-                const px = len > 0 ? (-dy / len) * curve : 0;
-                const py = len > 0 ? (dx / len) * curve : 0;
-                return (
-                  <motion.path
-                    d={`M ${centerPos.x} ${centerPos.y} Q ${mx + px} ${my + py} ${branch.x} ${branch.y}`}
-                    stroke="#008291"
-                    strokeWidth={3}
-                    strokeDasharray="8 4"
-                    strokeLinecap="round"
-                    fill="none"
-                    strokeOpacity={isSpotlit(branch.category) ? 0.85 : 0.15}
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.6, ease: 'easeInOut' }}
-                  />
-                );
-              })()}
-              {/* Folder → Sub-folders: curved bezier */}
-              {branch.subFolderPositions?.map((sub) => {
-                const sdx = sub.x - branch.x;
-                const sdy = sub.y - branch.y;
-                const slen = Math.sqrt(sdx * sdx + sdy * sdy);
-                const sCurve = Math.min(15, slen * 0.12);
-                const smx = (branch.x + sub.x) / 2;
-                const smy = (branch.y + sub.y) / 2;
-                const spx = slen > 0 ? (-sdy / slen) * sCurve : 0;
-                const spy = slen > 0 ? (sdx / slen) * sCurve : 0;
-                return (
-                  <motion.path
-                    key={`sub-line-${sub.key}`}
-                    d={`M ${branch.x} ${branch.y} Q ${smx + spx} ${smy + spy} ${sub.x} ${sub.y}`}
-                    stroke="#008291"
-                    strokeWidth={2.5}
-                    fill="none"
-                    strokeOpacity={isSpotlit(branch.category) ? 0.8 : 0.15}
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.4, delay: 0.2, ease: 'easeInOut' }}
-                  />
-                );
-              })}
-              {/* Folder → Client leaves: curved bezier paths */}
+              {/* Center → Folder */}
+              <motion.path
+                d={`M ${centerPos.x} ${centerPos.y} L ${branch.x} ${branch.y}`}
+                stroke="#008291"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                fill="none"
+                strokeOpacity={isSpotlit(branch.category) ? 0.8 : 0.12}
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.6, ease: 'easeInOut' }}
+              />
+              {/* Folder → Sub-folders */}
+              {branch.subFolderPositions?.map((sub) => (
+                <motion.path
+                  key={`sub-line-${sub.key}`}
+                  d={`M ${branch.x} ${branch.y} L ${sub.x} ${sub.y}`}
+                  stroke="#008291"
+                  strokeWidth={2}
+                  fill="none"
+                  strokeOpacity={isSpotlit(branch.category) ? 0.7 : 0.12}
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 0.4, delay: 0.2, ease: 'easeInOut' }}
+                />
+              ))}
+              {/* Folder → Client nodes */}
               {branch.clientPositions.map((client) => {
-                const mx = (branch.x + client.x) / 2;
-                const my = (branch.y + client.y) / 2;
-                const cdx = client.x - branch.x;
-                const cdy = client.y - branch.y;
-                const len = Math.sqrt(cdx * cdx + cdy * cdy);
-                const curveAmt = Math.min(20, len * 0.15);
-                const perpX = len > 0 ? (-cdy / len) * curveAmt : 0;
-                const perpY = len > 0 ? (cdx / len) * curveAmt : 0;
-                // If client has a sub-folder parent, draw from sub-folder instead
                 const startX = client._subFolderX || branch.x;
                 const startY = client._subFolderY || branch.y;
-                const smx = (startX + client.x) / 2;
-                const smy = (startY + client.y) / 2;
-                const sdx = client.x - startX;
-                const sdy = client.y - startY;
-                const slen = Math.sqrt(sdx * sdx + sdy * sdy);
-                const sCurve = Math.min(20, slen * 0.15);
-                const sPerpX = slen > 0 ? (-sdy / slen) * sCurve : 0;
-                const sPerpY = slen > 0 ? (sdx / slen) * sCurve : 0;
-
                 return (
                   <motion.path
                     key={`line-${client.name}`}
-                    d={`M ${startX} ${startY} Q ${smx + sPerpX} ${smy + sPerpY} ${client.x} ${client.y}`}
+                    d={`M ${startX} ${startY} L ${client.x} ${client.y}`}
                     stroke="#008291"
-                    strokeWidth={2.5}
+                    strokeWidth={2}
                     fill="none"
-                    strokeOpacity={isSpotlit(branch.category) ? 0.8 : 0.15}
+                    strokeOpacity={isSpotlit(branch.category) ? 0.7 : 0.12}
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ duration: 0.5, delay: 0.3, ease: 'easeInOut' }}
