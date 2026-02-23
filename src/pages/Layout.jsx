@@ -213,7 +213,7 @@ function LayoutInner({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
@@ -357,7 +357,7 @@ function LayoutInner({ children }) {
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
       <div className="h-screen flex flex-col">
         {/* === TOP HEADER BAR === */}
-        <header className="border-b border-gray-200 px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-sm" style={{ backgroundColor: '#f8fdfd' }}>
+        <header className="border-b border-white/20 px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-sm backdrop-blur-xl" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}>
           {/* Right: Logo + Mobile menu */}
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="md:hidden h-7 w-7" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -466,7 +466,7 @@ function LayoutInner({ children }) {
 
               {/* Toggle button */}
               <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="self-start p-2 m-2 rounded-lg hover:bg-gray-100 transition-colors">
+                className="self-start p-2 m-2 rounded-[32px] hover:bg-white/50 transition-colors">
                 {sidebarCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
 
@@ -479,7 +479,7 @@ function LayoutInner({ children }) {
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setWorkMode(mode.key)}
-                          className={`p-2 rounded-lg transition-all ${workMode === mode.key ? mode.color + ' shadow-md' : 'text-gray-400 hover:bg-gray-100'}`}
+                          className={`p-2 rounded-[32px] transition-all ${workMode === mode.key ? mode.color + ' shadow-md' : 'text-gray-400 hover:bg-white/50'}`}
                         >
                           <mode.icon className="w-4 h-4" />
                         </button>
@@ -487,7 +487,7 @@ function LayoutInner({ children }) {
                       <TooltipContent side="left">{mode.label}</TooltipContent>
                     </Tooltip>
                   ))}
-                  <div className="w-8 border-b border-gray-200 my-1" />
+                  <div className="w-8 border-b border-white/20 my-1" />
                   {/* Nav icons */}
                   {Object.entries(sidebarSections)
                     .filter(([key]) => getVisibleSections(workMode).includes(key))
@@ -495,8 +495,8 @@ function LayoutInner({ children }) {
                       section.items.map(item => (
                         <Tooltip key={item.href}>
                           <TooltipTrigger asChild>
-                            <Link to={item.href} className={`p-2 rounded-lg transition-colors
-                              ${isActive(item.href) ? 'bg-emerald-50 text-emerald-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'}`}>
+                            <Link to={item.href} className={`p-2 rounded-[32px] transition-colors
+                              ${isActive(item.href) ? 'bg-white/60 text-[#008291]' : 'text-gray-400 hover:bg-white/50 hover:text-gray-600'}`}>
                               <item.icon className="w-5 h-5" />
                             </Link>
                           </TooltipTrigger>
@@ -510,18 +510,18 @@ function LayoutInner({ children }) {
                 <div className="flex flex-col flex-1 overflow-y-auto">
                   {/* Mantra — very top of sidebar */}
                   <div className="px-3 pt-3 pb-1 text-center">
-                    <p className="block font-black text-xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
+                    <p className="block font-black text-2xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
                   </div>
 
                   {/* Work Mode Selector */}
-                  <div className="px-3 py-2 border-b border-gray-200">
+                  <div className="px-3 py-2 border-b border-white/20">
                     <div className="flex gap-1">
                       {WORK_MODES.map(mode => (
                         <button
                           key={mode.key}
                           onClick={() => setWorkMode(mode.key)}
-                          className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all
-                            ${workMode === mode.key ? mode.color + ' shadow-md scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                          className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-[32px] text-xs font-medium transition-all
+                            ${workMode === mode.key ? mode.color + ' shadow-md scale-105' : 'bg-white/40 text-gray-600 hover:bg-white/60'}`}
                         >
                           <mode.icon className="w-4 h-4" />
                           {mode.label}
@@ -532,15 +532,15 @@ function LayoutInner({ children }) {
 
                   {/* Pinned Clients (pin-only, no auto-recent) */}
                   {pinnedClients.length > 0 && (
-                    <div className="px-3 py-2 border-b border-gray-200">
-                      <h3 className="text-xs font-bold text-gray-400 mb-2 flex items-center gap-1">
+                    <div className="px-3 py-2 border-b border-white/20">
+                      <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
                         <Star className="w-3 h-3" /> גישה מהירה
                       </h3>
                       {pinnedClients.slice(0, 8).map(client => (
                         <Link key={client.id}
                           to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm text-gray-600 hover:bg-white/50 transition-colors">
                           <div className="w-2 h-2 rounded-full bg-emerald-400" />
                           {client.name}
                         </Link>
@@ -550,8 +550,8 @@ function LayoutInner({ children }) {
 
                   {/* "התפריט שלי" — user-customized menu */}
                   {myMenu.length > 0 && (
-                    <div className="px-3 py-2 border-b border-gray-200">
-                      <h3 className="text-xs font-bold text-gray-400 mb-2 flex items-center gap-1">
+                    <div className="px-3 py-2 border-b border-white/20">
+                      <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
                         <Star className="w-3 h-3 text-amber-400" /> התפריט שלי
                       </h3>
                       {myMenu.map(href => {
@@ -564,8 +564,8 @@ function LayoutInner({ children }) {
                         return (
                           <Link key={href} to={href}
                             onClick={() => setIsMobileMenuOpen(false)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors
-                              ${isActive(href) ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm transition-colors
+                              ${isActive(href) ? 'bg-white/60 text-[#008291] font-medium shadow-sm' : 'text-gray-600 hover:bg-white/50'}`}>
                             <menuItem.icon className="w-3.5 h-3.5" />
                             {menuItem.name}
                           </Link>
@@ -576,19 +576,19 @@ function LayoutInner({ children }) {
 
                   {/* Daily Focus — top 5 tasks due today */}
                   {dailyFocusTasks.length > 0 && (
-                    <div className="px-3 py-2 border-b border-gray-200">
-                      <h3 className="text-xs font-bold text-gray-400 mb-2 flex items-center gap-1">
+                    <div className="px-3 py-2 border-b border-white/20">
+                      <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
                         <Target className="w-3 h-3 text-rose-400" /> מיקוד יומי
                       </h3>
                       {dailyFocusTasks.map(task => (
                         <Link key={task.id}
                           to={createPageUrl("Tasks")}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors">
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-xs text-gray-600 hover:bg-white/50 transition-colors">
                           <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
                           <span className="truncate flex-1">{task.title}</span>
                           {task.client_name && (
-                            <span className="text-[9px] bg-gray-100 text-gray-500 px-1 rounded shrink-0">{task.client_name}</span>
+                            <span className="text-[9px] bg-white/60 text-gray-500 px-1.5 rounded-full shrink-0">{task.client_name}</span>
                           )}
                         </Link>
                       ))}
@@ -601,21 +601,21 @@ function LayoutInner({ children }) {
                       .filter(([key]) => getVisibleSections(workMode).includes(key))
                       .map(([key, section]) => (
                         <div key={key} className="mb-3">
-                          <h3 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1 px-3">
+                          <h3 className="text-xs font-bold text-[#008291]/60 uppercase mb-2 flex items-center gap-1 px-3">
                             <section.icon className="w-3 h-3" /> {section.title}
                           </h3>
                           {section.items.map(item => (
                             <div key={item.href} className="flex items-center group">
                               <Link to={item.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
-                                  ${isActive(item.href) ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
+                                  ${isActive(item.href) ? 'bg-white/60 text-[#008291] font-medium shadow-sm' : 'text-gray-600 hover:bg-white/50'}`}>
                                 <item.icon className="w-4 h-4" />
                                 {item.name}
                               </Link>
                               <button
                                 onClick={() => toggleMyMenu(item.href)}
-                                className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-amber-50"
+                                className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/50"
                                 title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
                               >
                                 <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
@@ -647,7 +647,7 @@ function LayoutInner({ children }) {
                   </Button>
                 </div>
                 <div className="px-4 pt-2 pb-0 text-center">
-                  <p className="block font-black text-xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
+                  <p className="block font-black text-2xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
                 </div>
 
                 {/* Mobile search */}
@@ -656,14 +656,14 @@ function LayoutInner({ children }) {
                 </div>
 
                 {/* Work Mode Selector */}
-                <div className="px-3 py-2 border-b border-gray-200">
+                <div className="px-3 py-2 border-b border-white/20">
                   <div className="flex gap-1">
                     {WORK_MODES.map(mode => (
                       <button
                         key={mode.key}
                         onClick={() => setWorkMode(mode.key)}
-                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all
-                          ${workMode === mode.key ? mode.color + ' shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-[32px] text-xs font-medium transition-all
+                          ${workMode === mode.key ? mode.color + ' shadow-md' : 'bg-white/40 text-gray-600 hover:bg-white/60'}`}
                       >
                         <mode.icon className="w-4 h-4" />
                         {mode.label}
@@ -678,14 +678,14 @@ function LayoutInner({ children }) {
                     .filter(([key]) => getVisibleSections(workMode).includes(key))
                     .map(([key, section]) => (
                       <div key={key} className="mb-3">
-                        <h3 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1 px-3">
+                        <h3 className="text-xs font-bold text-[#008291]/60 uppercase mb-2 flex items-center gap-1 px-3">
                           <section.icon className="w-3 h-3" /> {section.title}
                         </h3>
                         {section.items.map(item => (
                           <Link key={item.href} to={item.href}
                             onClick={() => setIsMobileMenuOpen(false)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
-                              ${isActive(item.href) ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
+                            className={`flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
+                              ${isActive(item.href) ? 'bg-white/60 text-[#008291] font-medium shadow-sm' : 'text-gray-600 hover:bg-white/50'}`}>
                             <item.icon className="w-4 h-4" />
                             {item.name}
                           </Link>
@@ -701,7 +701,7 @@ function LayoutInner({ children }) {
           <main className="flex-1 flex flex-col min-h-0">
             {/* Desktop sub-header (page title + back) */}
             {!isHomePage && (
-              <div className="hidden md:block p-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
+              <div className="hidden md:block p-4 border-b border-white/20 bg-gradient-to-r from-primary/5 to-secondary/5">
                 <div className="max-w-full mx-auto flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-foreground">{findPageTitle()}</h2>
                   <Link to={createPageUrl("Home")}>
@@ -716,7 +716,7 @@ function LayoutInner({ children }) {
 
             {/* Mobile sub-header */}
             {!isHomePage && (
-              <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-border">
+              <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-white/20">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold text-foreground">{findPageTitle()}</h2>
                   <Link to={createPageUrl("Home")}>
@@ -758,8 +758,8 @@ function LayoutInner({ children }) {
                           <Upload className="w-7 h-7 text-orange-600" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-800">ייבוא גיבוי JSON</h3>
-                          <p className="text-sm text-gray-500">לחצי כאן לבחור קובץ גיבוי (.json) ולשחזר את כל הנתונים</p>
+                          <h3 className="text-lg font-bold text-foreground">ייבוא גיבוי JSON</h3>
+                          <p className="text-sm text-muted-foreground">לחצי כאן לבחור קובץ גיבוי (.json) ולשחזר את כל הנתונים</p>
                         </div>
                         <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6">
                           <Upload className="w-4 h-4 ml-2" />

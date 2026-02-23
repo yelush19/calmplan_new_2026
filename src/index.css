@@ -178,3 +178,128 @@ button:focus-visible {
     font-weight: 600;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   CalmPlan ZERO_PANIC Global Glassmorphism Theme
+   Applied to ALL pages — no gray coffins, no flat cards.
+   Every surface is a floating, frosted-glass panel.
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Kill ALL bg-gray-xx everywhere — override with glass */
+  .bg-gray-50, .bg-gray-100, .bg-gray-200 {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+  .bg-gray-300, .bg-gray-400, .bg-gray-500,
+  .bg-gray-600, .bg-gray-700, .bg-gray-800, .bg-gray-900 {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    color: var(--neutral-dark) !important;
+  }
+
+  /* Global border softening — no more harsh borders */
+  .border-gray-100, .border-gray-200, .border-gray-300 {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* Scrollbar styling for glass aesthetic */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 130, 145, 0.2);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 130, 145, 0.4);
+  }
+
+  /* CalmPlan glass card utility — use on any container */
+  .calm-glass {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 32px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  /* CalmPlan floating bubble — for list items */
+  .calm-bubble {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 24px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+  }
+  .calm-bubble:hover {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 12px rgba(0, 172, 193, 0.15);
+  }
+
+  /* Cyan glow for active/selected states */
+  .calm-glow {
+    box-shadow: 0 0 15px rgba(0, 172, 193, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  .calm-glow-active {
+    box-shadow: 0 0 20px rgba(0, 172, 193, 0.35), 0 2px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Override any remaining flat white backgrounds in page content areas */
+  .bg-white {
+    background-color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  /* Ensure all divide lines use glass borders */
+  .divide-gray-100 > * + *,
+  .divide-gray-200 > * + *,
+  .divide-gray-300 > * + * {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* Hover states — gray hover → glass hover */
+  .hover\:bg-gray-50:hover,
+  .hover\:bg-gray-100:hover,
+  .hover\:bg-gray-200:hover {
+    background-color: rgba(255, 255, 255, 0.6) !important;
+  }
+
+  /* Text-gray softening — keep readable but less harsh */
+  .text-gray-400, .text-gray-500 {
+    color: rgba(45, 52, 54, 0.5) !important;
+  }
+  .text-gray-600, .text-gray-700 {
+    color: rgba(45, 52, 54, 0.75) !important;
+  }
+  .text-gray-800, .text-gray-900 {
+    color: var(--neutral-dark) !important;
+  }
+
+  /* Ring focus states — use CalmPlan cyan */
+  .ring-gray-200, .ring-gray-300 {
+    --tw-ring-color: rgba(0, 172, 193, 0.3) !important;
+  }
+
+  /* All muted backgrounds get glass treatment */
+  .bg-muted {
+    background-color: rgba(255, 255, 255, 0.35) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  /* Slate grays too */
+  .bg-slate-50, .bg-slate-100, .bg-slate-200 {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+  .border-slate-100, .border-slate-200, .border-slate-300 {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+}
