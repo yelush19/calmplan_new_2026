@@ -296,7 +296,7 @@ export default function TaxReportsDashboardPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-5">
+    <div className="space-y-6 p-4 md:p-6 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]">
       {/* Nav */}
       <div className="flex items-center gap-2 flex-wrap">
         <Link to={createPageUrl('ClientsDashboard')}>
