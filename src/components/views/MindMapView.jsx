@@ -211,6 +211,9 @@ const MIN_ZOOM = 0.15;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.12;
 
+// ─── Persistence Key (outside component to avoid re-creation) ──
+const POSITIONS_STORAGE_KEY = 'mindmap-positions';
+
 // ─── Main Component ─────────────────────────────────────────────
 export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDismiss, focusMode = false, onEditTask, onTaskCreated, focusTaskId = null, focusClientName = null, onFocusHandled }) {
   const navigate = useNavigate();
@@ -255,10 +258,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // ── Draggable nodes: manual position overrides ──
   // Key: "category-clientName", Value: { x, y }
   // PERSISTENCE: Hydrate from localStorage on mount
-  const POSITIONS_KEY = 'calmplan-map-positions';
   const [manualPositions, setManualPositions] = useState(() => {
     try {
-      const saved = localStorage.getItem(POSITIONS_KEY);
+      const saved = localStorage.getItem(POSITIONS_STORAGE_KEY);
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
@@ -267,7 +269,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // PERSISTENCE: Save to localStorage on EVERY position change (immediate)
   const savePositionsToStorage = useCallback((positions) => {
-    try { localStorage.setItem(POSITIONS_KEY, JSON.stringify(positions)); } catch {}
+    try { localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(positions)); } catch {}
   }, []);
   useEffect(() => {
     if (Object.keys(manualPositions).length > 0) {
@@ -385,8 +387,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
     if (focusTaskId) {
       setHighlightTaskId(String(focusTaskId));
-      // Auto-clear highlight after 5s
-      setTimeout(() => setHighlightTaskId(null), 5000);
     }
     onFocusHandled?.();
   }, [focusClientName, focusTaskId, clientNodes]);
@@ -638,7 +638,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   useEffect(() => {
     setAutoFitDone(false);
     setManualPositions({});
-    localStorage.removeItem(POSITIONS_KEY);
+    localStorage.removeItem(POSITIONS_STORAGE_KEY);
   }, [spacingFactor]);
 
   // ── Pan handlers ──
@@ -1487,7 +1487,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {/* Reset manual positions button */}
         {Object.keys(manualPositions).length > 0 && (
           <button
-            onClick={(e) => { e.stopPropagation(); setManualPositions({}); setAutoFitDone(false); localStorage.removeItem(POSITIONS_KEY); }}
+            onClick={(e) => { e.stopPropagation(); setManualPositions({}); setAutoFitDone(false); localStorage.removeItem(POSITIONS_STORAGE_KEY); }}
             className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200 text-gray-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all text-[10px] font-medium"
             title="איפוס מיקומים ידניים"
           >
@@ -1604,7 +1604,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       </AnimatePresence>
 
       {/* ── Client Task Drawer (Sheet) ── */}
-      <Sheet open={!!drawerClient} onOpenChange={(open) => { if (!open) setDrawerClient(null); }}>
+      <Sheet open={!!drawerClient} onOpenChange={(open) => { if (!open) { setDrawerClient(null); setHighlightTaskId(null); } }}>
         <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col" dir="rtl">
           {drawerClient && (() => {
             const clientTasks = tasks.filter(t => t.client_name === drawerClient.name);
@@ -1648,12 +1648,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             const STATUS_CYCLE = ['not_started', 'in_progress', 'completed'];
             const cycleStatus = async (task, e) => {
               e.stopPropagation();
+              e.preventDefault();
               const currentIdx = STATUS_CYCLE.indexOf(task.status);
-              const nextStatus = STATUS_CYCLE[(currentIdx + 1) % STATUS_CYCLE.length];
+              // If status not in cycle list, start from not_started
+              const nextStatus = STATUS_CYCLE[(Math.max(currentIdx, 0) + 1) % STATUS_CYCLE.length];
               try {
                 await Task.update(task.id, { status: nextStatus });
-                onTaskCreated?.(); // refresh
                 toast.success(`${statusConfig[nextStatus]?.text || nextStatus}`);
+                // Force refresh after successful save
+                if (onTaskCreated) onTaskCreated();
               } catch (err) {
                 toast.error('שגיאה בעדכון סטטוס');
               }
@@ -1712,7 +1715,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               return (
                 <React.Fragment key={task.id}>
                   <div
-                    className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group ${isHighlighted ? 'animate-pulse bg-cyan-100 border-2 border-cyan-500' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group ${isHighlighted ? 'bg-cyan-100 ring-2 ring-cyan-500 rounded-lg' : ''}`}
                     style={{ paddingRight: `${16 + depth * 20}px` }}
                     onClick={(e) => {
                       // Delayed single-click: opens modal ONLY if not cancelled by double-click

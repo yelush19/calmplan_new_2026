@@ -461,8 +461,8 @@ function LayoutInner({ children }) {
         <div className="flex-1 flex flex-row">
           {/* === SIDEBAR === */}
           {!focusMode && (
-            <aside className={`hidden md:flex flex-col border-l border-gray-200 bg-white transition-all duration-300 shrink-0
-              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`}>
+            <aside className={`hidden md:flex flex-col border-l transition-all duration-300 shrink-0
+              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`} style={{ backgroundColor: '#f6fdfd', borderColor: '#00acc133' }}>
 
               {/* Toggle button */}
               <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
