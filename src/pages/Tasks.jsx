@@ -163,12 +163,19 @@ export default function TasksPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Feature 8: Deep-link from search — focus specific task/client in MindMap
+  const [focusTaskId, setFocusTaskId] = useState(null);
+  const [focusClientName, setFocusClientName] = useState(null);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const statusParam = params.get('status');
     const priorityParam = params.get('priority');
     const tabParam = params.get('tab');
     const contextParam = params.get('context');
+    const viewParam = params.get('view');
+    const taskIdParam = params.get('taskId');
+    const clientNameParam = params.get('clientName');
     if (statusParam) setStatusFilter([statusParam]);
     if (priorityParam) setPriorityFilter(priorityParam);
     if (tabParam && ['prev_month', 'curr_month', 'active', 'completed', 'all'].includes(tabParam)) {
@@ -177,6 +184,10 @@ export default function TasksPage() {
     if (contextParam && ['work', 'home'].includes(contextParam)) {
       setContextFilter(contextParam);
     }
+    // Feature 8: Auto-switch to mindmap and focus on client/task
+    if (viewParam === 'mindmap') setView('mindmap');
+    if (taskIdParam) setFocusTaskId(taskIdParam);
+    if (clientNameParam) setFocusClientName(decodeURIComponent(clientNameParam));
   }, [location.search]);
 
   useEffect(() => { loadTasks(); loadClients(); }, []);
@@ -872,7 +883,7 @@ export default function TasksPage() {
           </Card>
         )
       ) : view === 'mindmap' ? (
-        <MindMapView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} onTaskCreated={loadTasks} />
+        <MindMapView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} onTaskCreated={loadTasks} focusTaskId={focusTaskId} focusClientName={focusClientName} onFocusHandled={() => { setFocusTaskId(null); setFocusClientName(null); }} />
       ) : view === 'gantt' ? (
         <GanttView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} />
       ) : (

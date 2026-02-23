@@ -29,7 +29,13 @@ const ENTITY_CONFIGS = [
     color: 'text-blue-600',
     entity: Task,
     searchFields: ['title', 'description', 'client_name'],
-    getUrl: () => createPageUrl('Tasks'),
+    getUrl: (item) => {
+      // Feature 8: Deep-link to task's client drawer in MindMap
+      const params = new URLSearchParams({ view: 'mindmap' });
+      if (item.id) params.set('taskId', item.id);
+      if (item.client_name) params.set('clientName', item.client_name);
+      return `${createPageUrl('Tasks')}?${params.toString()}`;
+    },
     getSubtitle: (item) => [item.client_name, item.category, item.status === 'completed' ? 'הושלם' : item.status === 'in_progress' ? 'בעבודה' : ''].filter(Boolean).join(' | '),
   },
   {

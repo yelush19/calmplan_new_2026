@@ -369,6 +369,7 @@ function LayoutInner({ children }) {
               </div>
               <h1 className="text-sm font-bold text-foreground hidden md:block">CalmPlan</h1>
             </Link>
+            <span className="hidden md:block text-[11px] italic text-gray-400 mr-2">עשוי &gt; מושלם</span>
           </div>
 
           {/* Center: Global Search */}
@@ -523,6 +524,7 @@ function LayoutInner({ children }) {
                         </button>
                       ))}
                     </div>
+                    <p className="text-[11px] italic text-gray-400 text-center mt-2">✨ עשוי טוב יותר ממושלם</p>
                   </div>
 
                   {/* Pinned Clients (pin-only, no auto-recent) */}
@@ -641,6 +643,7 @@ function LayoutInner({ children }) {
                     <X className="w-5 h-5" />
                   </Button>
                 </div>
+                <p className="px-4 text-[11px] italic text-gray-400">✨ עשוי טוב יותר ממושלם</p>
 
                 {/* Mobile search */}
                 <div className="px-4 py-2">

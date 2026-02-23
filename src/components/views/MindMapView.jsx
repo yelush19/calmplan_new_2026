@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star } from 'lucide-react';
+import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star, Trash2, Check } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Task } from '@/api/entities';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -211,7 +212,7 @@ const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.12;
 
 // ─── Main Component ─────────────────────────────────────────────
-export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDismiss, focusMode = false, onEditTask, onTaskCreated }) {
+export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDismiss, focusMode = false, onEditTask, onTaskCreated, focusTaskId = null, focusClientName = null, onFocusHandled }) {
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -226,6 +227,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [showDrawerCompleted, setShowDrawerCompleted] = useState(false);
   const [focusedClients, setFocusedClients] = useState(new Set());
 
+  // ── Feature 3: Drawer Inline Editing ──
+  const [inlineEditTaskId, setInlineEditTaskId] = useState(null);
+  const [inlineEditValue, setInlineEditValue] = useState('');
+
+  // ── Feature 5: Quick Sub-Task inline input ──
+  const [inlineSubTaskParentId, setInlineSubTaskParentId] = useState(null);
+  const [inlineSubTaskTitle, setInlineSubTaskTitle] = useState('');
+
+  // ── Feature 7: Node Rename on Map ──
+  const [renamingNodeKey, setRenamingNodeKey] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: 'task'|'client', id, name }
+
   // ── Pan & Zoom state ──
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -239,13 +253,29 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── Draggable nodes: manual position overrides ──
   // Key: "category-clientName", Value: { x, y }
-  const [manualPositions, setManualPositions] = useState({});
+  // Feature 6: Load saved positions from localStorage on mount
+  const [manualPositions, setManualPositions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mindmap-node-positions');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const draggingNode = useRef(null); // { key, startX, startY, origX, origY }
   const nodeHasDragged = useRef(false);
+
+  // ── Feature 6: Persist node positions to localStorage ──
+  useEffect(() => {
+    if (Object.keys(manualPositions).length > 0) {
+      localStorage.setItem('mindmap-node-positions', JSON.stringify(manualPositions));
+    }
+  }, [manualPositions]);
 
   // ── Crisis Mode ──
   const [crisisMode, setCrisisMode] = useState(() => localStorage.getItem('mindmap-crisis-mode') === 'true');
   useEffect(() => { localStorage.setItem('mindmap-crisis-mode', String(crisisMode)); }, [crisisMode]);
+
+  // ── Feature 8: Auto-open drawer from search deep-link ──
+  const [highlightTaskId, setHighlightTaskId] = useState(null);
 
   // Measure container
   useEffect(() => {
@@ -336,6 +366,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     return { branches, clientNodes, centerLabel };
   }, [tasks, clients, crisisMode]);
+
+  // ── Feature 8: Auto-open drawer from search deep-link ──
+  useEffect(() => {
+    if (!focusClientName || !clientNodes || clientNodes.length === 0) return;
+    const clientNode = clientNodes.find(c => c.name === focusClientName);
+    if (clientNode) {
+      setDrawerClient(clientNode);
+      setShowDrawerCompleted(false);
+    }
+    if (focusTaskId) setHighlightTaskId(focusTaskId);
+    onFocusHandled?.();
+  }, [focusClientName, focusTaskId, clientNodes]);
 
   // ── Layout Calculation: Container-Aware + Complexity + ADHD Focus + Collision Detection ──
   const layout = useMemo(() => {
@@ -581,6 +623,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   useEffect(() => {
     setAutoFitDone(false);
     setManualPositions({});
+    localStorage.removeItem('mindmap-node-positions');
   }, [spacingFactor]);
 
   // ── Pan handlers ──
@@ -778,7 +821,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // ── Handlers ──
   const handleClientDoubleClick = useCallback((client) => {
     if (client.clientId) {
-      navigate(createPageUrl('ClientManagement') + `?client=${client.clientId}`);
+      navigate(createPageUrl('ClientManagement') + `?clientId=${client.clientId}`);
     } else {
       navigate(createPageUrl('Tasks') + `?search=${encodeURIComponent(client.name)}`);
     }
@@ -1160,23 +1203,82 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
                   onPointerDown={(e) => handleNodePointerDown(e, nodeKey, client.x, client.y)}
                   onPointerUp={(e) => handleNodePointerUp(e, client)}
-                  onDoubleClick={() => handleClientDoubleClick(client)}
-                  title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''}${isWaitingOnClient ? ' [ממתין ללקוח]' : ''} - גרור להזיז · לחיצה לעריכה`}
+                  onDoubleClick={(e) => {
+                    // Feature 7: Double-click on node label → inline rename
+                    if (e.target.closest('[data-node-rename-input]')) return;
+                    e.stopPropagation();
+                    setRenamingNodeKey(nodeKey);
+                    setRenameValue(client.topTask?.title || '');
+                  }}
+                  title={`${client.name} (${client.tierIcon} ${client.tierLabel})${isGhost ? ' [חסר תאריך]' : ''}${isWaitingOnClient ? ' [ממתין ללקוח]' : ''} - גרור להזיז · לחיצה כפולה לעריכה`}
                 >
-                  {/* Client display name (nickname || name) */}
-                  <span
-                    className="font-bold leading-tight text-center px-2 truncate w-full"
+                  {/* Feature 7: Hover delete button */}
+                  <button
+                    className="absolute -bottom-1.5 -left-1.5 flex items-center justify-center rounded-full pointer-events-auto opacity-0 hover:!opacity-100 group-hover:opacity-70 transition-opacity"
                     style={{
-                      fontSize: finalH < 45 ? '10px' : finalH < 55 ? '11px' : '12px',
-                      textShadow: isGhost ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
-                      maxWidth: finalW - 12,
+                      width: 18,
+                      height: 18,
+                      backgroundColor: 'rgba(255,255,255,0.95)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      border: '1px solid rgba(0,0,0,0.1)',
+                      display: isHovered ? 'flex' : 'none',
                     }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // If client has a single topTask, offer to delete it; otherwise warn
+                      if (client.topTask) {
+                        setDeleteConfirm({ type: 'task', id: client.topTask.id, name: client.topTask.title });
+                      } else {
+                        toast.info('אין משימה פעילה למחיקה');
+                      }
+                    }}
+                    title="מחק משימה"
                   >
-                    {isFrozen && <span title="קפוא - כל המשימות נדחו" style={{ marginInlineEnd: '3px' }}>🧊</span>}
-                    {!isFrozen && procrastinatedCount > 0 && <span title={`${procrastinatedCount} משימות נדחו יותר מ-3 פעמים`} style={{ marginInlineEnd: '3px' }}>🐌</span>}
-                    {isWaitingOnClient && <span title="ממתין ללקוח" style={{ marginInlineEnd: '3px' }}>⏳</span>}
-                    {client.displayName}
-                  </span>
+                    <Trash2 className="w-2.5 h-2.5 text-gray-500 hover:text-red-500" />
+                  </button>
+
+                  {/* Client display name (nickname || name) */}
+                  {renamingNodeKey === nodeKey ? (
+                    <input
+                      data-node-rename-input
+                      autoFocus
+                      className="font-bold leading-tight text-center bg-white/90 text-gray-800 border border-blue-300 rounded px-1 py-0.5 outline-none focus:ring-2 focus:ring-blue-200 w-[90%]"
+                      style={{ fontSize: finalH < 45 ? '10px' : finalH < 55 ? '11px' : '12px' }}
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={async () => {
+                        const trimmed = renameValue.trim();
+                        if (trimmed && client.topTask && trimmed !== client.topTask.title) {
+                          try {
+                            await Task.update(client.topTask.id, { title: trimmed });
+                            onTaskCreated?.();
+                            toast.success('שם עודכן');
+                          } catch { toast.error('שגיאה בעדכון'); }
+                        }
+                        setRenamingNodeKey(null);
+                      }}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') e.target.blur();
+                        if (e.key === 'Escape') setRenamingNodeKey(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span
+                      className="font-bold leading-tight text-center px-2 truncate w-full"
+                      style={{
+                        fontSize: finalH < 45 ? '10px' : finalH < 55 ? '11px' : '12px',
+                        textShadow: isGhost ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
+                        maxWidth: finalW - 12,
+                      }}
+                    >
+                      {isFrozen && <span title="קפוא - כל המשימות נדחו" style={{ marginInlineEnd: '3px' }}>🧊</span>}
+                      {!isFrozen && procrastinatedCount > 0 && <span title={`${procrastinatedCount} משימות נדחו יותר מ-3 פעמים`} style={{ marginInlineEnd: '3px' }}>🐌</span>}
+                      {isWaitingOnClient && <span title="ממתין ללקוח" style={{ marginInlineEnd: '3px' }}>⏳</span>}
+                      {client.displayName}
+                    </span>
+                  )}
 
                   {/* Top task title */}
                   {truncatedTask && (
@@ -1357,7 +1459,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {/* Reset manual positions button */}
         {Object.keys(manualPositions).length > 0 && (
           <button
-            onClick={(e) => { e.stopPropagation(); setManualPositions({}); setAutoFitDone(false); }}
+            onClick={(e) => { e.stopPropagation(); setManualPositions({}); setAutoFitDone(false); localStorage.removeItem('mindmap-node-positions'); }}
             className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200 text-gray-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all text-[10px] font-medium"
             title="איפוס מיקומים ידניים"
           >
@@ -1514,20 +1616,122 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               return groups.length > 0 ? groups : null;
             })() : null;
 
+            // ── Feature 4: Status cycling logic ──
+            const STATUS_CYCLE = ['not_started', 'in_progress', 'completed'];
+            const cycleStatus = async (task, e) => {
+              e.stopPropagation();
+              const currentIdx = STATUS_CYCLE.indexOf(task.status);
+              const nextStatus = STATUS_CYCLE[(currentIdx + 1) % STATUS_CYCLE.length];
+              try {
+                await Task.update(task.id, { status: nextStatus });
+                onTaskCreated?.(); // refresh
+                toast.success(`${statusConfig[nextStatus]?.text || nextStatus}`);
+              } catch (err) {
+                toast.error('שגיאה בעדכון סטטוס');
+              }
+            };
+
+            // ── Feature 3: Inline title save ──
+            const saveInlineTitle = async (task) => {
+              const trimmed = inlineEditValue.trim();
+              if (!trimmed || trimmed === task.title) {
+                setInlineEditTaskId(null);
+                return;
+              }
+              try {
+                await Task.update(task.id, { title: trimmed });
+                onTaskCreated?.();
+                toast.success('שם עודכן');
+              } catch (err) {
+                toast.error('שגיאה בעדכון שם');
+              }
+              setInlineEditTaskId(null);
+            };
+
+            // ── Feature 5: Inline sub-task create ──
+            const createInlineSubTask = async (parentTask) => {
+              const trimmed = inlineSubTaskTitle.trim();
+              if (!trimmed) { setInlineSubTaskParentId(null); return; }
+              try {
+                await Task.create({
+                  title: trimmed,
+                  parent_id: parentTask.id,
+                  client_name: drawerClient.name,
+                  category: parentTask.category || 'אחר',
+                  status: 'not_started',
+                });
+                setInlineSubTaskTitle('');
+                setInlineSubTaskParentId(null);
+                onTaskCreated?.();
+                toast.success('תת-משימה נוספה');
+              } catch (err) {
+                toast.error('שגיאה בהוספת תת-משימה');
+              }
+            };
+
             const renderTask = (task, depth = 0) => {
               const sts = statusConfig[task.status] || statusConfig.not_started;
               const children = childMap[task.id] || [];
+              const isEditing = inlineEditTaskId === task.id;
+              const isSubTaskInputOpen = inlineSubTaskParentId === task.id;
+              const isHighlighted = highlightTaskId === task.id; // Feature 8
+
+              // Feature 4: Status dot color classes for cycling
+              const statusDotStyle = task.status === 'completed'
+                ? 'bg-emerald-500' : task.status === 'in_progress'
+                ? 'bg-sky-500' : 'bg-slate-400';
+
               return (
                 <React.Fragment key={task.id}>
                   <div
-                    className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group"
+                    className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 group ${isHighlighted ? 'bg-blue-50 ring-2 ring-blue-300 ring-inset' : ''}`}
                     style={{ paddingRight: `${16 + depth * 20}px` }}
-                    onClick={() => onEditTask?.(task)}
+                    onClick={() => !isEditing && onEditTask?.(task)}
                   >
                     {depth > 0 && <GitBranchPlus className="w-3 h-3 text-violet-400 shrink-0" />}
-                    <div className={`w-2 h-2 rounded-full shrink-0 ${sts.dot}`} />
+
+                    {/* Feature 4: Clickable status toggle */}
+                    <button
+                      onClick={(e) => cycleStatus(task, e)}
+                      className={`w-3.5 h-3.5 rounded-full shrink-0 border-2 transition-all hover:scale-125 flex items-center justify-center ${
+                        task.status === 'completed' ? 'bg-emerald-500 border-emerald-500' :
+                        task.status === 'in_progress' ? 'bg-sky-500 border-sky-500' :
+                        'bg-white border-slate-300 hover:border-sky-400'
+                      }`}
+                      title={`סטטוס: ${sts.text} — לחץ לשנות`}
+                    >
+                      {task.status === 'completed' && <Check className="w-2 h-2 text-white" />}
+                      {task.status === 'in_progress' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </button>
+
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-800 truncate">{task.title}</p>
+                      {/* Feature 3: Inline editing on double-click */}
+                      {isEditing ? (
+                        <input
+                          autoFocus
+                          className="text-sm text-gray-800 bg-white border border-blue-300 rounded px-1.5 py-0.5 w-full outline-none focus:ring-2 focus:ring-blue-200"
+                          value={inlineEditValue}
+                          onChange={(e) => setInlineEditValue(e.target.value)}
+                          onBlur={() => saveInlineTitle(task)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveInlineTitle(task);
+                            if (e.key === 'Escape') setInlineEditTaskId(null);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <p
+                          className="text-sm text-gray-800 truncate"
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            setInlineEditTaskId(task.id);
+                            setInlineEditValue(task.title);
+                          }}
+                          title="לחיצה כפולה לעריכת שם"
+                        >
+                          {task.title}
+                        </p>
+                      )}
                       {task.due_date && (
                         <p className="text-[10px] text-gray-400">{format(new Date(task.due_date), 'd/M', { locale: he })}</p>
                       )}
@@ -1538,10 +1742,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         {(task.reschedule_count || 0) > 5 ? '🧊 קפוא' : `🐌 ×${task.reschedule_count}`}
                       </span>
                     )}
+                    {/* Feature 5: Add sub-task button → opens inline input instead of modal */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setDrawerSubTaskParent(task);
+                        setInlineSubTaskParentId(prev => prev === task.id ? null : task.id);
+                        setInlineSubTaskTitle('');
                       }}
                       className="p-1 rounded hover:bg-emerald-50 text-gray-300 hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-all shrink-0"
                       title="הוסף תת-משימה"
@@ -1549,6 +1755,38 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   </div>
+
+                  {/* Feature 5: Inline sub-task input */}
+                  {isSubTaskInputOpen && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50/50 border-b border-emerald-100" style={{ paddingRight: `${36 + depth * 20}px` }}>
+                      <GitBranchPlus className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <input
+                        autoFocus
+                        placeholder="שם תת-משימה..."
+                        className="flex-1 text-sm bg-white border border-emerald-300 rounded px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-200"
+                        value={inlineSubTaskTitle}
+                        onChange={(e) => setInlineSubTaskTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') createInlineSubTask(task);
+                          if (e.key === 'Escape') { setInlineSubTaskParentId(null); setInlineSubTaskTitle(''); }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <button
+                        onClick={() => createInlineSubTask(task)}
+                        className="px-2 py-1 rounded bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors"
+                      >
+                        הוסף
+                      </button>
+                      <button
+                        onClick={() => { setInlineSubTaskParentId(null); setInlineSubTaskTitle(''); }}
+                        className="p-1 rounded hover:bg-gray-100 text-gray-400"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+
                   {children.filter(c => c.status !== 'completed' && c.status !== 'not_relevant').map(child => renderTask(child, depth + 1))}
                 </React.Fragment>
               );
@@ -1635,7 +1873,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                             className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 opacity-50"
                             onClick={() => onEditTask?.(task)}
                           >
-                            <div className={`w-2 h-2 rounded-full shrink-0 ${sts.dot}`} />
+                            <button
+                              onClick={(e) => cycleStatus(task, e)}
+                              className="w-3.5 h-3.5 rounded-full shrink-0 border-2 bg-emerald-500 border-emerald-500 flex items-center justify-center transition-all hover:scale-125"
+                              title="לחץ להחזיר לטרם התחיל"
+                            >
+                              <Check className="w-2 h-2 text-white" />
+                            </button>
                             <p className="text-xs text-gray-400 flex-1 truncate line-through">{task.title}</p>
                           </div>
                         );
@@ -1698,6 +1942,37 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           ESC ליציאה ממסך מלא
         </div>
       )}
+
+      {/* ── Feature 7: Delete Confirmation Dialog ── */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>למחוק את המשימה?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirm?.name ? `"${deleteConfirm.name}"` : 'המשימה'} תימחק לצמיתות. פעולה זו אינה ניתנת לביטול.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2 justify-start">
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={async () => {
+                if (!deleteConfirm) return;
+                try {
+                  await Task.delete(deleteConfirm.id);
+                  onTaskCreated?.();
+                  toast.success('המשימה נמחקה');
+                } catch (err) {
+                  toast.error('שגיאה במחיקה');
+                }
+                setDeleteConfirm(null);
+              }}
+            >
+              מחק
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
