@@ -2,13 +2,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AccountReconciliation, Client, ClientAccount, Task } from '@/api/entities';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog';
@@ -16,14 +16,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import {
   BookCheck, Plus, CheckCircle, Clock, AlertCircle, Landmark, CreditCard,
   AlertTriangle, Calendar, Search, BookUser, Building2, ChevronDown, ChevronUp,
-  ArrowUpDown, Loader, ExternalLink
+  ArrowUpDown, Loader, ExternalLink, Zap, Filter, Users, RefreshCw
 } from 'lucide-react';
 
 // ─── Status Configuration — Glassmorphism Pill Styles ──────────
 const statusConfig = {
-  not_started:            { label: 'לא התחיל',       pill: 'bg-white/40 text-gray-700 border border-white/30 backdrop-blur-sm', icon: Clock },
+  not_started:            { label: 'לא התחיל',       pill: 'bg-white/40 text-slate-700 border border-white/30 backdrop-blur-sm', icon: Clock },
   waiting_for_materials:  { label: 'ממתין לחומרים',   pill: 'bg-amber-100/80 text-amber-800 border border-amber-200',            icon: AlertCircle },
-  in_progress:            { label: 'בתהליך',          pill: 'bg-sky-100/80 text-sky-800 border border-sky-200',                  icon: Clock },
+  in_progress:            { label: 'בתהליך',          pill: 'bg-[#00acc1]/15 text-[#00acc1] border border-[#00acc1]/30',         icon: Clock },
   completed:              { label: 'הושלם',           pill: 'bg-teal-100/80 text-teal-800 border border-teal-200',               icon: CheckCircle },
   issues:                 { label: 'בעיות',           pill: 'bg-rose-100/80 text-rose-800 border border-rose-200',               icon: AlertCircle },
 };
@@ -43,6 +43,31 @@ const accountTypeIcons = {
 const accountTypeLabels = {
   bank: 'בנק', credit_card: 'אשראי', bookkeeping: 'הנה"ח', clearing: 'סליקה',
 };
+
+// ─── Lag severity thresholds ───────────────────────────────────
+function getLagSeverity(days) {
+  if (days <= 0) return 'ok';
+  if (days <= 14) return 'low';
+  if (days <= 30) return 'medium';
+  if (days <= 60) return 'high';
+  return 'critical';
+}
+
+const lagSeverityConfig = {
+  ok:       { dot: 'bg-teal-400',  glow: '',                                                    text: 'text-teal-600' },
+  low:      { dot: 'bg-sky-400',   glow: '',                                                    text: 'text-sky-600' },
+  medium:   { dot: 'bg-amber-400', glow: 'shadow-[0_0_8px_rgba(245,158,11,0.5)]',               text: 'text-amber-600' },
+  high:     { dot: 'bg-orange-500',glow: 'shadow-[0_0_10px_rgba(249,115,22,0.6)]',              text: 'text-orange-600' },
+  critical: { dot: 'bg-rose-500',  glow: 'shadow-[0_0_12px_rgba(244,63,94,0.6)] animate-pulse', text: 'text-rose-600' },
+};
+
+// ─── Pre-set lag filter options ────────────────────────────────
+const LAG_FILTER_OPTIONS = [
+  { key: 'all',  label: 'הכל',       minDays: 0 },
+  { key: '14',   label: '> 14 ימים', minDays: 14 },
+  { key: '30',   label: '> 30 ימים', minDays: 30 },
+  { key: '60',   label: '> 60 ימים', minDays: 60 },
+];
 
 function calcNextDate(lastDate, frequency) {
   if (!lastDate) return null;
@@ -101,24 +126,24 @@ function ClientDrawer({ client, tasks, open, onClose }) {
             <div className="w-3 h-3 rounded-full bg-[#008291]" />
             {client.nickname || client.name}
           </SheetTitle>
-          <SheetDescription className="text-right text-sm text-gray-500">
+          <SheetDescription className="text-right text-sm text-slate-500">
             {clientTasks.length} משימות פעילות
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 space-y-3">
           {clientTasks.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">אין משימות פעילות ללקוח זה</p>
+            <p className="text-sm text-slate-400 text-center py-8">אין משימות פעילות ללקוח זה</p>
           ) : (
             clientTasks.map(task => (
-              <div key={task.id} className="p-3 bg-white/70 rounded-[16px] shadow-sm border border-white/30">
-                <p className="font-medium text-sm text-gray-800">{task.title}</p>
+              <div key={task.id} className="p-3 bg-white/70 backdrop-blur-sm rounded-[16px] shadow-sm border border-white/30">
+                <p className="font-medium text-sm text-slate-800">{task.title}</p>
                 <div className="flex items-center gap-2 mt-1.5">
                   <Badge className={`text-[10px] rounded-full px-2 ${statusConfig[task.status]?.pill || statusConfig.not_started.pill}`}>
                     {statusConfig[task.status]?.label || task.status}
                   </Badge>
                   {task.due_date && (
-                    <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                    <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
                       <Calendar className="w-2.5 h-2.5" /> {formatDate(task.due_date)}
                     </span>
                   )}
@@ -129,6 +154,73 @@ function ClientDrawer({ client, tasks, open, onClose }) {
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+// ─── Bulk Action Dialog ─────────────────────────────────────────
+function BulkActionDialog({ open, onClose, selectedCount, onApply }) {
+  const [bulkDate, setBulkDate] = useState('');
+  const [bulkStatus, setBulkStatus] = useState('');
+
+  const handleApply = () => {
+    const updates = {};
+    if (bulkDate) {
+      updates.last_reconciliation_date = bulkDate;
+    }
+    if (bulkStatus) {
+      updates.status = bulkStatus;
+    }
+    if (Object.keys(updates).length > 0) {
+      onApply(updates);
+    }
+    setBulkDate('');
+    setBulkStatus('');
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="backdrop-blur-xl bg-white/80 border-white/30 rounded-[24px] max-w-md">
+        <DialogHeader>
+          <DialogTitle>עדכון גורף</DialogTitle>
+          <DialogDescription>עדכון {selectedCount} חשבונות נבחרים בפעולה אחת</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-3">
+          <div>
+            <Label>תאריך התאמה חדש</Label>
+            <Input
+              type="date"
+              value={bulkDate}
+              onChange={(e) => setBulkDate(e.target.value)}
+              className="rounded-[16px] bg-white/60 border-white/30 backdrop-blur-sm mt-1"
+            />
+          </div>
+          <div>
+            <Label>סטטוס חדש</Label>
+            <Select value={bulkStatus} onValueChange={setBulkStatus}>
+              <SelectTrigger className="rounded-[16px] bg-white/60 border-white/30 backdrop-blur-sm mt-1">
+                <SelectValue placeholder="ללא שינוי" />
+              </SelectTrigger>
+              <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[16px]">
+                {Object.entries(statusConfig).map(([k, c]) => (
+                  <SelectItem key={k} value={k}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} className="rounded-[12px]">ביטול</Button>
+          <Button
+            onClick={handleApply}
+            className="bg-[#008291] hover:bg-[#006d7a] text-white rounded-[12px]"
+            disabled={!bulkDate && !bulkStatus}
+          >
+            עדכן {selectedCount} חשבונות
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -192,26 +284,26 @@ function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSa
             <div>
               <Label>לקוח</Label>
               <Select value={formData.client_id} onValueChange={(v) => setFormData(prev => ({ ...prev, client_id: v, client_account_id: '' }))}>
-                <SelectTrigger><SelectValue placeholder="בחר לקוח" /></SelectTrigger>
-                <SelectContent className="bg-white">{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="rounded-[12px] bg-white/60 border-white/30"><SelectValue placeholder="בחר לקוח" /></SelectTrigger>
+                <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[12px]">{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label>חשבון</Label>
               <Select value={formData.client_account_id} onValueChange={(v) => setFormData(prev => ({ ...prev, client_account_id: v }))} disabled={clientAccounts.length === 0}>
-                <SelectTrigger><SelectValue placeholder="בחר חשבון" /></SelectTrigger>
-                <SelectContent className="bg-white">{clientAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="rounded-[12px] bg-white/60 border-white/30"><SelectValue placeholder="בחר חשבון" /></SelectTrigger>
+                <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[12px]">{clientAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label>תקופה</Label>
-              <Input value={formData.period} onChange={(e) => setFormData(prev => ({ ...prev, period: e.target.value }))} placeholder="ינואר 2026" />
+              <Input value={formData.period} onChange={(e) => setFormData(prev => ({ ...prev, period: e.target.value }))} placeholder="ינואר 2026" className="rounded-[12px] bg-white/60 border-white/30" />
             </div>
             <div>
               <Label>סוג</Label>
               <Select value={formData.reconciliation_type} onValueChange={(v) => setFormData(prev => ({ ...prev, reconciliation_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectTrigger className="rounded-[12px] bg-white/60 border-white/30"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[12px]">
                   <SelectItem value="bank_credit">בנק/אשראי</SelectItem>
                   <SelectItem value="internal">פנימי</SelectItem>
                 </SelectContent>
@@ -220,28 +312,91 @@ function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSa
             <div>
               <Label>סטטוס</Label>
               <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-white">
+                <SelectTrigger className="rounded-[12px] bg-white/60 border-white/30"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[12px]">
                   {Object.entries(statusConfig).map(([k, c]) => <SelectItem key={k} value={k}>{c.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>תאריך יעד</Label>
-              <Input type="date" value={formData.due_date} onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))} />
+              <Input type="date" value={formData.due_date} onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))} className="rounded-[12px] bg-white/60 border-white/30" />
             </div>
           </div>
           <div>
             <Label>הערות</Label>
-            <Textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="הערות..." className="min-h-[60px]" />
+            <Textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="הערות..." className="min-h-[60px] rounded-[12px] bg-white/60 border-white/30" />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>ביטול</Button>
-          <Button onClick={handleSubmit} className="bg-[#008291] hover:bg-[#006d7a] text-white">שמור</Button>
+          <Button variant="ghost" onClick={onClose} className="rounded-[12px]">ביטול</Button>
+          <Button onClick={handleSubmit} className="bg-[#008291] hover:bg-[#006d7a] text-white rounded-[12px]">שמור</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Client Group Accordion Header ──────────────────────────────
+function ClientGroupHeader({
+  clientName, client, accounts, isExpanded, onToggle,
+  isSelected, onSelectClient, onOpenDrawer,
+}) {
+  const totalAccounts = accounts.length;
+  const laggingCount = accounts.filter(r => r.daysOverdue > 0).length;
+  const completedCount = accounts.filter(r => r.latestStatus === 'completed').length;
+  const worstLag = Math.max(0, ...accounts.map(r => r.daysOverdue));
+  const worstSeverity = getLagSeverity(worstLag);
+
+  return (
+    <div
+      className={`flex items-center justify-between p-3 cursor-pointer transition-all rounded-[16px] ${
+        isExpanded
+          ? 'bg-white/50 backdrop-blur-sm border border-white/30 shadow-sm'
+          : 'hover:bg-white/30'
+      }`}
+    >
+      <div className="flex items-center gap-3 flex-1" onClick={onToggle}>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onSelectClient(clientName)}
+            className="border-[#008291]/50"
+          />
+        </div>
+        <motion.div
+          animate={{ rotate: isExpanded ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="w-4 h-4 text-[#008291]" />
+        </motion.div>
+        <button
+          className="font-bold text-slate-800 text-sm hover:text-[#008291] transition-colors text-right"
+          onClick={(e) => { e.stopPropagation(); onOpenDrawer(client); }}
+        >
+          {clientName}
+        </button>
+        <div className="flex items-center gap-2">
+          <Badge className="text-[10px] rounded-full bg-[#008291]/10 text-[#008291] border border-[#008291]/20 px-2">
+            {totalAccounts} חשבונות
+          </Badge>
+          {laggingCount > 0 && (
+            <Badge className={`text-[10px] rounded-full px-2 ${
+              worstSeverity === 'critical' || worstSeverity === 'high'
+                ? 'bg-rose-100/80 text-rose-700 border border-rose-200'
+                : 'bg-amber-100/80 text-amber-700 border border-amber-200'
+            }`}>
+              {laggingCount} בפיגור
+            </Badge>
+          )}
+          {completedCount === totalAccounts && totalAccounts > 0 && (
+            <Badge className="text-[10px] rounded-full bg-teal-100/80 text-teal-700 border border-teal-200 px-2">
+              הכל מעודכן
+            </Badge>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -257,8 +412,19 @@ export default function ReconciliationsPage() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [drawerClient, setDrawerClient] = useState(null);
 
-  // Sorting state
+  // Sorting
   const [sort, setSort] = useState({ key: 'daysOverdue', dir: 'desc' });
+
+  // Lag filter
+  const [lagFilter, setLagFilter] = useState('all');
+  const [customLagDays, setCustomLagDays] = useState('');
+
+  // Accordion state — expanded client groups
+  const [expandedClients, setExpandedClients] = useState(new Set());
+
+  // Selection state for bulk actions
+  const [selectedAccounts, setSelectedAccounts] = useState(new Set());
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -287,6 +453,24 @@ export default function ReconciliationsPage() {
       loadData();
     } catch (error) {
       console.error("Error updating account:", error);
+    }
+  };
+
+  const handleBulkUpdate = async (updates) => {
+    try {
+      const promises = Array.from(selectedAccounts).map(accountId => {
+        const row = rows.find(r => r.id === accountId);
+        const updateData = { ...updates };
+        if (updates.last_reconciliation_date && row) {
+          updateData.next_reconciliation_due = calcNextDate(updates.last_reconciliation_date, row.frequency);
+        }
+        return ClientAccount.update(accountId, updateData);
+      });
+      await Promise.all(promises);
+      setSelectedAccounts(new Set());
+      loadData();
+    } catch (error) {
+      console.error("Error in bulk update:", error);
     }
   };
 
@@ -319,6 +503,13 @@ export default function ReconciliationsPage() {
     return m;
   }, [clients]);
 
+  // Effective lag filter threshold
+  const lagThreshold = useMemo(() => {
+    if (lagFilter === 'custom' && customLagDays) return parseInt(customLagDays, 10) || 0;
+    const preset = LAG_FILTER_OPTIONS.find(o => o.key === lagFilter);
+    return preset ? preset.minDays : 0;
+  }, [lagFilter, customLagDays]);
+
   // Build enriched rows
   const rows = useMemo(() => {
     return allAccounts
@@ -345,6 +536,7 @@ export default function ReconciliationsPage() {
         return {
           id: acc.id,
           clientName: client.name,
+          clientId: client.id,
           client,
           accountName: acc.account_name || acc.bank_name || '-',
           accountType: acc.account_type,
@@ -352,12 +544,18 @@ export default function ReconciliationsPage() {
           lastDate: acc.last_reconciliation_date,
           nextDate,
           daysOverdue,
+          lagSeverity: getLagSeverity(daysOverdue),
           latestStatus,
           latestRec,
           account: acc,
         };
+      })
+      .filter(row => {
+        // Apply lag filter
+        if (lagThreshold > 0) return row.daysOverdue >= lagThreshold;
+        return true;
       });
-  }, [allAccounts, clientMap, reconciliations, searchTerm]);
+  }, [allAccounts, clientMap, reconciliations, searchTerm, lagThreshold]);
 
   // Sort rows
   const sortedRows = useMemo(() => {
@@ -379,175 +577,410 @@ export default function ReconciliationsPage() {
     return sorted;
   }, [rows, sort]);
 
+  // Group rows by client
+  const clientGroups = useMemo(() => {
+    const groups = {};
+    sortedRows.forEach(row => {
+      if (!groups[row.clientName]) {
+        groups[row.clientName] = { client: row.client, rows: [] };
+      }
+      groups[row.clientName].rows.push(row);
+    });
+    // Sort groups by client name
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [sortedRows]);
+
   // Stats
   const overdueCount = rows.filter(r => r.daysOverdue > 0).length;
   const completedCount = rows.filter(r => r.latestStatus === 'completed').length;
   const pendingCount = rows.filter(r => r.latestStatus !== 'completed').length;
+  const totalClients = clientGroups.length;
+
+  // ─── Selection helpers ──────────────────────────────────────────
+  const toggleAccountSelection = useCallback((accountId) => {
+    setSelectedAccounts(prev => {
+      const next = new Set(prev);
+      if (next.has(accountId)) next.delete(accountId);
+      else next.add(accountId);
+      return next;
+    });
+  }, []);
+
+  const toggleClientSelection = useCallback((clientName) => {
+    const group = clientGroups.find(([name]) => name === clientName);
+    if (!group) return;
+    const clientAccountIds = group[1].rows.map(r => r.id);
+    setSelectedAccounts(prev => {
+      const next = new Set(prev);
+      const allSelected = clientAccountIds.every(id => next.has(id));
+      if (allSelected) {
+        clientAccountIds.forEach(id => next.delete(id));
+      } else {
+        clientAccountIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  }, [clientGroups]);
+
+  const toggleSelectAll = useCallback(() => {
+    const allIds = rows.map(r => r.id);
+    setSelectedAccounts(prev => {
+      if (prev.size === allIds.length) return new Set();
+      return new Set(allIds);
+    });
+  }, [rows]);
+
+  const isClientSelected = useCallback((clientName) => {
+    const group = clientGroups.find(([name]) => name === clientName);
+    if (!group) return false;
+    return group[1].rows.every(r => selectedAccounts.has(r.id));
+  }, [clientGroups, selectedAccounts]);
+
+  // ─── Accordion toggle ──────────────────────────────────────────
+  const toggleExpanded = useCallback((clientName) => {
+    setExpandedClients(prev => {
+      const next = new Set(prev);
+      if (next.has(clientName)) next.delete(clientName);
+      else next.add(clientName);
+      return next;
+    });
+  }, []);
+
+  const expandAll = useCallback(() => {
+    setExpandedClients(new Set(clientGroups.map(([name]) => name)));
+  }, [clientGroups]);
+
+  const collapseAll = useCallback(() => {
+    setExpandedClients(new Set());
+  }, []);
 
   return (
     <div className="space-y-6 p-4 md:p-6 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]" dir="rtl">
-      {/* Header */}
+      {/* ── Header ──────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-full" style={{ backgroundColor: 'rgba(0,130,145,0.15)' }}>
             <BookCheck className="w-8 h-8 text-[#008291]" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">התאמות חשבונות</h1>
-            <p className="text-gray-500 text-sm">מעקב ובקרה על כל ההתאמות</p>
+            <h1 className="text-3xl font-bold text-slate-800">התאמות חשבונות</h1>
+            <p className="text-slate-500 text-sm">מרכז שליטה — מעקב ובקרה מאורגן</p>
           </div>
         </div>
-        <Button className="bg-[#008291] hover:bg-[#006d7a] text-white rounded-[16px]" onClick={() => { setEditingRec(null); setShowEditDialog(true); }}>
-          <Plus className="w-4 h-4 ml-2" />
-          הוסף התאמה
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedAccounts.size > 0 && (
+            <Button
+              className="bg-[#00acc1] hover:bg-[#0097a7] text-white rounded-[16px] gap-1.5"
+              onClick={() => setShowBulkDialog(true)}
+            >
+              <RefreshCw className="w-4 h-4" />
+              עדכון גורף ({selectedAccounts.size})
+            </Button>
+          )}
+          <Button
+            className="bg-[#008291] hover:bg-[#006d7a] text-white rounded-[16px]"
+            onClick={() => { setEditingRec(null); setShowEditDialog(true); }}
+          >
+            <Plus className="w-4 h-4 ml-2" />
+            הוסף התאמה
+          </Button>
+        </div>
       </div>
 
-      {/* Summary Cards — glass style */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* ── Summary Cards — glass style ─────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
+          <div className="text-2xl font-bold text-[#008291]">{totalClients}</div>
+          <div className="text-xs text-slate-500">לקוחות פעילים</div>
+        </div>
         <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
           <div className="text-2xl font-bold text-[#008291]">{rows.length}</div>
-          <div className="text-xs text-gray-500">חשבונות פעילים</div>
+          <div className="text-xs text-slate-500">חשבונות פעילים</div>
         </div>
-        <div className={`p-4 rounded-[20px] backdrop-blur-sm border shadow-sm ${overdueCount > 0 ? 'bg-amber-50/60 border-amber-200' : 'bg-white/50 border-white/30'}`}>
+        <div className={`p-4 rounded-[20px] backdrop-blur-sm border shadow-sm ${overdueCount > 0 ? 'bg-amber-50/60 border-amber-200/50' : 'bg-white/50 border-white/30'}`}>
           <div className={`text-2xl font-bold ${overdueCount > 0 ? 'text-amber-600' : 'text-[#008291]'}`}>{overdueCount}</div>
-          <div className="text-xs text-gray-500">בפיגור</div>
+          <div className="text-xs text-slate-500">בפיגור</div>
         </div>
         <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
-          <div className="text-2xl font-bold text-sky-600">{pendingCount}</div>
-          <div className="text-xs text-gray-500">פתוחות</div>
+          <div className="text-2xl font-bold text-[#00acc1]">{pendingCount}</div>
+          <div className="text-xs text-slate-500">פתוחות</div>
         </div>
         <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
           <div className="text-2xl font-bold text-teal-600">{completedCount}</div>
-          <div className="text-xs text-gray-500">הושלמו</div>
+          <div className="text-xs text-slate-500">הושלמו</div>
         </div>
       </div>
 
-      {/* Overdue Alert */}
+      {/* ── Overdue Alert ───────────────────────────────────────── */}
       {overdueCount > 0 && (
-        <div className="bg-amber-50/60 backdrop-blur-sm border border-amber-200 rounded-[16px] p-3 flex items-center gap-2 text-amber-800">
+        <div className="bg-amber-50/60 backdrop-blur-sm border border-amber-200/50 rounded-[16px] p-3 flex items-center gap-2 text-amber-800">
           <AlertTriangle className="w-5 h-5 shrink-0" />
           <span className="font-medium text-sm">{overdueCount} חשבונות בפיגור התאמה!</span>
         </div>
       )}
 
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-        <Input
-          placeholder="חיפוש לקוח או חשבון..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pr-10 rounded-[16px] bg-white/60 border-white/30 backdrop-blur-sm"
-        />
+      {/* ── Filter & Search Bar — glass container ───────────────── */}
+      <div className="backdrop-blur-xl bg-white/45 border border-white/20 rounded-[24px] p-4 shadow-sm">
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          {/* Lag Filter */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="w-4 h-4 text-[#008291]" />
+            <span className="text-xs font-medium text-slate-600 ml-1">סינון פיגור:</span>
+            {LAG_FILTER_OPTIONS.map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => { setLagFilter(opt.key); setCustomLagDays(''); }}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  lagFilter === opt.key
+                    ? 'bg-[#008291] text-white shadow-md'
+                    : 'bg-white/50 text-slate-600 border border-white/30 hover:bg-white/70'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setLagFilter('custom')}
+                className={`px-3 py-1.5 rounded-r-full text-xs font-medium transition-all ${
+                  lagFilter === 'custom'
+                    ? 'bg-[#008291] text-white shadow-md'
+                    : 'bg-white/50 text-slate-600 border border-white/30 hover:bg-white/70'
+                }`}
+              >
+                מותאם
+              </button>
+              {lagFilter === 'custom' && (
+                <Input
+                  type="number"
+                  min="1"
+                  value={customLagDays}
+                  onChange={(e) => setCustomLagDays(e.target.value)}
+                  placeholder="ימים"
+                  className="w-20 h-8 text-xs rounded-l-full rounded-r-none bg-white/60 border-white/30 backdrop-blur-sm"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative flex-1 max-w-md mr-auto">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Input
+              placeholder="חיפוש לקוח או חשבון..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-10 rounded-[16px] bg-white/60 border-white/30 backdrop-blur-sm"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Dynamic Sortable Table */}
+      {/* ── Expand/Collapse + Select All controls ─────────────── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={selectedAccounts.size === rows.length && rows.length > 0}
+            onCheckedChange={toggleSelectAll}
+            className="border-[#008291]/50"
+          />
+          <span className="text-xs text-slate-500">
+            {selectedAccounts.size > 0
+              ? `${selectedAccounts.size} נבחרו`
+              : 'בחר הכל'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={expandAll}
+            className="text-xs text-[#008291] hover:underline"
+          >
+            פרוס הכל
+          </button>
+          <span className="text-slate-300">|</span>
+          <button
+            onClick={collapseAll}
+            className="text-xs text-[#008291] hover:underline"
+          >
+            כווץ הכל
+          </button>
+        </div>
+      </div>
+
+      {/* ── Client-Grouped Accordion Table ───────────────────── */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <Loader className="w-8 h-8 animate-spin text-[#008291]" />
-          <span className="mr-3 text-gray-500">טוען נתונים...</span>
+          <span className="mr-3 text-slate-500">טוען נתונים...</span>
+        </div>
+      ) : clientGroups.length === 0 ? (
+        <div className="text-center py-16 backdrop-blur-sm bg-white/30 rounded-[24px] border border-white/20">
+          <BookCheck className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+          <p className="text-slate-400 text-sm">אין חשבונות להצגה</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-[20px] border border-white/30 shadow-sm">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr>
-                <SortableHeader label="לקוח" sortKey="clientName" currentSort={sort} onSort={handleSort} />
-                <SortableHeader label="חשבון" sortKey="accountName" currentSort={sort} onSort={handleSort} />
-                <SortableHeader label="סוג" sortKey="accountType" currentSort={sort} onSort={handleSort} />
-                <SortableHeader label="תדירות" sortKey="frequency" currentSort={sort} onSort={handleSort} />
-                <SortableHeader label="התאמה אחרונה" sortKey="lastDate" currentSort={sort} onSort={handleSort} />
-                <SortableHeader label="התאמה הבאה" sortKey="nextDate" currentSort={sort} onSort={handleSort} />
-                <SortableHeader label="פיגור (ימים)" sortKey="daysOverdue" currentSort={sort} onSort={handleSort} />
-                <SortableHeader label="סטטוס" sortKey="latestStatus" currentSort={sort} onSort={handleSort} />
-                <th className="p-3 font-bold text-white text-center" style={{ backgroundColor: '#008291' }}>פעולה</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRows.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="text-center py-12 text-gray-400">
-                    <BookCheck className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                    אין חשבונות להצגה
-                  </td>
-                </tr>
-              ) : (
-                sortedRows.map((row, idx) => {
-                  const AccIcon = accountTypeIcons[row.accountType] || Landmark;
-                  const stsCfg = statusConfig[row.latestStatus] || statusConfig.not_started;
-                  return (
-                    <motion.tr
-                      key={row.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.02 }}
-                      className={`border-b border-white/20 cursor-pointer transition-colors ${
-                        row.daysOverdue > 0 ? 'bg-amber-50/30 hover:bg-amber-50/60' : 'bg-white/20 hover:bg-white/40'
-                      }`}
-                      onClick={() => setDrawerClient(row.client)}
+        <div className="space-y-2">
+          {clientGroups.map(([clientName, { client, rows: clientRows }]) => {
+            const isExpanded = expandedClients.has(clientName);
+
+            return (
+              <motion.div
+                key={clientName}
+                layout
+                className="backdrop-blur-xl bg-white/45 border border-white/20 rounded-[24px] shadow-sm overflow-hidden"
+              >
+                {/* Client Accordion Header */}
+                <ClientGroupHeader
+                  clientName={clientName}
+                  client={client}
+                  accounts={clientRows}
+                  isExpanded={isExpanded}
+                  onToggle={() => toggleExpanded(clientName)}
+                  isSelected={isClientSelected(clientName)}
+                  onSelectClient={toggleClientSelection}
+                  onOpenDrawer={setDrawerClient}
+                />
+
+                {/* Expandable Account Rows */}
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      className="overflow-hidden"
                     >
-                      <td className="p-3 font-medium text-gray-800">{row.clientName}</td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1.5">
-                          <AccIcon className="w-4 h-4 text-[#008291]" />
-                          <span className="text-gray-700">{row.accountName}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge className="text-[10px] rounded-full bg-white/50 text-gray-600 border border-white/30">
-                          {accountTypeLabels[row.accountType] || row.accountType}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge className="text-[10px] rounded-full bg-white/50 text-gray-600 border border-white/30">
-                          {frequencyLabels[row.frequency] || 'חודשי'}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center text-xs text-gray-600">{formatDate(row.lastDate)}</td>
-                      <td className="p-3 text-center text-xs text-gray-600">{formatDate(row.nextDate)}</td>
-                      <td className="p-3 text-center">
-                        {row.daysOverdue > 0 ? (
-                          <span className="text-xs font-bold text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded-full">
-                            {row.daysOverdue} ימים
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge className={`text-[10px] rounded-full px-2.5 py-0.5 ${stsCfg.pill}`}>
-                          {stsCfg.label}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-[10px] gap-1 rounded-full bg-white/50 border-white/30 hover:bg-teal-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const today = new Date().toISOString().split('T')[0];
-                            const newNext = calcNextDate(today, row.frequency);
-                            handleUpdateAccount(row.id, {
-                              last_reconciliation_date: today,
-                              next_reconciliation_due: newNext,
-                            });
-                          }}
-                        >
-                          <CheckCircle className="w-3 h-3 text-teal-600" /> סמן הושלם
-                        </Button>
-                      </td>
-                    </motion.tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr>
+                              <th className="p-2 w-10" style={{ backgroundColor: '#008291' }}></th>
+                              <SortableHeader label="חשבון" sortKey="accountName" currentSort={sort} onSort={handleSort} />
+                              <SortableHeader label="סוג" sortKey="accountType" currentSort={sort} onSort={handleSort} />
+                              <SortableHeader label="תדירות" sortKey="frequency" currentSort={sort} onSort={handleSort} />
+                              <SortableHeader label="התאמה אחרונה" sortKey="lastDate" currentSort={sort} onSort={handleSort} />
+                              <SortableHeader label="התאמה הבאה" sortKey="nextDate" currentSort={sort} onSort={handleSort} />
+                              <SortableHeader label="פיגור (ימים)" sortKey="daysOverdue" currentSort={sort} onSort={handleSort} />
+                              <SortableHeader label="סטטוס" sortKey="latestStatus" currentSort={sort} onSort={handleSort} />
+                              <th className="p-3 font-bold text-white text-center" style={{ backgroundColor: '#008291' }}>פעולה</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {clientRows.map((row, idx) => {
+                              const AccIcon = accountTypeIcons[row.accountType] || Landmark;
+                              const stsCfg = statusConfig[row.latestStatus] || statusConfig.not_started;
+                              const severity = lagSeverityConfig[row.lagSeverity];
+                              const isChecked = selectedAccounts.has(row.id);
+
+                              return (
+                                <motion.tr
+                                  key={row.id}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: idx * 0.03 }}
+                                  className={`border-b border-white/20 transition-colors ${
+                                    isChecked
+                                      ? 'bg-[#008291]/5'
+                                      : row.daysOverdue > 30
+                                        ? 'bg-rose-50/20 hover:bg-rose-50/40'
+                                        : row.daysOverdue > 0
+                                          ? 'bg-amber-50/20 hover:bg-amber-50/40'
+                                          : 'bg-white/20 hover:bg-white/40'
+                                  }`}
+                                >
+                                  {/* Checkbox */}
+                                  <td className="p-2 text-center">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={() => toggleAccountSelection(row.id)}
+                                      className="border-[#008291]/50"
+                                    />
+                                  </td>
+                                  {/* Account Name + Lag Heatmap Dot */}
+                                  <td className="p-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${severity.dot} ${severity.glow}`} />
+                                      <AccIcon className="w-4 h-4 text-[#008291]" />
+                                      <span className="text-slate-700">{row.accountName}</span>
+                                    </div>
+                                  </td>
+                                  {/* Type */}
+                                  <td className="p-3 text-center">
+                                    <Badge className="text-[10px] rounded-full bg-white/50 text-slate-600 border border-white/30">
+                                      {accountTypeLabels[row.accountType] || row.accountType}
+                                    </Badge>
+                                  </td>
+                                  {/* Frequency */}
+                                  <td className="p-3 text-center">
+                                    <Badge className="text-[10px] rounded-full bg-white/50 text-slate-600 border border-white/30">
+                                      {frequencyLabels[row.frequency] || 'חודשי'}
+                                    </Badge>
+                                  </td>
+                                  {/* Last Reconciliation */}
+                                  <td className="p-3 text-center text-xs text-slate-600">
+                                    {formatDate(row.lastDate)}
+                                  </td>
+                                  {/* Next Reconciliation */}
+                                  <td className="p-3 text-center text-xs text-slate-600">
+                                    {formatDate(row.nextDate)}
+                                  </td>
+                                  {/* Days Overdue */}
+                                  <td className="p-3 text-center">
+                                    {row.daysOverdue > 0 ? (
+                                      <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                                        row.daysOverdue > 30
+                                          ? 'bg-rose-100/60 text-rose-700'
+                                          : 'bg-amber-100/60 text-amber-700'
+                                      }`}>
+                                        {row.daysOverdue} ימים
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-slate-400">-</span>
+                                    )}
+                                  </td>
+                                  {/* Status */}
+                                  <td className="p-3 text-center">
+                                    <Badge className={`text-[10px] rounded-full px-2.5 py-0.5 ${stsCfg.pill}`}>
+                                      {stsCfg.label}
+                                    </Badge>
+                                  </td>
+                                  {/* Quick Sync Action */}
+                                  <td className="p-3 text-center">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-[10px] gap-1 rounded-full bg-white/50 border-white/30 hover:bg-teal-50/60 hover:border-teal-200"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const today = new Date().toISOString().split('T')[0];
+                                        const newNext = calcNextDate(today, row.frequency);
+                                        handleUpdateAccount(row.id, {
+                                          last_reconciliation_date: today,
+                                          next_reconciliation_due: newNext,
+                                        });
+                                      }}
+                                    >
+                                      <Zap className="w-3 h-3 text-teal-600" />
+                                      <span>סונכרן היום</span>
+                                    </Button>
+                                  </td>
+                                </motion.tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
-      {/* Client Drawer */}
+      {/* ── Client Drawer ──────────────────────────────────────── */}
       <ClientDrawer
         client={drawerClient}
         tasks={allTasks}
@@ -555,13 +988,21 @@ export default function ReconciliationsPage() {
         onClose={() => setDrawerClient(null)}
       />
 
-      {/* Edit Dialog */}
+      {/* ── Edit Dialog ────────────────────────────────────────── */}
       <ReconciliationEditDialog
         reconciliation={editingRec}
         clients={clients}
         open={showEditDialog}
         onClose={() => { setShowEditDialog(false); setEditingRec(null); }}
         onSave={handleSaveReconciliation}
+      />
+
+      {/* ── Bulk Action Dialog ─────────────────────────────────── */}
+      <BulkActionDialog
+        open={showBulkDialog}
+        onClose={() => setShowBulkDialog(false)}
+        selectedCount={selectedAccounts.size}
+        onApply={handleBulkUpdate}
       />
     </div>
   );
