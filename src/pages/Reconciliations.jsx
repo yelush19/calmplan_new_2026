@@ -18,6 +18,7 @@ import {
   AlertTriangle, Calendar, Search, BookUser, Building2, ChevronDown, ChevronUp,
   ArrowUpDown, Loader, ExternalLink, Zap, Filter, Users, RefreshCw
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ─── Status Configuration — Glassmorphism Pill Styles ──────────
 const statusConfig = {
@@ -450,9 +451,10 @@ export default function ReconciliationsPage() {
   const handleUpdateAccount = async (accountId, updates) => {
     try {
       await ClientAccount.update(accountId, updates);
-      loadData();
+      await loadData();
     } catch (error) {
       console.error("Error updating account:", error);
+      throw error;
     }
   };
 
@@ -945,24 +947,29 @@ export default function ReconciliationsPage() {
                                       {stsCfg.label}
                                     </Badge>
                                   </td>
-                                  {/* Quick Sync Action */}
+                                  {/* Quick Sync Action — Lightning Bolt ⚡ */}
                                   <td className="p-3 text-center">
                                     <Button
-                                      variant="outline"
                                       size="sm"
-                                      className="text-[10px] gap-1 rounded-full bg-white/50 border-white/30 hover:bg-teal-50/60 hover:border-teal-200"
-                                      onClick={(e) => {
+                                      className="text-[10px] gap-1.5 rounded-full bg-[#008291] hover:bg-[#006d7a] text-white shadow-md hover:shadow-lg transition-all"
+                                      onClick={async (e) => {
                                         e.stopPropagation();
-                                        const today = new Date().toISOString().split('T')[0];
-                                        const newNext = calcNextDate(today, row.frequency);
-                                        handleUpdateAccount(row.id, {
-                                          last_reconciliation_date: today,
-                                          next_reconciliation_due: newNext,
-                                        });
+                                        try {
+                                          const today = new Date().toISOString().split('T')[0];
+                                          const newNext = calcNextDate(today, row.frequency);
+                                          await handleUpdateAccount(row.id, {
+                                            last_reconciliation_date: today,
+                                            next_reconciliation_due: newNext,
+                                            last_sync_date: new Date().toISOString(),
+                                          });
+                                          toast.success(`${row.accountName} סונכרן להיום`);
+                                        } catch (err) {
+                                          toast.error('שגיאה בסנכרון');
+                                        }
                                       }}
                                     >
-                                      <Zap className="w-3 h-3 text-teal-600" />
-                                      <span>סונכרן היום</span>
+                                      <Zap className="w-3.5 h-3.5" />
+                                      <span>⚡ סנכרן להיום</span>
                                     </Button>
                                   </td>
                                 </motion.tr>

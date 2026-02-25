@@ -1319,27 +1319,26 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               onPointerDown={(e) => handleFolderPointerDown(e, `folder-${branch.category}`, branch.x, branch.y)}
               onPointerUp={(e) => handleFolderPointerUp(e, branch.category)}
             >
-              <svg width="130" height="60" viewBox="0 0 130 60" style={{ overflow: 'visible' }}>
-                {/* Hexagonal folder shape */}
-                <polygon
-                  points="20,0 110,0 130,30 110,60 20,60 0,30"
-                  fill={branch.config.color}
+              <svg width="100" height="100" viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
+                {/* Level 2 — Large Circle, Light Cyan (#00acc1), 2px Solid border */}
+                <circle
+                  cx="50" cy="50" r="46"
+                  fill="#00acc1"
                   opacity={0.88}
                   stroke="#008291"
-                  strokeWidth={2.5}
-                  filter="url(#folderGlow)"
+                  strokeWidth={2}
                 />
-                <defs>
-                  <filter id="folderGlow">
-                    <feGaussianBlur stdDeviation="3" result="glow" />
-                    <feMerge><feMergeNode in="glow" /><feMergeNode in="SourceGraphic" /></feMerge>
-                  </filter>
-                </defs>
-                <text x="65" y="35" textAnchor="middle" fill="white" fontSize="12" fontWeight="700" style={{ pointerEvents: 'none' }}>
-                  {branch.config.icon} {branch.category}
+                {/* Glass highlight */}
+                <ellipse cx="50" cy="36" rx="28" ry="18" fill="white" opacity={0.12} />
+                <text x="50" y="46" textAnchor="middle" fill="white" fontSize="12" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                  {branch.config.icon}
                 </text>
-                <circle cx="112" cy="14" r="11" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" strokeWidth={1} />
-                <text x="112" y="18" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                <text x="50" y="60" textAnchor="middle" fill="white" fontSize="10" fontWeight="600" opacity={0.9} style={{ pointerEvents: 'none' }}>
+                  {branch.category}
+                </text>
+                {/* Count badge */}
+                <circle cx="78" cy="20" r="12" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" strokeWidth={1} />
+                <text x="78" y="24" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                   {branch.clients.length}
                 </text>
               </svg>
@@ -1349,7 +1348,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             {branch.subFolderPositions?.map((sub, si) => (
               <motion.div
                 key={`sub-${branch.category}-${sub.key}`}
-                className="absolute z-10 cursor-pointer select-none"
+                className="absolute z-10 cursor-pointer select-none mindmap-sparkle-hover"
                 style={{
                   left: sub.x,
                   top: sub.y,
@@ -1362,33 +1361,34 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 transition={{ delay: i * 0.08 + si * 0.05 + 0.1, type: 'spring', stiffness: 200 }}
                 whileHover={{
                   scale: 1.15,
-                  boxShadow: '0 0 20px rgba(0,172,193,0.6), 0 0 40px rgba(0,172,193,0.3)',
-                  filter: 'brightness(1.15)',
+                  boxShadow: '0 0 25px rgba(0,172,193,0.8), 0 0 50px rgba(0,172,193,0.4)',
+                  filter: 'brightness(1.2)',
                 }}
                 onClick={(e) => { e.stopPropagation(); handleBranchClick(branch.category); }}
               >
                 <svg width="96" height="38" viewBox="0 0 96 38" style={{ overflow: 'visible' }}>
-                  {/* Category sub-folder — folder-tab shape, Light Cyan (#00acc1), Dashed border */}
+                  {/* Level 3 — Folder-Tab shape, Dashed Border, bg-white/20, Sparkle on hover */}
                   <path d="M0,8 L0,30 Q0,38 8,38 L88,38 Q96,38 96,30 L96,8 Q96,0 88,0 L36,0 L30,6 L8,6 Q0,6 0,8 Z"
-                    fill="#00acc1"
-                    opacity={0.75}
-                    stroke="#008291"
+                    fill="rgba(255,255,255,0.20)"
+                    stroke="#00acc1"
                     strokeWidth={1.5}
-                    strokeDasharray="4 2"
+                    strokeDasharray="5 3"
                   />
-                  {/* White shimmer overlay */}
+                  {/* Shimmer overlay — animated via CSS */}
                   <path d="M0,8 L0,30 Q0,38 8,38 L88,38 Q96,38 96,30 L96,8 Q96,0 88,0 L36,0 L30,6 L8,6 Q0,6 0,8 Z"
                     fill="url(#subFolderShimmer)"
-                    opacity={0.15}
+                    opacity={0.25}
+                    className="mindmap-shimmer-fill"
                   />
                   <defs>
-                    <linearGradient id="subFolderShimmer" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="white" stopOpacity="0.8" />
-                      <stop offset="50%" stopColor="white" stopOpacity="0" />
-                      <stop offset="100%" stopColor="white" stopOpacity="0.4" />
+                    <linearGradient id="subFolderShimmer" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="white" stopOpacity="0" />
+                      <stop offset="40%" stopColor="white" stopOpacity="0.8" />
+                      <stop offset="60%" stopColor="white" stopOpacity="0.8" />
+                      <stop offset="100%" stopColor="white" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <text x="48" y="26" textAnchor="middle" fill="white" fontSize="10" fontWeight="600" style={{ pointerEvents: 'none' }}>
+                  <text x="48" y="26" textAnchor="middle" fill="#008291" fontSize="10" fontWeight="700" style={{ pointerEvents: 'none' }}>
                     📂 {sub.key}
                   </text>
                 </svg>
@@ -1408,19 +1408,24 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const procrastinatedCount = client.tasks.filter(t => (t.reschedule_count || 0) > 3).length;
               const isFrozen = client.tasks.length > 0 && client.tasks.every(t => (t.reschedule_count || 0) > 5);
 
+              // Level 4 — Complexity glow: high-tier clients get subtle glow + 10% larger
+              const isHighComplexity = client.tier >= 3;
+              const complexityScale = isHighComplexity ? 1.1 : 1.0;
+
               // Pill dimensions based on complexity tier
               const pillHeight = Math.max(client.radius * 1.2, 55);
               const pillWidth = Math.max(client.radius * 3.0, 120);
-              // Completed: shrink slightly + dim
-              const finalW = isAllDone ? pillWidth * 0.85 : pillWidth;
-              const finalH = isAllDone ? pillHeight * 0.85 : pillHeight;
+              // Completed: shrink slightly + dim; High complexity: 10% larger
+              const finalW = (isAllDone ? pillWidth * 0.85 : pillWidth) * complexityScale;
+              const finalH = (isAllDone ? pillHeight * 0.85 : pillHeight) * complexityScale;
 
-              // Shadows — Cyan Glow on all nodes
-              const hoverGlow = `0 0 24px ${client.color}88, 0 4px 14px rgba(0,172,193,0.3)`;
-              const focusGlow = '0 0 20px #06B6D466, 0 0 8px #06B6D444, 0 0 15px rgba(0,172,193,0.2)';
+              // Shadows — Level 4: no border glow (clean glass), complexity glow for tier 3+
+              const complexityGlow = isHighComplexity ? '0 0 18px rgba(0,172,193,0.35)' : '';
+              const hoverGlow = `0 4px 14px rgba(0,0,0,0.12), 0 0 20px ${client.color}44`;
+              const focusGlow = '0 0 20px #06B6D466, 0 0 8px #06B6D444';
               const normalShadow = isFilingReady
-                ? `0 0 16px ${ZERO_PANIC.amber}66, 0 0 15px rgba(0,172,193,0.2)`
-                : '0 0 15px rgba(0,172,193,0.2), 0 2px 8px rgba(0,0,0,0.08)';
+                ? `0 0 16px ${ZERO_PANIC.amber}44`
+                : complexityGlow || '0 2px 8px rgba(0,0,0,0.08)';
 
               // Top task title (truncated)
               const topTaskTitle = client.topTask?.title || '';
@@ -1448,12 +1453,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     height: finalH,
                     left: client.x - finalW / 2,
                     top: client.y - finalH / 2,
-                    backgroundColor: isGhost ? 'rgba(255,255,255,0.85)' : client.color,
-                    borderColor,
+                    // Level 4 — White-Glass pill: translucent glass with color accent border
+                    backgroundColor: isGhost ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
+                    backdropFilter: isGhost ? 'none' : 'blur(12px)',
+                    WebkitBackdropFilter: isGhost ? 'none' : 'blur(12px)',
+                    borderColor: isGhost ? client.color : borderColor,
                     borderStyle,
-                    borderWidth,
+                    borderWidth: isFrozen ? borderWidth : isAllDone ? borderWidth : Math.max(borderWidth, 2.5),
                     borderRadius: finalH / 2,
-                    color: isGhost ? client.color : '#fff',
+                    // Glass text: use status color for text instead of white-on-color
+                    color: client.color,
                     boxShadow: isHovered ? hoverGlow : isFocused ? focusGlow : normalShadow,
                     opacity: isSpotlit(branch.category) ? (isFrozen ? 0.4 : isAllDone ? 0.35 : 1) : 0.12,
                     filter: isFrozen ? 'saturate(0.15) brightness(0.7)' : isAllDone ? 'saturate(0.3) brightness(0.85)' : 'none',
@@ -1516,7 +1525,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     className="font-bold leading-tight text-center px-2 truncate w-full"
                     style={{
                       fontSize: finalH < 45 ? '10px' : finalH < 55 ? '11px' : '12px',
-                      textShadow: isGhost ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
+                      textShadow: '0 1px 2px rgba(255,255,255,0.6)',
                       maxWidth: finalW - 12,
                     }}
                   >
@@ -1551,7 +1560,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         style={{
                           height: '100%',
                           width: `${(client.completedTasks / client.totalTasks) * 100}%`,
-                          backgroundColor: isFilingReady ? ZERO_PANIC.amber : 'rgba(255,255,255,0.6)',
+                          backgroundColor: isFilingReady ? ZERO_PANIC.amber : client.color,
+                          opacity: 0.6,
                           borderRadius: '0 0 999px 999px',
                           transition: 'width 0.3s ease',
                         }}
