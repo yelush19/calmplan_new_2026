@@ -274,12 +274,12 @@ export default function PayrollDashboardPage() {
     <div className="p-4 md:p-6 space-y-5 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]">
       <div className="flex items-center gap-2 flex-wrap">
         <Link to={createPageUrl('ClientsDashboard')}>
-          <Button variant="outline" size="sm" className="gap-2 text-gray-600 hover:text-emerald-700">
+          <Button variant="outline" size="sm" className="gap-2 text-slate-600 hover:text-emerald-700">
             <ArrowRight className="w-4 h-4" />חזור ללוח לקוחות
           </Button>
         </Link>
         {clientFilter && (
-          <Badge className="bg-gray-600 text-white text-sm px-3 py-1.5 gap-2">
+          <Badge className="bg-[#008291] text-white text-sm px-3 py-1.5 gap-2">
             <Users className="w-3.5 h-3.5" />{clientFilter}
             <button onClick={clearClientFilter} className="hover:bg-white/20 rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
           </Badge>
@@ -289,22 +289,22 @@ export default function PayrollDashboardPage() {
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center shadow-md">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#008291] to-[#006d7a] flex items-center justify-center shadow-md">
             <Briefcase className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">שכר ודיווחי רשויות</h1>
-            <p className="text-gray-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | שכר, ניכויים, ביטוח לאומי, מס"ב ועוד</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">שכר ודיווחי רשויות</h1>
+            <p className="text-slate-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | שכר, ניכויים, ביטוח לאומי, מס"ב ועוד</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-white/20 p-1 shadow-sm">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
               <ChevronRight className="w-4 h-4" />
             </Button>
             <div className="text-center w-32">
-              <div className="text-[10px] text-gray-400 leading-none">חודש דיווח</div>
-              <div className="font-semibold text-sm text-gray-700">
+              <div className="text-[10px] text-slate-400 leading-none">חודש דיווח</div>
+              <div className="font-semibold text-sm text-slate-700">
                 {format(selectedMonth, 'MMMM yyyy', { locale: he })}
               </div>
             </div>
@@ -312,7 +312,7 @@ export default function PayrollDashboardPage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
-          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-gray-200 p-0.5">
+          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-white/20 p-0.5">
             <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')}>
               <List className="w-4 h-4" />
             </Button>
@@ -334,7 +334,7 @@ export default function PayrollDashboardPage() {
       </motion.div>
 
       <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
         <Input
           placeholder="חיפוש לפי שם לקוח, משימה..."
           value={searchTerm}
@@ -344,28 +344,28 @@ export default function PayrollDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
+        <Card className="bg-gradient-to-br from-white/30 to-white border-white/20 shadow-sm">
           <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-gray-700">{stats.total}</div>
-            <div className="text-xs text-gray-500">סה"כ תהליכים</div>
+            <div className="text-2xl font-bold text-slate-700">{stats.total}</div>
+            <div className="text-xs text-slate-500">סה"כ תהליכים</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-emerald-600">{stats.completed}</div>
-            <div className="text-xs text-gray-500">הושלמו</div>
+            <div className="text-xs text-slate-500">הושלמו</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-50/50 to-white border-emerald-200 shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-emerald-700">{stats.pct}%</div>
-            <div className="text-xs text-gray-500">תהליכים שהושלמו</div>
+            <div className="text-xs text-slate-500">תהליכים שהושלמו</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-sky-50 to-white border-sky-200 shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-sky-700">{stats.stepsPct}%</div>
-            <div className="text-xs text-gray-500">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
+            <div className="text-xs text-slate-500">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
           </CardContent>
         </Card>
       </div>
@@ -404,10 +404,10 @@ export default function PayrollDashboardPage() {
           </div>
         )
       ) : (
-        <Card className="p-12 text-center border-gray-200">
+        <Card className="p-12 text-center border-white/20">
           <Briefcase className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-600 mb-2">לא נמצאו תהליכי שכר לחודש הנבחר</h3>
-          <p className="text-gray-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
+          <h3 className="text-xl font-semibold text-slate-600 mb-2">לא נמצאו תהליכי שכר לחודש הנבחר</h3>
+          <p className="text-slate-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
         </Card>
       )}
 

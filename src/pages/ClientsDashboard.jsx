@@ -27,8 +27,8 @@ const COLUMN_GROUPS = [
   {
     key: 'taxes',
     label: 'מיסים',
-    bgColor: 'bg-slate-50',
-    headerBg: 'bg-slate-600',
+    bgColor: 'bg-[#008291]/5',
+    headerBg: 'bg-[#008291]',
     headerText: 'text-white',
     drillDownPage: 'TaxReportsDashboard',
     icon: Calculator,
@@ -40,8 +40,8 @@ const COLUMN_GROUPS = [
   {
     key: 'payroll',
     label: 'שכר',
-    bgColor: 'bg-gray-50',
-    headerBg: 'bg-gray-600',
+    bgColor: 'bg-[#00acc1]/5',
+    headerBg: 'bg-[#00acc1]',
     headerText: 'text-white',
     drillDownPage: 'PayrollDashboard',
     icon: Briefcase,
@@ -76,7 +76,7 @@ const ALL_COLUMNS = COLUMN_GROUPS.flatMap(g => g.columns);
 // Statuses available for quick-change (excluding 'issues' duplicate)
 const CHANGEABLE_STATUSES = Object.entries(STATUS_CONFIG).filter(([k]) => k !== 'issues');
 
-const EMPTY_STATUS = { label: '-', bg: 'bg-white', text: 'text-gray-300' };
+const EMPTY_STATUS = { label: '-', bg: 'bg-white/40', text: 'text-slate-300' };
 
 // Popover positioned near a cell
 function CellPopover({ anchorRect, onClose, children }) {
@@ -107,7 +107,7 @@ function CellPopover({ anchorRect, onClose, children }) {
   return (
     <div
       ref={popoverRef}
-      className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-2 min-w-[200px] animate-in fade-in-0 zoom-in-95"
+      className="fixed z-50 bg-white rounded-lg shadow-xl border border-white/20 p-2 min-w-[200px] animate-in fade-in-0 zoom-in-95"
       style={{ top, left }}
     >
       {children}
@@ -428,17 +428,17 @@ export default function ClientsDashboardPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">תהליכי דיווח חודשיים</h1>
-            <p className="text-sm text-gray-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | לחץ על תא לשינוי סטטוס</p>
+            <p className="text-sm text-slate-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | לחץ על תא לשינוי סטטוס</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-white/20 p-1 shadow-sm">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
               <ChevronRight className="w-4 h-4" />
             </Button>
             <div className="text-center w-32">
-              <div className="text-[10px] text-gray-400 leading-none">חודש דיווח</div>
-              <div className="font-semibold text-sm text-gray-700">
+              <div className="text-[10px] text-slate-400 leading-none">חודש דיווח</div>
+              <div className="font-semibold text-sm text-slate-700">
                 {format(selectedMonth, 'MMMM yyyy', { locale: he })}
               </div>
             </div>
@@ -472,10 +472,10 @@ export default function ClientsDashboardPage() {
           <div className="flex items-center gap-2 text-sm text-emerald-800">
             <Check className="w-4 h-4" />
             <span>נוצרו <strong>{generateResult.created}</strong> דיווחים חדשים</span>
-            {generateResult.skipped > 0 && <span className="text-gray-500">({generateResult.skipped} כבר קיימים)</span>}
+            {generateResult.skipped > 0 && <span className="text-slate-500">({generateResult.skipped} כבר קיימים)</span>}
             {generateResult.errors > 0 && <span className="text-amber-500">({generateResult.errors} שגיאות)</span>}
           </div>
-          <button onClick={() => setGenerateResult(null)} className="text-gray-400 hover:text-gray-600">
+          <button onClick={() => setGenerateResult(null)} className="text-slate-400 hover:text-slate-600">
             <X className="w-4 h-4" />
           </button>
         </motion.div>
@@ -483,34 +483,34 @@ export default function ClientsDashboardPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
+        <Card className="bg-gradient-to-br from-gray-50 to-white border-white/20 shadow-sm">
           <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-gray-700">{filteredClients.length}</div>
-            <div className="text-xs text-gray-500">לקוחות פעילים</div>
+            <div className="text-2xl font-bold text-slate-700">{filteredClients.length}</div>
+            <div className="text-xs text-slate-500">לקוחות פעילים</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200 shadow-sm">
+        <Card className="bg-gradient-to-br from-gray-50 to-white border-white/20 shadow-sm">
           <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-gray-600">{stats.total}</div>
-            <div className="text-xs text-gray-500">תהליכים</div>
+            <div className="text-2xl font-bold text-slate-600">{stats.total}</div>
+            <div className="text-xs text-slate-500">תהליכים</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-emerald-600">{stats.completed}</div>
-            <div className="text-xs text-gray-500">הושלמו</div>
+            <div className="text-xs text-slate-500">הושלמו</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200 shadow-sm hidden md:block">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-amber-600">{stats.issues}</div>
-            <div className="text-xs text-gray-500">דורש טיפול</div>
+            <div className="text-xs text-slate-500">דורש טיפול</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-sm hidden md:block">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-emerald-700">{stats.pct}%</div>
-            <div className="text-xs text-gray-500">התקדמות כוללת</div>
+            <div className="text-xs text-slate-500">התקדמות כוללת</div>
           </CardContent>
         </Card>
       </div>
@@ -518,10 +518,10 @@ export default function ClientsDashboardPage() {
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-2">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
           <Input placeholder="חיפוש לקוח..." value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10 h-9 text-sm border-gray-200 bg-white" />
+            className="pr-10 h-9 text-sm border-white/20 bg-white" />
         </div>
         <MultiStatusFilter
           options={[
@@ -543,19 +543,19 @@ export default function ClientsDashboardPage() {
           <Loader className="w-10 h-10 animate-spin text-emerald-500" />
         </div>
       ) : filteredClients.length > 0 ? (
-        <Card className="border-gray-300 shadow-md overflow-hidden">
+        <Card className="border-white/30 shadow-md overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[750px]">
                 <thead>
                   {/* Group headers */}
                   <tr>
-                    <th rowSpan={2} className="text-right px-4 py-3 font-bold text-gray-700 text-sm bg-gray-100 sticky right-0 z-20 border-b-2 border-gray-300 min-w-[160px]">
+                    <th rowSpan={2} className="text-right px-4 py-3 font-bold text-slate-700 text-sm bg-white/50 sticky right-0 z-20 border-b-2 border-white/30 min-w-[160px]">
                       לקוח
                     </th>
                     {COLUMN_GROUPS.map(group => (
                       <th key={group.key} colSpan={group.columns.length}
-                        className={`px-3 py-2.5 text-center font-bold text-sm border-b-2 border-gray-300 border-x-2 border-gray-300 ${group.headerBg} ${group.headerText}`}>
+                        className={`px-3 py-2.5 text-center font-bold text-sm border-b-2 border-white/30 border-x-2 border-white/30 ${group.headerBg} ${group.headerText}`}>
                         <Link to={createPageUrl(group.drillDownPage)}
                           className="inline-flex items-center gap-2 hover:opacity-80 transition-opacity">
                           <group.icon className="w-4 h-4" />
@@ -566,14 +566,14 @@ export default function ClientsDashboardPage() {
                     ))}
                   </tr>
                   {/* Sub-column headers */}
-                  <tr className="border-b-2 border-gray-300">
+                  <tr className="border-b-2 border-white/30">
                     {COLUMN_GROUPS.map(group =>
                       group.columns.map((col, idx) => {
                         const colStats = getColumnStats(col.key);
                         return (
-                          <th key={col.key} className={`px-2 py-2 text-center text-xs font-semibold text-gray-600 ${group.bgColor} ${idx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                          <th key={col.key} className={`px-2 py-2 text-center text-xs font-semibold text-slate-600 ${group.bgColor} ${idx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
                             <div>{col.label}</div>
-                            <div className="text-[10px] font-normal text-gray-400 mt-0.5">{colStats.pct}% ({colStats.done}/{colStats.total})</div>
+                            <div className="text-[10px] font-normal text-slate-400 mt-0.5">{colStats.pct}% ({colStats.done}/{colStats.total})</div>
                           </th>
                         );
                       })
@@ -590,10 +590,10 @@ export default function ClientsDashboardPage() {
 
                     return (
                       <tr key={client.id}
-                        className={`border-b border-gray-200 transition-colors hover:bg-emerald-50/30 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                        className={`border-b border-white/20 transition-colors hover:bg-emerald-50/30 ${index % 2 === 0 ? 'bg-white' : 'bg-white/30/40'}`}>
                         {/* Client name cell */}
-                        <td className="px-4 py-2.5 sticky right-0 z-10 border-l-2 border-gray-300"
-                          style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fafafa' }}>
+                        <td className="px-4 py-2.5 sticky right-0 z-10 border-l-2 border-white/30"
+                          style={{ backgroundColor: index % 2 === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
                           <div className="flex items-center justify-between">
                             <div>
                               <Link
@@ -604,7 +604,7 @@ export default function ClientsDashboardPage() {
                                 {client.name}
                               </Link>
                               {clientTotal > 0 && (
-                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                <div className="text-[10px] text-slate-400 mt-0.5">
                                   {clientDone}/{clientTotal} הושלמו
                                 </div>
                               )}
@@ -628,8 +628,8 @@ export default function ClientsDashboardPage() {
                             // Service not applicable for this client
                             if (!clientNeedsService(client, col, group)) {
                               return (
-                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
-                                  <div className={`${STATUS_CONFIG.not_relevant.bg} text-gray-400 rounded py-1.5 text-[10px] font-medium mx-0.5`}>
+                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
+                                  <div className={`${STATUS_CONFIG.not_relevant.bg} text-slate-400 rounded py-1.5 text-[10px] font-medium mx-0.5`}>
                                     לא רלוונטי
                                   </div>
                                 </td>
@@ -641,8 +641,8 @@ export default function ClientsDashboardPage() {
                               // Check if bimonthly off-month → show "לא רלוונטי"
                               if (isBimonthlyOffMonth(client, col.key, selectedMonth)) {
                                 return (
-                                  <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
-                                    <div className={`${STATUS_CONFIG.not_relevant.bg} text-gray-400 rounded py-1.5 text-xs font-bold mx-0.5`}>
+                                  <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
+                                    <div className={`${STATUS_CONFIG.not_relevant.bg} text-slate-400 rounded py-1.5 text-xs font-bold mx-0.5`}>
                                       דו-חודשי
                                     </div>
                                   </td>
@@ -650,10 +650,10 @@ export default function ClientsDashboardPage() {
                               }
                               // Empty cell - clickable to create task
                               return (
-                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
                                   <button
                                     onClick={(e) => handleCreateTask(e, client, col, group)}
-                                    className="w-full bg-white hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 rounded py-1.5 text-xs font-medium mx-0.5 border border-dashed border-gray-200 hover:border-emerald-300 transition-all cursor-pointer group/empty"
+                                    className="w-full bg-white hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded py-1.5 text-xs font-medium mx-0.5 border border-dashed border-white/20 hover:border-emerald-300 transition-all cursor-pointer group/empty"
                                     title={`צור משימת ${col.label} עבור ${client.name}`}
                                   >
                                     <span className="group-hover/empty:hidden">-</span>
@@ -668,7 +668,7 @@ export default function ClientsDashboardPage() {
                             const isActive = popover?.clientName === client.name && popover?.colKey === col.key;
 
                             return (
-                              <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
+                              <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
                                 <button
                                   onClick={(e) => handleCellClick(e, client, col, group)}
                                   className={`w-full ${config.bg} text-gray-900 rounded py-1.5 text-xs font-bold mx-0.5 hover:opacity-80 hover:shadow-sm transition-all cursor-pointer ${isActive ? 'ring-2 ring-emerald-500 ring-offset-1' : ''}`}
@@ -689,18 +689,18 @@ export default function ClientsDashboardPage() {
                 </tbody>
                 {/* Footer */}
                 <tfoot>
-                  <tr className="bg-gray-100 border-t-2 border-gray-300">
-                    <td className="px-4 py-2.5 sticky right-0 bg-gray-100 z-10 text-sm font-bold text-gray-700 border-l-2 border-gray-300">
+                  <tr className="bg-white/50 border-t-2 border-white/30">
+                    <td className="px-4 py-2.5 sticky right-0 bg-white/50 z-10 text-sm font-bold text-slate-700 border-l-2 border-white/30">
                       סה"כ ({filteredClients.length} לקוחות)
                     </td>
                     {COLUMN_GROUPS.map(group =>
                       group.columns.map((col, colIdx) => {
                         const colStats = getColumnStats(col.key);
                         return (
-                          <td key={col.key} className={`px-2 py-2.5 text-center ${colIdx === 0 ? 'border-r-2 border-gray-300' : 'border-r border-gray-200'}`}>
-                            <div className="text-sm font-bold text-gray-700">{colStats.pct}%</div>
-                            <div className="text-[10px] text-gray-500">{colStats.done}/{colStats.total}</div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                          <td key={col.key} className={`px-2 py-2.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
+                            <div className="text-sm font-bold text-slate-700">{colStats.pct}%</div>
+                            <div className="text-[10px] text-slate-500">{colStats.done}/{colStats.total}</div>
+                            <div className="w-full bg-white/40 rounded-full h-1.5 mt-1">
                               <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${colStats.pct}%` }} />
                             </div>
                           </td>
@@ -714,10 +714,10 @@ export default function ClientsDashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="p-12 text-center border-gray-200 shadow-sm">
-          <Users className="w-14 h-14 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">אין לקוחות פעילים להצגה</h3>
-          <p className="text-sm text-gray-400 mb-4">הוסף לקוחות דרך ניהול לקוחות או שנה סינון</p>
+        <Card className="p-12 text-center border-white/20 shadow-sm">
+          <Users className="w-14 h-14 mx-auto text-slate-300 mb-4" />
+          <h3 className="text-lg font-semibold text-slate-600 mb-2">אין לקוחות פעילים להצגה</h3>
+          <p className="text-sm text-slate-400 mb-4">הוסף לקוחות דרך ניהול לקוחות או שנה סינון</p>
           <Link to={createPageUrl('ClientManagement')}>
             <Button variant="outline" className="gap-2">
               <Users className="w-4 h-4" />
@@ -734,7 +734,7 @@ export default function ClientsDashboardPage() {
             {/* Header */}
             <div className="px-2 py-1.5 border-b border-gray-100 mb-1">
               <div className="font-semibold text-sm text-gray-800">{popover.clientName}</div>
-              <div className="text-xs text-gray-500">{popover.col.label} - {popover.task ? 'שינוי סטטוס' : 'יצירת משימה חדשה'}</div>
+              <div className="text-xs text-slate-500">{popover.col.label} - {popover.task ? 'שינוי סטטוס' : 'יצירת משימה חדשה'}</div>
             </div>
 
             {/* Status options */}
@@ -765,7 +765,7 @@ export default function ClientsDashboardPage() {
                     navigateToDrillDown(popover.group, popover.clientName);
                     setPopover(null);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded text-xs text-gray-600 hover:bg-gray-100 transition-all cursor-pointer"
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded text-xs text-slate-600 hover:bg-white/50 transition-all cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   צפה בפירוט מלא
@@ -788,37 +788,37 @@ export default function ClientsDashboardPage() {
 
           return (
             <Link key={group.key} to={createPageUrl(group.drillDownPage)}>
-              <Card className="border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
+              <Card className="border-white/20 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${group.headerBg} shadow-sm`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-bold text-gray-700 group-hover:text-emerald-700 transition-colors">{group.label}</div>
-                    <div className="text-xs text-gray-400">
+                    <div className="font-bold text-slate-700 group-hover:text-emerald-700 transition-colors">{group.label}</div>
+                    <div className="text-xs text-slate-400">
                       {groupDone}/{groupTasks.length} הושלמו
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1.5">
+                    <div className="w-full bg-white/40 rounded-full h-1.5 mt-1.5">
                       <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${groupPct}%` }} />
                     </div>
                   </div>
-                  <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
+                  <ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 transition-colors" />
                 </CardContent>
               </Card>
             </Link>
           );
         })}
         <Link to={createPageUrl('ClientManagement')}>
-          <Card className="border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
+          <Card className="border-white/20 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-500 shadow-sm">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/300 shadow-sm">
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <div className="font-bold text-gray-700 group-hover:text-emerald-700 transition-colors">ניהול לקוחות</div>
-                <div className="text-xs text-gray-400">הוספה, עריכה וצפייה</div>
+                <div className="font-bold text-slate-700 group-hover:text-emerald-700 transition-colors">ניהול לקוחות</div>
+                <div className="text-xs text-slate-400">הוספה, עריכה וצפייה</div>
               </div>
-              <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 transition-colors" />
+              <ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 transition-colors" />
             </CardContent>
           </Card>
         </Link>

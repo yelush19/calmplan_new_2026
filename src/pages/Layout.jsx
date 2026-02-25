@@ -55,7 +55,7 @@ const WORK_MODES = [
     key: 'admin',
     label: 'ניהול',
     icon: Settings,
-    color: 'bg-gray-500 text-white',
+    color: 'bg-[#008291]/80 text-white',
     description: 'לקוחות + ספקים + הגדרות',
     visibleSections: ['clients', 'system']
   },
@@ -432,14 +432,14 @@ function LayoutInner({ children }) {
                 </div>
                 <div className="mt-4 space-y-3">
                   {emergencyTasks.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-8">אין משימות שדורשות תשומת לב</p>
+                    <p className="text-sm text-slate-400 text-center py-8">אין משימות שדורשות תשומת לב</p>
                   ) : (
                     emergencyTasks.map(task => (
                       <Card key={task.id} className="border-r-4 border-purple-400 cursor-pointer hover:bg-purple-50"
                             onClick={() => navigate(createPageUrl("Tasks"))}>
                         <CardContent className="p-3">
                           <p className="font-medium text-sm">{task.title}</p>
-                          <p className="text-xs text-gray-500">{task.client_name} {task.due_date && `\u2022 ${task.due_date}`}</p>
+                          <p className="text-xs text-slate-500">{task.client_name} {task.due_date && `\u2022 ${task.due_date}`}</p>
                         </CardContent>
                       </Card>
                     ))
@@ -636,7 +636,7 @@ function LayoutInner({ children }) {
             <>
               <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)} />
               <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 backdrop-blur-xl bg-white/45 border-l border-white/20 shadow-xl overflow-y-auto">
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="p-4 border-b border-white/20 flex items-center justify-between">
                   <Link to={createPageUrl("Home")} className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
                       <Brain className="w-5 h-5 text-primary-foreground" />
@@ -824,7 +824,7 @@ function LayoutInner({ children }) {
             onClick={guardClick(() => setNotesOpen(!notesOpen))}
             className={`w-11 h-11 rounded-full shadow-xl flex items-center justify-center ring-2 ring-white/50 select-none ${
               notesOpen
-                ? 'bg-gray-500 hover:bg-gray-600 text-white'
+                ? 'bg-[#008291] hover:bg-[#006d7a] text-white'
                 : 'bg-amber-500 hover:bg-amber-600 text-white'
             }`}
             title={notesOpen ? 'סגור פתקים' : 'פתח פתקים • גרור לשינוי מיקום • לחיצה כפולה לאיפוס'}
@@ -846,7 +846,7 @@ function LayoutInner({ children }) {
         <>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setNotesOpen(false)} />
           <div
-            className="fixed bottom-20 left-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[70vh] bg-white rounded-2xl shadow-2xl border-2 border-amber-300 flex flex-col overflow-hidden"
+            className="fixed bottom-20 left-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[70vh] backdrop-blur-xl bg-white/45 border border-white/20 rounded-[32px] shadow-2xl flex flex-col overflow-hidden"
             style={{ direction: 'rtl' }}
           >
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-l from-amber-100 to-amber-50 border-b border-amber-200 shrink-0">

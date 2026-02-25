@@ -16,7 +16,7 @@ export const Checkbox = ({ checked, onChange, onCheckedChange, disabled = false,
       aria-checked={!!checked}
       className={`
         w-4 h-4 border-2 rounded cursor-pointer flex items-center justify-center transition-all
-        ${checked ? 'bg-primary border-primary' : 'border-gray-300 hover:border-gray-400'}
+        ${checked ? 'bg-primary border-primary' : 'border-[#008291]/40 hover:border-[#008291]/60'}
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${className}
       `}
