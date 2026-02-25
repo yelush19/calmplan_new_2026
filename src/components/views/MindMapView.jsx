@@ -54,6 +54,35 @@ const NODE_COLOR_MAP = {
   slate:   '#90A4AE',
 };
 
+// ─── NEW HIERARCHY: Meta-folders group departments ───────────────
+// Root → Meta-Folder → Department → Client Leaves
+const META_FOLDERS = {
+  'דיווחים': {
+    icon: '📊', color: '#008291', label: 'Reports',
+    departments: ['מע"מ', 'מקדמות', 'ב"ל', 'ניכויים'],
+    subFolders: [
+      { key: 'דיווחי שכר', icon: '👥', departments: ['שכר', 'ב"ל', 'ניכויים'] },
+      { key: 'דיווחי מיסים', icon: '📊', departments: ['מע"מ', 'מקדמות'] },
+    ],
+  },
+  'שכר ותשלומים': {
+    icon: '💰', color: '#0288D1', label: 'Payroll',
+    departments: ['שכר'],
+  },
+  'התאמות ומאזנים': {
+    icon: '🔄', color: '#0097A7', label: 'Reconcile',
+    departments: ['התאמות', 'מאזנים'],
+  },
+  'אדמיניסטרציה': {
+    icon: '📁', color: '#546E7A', label: 'Admin',
+    departments: ['אדמיניסטרציה'],
+  },
+  'בית': {
+    icon: '🏠', color: '#6D4C41', label: 'Home',
+    departments: ['בית'],
+  },
+};
+
 // Department folder nodes – Glassmorphism Teal/Cyan palette
 const BRANCH_CONFIG = {
   'שכר':          { color: '#0288D1', icon: '👥', label: 'Payroll' },
@@ -410,6 +439,48 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       }),
     }));
 
+    // ── Assign meta-folder to each branch ──
+    branches.forEach(branch => {
+      for (const [metaName, meta] of Object.entries(META_FOLDERS)) {
+        if (meta.departments.includes(branch.category)) {
+          branch.metaFolder = metaName;
+          branch.metaConfig = meta;
+          // Check if this branch belongs to a specific sub-folder within the meta
+          if (meta.subFolders) {
+            for (const sf of meta.subFolders) {
+              if (sf.departments.includes(branch.category)) {
+                branch.metaSubFolder = sf.key;
+                branch.metaSubFolderIcon = sf.icon;
+                break;
+              }
+            }
+          }
+          break;
+        }
+      }
+      if (!branch.metaFolder) {
+        branch.metaFolder = 'אדמיניסטרציה';
+        branch.metaConfig = META_FOLDERS['אדמיניסטרציה'];
+      }
+    });
+
+    // ── Build meta-folder groups (for rendering outer hexagon ring) ──
+    const metaGroups = {};
+    branches.forEach(branch => {
+      const mf = branch.metaFolder;
+      if (!metaGroups[mf]) {
+        metaGroups[mf] = {
+          name: mf,
+          config: branch.metaConfig || META_FOLDERS[mf],
+          departments: [],
+          totalClients: 0,
+        };
+      }
+      metaGroups[mf].departments.push(branch.category);
+      metaGroups[mf].totalClients += branch.clients.length;
+    });
+    const metaFolders = Object.values(metaGroups);
+
     // Build flat client nodes for rendering
     const clientNodes = [];
     branches.forEach(branch => {
@@ -424,7 +495,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       return t.due_date === todayStr;
     });
 
-    return { branches, clientNodes, centerLabel, todayTasks };
+    return { branches, clientNodes, centerLabel, todayTasks, metaFolders };
   }, [tasks, clients, crisisMode]);
 
   // ── Feature 8: Auto-open drawer from search deep-link ──
@@ -632,8 +703,26 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       });
     });
 
-    return { cx, cy, centerR, branchPositions, virtualW: w, virtualH: h, isWide };
-  }, [branches, dimensions, spacingFactor, manualPositions]);
+    // ── Meta-folder positions (outer hexagon ring between center and branches) ──
+    const metaFolderPositions = metaFolders.map((mf, i) => {
+      const mfAngle = (i * 2 * Math.PI / Math.max(metaFolders.length, 1)) - Math.PI / 2;
+      // Position at 50% of branch distance (halfway between center and departments)
+      const mfDist = Math.min(scaleX, scaleY) * 0.48;
+      const mx = cx + Math.cos(mfAngle) * mfDist;
+      const my = cy + Math.sin(mfAngle) * mfDist;
+      // Manual position override
+      const manualKey = `meta-${mf.name}`;
+      const manual = manualPositions[manualKey];
+      return {
+        ...mf,
+        x: manual?.x ?? mx,
+        y: manual?.y ?? my,
+        angle: mfAngle,
+      };
+    });
+
+    return { cx, cy, centerR, branchPositions, metaFolderPositions, virtualW: w, virtualH: h, isWide };
+  }, [branches, metaFolders, dimensions, spacingFactor, manualPositions]);
 
   // ── Draggable center: effective position respects manual drag override ──
   const centerPos = useMemo(() => {
@@ -1044,21 +1133,45 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             </filter>
           </defs>
 
-          {/* ── Connection Lines — straight, center-to-center ── */}
-          {layout.branchPositions.map((branch) => (
-            <g key={`lines-${branch.category}`}>
-              {/* Center → Folder */}
+          {/* ── Meta-Folder Connection Lines: Center → Meta-Folder → Departments ── */}
+          {layout.metaFolderPositions?.map((mf) => (
+            <g key={`meta-lines-${mf.name}`}>
+              {/* Center → Meta-Folder */}
               <motion.path
-                d={`M ${centerPos.x} ${centerPos.y} L ${branch.x} ${branch.y}`}
+                d={`M ${centerPos.x} ${centerPos.y} L ${mf.x} ${mf.y}`}
                 stroke="#008291"
-                strokeWidth={2.5}
+                strokeWidth={3}
                 strokeLinecap="round"
                 fill="none"
-                strokeOpacity={isSpotlit(branch.category) ? 0.8 : 0.12}
+                strokeOpacity={0.6}
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
-                transition={{ duration: 0.6, ease: 'easeInOut' }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
               />
+              {/* Meta-Folder → its Department branches */}
+              {layout.branchPositions
+                .filter(b => b.metaFolder === mf.name)
+                .map(branch => (
+                  <motion.path
+                    key={`meta-dept-${mf.name}-${branch.category}`}
+                    d={`M ${mf.x} ${mf.y} L ${branch.x} ${branch.y}`}
+                    stroke={mf.config?.color || '#008291'}
+                    strokeWidth={2}
+                    strokeDasharray="6 3"
+                    fill="none"
+                    strokeOpacity={isSpotlit(branch.category) ? 0.7 : 0.12}
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.4, delay: 0.2, ease: 'easeInOut' }}
+                  />
+                ))
+              }
+            </g>
+          ))}
+
+          {/* ── Department Connection Lines — department-to-client ── */}
+          {layout.branchPositions.map((branch) => (
+            <g key={`lines-${branch.category}`}>
               {/* Folder → Sub-folders */}
               {branch.subFolderPositions?.map((sub) => (
                 <motion.path
@@ -1129,10 +1242,65 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           <span className="opacity-60 text-[11px]">{centerLabel}</span>
         </motion.div>
 
-        {/* ── Branch (Category) Nodes ── */}
+        {/* ── META-FOLDER Hexagon Nodes (outer ring) ── */}
+        {layout.metaFolderPositions?.map((mf, mi) => (
+          <motion.div
+            key={`meta-${mf.name}`}
+            data-node-draggable
+            className="absolute z-[15] select-none touch-none"
+            style={{
+              left: mf.x,
+              top: mf.y,
+              transform: 'translate(-50%, -50%)',
+              cursor: 'grab',
+            }}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: mi * 0.06, type: 'spring', stiffness: 200 }}
+            whileHover={{ scale: 1.12 }}
+            onPointerDown={(e) => handleNodePointerDown(e, `meta-${mf.name}`, mf.x, mf.y)}
+            onPointerUp={(e) => {
+              const wasDragging = nodeHasDragged.current;
+              draggingNode.current = null;
+              nodeHasDragged.current = false;
+              if (wasDragging) setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
+            }}
+          >
+            <svg width="140" height="64" viewBox="0 0 140 64" style={{ overflow: 'visible' }}>
+              {/* Large Hexagon shape — Deep Teal, Solid */}
+              <polygon
+                points="22,0 118,0 140,32 118,64 22,64 0,32"
+                fill={mf.config?.color || '#008291'}
+                opacity={0.92}
+                stroke="#008291"
+                strokeWidth={3}
+              />
+              {/* Glass highlight */}
+              <polygon
+                points="22,0 118,0 140,32 118,64 22,64 0,32"
+                fill="url(#metaGlassGrad)"
+                opacity={0.25}
+              />
+              <defs>
+                <linearGradient id="metaGlassGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="white" stopOpacity="0.6" />
+                  <stop offset="100%" stopColor="white" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <text x="70" y="28" textAnchor="middle" fill="white" fontSize="13" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                {mf.config?.icon || '📂'} {mf.name}
+              </text>
+              <text x="70" y="46" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="10" style={{ pointerEvents: 'none' }}>
+                {mf.totalClients} לקוחות
+              </text>
+            </svg>
+          </motion.div>
+        ))}
+
+        {/* ── Branch (Category/Department) Nodes ── */}
         {layout.branchPositions.map((branch, i) => (
           <React.Fragment key={branch.category}>
-            {/* Folder-shaped department node — draggable */}
+            {/* Category department node — hexagonal, draggable */}
             <motion.div
               data-node-draggable
               className="absolute z-10 select-none touch-none"
@@ -1177,7 +1345,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               </svg>
             </motion.div>
 
-            {/* Sub-folder nodes (for 'בית' department) */}
+            {/* Sub-folder / Category nodes — Light Cyan, Dashed, Sparkle Hover */}
             {branch.subFolderPositions?.map((sub, si) => (
               <motion.div
                 key={`sub-${branch.category}-${sub.key}`}
@@ -1187,23 +1355,39 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   top: sub.y,
                   transform: 'translate(-50%, -50%)',
                   opacity: isSpotlit(branch.category) ? 0.9 : 0.12,
-                  transition: 'opacity 0.4s ease-in-out',
+                  transition: 'opacity 0.4s ease-in-out, box-shadow 0.3s ease',
                 }}
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: isSpotlit(branch.category) ? 0.9 : 0.12, scale: 1 }}
                 transition={{ delay: i * 0.08 + si * 0.05 + 0.1, type: 'spring', stiffness: 200 }}
-                whileHover={{ scale: 1.08 }}
+                whileHover={{
+                  scale: 1.15,
+                  boxShadow: '0 0 20px rgba(0,172,193,0.6), 0 0 40px rgba(0,172,193,0.3)',
+                  filter: 'brightness(1.15)',
+                }}
                 onClick={(e) => { e.stopPropagation(); handleBranchClick(branch.category); }}
               >
                 <svg width="96" height="38" viewBox="0 0 96 38" style={{ overflow: 'visible' }}>
-                  {/* Category sub-folder — smaller pill with dashed border + folder tab */}
+                  {/* Category sub-folder — folder-tab shape, Light Cyan (#00acc1), Dashed border */}
                   <path d="M0,8 L0,30 Q0,38 8,38 L88,38 Q96,38 96,30 L96,8 Q96,0 88,0 L36,0 L30,6 L8,6 Q0,6 0,8 Z"
-                    fill={branch.config.color}
-                    opacity={0.7}
+                    fill="#00acc1"
+                    opacity={0.75}
                     stroke="#008291"
                     strokeWidth={1.5}
                     strokeDasharray="4 2"
                   />
+                  {/* White shimmer overlay */}
+                  <path d="M0,8 L0,30 Q0,38 8,38 L88,38 Q96,38 96,30 L96,8 Q96,0 88,0 L36,0 L30,6 L8,6 Q0,6 0,8 Z"
+                    fill="url(#subFolderShimmer)"
+                    opacity={0.15}
+                  />
+                  <defs>
+                    <linearGradient id="subFolderShimmer" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="white" stopOpacity="0.8" />
+                      <stop offset="50%" stopColor="white" stopOpacity="0" />
+                      <stop offset="100%" stopColor="white" stopOpacity="0.4" />
+                    </linearGradient>
+                  </defs>
                   <text x="48" y="26" textAnchor="middle" fill="white" fontSize="10" fontWeight="600" style={{ pointerEvents: 'none' }}>
                     📂 {sub.key}
                   </text>

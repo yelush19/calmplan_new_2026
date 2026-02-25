@@ -76,7 +76,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
         disabled={disabled}
         className={`w-full flex items-center justify-between h-9 px-3 text-xs border border-white/30 rounded-[24px] transition-colors backdrop-blur-sm ${disabled ? 'bg-white/20 cursor-not-allowed opacity-60' : 'bg-white/40 hover:bg-white/60'}`}
       >
-        <span className={`truncate ${!selectedItem && value === '__none__' ? 'text-gray-500' : 'text-gray-700'}`}>
+        <span className={`truncate ${!selectedItem && value === '__none__' ? 'text-slate-500' : 'text-slate-700'}`}>
           {displayLabel}
         </span>
         <ChevronDown className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -104,7 +104,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
               <button
                 type="button"
                 onClick={() => { onChange('__none__'); setIsOpen(false); }}
-                className={`w-full text-right px-3 py-1.5 text-xs hover:bg-white/50 transition-colors rounded-[12px] ${value === '__none__' ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-gray-500'}`}
+                className={`w-full text-right px-3 py-1.5 text-xs hover:bg-white/50 transition-colors rounded-[12px] ${value === '__none__' ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-slate-500'}`}
               >
                 {noneLabel}
               </button>
@@ -117,7 +117,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                 if (groupItems.length === 0) return null;
                 return (
                   <div key={group.key}>
-                    <div className="px-3 py-1 text-[10px] font-bold text-gray-500 bg-white/30 sticky top-0">
+                    <div className="px-3 py-1 text-[10px] font-bold text-slate-500 bg-white/30 sticky top-0">
                       {group.label}
                     </div>
                     {groupItems.map(item => {
@@ -128,7 +128,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                           type="button"
                           key={itemKey}
                           onClick={() => { onChange(itemKey); setIsOpen(false); }}
-                          className={`w-full text-right px-3 py-1.5 text-xs hover:bg-white/50 transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-gray-700'}`}
+                          className={`w-full text-right px-3 py-1.5 text-xs hover:bg-white/50 transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-slate-700'}`}
                         >
                           {renderItem ? renderItem(item) : item.label || item.name}
                         </button>
@@ -147,7 +147,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                     type="button"
                     key={itemKey}
                     onClick={() => { onChange(itemKey); setIsOpen(false); }}
-                    className={`w-full text-right px-3 py-1.5 text-xs hover:bg-white/50 transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-gray-700'}`}
+                    className={`w-full text-right px-3 py-1.5 text-xs hover:bg-white/50 transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-slate-700'}`}
                   >
                     {renderItem ? renderItem(item) : item.label || item.name}
                   </button>

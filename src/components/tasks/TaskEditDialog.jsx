@@ -72,9 +72,9 @@ function ExecutionTimeline({ startDate, dueDate }) {
   const textColor = isOverdue ? 'text-amber-600' : isUrgent ? 'text-amber-500' : isWarning ? 'text-amber-600' : 'text-emerald-600';
 
   return (
-    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+    <div className="bg-white/30 backdrop-blur-sm rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1 text-gray-500">
+        <span className="flex items-center gap-1 text-slate-500">
           <Timer className="w-3 h-3" />
           תקופת ביצוע
         </span>
@@ -87,13 +87,13 @@ function ExecutionTimeline({ startDate, dueDate }) {
         </span>
       </div>
       {/* Progress bar */}
-      <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+      <div className="w-full h-2.5 bg-white/40 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${barColor}`}
           style={{ width: `${progress}%` }}
         />
       </div>
-      <div className="flex justify-between text-[10px] text-gray-400">
+      <div className="flex justify-between text-[10px] text-slate-400">
         <span>התחלה: {format(start, 'd/M')}</span>
         <span>{totalDays} ימים סה"כ</span>
         <span>סיום: {format(end, 'd/M')}</span>
@@ -290,7 +290,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <span className="text-[10px] text-gray-500">תאריך התחלה</span>
+                <span className="text-[10px] text-slate-500">תאריך התחלה</span>
                 <Input
                   type="date"
                   value={editData.scheduled_start}
@@ -301,7 +301,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] text-gray-500">תאריך יעד (דדליין)</span>
+                <span className="text-[10px] text-slate-500">תאריך יעד (דדליין)</span>
                 <Input
                   type="date"
                   value={editData.due_date}
@@ -315,7 +315,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             {/* Time + Duration */}
             <div className="grid grid-cols-2 gap-3 mt-2">
               <div className="space-y-1">
-                <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                <span className="text-[10px] text-slate-500 flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   שעה
                 </span>
@@ -328,7 +328,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                <span className="text-[10px] text-slate-500 flex items-center gap-1">
                   <Timer className="w-3 h-3" />
                   משך משימה (דקות)
                 </span>
@@ -367,7 +367,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             <textarea
               value={editData.notes}
               onChange={(e) => setEditData(prev => ({ ...prev, notes: e.target.value }))}
-              className="w-full text-sm border border-gray-200 rounded-md p-2 min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full text-sm border border-white/20 rounded-md p-2 min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="הוסף הערה..."
             />
           </div>
@@ -384,18 +384,18 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                 {editData.sub_tasks.map(st => {
                   const stPri = PRIORITY_OPTIONS.find(p => p.value === st.priority);
                   return (
-                    <div key={st.id} className="flex items-center gap-2 p-1.5 rounded bg-gray-50 group">
+                    <div key={st.id} className="flex items-center gap-2 p-1.5 rounded bg-white/30 backdrop-blur-sm group">
                       <button onClick={() => handleToggleSubTask(st.id)} className="shrink-0">
                         {st.done ? (
                           <CheckSquare className="w-4 h-4 text-emerald-500" />
                         ) : (
-                          <Square className="w-4 h-4 text-gray-400" />
+                          <Square className="w-4 h-4 text-slate-400" />
                         )}
                       </button>
                       {stPri && (
                         <stPri.icon className={`w-3 h-3 shrink-0 ${stPri.color}`} />
                       )}
-                      <span className={`text-xs flex-1 ${st.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                      <span className={`text-xs flex-1 ${st.done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
                         {st.title}
                       </span>
                       {st.due_time && (
@@ -404,7 +404,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                         </span>
                       )}
                       {st.due_date && (
-                        <span className="text-[10px] text-gray-400">{st.due_date}</span>
+                        <span className="text-[10px] text-slate-400">{st.due_date}</span>
                       )}
                       <button
                         onClick={() => handleDeleteSubTask(st.id)}
@@ -495,16 +495,16 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             {(() => {
               const childTasks = allTasks.filter(t => t.parent_id === task.id);
               if (childTasks.length === 0) return (
-                <p className="text-xs text-gray-400 text-center py-2">אין תתי-משימות מלאות</p>
+                <p className="text-xs text-slate-400 text-center py-2">אין תתי-משימות מלאות</p>
               );
               return (
                 <div className="space-y-1 max-h-[150px] overflow-y-auto">
                   {childTasks.map(child => {
                     const childStatus = statusConfig[child.status] || statusConfig.not_started;
                     return (
-                      <div key={child.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div key={child.id} className="flex items-center gap-2 p-2 rounded-lg bg-white/30 backdrop-blur-sm hover:bg-white/40 transition-colors">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${childStatus.dot}`} />
-                        <span className="text-xs text-gray-700 flex-1 truncate">{child.title}</span>
+                        <span className="text-xs text-slate-700 flex-1 truncate">{child.title}</span>
                         <Badge className={`${childStatus.color} text-[9px] px-1.5 py-0`}>
                           {childStatus.text}
                         </Badge>
@@ -535,8 +535,8 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
 
           {/* Client info (read-only) */}
           {task.client_name && (
-            <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
-              לקוח: <span className="font-medium text-gray-700">{task.client_name}</span>
+            <div className="text-xs text-slate-500 bg-white/30 backdrop-blur-sm rounded p-2">
+              לקוח: <span className="font-medium text-slate-700">{task.client_name}</span>
             </div>
           )}
 
