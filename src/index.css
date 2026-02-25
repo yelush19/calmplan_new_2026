@@ -83,13 +83,13 @@ button:focus-visible {
     --secondary-foreground: 0 0% 100%;
     --accent: 158 92% 30%;
     --accent-foreground: 0 0% 100%;
-    --background: 0 0% 100%;
+    --background: 210 40% 98%;
     --foreground: 192 9% 19%;
-    --muted: 228 25% 97%;
+    --muted: 210 30% 96%;
     --muted-foreground: 200 7% 42%;
-    --card: 0 0% 100%;
+    --card: 210 40% 98%;
     --card-foreground: 192 9% 19%;
-    --popover: 0 0% 100%;
+    --popover: 210 40% 98%;
     --popover-foreground: 192 9% 19%;
     --border: 200 16% 85%;
     --input: 200 16% 85%;
@@ -255,6 +255,26 @@ button:focus-visible {
   /* Override any remaining flat white backgrounds → glass (Visual Constitution) */
   .bg-white {
     background-color: rgba(255, 255, 255, 0.45) !important;
+  }
+
+  /* Force glass on Radix popover / card / dialog backgrounds */
+  .bg-background, .bg-card, .bg-popover {
+    background-color: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+  }
+
+  /* Slate color overrides — redirect to glass-compatible values */
+  .bg-slate-50, .bg-slate-100, .bg-slate-200 {
+    background-color: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+  }
+  .bg-slate-300, .bg-slate-400, .bg-slate-500,
+  .bg-slate-600, .bg-slate-700, .bg-slate-800, .bg-slate-900 {
+    background-color: rgba(255, 255, 255, 0.35) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
   }
 
   /* Ensure all divide lines use glass borders */
