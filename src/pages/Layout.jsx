@@ -93,7 +93,6 @@ const getSidebarSections = () => ({
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
       { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
-      { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
     ]
   },
@@ -116,6 +115,7 @@ const getSidebarSections = () => ({
     items: [
       { name: "אשף הגדרת נתונים", href: createPageUrl("SystemReadiness"), icon: Zap },
       { name: "הגדרת מורכבות לקוחות", href: createPageUrl("BatchSetup"), icon: Scaling },
+      { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
       { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
       { name: "גיבוי ושחזור", href: createPageUrl("BackupManager"), icon: Shield },
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
