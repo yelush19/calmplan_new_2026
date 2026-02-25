@@ -96,9 +96,9 @@ export default function DashboardsPage() {
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="p-4 sm:p-6 md:p-8 bg-gray-50"
+            className="p-4 sm:p-6 md:p-8 backdrop-blur-xl bg-white/45 border border-white/20 rounded-[32px] shadow-xl"
         >
-            <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">דשבורד ניתוח נתונים</h1>
+            <h1 className="text-4xl font-bold text-slate-800 mb-8 text-center">דשבורד ניתוח נתונים</h1>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <Card>
