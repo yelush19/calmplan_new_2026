@@ -372,7 +372,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, []);
 
   // ── Data Processing ──
-  const { branches, clientNodes, centerLabel, todayTasks } = useMemo(() => {
+  const { branches, clientNodes, centerLabel, todayTasks, metaFolders } = useMemo(() => {
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     const centerLabel = format(today, 'EEEE, d/M', { locale: he });
