@@ -55,72 +55,89 @@ const NODE_COLOR_MAP = {
   slate:   '#90A4AE',
 };
 
-// ─── NEW HIERARCHY: Meta-folders group departments ───────────────
-// Root → Meta-Folder → Department → Client Leaves
+// ─── REFINED HIERARCHY: 5 Business Categories ───────────────
+// Root → Meta-Folder (5 hexagons) → Complexity Sub-groups → Client Leaves
 const META_FOLDERS = {
-  'דיווחים': {
-    icon: '📊', color: '#008291', label: 'Reports',
-    departments: ['מע"מ', 'מקדמות', 'ביטוח לאומי', 'ניכויים'],
-    subFolders: [
-      { key: 'דיווחי שכר', icon: '👥', departments: ['שכר', 'ביטוח לאומי', 'ניכויים'] },
-      { key: 'דיווחי מיסים', icon: '📊', departments: ['מע"מ', 'מקדמות'] },
-    ],
+  'שכר': {
+    icon: '👥', color: '#0277BD', label: 'Payroll',
+    departments: ['שכר', 'ביטוח לאומי', 'ניכויים'],
+    // Complexity sub-groups: clients sorted into Nano/Medium/Large
+    complexitySubFolders: true,
   },
-  'שכר ותשלומים': {
-    icon: '💰', color: '#0288D1', label: 'Payroll',
-    departments: ['שכר'],
+  'מע"מ ומקדמות': {
+    icon: '📊', color: '#00838F', label: 'VAT/Advances',
+    departments: ['מע"מ', 'מקדמות'],
+    // Complexity sub-groups: clients sorted into Nano/Medium/Large
+    complexitySubFolders: true,
   },
-  'התאמות ומאזנים': {
-    icon: '🔄', color: '#0097A7', label: 'Reconcile',
-    departments: ['התאמות', 'מאזנים'],
+  'דיווחי רשויות': {
+    icon: '🏛️', color: '#4527A0', label: 'Authority Reports',
+    departments: ['ביטוח לאומי דיווח', 'ניכויים דיווח'],
   },
-  'אדמיניסטרציה': {
-    icon: '📁', color: '#546E7A', label: 'Admin',
-    departments: ['אדמיניסטרציה'],
+  'מאזנים': {
+    icon: '⚖️', color: '#00695C', label: 'Balance Sheets',
+    departments: ['התאמות', 'מאזנים', 'דוח שנתי'],
   },
-  'בית': {
-    icon: '🏠', color: '#6D4C41', label: 'Home',
-    departments: ['בית'],
+  'שירותים נוספים': {
+    icon: '🔧', color: '#546E7A', label: 'Additional Services',
+    departments: ['הנהלת חשבונות', 'אדמיניסטרציה', 'בית'],
+    // ALL Additional Services are auto-Nano
+    forceNano: true,
   },
 };
 
-// Department folder nodes – Glassmorphism Teal/Cyan palette
+// Department folder nodes
 const BRANCH_CONFIG = {
-  'שכר':          { color: '#0288D1', icon: '👥', label: 'Payroll' },
-  'מע"מ':         { color: '#00838F', icon: '📊', label: 'VAT' },
-  'ביטוח לאומי':          { color: '#00695C', icon: '🏛️', label: 'NI' },
-  'ניכויים':       { color: '#00897B', icon: '📋', label: 'Deduct' },
-  'מקדמות':       { color: '#00796B', icon: '💰', label: 'Advances' },
-  'התאמות':       { color: '#0097A7', icon: '🔄', label: 'Reconcile' },
-  'מאזנים':       { color: '#006064', icon: '⚖️', label: 'Balance' },
-  'אדמיניסטרציה': { color: '#546E7A', icon: '📁', label: 'Admin' },
-  'בית':          {
-    color: '#6D4C41', icon: '🏠', label: 'Home',
-    subFolders: [
-      { key: 'שוטף', icon: '🔄', label: 'Routine' },
-      { key: 'פסח/פרויקטים', icon: '🔨', label: 'Projects' },
-      { key: 'משפטי/אישי', icon: '⚖️', label: 'Legal' },
-    ],
-  },
+  'שכר':              { color: '#0277BD', icon: '👥', label: 'Payroll' },
+  'מע"מ':             { color: '#00838F', icon: '📊', label: 'VAT' },
+  'ביטוח לאומי':      { color: '#4527A0', icon: '🏛️', label: 'NI' },
+  'ניכויים':          { color: '#4527A0', icon: '📋', label: 'Deduct' },
+  'מקדמות':           { color: '#00838F', icon: '💰', label: 'Advances' },
+  'התאמות':           { color: '#00695C', icon: '🔄', label: 'Reconcile' },
+  'מאזנים':           { color: '#00695C', icon: '⚖️', label: 'Balance' },
+  'דוח שנתי':         { color: '#00695C', icon: '📑', label: 'Annual' },
+  'הנהלת חשבונות':    { color: '#546E7A', icon: '📒', label: 'Bookkeeping' },
+  'אדמיניסטרציה':     { color: '#546E7A', icon: '📁', label: 'Admin' },
+  'בית':              { color: '#6D4C41', icon: '🏠', label: 'Home' },
+  'ביטוח לאומי דיווח': { color: '#4527A0', icon: '🏛️', label: 'NI Report' },
+  'ניכויים דיווח':     { color: '#4527A0', icon: '📋', label: 'Deduct Report' },
 };
 
-// Keyword mapping for Home sub-categories
-const HOME_SUB_CATEGORY_MAP = {
-  'פסח': 'פסח/פרויקטים', 'פרויקט': 'פסח/פרויקטים', 'שיפוץ': 'פסח/פרויקטים',
-  'משפטי': 'משפטי/אישי', 'אישי': 'משפטי/אישי', 'עו"ד': 'משפטי/אישי',
-  'בית משפט': 'משפטי/אישי', 'תביעה': 'משפטי/אישי',
+// Complexity tier labels for sub-grouping inside Payroll / VAT
+const COMPLEXITY_SUB_LABELS = {
+  0: { key: 'ננו', icon: '⚡', label: 'Nano' },
+  1: { key: 'פשוט', icon: '📄', label: 'Simple' },
+  2: { key: 'בינוני', icon: '📦', label: 'Medium' },
+  3: { key: 'מורכב', icon: '🏢', label: 'Large' },
 };
 
-// Zone labels for Home brain dump
-const HOME_ZONES = ['מטבח', 'משרד', 'חדר שינה', 'סלון', 'חצר', 'כללי'];
-
-// Map legacy task categories to new department keys
+// Map ALL task categories (Hebrew + work_* English) to department keys
 const CATEGORY_TO_DEPARTMENT = {
-  'מע"מ': 'מע"מ',
-  'מקדמות מס': 'מקדמות',
+  // Payroll group
   'שכר': 'שכר',
+  'work_payroll': 'שכר',
+  // VAT/Advances group
+  'מע"מ': 'מע"מ',
+  'work_vat_reporting': 'מע"מ',
+  'מע"מ 874': 'מע"מ',
+  'work_vat_874': 'מע"מ',
+  'מקדמות מס': 'מקדמות',
+  'work_tax_advances': 'מקדמות',
+  // Authority Reports group
   'ביטוח לאומי': 'ביטוח לאומי',
+  'work_social_security': 'ביטוח לאומי',
   'ניכויים': 'ניכויים',
+  'work_deductions': 'ניכויים',
+  // Balance Sheets group
+  'התאמות': 'התאמות',
+  'work_reconciliation': 'התאמות',
+  'מאזנים': 'מאזנים',
+  'דוח שנתי': 'דוח שנתי',
+  'work_client_management': 'דוח שנתי',
+  'work_annual_reports': 'דוח שנתי',
+  // Additional Services group
+  'הנהלת חשבונות': 'הנהלת חשבונות',
+  'work_bookkeeping': 'הנהלת חשבונות',
   'הנחש': 'התאמות',
   'home': 'בית',
   'personal': 'אדמיניסטרציה',
@@ -357,7 +374,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v3-magnetic'; // bump this to force reset
+  const LAYOUT_VERSION = 'v4-refined-categories'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -506,22 +523,55 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         if (meta.departments.includes(branch.category)) {
           branch.metaFolder = metaName;
           branch.metaConfig = meta;
-          // Check if this branch belongs to a specific sub-folder within the meta
-          if (meta.subFolders) {
-            for (const sf of meta.subFolders) {
-              if (sf.departments.includes(branch.category)) {
-                branch.metaSubFolder = sf.key;
-                branch.metaSubFolderIcon = sf.icon;
-                break;
-              }
-            }
-          }
           break;
         }
       }
       if (!branch.metaFolder) {
-        branch.metaFolder = 'אדמיניסטרציה';
-        branch.metaConfig = META_FOLDERS['אדמיניסטרציה'];
+        // Unmapped categories → Additional Services
+        branch.metaFolder = 'שירותים נוספים';
+        branch.metaConfig = META_FOLDERS['שירותים נוספים'];
+      }
+    });
+
+    // ── NANO SHORTCUT: All clients under 'שירותים נוספים' are forced to Nano ──
+    branches.forEach(branch => {
+      if (branch.metaConfig?.forceNano) {
+        branch.clients.forEach(client => {
+          client.tier = 0;
+          client.tierLabel = 'ננו';
+          client.tierIcon = '⚡';
+        });
+      }
+    });
+
+    // ── COMPLEXITY SUB-GROUPS: Inside Payroll and VAT, group clients by tier ──
+    branches.forEach(branch => {
+      if (branch.metaConfig?.complexitySubFolders) {
+        // Build tier groups from clients in this branch
+        const tierGroups = {};
+        branch.clients.forEach(client => {
+          const t = client.tier || 0;
+          if (!tierGroups[t]) tierGroups[t] = [];
+          tierGroups[t].push(client);
+        });
+        // Generate sub-folder entries for each tier that has clients
+        branch.config = { ...branch.config }; // clone to avoid mutation
+        branch.config.subFolders = Object.keys(tierGroups)
+          .map(Number)
+          .sort()
+          .map(t => ({
+            key: COMPLEXITY_SUB_LABELS[t]?.key || `tier-${t}`,
+            icon: COMPLEXITY_SUB_LABELS[t]?.icon || '📄',
+            label: COMPLEXITY_SUB_LABELS[t]?.label || `Tier ${t}`,
+            tier: t,
+            clientNames: tierGroups[t].map(c => c.name),
+          }));
+        // Tag each client with its complexity sub-folder
+        branch.clients.forEach(client => {
+          const t = client.tier || 0;
+          const subLabel = COMPLEXITY_SUB_LABELS[t]?.key || `tier-${t}`;
+          client._complexitySubFolder = subLabel;
+        });
       }
     });
 
@@ -641,12 +691,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         return node;
       });
 
-      // Compute sub-folder positions for departments with subFolders (e.g. 'בית')
+      // Compute sub-folder positions for complexity sub-groups (Payroll/VAT)
       let subFolderPositions = null;
-      if (branch.config.subFolders) {
+      if (branch.config.subFolders && branch.config.subFolders.length > 0) {
         const subCount = branch.config.subFolders.length;
-        const subSpread = Math.PI * 0.4;
-        const subDist = Math.min(baseLeafDist * 0.5, 30); // max 30px from parent
+        const subSpread = Math.PI * 0.5;
+        const subDist = Math.min(baseLeafDist * 1.2, 40); // tight: max 40px from parent
         subFolderPositions = branch.config.subFolders.map((sub, si) => {
           const subAngle = angle + (si - (subCount - 1) / 2) * (subSpread / Math.max(subCount - 1, 1));
           return {
@@ -656,16 +706,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           };
         });
 
-        // Classify clients into sub-folders by keyword scan and reposition
+        // Classify clients into complexity sub-folders
         clientPositions.forEach(cp => {
-          const titleText = cp.tasks?.map(t => t.title).join(' ') || '';
-          let matchedSubKey = 'שוטף'; // default
-          for (const [keyword, subKey] of Object.entries(HOME_SUB_CATEGORY_MAP)) {
-            if (titleText.includes(keyword)) { matchedSubKey = subKey; break; }
-          }
-          const subFolder = subFolderPositions.find(s => s.key === matchedSubKey) || subFolderPositions[0];
+          const matchKey = cp._complexitySubFolder || COMPLEXITY_SUB_LABELS[cp.tier || 0]?.key || subFolderPositions[0]?.key;
+          const subFolder = subFolderPositions.find(s => s.key === matchKey) || subFolderPositions[0];
           if (subFolder) {
-            // Store sub-folder reference for connection lines
             cp._subFolderX = subFolder.x;
             cp._subFolderY = subFolder.y;
           }
