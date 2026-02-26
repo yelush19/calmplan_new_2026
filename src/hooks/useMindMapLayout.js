@@ -6,6 +6,7 @@ import {
   getCategoriesForClient,
 } from '@/lib/theme-constants';
 import { computeComplexityTier, getBubbleRadius } from '@/lib/complexity';
+import { isReportingActiveClient, isActiveClient } from '@/api/functions';
 
 // ══════════════════════════════════════════════════════════════════
 // LAW 2: THE SPATIAL ANCHOR — Geometry & Physics Engine
@@ -213,10 +214,9 @@ export function useMindMapLayout({ clients, tasks, reconciliations }) {
     const nodes = [];
     const edges = [];
 
-    // LAW 1.1: ACTIVE ONLY
-    const activeClients = (clients || []).filter(c =>
-      c.status === 'active' && c.is_deleted !== true
-    );
+    // THE 19 ANCHORS: ALL active clients appear as Pills.
+    // Reporting-active = Solid pill, Balance-only = Ghosted pill (60% opacity)
+    const activeClients = (clients || []).filter(c => isActiveClient(c));
     const allTasks = tasks || [];
     const allRecons = reconciliations || [];
 
@@ -343,9 +343,13 @@ export function useMindMapLayout({ clients, tasks, reconciliations }) {
         const radius = getBubbleRadius(tier, CLIENT_BASE_RADIUS);
         const statusPriority = getStatusPriority(overallStatus);
 
+        // THE 19 ANCHORS: Check if client has active monthly tasks
+        // Reporting-active = solid pill, balance-only = ghosted (60% opacity)
+        const isGhosted = !isReportingActiveClient(client);
+
         return {
           client, clientTasks, clientRecons, clientCategories,
-          categoryStatuses, overallStatus, tier, radius, statusPriority,
+          categoryStatuses, overallStatus, tier, radius, statusPriority, isGhosted,
         };
       });
 
@@ -367,7 +371,7 @@ export function useMindMapLayout({ clients, tasks, reconciliations }) {
       enriched.forEach((item, i) => {
         const {
           client, clientTasks, clientRecons, clientCategories,
-          categoryStatuses, overallStatus, tier, radius, statusPriority,
+          categoryStatuses, overallStatus, tier, radius, statusPriority, isGhosted,
         } = item;
 
         // Distance: high-priority closer, completed pushed out
@@ -403,6 +407,7 @@ export function useMindMapLayout({ clients, tasks, reconciliations }) {
           gradientTo: catNode.gradientTo,
           status: overallStatus,
           tier,
+          isGhosted, // balance-only clients = 60% opacity
           data: {
             clientId: client.id,
             serviceTypes: client.service_types || [],
