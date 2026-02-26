@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { 
-  DollarSign, 
-  Users, 
-  BookCheck, 
+import {
+  DollarSign,
+  Users,
+  BookCheck,
   FileText,
   Briefcase,
   AlertCircle,
@@ -19,11 +19,14 @@ import {
   Calendar,
   Monitor,
   Scaling,
-  RefreshCw, // Added for new functionality
-  CheckCircle // Added for new functionality
+  RefreshCw,
+  CheckCircle,
+  Trash2,
+  Eye,
 } from 'lucide-react';
 import { Task, AccountReconciliation, Dashboard } from '@/api/entities';
-import { generateProcessTasks, cleanupYearEndOnlyTasks } from '@/api/functions';
+import { generateProcessTasks, cleanupYearEndOnlyTasks, dedupTasksForMonth, wipeAllTasksForMonth, previewTaskGeneration } from '@/api/functions';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const StatCard = ({ title, value, icon: Icon, link, isLoading }) => {
   if (isLoading) {
@@ -178,6 +181,75 @@ export default function BusinessHubPage() {
     } finally {
       setIsGeneratingTasks(false);
     }
+  };
+
+  const handleDedupTasks = async () => {
+    setIsGeneratingTasks(true);
+    setTaskGenerationResult(null);
+    try {
+      const response = await dedupTasksForMonth({ year: 2026, month: 2 });
+      if (response.data.success) {
+        setTaskGenerationResult({
+          type: 'success',
+          message: `נמחקו ${response.data.deleted} כפילויות מתוך ${response.data.duplicatesFound} שנמצאו`,
+        });
+      } else {
+        setTaskGenerationResult({ type: 'error', message: response.data.error || 'שגיאה בניקוי כפילויות' });
+      }
+    } catch (error) {
+      setTaskGenerationResult({ type: 'error', message: 'שגיאה בניקוי כפילויות' });
+    } finally {
+      setIsGeneratingTasks(false);
+    }
+  };
+
+  // ===== WIPE & RESET =====
+  const [showWipeConfirm, setShowWipeConfirm] = useState(false);
+  const handleWipeAllTasks = async () => {
+    setShowWipeConfirm(false);
+    setIsGeneratingTasks(true);
+    setTaskGenerationResult(null);
+    try {
+      const response = await wipeAllTasksForMonth({ year: 2026, month: 2 });
+      if (response.data.success) {
+        setTaskGenerationResult({
+          type: 'success',
+          message: `🧹 נמחקו ${response.data.deleted} משימות לתקופה 02.2026`,
+        });
+      } else {
+        setTaskGenerationResult({ type: 'error', message: response.data.error || 'שגיאה במחיקה' });
+      }
+    } catch (error) {
+      setTaskGenerationResult({ type: 'error', message: 'שגיאה במחיקת משימות' });
+    } finally {
+      setIsGeneratingTasks(false);
+    }
+  };
+
+  // ===== AUDIT PREVIEW =====
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditPreview, setAuditPreview] = useState(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  const handleShowAudit = async () => {
+    setIsLoadingPreview(true);
+    setAuditPreview(null);
+    try {
+      const response = await previewTaskGeneration({ taskType: 'all' });
+      if (response.data.success) {
+        setAuditPreview(response.data.preview);
+        setShowAuditModal(true);
+      }
+    } catch (error) {
+      setTaskGenerationResult({ type: 'error', message: 'שגיאה בטעינת תצוגה מקדימה' });
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  const handleConfirmGenerate = async () => {
+    setShowAuditModal(false);
+    await handleGenerateAllTasks();
   };
 
   const handleGenerateMonthlyReports = async () => {
@@ -345,16 +417,16 @@ export default function BusinessHubPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-emerald-900">יצירת משימות אוטומטית</h3>
-                  <p className="text-sm text-emerald-700">יוצר משימות התאמות, מאזנים ודיווחים</p>
+                  <p className="text-sm text-emerald-700">בדיקה מקדימה + יצירה אידמפוטנטית</p>
                 </div>
               </div>
-              <Button 
-                onClick={handleGenerateAllTasks}
-                disabled={isGeneratingTasks}
+              <Button
+                onClick={handleShowAudit}
+                disabled={isGeneratingTasks || isLoadingPreview}
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
               >
-                <RefreshCw className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
-                {isGeneratingTasks ? 'יוצר משימות...' : 'צור כל המשימות'}
+                <Eye className={`w-4 h-4 ml-2 ${isLoadingPreview ? 'animate-spin' : ''}`} />
+                {isLoadingPreview ? 'טוען תצוגה מקדימה...' : 'תצוגה מקדימה + יצירה'}
               </Button>
             </CardContent>
           </Card>
@@ -387,6 +459,38 @@ export default function BusinessHubPage() {
               >
                 <AlertCircle className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
                 ניקוי משימות לקוחות שנתיים
+              </Button>
+              <Button
+                onClick={handleDedupTasks}
+                disabled={isGeneratingTasks}
+                variant="outline"
+                className="w-full mt-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                <AlertCircle className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+                הסר כפילויות 02.2026
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-rose-100 border-red-200 hover:shadow-lg transition-all duration-300 rounded-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-500 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-red-900">מחיקה מלאה 02.2026</h3>
+                  <p className="text-sm text-red-700">מוחק את כל המשימות לתקופה ומאפשר יצירה מחדש</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setShowWipeConfirm(true)}
+                disabled={isGeneratingTasks}
+                variant="outline"
+                className="w-full border-red-400 text-red-700 hover:bg-red-100"
+              >
+                <Trash2 className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+                מחק הכל ואפס 02.2026
               </Button>
             </CardContent>
           </Card>
@@ -469,6 +573,66 @@ export default function BusinessHubPage() {
           </div>
         </div>
       </div>
+
+      {/* Wipe Confirmation Dialog */}
+      <AlertDialog open={showWipeConfirm} onOpenChange={setShowWipeConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת כל המשימות לתקופה 02.2026</AlertDialogTitle>
+            <AlertDialogDescription>
+              פעולה זו תמחק את כל המשימות שתאריך היעד שלהן בפברואר 2026. לא ניתן לשחזר את הנתונים. האם להמשיך?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction onClick={handleWipeAllTasks} className="bg-red-600 hover:bg-red-700">
+              מחק הכל
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Audit Preview Modal */}
+      <AlertDialog open={showAuditModal} onOpenChange={setShowAuditModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>תצוגה מקדימה - יצירת משימות</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                {auditPreview && (
+                  <>
+                    <p className="font-medium text-foreground">
+                      {auditPreview.totalClients} לקוחות פעילים | {auditPreview.existingTasksThisMonth} משימות קיימות לחודש זה
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 p-3 bg-muted rounded-lg">
+                      {auditPreview.breakdown.vat > 0 && <div>מע"מ: {auditPreview.breakdown.vat}</div>}
+                      {auditPreview.breakdown.payroll > 0 && <div>שכר: {auditPreview.breakdown.payroll}</div>}
+                      {auditPreview.breakdown.tax_advances > 0 && <div>מקדמות: {auditPreview.breakdown.tax_advances}</div>}
+                      {auditPreview.breakdown.social_security > 0 && <div>ביטוח לאומי: {auditPreview.breakdown.social_security}</div>}
+                      {auditPreview.breakdown.deductions > 0 && <div>ניכויים: {auditPreview.breakdown.deductions}</div>}
+                      {auditPreview.breakdown.reconciliation > 0 && <div>התאמות: {auditPreview.breakdown.reconciliation}</div>}
+                    </div>
+                    <div className="flex justify-between font-medium text-foreground p-2 bg-emerald-50 rounded-lg">
+                      <span>סה"כ צפוי: {auditPreview.totalExpected}</span>
+                      <span className="text-emerald-700">חדשות: {auditPreview.newTasks}</span>
+                      <span className="text-orange-600">קיימות: {auditPreview.alreadyExist}</span>
+                    </div>
+                    {auditPreview.newTasks === 0 && (
+                      <p className="text-orange-600 font-medium">כל המשימות כבר קיימות - לא ייווצרו כפילויות.</p>
+                    )}
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmGenerate} className="bg-emerald-600 hover:bg-emerald-700">
+              {auditPreview?.newTasks === 0 ? 'אין משימות ליצור' : `צור ${auditPreview?.newTasks || 0} משימות`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

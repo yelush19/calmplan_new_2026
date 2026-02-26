@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -1251,6 +1251,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           position: 'absolute',
           top: 0,
           left: 0,
+          willChange: 'transform', // GPU acceleration
         }}
       >
         {/* ── SVG Connection Lines (z-[1]: behind all nodes) ── */}
@@ -1273,17 +1274,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           {/* ── L0→L1: Center → Meta-Folder hexagons ── */}
           {layout.metaFolderPositions?.map((mf) => (
             <g key={`meta-lines-${mf.name}`}>
-              <motion.path
-                d={`M ${centerPos.x} ${centerPos.y} L ${mf.x} ${mf.y}`}
-                stroke="#008291"
-                strokeWidth={3}
-                strokeLinecap="round"
-                fill="none"
-                strokeOpacity={0.6}
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.5, ease: 'easeInOut' }}
-              />
+              {zoom < 0.6 ? (
+                <line x1={centerPos.x} y1={centerPos.y} x2={mf.x} y2={mf.y}
+                  stroke="#008291" strokeWidth={3} strokeLinecap="round" strokeOpacity={0.6} />
+              ) : (
+                <motion.path
+                  d={`M ${centerPos.x} ${centerPos.y} L ${mf.x} ${mf.y}`}
+                  stroke="#008291" strokeWidth={3} strokeLinecap="round" fill="none" strokeOpacity={0.6}
+                  initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                  transition={{ duration: 0.5, ease: 'easeInOut' }}
+                />
+              )}
             </g>
           ))}
 
@@ -1292,17 +1293,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             if (!expandedMetaFolders.has(sf.metaFolderName)) return null;
             const mfPos = layout.metaFolderPositions.find(m => m.name === sf.metaFolderName);
             if (!mfPos) return null;
-            return (
+            return zoom < 0.6 ? (
+              <line key={`metasub-line-${sf.metaFolderName}-${sf.key}`}
+                x1={mfPos.x} y1={mfPos.y} x2={sf.x} y2={sf.y}
+                stroke="#00acc1" strokeWidth={2.5} strokeLinecap="round" strokeOpacity={0.55} />
+            ) : (
               <motion.path
                 key={`metasub-line-${sf.metaFolderName}-${sf.key}`}
                 d={`M ${mfPos.x} ${mfPos.y} L ${sf.x} ${sf.y}`}
-                stroke="#00acc1"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                fill="none"
-                strokeOpacity={0.55}
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
+                stroke="#00acc1" strokeWidth={2.5} strokeLinecap="round" fill="none" strokeOpacity={0.55}
+                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
                 transition={{ duration: 0.4, delay: 0.15, ease: 'easeInOut' }}
               />
             );
@@ -1313,17 +1313,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             const parentX = branch._metaSubX || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.x || centerPos.x;
             const parentY = branch._metaSubY || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.y || centerPos.y;
-            return (
+            const opacity = isSpotlit(branch.category) ? 0.65 : 0.1;
+            return zoom < 0.6 ? (
+              <line key={`dept-line-${branch.category}`}
+                x1={parentX} y1={parentY} x2={branch.x} y2={branch.y}
+                stroke={branch.metaConfig?.color || '#008291'} strokeWidth={1.8}
+                strokeDasharray="6 3" strokeOpacity={opacity} />
+            ) : (
               <motion.path
                 key={`dept-line-${branch.category}`}
                 d={`M ${parentX} ${parentY} L ${branch.x} ${branch.y}`}
-                stroke={branch.metaConfig?.color || '#008291'}
-                strokeWidth={1.8}
-                strokeDasharray="6 3"
-                fill="none"
-                strokeOpacity={isSpotlit(branch.category) ? 0.65 : 0.1}
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
+                stroke={branch.metaConfig?.color || '#008291'} strokeWidth={1.8}
+                strokeDasharray="6 3" fill="none" strokeOpacity={opacity}
+                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
                 transition={{ duration: 0.4, delay: 0.25, ease: 'easeInOut' }}
               />
             );
@@ -1334,35 +1336,38 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!expandedBranches.has(branch.category)) return null;
             const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN);
+            const subOpacity = isSpotlit(branch.category) ? 0.6 : 0.1;
+            const clientOpacity = isSpotlit(branch.category) ? 0.55 : 0.08;
             return (
               <g key={`lines-${branch.category}`}>
                 {branch.subFolderPositions?.map((sub) => (
-                  <motion.path
-                    key={`sub-line-${sub.key}`}
-                    d={`M ${branch.x} ${branch.y} L ${sub.x} ${sub.y}`}
-                    stroke="#008291"
-                    strokeWidth={1.5}
-                    strokeDasharray="4 2"
-                    fill="none"
-                    strokeOpacity={isSpotlit(branch.category) ? 0.6 : 0.1}
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.4, delay: 0.3, ease: 'easeInOut' }}
-                  />
+                  zoom < 0.6 ? (
+                    <line key={`sub-line-${sub.key}`}
+                      x1={branch.x} y1={branch.y} x2={sub.x} y2={sub.y}
+                      stroke="#008291" strokeWidth={1.5} strokeDasharray="4 2" strokeOpacity={subOpacity} />
+                  ) : (
+                    <motion.path
+                      key={`sub-line-${sub.key}`}
+                      d={`M ${branch.x} ${branch.y} L ${sub.x} ${sub.y}`}
+                      stroke="#008291" strokeWidth={1.5} strokeDasharray="4 2" fill="none" strokeOpacity={subOpacity}
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.4, delay: 0.3, ease: 'easeInOut' }}
+                    />
+                  )
                 ))}
                 {visibleClients.map((client) => {
                   const startX = client._subFolderX || branch.x;
                   const startY = client._subFolderY || branch.y;
-                  return (
+                  return zoom < 0.6 ? (
+                    <line key={`line-${client.name}`}
+                      x1={startX} y1={startY} x2={client.x} y2={client.y}
+                      stroke="#008291" strokeWidth={1.5} strokeOpacity={clientOpacity} />
+                  ) : (
                     <motion.path
                       key={`line-${client.name}`}
                       d={`M ${startX} ${startY} L ${client.x} ${client.y}`}
-                      stroke="#008291"
-                      strokeWidth={1.5}
-                      fill="none"
-                      strokeOpacity={isSpotlit(branch.category) ? 0.55 : 0.08}
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
+                      stroke="#008291" strokeWidth={1.5} fill="none" strokeOpacity={clientOpacity}
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
                       transition={{ duration: 0.5, delay: 0.35, ease: 'easeInOut' }}
                     />
                   );
