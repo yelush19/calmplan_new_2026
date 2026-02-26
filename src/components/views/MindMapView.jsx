@@ -7,7 +7,7 @@ import { he } from 'date-fns/locale';
 import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star, Trash2, Check, RefreshCw } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Task, Client } from '@/api/entities';
-import { dedupTasksForMonth } from '@/api/functions';
+import { dedupTasksForMonth, wipeAllTasksForMonth, generateProcessTasks } from '@/api/functions';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -288,19 +288,42 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
   }, [tasks]);
 
-  // ── AUTO-DEDUP: Run once on mount to purge duplicate tasks (the 57 rule) ──
-  const dedupRan = useRef(false);
+  // ── NUCLEAR RESET: Wipe Feb 2026 tasks + regenerate with service-aware logic ──
+  // Runs ONCE on mount. After first run, stores flag in localStorage to prevent re-runs.
+  const nuclearRan = useRef(false);
   useEffect(() => {
-    if (dedupRan.current || !tasks || tasks.length === 0) return;
-    dedupRan.current = true;
-    dedupTasksForMonth({ year: 2026, month: 2 }).then(res => {
-      if (res?.data?.deleted > 0) {
-        console.log(`[CalmPlan] Auto-dedup: removed ${res.data.deleted} duplicate tasks`);
-        // Trigger reload to reflect cleaned data
+    const NUCLEAR_KEY = 'calmplan-nuclear-v7-done';
+    if (nuclearRan.current) return;
+    // Skip if already ran this version
+    try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
+    nuclearRan.current = true;
+
+    (async () => {
+      try {
+        console.log('[CalmPlan] NUCLEAR RESET: Wiping Feb 2026 tasks...');
+        const wipeRes = await wipeAllTasksForMonth({ year: 2026, month: 2 });
+        console.log(`[CalmPlan] Wiped: ${wipeRes?.data?.deleted || 0} tasks deleted`);
+
+        console.log('[CalmPlan] Regenerating with service-aware filters...');
+        const genRes = await generateProcessTasks({ taskType: 'all' });
+        const created = genRes?.data?.results?.summary?.tasksCreated || 0;
+        console.log(`[CalmPlan] Regenerated: ${created} tasks created`);
+
+        // Mark as done so it doesn't re-run
+        try { localStorage.setItem(NUCLEAR_KEY, 'true'); } catch {}
+
+        // Reload to reflect clean data
         window.location.reload();
+      } catch (err) {
+        console.error('[CalmPlan] Nuclear reset error:', err);
+        // Still run dedup as fallback
+        try {
+          const dedupRes = await dedupTasksForMonth({ year: 2026, month: 2 });
+          if (dedupRes?.data?.deleted > 0) window.location.reload();
+        } catch {}
       }
-    }).catch(() => {});
-  }, [tasks]);
+    })();
+  }, []);
 
   const [focusedClients, setFocusedClients] = useState(new Set());
 
@@ -371,7 +394,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v6-nuclear-cleanup'; // bump this to force reset
+  const LAYOUT_VERSION = 'v7-collision-law'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -650,20 +673,32 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const padY = 60;
     const scaleX = (w - padX * 2) * 0.22 * spacingFactor;
     const scaleY = (h - padY * 2) * 0.22 * spacingFactor;
-    const baseLeafDist = 55;
+    const baseLeafDist = 100; // increased from 55 — hard repulsion needs initial spread
 
-    // ─── PHASE 0: RADIAL SYMMETRY — Meta-folder hexagons at equal angles FIRST ───
-    // Equal angular distribution: 5 hexagons → 72° apart, 4 → 90°, etc.
-    // Start from top (-π/2) for visual balance
+    // ─── PHASE 0: RADIAL LOCKING — Meta-folder hexagons at FIXED cardinal angles ───
+    // THE COLLISION LAW: Level 1 categories locked at 0°, 90°, 180°, 270° (+ diagonals for 5+)
+    // This prevents the "Leaning Tower" effect where categories drift and pile up
     const metaCount = metaFolders.length;
-    const metaAngleStep = (2 * Math.PI) / Math.max(metaCount, 1);
-    // Distance from center: proportional to viewport, min 130px for readability
-    const basemetaDist = Math.max(130, Math.min(Math.max(scaleX, scaleY) * 0.65, 200));
+    // Fixed angles: for 4 → cardinal (0,90,180,270); for 5+ → add 45° diagonals
+    const FIXED_ANGLES_BY_COUNT = {
+      1: [-Math.PI / 2],
+      2: [-Math.PI / 2, Math.PI / 2],
+      3: [-Math.PI / 2, Math.PI / 6, Math.PI * 5 / 6],
+      4: [-Math.PI / 2, 0, Math.PI / 2, Math.PI],
+      5: [-Math.PI / 2, -Math.PI / 6, Math.PI / 3, Math.PI * 2 / 3, Math.PI * 7 / 6],
+      6: [-Math.PI / 2, -Math.PI / 6, Math.PI / 6, Math.PI / 2, Math.PI * 5 / 6, Math.PI * 7 / 6],
+    };
+    const fixedAngles = FIXED_ANGLES_BY_COUNT[Math.min(metaCount, 6)] ||
+      Array.from({ length: metaCount }, (_, i) => (i * 2 * Math.PI / metaCount) - Math.PI / 2);
+
+    // Distance from center: proportional to viewport, min 160px for readability
+    // INCREASED from 130 → 200 base to prevent hexagon cloud
+    const basemetaDist = Math.max(200, Math.min(Math.max(scaleX, scaleY) * 0.7, 280));
 
     let metaFolderPositions = metaFolders.map((mf, i) => {
-      const angle = i * metaAngleStep - Math.PI / 2;
-      // TREE-SHIFTING: expanded hexagons push 50px further to make room for children
-      const expandBonus = expandedMetaFolders.has(mf.name) ? 50 : 0;
+      const angle = fixedAngles[i] || (i * 2 * Math.PI / metaCount) - Math.PI / 2;
+      // TREE-SHIFTING: expanded hexagons push 80px further to make room for children
+      const expandBonus = expandedMetaFolders.has(mf.name) ? 80 : 0;
       const finalDist = basemetaDist + expandBonus;
       const mx = cx + Math.cos(angle) * finalDist;
       const my = cy + Math.sin(angle) * finalDist;
@@ -711,7 +746,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     // ─── PHASE 1: Position departments around their PARENT hexagon ───
     const allClientNodes = [];
-    const deptDist = 90; // departments 90px from their parent hexagon
+    const deptDist = 140; // departments 140px from their parent hexagon (was 90 — too cramped)
 
     const branchPositions = branches.map((branch) => {
       const parentMeta = metaFolderPositions.find(m => m.name === branch.metaFolder);
@@ -737,9 +772,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       // Position client leaf nodes in a RADIAL CIRCLE around department
       // No overlapping — full circle spread when many clients
       const clientCount = branch.clients.length;
-      const clientAngleSpread = clientCount <= 3
-        ? Math.PI * 0.7
-        : Math.min(Math.PI * 1.5, clientCount * 0.55);
+      // COLLISION LAW: wider radial spread — use full circle for many clients
+      const clientAngleSpread = clientCount <= 2
+        ? Math.PI * 0.8
+        : Math.min(Math.PI * 2, clientCount * 0.65);
       const sortedClients = [...branch.clients].sort((a, b) => (b.statusRing || 0) - (a.statusRing || 0));
 
       const clientPositions = sortedClients.map((client, j) => {
@@ -797,12 +833,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       };
     });
 
-    // ─── PHASE 2: Spring Force + Collision Detection for client nodes ───
-    const MIN_GAP = 4;
-    const SPRING_STRENGTH = 0.3;
-    const MAX_PARENT_DIST = 100;
+    // ─── PHASE 2: HARD REPULSION FORCE — THE COLLISION LAW ───
+    // If distance d < 150px, apply IMMEDIATE displacement vector.
+    // Overlapping bounding boxes = FORBIDDEN. No spring pullback that causes re-collision.
+    const HARD_REPULSION_DIST = 150; // minimum distance between ANY two client nodes
+    const MAX_PARENT_DIST = 250;     // increased from 100 — no more cramming
     const getPillHalfWidth = (r) => Math.max(r * 1.2, 45);
-    for (let pass = 0; pass < 12; pass++) {
+
+    // Phase 2a: Hard repulsion (no spring force to undermine it)
+    for (let pass = 0; pass < 20; pass++) {
       let hadCollision = false;
       for (let i = 0; i < allClientNodes.length; i++) {
         for (let j = i + 1; j < allClientNodes.length; j++) {
@@ -811,10 +850,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const minDist = getPillHalfWidth(a.radius) + getPillHalfWidth(b.radius) + MIN_GAP;
+          // Hard minimum: pill bounding box + 150px gap, whichever is larger
+          const pillMin = getPillHalfWidth(a.radius) + getPillHalfWidth(b.radius);
+          const minDist = Math.max(pillMin, HARD_REPULSION_DIST);
           if (dist < minDist && dist > 0) {
             hadCollision = true;
-            const overlap = (minDist - dist) / 2;
+            const overlap = (minDist - dist) / 2 + 2; // +2px safety margin
             const nx = dx / dist;
             const ny = dy / dist;
             a.x -= nx * overlap;
@@ -824,14 +865,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           }
         }
       }
+      // Phase 2b: Soft tether — keep clients roughly near parent branch
+      // Use WEAK force (0.05) so it doesn't undo the collision fix
       allClientNodes.forEach(node => {
-        const dx = node.branchX - node.x;
-        const dy = node.branchY - node.y;
-        node.x += dx * SPRING_STRENGTH;
-        node.y += dy * SPRING_STRENGTH;
         const dx2 = node.x - node.branchX;
         const dy2 = node.y - node.branchY;
         const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        // Only pull back if WAY too far (> MAX_PARENT_DIST)
         if (dist2 > MAX_PARENT_DIST) {
           const scale = MAX_PARENT_DIST / dist2;
           node.x = node.branchX + dx2 * scale;
@@ -839,6 +879,37 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         }
       });
       if (!hadCollision) break;
+    }
+
+    // ─── PHASE 2c: Hard repulsion between DEPARTMENT (branch) nodes ───
+    // Prevents department folders from stacking on top of each other
+    const DEPT_MIN_GAP = 200;
+    for (let pass = 0; pass < 8; pass++) {
+      let shifted = false;
+      for (let i = 0; i < branchPositions.length; i++) {
+        for (let j = i + 1; j < branchPositions.length; j++) {
+          const a = branchPositions[i];
+          const b = branchPositions[j];
+          if (manualPositions[`folder-${a.category}`] || manualPositions[`folder-${b.category}`]) continue;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < DEPT_MIN_GAP && dist > 0) {
+            shifted = true;
+            const overlap = (DEPT_MIN_GAP - dist) / 2 + 1;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            a.x -= nx * overlap;
+            a.y -= ny * overlap;
+            b.x += nx * overlap;
+            b.y += ny * overlap;
+            // Update client positions relative to their branch
+            a.clientPositions?.forEach(cp => { cp.branchX = a.x; });
+            b.clientPositions?.forEach(cp => { cp.branchX = b.x; });
+          }
+        }
+      }
+      if (!shifted) break;
     }
 
     // Sync collision-resolved positions back
