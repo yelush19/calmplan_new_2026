@@ -191,38 +191,83 @@ const BIMONTHLY_DUE_MONTHS = [2, 4, 6, 8, 10, 12];
 const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
 /**
- * Check if client has payroll service active.
+ * SERVICE-AWARE FILTER: Check each service by BOTH service_types AND reporting_info frequency.
+ * A client only gets a task if:
+ *   1. Their service_types includes the relevant service, AND
+ *   2. Their reporting_info frequency for that service is NOT 'not_applicable'
+ *
+ * If frequency field is undefined → treat as 'not_applicable' (strict mode).
+ * This prevents blind generation for clients who don't actually use the service.
  */
 function clientHasPayroll(client) {
   const services = client.service_types || [];
-  const hasPayrollService = services.includes('payroll') || services.includes('full_service') || services.includes('bookkeeping');
+  const hasPayrollService = services.some(st =>
+    st === 'payroll' || st === 'full_service'
+  );
+  // STRICT: frequency must be explicitly set and not 'not_applicable'
   const payrollFreq = client.reporting_info?.payroll_frequency;
-  return hasPayrollService && payrollFreq !== 'not_applicable';
+  return hasPayrollService && !!payrollFreq && payrollFreq !== 'not_applicable';
 }
 
 /**
- * Get the templates applicable to a client based on service_types.
- * Filters out payroll-dependent templates if client has no payroll.
+ * SERVICE-AWARE template selection. No more blind generation.
+ * Each template requires BOTH:
+ *   (a) the service in service_types
+ *   (b) the frequency in reporting_info not being 'not_applicable'
  */
 function getClientTemplates(client) {
   const serviceTypes = client.service_types || [];
   if (serviceTypes.length === 0) return [];
 
-  const templateKeys = new Set();
-  serviceTypes.forEach(st => {
-    const templates = SERVICE_TYPE_TO_TEMPLATES[st];
-    if (templates) templates.forEach(t => templateKeys.add(t));
-  });
+  const reporting = client.reporting_info || {};
+  const templateKeys = [];
 
-  // Remove payroll-dependent templates if client has no payroll
-  const hasPayroll = clientHasPayroll(client);
-  if (!hasPayroll) {
-    templateKeys.delete('payroll');
-    templateKeys.delete('social_security');
-    templateKeys.delete('deductions');
+  // Helper: check if frequency is explicitly set and active
+  const freqIsActive = (freq) => !!freq && freq !== 'not_applicable';
+
+  // ── VAT: Only if client has VAT-related service AND vat frequency is active ──
+  const hasVatService = serviceTypes.some(st =>
+    ['vat', 'vat_reporting', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
+  );
+  if (hasVatService && freqIsActive(reporting.vat_reporting_frequency)) {
+    templateKeys.push('vat');
   }
 
-  return [...templateKeys];
+  // ── Tax Advances: Only if applicable service AND frequency is active ──
+  const hasTaxAdvService = serviceTypes.some(st =>
+    ['tax_reports', 'tax_advances', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
+  );
+  if (hasTaxAdvService && freqIsActive(reporting.tax_advances_frequency)) {
+    templateKeys.push('tax_advances');
+  }
+
+  // ── Payroll: Only if explicit payroll service AND frequency is active ──
+  const hasPayrollService = serviceTypes.some(st =>
+    ['payroll', 'full_service'].includes(st)
+  );
+  if (hasPayrollService && freqIsActive(reporting.payroll_frequency)) {
+    templateKeys.push('payroll');
+
+    // Social Security follows payroll — but only if its own frequency is active
+    if (freqIsActive(reporting.social_security_frequency)) {
+      templateKeys.push('social_security');
+    }
+
+    // Deductions follows payroll — but only if its own frequency is active
+    if (freqIsActive(reporting.deductions_frequency)) {
+      templateKeys.push('deductions');
+    }
+  }
+
+  // ── Annual Report: Only if explicitly subscribed ──
+  const hasAnnualService = serviceTypes.some(st =>
+    ['annual_reports', 'full_service', 'tax_reports'].includes(st)
+  );
+  if (hasAnnualService) {
+    templateKeys.push('annual_report');
+  }
+
+  return templateKeys;
 }
 
 /**
@@ -1291,20 +1336,19 @@ export const generateProcessTasks = async (params = {}) => {
       log.push(`${timestamp()} יוצר משימות דיווח תקופתיות...`);
 
       for (const client of activeClients) {
-        // GUARD: Skip clients who only have annual_reports service — they don't get monthly/periodic tasks
-        const services = client.service_types || [];
-        const hasMonthlyService = services.some(st =>
-          st === 'bookkeeping' || st === 'full_service' || st === 'payroll' || st === 'vat' || st === 'tax_reports'
-        );
-        if (!hasMonthlyService && services.length > 0) {
-          continue; // skip annual_reports-only clients
-        }
-
+        // SERVICE-AWARE: getClientTemplates already filters by service+frequency
+        // So balance-only clients get 0 templates here (annual_report is skipped below)
         const templateKeys = getClientTemplates(client);
+        const monthlyTemplates = templateKeys.filter(k => k !== 'annual_report');
+        if (monthlyTemplates.length === 0) {
+          log.push(`${timestamp()} ⏭️ ${client.name}: 0 שירותים חודשיים (דילוג)`);
+          continue;
+        }
+        log.push(`${timestamp()} 📋 ${client.name}: ${monthlyTemplates.join(', ')}`);
 
         for (const templateKey of templateKeys) {
           // Skip annual reports here (handled in balanceSheets section)
-          if (templateKey === 'annual_report' && taskType === 'mondayReports') continue;
+          if (templateKey === 'annual_report') continue;
 
           if (!shouldRunForMonth(templateKey, currentMonth, client)) continue;
 
@@ -1415,10 +1459,12 @@ export const generateProcessTasks = async (params = {}) => {
       log.push(`${timestamp()} יוצר משימות התאמות...`);
 
       for (const client of activeClients) {
+        // STRICT: Reconciliation only for bookkeeping/full_service clients
         const clientServices = client.service_types || [];
-        if (clientServices.length > 0 &&
-            !clientServices.includes('bookkeeping') &&
-            !clientServices.includes('full_service')) continue;
+        if (!clientServices.includes('bookkeeping') &&
+            !clientServices.includes('bookkeeping_full') &&
+            !clientServices.includes('full_service') &&
+            !clientServices.includes('reconciliation')) continue;
 
         const title = `${client.name} - התאמת חשבונות ${monthNum}/${currentYear}`;
         // Stronger dedup: check by client + category + period (not just title)
