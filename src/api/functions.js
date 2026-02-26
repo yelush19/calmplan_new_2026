@@ -1288,6 +1288,15 @@ export const generateProcessTasks = async (params = {}) => {
       log.push(`${timestamp()} יוצר משימות דיווח תקופתיות...`);
 
       for (const client of activeClients) {
+        // GUARD: Skip clients who only have annual_reports service — they don't get monthly/periodic tasks
+        const services = client.service_types || [];
+        const hasMonthlyService = services.some(st =>
+          st === 'bookkeeping' || st === 'full_service' || st === 'payroll' || st === 'vat' || st === 'tax_reports'
+        );
+        if (!hasMonthlyService && services.length > 0) {
+          continue; // skip annual_reports-only clients
+        }
+
         const templateKeys = getClientTemplates(client);
 
         for (const templateKey of templateKeys) {
@@ -1295,6 +1304,10 @@ export const generateProcessTasks = async (params = {}) => {
           if (templateKey === 'annual_report' && taskType === 'mondayReports') continue;
 
           if (!shouldRunForMonth(templateKey, currentMonth, client)) continue;
+
+          // GUARD: Double-check frequency — only create for monthly or bimonthly
+          const freq = getClientFrequency(templateKey, client);
+          if (freq === 'not_applicable' || freq === 'yearly') continue;
 
           const template = PROCESS_TEMPLATES[templateKey];
           const description = getReportDescription(templateKey, currentMonth, currentYear, client);
@@ -1428,6 +1441,59 @@ export const generateProcessTasks = async (params = {}) => {
         log
       }
     };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
+};
+
+// ===== Cleanup: Remove tasks for Year-end-only clients in 02.2026 =====
+export const cleanupYearEndOnlyTasks = async () => {
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  let deleted = 0;
+
+  try {
+    const allClients = await entities.Client.list();
+    const allTasks = await entities.Task.list();
+
+    // Identify clients whose ONLY service is annual_reports (year-end only)
+    const yearEndOnlyClients = allClients.filter(c => {
+      const services = c.service_types || [];
+      return services.length > 0 &&
+        services.every(st => st === 'annual_reports') &&
+        (c.status === 'active' || c.status === 'balance_sheet_only');
+    });
+
+    const yearEndClientNames = new Set(yearEndOnlyClients.map(c => c.name));
+    log.push(`${timestamp()} נמצאו ${yearEndOnlyClients.length} לקוחות שנתיים בלבד: ${[...yearEndClientNames].join(', ')}`);
+
+    // Find monthly/periodic tasks created for these clients in 02.2026
+    const monthlyCategories = new Set([
+      'work_vat_reporting', 'work_payroll', 'work_tax_advances',
+      'work_social_security', 'work_deductions',
+      'מע"מ', 'שכר', 'מקדמות מס', 'ביטוח לאומי', 'ניכויים',
+    ]);
+
+    const tasksToDelete = allTasks.filter(t =>
+      yearEndClientNames.has(t.client_name) &&
+      monthlyCategories.has(t.category) &&
+      t.due_date && t.due_date.startsWith('2026-02') &&
+      t.status !== 'completed'
+    );
+
+    log.push(`${timestamp()} נמצאו ${tasksToDelete.length} משימות חודשיות שנוצרו בטעות`);
+
+    for (const task of tasksToDelete) {
+      try {
+        await entities.Task.delete(task.id);
+        deleted++;
+      } catch (err) {
+        log.push(`${timestamp()} שגיאה במחיקת "${task.title}": ${err.message}`);
+      }
+    }
+
+    log.push(`${timestamp()} נמחקו ${deleted} משימות`);
+    return { data: { success: true, deleted, log } };
   } catch (error) {
     return { data: { success: false, error: error.message, log } };
   }

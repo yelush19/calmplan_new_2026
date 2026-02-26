@@ -40,7 +40,17 @@ console.log('[CalmPlan] Supabase config:', {
 let _supabase = null;
 if (isSupabaseConfigured) {
   try {
-    _supabase = createClient(supabaseUrl, supabaseAnonKey);
+    _supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          'X-Client-Info': 'calmplan-web',
+        },
+      },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    });
   } catch (e) {
     console.error('[CalmPlan] Failed to create Supabase client:', e.message);
     console.warn('[CalmPlan] Falling back to localStorage mode.');

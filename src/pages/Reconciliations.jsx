@@ -941,36 +941,80 @@ export default function ReconciliationsPage() {
                                       <span className="text-xs text-slate-400">-</span>
                                     )}
                                   </td>
-                                  {/* Status */}
+                                  {/* Status — Interactive Glass Button */}
                                   <td className="p-3 text-center">
-                                    <Badge className={`text-[10px] rounded-full px-2.5 py-0.5 ${stsCfg.pill}`}>
-                                      {stsCfg.label}
-                                    </Badge>
-                                  </td>
-                                  {/* Quick Sync Action — Lightning Bolt ⚡ */}
-                                  <td className="p-3 text-center">
-                                    <Button
-                                      size="sm"
-                                      className="text-[10px] gap-1.5 rounded-full bg-[#008291] hover:bg-[#006d7a] text-white shadow-md hover:shadow-lg transition-all"
+                                    <button
+                                      className={`inline-flex items-center gap-1.5 text-[10px] rounded-full px-3 py-1.5 font-medium backdrop-blur-sm border shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ${stsCfg.pill}`}
                                       onClick={async (e) => {
                                         e.stopPropagation();
+                                        const statusCycle = ['not_started', 'in_progress', 'completed'];
+                                        const currentIdx = statusCycle.indexOf(row.latestStatus);
+                                        const nextStatus = statusCycle[(currentIdx + 1) % statusCycle.length];
                                         try {
-                                          const today = new Date().toISOString().split('T')[0];
-                                          const newNext = calcNextDate(today, row.frequency);
-                                          await handleUpdateAccount(row.id, {
-                                            last_reconciliation_date: today,
-                                            next_reconciliation_due: newNext,
-                                            last_sync_date: new Date().toISOString(),
-                                          });
-                                          toast.success(`${row.accountName} סונכרן להיום`);
+                                          if (row.latestRec?.id) {
+                                            await AccountReconciliation.update(row.latestRec.id, { status: nextStatus });
+                                          } else {
+                                            await AccountReconciliation.create({
+                                              client_id: row.clientId,
+                                              client_account_id: row.id,
+                                              client_name: row.clientName,
+                                              account_name: row.accountName,
+                                              status: nextStatus,
+                                              period: new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' }),
+                                            });
+                                          }
+                                          const nextStsCfg = statusConfig[nextStatus] || statusConfig.not_started;
+                                          toast.success(`${row.accountName}: ${nextStsCfg.label}`);
+                                          loadData();
                                         } catch (err) {
-                                          toast.error('שגיאה בסנכרון');
+                                          toast.error('שגיאה בעדכון סטטוס');
                                         }
                                       }}
                                     >
-                                      <Zap className="w-3.5 h-3.5" />
-                                      <span>⚡ סנכרן להיום</span>
-                                    </Button>
+                                      {stsCfg.icon && <stsCfg.icon className="w-3 h-3" />}
+                                      {stsCfg.label}
+                                    </button>
+                                  </td>
+                                  {/* Quick Sync Action — ⚡ Zap: Mark as Done + update last_sync */}
+                                  <td className="p-3 text-center">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <Button
+                                        size="sm"
+                                        className="text-[10px] gap-1 rounded-full backdrop-blur-sm bg-white/40 hover:bg-[#008291] text-[#008291] hover:text-white border border-[#008291]/30 hover:border-transparent shadow-sm hover:shadow-lg transition-all"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const today = new Date().toISOString().split('T')[0];
+                                            const newNext = calcNextDate(today, row.frequency);
+                                            await handleUpdateAccount(row.id, {
+                                              last_reconciliation_date: today,
+                                              next_reconciliation_due: newNext,
+                                              last_sync_date: new Date().toISOString(),
+                                            });
+                                            // Also mark reconciliation as completed
+                                            if (row.latestRec?.id) {
+                                              await AccountReconciliation.update(row.latestRec.id, { status: 'completed' });
+                                            } else {
+                                              await AccountReconciliation.create({
+                                                client_id: row.clientId,
+                                                client_account_id: row.id,
+                                                client_name: row.clientName,
+                                                account_name: row.accountName,
+                                                status: 'completed',
+                                                period: new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' }),
+                                              });
+                                            }
+                                            toast.success(`${row.accountName} — הושלם וסונכרן`);
+                                            loadData();
+                                          } catch (err) {
+                                            toast.error('שגיאה בסנכרון');
+                                          }
+                                        }}
+                                      >
+                                        <Zap className="w-3 h-3" />
+                                        סנכרן
+                                      </Button>
+                                    </div>
                                   </td>
                                 </motion.tr>
                               );
