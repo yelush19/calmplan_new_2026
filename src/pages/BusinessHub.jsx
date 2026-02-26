@@ -23,7 +23,7 @@ import {
   CheckCircle // Added for new functionality
 } from 'lucide-react';
 import { Task, AccountReconciliation, Dashboard } from '@/api/entities';
-import { generateProcessTasks } from '@/api/functions'; // Added for new functionality
+import { generateProcessTasks, cleanupYearEndOnlyTasks } from '@/api/functions';
 
 const StatCard = ({ title, value, icon: Icon, link, isLoading }) => {
   if (isLoading) {
@@ -155,6 +155,26 @@ export default function BusinessHubPage() {
         type: 'error',
         message: 'שגיאה בקריאה לפונקציה'
       });
+    } finally {
+      setIsGeneratingTasks(false);
+    }
+  };
+
+  const handleCleanupYearEnd = async () => {
+    setIsGeneratingTasks(true);
+    setTaskGenerationResult(null);
+    try {
+      const response = await cleanupYearEndOnlyTasks();
+      if (response.data.success) {
+        setTaskGenerationResult({
+          type: 'success',
+          message: `נמחקו ${response.data.deleted} משימות שנוצרו בטעות ללקוחות שנתיים בלבד`,
+        });
+      } else {
+        setTaskGenerationResult({ type: 'error', message: response.data.error || 'שגיאה בניקוי' });
+      }
+    } catch (error) {
+      setTaskGenerationResult({ type: 'error', message: 'שגיאה בניקוי משימות' });
     } finally {
       setIsGeneratingTasks(false);
     }
@@ -350,7 +370,7 @@ export default function BusinessHubPage() {
                   <p className="text-sm text-blue-700">יוצר משימות דיווח ב-Monday.com</p>
                 </div>
               </div>
-              <Button 
+              <Button
                 onClick={handleGenerateMonthlyReports}
                 disabled={isGeneratingTasks}
                 variant="outline"
@@ -358,6 +378,15 @@ export default function BusinessHubPage() {
               >
                 <Calendar className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
                 צור דיווחים חודשיים
+              </Button>
+              <Button
+                onClick={handleCleanupYearEnd}
+                disabled={isGeneratingTasks}
+                variant="outline"
+                className="w-full mt-2 border-red-300 text-red-700 hover:bg-red-50"
+              >
+                <AlertCircle className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+                ניקוי משימות לקוחות שנתיים
               </Button>
             </CardContent>
           </Card>

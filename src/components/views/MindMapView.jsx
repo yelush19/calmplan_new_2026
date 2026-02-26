@@ -365,6 +365,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [crisisMode, setCrisisMode] = useState(() => localStorage.getItem('mindmap-crisis-mode') === 'true');
   useEffect(() => { localStorage.setItem('mindmap-crisis-mode', String(crisisMode)); }, [crisisMode]);
 
+  // ── COLLAPSE BY DEFAULT: branches start collapsed, click to expand ──
+  const MAX_VISIBLE_CHILDREN = 10;
+  const [expandedBranches, setExpandedBranches] = useState(new Set());
+  const toggleBranchExpand = useCallback((category) => {
+    setExpandedBranches(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  }, []);
+
   // ── Feature 8: Auto-open drawer from search deep-link ──
   const [highlightTaskId, setHighlightTaskId] = useState(null);
 
@@ -543,8 +555,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const padY = 60;
     const scaleX = (w - padX * 2) * 0.42 * spacingFactor;
     const scaleY = (h - padY * 2) * 0.42 * spacingFactor;
-    // Leaf distance: increased for wider pill nodes
-    const baseLeafDist = Math.min(scaleX, scaleY) * 0.58;
+    // Spring Force: short leaf distance — children stay close to parent
+    const baseLeafDist = Math.min(scaleX, scaleY) * 0.38;
 
     const angleStep = (2 * Math.PI) / Math.max(branches.length, 1);
 
@@ -633,13 +645,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       };
     });
 
-    // ─── Phase 2: Collision Detection & Resolution (pill-aware) ───
-    // Pill nodes are wider than circles: width ≈ radius*2.8, height ≈ radius*1.1
-    // Use the larger dimension (half-width) as effective collision radius
-    const MIN_GAP = 10;
+    // ─── Phase 2: Spring Force + Collision Detection ───
+    // Each pass: (a) push overlapping nodes apart, (b) pull nodes toward branch center
+    const MIN_GAP = 8;
+    const SPRING_STRENGTH = 0.15; // how strongly nodes get pulled back toward parent
     const getPillHalfWidth = (r) => Math.max(r * 1.5, 60);
-    for (let pass = 0; pass < 8; pass++) {
+    for (let pass = 0; pass < 10; pass++) {
       let hadCollision = false;
+      // (a) Collision repulsion
       for (let i = 0; i < allClientNodes.length; i++) {
         for (let j = i + 1; j < allClientNodes.length; j++) {
           const a = allClientNodes[i];
@@ -661,6 +674,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           }
         }
       }
+      // (b) Spring pull: attract each node back toward its branch center
+      allClientNodes.forEach(node => {
+        const dx = node.branchX - node.x;
+        const dy = node.branchY - node.y;
+        node.x += dx * SPRING_STRENGTH;
+        node.y += dy * SPRING_STRENGTH;
+      });
       if (!hadCollision) break;
     }
 
@@ -791,15 +811,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       maxX = Math.max(maxX, branch.x + 60);
       minY = Math.min(minY, branch.y - 24);
       maxY = Math.max(maxY, branch.y + 24);
-      branch.clientPositions.forEach(client => {
-        // Account for pill width (wider than height)
-        const pillHalfW = Math.max((client.radius || 30) * 1.5, 60);
-        const pillHalfH = Math.max((client.radius || 30) * 0.6, 28);
-        minX = Math.min(minX, client.x - pillHalfW);
-        maxX = Math.max(maxX, client.x + pillHalfW);
-        minY = Math.min(minY, client.y - pillHalfH);
-        maxY = Math.max(maxY, client.y + pillHalfH);
-      });
+      // Only include client nodes from expanded branches in bounding box
+      if (expandedBranches.has(branch.category)) {
+        branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN).forEach(client => {
+          const pillHalfW = Math.max((client.radius || 30) * 1.5, 60);
+          const pillHalfH = Math.max((client.radius || 30) * 0.6, 28);
+          minX = Math.min(minX, client.x - pillHalfW);
+          maxX = Math.max(maxX, client.x + pillHalfW);
+          minY = Math.min(minY, client.y - pillHalfH);
+          maxY = Math.max(maxY, client.y + pillHalfH);
+        });
+      }
     });
 
     const contentW = maxX - minX;
@@ -925,15 +947,51 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     setShowDrawerCompleted(false);
   }, [savePositionsToStorage]);
 
+  // ── Meta-folder drag handlers: move all sub-folders + department branches + their children ──
+  const handleMetaPointerDown = useCallback((e, metaKey, currentX, currentY) => {
+    e.stopPropagation();
+    nodeHasDragged.current = false;
+    const metaName = metaKey.replace('meta-', '');
+    // Gather ALL descendant positions: sub-folder circles, department folders, client pills
+    const childPositions = [];
+    // Sub-folder circles
+    layout.metaSubFolderPositions?.forEach(sf => {
+      if (sf.metaFolderName === metaName) {
+        childPositions.push({ key: `metasub-${sf.metaFolderName}-${sf.key}`, x: sf.x, y: sf.y });
+      }
+    });
+    // Department branches + their clients
+    layout.branchPositions.forEach(branch => {
+      if (branch.metaFolder === metaName) {
+        childPositions.push({ key: `folder-${branch.category}`, x: branch.x, y: branch.y });
+        branch.clientPositions.forEach(cp => {
+          childPositions.push({ key: `${branch.category}-${cp.name}`, x: cp.x, y: cp.y });
+        });
+      }
+    });
+    draggingNode.current = {
+      key: metaKey, startX: e.clientX, startY: e.clientY,
+      origX: currentX, origY: currentY, isFolder: true, childPositions,
+    };
+  }, [layout]);
+
   // ── Folder drag handlers ──
   const handleFolderPointerDown = useCallback((e, folderKey, currentX, currentY) => {
     e.stopPropagation();
     nodeHasDragged.current = false;
     const category = folderKey.replace('folder-', '');
     const branch = layout.branchPositions.find(b => b.category === category);
-    const childPositions = branch ? branch.clientPositions.map(cp => ({
-      key: `${category}-${cp.name}`, x: cp.x, y: cp.y,
-    })) : [];
+    const childPositions = [];
+    if (branch) {
+      // Include sub-folder nodes
+      branch.subFolderPositions?.forEach(sub => {
+        childPositions.push({ key: `sub-${category}-${sub.key}`, x: sub.x, y: sub.y });
+      });
+      // Include client pills
+      branch.clientPositions.forEach(cp => {
+        childPositions.push({ key: `${category}-${cp.name}`, x: cp.x, y: cp.y });
+      });
+    }
     draggingNode.current = {
       key: folderKey, startX: e.clientX, startY: e.clientY,
       origX: currentX, origY: currentY, isFolder: true, childPositions,
@@ -945,9 +1003,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     draggingNode.current = null;
     nodeHasDragged.current = false;
     if (!wasDragging) {
-      setSelectedBranch(prev => prev === category ? null : category);
+      // COLLAPSE/EXPAND: toggle branch children visibility
+      toggleBranchExpand(category);
     }
-  }, []);
+  }, [toggleBranchExpand]);
 
   const toggleClientFocus = useCallback((clientName, e) => {
     e?.stopPropagation();
@@ -1250,42 +1309,47 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             );
           })}
 
-          {/* ── L3→L3/L4: Department → Sub-folders & Client nodes ── */}
-          {layout.branchPositions.map((branch) => (
-            <g key={`lines-${branch.category}`}>
-              {branch.subFolderPositions?.map((sub) => (
-                <motion.path
-                  key={`sub-line-${sub.key}`}
-                  d={`M ${branch.x} ${branch.y} L ${sub.x} ${sub.y}`}
-                  stroke="#008291"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 2"
-                  fill="none"
-                  strokeOpacity={isSpotlit(branch.category) ? 0.6 : 0.1}
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.4, delay: 0.3, ease: 'easeInOut' }}
-                />
-              ))}
-              {branch.clientPositions.map((client) => {
-                const startX = client._subFolderX || branch.x;
-                const startY = client._subFolderY || branch.y;
-                return (
+          {/* ── L3→L3/L4: Department → Sub-folders & Client nodes (ONLY when expanded) ── */}
+          {layout.branchPositions.map((branch) => {
+            const isExpanded = expandedBranches.has(branch.category);
+            if (!isExpanded) return null; // COLLAPSE: no child lines when collapsed
+            const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN);
+            return (
+              <g key={`lines-${branch.category}`}>
+                {branch.subFolderPositions?.map((sub) => (
                   <motion.path
-                    key={`line-${client.name}`}
-                    d={`M ${startX} ${startY} L ${client.x} ${client.y}`}
+                    key={`sub-line-${sub.key}`}
+                    d={`M ${branch.x} ${branch.y} L ${sub.x} ${sub.y}`}
                     stroke="#008291"
                     strokeWidth={1.5}
+                    strokeDasharray="4 2"
                     fill="none"
-                    strokeOpacity={isSpotlit(branch.category) ? 0.55 : 0.08}
+                    strokeOpacity={isSpotlit(branch.category) ? 0.6 : 0.1}
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.5, delay: 0.35, ease: 'easeInOut' }}
+                    transition={{ duration: 0.4, delay: 0.3, ease: 'easeInOut' }}
                   />
-                );
-              })}
-            </g>
-          ))}
+                ))}
+                {visibleClients.map((client) => {
+                  const startX = client._subFolderX || branch.x;
+                  const startY = client._subFolderY || branch.y;
+                  return (
+                    <motion.path
+                      key={`line-${client.name}`}
+                      d={`M ${startX} ${startY} L ${client.x} ${client.y}`}
+                      stroke="#008291"
+                      strokeWidth={1.5}
+                      fill="none"
+                      strokeOpacity={isSpotlit(branch.category) ? 0.55 : 0.08}
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.5, delay: 0.35, ease: 'easeInOut' }}
+                    />
+                  );
+                })}
+              </g>
+            );
+          })}
         </svg>
 
         {/* ── Center Node: "היום שלי" — draggable, today-only ── */}
@@ -1338,7 +1402,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: mi * 0.06, type: 'spring', stiffness: 200 }}
             whileHover={{ scale: 1.12 }}
-            onPointerDown={(e) => handleNodePointerDown(e, `meta-${mf.name}`, mf.x, mf.y)}
+            onPointerDown={(e) => handleMetaPointerDown(e, `meta-${mf.name}`, mf.x, mf.y)}
             onPointerUp={(e) => {
               const wasDragging = nodeHasDragged.current;
               draggingNode.current = null;
@@ -1417,9 +1481,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         ))}
 
         {/* ── Branch (Category/Department) Nodes — Level 3 Folder-Tab ── */}
-        {layout.branchPositions.map((branch, i) => (
+        {layout.branchPositions.map((branch, i) => {
+          const isBranchExpanded = expandedBranches.has(branch.category);
+          return (
           <React.Fragment key={branch.category}>
-            {/* Category department node — hexagonal, draggable */}
+            {/* Category department node — folder-tab, click to expand/collapse */}
             <motion.div
               data-node-draggable
               className="absolute z-10 select-none touch-none"
@@ -1429,7 +1495,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 transform: 'translate(-50%, -50%)',
                 opacity: isSpotlit(branch.category) ? 1 : 0.15,
                 transition: 'opacity 0.4s ease-in-out',
-                cursor: draggingNode.current?.key === `folder-${branch.category}` ? 'grabbing' : 'grab',
+                cursor: draggingNode.current?.key === `folder-${branch.category}` ? 'grabbing' : 'pointer',
               }}
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: isSpotlit(branch.category) ? 1 : 0.15, scale: 1 }}
@@ -1439,12 +1505,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               onPointerUp={(e) => handleFolderPointerUp(e, branch.category)}
             >
               <svg width="120" height="48" viewBox="0 0 120 48" style={{ overflow: 'visible' }}>
-                {/* Level 3 — Folder-Tab shape, White-Glass bg, Dashed border */}
+                {/* Level 3 — Folder-Tab shape: solid fill when expanded, dashed when collapsed */}
                 <path d="M0,10 L0,38 Q0,48 10,48 L110,48 Q120,48 120,38 L120,10 Q120,0 110,0 L44,0 L38,8 L10,8 Q0,8 0,10 Z"
-                  fill="rgba(255,255,255,0.20)"
-                  stroke="#00acc1"
-                  strokeWidth={1.5}
-                  strokeDasharray="5 3"
+                  fill={isBranchExpanded ? 'rgba(0,172,193,0.12)' : 'rgba(255,255,255,0.20)'}
+                  stroke={isBranchExpanded ? '#008291' : '#00acc1'}
+                  strokeWidth={isBranchExpanded ? 2.5 : 1.5}
+                  strokeDasharray={isBranchExpanded ? undefined : '5 3'}
                 />
                 {/* Glass highlight */}
                 <path d="M0,10 L0,38 Q0,48 10,48 L110,48 Q120,48 120,38 L120,10 Q120,0 110,0 L44,0 L38,8 L10,8 Q0,8 0,10 Z"
@@ -1453,16 +1519,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 <text x="60" y="32" textAnchor="middle" fill="#008291" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
                   {branch.config.icon} {branch.category}
                 </text>
-                {/* Count badge */}
-                <circle cx="104" cy="14" r="11" fill="rgba(0,130,145,0.15)" stroke="#00acc1" strokeWidth={1} />
+                {/* Count badge — shows total clients */}
+                <circle cx="104" cy="14" r="11" fill={isBranchExpanded ? 'rgba(0,130,145,0.3)' : 'rgba(0,130,145,0.15)'} stroke="#00acc1" strokeWidth={1} />
                 <text x="104" y="18" textAnchor="middle" fill="#008291" fontSize="9" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                   {branch.clients.length}
+                </text>
+                {/* Expand/collapse indicator ▶ / ▼ */}
+                <text x="12" y="18" textAnchor="middle" fill="#00acc1" fontSize="9" style={{ pointerEvents: 'none' }}>
+                  {isBranchExpanded ? '▼' : '▶'}
                 </text>
               </svg>
             </motion.div>
 
-            {/* Sub-folder / Category nodes — Light Cyan, Dashed, Sparkle Hover */}
-            {branch.subFolderPositions?.map((sub, si) => (
+            {/* Sub-folder / Category nodes — ONLY when branch is expanded */}
+            {isBranchExpanded && branch.subFolderPositions?.map((sub, si) => (
               <motion.div
                 key={`sub-${branch.category}-${sub.key}`}
                 className="absolute z-10 cursor-pointer select-none mindmap-sparkle-hover"
@@ -1481,7 +1551,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   boxShadow: '0 0 25px rgba(0,172,193,0.8), 0 0 50px rgba(0,172,193,0.4)',
                   filter: 'brightness(1.2)',
                 }}
-                onClick={(e) => { e.stopPropagation(); handleBranchClick(branch.category); }}
+                onClick={(e) => { e.stopPropagation(); toggleBranchExpand(branch.category); }}
               >
                 <svg width="96" height="38" viewBox="0 0 96 38" style={{ overflow: 'visible' }}>
                   {/* Level 3 — Folder-Tab shape, Dashed Border, bg-white/20, Sparkle on hover */}
@@ -1512,8 +1582,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               </motion.div>
             ))}
 
-            {/* ── Client Leaf Nodes (Pill / Mini-Card Shape) ── */}
-            {branch.clientPositions.map((client, j) => {
+            {/* ── Client Leaf Nodes — ONLY when branch is expanded, max 10 visible ── */}
+            {isBranchExpanded && branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN).map((client, j) => {
               const isHovered = hoveredNode === client.name;
               const isAllDone = client.completionRatio === 1 && client.totalTasks > 0;
               const isFilingReady = client.isFilingReady;
@@ -1536,13 +1606,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const finalW = (isAllDone ? pillWidth * 0.85 : pillWidth) * complexityScale;
               const finalH = (isAllDone ? pillHeight * 0.85 : pillHeight) * complexityScale;
 
-              // Shadows — Level 4: no border glow (clean glass), complexity glow for tier 3+
-              const complexityGlow = isHighComplexity ? '0 0 18px rgba(0,172,193,0.35)' : '';
+              // ── STATUS-BASED GLOW ──
+              // Done = Green glow | In-Progress/Active = Teal glow | To-Do = glass (no glow)
+              const statusGlow = isAllDone
+                ? '0 0 14px rgba(16,185,129,0.4), 0 0 6px rgba(16,185,129,0.2)'   // Green
+                : client.statusRing >= 2
+                  ? '0 0 14px rgba(0,172,193,0.35), 0 0 6px rgba(0,130,145,0.2)'   // Teal
+                  : '0 2px 8px rgba(0,0,0,0.06)';                                    // Glass (subtle)
+              const complexityGlow = isHighComplexity ? ', 0 0 18px rgba(0,172,193,0.35)' : '';
               const hoverGlow = `0 4px 14px rgba(0,0,0,0.12), 0 0 20px ${client.color}44`;
               const focusGlow = '0 0 20px #06B6D466, 0 0 8px #06B6D444';
               const normalShadow = isFilingReady
                 ? `0 0 16px ${ZERO_PANIC.amber}44`
-                : complexityGlow || '0 2px 8px rgba(0,0,0,0.08)';
+                : statusGlow + complexityGlow;
 
               // Top task title (truncated)
               const topTaskTitle = client.topTask?.title || '';
@@ -1552,7 +1628,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const isFocused = focusedClients.has(client.name);
 
               // Border: frozen > focus > waiting > filing-ready > ghost > normal
-              const borderColor = isFrozen ? '#6B7280' : isFocused ? '#06B6D4' : isWaitingOnClient ? '#f59e0b' : isFilingReady ? ZERO_PANIC.amber : isGhost ? client.color : (isHovered ? '#fff' : 'rgba(255,255,255,0.4)');
+              // Status-color borders: Done=green, Active=teal, Todo=glass-white
+              const statusBorder = isAllDone ? 'rgba(16,185,129,0.5)' : client.statusRing >= 2 ? 'rgba(0,172,193,0.4)' : 'rgba(255,255,255,0.4)';
+              const borderColor = isFrozen ? '#6B7280' : isFocused ? '#06B6D4' : isWaitingOnClient ? '#f59e0b' : isFilingReady ? ZERO_PANIC.amber : isGhost ? client.color : (isHovered ? '#fff' : statusBorder);
               const borderStyle = isFrozen ? 'dashed' : isGhost ? 'dashed' : 'solid';
               const borderWidth = isFrozen ? 2.5 : isFocused ? 3.5 : isWaitingOnClient ? 2.5 : isFilingReady ? 3 : 1.5;
 
@@ -1570,8 +1648,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     height: finalH,
                     left: client.x - finalW / 2,
                     top: client.y - finalH / 2,
-                    // Level 4 — White-Glass pill: translucent glass with color accent border
-                    backgroundColor: isGhost ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
+                    // Level 4 — Status Glass: Done=green-tint, Active=teal-tint, Todo=pure-glass
+                    backgroundColor: isGhost ? 'rgba(255,255,255,0.85)' : isAllDone ? 'rgba(16,185,129,0.08)' : client.statusRing >= 2 ? 'rgba(0,172,193,0.06)' : 'rgba(255,255,255,0.35)',
                     backdropFilter: isGhost ? 'none' : 'blur(12px)',
                     WebkitBackdropFilter: isGhost ? 'none' : 'blur(12px)',
                     borderColor: isGhost ? client.color : borderColor,
@@ -1721,8 +1799,41 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 </motion.div>
               );
             })}
+
+            {/* ── "+X more" counter node when branch has >10 clients ── */}
+            {isBranchExpanded && branch.clientPositions.length > MAX_VISIBLE_CHILDREN && (() => {
+              const overflowCount = branch.clientPositions.length - MAX_VISIBLE_CHILDREN;
+              // Position the overflow pill near the last visible client
+              const lastVisible = branch.clientPositions[MAX_VISIBLE_CHILDREN - 1];
+              const overflowX = lastVisible ? lastVisible.x + 40 : branch.x + 80;
+              const overflowY = lastVisible ? lastVisible.y + 40 : branch.y + 60;
+              return (
+                <motion.div
+                  className="absolute z-10 flex items-center justify-center select-none"
+                  style={{
+                    left: overflowX,
+                    top: overflowY,
+                    transform: 'translate(-50%, -50%)',
+                    width: 72,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: 'rgba(0,130,145,0.12)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1.5px dashed #00acc1',
+                    cursor: 'pointer',
+                  }}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 0.85, scale: 1 }}
+                  whileHover={{ scale: 1.1 }}
+                  onClick={(e) => { e.stopPropagation(); setDrawerClient(null); toast.info(`${overflowCount} לקוחות נוספים ב${branch.category} — פתח את המגירה`); }}
+                >
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#008291' }}>+{overflowCount} עוד</span>
+                </motion.div>
+              );
+            })()}
           </React.Fragment>
-        ))}
+          );
+        })}
       </div>
       {/* ── END transformed content layer ── */}
 
