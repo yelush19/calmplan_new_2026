@@ -210,6 +210,60 @@ function clientHasPayroll(client) {
 }
 
 /**
+ * ULTIMATE SERVICE-GRID LOGIC:
+ * Each client has a specific 'Service Profile'. Use this grid:
+ *
+ * Service Type      | Logic / Frequency           | Target Folder
+ * VAT (מע"מ)        | Only if vat_active === true  | Reports / מע"מ
+ * Payroll (שכר)     | Only if has_payroll === true  | Payroll / שכר
+ * Adjustments (התאמות)| Only if needs_adjustments    | Adjustments / התאמות
+ * Balances (מאזנים)  | All 19 active clients        | Balances / מאזנים
+ *
+ * NO GHOST TASKS: If a client doesn't have a service, DO NOT create a task for it.
+ */
+
+/**
+ * Check if client has ANY monthly recurring reporting task.
+ * Used to determine if a client is "reporting-active" (solid pill) vs
+ * "balance-only" (ghosted pill at 60% opacity).
+ */
+export function isReportingActiveClient(client) {
+  if (!client || client.status !== 'active' || client.is_deleted === true) return false;
+
+  const services = client.service_types || [];
+  const reporting = client.reporting_info || {};
+
+  // VAT active
+  const hasVat = services.some(st =>
+    ['vat', 'vat_reporting', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
+  ) && !!reporting.vat_reporting_frequency && reporting.vat_reporting_frequency !== 'not_applicable';
+
+  // Payroll active
+  const hasPayroll = services.some(st => st === 'payroll' || st === 'full_service') &&
+    !!reporting.payroll_frequency && reporting.payroll_frequency !== 'not_applicable';
+
+  // Tax advances active
+  const hasTaxAdv = services.some(st =>
+    ['tax_reports', 'tax_advances', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
+  ) && !!reporting.tax_advances_frequency && reporting.tax_advances_frequency !== 'not_applicable';
+
+  // Adjustments (bookkeeping reconciliation)
+  const hasAdjustments = services.some(st =>
+    ['bookkeeping', 'bookkeeping_full', 'full_service', 'reconciliation'].includes(st)
+  );
+
+  return hasPayroll || hasVat || hasTaxAdv || hasAdjustments;
+}
+
+/**
+ * Check if a client is active (not deleted, status=active).
+ * ALL active clients appear in MindMap (reporting-active=solid, balance-only=ghosted).
+ */
+export function isActiveClient(client) {
+  return client && client.status === 'active' && client.is_deleted !== true;
+}
+
+/**
  * SERVICE-AWARE template selection. No more blind generation.
  * Each template requires BOTH:
  *   (a) the service in service_types
@@ -1317,12 +1371,17 @@ export const generateProcessTasks = async (params = {}) => {
   };
 
   try {
-    // ── LAW 1.1: ACTIVE-ONLY FILTER ──
-    // FORBIDDEN: inactive, deleted, archived clients
+    // ── LAW 1.1: REPORTING-ACTIVE FILTER ──
+    // FORBIDDEN: inactive, deleted, archived, balance-only clients
+    // A client is reporting-active ONLY if they have recurring monthly tasks
     const allClients = await entities.Client.list();
-    const activeClients = allClients.filter(c =>
+    const allActiveClients = allClients.filter(c =>
       c.status === 'active' && c.is_deleted !== true
     );
+    // For monthly tasks: use STRICT reporting-active filter
+    const activeClients = allActiveClients.filter(c => isReportingActiveClient(c));
+    // For annual reports: use broader active filter (all active clients)
+    const annualEligibleClients = allActiveClients;
 
     // ── LAW 1.3: COMPOSITE UNIQUE KEY via Set ──
     // Key = `${client_id}::${task_type}::${period}`
@@ -1342,7 +1401,7 @@ export const generateProcessTasks = async (params = {}) => {
       createdKeys.add(`${clientKey}::${typeKey}::${monthPrefix}`);
     });
 
-    log.push(`${timestamp()} LAW 1: ${activeClients.length} active clients (of ${allClients.length} total), ${existingForMonth.length} existing tasks for ${monthPrefix}`);
+    log.push(`${timestamp()} LAW 1: ${activeClients.length} reporting-active clients (of ${allActiveClients.length} active, ${allClients.length} total), ${existingForMonth.length} existing tasks for ${monthPrefix}`);
 
     const results = {
       summary: { tasksCreated: 0, mondayTasksCreated: 0, errors: 0, skippedBalanceOnly: 0 },
@@ -1425,9 +1484,9 @@ export const generateProcessTasks = async (params = {}) => {
       }
     }
 
-    // --- Balance Sheets / Annual Reports ---
+    // --- Balance Sheets / Annual Reports (use broader filter — all active clients) ---
     if (taskType === 'all' || taskType === 'balanceSheets') {
-      for (const client of activeClients) {
+      for (const client of annualEligibleClients) {
         const templateKeys = getClientTemplates(client);
         if (!templateKeys.includes('annual_report')) continue;
 
@@ -1494,13 +1553,28 @@ export const generateProcessTasks = async (params = {}) => {
       }
     }
 
-    log.push(`${timestamp()} DONE: ${results.summary.tasksCreated} tasks created, ${results.summary.skippedBalanceOnly} balance-only clients skipped`);
+    // ── CATEGORY COUNT AUDIT: Log task breakdown per category ──
+    const allTasksNow = await entities.Task.list();
+    const febTasks = allTasksNow.filter(t => t.due_date && t.due_date.startsWith(monthPrefix));
+    const categoryCounts = {};
+    febTasks.forEach(t => {
+      const cat = t.category || 'unknown';
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    });
+    log.push(`${timestamp()} ═══ TASK COUNT PER CATEGORY ═══`);
+    Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]).forEach(([cat, count]) => {
+      log.push(`${timestamp()}   ${cat}: ${count}`);
+    });
+    log.push(`${timestamp()} ═══ TOTAL: ${febTasks.length} tasks for ${monthPrefix} ═══`);
+    log.push(`${timestamp()} Reporting-active clients: ${activeClients.length}, Balance-only skipped: ${results.summary.skippedBalanceOnly}`);
 
     return {
       data: {
         success: true,
         message: `נוצרו ${results.summary.tasksCreated} משימות חדשות`,
         results,
+        categoryCounts,
+        totalForMonth: febTasks.length,
         log
       }
     };

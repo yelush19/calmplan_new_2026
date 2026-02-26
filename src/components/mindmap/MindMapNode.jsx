@@ -205,7 +205,9 @@ function ClientNode({ node, isSelected, onClick }) {
   const isCompleted = node.status === 'completed';
   const isIssue = node.status === 'issue';
   const isFilingReady = node.status === 'ready_for_reporting';
-  const baseOpacity = isCompleted ? 0.45 : 1;
+  // THE 19 ANCHORS: Balance-only clients are ghosted at 60% opacity
+  const isGhosted = node.isGhosted === true;
+  const baseOpacity = isGhosted ? 0.6 : isCompleted ? 0.45 : 1;
 
   const gradId = `client-grad-${node.id}`;
   const glowId = `client-glow-${node.id}`;

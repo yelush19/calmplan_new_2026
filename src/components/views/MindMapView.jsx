@@ -293,29 +293,35 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // Runs ONCE on mount. After first run, stores flag to prevent re-runs.
   const nuclearRan = useRef(false);
   useEffect(() => {
-    const NUCLEAR_KEY = 'calmplan-nuclear-v8-architecture-reset';
+    const NUCLEAR_KEY = 'calmplan-nuclear-v9-reporting-active';
     if (nuclearRan.current) return;
     try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
     nuclearRan.current = true;
 
     (async () => {
       try {
-        console.log('[CalmPlan] LAW 1 NUCLEAR RESET: Wiping Feb 2026 tasks...');
+        console.log('[CalmPlan] SERVICE-GRID NUCLEAR RESET v9: Wiping Feb 2026 tasks...');
         const wipeRes = await wipeAllTasksForMonth({ year: 2026, month: 2 });
         const wiped = wipeRes?.data?.deleted || 0;
         console.log(`[CalmPlan] Wiped: ${wiped} tasks deleted`);
 
-        console.log('[CalmPlan] Regenerating with service-aware filters (LAW 1.2)...');
+        console.log('[CalmPlan] Regenerating with Service-Grid logic...');
         const genRes = await generateProcessTasks({ taskType: 'all' });
         const created = genRes?.data?.results?.summary?.tasksCreated || 0;
         const skipped = genRes?.data?.results?.summary?.skippedBalanceOnly || 0;
-        console.log(`[CalmPlan] TASK COUNT: ${created} tasks created, ${skipped} balance-only skipped`);
+        console.log(`[CalmPlan] ═══ TASK COUNT AUDIT ═══`);
+        console.log(`[CalmPlan] Total: ${created} tasks created, ${skipped} balance-only skipped`);
+
+        // Log task count per category for verification
+        if (genRes?.data?.log) {
+          genRes.data.log.forEach(line => console.log(`[CalmPlan] ${line}`));
+        }
 
         // AUDIT: If task count exceeds 70, run dedup as safety net
         if (created > 70) {
-          console.warn(`[CalmPlan] AUDIT WARNING: ${created} tasks exceeds 70 limit. Running dedup...`);
+          console.warn(`[CalmPlan] AUDIT WARNING: ${created} tasks exceeds 70! Running dedup...`);
           const dedupRes = await dedupTasksForMonth({ year: 2026, month: 2 });
-          console.log(`[CalmPlan] Dedup cleaned: ${dedupRes?.data?.deleted || 0} duplicates removed`);
+          console.log(`[CalmPlan] Dedup cleaned: ${dedupRes?.data?.deleted || 0} duplicates`);
         }
 
         try { localStorage.setItem(NUCLEAR_KEY, 'true'); } catch {}
@@ -399,7 +405,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v8-architecture-reset'; // bump this to force reset
+  const LAYOUT_VERSION = 'v9-reporting-active-grid'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
