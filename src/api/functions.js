@@ -1314,14 +1314,21 @@ export const generateProcessTasks = async (params = {}) => {
           const title = `${client.name} - ${description}`;
           const workCategory = TEMPLATE_TO_WORK_CATEGORY[templateKey] || template.category;
 
-          // Skip if similar task already exists (check both work categories and Hebrew categories)
+          // UNIQUE CONSTRAINT: check by (client_id OR client_name) + (category variants) + month
+          // Prevents duplicates even if title format changes
           const hebrewCategory = template.category; // e.g. 'מע"מ'
-          const exists = existingTasks.some(t =>
-            t.title === title ||
-            (t.client_name === client.name &&
-              (t.category === workCategory || t.category === hebrewCategory) &&
-              t.due_date && t.due_date.startsWith(`${currentYear}-${monthNum}`))
-          );
+          const monthPrefix = `${currentYear}-${monthNum}`;
+          const exists = existingTasks.some(t => {
+            // Match by client
+            const sameClient = t.client_name === client.name || (client.id && t.client_id === client.id);
+            if (!sameClient) return false;
+            // Match by task type (work category OR Hebrew category)
+            const sameType = t.category === workCategory || t.category === hebrewCategory;
+            if (!sameType) return false;
+            // Match by period (same month)
+            const samePeriod = (t.due_date && t.due_date.startsWith(monthPrefix)) || t.title === title;
+            return samePeriod;
+          });
           if (exists) continue;
 
           // Use tax calendar for accurate due dates
@@ -1370,7 +1377,12 @@ export const generateProcessTasks = async (params = {}) => {
         if (!templateKeys.includes('annual_report')) continue;
 
         const title = `${client.name} - דוח שנתי לשנת ${currentYear - 1}`;
-        const exists = existingTasks.some(t => t.title === title);
+        // Stronger dedup: check by client + category + year (not just title)
+        const exists = existingTasks.some(t => {
+          const sameClient = t.client_name === client.name || (client.id && t.client_id === client.id);
+          if (!sameClient) return false;
+          return t.category === 'work_client_management' || t.title === title;
+        });
         if (exists) continue;
 
         try {
@@ -1406,7 +1418,15 @@ export const generateProcessTasks = async (params = {}) => {
             !clientServices.includes('full_service')) continue;
 
         const title = `${client.name} - התאמת חשבונות ${monthNum}/${currentYear}`;
-        const exists = existingTasks.some(t => t.title === title);
+        // Stronger dedup: check by client + category + period (not just title)
+        const monthPrefix = `${currentYear}-${monthNum}`;
+        const exists = existingTasks.some(t => {
+          const sameClient = t.client_name === client.name || (client.id && t.client_id === client.id);
+          if (!sameClient) return false;
+          const sameType = t.category === 'work_reconciliation' || t.category === 'התאמות';
+          if (!sameType) return false;
+          return (t.due_date && t.due_date.startsWith(monthPrefix)) || t.title === title;
+        });
         if (exists) continue;
 
         try {
@@ -1494,6 +1514,173 @@ export const cleanupYearEndOnlyTasks = async () => {
 
     log.push(`${timestamp()} נמחקו ${deleted} משימות`);
     return { data: { success: true, deleted, log } };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
+};
+
+// ===== WIPE & RESET: Delete ALL tasks for a given month =====
+export const wipeAllTasksForMonth = async (params = {}) => {
+  const { year = 2026, month = 2 } = params;
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  let deleted = 0;
+
+  try {
+    const allTasks = await entities.Task.list();
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+
+    const tasksToDelete = allTasks.filter(t =>
+      t.due_date && t.due_date.startsWith(monthPrefix)
+    );
+
+    log.push(`${timestamp()} מוחק ${tasksToDelete.length} משימות לתקופה ${monthPrefix}`);
+
+    for (const task of tasksToDelete) {
+      try {
+        await entities.Task.delete(task.id);
+        deleted++;
+      } catch (err) {
+        log.push(`${timestamp()} שגיאה במחיקת "${task.title}": ${err.message}`);
+      }
+    }
+
+    log.push(`${timestamp()} נמחקו ${deleted} משימות`);
+    return { data: { success: true, deleted, total: tasksToDelete.length, log } };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
+};
+
+// ===== AUDIT PREVIEW: Count expected tasks without creating them =====
+export const previewTaskGeneration = async (params = {}) => {
+  const { taskType = 'all' } = params;
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const monthNum = String(currentMonth).padStart(2, '0');
+  const monthPrefix = `${currentYear}-${monthNum}`;
+
+  try {
+    const allClients = await entities.Client.list();
+    const activeClients = allClients.filter(c => c.status === 'active');
+    const existingTasks = await entities.Task.list();
+
+    const existingForMonth = existingTasks.filter(t =>
+      t.due_date && t.due_date.startsWith(monthPrefix)
+    );
+
+    const preview = {
+      totalClients: activeClients.length,
+      existingTasksThisMonth: existingForMonth.length,
+      breakdown: { vat: 0, payroll: 0, tax_advances: 0, social_security: 0, deductions: 0, annual_report: 0, reconciliation: 0 },
+      totalExpected: 0,
+      newTasks: 0,
+      alreadyExist: 0,
+    };
+
+    if (taskType === 'all' || taskType === 'mondayReports') {
+      for (const client of activeClients) {
+        const services = client.service_types || [];
+        const hasMonthlyService = services.some(st =>
+          st === 'bookkeeping' || st === 'full_service' || st === 'payroll' || st === 'vat' || st === 'tax_reports'
+        );
+        if (!hasMonthlyService && services.length > 0) continue;
+
+        const templateKeys = getClientTemplates(client);
+        for (const templateKey of templateKeys) {
+          if (templateKey === 'annual_report' && taskType === 'mondayReports') continue;
+          if (!shouldRunForMonth(templateKey, currentMonth, client)) continue;
+          const freq = getClientFrequency(templateKey, client);
+          if (freq === 'not_applicable' || freq === 'yearly') continue;
+
+          preview.breakdown[templateKey] = (preview.breakdown[templateKey] || 0) + 1;
+          preview.totalExpected++;
+
+          const template = PROCESS_TEMPLATES[templateKey];
+          const workCategory = TEMPLATE_TO_WORK_CATEGORY[templateKey] || template.category;
+          const hebrewCategory = template.category;
+          const exists = existingForMonth.some(t => {
+            const sameClient = t.client_name === client.name || (client.id && t.client_id === client.id);
+            if (!sameClient) return false;
+            const sameType = t.category === workCategory || t.category === hebrewCategory;
+            return sameType;
+          });
+
+          if (exists) preview.alreadyExist++;
+          else preview.newTasks++;
+        }
+      }
+    }
+
+    if (taskType === 'all' || taskType === 'reconciliations') {
+      for (const client of activeClients) {
+        const clientServices = client.service_types || [];
+        if (clientServices.length > 0 &&
+            !clientServices.includes('bookkeeping') &&
+            !clientServices.includes('full_service')) continue;
+        preview.breakdown.reconciliation++;
+        preview.totalExpected++;
+
+        const title = `${client.name} - התאמת חשבונות ${monthNum}/${currentYear}`;
+        const exists = existingForMonth.some(t => t.title === title);
+        if (exists) preview.alreadyExist++;
+        else preview.newTasks++;
+      }
+    }
+
+    return {
+      data: {
+        success: true,
+        preview,
+        label: `צפויות ${preview.totalExpected} משימות (${preview.newTasks} חדשות, ${preview.alreadyExist} קיימות)`,
+      }
+    };
+  } catch (error) {
+    return { data: { success: false, error: error.message } };
+  }
+};
+
+// ===== Dedup Purge: Remove duplicate tasks for a given month =====
+export const dedupTasksForMonth = async (params = {}) => {
+  const { year = 2026, month = 2 } = params;
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  let deleted = 0;
+
+  try {
+    const allTasks = await entities.Task.list();
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+
+    // Group tasks by (client_name + category + month) — keep first, delete rest
+    const seen = new Map(); // key → first task id
+    const duplicates = [];
+
+    allTasks
+      .filter(t => t.due_date && t.due_date.startsWith(monthPrefix))
+      .sort((a, b) => (a.created_date || '').localeCompare(b.created_date || '')) // oldest first
+      .forEach(t => {
+        const key = `${t.client_name || ''}::${t.category || ''}::${monthPrefix}`;
+        if (!seen.has(key)) {
+          seen.set(key, t.id);
+        } else {
+          duplicates.push(t);
+        }
+      });
+
+    log.push(`${timestamp()} נמצאו ${duplicates.length} כפילויות מתוך ${allTasks.length} משימות לחודש ${monthPrefix}`);
+
+    for (const task of duplicates) {
+      try {
+        await entities.Task.delete(task.id);
+        deleted++;
+      } catch (err) {
+        log.push(`${timestamp()} שגיאה במחיקת "${task.title}": ${err.message}`);
+      }
+    }
+
+    log.push(`${timestamp()} נמחקו ${deleted} כפילויות`);
+    return { data: { success: true, deleted, duplicatesFound: duplicates.length, log } };
   } catch (error) {
     return { data: { success: false, error: error.message, log } };
   }
