@@ -365,9 +365,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [crisisMode, setCrisisMode] = useState(() => localStorage.getItem('mindmap-crisis-mode') === 'true');
   useEffect(() => { localStorage.setItem('mindmap-crisis-mode', String(crisisMode)); }, [crisisMode]);
 
-  // ── COLLAPSE BY DEFAULT: branches start collapsed, click to expand ──
+  // ── STRICT COLLAPSE HIERARCHY ──
+  // Level 1 (meta-folders): collapsed by default → click to reveal Level 2/3
+  // Level 3 (departments): collapsed by default → click to reveal Level 4 clients
   const MAX_VISIBLE_CHILDREN = 10;
+  const [expandedMetaFolders, setExpandedMetaFolders] = useState(new Set());
   const [expandedBranches, setExpandedBranches] = useState(new Set());
+  const toggleMetaExpand = useCallback((metaName) => {
+    setExpandedMetaFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(metaName)) next.delete(metaName);
+      else next.add(metaName);
+      return next;
+    });
+  }, []);
   const toggleBranchExpand = useCallback((category) => {
     setExpandedBranches(prev => {
       const next = new Set(prev);
@@ -555,8 +566,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const padY = 60;
     const scaleX = (w - padX * 2) * 0.42 * spacingFactor;
     const scaleY = (h - padY * 2) * 0.42 * spacingFactor;
-    // Spring Force: short leaf distance — children stay close to parent
-    const baseLeafDist = Math.min(scaleX, scaleY) * 0.38;
+    // STRICT: linkDistance = 40px — children hug their parent
+    const baseLeafDist = 40;
 
     const angleStep = (2 * Math.PI) / Math.max(branches.length, 1);
 
@@ -806,12 +817,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     // Compute bounding box of all nodes
     let minX = layout.cx, maxX = layout.cx, minY = layout.cy, maxY = layout.cy;
 
+    // Include meta-folder hexagons in bounding box (always visible)
+    layout.metaFolderPositions?.forEach(mf => {
+      minX = Math.min(minX, mf.x - 70);
+      maxX = Math.max(maxX, mf.x + 70);
+      minY = Math.min(minY, mf.y - 32);
+      maxY = Math.max(maxY, mf.y + 32);
+    });
+    // Include branch + client nodes only when their parent meta is expanded
     layout.branchPositions.forEach(branch => {
+      if (!expandedMetaFolders.has(branch.metaFolder)) return;
       minX = Math.min(minX, branch.x - 60);
       maxX = Math.max(maxX, branch.x + 60);
       minY = Math.min(minY, branch.y - 24);
       maxY = Math.max(maxY, branch.y + 24);
-      // Only include client nodes from expanded branches in bounding box
       if (expandedBranches.has(branch.category)) {
         branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN).forEach(client => {
           const pillHalfW = Math.max((client.radius || 30) * 1.5, 60);
@@ -1268,8 +1287,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             </g>
           ))}
 
-          {/* ── L1→L2: Meta-Folder → Sub-Folder circles ── */}
+          {/* ── L1→L2: Meta-Folder → Sub-Folder circles (ONLY when meta expanded) ── */}
           {layout.metaSubFolderPositions?.map((sf) => {
+            if (!expandedMetaFolders.has(sf.metaFolderName)) return null;
             const mfPos = layout.metaFolderPositions.find(m => m.name === sf.metaFolderName);
             if (!mfPos) return null;
             return (
@@ -1288,9 +1308,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             );
           })}
 
-          {/* ── L1/L2→L3: Meta/SubFolder → Department branches ── */}
+          {/* ── L1/L2→L3: Meta/SubFolder → Department branches (ONLY when meta expanded) ── */}
           {layout.branchPositions.map((branch) => {
-            // If branch has a sub-folder parent, line comes from sub-folder; otherwise from meta-folder
+            if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             const parentX = branch._metaSubX || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.x || centerPos.x;
             const parentY = branch._metaSubY || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.y || centerPos.y;
             return (
@@ -1309,10 +1329,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             );
           })}
 
-          {/* ── L3→L3/L4: Department → Sub-folders & Client nodes (ONLY when expanded) ── */}
+          {/* ── L3→L3/L4: Department → Sub-folders & Client nodes (ONLY when meta+branch expanded) ── */}
           {layout.branchPositions.map((branch) => {
-            const isExpanded = expandedBranches.has(branch.category);
-            if (!isExpanded) return null; // COLLAPSE: no child lines when collapsed
+            if (!expandedMetaFolders.has(branch.metaFolder)) return null;
+            if (!expandedBranches.has(branch.category)) return null;
             const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN);
             return (
               <g key={`lines-${branch.category}`}>
@@ -1386,8 +1406,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           <span className="opacity-60 text-[11px]">{centerLabel}</span>
         </motion.div>
 
-        {/* ── META-FOLDER Hexagon Nodes (outer ring) ── */}
-        {layout.metaFolderPositions?.map((mf, mi) => (
+        {/* ── META-FOLDER Hexagon Nodes (Level 1 — always visible, click to expand) ── */}
+        {layout.metaFolderPositions?.map((mf, mi) => {
+          const isMetaExpanded = expandedMetaFolders.has(mf.name);
+          return (
           <motion.div
             key={`meta-${mf.name}`}
             data-node-draggable
@@ -1396,7 +1418,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               left: mf.x,
               top: mf.y,
               transform: 'translate(-50%, -50%)',
-              cursor: 'grab',
+              cursor: 'pointer',
             }}
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -1407,17 +1429,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const wasDragging = nodeHasDragged.current;
               draggingNode.current = null;
               nodeHasDragged.current = false;
-              if (wasDragging) setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
+              if (wasDragging) { setManualPositions(prev => { savePositionsToStorage(prev); return prev; }); }
+              else { toggleMetaExpand(mf.name); }
             }}
           >
             <svg width="140" height="64" viewBox="0 0 140 64" style={{ overflow: 'visible' }}>
-              {/* Large Hexagon shape — Deep Teal, Solid */}
+              {/* Hexagon — brighter fill when expanded */}
               <polygon
                 points="22,0 118,0 140,32 118,64 22,64 0,32"
                 fill={mf.config?.color || '#008291'}
-                opacity={0.92}
-                stroke="#008291"
-                strokeWidth={3}
+                opacity={isMetaExpanded ? 1 : 0.85}
+                stroke={isMetaExpanded ? '#fff' : '#008291'}
+                strokeWidth={isMetaExpanded ? 3.5 : 2.5}
               />
               {/* Glass highlight */}
               <polygon
@@ -1431,18 +1454,23 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   <stop offset="100%" stopColor="white" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              <text x="70" y="28" textAnchor="middle" fill="white" fontSize="13" fontWeight="700" style={{ pointerEvents: 'none' }}>
+              {/* Expand indicator */}
+              <text x="16" y="36" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10" style={{ pointerEvents: 'none' }}>
+                {isMetaExpanded ? '▼' : '▶'}
+              </text>
+              <text x="75" y="28" textAnchor="middle" fill="white" fontSize="13" fontWeight="700" style={{ pointerEvents: 'none' }}>
                 {mf.config?.icon || '📂'} {mf.name}
               </text>
-              <text x="70" y="46" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="10" style={{ pointerEvents: 'none' }}>
+              <text x="75" y="46" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="10" style={{ pointerEvents: 'none' }}>
                 {mf.totalClients} לקוחות
               </text>
             </svg>
           </motion.div>
-        ))}
+          );
+        })}
 
-        {/* ── Level 2: Meta Sub-Folder Circle Nodes (דיווחי שכר, דיווחי מיסים) ── */}
-        {layout.metaSubFolderPositions?.map((sf, si) => (
+        {/* ── Level 2: Meta Sub-Folder Circle Nodes — ONLY when parent meta is expanded ── */}
+        {layout.metaSubFolderPositions?.filter(sf => expandedMetaFolders.has(sf.metaFolderName)).map((sf, si) => (
           <motion.div
             key={`metasub-${sf.metaFolderName}-${sf.key}`}
             data-node-draggable
@@ -1480,8 +1508,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           </motion.div>
         ))}
 
-        {/* ── Branch (Category/Department) Nodes — Level 3 Folder-Tab ── */}
-        {layout.branchPositions.map((branch, i) => {
+        {/* ── Branch (Category/Department) Nodes — Level 3: ONLY when parent meta expanded ── */}
+        {layout.branchPositions.filter(b => expandedMetaFolders.has(b.metaFolder)).map((branch, i) => {
           const isBranchExpanded = expandedBranches.has(branch.category);
           return (
           <React.Fragment key={branch.category}>
