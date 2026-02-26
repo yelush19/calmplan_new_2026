@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star, Trash2, Check } from 'lucide-react';
+import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star, Trash2, Check, RefreshCw } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Task, Client } from '@/api/entities';
 import { toast } from 'sonner';
@@ -261,6 +261,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [drawerEditTask, setDrawerEditTask] = useState(null); // task being edited via QuickAdd
   const [drawerSubTaskParent, setDrawerSubTaskParent] = useState(null); // for sub-task creation
   const [showDrawerCompleted, setShowDrawerCompleted] = useState(false);
+
+  // ── Error State: Show reconnect when data fetch fails ──
+  const [fetchError, setFetchError] = useState(null);
+  useEffect(() => {
+    // Detect data load failure: if tasks/clients is null/undefined (not empty array) → error
+    if (tasks === null || tasks === undefined) {
+      setFetchError('לא ניתן לטעון נתונים מהשרת');
+    } else {
+      setFetchError(null);
+    }
+  }, [tasks]);
   const [focusedClients, setFocusedClients] = useState(new Set());
 
   // clickTimerRef no longer needed — modal law: every click opens full dialog
@@ -1097,6 +1108,28 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     if (!selectedBranch) return true;
     return category === selectedBranch;
   }, [focusMode, selectedBranch]);
+
+  // ── Error State: Reconnect Screen ──
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" dir="rtl">
+        <div className="p-6 rounded-[32px] backdrop-blur-2xl bg-white/40 border border-white/20 shadow-2xl flex flex-col items-center gap-4 max-w-sm">
+          <div className="w-16 h-16 rounded-full bg-rose-100/60 flex items-center justify-center">
+            <Cloud className="w-8 h-8 text-rose-500" />
+          </div>
+          <p className="text-lg font-bold text-slate-700">שגיאת חיבור</p>
+          <p className="text-sm text-slate-500 text-center">{fetchError}</p>
+          <button
+            onClick={() => { setFetchError(null); window.location.reload(); }}
+            className="px-6 py-2.5 rounded-full bg-[#008291] hover:bg-[#006d7a] text-white font-medium text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            התחבר מחדש
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (tasks.length === 0 && inboxItems.length === 0) {
     return (
