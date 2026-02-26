@@ -47,7 +47,7 @@ const sheetVariants = cva(
 const SheetContent = React.forwardRef(({ side = "right", className, children, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
-    <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} style={{ backgroundColor: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', ...props.style }} {...props}>
+    <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} style={{ backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)', borderLeft: '1px solid rgba(255,255,255,0.2)', ...props.style }} {...props}>
       <SheetPrimitive.Close
         className="absolute right-4 top-4 rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-white/40 p-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-white/30">
         <X className="h-4 w-4" />

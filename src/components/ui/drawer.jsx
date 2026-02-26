@@ -36,7 +36,7 @@ const DrawerContent = React.forwardRef(({ className, children, ...props }, ref) 
         "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[24px] border border-white/20 backdrop-blur-2xl shadow-2xl",
         className
       )}
-      style={{ backgroundColor: 'rgba(255, 255, 255, 0.40)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}
+      style={{ backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)', borderTop: '1px solid rgba(255,255,255,0.2)' }}
       {...props}>
       <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-white/30" />
       {children}
