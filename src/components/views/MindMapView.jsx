@@ -55,24 +55,19 @@ const NODE_COLOR_MAP = {
   slate:   '#90A4AE',
 };
 
-// ─── REFINED HIERARCHY: 5 Business Categories ───────────────
-// Root → Meta-Folder (5 hexagons) → Complexity Sub-groups → Client Leaves
+// ─── HIERARCHY: 5 Business Categories ───────────────
+// Root → Meta-Folder (5 hexagons) → Department → Client Leaves
+// MATH LAW: Sum of all hexagon task counts MUST equal total task count
 const META_FOLDERS = {
   'שכר': {
     icon: '👥', color: '#0277BD', label: 'Payroll',
     departments: ['שכר', 'ביטוח לאומי', 'ניכויים'],
-    // Complexity sub-groups: clients sorted into Nano/Medium/Large
     complexitySubFolders: true,
   },
   'מע"מ ומקדמות': {
     icon: '📊', color: '#00838F', label: 'VAT/Advances',
     departments: ['מע"מ', 'מקדמות'],
-    // Complexity sub-groups: clients sorted into Nano/Medium/Large
     complexitySubFolders: true,
-  },
-  'דיווחי רשויות': {
-    icon: '🏛️', color: '#4527A0', label: 'Authority Reports',
-    departments: ['ביטוח לאומי דיווח', 'ניכויים דיווח'],
   },
   'מאזנים': {
     icon: '⚖️', color: '#00695C', label: 'Balance Sheets',
@@ -81,7 +76,14 @@ const META_FOLDERS = {
   'שירותים נוספים': {
     icon: '🔧', color: '#546E7A', label: 'Additional Services',
     departments: ['הנהלת חשבונות', 'אדמיניסטרציה', 'בית'],
-    // ALL Additional Services are auto-Nano
+    forceNano: true,
+  },
+  'ממתין לסיווג': {
+    icon: '📋', color: '#78909C', label: 'Pending Review',
+    // CATCH-ALL: any task whose department isn't in the 4 groups above lands here
+    // This ensures total hexagon sum ALWAYS equals the badge total
+    departments: ['אחר/טיוטות'],
+    isCatchAll: true,
     forceNano: true,
   },
 };
@@ -101,6 +103,7 @@ const BRANCH_CONFIG = {
   'בית':              { color: '#6D4C41', icon: '🏠', label: 'Home' },
   'ביטוח לאומי דיווח': { color: '#4527A0', icon: '🏛️', label: 'NI Report' },
   'ניכויים דיווח':     { color: '#4527A0', icon: '📋', label: 'Deduct Report' },
+  'אחר/טיוטות':        { color: '#78909C', icon: '📝', label: 'Others/Drafts' },
 };
 
 // Complexity tier labels for sub-grouping inside Payroll / VAT
@@ -374,7 +377,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v4-refined-categories'; // bump this to force reset
+  const LAYOUT_VERSION = 'v5-radial-symmetry'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -466,12 +469,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       return t.priority !== 'low';
     });
 
+    // Collect ALL known department names for catch-all check
+    const knownDepartments = new Set();
+    Object.values(META_FOLDERS).forEach(mf => mf.departments.forEach(d => knownDepartments.add(d)));
+
     activeTasks.forEach(task => {
       const rawCat = task.category || 'אחר';
       let cat = CATEGORY_TO_DEPARTMENT[rawCat] || rawCat;
-      const clientName = task.client_name || 'אדמיניסטרציה';
-      // No-client tasks → dedicated Admin branch (not scattered across categories)
+      const clientName = task.client_name || 'כללי';
+      // No-client tasks → Admin branch
       if (!task.client_name) cat = 'אדמיניסטרציה';
+      // MATH AUDIT: If category doesn't map to ANY known department, route to catch-all
+      if (!knownDepartments.has(cat) && cat !== 'אדמיניסטרציה') {
+        cat = 'אחר/טיוטות';
+      }
       if (!catClientMap[cat]) catClientMap[cat] = {};
       if (!catClientMap[cat][clientName]) catClientMap[cat][clientName] = [];
       catClientMap[cat][clientName].push(task);
@@ -527,9 +538,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         }
       }
       if (!branch.metaFolder) {
-        // Unmapped categories → Additional Services
-        branch.metaFolder = 'שירותים נוספים';
-        branch.metaConfig = META_FOLDERS['שירותים נוספים'];
+        // Unmapped categories → Catch-all "ממתין לסיווג" (ensures MATH LAW: no ghost tasks)
+        const catchAllEntry = Object.entries(META_FOLDERS).find(([_, m]) => m.isCatchAll);
+        if (catchAllEntry) {
+          branch.metaFolder = catchAllEntry[0];
+          branch.metaConfig = catchAllEntry[1];
+        } else {
+          branch.metaFolder = 'שירותים נוספים';
+          branch.metaConfig = META_FOLDERS['שירותים נוספים'];
+        }
       }
     });
 
@@ -585,10 +602,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           config: branch.metaConfig || META_FOLDERS[mf],
           departments: [],
           totalClients: 0,
+          totalTasks: 0,
         };
       }
       metaGroups[mf].departments.push(branch.category);
       metaGroups[mf].totalClients += branch.clients.length;
+      metaGroups[mf].totalTasks += branch.clients.reduce((sum, c) => sum + c.totalTasks, 0);
+    });
+    // MATH LAW: Ensure ALL meta-folders appear (even if empty) so total always adds up
+    Object.entries(META_FOLDERS).forEach(([name, config]) => {
+      if (!metaGroups[name]) {
+        metaGroups[name] = { name, config, departments: [], totalClients: 0, totalTasks: 0 };
+      }
     });
     const metaFolders = Object.values(metaGroups);
 
@@ -626,10 +651,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     onFocusHandled?.();
   }, [focusClientName, focusTaskId, clientNodes]);
 
-  // ── Layout Calculation: Container-Aware + Complexity + ADHD Focus + Collision Detection ──
+  // ── Layout Calculation: RADIAL SYMMETRY + Departments Near Parent Hex + Collision Push ──
   const layout = useMemo(() => {
-    // USE ACTUAL CONTAINER DIMENSIONS — not a virtual oversized canvas
-    // This ensures nodes are positioned within the visible viewport at 100% zoom
     const w = Math.max(dimensions.width, 600);
     const h = Math.max(dimensions.height, 400);
     const isWide = w >= 1600;
@@ -637,46 +660,106 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const cy = h / 2;
     const centerR = isWide ? 55 : 48;
 
-    // MAGNETIC CLUSTERING: compact layout — branches close to center
     const padX = 80;
     const padY = 60;
-    const scaleX = (w - padX * 2) * 0.17 * spacingFactor; // was 0.42 → 60% reduction
-    const scaleY = (h - padY * 2) * 0.17 * spacingFactor;
-    // STRICT: 16px linkDistance — children HUG their parent (max 80px away)
-    const baseLeafDist = 16;
+    const scaleX = (w - padX * 2) * 0.22 * spacingFactor;
+    const scaleY = (h - padY * 2) * 0.22 * spacingFactor;
+    const baseLeafDist = 40;
 
-    const angleStep = (2 * Math.PI) / Math.max(branches.length, 1);
+    // ─── PHASE 0: RADIAL SYMMETRY — Meta-folder hexagons at equal angles FIRST ───
+    // Equal angular distribution: 5 hexagons → 72° apart, 4 → 90°, etc.
+    // Start from top (-π/2) for visual balance
+    const metaCount = metaFolders.length;
+    const metaAngleStep = (2 * Math.PI) / Math.max(metaCount, 1);
+    // Distance from center: proportional to viewport, min 130px for readability
+    const basemetaDist = Math.max(130, Math.min(Math.max(scaleX, scaleY) * 0.65, 200));
 
-    // ─── Phase 1: Position all nodes ───
-    const allClientNodes = []; // collect for collision detection
+    let metaFolderPositions = metaFolders.map((mf, i) => {
+      const angle = i * metaAngleStep - Math.PI / 2;
+      // TREE-SHIFTING: expanded hexagons push 50px further to make room for children
+      const expandBonus = expandedMetaFolders.has(mf.name) ? 50 : 0;
+      const finalDist = basemetaDist + expandBonus;
+      const mx = cx + Math.cos(angle) * finalDist;
+      const my = cy + Math.sin(angle) * finalDist;
+      const manualKey = `meta-${mf.name}`;
+      const manual = manualPositions[manualKey];
+      return {
+        ...mf,
+        x: manual?.x ?? mx,
+        y: manual?.y ?? my,
+        angle,
+      };
+    });
 
-    const branchPositions = branches.map((branch, i) => {
-      const angle = i * angleStep - Math.PI / 2;
-      const bx = cx + Math.cos(angle) * scaleX;
-      const by = cy + Math.sin(angle) * scaleY;
+    // ─── COLLISION PUSH between meta-folder hexagons (150px minimum gap) ───
+    const META_MIN_GAP = 150;
+    for (let pass = 0; pass < 8; pass++) {
+      let shifted = false;
+      for (let i = 0; i < metaFolderPositions.length; i++) {
+        for (let j = i + 1; j < metaFolderPositions.length; j++) {
+          const a = metaFolderPositions[i];
+          const b = metaFolderPositions[j];
+          // Skip if either has manual position
+          if (manualPositions[`meta-${a.name}`] || manualPositions[`meta-${b.name}`]) continue;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          // Expanded hexagons need more space
+          const aRadius = expandedMetaFolders.has(a.name) ? 90 : 50;
+          const bRadius = expandedMetaFolders.has(b.name) ? 90 : 50;
+          const minDist = aRadius + bRadius + META_MIN_GAP;
+          if (dist < minDist && dist > 0) {
+            shifted = true;
+            const overlap = (minDist - dist) / 2;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            a.x -= nx * overlap;
+            a.y -= ny * overlap;
+            b.x += nx * overlap;
+            b.y += ny * overlap;
+          }
+        }
+      }
+      if (!shifted) break;
+    }
 
+    // ─── PHASE 1: Position departments around their PARENT hexagon ───
+    const allClientNodes = [];
+    const deptDist = 75; // departments 75px from their parent hexagon
+
+    const branchPositions = branches.map((branch) => {
+      const parentMeta = metaFolderPositions.find(m => m.name === branch.metaFolder);
+      if (!parentMeta) {
+        return { ...branch, x: cx, y: cy, angle: 0, clientPositions: [], subFolderPositions: null };
+      }
+
+      // Find siblings (other departments under same hexagon)
+      const siblings = branches.filter(b => b.metaFolder === branch.metaFolder);
+      const sibIdx = siblings.indexOf(branch);
+      const sibCount = siblings.length;
+
+      // Fan out radially from hexagon in the direction of hexagon from center
+      const spreadAngle = sibCount <= 1 ? 0 : Math.PI * 0.7;
+      const baseAngle = parentMeta.angle;
+      const branchAngle = sibCount <= 1
+        ? baseAngle
+        : baseAngle + (sibIdx - (sibCount - 1) / 2) * (spreadAngle / Math.max(sibCount - 1, 1));
+
+      const bx = parentMeta.x + Math.cos(branchAngle) * deptDist;
+      const by = parentMeta.y + Math.sin(branchAngle) * deptDist;
+
+      // Position client leaf nodes around department
       const clientCount = branch.clients.length;
       const clientAngleSpread = Math.min(Math.PI * 0.75, clientCount * 0.42);
-
-      // Sort clients: filing-ready & urgent first (closer to branch), completed last (pushed out)
       const sortedClients = [...branch.clients].sort((a, b) => (b.statusRing || 0) - (a.statusRing || 0));
 
       const clientPositions = sortedClients.map((client, j) => {
-        const clientAngle = angle + (j - (clientCount - 1) / 2) * (clientAngleSpread / Math.max(clientCount - 1, 1));
-
-        // ADHD Focus: distance from branch based on status
+        const clientAngle = branchAngle + (j - (clientCount - 1) / 2) * (clientAngleSpread / Math.max(clientCount - 1, 1));
         const statusDistMultiplier = {
-          4: 0.82,  // Overdue / Due Today → pull in
-          3: 0.88,  // Filing Ready → pull in
-          2: 1.0,   // Active → normal
-          1: 1.0,   // External → normal
-          0: 1.3,   // Completed → push out
+          4: 0.82, 3: 0.88, 2: 1.0, 1: 1.0, 0: 1.3,
         }[client.statusRing || 2] || 1.0;
-
         const stagger = (j % 2) * Math.min(20, baseLeafDist * 0.15);
         const dist = (baseLeafDist + stagger) * statusDistMultiplier;
-
-        // Complexity-tier based radius (3:1 ratio)
         const nodeRadius = getNodeRadius(client.tier, isWide);
 
         const node = {
@@ -691,22 +774,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         return node;
       });
 
-      // Compute sub-folder positions for complexity sub-groups (Payroll/VAT)
+      // Complexity sub-folder positions (Payroll/VAT)
       let subFolderPositions = null;
       if (branch.config.subFolders && branch.config.subFolders.length > 0) {
         const subCount = branch.config.subFolders.length;
         const subSpread = Math.PI * 0.5;
-        const subDist = Math.min(baseLeafDist * 1.2, 40); // tight: max 40px from parent
+        const subDist = Math.min(baseLeafDist * 1.2, 40);
         subFolderPositions = branch.config.subFolders.map((sub, si) => {
-          const subAngle = angle + (si - (subCount - 1) / 2) * (subSpread / Math.max(subCount - 1, 1));
+          const subAngle = branchAngle + (si - (subCount - 1) / 2) * (subSpread / Math.max(subCount - 1, 1));
           return {
             ...sub,
             x: bx + Math.cos(subAngle) * subDist,
             y: by + Math.sin(subAngle) * subDist,
           };
         });
-
-        // Classify clients into complexity sub-folders
         clientPositions.forEach(cp => {
           const matchKey = cp._complexitySubFolder || COMPLEXITY_SUB_LABELS[cp.tier || 0]?.key || subFolderPositions[0]?.key;
           const subFolder = subFolderPositions.find(s => s.key === matchKey) || subFolderPositions[0];
@@ -721,21 +802,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         ...branch,
         x: bx,
         y: by,
-        angle,
+        angle: branchAngle,
         clientPositions,
         subFolderPositions,
       };
     });
 
-    // ─── Phase 2: Spring Force + Collision Detection ───
-    // MAGNETIC CLUSTERING: strong spring (0.4) + 80px max distance from parent
+    // ─── PHASE 2: Spring Force + Collision Detection for client nodes ───
     const MIN_GAP = 4;
     const SPRING_STRENGTH = 0.4;
-    const MAX_PARENT_DIST = 80; // children never drift further than 80px from parent
+    const MAX_PARENT_DIST = 80;
     const getPillHalfWidth = (r) => Math.max(r * 1.2, 45);
     for (let pass = 0; pass < 12; pass++) {
       let hadCollision = false;
-      // (a) Collision repulsion
       for (let i = 0; i < allClientNodes.length; i++) {
         for (let j = i + 1; j < allClientNodes.length; j++) {
           const a = allClientNodes[i];
@@ -744,7 +823,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           const dy = b.y - a.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           const minDist = getPillHalfWidth(a.radius) + getPillHalfWidth(b.radius) + MIN_GAP;
-
           if (dist < minDist && dist > 0) {
             hadCollision = true;
             const overlap = (minDist - dist) / 2;
@@ -757,15 +835,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           }
         }
       }
-      // (b) Strong spring pull toward parent + hard 80px max
       allClientNodes.forEach(node => {
         const dx = node.branchX - node.x;
         const dy = node.branchY - node.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        // Spring pull
         node.x += dx * SPRING_STRENGTH;
         node.y += dy * SPRING_STRENGTH;
-        // Hard clamp: if still > 80px, snap to 80px radius
         const dx2 = node.x - node.branchX;
         const dy2 = node.y - node.branchY;
         const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
@@ -778,18 +852,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       if (!hadCollision) break;
     }
 
-    // Sync collision-resolved positions back to branchPositions
+    // Sync collision-resolved positions back
     branchPositions.forEach(branch => {
       branch.clientPositions.forEach(cp => {
         const resolved = allClientNodes.find(n => n.name === cp.name && n.category === cp.category);
-        if (resolved) {
-          cp.x = resolved.x;
-          cp.y = resolved.y;
-        }
+        if (resolved) { cp.x = resolved.x; cp.y = resolved.y; }
       });
     });
 
-    // Apply folder manual position overrides (from folder dragging)
+    // Apply folder manual position overrides
     branchPositions.forEach(branch => {
       const folderKey = `folder-${branch.category}`;
       const folderPos = manualPositions[folderKey];
@@ -798,25 +869,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         const deltaY = folderPos.y - branch.y;
         branch.x = folderPos.x;
         branch.y = folderPos.y;
-        // Shift sub-folders too
         if (branch.subFolderPositions) {
-          branch.subFolderPositions.forEach(sub => {
-            sub.x += deltaX;
-            sub.y += deltaY;
-          });
+          branch.subFolderPositions.forEach(sub => { sub.x += deltaX; sub.y += deltaY; });
         }
-        // Shift children that don't have their own manual position
         branch.clientPositions.forEach(cp => {
           const childKey = `${branch.category}-${cp.name}`;
-          if (!manualPositions[childKey]) {
-            cp.x += deltaX;
-            cp.y += deltaY;
-          }
+          if (!manualPositions[childKey]) { cp.x += deltaX; cp.y += deltaY; }
         });
       }
     });
 
-    // Apply client manual position overrides (from user dragging)
+    // Apply client manual position overrides
     branchPositions.forEach(branch => {
       branch.clientPositions.forEach(cp => {
         const key = `${branch.category}-${cp.name}`;
@@ -828,39 +891,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       });
     });
 
-    // ── Meta-folder positions (outer hexagon ring between center and branches) ──
-    const metaFolderPositions = metaFolders.map((mf, i) => {
-      const mfAngle = (i * 2 * Math.PI / Math.max(metaFolders.length, 1)) - Math.PI / 2;
-      // Position meta-folders close to center — max 120px from center
-      const mfDist = Math.min(Math.min(scaleX, scaleY) * 0.9, 120);
-      const mx = cx + Math.cos(mfAngle) * mfDist;
-      const my = cy + Math.sin(mfAngle) * mfDist;
-      // Manual position override
-      const manualKey = `meta-${mf.name}`;
-      const manual = manualPositions[manualKey];
-      return {
-        ...mf,
-        x: manual?.x ?? mx,
-        y: manual?.y ?? my,
-        angle: mfAngle,
-      };
-    });
-
-    // ── Level 2: Meta sub-folder positions (circles between meta-hexagons and dept branches) ──
+    // ── Level 2: Meta sub-folder positions ──
     const metaSubFolderPositions = [];
     metaFolderPositions.forEach(mfPos => {
       const metaConfig = META_FOLDERS[mfPos.name];
       if (!metaConfig?.subFolders) return;
       metaConfig.subFolders.forEach((sf) => {
-        // Find department branches belonging to this sub-folder
         const sfBranches = branchPositions.filter(b => sf.departments.includes(b.category));
         if (sfBranches.length === 0) return;
-        // Position: close to parent hexagon (70% hex, 30% branch avg) — max 60px from hex
         const avgX = sfBranches.reduce((s, b) => s + b.x, 0) / sfBranches.length;
         const avgY = sfBranches.reduce((s, b) => s + b.y, 0) / sfBranches.length;
-        let sx = mfPos.x * 0.7 + avgX * 0.3;
-        let sy = mfPos.y * 0.7 + avgY * 0.3;
-        // Clamp: sub-folder max 60px from its parent hexagon
+        let sx = mfPos.x * 0.6 + avgX * 0.4;
+        let sy = mfPos.y * 0.6 + avgY * 0.4;
         const sfDx = sx - mfPos.x, sfDy = sy - mfPos.y;
         const sfDist = Math.sqrt(sfDx * sfDx + sfDy * sfDy);
         if (sfDist > 60) { const sfScale = 60 / sfDist; sx = mfPos.x + sfDx * sfScale; sy = mfPos.y + sfDy * sfScale; }
@@ -872,7 +914,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           x: manual?.x ?? sx,
           y: manual?.y ?? sy,
         });
-        // Tag each branch with its sub-folder position for connection lines
         sfBranches.forEach(b => {
           b._metaSubX = manual?.x ?? sx;
           b._metaSubY = manual?.y ?? sy;
@@ -882,7 +923,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     });
 
     return { cx, cy, centerR, branchPositions, metaFolderPositions, metaSubFolderPositions, virtualW: w, virtualH: h, isWide };
-  }, [branches, metaFolders, dimensions, spacingFactor, manualPositions]);
+  }, [branches, metaFolders, dimensions, spacingFactor, manualPositions, expandedMetaFolders]);
 
   // ── Draggable center: effective position respects manual drag override ──
   const centerPos = useMemo(() => {
@@ -1525,27 +1566,36 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               else { toggleMetaExpand(mf.name); }
             }}
           >
-            <svg width="140" height="64" viewBox="0 0 140 64" style={{ overflow: 'visible' }}>
-              {/* Hexagon — brighter fill when expanded */}
+            <svg width="150" height="72" viewBox="-5 -4 150 72" style={{ overflow: 'visible' }}>
+              <defs>
+                <linearGradient id={`metaGlassGrad-${mi}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="white" stopOpacity="0.6" />
+                  <stop offset="100%" stopColor="white" stopOpacity="0" />
+                </linearGradient>
+                <filter id={`hexShadow-${mi}`} x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx="0" dy="3" stdDeviation="5" floodColor={mf.config?.color || '#008291'} floodOpacity="0.35" />
+                </filter>
+              </defs>
+              {/* Hexagon — premium drop-shadow + glass */}
               <polygon
                 points="22,0 118,0 140,32 118,64 22,64 0,32"
                 fill={mf.config?.color || '#008291'}
-                opacity={isMetaExpanded ? 1 : 0.85}
-                stroke={isMetaExpanded ? '#fff' : '#008291'}
-                strokeWidth={isMetaExpanded ? 3.5 : 2.5}
+                opacity={isMetaExpanded ? 1 : 0.9}
+                filter={`url(#hexShadow-${mi})`}
+              />
+              {/* White border at 0.2 opacity for glass effect */}
+              <polygon
+                points="22,0 118,0 140,32 118,64 22,64 0,32"
+                fill="none"
+                stroke="rgba(255,255,255,0.25)"
+                strokeWidth={isMetaExpanded ? 3 : 2}
               />
               {/* Glass highlight */}
               <polygon
                 points="22,0 118,0 140,32 118,64 22,64 0,32"
-                fill="url(#metaGlassGrad)"
-                opacity={0.25}
+                fill={`url(#metaGlassGrad-${mi})`}
+                opacity={0.3}
               />
-              <defs>
-                <linearGradient id="metaGlassGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="white" stopOpacity="0.6" />
-                  <stop offset="100%" stopColor="white" stopOpacity="0" />
-                </linearGradient>
-              </defs>
               {/* Expand indicator */}
               <text x="16" y="36" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10" style={{ pointerEvents: 'none' }}>
                 {isMetaExpanded ? '▼' : '▶'}
@@ -1553,8 +1603,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <text x="75" y="28" textAnchor="middle" fill="white" fontSize="13" fontWeight="700" style={{ pointerEvents: 'none' }}>
                 {mf.config?.icon || '📂'} {mf.name}
               </text>
-              <text x="75" y="46" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="10" style={{ pointerEvents: 'none' }}>
-                {mf.totalClients} לקוחות
+              <text x="75" y="46" textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize="10" style={{ pointerEvents: 'none' }}>
+                {mf.totalTasks} משימות · {mf.totalClients} לקוחות
               </text>
             </svg>
           </motion.div>
@@ -1586,8 +1636,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             }}
           >
             <svg width="90" height="90" viewBox="0 0 90 90" style={{ overflow: 'visible' }}>
-              {/* Level 2 — White-Glass circle, dashed cyan border */}
-              <circle cx="45" cy="45" r="42" fill="rgba(255,255,255,0.30)" stroke="#00acc1" strokeWidth={1.5} strokeDasharray="6 3" />
+              {/* Level 2 — White-Glass circle, dashed cyan border + white inner border */}
+              <circle cx="45" cy="45" r="42" fill="rgba(255,255,255,0.35)" stroke="#00acc1" strokeWidth={1.5} strokeDasharray="6 3" />
+              <circle cx="45" cy="45" r="40" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
               {/* Glass highlight */}
               <ellipse cx="45" cy="33" rx="24" ry="14" fill="white" opacity={0.2} />
               <text x="45" y="42" textAnchor="middle" fill="#006064" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
@@ -1625,12 +1676,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               onPointerUp={(e) => handleFolderPointerUp(e, branch.category)}
             >
               <svg width="120" height="48" viewBox="0 0 120 48" style={{ overflow: 'visible' }}>
-                {/* Level 3 — White-Glass folder-tab: bg-white/30, dashed cyan border */}
+                {/* Level 3 — White-Glass folder-tab: bg-white/30, dashed cyan border + white inner border */}
                 <path d="M0,10 L0,38 Q0,48 10,48 L110,48 Q120,48 120,38 L120,10 Q120,0 110,0 L44,0 L38,8 L10,8 Q0,8 0,10 Z"
-                  fill="rgba(255,255,255,0.30)"
+                  fill="rgba(255,255,255,0.35)"
                   stroke={isBranchExpanded ? '#00838F' : '#90CAF9'}
                   strokeWidth={1.5}
                   strokeDasharray="5 3"
+                />
+                {/* White inner border for glass effect */}
+                <path d="M2,11 L2,37 Q2,46 11,46 L109,46 Q118,46 118,37 L118,11 Q118,2 109,2 L44,2 L39,9 L11,9 Q2,9 2,11 Z"
+                  fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={1}
                 />
                 {/* Glass highlight */}
                 <path d="M0,10 L0,38 Q0,48 10,48 L110,48 Q120,48 120,38 L120,10 Q120,0 110,0 L44,0 L38,8 L10,8 Q0,8 0,10 Z"
