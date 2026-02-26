@@ -1648,11 +1648,28 @@ export const dedupTasksForMonth = async (params = {}) => {
   const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
   let deleted = 0;
 
+  // ── GATEKEEPER: Normalize category to canonical department name ──
+  // This catches duplicates where one task has 'work_vat_reporting' and another has 'מע"מ'
+  const CATEGORY_NORMALIZE = {
+    'work_payroll': 'שכר', 'שכר': 'שכר',
+    'work_vat_reporting': 'מע"מ', 'מע"מ': 'מע"מ', 'work_vat_874': 'מע"מ', 'מע"מ 874': 'מע"מ',
+    'work_tax_advances': 'מקדמות', 'מקדמות מס': 'מקדמות', 'מקדמות': 'מקדמות',
+    'work_social_security': 'ביטוח לאומי', 'ביטוח לאומי': 'ביטוח לאומי',
+    'work_deductions': 'ניכויים', 'ניכויים': 'ניכויים',
+    'work_reconciliation': 'התאמות', 'התאמות': 'התאמות',
+    'work_client_management': 'דוח שנתי', 'work_annual_reports': 'דוח שנתי',
+    'מאזנים': 'מאזנים', 'דוח שנתי': 'דוח שנתי',
+    'work_bookkeeping': 'הנהלת חשבונות', 'הנהלת חשבונות': 'הנהלת חשבונות',
+    'home': 'בית', 'personal': 'אדמיניסטרציה', 'אחר': 'אדמיניסטרציה',
+  };
+  const normalizeCategory = (cat) => CATEGORY_NORMALIZE[cat] || cat || 'אחר';
+
   try {
     const allTasks = await entities.Task.list();
     const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
 
-    // Group tasks by (client_name + category + month) — keep first, delete rest
+    // COMPOSITE KEY: client_name + normalized_category + month
+    // This is the "Gatekeeper" — ONE task per client per category per month
     const seen = new Map(); // key → first task id
     const duplicates = [];
 
@@ -1660,7 +1677,8 @@ export const dedupTasksForMonth = async (params = {}) => {
       .filter(t => t.due_date && t.due_date.startsWith(monthPrefix))
       .sort((a, b) => (a.created_date || '').localeCompare(b.created_date || '')) // oldest first
       .forEach(t => {
-        const key = `${t.client_name || ''}::${t.category || ''}::${monthPrefix}`;
+        const normCat = normalizeCategory(t.category);
+        const key = `${t.client_name || ''}::${normCat}::${monthPrefix}`;
         if (!seen.has(key)) {
           seen.set(key, t.id);
         } else {
