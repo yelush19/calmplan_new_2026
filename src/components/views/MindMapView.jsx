@@ -555,8 +555,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const padY = 60;
     const scaleX = (w - padX * 2) * 0.42 * spacingFactor;
     const scaleY = (h - padY * 2) * 0.42 * spacingFactor;
-    // Leaf distance: increased for wider pill nodes
-    const baseLeafDist = Math.min(scaleX, scaleY) * 0.58;
+    // Spring Force: short leaf distance — children stay close to parent
+    const baseLeafDist = Math.min(scaleX, scaleY) * 0.38;
 
     const angleStep = (2 * Math.PI) / Math.max(branches.length, 1);
 
@@ -645,13 +645,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       };
     });
 
-    // ─── Phase 2: Collision Detection & Resolution (pill-aware) ───
-    // Pill nodes are wider than circles: width ≈ radius*2.8, height ≈ radius*1.1
-    // Use the larger dimension (half-width) as effective collision radius
-    const MIN_GAP = 10;
+    // ─── Phase 2: Spring Force + Collision Detection ───
+    // Each pass: (a) push overlapping nodes apart, (b) pull nodes toward branch center
+    const MIN_GAP = 8;
+    const SPRING_STRENGTH = 0.15; // how strongly nodes get pulled back toward parent
     const getPillHalfWidth = (r) => Math.max(r * 1.5, 60);
-    for (let pass = 0; pass < 8; pass++) {
+    for (let pass = 0; pass < 10; pass++) {
       let hadCollision = false;
+      // (a) Collision repulsion
       for (let i = 0; i < allClientNodes.length; i++) {
         for (let j = i + 1; j < allClientNodes.length; j++) {
           const a = allClientNodes[i];
@@ -673,6 +674,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           }
         }
       }
+      // (b) Spring pull: attract each node back toward its branch center
+      allClientNodes.forEach(node => {
+        const dx = node.branchX - node.x;
+        const dy = node.branchY - node.y;
+        node.x += dx * SPRING_STRENGTH;
+        node.y += dy * SPRING_STRENGTH;
+      });
       if (!hadCollision) break;
     }
 
@@ -939,15 +947,51 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     setShowDrawerCompleted(false);
   }, [savePositionsToStorage]);
 
+  // ── Meta-folder drag handlers: move all sub-folders + department branches + their children ──
+  const handleMetaPointerDown = useCallback((e, metaKey, currentX, currentY) => {
+    e.stopPropagation();
+    nodeHasDragged.current = false;
+    const metaName = metaKey.replace('meta-', '');
+    // Gather ALL descendant positions: sub-folder circles, department folders, client pills
+    const childPositions = [];
+    // Sub-folder circles
+    layout.metaSubFolderPositions?.forEach(sf => {
+      if (sf.metaFolderName === metaName) {
+        childPositions.push({ key: `metasub-${sf.metaFolderName}-${sf.key}`, x: sf.x, y: sf.y });
+      }
+    });
+    // Department branches + their clients
+    layout.branchPositions.forEach(branch => {
+      if (branch.metaFolder === metaName) {
+        childPositions.push({ key: `folder-${branch.category}`, x: branch.x, y: branch.y });
+        branch.clientPositions.forEach(cp => {
+          childPositions.push({ key: `${branch.category}-${cp.name}`, x: cp.x, y: cp.y });
+        });
+      }
+    });
+    draggingNode.current = {
+      key: metaKey, startX: e.clientX, startY: e.clientY,
+      origX: currentX, origY: currentY, isFolder: true, childPositions,
+    };
+  }, [layout]);
+
   // ── Folder drag handlers ──
   const handleFolderPointerDown = useCallback((e, folderKey, currentX, currentY) => {
     e.stopPropagation();
     nodeHasDragged.current = false;
     const category = folderKey.replace('folder-', '');
     const branch = layout.branchPositions.find(b => b.category === category);
-    const childPositions = branch ? branch.clientPositions.map(cp => ({
-      key: `${category}-${cp.name}`, x: cp.x, y: cp.y,
-    })) : [];
+    const childPositions = [];
+    if (branch) {
+      // Include sub-folder nodes
+      branch.subFolderPositions?.forEach(sub => {
+        childPositions.push({ key: `sub-${category}-${sub.key}`, x: sub.x, y: sub.y });
+      });
+      // Include client pills
+      branch.clientPositions.forEach(cp => {
+        childPositions.push({ key: `${category}-${cp.name}`, x: cp.x, y: cp.y });
+      });
+    }
     draggingNode.current = {
       key: folderKey, startX: e.clientX, startY: e.clientY,
       origX: currentX, origY: currentY, isFolder: true, childPositions,
@@ -1358,7 +1402,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: mi * 0.06, type: 'spring', stiffness: 200 }}
             whileHover={{ scale: 1.12 }}
-            onPointerDown={(e) => handleNodePointerDown(e, `meta-${mf.name}`, mf.x, mf.y)}
+            onPointerDown={(e) => handleMetaPointerDown(e, `meta-${mf.name}`, mf.x, mf.y)}
             onPointerUp={(e) => {
               const wasDragging = nodeHasDragged.current;
               draggingNode.current = null;
