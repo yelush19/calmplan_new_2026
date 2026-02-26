@@ -1273,10 +1273,13 @@ export const generateProcessTasks = async (params = {}) => {
 
   try {
     const allClients = await entities.Client.list();
-    const activeClients = allClients.filter(c => c.status === 'active');
+    // ACTIVE ONLY: status=active AND not deleted. No inactive/archived clients.
+    const activeClients = allClients.filter(c =>
+      c.status === 'active' && c.is_deleted !== true
+    );
     const existingTasks = await entities.Task.list();
 
-    log.push(`${timestamp()} נמצאו ${activeClients.length} לקוחות פעילים, ${existingTasks.length} משימות קיימות`);
+    log.push(`${timestamp()} נמצאו ${activeClients.length} לקוחות פעילים (מתוך ${allClients.length}), ${existingTasks.length} משימות קיימות`);
 
     const results = {
       summary: { tasksCreated: 0, mondayTasksCreated: 0, errors: 0 },
@@ -1648,37 +1651,66 @@ export const dedupTasksForMonth = async (params = {}) => {
   const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
   let deleted = 0;
 
-  // ── GATEKEEPER: Normalize category to canonical department name ──
-  // This catches duplicates where one task has 'work_vat_reporting' and another has 'מע"מ'
-  const CATEGORY_NORMALIZE = {
-    'work_payroll': 'שכר', 'שכר': 'שכר',
-    'work_vat_reporting': 'מע"מ', 'מע"מ': 'מע"מ', 'work_vat_874': 'מע"מ', 'מע"מ 874': 'מע"מ',
-    'work_tax_advances': 'מקדמות', 'מקדמות מס': 'מקדמות', 'מקדמות': 'מקדמות',
-    'work_social_security': 'ביטוח לאומי', 'ביטוח לאומי': 'ביטוח לאומי',
-    'work_deductions': 'ניכויים', 'ניכויים': 'ניכויים',
-    'work_reconciliation': 'התאמות', 'התאמות': 'התאמות',
-    'work_client_management': 'דוח שנתי', 'work_annual_reports': 'דוח שנתי',
-    'מאזנים': 'מאזנים', 'דוח שנתי': 'דוח שנתי',
-    'work_bookkeeping': 'הנהלת חשבונות', 'הנהלת חשבונות': 'הנהלת חשבונות',
-    'home': 'בית', 'personal': 'אדמיניסטרציה', 'אחר': 'אדמיניסטרציה',
+  // ── NUCLEAR GATEKEEPER: Normalize to META-FOLDER level ──
+  // ONE task per client per meta-folder group per month.
+  // 19 clients × 3 groups = ~57 tasks. No more, no less.
+  const CATEGORY_TO_METAFOLDER = {
+    // שכר (Payroll) group — all collapse to one
+    'שכר': 'שכר', 'work_payroll': 'שכר',
+    'ביטוח לאומי': 'שכר', 'work_social_security': 'שכר',
+    'ניכויים': 'שכר', 'work_deductions': 'שכר',
+    // מע"מ ומקדמות (VAT) group — all collapse to one
+    'מע"מ': 'מע"מ', 'work_vat_reporting': 'מע"מ',
+    'מע"מ 874': 'מע"מ', 'work_vat_874': 'מע"מ',
+    'מקדמות': 'מע"מ', 'מקדמות מס': 'מע"מ', 'work_tax_advances': 'מע"מ',
+    // מאזנים (Balance) group — all collapse to one
+    'התאמות': 'מאזנים', 'work_reconciliation': 'מאזנים',
+    'מאזנים': 'מאזנים', 'דוח שנתי': 'מאזנים',
+    'work_client_management': 'מאזנים', 'work_annual_reports': 'מאזנים',
+    // שירותים נוספים (Additional) — all collapse to one
+    'הנהלת חשבונות': 'שירותים', 'work_bookkeeping': 'שירותים',
+    'הנחש': 'מאזנים',
+    'home': 'שירותים', 'personal': 'שירותים',
+    'אחר': 'שירותים', 'אדמיניסטרציה': 'שירותים', 'בית': 'שירותים',
   };
-  const normalizeCategory = (cat) => CATEGORY_NORMALIZE[cat] || cat || 'אחר';
+  const normalizeToMetaFolder = (cat) => CATEGORY_TO_METAFOLDER[cat] || 'שירותים';
 
   try {
+    // Step 1: Get actual active clients for orphan detection
+    const allClients = await entities.Client.list();
+    const activeClientNames = new Set(
+      allClients
+        .filter(c => c.status === 'active' && c.is_deleted !== true)
+        .map(c => c.name)
+    );
+
     const allTasks = await entities.Task.list();
     const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+    const monthTasks = allTasks.filter(t => t.due_date && t.due_date.startsWith(monthPrefix));
 
-    // COMPOSITE KEY: client_name + normalized_category + month
-    // This is the "Gatekeeper" — ONE task per client per category per month
-    const seen = new Map(); // key → first task id
+    log.push(`${timestamp()} ${monthTasks.length} משימות לחודש ${monthPrefix}, ${activeClientNames.size} לקוחות פעילים`);
+
+    // Step 2: Delete orphan tasks (client not in active list)
+    const orphans = monthTasks.filter(t =>
+      t.client_name && !activeClientNames.has(t.client_name)
+    );
+    for (const task of orphans) {
+      try { await entities.Task.delete(task.id); deleted++; } catch {}
+    }
+    if (orphans.length > 0) {
+      log.push(`${timestamp()} נמחקו ${orphans.length} משימות יתומות (לקוחות לא פעילים)`);
+    }
+
+    // Step 3: META-FOLDER LEVEL dedup — ONE task per client per group per month
+    const survivingTasks = monthTasks.filter(t => !orphans.includes(t));
+    const seen = new Map(); // composite key → first task id
     const duplicates = [];
 
-    allTasks
-      .filter(t => t.due_date && t.due_date.startsWith(monthPrefix))
-      .sort((a, b) => (a.created_date || '').localeCompare(b.created_date || '')) // oldest first
+    survivingTasks
+      .sort((a, b) => (a.created_date || '').localeCompare(b.created_date || ''))
       .forEach(t => {
-        const normCat = normalizeCategory(t.category);
-        const key = `${t.client_name || ''}::${normCat}::${monthPrefix}`;
+        const metaGroup = normalizeToMetaFolder(t.category);
+        const key = `${t.client_name || ''}::${metaGroup}::${monthPrefix}`;
         if (!seen.has(key)) {
           seen.set(key, t.id);
         } else {
@@ -1686,19 +1718,15 @@ export const dedupTasksForMonth = async (params = {}) => {
         }
       });
 
-    log.push(`${timestamp()} נמצאו ${duplicates.length} כפילויות מתוך ${allTasks.length} משימות לחודש ${monthPrefix}`);
-
     for (const task of duplicates) {
-      try {
-        await entities.Task.delete(task.id);
-        deleted++;
-      } catch (err) {
-        log.push(`${timestamp()} שגיאה במחיקת "${task.title}": ${err.message}`);
-      }
+      try { await entities.Task.delete(task.id); deleted++; } catch {}
+    }
+    if (duplicates.length > 0) {
+      log.push(`${timestamp()} נמחקו ${duplicates.length} כפילויות (ברמת קבוצה)`);
     }
 
-    log.push(`${timestamp()} נמחקו ${deleted} כפילויות`);
-    return { data: { success: true, deleted, duplicatesFound: duplicates.length, log } };
+    log.push(`${timestamp()} סה"כ נמחקו ${deleted} משימות. נותרו ${monthTasks.length - deleted}`);
+    return { data: { success: true, deleted, duplicatesFound: duplicates.length + orphans.length, log } };
   } catch (error) {
     return { data: { success: false, error: error.message, log } };
   }

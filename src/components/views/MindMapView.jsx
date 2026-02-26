@@ -55,9 +55,10 @@ const NODE_COLOR_MAP = {
   slate:   '#90A4AE',
 };
 
-// ─── HIERARCHY: 5 Business Categories ───────────────
-// Root → Meta-Folder (5 hexagons) → Department → Client Leaves
+// ─── HIERARCHY: 4 Business Categories (NO catch-all bucket) ───────────────
+// Root → Meta-Folder (4 hexagons) → Department → Client Leaves
 // MATH LAW: Sum of all hexagon task counts MUST equal total task count
+// After nuclear dedup: 19 clients × ~3 groups = ~57 tasks
 const META_FOLDERS = {
   'שכר': {
     icon: '👥', color: '#0277BD', label: 'Payroll',
@@ -75,15 +76,8 @@ const META_FOLDERS = {
   },
   'שירותים נוספים': {
     icon: '🔧', color: '#546E7A', label: 'Additional Services',
-    departments: ['הנהלת חשבונות', 'אדמיניסטרציה', 'בית'],
-    forceNano: true,
-  },
-  'ממתין לסיווג': {
-    icon: '📋', color: '#78909C', label: 'Pending Review',
-    // CATCH-ALL: any task whose department isn't in the 4 groups above lands here
-    // This ensures total hexagon sum ALWAYS equals the badge total
-    departments: ['אחר/טיוטות'],
-    isCatchAll: true,
+    // Absorbs ALL unmapped categories — NO "pending" bucket
+    departments: ['הנהלת חשבונות', 'אדמיניסטרציה', 'בית', 'אחר/טיוטות'],
     forceNano: true,
   },
 };
@@ -377,7 +371,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v5-radial-symmetry'; // bump this to force reset
+  const LAYOUT_VERSION = 'v6-nuclear-cleanup'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -538,15 +532,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         }
       }
       if (!branch.metaFolder) {
-        // Unmapped categories → Catch-all "ממתין לסיווג" (ensures MATH LAW: no ghost tasks)
-        const catchAllEntry = Object.entries(META_FOLDERS).find(([_, m]) => m.isCatchAll);
-        if (catchAllEntry) {
-          branch.metaFolder = catchAllEntry[0];
-          branch.metaConfig = catchAllEntry[1];
-        } else {
-          branch.metaFolder = 'שירותים נוספים';
-          branch.metaConfig = META_FOLDERS['שירותים נוספים'];
-        }
+        // Unmapped categories → Additional Services (NO pending bucket)
+        branch.metaFolder = 'שירותים נוספים';
+        branch.metaConfig = META_FOLDERS['שירותים נוספים'];
       }
     });
 
@@ -601,20 +589,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           name: mf,
           config: branch.metaConfig || META_FOLDERS[mf],
           departments: [],
+          _uniqueClientNames: new Set(), // track unique names, not sum
           totalClients: 0,
           totalTasks: 0,
         };
       }
       metaGroups[mf].departments.push(branch.category);
-      metaGroups[mf].totalClients += branch.clients.length;
+      // UNIQUE CLIENT COUNT: same client in שכר + ביטוח לאומי counts as 1, not 2
+      branch.clients.forEach(c => metaGroups[mf]._uniqueClientNames.add(c.name));
+      metaGroups[mf].totalClients = metaGroups[mf]._uniqueClientNames.size;
       metaGroups[mf].totalTasks += branch.clients.reduce((sum, c) => sum + c.totalTasks, 0);
     });
-    // MATH LAW: Ensure ALL meta-folders appear (even if empty) so total always adds up
-    Object.entries(META_FOLDERS).forEach(([name, config]) => {
-      if (!metaGroups[name]) {
-        metaGroups[name] = { name, config, departments: [], totalClients: 0, totalTasks: 0 };
-      }
-    });
+    // Only show meta-folders that have actual tasks (no empty buckets)
     const metaFolders = Object.values(metaGroups);
 
     // Build flat client nodes for rendering
@@ -664,7 +650,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const padY = 60;
     const scaleX = (w - padX * 2) * 0.22 * spacingFactor;
     const scaleY = (h - padY * 2) * 0.22 * spacingFactor;
-    const baseLeafDist = 40;
+    const baseLeafDist = 55;
 
     // ─── PHASE 0: RADIAL SYMMETRY — Meta-folder hexagons at equal angles FIRST ───
     // Equal angular distribution: 5 hexagons → 72° apart, 4 → 90°, etc.
@@ -691,8 +677,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       };
     });
 
-    // ─── COLLISION PUSH between meta-folder hexagons (150px minimum gap) ───
-    const META_MIN_GAP = 150;
+    // ─── COLLISION PUSH between meta-folder hexagons (200px minimum gap) ───
+    const META_MIN_GAP = 200;
     for (let pass = 0; pass < 8; pass++) {
       let shifted = false;
       for (let i = 0; i < metaFolderPositions.length; i++) {
@@ -725,7 +711,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     // ─── PHASE 1: Position departments around their PARENT hexagon ───
     const allClientNodes = [];
-    const deptDist = 75; // departments 75px from their parent hexagon
+    const deptDist = 90; // departments 90px from their parent hexagon
 
     const branchPositions = branches.map((branch) => {
       const parentMeta = metaFolderPositions.find(m => m.name === branch.metaFolder);
@@ -748,9 +734,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const bx = parentMeta.x + Math.cos(branchAngle) * deptDist;
       const by = parentMeta.y + Math.sin(branchAngle) * deptDist;
 
-      // Position client leaf nodes around department
+      // Position client leaf nodes in a RADIAL CIRCLE around department
+      // No overlapping — full circle spread when many clients
       const clientCount = branch.clients.length;
-      const clientAngleSpread = Math.min(Math.PI * 0.75, clientCount * 0.42);
+      const clientAngleSpread = clientCount <= 3
+        ? Math.PI * 0.7
+        : Math.min(Math.PI * 1.5, clientCount * 0.55);
       const sortedClients = [...branch.clients].sort((a, b) => (b.statusRing || 0) - (a.statusRing || 0));
 
       const clientPositions = sortedClients.map((client, j) => {
@@ -810,8 +799,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     // ─── PHASE 2: Spring Force + Collision Detection for client nodes ───
     const MIN_GAP = 4;
-    const SPRING_STRENGTH = 0.4;
-    const MAX_PARENT_DIST = 80;
+    const SPRING_STRENGTH = 0.3;
+    const MAX_PARENT_DIST = 100;
     const getPillHalfWidth = (r) => Math.max(r * 1.2, 45);
     for (let pass = 0; pass < 12; pass++) {
       let hadCollision = false;
