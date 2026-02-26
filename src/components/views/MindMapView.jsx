@@ -288,35 +288,40 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
   }, [tasks]);
 
-  // ── NUCLEAR RESET: Wipe Feb 2026 tasks + regenerate with service-aware logic ──
-  // Runs ONCE on mount. After first run, stores flag in localStorage to prevent re-runs.
+  // ── NUCLEAR RESET v8: Wipe Feb 2026 tasks + regenerate with service-aware logic ──
+  // LAW 1.3: Before generating, DELETE all 02.2026 tasks. Then regenerate.
+  // Runs ONCE on mount. After first run, stores flag to prevent re-runs.
   const nuclearRan = useRef(false);
   useEffect(() => {
-    const NUCLEAR_KEY = 'calmplan-nuclear-v7-done';
+    const NUCLEAR_KEY = 'calmplan-nuclear-v8-architecture-reset';
     if (nuclearRan.current) return;
-    // Skip if already ran this version
     try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
     nuclearRan.current = true;
 
     (async () => {
       try {
-        console.log('[CalmPlan] NUCLEAR RESET: Wiping Feb 2026 tasks...');
+        console.log('[CalmPlan] LAW 1 NUCLEAR RESET: Wiping Feb 2026 tasks...');
         const wipeRes = await wipeAllTasksForMonth({ year: 2026, month: 2 });
-        console.log(`[CalmPlan] Wiped: ${wipeRes?.data?.deleted || 0} tasks deleted`);
+        const wiped = wipeRes?.data?.deleted || 0;
+        console.log(`[CalmPlan] Wiped: ${wiped} tasks deleted`);
 
-        console.log('[CalmPlan] Regenerating with service-aware filters...');
+        console.log('[CalmPlan] Regenerating with service-aware filters (LAW 1.2)...');
         const genRes = await generateProcessTasks({ taskType: 'all' });
         const created = genRes?.data?.results?.summary?.tasksCreated || 0;
-        console.log(`[CalmPlan] Regenerated: ${created} tasks created`);
+        const skipped = genRes?.data?.results?.summary?.skippedBalanceOnly || 0;
+        console.log(`[CalmPlan] TASK COUNT: ${created} tasks created, ${skipped} balance-only skipped`);
 
-        // Mark as done so it doesn't re-run
+        // AUDIT: If task count exceeds 70, run dedup as safety net
+        if (created > 70) {
+          console.warn(`[CalmPlan] AUDIT WARNING: ${created} tasks exceeds 70 limit. Running dedup...`);
+          const dedupRes = await dedupTasksForMonth({ year: 2026, month: 2 });
+          console.log(`[CalmPlan] Dedup cleaned: ${dedupRes?.data?.deleted || 0} duplicates removed`);
+        }
+
         try { localStorage.setItem(NUCLEAR_KEY, 'true'); } catch {}
-
-        // Reload to reflect clean data
         window.location.reload();
       } catch (err) {
         console.error('[CalmPlan] Nuclear reset error:', err);
-        // Still run dedup as fallback
         try {
           const dedupRes = await dedupTasksForMonth({ year: 2026, month: 2 });
           if (dedupRes?.data?.deleted > 0) window.location.reload();
@@ -394,7 +399,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v7-collision-law'; // bump this to force reset
+  const LAYOUT_VERSION = 'v8-architecture-reset'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -1574,8 +1579,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             height: layout.centerR * 2,
             left: centerPos.x - layout.centerR,
             top: centerPos.y - layout.centerR,
-            background: 'linear-gradient(135deg, #0288D1, #00897B)',
-            boxShadow: '0 4px 20px rgba(2,136,209,0.35), 0 2px 8px rgba(0,0,0,0.15)',
+            background: 'linear-gradient(135deg, #00838F, #004D40)',
+            boxShadow: '0 4px 20px rgba(0,131,143,0.4), 0 2px 8px rgba(0,0,0,0.15)',
             cursor: draggingNode.current?.key === 'center-node' ? 'grabbing' : 'grab',
           }}
           initial={{ scale: 0 }}
@@ -1599,9 +1604,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           <span className="opacity-60 text-[11px]">{centerLabel}</span>
         </motion.div>
 
-        {/* ── META-FOLDER Hexagon Nodes (Level 1 — always visible, click to expand) ── */}
+        {/* ── LAW 3: Level 1 — SOFT-SQUARE Category Containers (Deep Teal, 24px corners, outer glow) ── */}
         {layout.metaFolderPositions?.map((mf, mi) => {
           const isMetaExpanded = expandedMetaFolders.has(mf.name);
+          const W = 160, H = 80, CR = 24;
           return (
           <motion.div
             key={`meta-${mf.name}`}
@@ -1616,7 +1622,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: mi * 0.06, type: 'spring', stiffness: 200 }}
-            whileHover={{ scale: 1.12 }}
+            whileHover={{ scale: 1.08 }}
             onPointerDown={(e) => handleMetaPointerDown(e, `meta-${mf.name}`, mf.x, mf.y)}
             onPointerUp={(e) => {
               const wasDragging = nodeHasDragged.current;
@@ -1626,44 +1632,52 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               else { toggleMetaExpand(mf.name); }
             }}
           >
-            <svg width="150" height="72" viewBox="-5 -4 150 72" style={{ overflow: 'visible' }}>
+            <svg width={W + 20} height={H + 20} viewBox={`-10 -10 ${W + 20} ${H + 20}`} style={{ overflow: 'visible' }}>
               <defs>
+                <linearGradient id={`metaSoftGrad-${mi}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#00695C" stopOpacity="0.95" />
+                  <stop offset="100%" stopColor="#004D40" stopOpacity="0.92" />
+                </linearGradient>
                 <linearGradient id={`metaGlassGrad-${mi}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="white" stopOpacity="0.6" />
+                  <stop offset="0%" stopColor="white" stopOpacity="0.15" />
                   <stop offset="100%" stopColor="white" stopOpacity="0" />
                 </linearGradient>
-                <filter id={`hexShadow-${mi}`} x="-30%" y="-30%" width="160%" height="160%">
-                  <feDropShadow dx="0" dy="3" stdDeviation="5" floodColor={mf.config?.color || '#008291'} floodOpacity="0.35" />
+                <filter id={`metaGlow-${mi}`} x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="6" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
               </defs>
-              {/* Hexagon — premium drop-shadow + glass */}
-              <polygon
-                points="22,0 118,0 140,32 118,64 22,64 0,32"
-                fill={mf.config?.color || '#008291'}
-                opacity={isMetaExpanded ? 1 : 0.9}
-                filter={`url(#hexShadow-${mi})`}
-              />
-              {/* White border at 0.2 opacity for glass effect */}
-              <polygon
-                points="22,0 118,0 140,32 118,64 22,64 0,32"
-                fill="none"
-                stroke="rgba(255,255,255,0.25)"
-                strokeWidth={isMetaExpanded ? 3 : 2}
-              />
-              {/* Glass highlight */}
-              <polygon
-                points="22,0 118,0 140,32 118,64 22,64 0,32"
-                fill={`url(#metaGlassGrad-${mi})`}
-                opacity={0.3}
-              />
+              {/* Outer glow ring */}
+              <rect x={-4} y={-4} width={W + 8} height={H + 8}
+                rx={CR + 4} ry={CR + 4}
+                fill="none" stroke="#00897B" strokeWidth="1.5"
+                strokeOpacity={isMetaExpanded ? 0.4 : 0.2}
+                filter={`url(#metaGlow-${mi})`} />
+              {/* Shadow */}
+              <rect x={2} y={3} width={W} height={H}
+                rx={CR} ry={CR}
+                fill="rgba(0,0,0,0.12)" />
+              {/* Main body — Deep Teal solid soft-square */}
+              <rect x={0} y={0} width={W} height={H}
+                rx={CR} ry={CR}
+                fill={`url(#metaSoftGrad-${mi})`}
+                stroke={isMetaExpanded ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)'}
+                strokeWidth={isMetaExpanded ? 2.5 : 1.5} />
+              {/* Glass highlight (top-left) */}
+              <rect x={8} y={4} width={W * 0.5} height={H * 0.3}
+                rx={CR / 2} ry={CR / 2}
+                fill={`url(#metaGlassGrad-${mi})`} />
               {/* Expand indicator */}
-              <text x="16" y="36" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10" style={{ pointerEvents: 'none' }}>
+              <text x="18" y={H / 2 + 1} textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="10" style={{ pointerEvents: 'none' }}>
                 {isMetaExpanded ? '▼' : '▶'}
               </text>
-              <text x="75" y="28" textAnchor="middle" fill="white" fontSize="13" fontWeight="700" style={{ pointerEvents: 'none' }}>
+              {/* Label */}
+              <text x={W / 2 + 4} y={H / 2 - 6} textAnchor="middle" fill="white" fontSize="14" fontWeight="700"
+                style={{ pointerEvents: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
                 {mf.config?.icon || '📂'} {mf.name}
               </text>
-              <text x="75" y="46" textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize="10" style={{ pointerEvents: 'none' }}>
+              {/* Stats */}
+              <text x={W / 2 + 4} y={H / 2 + 12} textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10" style={{ pointerEvents: 'none' }}>
                 {mf.totalTasks} משימות · {mf.totalClients} לקוחות
               </text>
             </svg>
@@ -1671,8 +1685,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           );
         })}
 
-        {/* ── Level 2: Meta Sub-Folder Circle Nodes — ONLY when parent meta is expanded ── */}
-        {layout.metaSubFolderPositions?.filter(sf => expandedMetaFolders.has(sf.metaFolderName)).map((sf, si) => (
+        {/* ── LAW 3: Level 2 — Glass-Morphism Rectangle Sub-Folders ── */}
+        {layout.metaSubFolderPositions?.filter(sf => expandedMetaFolders.has(sf.metaFolderName)).map((sf, si) => {
+          const SW = 110, SH = 50, SCR = 16;
+          return (
           <motion.div
             key={`metasub-${sf.metaFolderName}-${sf.key}`}
             data-node-draggable
@@ -1686,7 +1702,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: si * 0.06 + 0.1, type: 'spring', stiffness: 200 }}
-            whileHover={{ scale: 1.12 }}
+            whileHover={{ scale: 1.08 }}
             onPointerDown={(e) => handleNodePointerDown(e, `metasub-${sf.metaFolderName}-${sf.key}`, sf.x, sf.y)}
             onPointerUp={(e) => {
               const wasDragging = nodeHasDragged.current;
@@ -1695,28 +1711,47 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               if (wasDragging) setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
             }}
           >
-            <svg width="90" height="90" viewBox="0 0 90 90" style={{ overflow: 'visible' }}>
-              {/* Level 2 — White-Glass circle, dashed cyan border + white inner border */}
-              <circle cx="45" cy="45" r="42" fill="rgba(255,255,255,0.35)" stroke="#00acc1" strokeWidth={1.5} strokeDasharray="6 3" />
-              <circle cx="45" cy="45" r="40" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
+            <svg width={SW + 10} height={SH + 10} viewBox={`-5 -5 ${SW + 10} ${SH + 10}`} style={{ overflow: 'visible' }}>
+              <defs>
+                <linearGradient id={`subGlass-${si}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="white" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="white" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {/* Glass-morphism rectangle — semi-transparent white */}
+              <rect x={0} y={0} width={SW} height={SH}
+                rx={SCR} ry={SCR}
+                fill="rgba(255,255,255,0.28)"
+                stroke="rgba(0,172,193,0.4)"
+                strokeWidth={1.2} />
+              {/* Inner border for glass depth */}
+              <rect x={1.5} y={1.5} width={SW - 3} height={SH - 3}
+                rx={SCR - 1} ry={SCR - 1}
+                fill="none"
+                stroke="rgba(255,255,255,0.15)"
+                strokeWidth={0.8} />
               {/* Glass highlight */}
-              <ellipse cx="45" cy="33" rx="24" ry="14" fill="white" opacity={0.2} />
-              <text x="45" y="42" textAnchor="middle" fill="#006064" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
+              <rect x={8} y={4} width={SW * 0.45} height={SH * 0.3}
+                rx={8} ry={8}
+                fill={`url(#subGlass-${si})`} />
+              <text x={SW / 2} y={SH / 2 - 3} textAnchor="middle" fill="#006064" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
                 {sf.icon} {sf.key}
               </text>
-              <text x="45" y="57" textAnchor="middle" fill="#607D8B" fontSize="9" style={{ pointerEvents: 'none' }}>
+              <text x={SW / 2} y={SH / 2 + 12} textAnchor="middle" fill="#607D8B" fontSize="9" style={{ pointerEvents: 'none' }}>
                 {sf.departments?.length || 0} קטגוריות
               </text>
             </svg>
           </motion.div>
-        ))}
+          );
+        })}
 
-        {/* ── Branch (Category/Department) Nodes — Level 3: ONLY when parent meta expanded ── */}
+        {/* ── LAW 3: Level 2/3 — Glass-Morphism Folder Nodes (Departments) ── */}
         {layout.branchPositions.filter(b => expandedMetaFolders.has(b.metaFolder)).map((branch, i) => {
           const isBranchExpanded = expandedBranches.has(branch.category);
+          const FW = 130, FH = 50, FCR = 16;
           return (
           <React.Fragment key={branch.category}>
-            {/* Category department node — folder-tab, click to expand/collapse */}
+            {/* Department folder — glass rectangle, click to expand/collapse */}
             <motion.div
               data-node-draggable
               className="absolute z-10 select-none touch-none"
@@ -1731,37 +1766,43 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: isSpotlit(branch.category) ? 1 : 0.15, scale: 1 }}
               transition={{ delay: i * 0.08, type: 'spring', stiffness: 200 }}
-              whileHover={{ scale: 1.1 }}
+              whileHover={{ scale: 1.06 }}
               onPointerDown={(e) => handleFolderPointerDown(e, `folder-${branch.category}`, branch.x, branch.y)}
               onPointerUp={(e) => handleFolderPointerUp(e, branch.category)}
             >
-              <svg width="120" height="48" viewBox="0 0 120 48" style={{ overflow: 'visible' }}>
-                {/* Level 3 — White-Glass folder-tab: bg-white/30, dashed cyan border + white inner border */}
-                <path d="M0,10 L0,38 Q0,48 10,48 L110,48 Q120,48 120,38 L120,10 Q120,0 110,0 L44,0 L38,8 L10,8 Q0,8 0,10 Z"
-                  fill="rgba(255,255,255,0.35)"
-                  stroke={isBranchExpanded ? '#00838F' : '#90CAF9'}
-                  strokeWidth={1.5}
-                  strokeDasharray="5 3"
-                />
-                {/* White inner border for glass effect */}
-                <path d="M2,11 L2,37 Q2,46 11,46 L109,46 Q118,46 118,37 L118,11 Q118,2 109,2 L44,2 L39,9 L11,9 Q2,9 2,11 Z"
-                  fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={1}
-                />
+              <svg width={FW + 10} height={FH + 10} viewBox={`-5 -5 ${FW + 10} ${FH + 10}`} style={{ overflow: 'visible' }}>
+                <defs>
+                  <linearGradient id={`folderGlass-${i}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="white" stopOpacity="0.12" />
+                    <stop offset="100%" stopColor="white" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                {/* Glass-morphism rectangle */}
+                <rect x={0} y={0} width={FW} height={FH}
+                  rx={FCR} ry={FCR}
+                  fill="rgba(255,255,255,0.32)"
+                  stroke={isBranchExpanded ? '#00838F' : 'rgba(144,202,249,0.5)'}
+                  strokeWidth={isBranchExpanded ? 1.8 : 1.2} />
+                {/* Inner glass border */}
+                <rect x={1.5} y={1.5} width={FW - 3} height={FH - 3}
+                  rx={FCR - 1} ry={FCR - 1}
+                  fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={0.8} />
                 {/* Glass highlight */}
-                <path d="M0,10 L0,38 Q0,48 10,48 L110,48 Q120,48 120,38 L120,10 Q120,0 110,0 L44,0 L38,8 L10,8 Q0,8 0,10 Z"
-                  fill="white" opacity={0.15}
-                />
-                <text x="60" y="32" textAnchor="middle" fill="#37474F" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                <rect x={8} y={3} width={FW * 0.45} height={FH * 0.28}
+                  rx={8} ry={8}
+                  fill={`url(#folderGlass-${i})`} />
+                {/* Expand/collapse indicator */}
+                <text x="14" y={FH / 2 + 1} textAnchor="middle" fill="#607D8B" fontSize="9" style={{ pointerEvents: 'none' }}>
+                  {isBranchExpanded ? '▼' : '▶'}
+                </text>
+                {/* Label */}
+                <text x={FW / 2 + 4} y={FH / 2 - 2} textAnchor="middle" fill="#37474F" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
                   {branch.config.icon} {branch.category}
                 </text>
                 {/* Count badge */}
-                <circle cx="104" cy="14" r="11" fill="rgba(255,255,255,0.5)" stroke="#90CAF9" strokeWidth={1} />
-                <text x="104" y="18" textAnchor="middle" fill="#37474F" fontSize="9" fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                <circle cx={FW - 16} cy={14} r="10" fill="rgba(255,255,255,0.45)" stroke="rgba(144,202,249,0.5)" strokeWidth={0.8} />
+                <text x={FW - 16} y={18} textAnchor="middle" fill="#37474F" fontSize="9" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                   {branch.clients.length}
-                </text>
-                {/* Expand/collapse indicator */}
-                <text x="12" y="18" textAnchor="middle" fill="#607D8B" fontSize="9" style={{ pointerEvents: 'none' }}>
-                  {isBranchExpanded ? '▼' : '▶'}
                 </text>
               </svg>
             </motion.div>

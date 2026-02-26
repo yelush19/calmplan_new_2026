@@ -18,7 +18,6 @@ export default function MindMapCanvas({ clients, tasks, reconciliations, onNodeC
   // Auto-fit when nodes are first available
   useEffect(() => {
     if (nodes.length > 0 && !hasAutoFitted.current) {
-      // Small delay to ensure container is measured
       const timer = setTimeout(() => {
         autoFit(nodes);
         hasAutoFitted.current = true;
@@ -27,7 +26,7 @@ export default function MindMapCanvas({ clients, tasks, reconciliations, onNodeC
     }
   }, [nodes, autoFit]);
 
-  // Re-autofit if nodes count changes significantly (client added/removed)
+  // Re-autofit if nodes count changes significantly
   const prevNodeCount = useRef(nodes.length);
   useEffect(() => {
     if (Math.abs(nodes.length - prevNodeCount.current) > 2) {
@@ -61,10 +60,9 @@ export default function MindMapCanvas({ clients, tasks, reconciliations, onNodeC
       onMouseUp={onMouseUp}
       onMouseLeave={onMouseUp}
     >
-      {/* Subtle grid pattern for infinite canvas feel */}
+      {/* Subtle grid pattern */}
       <svg
-        width="100%"
-        height="100%"
+        width="100%" height="100%"
         style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', opacity: 0.03 }}
       >
         <defs>
@@ -76,13 +74,9 @@ export default function MindMapCanvas({ clients, tasks, reconciliations, onNodeC
       </svg>
 
       {/* Main SVG canvas */}
-      <svg
-        width="100%"
-        height="100%"
-        style={{ position: 'relative' }}
-      >
+      <svg width="100%" height="100%" style={{ position: 'relative' }}>
         <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
-          {/* Edges rendered behind nodes */}
+          {/* LAW 2.1: Edges rendered BEHIND nodes (SVG render order) */}
           {edges.map(edge => (
             <MindMapEdge
               key={edge.id}
@@ -90,10 +84,11 @@ export default function MindMapCanvas({ clients, tasks, reconciliations, onNodeC
               toNode={nodeMap[edge.to]}
               color={edge.color}
               isSecondary={edge.isSecondary}
+              level={edge.level}
             />
           ))}
 
-          {/* Nodes */}
+          {/* Nodes rendered on top */}
           <AnimatePresence>
             {nodes.map(node => (
               <MindMapNode
