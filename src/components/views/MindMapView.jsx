@@ -293,14 +293,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // Runs ONCE on mount. After first run, stores flag to prevent re-runs.
   const nuclearRan = useRef(false);
   useEffect(() => {
-    const NUCLEAR_KEY = 'calmplan-nuclear-v9-reporting-active';
+    const NUCLEAR_KEY = 'calmplan-nuclear-v10-clean-physics';
     if (nuclearRan.current) return;
     try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
     nuclearRan.current = true;
 
     (async () => {
       try {
-        console.log('[CalmPlan] SERVICE-GRID NUCLEAR RESET v9: Wiping Feb 2026 tasks...');
+        console.log('[CalmPlan] CLEAN-PHYSICS NUCLEAR RESET v10: Wiping Feb 2026 tasks...');
         const wipeRes = await wipeAllTasksForMonth({ year: 2026, month: 2 });
         const wiped = wipeRes?.data?.deleted || 0;
         console.log(`[CalmPlan] Wiped: ${wiped} tasks deleted`);
@@ -405,7 +405,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v9-reporting-active-grid'; // bump this to force reset
+  const LAYOUT_VERSION = 'v10-clean-physics'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -481,21 +481,32 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, []);
 
   // ── Data Processing ──
-  const { branches, clientNodes, centerLabel, todayTasks, metaFolders } = useMemo(() => {
+  const { branches, clientNodes, centerLabel, todayTasks, metaFolders, activeTaskCount } = useMemo(() => {
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     const centerLabel = format(today, 'EEEE, d/M', { locale: he });
 
-    // Group tasks by category → client
+    // ── TRUTH ENGINE: Filter tasks to CURRENT MONTH ONLY ──
+    // This is the root fix: previous versions showed ALL months (558 tasks!)
+    // Only show tasks whose due_date falls within the current month
+    const currentMonthPrefix = format(today, 'yyyy-MM'); // e.g. "2026-02"
     const catClientMap = {};
     const activeTasks = tasks.filter(t => {
       if (t.status === 'not_relevant') return false;
+      // MONTH FILTER: Only show tasks WITH a due_date in the current month
+      // Tasks without due_date are unscheduled — they do NOT belong on the MindMap
+      if (!t.due_date || !t.due_date.startsWith(currentMonthPrefix)) return false;
       if (!crisisMode) return true;
-      // Crisis mode: keep only urgent/high priority tasks
       const dept = CATEGORY_TO_DEPARTMENT[t.category || 'אחר'] || t.category;
       if (dept === 'בית') return t.priority === 'urgent' || t.priority === 'high';
       return t.priority !== 'low';
     });
+
+    // HARD LIMIT: If task count exceeds 70, log warning
+    if (activeTasks.length > 70) {
+      console.warn(`[CalmPlan] TRUTH ENGINE: ${activeTasks.length} tasks for ${currentMonthPrefix} exceeds 70 limit!`);
+    }
+    console.log(`[CalmPlan] MindMap rendering ${activeTasks.length} tasks for ${currentMonthPrefix}`);
 
     // Collect ALL known department names for catch-all check
     const knownDepartments = new Set();
@@ -651,7 +662,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       return t.due_date === todayStr;
     });
 
-    return { branches, clientNodes, centerLabel, todayTasks, metaFolders };
+    return { branches, clientNodes, centerLabel, todayTasks, metaFolders, activeTaskCount: activeTasks.length };
   }, [tasks, clients, crisisMode]);
 
   // ── Feature 8: Auto-open drawer from search deep-link ──
@@ -671,7 +682,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     onFocusHandled?.();
   }, [focusClientName, focusTaskId, clientNodes]);
 
-  // ── Layout Calculation: RADIAL SYMMETRY + Departments Near Parent Hex + Collision Push ──
+  // ══════════════════════════════════════════════════════════════
+  // LAYOUT: DYNAMIC PHYSICS — Vertical Displacement + Radial Categories
+  // LAW 2: child.y = parent.y + (index * 70px), 150px safety gap
+  // ══════════════════════════════════════════════════════════════
   const layout = useMemo(() => {
     const w = Math.max(dimensions.width, 600);
     const h = Math.max(dimensions.height, 400);
@@ -680,39 +694,23 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const cy = h / 2;
     const centerR = isWide ? 55 : 48;
 
-    const padX = 80;
-    const padY = 60;
-    const scaleX = (w - padX * 2) * 0.22 * spacingFactor;
-    const scaleY = (h - padY * 2) * 0.22 * spacingFactor;
-    const baseLeafDist = 100; // increased from 55 — hard repulsion needs initial spread
-
-    // ─── PHASE 0: RADIAL LOCKING — Meta-folder hexagons at FIXED cardinal angles ───
-    // THE COLLISION LAW: Level 1 categories locked at 0°, 90°, 180°, 270° (+ diagonals for 5+)
-    // This prevents the "Leaning Tower" effect where categories drift and pile up
+    // ─── Categories at cardinal positions, 280px from center ───
     const metaCount = metaFolders.length;
-    // Fixed angles: for 4 → cardinal (0,90,180,270); for 5+ → add 45° diagonals
-    const FIXED_ANGLES_BY_COUNT = {
+    const FIXED_ANGLES = {
       1: [-Math.PI / 2],
       2: [-Math.PI / 2, Math.PI / 2],
       3: [-Math.PI / 2, Math.PI / 6, Math.PI * 5 / 6],
       4: [-Math.PI / 2, 0, Math.PI / 2, Math.PI],
-      5: [-Math.PI / 2, -Math.PI / 6, Math.PI / 3, Math.PI * 2 / 3, Math.PI * 7 / 6],
-      6: [-Math.PI / 2, -Math.PI / 6, Math.PI / 6, Math.PI / 2, Math.PI * 5 / 6, Math.PI * 7 / 6],
     };
-    const fixedAngles = FIXED_ANGLES_BY_COUNT[Math.min(metaCount, 6)] ||
+    const fixedAngles = FIXED_ANGLES[Math.min(metaCount, 4)] ||
       Array.from({ length: metaCount }, (_, i) => (i * 2 * Math.PI / metaCount) - Math.PI / 2);
 
-    // Distance from center: proportional to viewport, min 160px for readability
-    // INCREASED from 130 → 200 base to prevent hexagon cloud
-    const basemetaDist = Math.max(200, Math.min(Math.max(scaleX, scaleY) * 0.7, 280));
+    const basemetaDist = 280;
 
     let metaFolderPositions = metaFolders.map((mf, i) => {
       const angle = fixedAngles[i] || (i * 2 * Math.PI / metaCount) - Math.PI / 2;
-      // TREE-SHIFTING: expanded hexagons push 80px further to make room for children
-      const expandBonus = expandedMetaFolders.has(mf.name) ? 80 : 0;
-      const finalDist = basemetaDist + expandBonus;
-      const mx = cx + Math.cos(angle) * finalDist;
-      const my = cy + Math.sin(angle) * finalDist;
+      const mx = cx + Math.cos(angle) * basemetaDist;
+      const my = cy + Math.sin(angle) * basemetaDist;
       const manualKey = `meta-${mf.name}`;
       const manual = manualPositions[manualKey];
       return {
@@ -723,41 +721,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       };
     });
 
-    // ─── COLLISION PUSH between meta-folder hexagons (200px minimum gap) ───
-    const META_MIN_GAP = 200;
-    for (let pass = 0; pass < 8; pass++) {
-      let shifted = false;
-      for (let i = 0; i < metaFolderPositions.length; i++) {
-        for (let j = i + 1; j < metaFolderPositions.length; j++) {
-          const a = metaFolderPositions[i];
-          const b = metaFolderPositions[j];
-          // Skip if either has manual position
-          if (manualPositions[`meta-${a.name}`] || manualPositions[`meta-${b.name}`]) continue;
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          // Expanded hexagons need more space
-          const aRadius = expandedMetaFolders.has(a.name) ? 90 : 50;
-          const bRadius = expandedMetaFolders.has(b.name) ? 90 : 50;
-          const minDist = aRadius + bRadius + META_MIN_GAP;
-          if (dist < minDist && dist > 0) {
-            shifted = true;
-            const overlap = (minDist - dist) / 2;
-            const nx = dx / dist;
-            const ny = dy / dist;
-            a.x -= nx * overlap;
-            a.y -= ny * overlap;
-            b.x += nx * overlap;
-            b.y += ny * overlap;
-          }
-        }
-      }
-      if (!shifted) break;
-    }
-
-    // ─── PHASE 1: Position departments around their PARENT hexagon ───
-    const allClientNodes = [];
-    const deptDist = 140; // departments 140px from their parent hexagon (was 90 — too cramped)
+    // ═══════════════════════════════════════════════════════════
+    // LAW 2: VERTICAL DISPLACEMENT — child.y = parent.y + (index * 70)
+    // No radial scattering. No collision system. Clean vertical lists.
+    // ═══════════════════════════════════════════════════════════
+    const CHILD_GAP = 70;
 
     const branchPositions = branches.map((branch) => {
       const parentMeta = metaFolderPositions.find(m => m.name === branch.metaFolder);
@@ -765,235 +733,48 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         return { ...branch, x: cx, y: cy, angle: 0, clientPositions: [], subFolderPositions: null };
       }
 
-      // Find siblings (other departments under same hexagon)
+      // Find siblings (other departments under same parent category)
       const siblings = branches.filter(b => b.metaFolder === branch.metaFolder);
       const sibIdx = siblings.indexOf(branch);
-      const sibCount = siblings.length;
 
-      // Fan out radially from hexagon in the direction of hexagon from center
-      const spreadAngle = sibCount <= 1 ? 0 : Math.PI * 0.7;
-      const baseAngle = parentMeta.angle;
-      const branchAngle = sibCount <= 1
-        ? baseAngle
-        : baseAngle + (sibIdx - (sibCount - 1) / 2) * (spreadAngle / Math.max(sibCount - 1, 1));
+      // Departments stack VERTICALLY below their parent category
+      // child.y = parent.y + ((index + 1) * 70)
+      const bx = parentMeta.x;
+      const by = parentMeta.y + ((sibIdx + 1) * CHILD_GAP);
 
-      const bx = parentMeta.x + Math.cos(branchAngle) * deptDist;
-      const by = parentMeta.y + Math.sin(branchAngle) * deptDist;
+      // Apply manual position override for this folder
+      const folderKey = `folder-${branch.category}`;
+      const folderPos = manualPositions[folderKey];
+      const finalBx = folderPos?.x ?? bx;
+      const finalBy = folderPos?.y ?? by;
 
-      // Position client leaf nodes in a RADIAL CIRCLE around department
-      // No overlapping — full circle spread when many clients
-      const clientCount = branch.clients.length;
-      // COLLISION LAW: wider radial spread — use full circle for many clients
-      const clientAngleSpread = clientCount <= 2
-        ? Math.PI * 0.8
-        : Math.min(Math.PI * 2, clientCount * 0.65);
+      // Client pills: VERTICAL LIST below their department, 70px gap
       const sortedClients = [...branch.clients].sort((a, b) => (b.statusRing || 0) - (a.statusRing || 0));
-
       const clientPositions = sortedClients.map((client, j) => {
-        const clientAngle = branchAngle + (j - (clientCount - 1) / 2) * (clientAngleSpread / Math.max(clientCount - 1, 1));
-        const statusDistMultiplier = {
-          4: 0.82, 3: 0.88, 2: 1.0, 1: 1.0, 0: 1.3,
-        }[client.statusRing || 2] || 1.0;
-        const stagger = (j % 2) * Math.min(20, baseLeafDist * 0.15);
-        const dist = (baseLeafDist + stagger) * statusDistMultiplier;
         const nodeRadius = getNodeRadius(client.tier, isWide);
-
-        const node = {
+        const clientKey = `${branch.category}-${client.name}`;
+        const clientPos = manualPositions[clientKey];
+        return {
           ...client,
           radius: nodeRadius,
-          x: bx + Math.cos(clientAngle) * dist,
-          y: by + Math.sin(clientAngle) * dist,
-          branchX: bx,
-          branchY: by,
+          x: clientPos?.x ?? finalBx,
+          y: clientPos?.y ?? (finalBy + ((j + 1) * CHILD_GAP)),
+          branchX: finalBx,
+          branchY: finalBy,
         };
-        allClientNodes.push(node);
-        return node;
       });
-
-      // Complexity sub-folder positions (Payroll/VAT)
-      let subFolderPositions = null;
-      if (branch.config.subFolders && branch.config.subFolders.length > 0) {
-        const subCount = branch.config.subFolders.length;
-        const subSpread = Math.PI * 0.5;
-        const subDist = Math.min(baseLeafDist * 1.2, 40);
-        subFolderPositions = branch.config.subFolders.map((sub, si) => {
-          const subAngle = branchAngle + (si - (subCount - 1) / 2) * (subSpread / Math.max(subCount - 1, 1));
-          return {
-            ...sub,
-            x: bx + Math.cos(subAngle) * subDist,
-            y: by + Math.sin(subAngle) * subDist,
-          };
-        });
-        clientPositions.forEach(cp => {
-          const matchKey = cp._complexitySubFolder || COMPLEXITY_SUB_LABELS[cp.tier || 0]?.key || subFolderPositions[0]?.key;
-          const subFolder = subFolderPositions.find(s => s.key === matchKey) || subFolderPositions[0];
-          if (subFolder) {
-            cp._subFolderX = subFolder.x;
-            cp._subFolderY = subFolder.y;
-          }
-        });
-      }
 
       return {
         ...branch,
-        x: bx,
-        y: by,
-        angle: branchAngle,
+        x: finalBx,
+        y: finalBy,
+        angle: parentMeta.angle,
         clientPositions,
-        subFolderPositions,
+        subFolderPositions: null,
       };
     });
 
-    // ─── PHASE 2: HARD REPULSION FORCE — THE COLLISION LAW ───
-    // If distance d < 150px, apply IMMEDIATE displacement vector.
-    // Overlapping bounding boxes = FORBIDDEN. No spring pullback that causes re-collision.
-    const HARD_REPULSION_DIST = 150; // minimum distance between ANY two client nodes
-    const MAX_PARENT_DIST = 250;     // increased from 100 — no more cramming
-    const getPillHalfWidth = (r) => Math.max(r * 1.2, 45);
-
-    // Phase 2a: Hard repulsion (no spring force to undermine it)
-    for (let pass = 0; pass < 20; pass++) {
-      let hadCollision = false;
-      for (let i = 0; i < allClientNodes.length; i++) {
-        for (let j = i + 1; j < allClientNodes.length; j++) {
-          const a = allClientNodes[i];
-          const b = allClientNodes[j];
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          // Hard minimum: pill bounding box + 150px gap, whichever is larger
-          const pillMin = getPillHalfWidth(a.radius) + getPillHalfWidth(b.radius);
-          const minDist = Math.max(pillMin, HARD_REPULSION_DIST);
-          if (dist < minDist && dist > 0) {
-            hadCollision = true;
-            const overlap = (minDist - dist) / 2 + 2; // +2px safety margin
-            const nx = dx / dist;
-            const ny = dy / dist;
-            a.x -= nx * overlap;
-            a.y -= ny * overlap;
-            b.x += nx * overlap;
-            b.y += ny * overlap;
-          }
-        }
-      }
-      // Phase 2b: Soft tether — keep clients roughly near parent branch
-      // Use WEAK force (0.05) so it doesn't undo the collision fix
-      allClientNodes.forEach(node => {
-        const dx2 = node.x - node.branchX;
-        const dy2 = node.y - node.branchY;
-        const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-        // Only pull back if WAY too far (> MAX_PARENT_DIST)
-        if (dist2 > MAX_PARENT_DIST) {
-          const scale = MAX_PARENT_DIST / dist2;
-          node.x = node.branchX + dx2 * scale;
-          node.y = node.branchY + dy2 * scale;
-        }
-      });
-      if (!hadCollision) break;
-    }
-
-    // ─── PHASE 2c: Hard repulsion between DEPARTMENT (branch) nodes ───
-    // Prevents department folders from stacking on top of each other
-    const DEPT_MIN_GAP = 200;
-    for (let pass = 0; pass < 8; pass++) {
-      let shifted = false;
-      for (let i = 0; i < branchPositions.length; i++) {
-        for (let j = i + 1; j < branchPositions.length; j++) {
-          const a = branchPositions[i];
-          const b = branchPositions[j];
-          if (manualPositions[`folder-${a.category}`] || manualPositions[`folder-${b.category}`]) continue;
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < DEPT_MIN_GAP && dist > 0) {
-            shifted = true;
-            const overlap = (DEPT_MIN_GAP - dist) / 2 + 1;
-            const nx = dx / dist;
-            const ny = dy / dist;
-            a.x -= nx * overlap;
-            a.y -= ny * overlap;
-            b.x += nx * overlap;
-            b.y += ny * overlap;
-            // Update client positions relative to their branch
-            a.clientPositions?.forEach(cp => { cp.branchX = a.x; });
-            b.clientPositions?.forEach(cp => { cp.branchX = b.x; });
-          }
-        }
-      }
-      if (!shifted) break;
-    }
-
-    // Sync collision-resolved positions back
-    branchPositions.forEach(branch => {
-      branch.clientPositions.forEach(cp => {
-        const resolved = allClientNodes.find(n => n.name === cp.name && n.category === cp.category);
-        if (resolved) { cp.x = resolved.x; cp.y = resolved.y; }
-      });
-    });
-
-    // Apply folder manual position overrides
-    branchPositions.forEach(branch => {
-      const folderKey = `folder-${branch.category}`;
-      const folderPos = manualPositions[folderKey];
-      if (folderPos && typeof folderPos.x === 'number' && typeof folderPos.y === 'number') {
-        const deltaX = folderPos.x - branch.x;
-        const deltaY = folderPos.y - branch.y;
-        branch.x = folderPos.x;
-        branch.y = folderPos.y;
-        if (branch.subFolderPositions) {
-          branch.subFolderPositions.forEach(sub => { sub.x += deltaX; sub.y += deltaY; });
-        }
-        branch.clientPositions.forEach(cp => {
-          const childKey = `${branch.category}-${cp.name}`;
-          if (!manualPositions[childKey]) { cp.x += deltaX; cp.y += deltaY; }
-        });
-      }
-    });
-
-    // Apply client manual position overrides
-    branchPositions.forEach(branch => {
-      branch.clientPositions.forEach(cp => {
-        const key = `${branch.category}-${cp.name}`;
-        const pos = manualPositions[key];
-        if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
-          cp.x = pos.x;
-          cp.y = pos.y;
-        }
-      });
-    });
-
-    // ── Level 2: Meta sub-folder positions ──
-    const metaSubFolderPositions = [];
-    metaFolderPositions.forEach(mfPos => {
-      const metaConfig = META_FOLDERS[mfPos.name];
-      if (!metaConfig?.subFolders) return;
-      metaConfig.subFolders.forEach((sf) => {
-        const sfBranches = branchPositions.filter(b => sf.departments.includes(b.category));
-        if (sfBranches.length === 0) return;
-        const avgX = sfBranches.reduce((s, b) => s + b.x, 0) / sfBranches.length;
-        const avgY = sfBranches.reduce((s, b) => s + b.y, 0) / sfBranches.length;
-        let sx = mfPos.x * 0.6 + avgX * 0.4;
-        let sy = mfPos.y * 0.6 + avgY * 0.4;
-        const sfDx = sx - mfPos.x, sfDy = sy - mfPos.y;
-        const sfDist = Math.sqrt(sfDx * sfDx + sfDy * sfDy);
-        if (sfDist > 60) { const sfScale = 60 / sfDist; sx = mfPos.x + sfDx * sfScale; sy = mfPos.y + sfDy * sfScale; }
-        const manualKey = `metasub-${mfPos.name}-${sf.key}`;
-        const manual = manualPositions[manualKey];
-        metaSubFolderPositions.push({
-          ...sf,
-          metaFolderName: mfPos.name,
-          x: manual?.x ?? sx,
-          y: manual?.y ?? sy,
-        });
-        sfBranches.forEach(b => {
-          b._metaSubX = manual?.x ?? sx;
-          b._metaSubY = manual?.y ?? sy;
-          b._metaSubKey = sf.key;
-        });
-      });
-    });
-
-    return { cx, cy, centerR, branchPositions, metaFolderPositions, metaSubFolderPositions, virtualW: w, virtualH: h, isWide };
+    return { cx, cy, centerR, branchPositions, metaFolderPositions, metaSubFolderPositions: [], virtualW: w, virtualH: h, isWide };
   }, [branches, metaFolders, dimensions, spacingFactor, manualPositions, expandedMetaFolders]);
 
   // ── Draggable center: effective position respects manual drag override ──
@@ -1408,6 +1189,31 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     );
   }
 
+  // LAW 3: LOGICAL AUDIT — HARD ABORT if >70 tasks
+  if (activeTaskCount > 70) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" dir="rtl">
+        <div className="p-8 rounded-3xl bg-red-50 border border-red-200 shadow-xl flex flex-col items-center gap-4 max-w-md">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-3xl">⛔</div>
+          <p className="text-lg font-bold text-red-700">שגיאת נתונים — {activeTaskCount} משימות</p>
+          <p className="text-sm text-red-600 text-center">המערכת מותרת עד 70 משימות לחודש. נמצאו {activeTaskCount}.</p>
+          <p className="text-xs text-red-500">יש לבצע איפוס משימות.</p>
+          <button
+            onClick={async () => {
+              try {
+                localStorage.removeItem('calmplan-nuclear-v10-clean-physics');
+                window.location.reload();
+              } catch { window.location.reload(); }
+            }}
+            className="px-6 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-medium text-sm shadow-md flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" /> איפוס ורענון
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (tasks.length === 0 && inboxItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400 gap-3">
@@ -1422,10 +1228,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     ? "fixed inset-0 z-[9999] bg-gradient-to-br from-white/60 via-blue-50/30 to-white/40"
     : "relative w-full h-full";
 
-  // MindMap fills 100% of parent container — parent controls the height
+  // APPLE-INSPIRED: Clean light grey background — NO turquoise soup
   const containerStyle = isFullscreen
-    ? { background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f8fbff 50%, #f0f7ff 100%)' }
-    : { height: '100%', background: 'radial-gradient(ellipse at center, #f8fbff 0%, #f8fbff 50%, #f0f7ff 100%)' };
+    ? { background: '#F9FAFB' }
+    : { height: '100%', background: '#F9FAFB' };
 
   return (
     <div
@@ -1453,122 +1259,102 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           willChange: 'transform', // GPU acceleration
         }}
       >
-        {/* ── SVG Connection Lines (z-[1]: behind all nodes) ── */}
+        {/* ── SVG Connection Lines — z-index: -1, BEHIND all nodes ──
+             DYNAMIC CONNECTIVITY: Lines use quadratic bezier curves.
+             Color: #E5E7EB (light grey). Thin. Slightly curved. ── */}
         <svg
           width={layout.virtualW}
           height={layout.virtualH}
-          className="absolute inset-0 pointer-events-none z-[1]"
-          style={{ overflow: 'visible' }}
+          className="absolute inset-0 pointer-events-none"
+          style={{ overflow: 'visible', zIndex: -1 }}
         >
-          <defs>
-            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15" />
-            </filter>
-          </defs>
+          {/* ── L0→L1: Center Hub → Category Containers (curved bezier) ── */}
+          {layout.metaFolderPositions?.map((mf) => {
+            const x1 = centerPos.x, y1 = centerPos.y;
+            const x2 = mf.x, y2 = mf.y;
+            // Quadratic bezier: control point offset perpendicular to midpoint
+            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+            const dx = x2 - x1, dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            // Slight curve: perpendicular offset = 8% of line length
+            const curveAmt = len * 0.08;
+            const cx = mx + (-dy / len) * curveAmt;
+            const cy = my + (dx / len) * curveAmt;
+            return (
+              <path key={`meta-line-${mf.name}`}
+                d={`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`}
+                fill="none"
+                stroke="#E5E7EB"
+                strokeWidth={1.5}
+                strokeLinecap="round" />
+            );
+          })}
 
-          {/* ── L0→L1: Center → Meta-Folder hexagons — Deep Teal ── */}
-          {layout.metaFolderPositions?.map((mf) => (
-            <g key={`meta-lines-${mf.name}`}>
-              {zoom < 0.6 ? (
-                <line x1={centerPos.x} y1={centerPos.y} x2={mf.x} y2={mf.y}
-                  stroke="#006064" strokeWidth={2.5} strokeLinecap="round" strokeOpacity={0.5} />
-              ) : (
-                <motion.path
-                  d={`M ${centerPos.x} ${centerPos.y} L ${mf.x} ${mf.y}`}
-                  stroke="#006064" strokeWidth={2.5} strokeLinecap="round" fill="none" strokeOpacity={0.5}
-                  initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.5, ease: 'easeInOut' }}
-                />
-              )}
-            </g>
-          ))}
-
-          {/* ── L1→L2: Meta-Folder → Sub-Folder circles — light gray ── */}
+          {/* ── L1→L2: Category → Sub-Folder (only when expanded) ── */}
           {layout.metaSubFolderPositions?.map((sf) => {
             if (!expandedMetaFolders.has(sf.metaFolderName)) return null;
             const mfPos = layout.metaFolderPositions.find(m => m.name === sf.metaFolderName);
             if (!mfPos) return null;
-            return zoom < 0.6 ? (
-              <line key={`metasub-line-${sf.metaFolderName}-${sf.key}`}
-                x1={mfPos.x} y1={mfPos.y} x2={sf.x} y2={sf.y}
-                stroke="#B0BEC5" strokeWidth={1.5} strokeLinecap="round" strokeOpacity={0.5} />
-            ) : (
-              <motion.path
-                key={`metasub-line-${sf.metaFolderName}-${sf.key}`}
-                d={`M ${mfPos.x} ${mfPos.y} L ${sf.x} ${sf.y}`}
-                stroke="#B0BEC5" strokeWidth={1.5} strokeLinecap="round" fill="none" strokeOpacity={0.5}
-                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                transition={{ duration: 0.4, delay: 0.15, ease: 'easeInOut' }}
-              />
+            const x1 = mfPos.x, y1 = mfPos.y, x2 = sf.x, y2 = sf.y;
+            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+            const dx = x2 - x1, dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const cx = mx + (-dy / len) * (len * 0.06);
+            const cy = my + (dx / len) * (len * 0.06);
+            return (
+              <path key={`metasub-line-${sf.metaFolderName}-${sf.key}`}
+                d={`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`}
+                fill="none"
+                stroke="#E5E7EB"
+                strokeWidth={1.2}
+                strokeLinecap="round" />
             );
           })}
 
-          {/* ── L1/L2→L3: Meta/SubFolder → Department branches — light dashed ── */}
+          {/* ── L2→L3: Category/SubFolder → Department ── */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
-            const parentX = branch._metaSubX || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.x || centerPos.x;
-            const parentY = branch._metaSubY || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.y || centerPos.y;
-            const opacity = isSpotlit(branch.category) ? 0.5 : 0.1;
-            return zoom < 0.6 ? (
-              <line key={`dept-line-${branch.category}`}
-                x1={parentX} y1={parentY} x2={branch.x} y2={branch.y}
-                stroke="#90A4AE" strokeWidth={1.2}
-                strokeDasharray="4 3" strokeOpacity={opacity} />
-            ) : (
-              <motion.path
-                key={`dept-line-${branch.category}`}
-                d={`M ${parentX} ${parentY} L ${branch.x} ${branch.y}`}
-                stroke="#90A4AE" strokeWidth={1.2}
-                strokeDasharray="4 3" fill="none" strokeOpacity={opacity}
-                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                transition={{ duration: 0.4, delay: 0.25, ease: 'easeInOut' }}
-              />
+            const px = branch._metaSubX || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.x || centerPos.x;
+            const py = branch._metaSubY || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.y || centerPos.y;
+            const dx = branch.x - px, dy = branch.y - py;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const mx = (px + branch.x) / 2, my = (py + branch.y) / 2;
+            const cx = mx + (-dy / len) * (len * 0.06);
+            const cy = my + (dx / len) * (len * 0.06);
+            return (
+              <path key={`dept-line-${branch.category}`}
+                d={`M ${px} ${py} Q ${cx} ${cy} ${branch.x} ${branch.y}`}
+                fill="none"
+                stroke="#E5E7EB"
+                strokeWidth={1}
+                strokeLinecap="round" />
             );
           })}
 
-          {/* ── L3→L3/L4: Department → Sub-folders & Client nodes — subtle gray ── */}
+          {/* ── L3→L4: Department → Client Pills ── */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!expandedBranches.has(branch.category)) return null;
             const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN);
-            const subOpacity = isSpotlit(branch.category) ? 0.45 : 0.08;
-            const clientOpacity = isSpotlit(branch.category) ? 0.35 : 0.06;
             return (
               <g key={`lines-${branch.category}`}>
                 {branch.subFolderPositions?.map((sub) => (
-                  zoom < 0.6 ? (
-                    <line key={`sub-line-${sub.key}`}
-                      x1={branch.x} y1={branch.y} x2={sub.x} y2={sub.y}
-                      stroke="#B0BEC5" strokeWidth={1} strokeDasharray="3 2" strokeOpacity={subOpacity} />
-                  ) : (
-                    <motion.path
-                      key={`sub-line-${sub.key}`}
-                      d={`M ${branch.x} ${branch.y} L ${sub.x} ${sub.y}`}
-                      stroke="#B0BEC5" strokeWidth={1} strokeDasharray="3 2" fill="none" strokeOpacity={subOpacity}
-                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.4, delay: 0.3, ease: 'easeInOut' }}
-                    />
-                  )
+                  <path key={`sub-line-${sub.key}`}
+                    d={`M ${branch.x} ${branch.y} L ${sub.x} ${sub.y}`}
+                    fill="none" stroke="#E5E7EB" strokeWidth={1} strokeLinecap="round" />
                 ))}
                 {visibleClients.map((client) => {
-                  const startX = client._subFolderX || branch.x;
-                  const startY = client._subFolderY || branch.y;
-                  return zoom < 0.6 ? (
-                    <line key={`line-${client.name}`}
-                      x1={startX} y1={startY} x2={client.x} y2={client.y}
-                      stroke="#CFD8DC" strokeWidth={1} strokeOpacity={clientOpacity} />
-                  ) : (
-                    <motion.path
-                      key={`line-${client.name}`}
-                      d={`M ${startX} ${startY} L ${client.x} ${client.y}`}
-                      stroke="#CFD8DC" strokeWidth={1} fill="none" strokeOpacity={clientOpacity}
-                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.5, delay: 0.35, ease: 'easeInOut' }}
-                    />
+                  const sx = client._subFolderX || branch.x;
+                  const sy = client._subFolderY || branch.y;
+                  const dx = client.x - sx, dy = client.y - sy;
+                  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                  const mx = (sx + client.x) / 2, my = (sy + client.y) / 2;
+                  const cx = mx + (-dy / len) * (len * 0.05);
+                  const cy = my + (dx / len) * (len * 0.05);
+                  return (
+                    <path key={`line-${client.name}`}
+                      d={`M ${sx} ${sy} Q ${cx} ${cy} ${client.x} ${client.y}`}
+                      fill="none" stroke="#E5E7EB" strokeWidth={0.8} strokeLinecap="round" />
                   );
                 })}
               </g>
@@ -1579,14 +1365,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {/* ── Center Node: "היום שלי" — draggable, today-only ── */}
         <motion.div
           data-node-draggable
-          className="absolute z-20 flex flex-col items-center justify-center rounded-full text-white shadow-xl select-none"
+          className="absolute flex flex-col items-center justify-center rounded-full text-white select-none"
           style={{
             width: layout.centerR * 2,
             height: layout.centerR * 2,
             left: centerPos.x - layout.centerR,
             top: centerPos.y - layout.centerR,
-            background: 'linear-gradient(135deg, #00838F, #004D40)',
-            boxShadow: '0 4px 20px rgba(0,131,143,0.4), 0 2px 8px rgba(0,0,0,0.15)',
+            zIndex: 10,
+            background: 'linear-gradient(135deg, #1E3A5F, #0F2744)',
+            boxShadow: '0 8px 24px rgba(15,39,68,0.25), 0 2px 8px rgba(0,0,0,0.08)',
             cursor: draggingNode.current?.key === 'center-node' ? 'grabbing' : 'grab',
           }}
           initial={{ scale: 0 }}
@@ -1618,9 +1405,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           <motion.div
             key={`meta-${mf.name}`}
             data-node-draggable
-            className="absolute z-[15] select-none touch-none"
+            className="absolute z-10 select-none touch-none"
             style={{
               left: mf.x,
+              filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))',
               top: mf.y,
               transform: 'translate(-50%, -50%)',
               cursor: 'pointer',
@@ -1698,10 +1486,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           <motion.div
             key={`metasub-${sf.metaFolderName}-${sf.key}`}
             data-node-draggable
-            className="absolute z-[12] select-none touch-none"
+            className="absolute z-10 select-none touch-none"
             style={{
               left: sf.x,
               top: sf.y,
+              filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))',
               transform: 'translate(-50%, -50%)',
               cursor: 'grab',
             }}
