@@ -726,8 +726,7 @@
     "service_types": [
       "payroll",
       "bookkeeping",
-      "vat_reporting",
-      "tax_advances"
+      "vat_reporting"
     ],
     "extra_services": "דיווח למתפעל, מס\"ב סוציאליות, מס\"ב עובדים, מס\"ב רשויות, מס\"ב ספקים",
     "tax_info": {
@@ -743,7 +742,7 @@
     },
     "reporting_info": {
       "vat_reporting_frequency": "monthly",
-      "tax_advances_frequency": "monthly",
+      "tax_advances_frequency": "not_applicable",
       "deductions_frequency": "monthly",
       "social_security_frequency": "monthly",
       "payroll_frequency": "monthly"
@@ -1328,7 +1327,6 @@
     "status": "active",
     "entity_number": "514821768",
     "service_types": [
-      "payroll",
       "bookkeeping",
       "vat_reporting"
     ],
