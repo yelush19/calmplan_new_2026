@@ -34,16 +34,17 @@ import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 
-// P1 Payroll extras: masav, payslips, pensions/operator/taml
+// P1 Payroll extras: masav, payslips, pensions
 const P1_PAYROLL_EXTRAS = [
   'masav_social', 'masav_employees', 'masav_authorities',
   'payslip_sending', 'authorities_payment', 'reserve_claims',
-  'social_benefits', 'operator_reporting', 'taml_reporting',
+  'social_benefits',
 ];
 
-// P2 Bookkeeping extras: consulting, supplier MASAV, etc.
+// P2 Bookkeeping extras: supplier MASAV, operator/taml, consulting
+// Must match the columns in ClientsDashboard P2 additional services
 const P2_BOOKKEEPING_EXTRAS = [
-  'masav_suppliers', 'consulting', 'bookkeeping',
+  'masav_suppliers', 'operator_reporting', 'taml_reporting', 'consulting', 'bookkeeping',
 ];
 
 function getServicesForScope(scope) {
@@ -64,8 +65,8 @@ const SCOPE_CONFIG = {
     emptyTitle: 'אין שירותי שכר נוספים לחודש הנבחר',
   },
   p2: {
-    title: 'הנה"ח - שירותים נוספים',
-    subtitle: 'מס"ב ספקים, ייעוץ, הנהלת חשבונות',
+    title: 'P2 | שירותים נוספים',
+    subtitle: 'מס"ב ספקים, דיווח מתפעל/טמל, ייעוץ, הנהלת חשבונות',
     gradientFrom: 'from-[#00838F]',
     gradientTo: 'to-[#006064]',
     backHref: 'ClientsDashboard',

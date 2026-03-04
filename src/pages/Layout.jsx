@@ -11,7 +11,7 @@ import {
   ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote,
   ChevronLeft, ChevronRight, Plus, Hourglass, Maximize2, Star,
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
-  CalendarPlus, LayoutGrid
+  CalendarPlus, LayoutGrid, TrendingUp
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -77,6 +77,7 @@ const getSidebarSections = () => ({
     ]
   },
   // ── P2 | הנהלת חשבונות ──
+  // Value chain: ייצור → דיווחי מיסים → התאמות → תוצרים
   p2_bookkeeping: {
     title: "P2 | הנהלת חשבונות",
     icon: FileBarChart,
@@ -84,9 +85,9 @@ const getSidebarSections = () => ({
       { name: "ריכוז דיווחי מיסים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
       { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
       { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
-      { name: "תוצרים (רוה\"ס)", href: createPageUrl("PeriodicSummaryReports"), icon: FileText },
-      { name: "הנה\"ח - שירותים נוספים", href: createPageUrl("BookkeepingExtrasDashboard"), icon: LayoutGrid },
+      { name: "תוצרים (רוה\"ס)", href: createPageUrl("FinancialResultsDashboard"), icon: TrendingUp },
       { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
+      { name: "שירותים נוספים", href: createPageUrl("BookkeepingExtrasDashboard"), icon: LayoutGrid },
     ]
   },
   // ── P3 | ניהול משרד ──
