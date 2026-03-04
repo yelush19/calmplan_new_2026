@@ -97,6 +97,8 @@ import ClientContracts from "./ClientContracts";
 
 import BatchSetup from "./BatchSetup";
 
+import FinancialResultsDashboard from "./FinancialResultsDashboard";
+
 import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -194,6 +196,8 @@ const PAGES = {
     ClientContracts: ClientContracts,
 
     BatchSetup: BatchSetup,
+
+    FinancialResultsDashboard: FinancialResultsDashboard,
 
 }
 
@@ -319,6 +323,8 @@ function PagesContent() {
                 <Route path="/ClientContracts" element={<ClientContracts />} />
 
                 <Route path="/BatchSetup" element={<BatchSetup />} />
+
+                <Route path="/FinancialResultsDashboard" element={<FinancialResultsDashboard />} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">
