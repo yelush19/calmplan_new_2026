@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cloud, CloudOff, AlertTriangle, Loader2, CheckCircle2, X } from 'lucide-react';
+import { Cloud, CloudOff, AlertTriangle, Loader2, CheckCircle2, X, HardDrive } from 'lucide-react';
 
 const STATUS_CONFIG = {
   ok: {
@@ -7,42 +7,56 @@ const STATUS_CONFIG = {
     bgClass: 'bg-green-500',
     pulseClass: '',
     tooltipBg: 'bg-green-50 border-green-200 text-green-800',
+    label: 'גיבוי אוטומטי פעיל',
+  },
+  local_only: {
+    icon: HardDrive,
+    bgClass: 'bg-teal-500',
+    pulseClass: '',
+    tooltipBg: 'bg-teal-50 border-teal-200 text-teal-800',
+    label: 'גיבוי מקומי פעיל',
   },
   checking: {
     icon: Loader2,
     bgClass: 'bg-blue-500',
     pulseClass: 'animate-spin',
     tooltipBg: 'bg-blue-50 border-blue-200 text-blue-800',
+    label: 'בודק...',
   },
   backing_up: {
     icon: Loader2,
     bgClass: 'bg-blue-500 animate-pulse',
     pulseClass: 'animate-spin',
     tooltipBg: 'bg-blue-50 border-blue-200 text-blue-800',
+    label: 'מגבה עכשיו...',
   },
   warning: {
     icon: AlertTriangle,
     bgClass: 'bg-amber-500 animate-pulse',
     pulseClass: '',
     tooltipBg: 'bg-amber-50 border-amber-200 text-amber-800',
+    label: 'שגיאות בגיבוי',
   },
   overdue: {
     icon: AlertTriangle,
     bgClass: 'bg-amber-500 animate-pulse',
     pulseClass: '',
     tooltipBg: 'bg-amber-50 border-amber-200 text-amber-800',
+    label: 'גיבוי באיחור',
   },
   error: {
     icon: CloudOff,
     bgClass: 'bg-amber-500 animate-pulse',
     pulseClass: '',
     tooltipBg: 'bg-amber-50 border-amber-200 text-amber-800',
+    label: 'שגיאת גיבוי',
   },
   disabled: {
     icon: CloudOff,
     bgClass: 'bg-gray-400',
     pulseClass: '',
     tooltipBg: 'bg-gray-50 border-gray-200 text-gray-600',
+    label: 'גיבוי כבוי',
   },
 };
 
@@ -63,12 +77,18 @@ export default function BackupHealthIndicator({ health }) {
       })
     : 'לא ידוע';
 
+  const nextBackupDisplay = health.nextBackupMinutes != null
+    ? health.nextBackupMinutes === 0
+      ? 'עכשיו'
+      : `בעוד ${health.nextBackupMinutes} דקות`
+    : null;
+
   return (
     <div className="relative">
       <button
         onClick={() => setShowTooltip(!showTooltip)}
         className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${config.bgClass} text-white shadow-sm hover:shadow-md`}
-        title="מצב גיבוי"
+        title={config.label}
       >
         <Icon className={`w-4 h-4 ${config.pulseClass}`} />
       </button>
@@ -76,11 +96,11 @@ export default function BackupHealthIndicator({ health }) {
       {showTooltip && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowTooltip(false)} />
-          <div className={`absolute top-10 left-0 z-50 w-56 p-3 rounded-lg border shadow-lg ${config.tooltipBg}`} style={{ direction: 'rtl' }}>
+          <div className={`absolute top-10 left-0 z-50 w-64 p-3 rounded-lg border shadow-lg ${config.tooltipBg}`} style={{ direction: 'rtl' }}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
                 <Cloud className="w-4 h-4" />
-                <span className="font-bold text-xs">מצב גיבוי</span>
+                <span className="font-bold text-xs">{config.label}</span>
               </div>
               <button onClick={() => setShowTooltip(false)} className="p-0.5 rounded hover:bg-black/10">
                 <X className="w-3 h-3" />
@@ -88,9 +108,12 @@ export default function BackupHealthIndicator({ health }) {
             </div>
             <p className="text-xs font-medium">{health.message}</p>
             {health.lastBackup && (
-              <p className="text-[10px] mt-1 opacity-75">גיבוי אחרון: {lastBackupDisplay}</p>
+              <p className="text-[10px] mt-1.5 opacity-75">גיבוי אחרון: {lastBackupDisplay}</p>
             )}
-            <p className="text-[10px] mt-1 opacity-60">בדיקה כל 30 דקות, גיבוי כל שעה</p>
+            {nextBackupDisplay && (
+              <p className="text-[10px] mt-0.5 opacity-75">גיבוי הבא: {nextBackupDisplay}</p>
+            )}
+            <p className="text-[10px] mt-1.5 opacity-60">בדיקה כל 10 דקות, גיבוי כל שעה</p>
           </div>
         </>
       )}

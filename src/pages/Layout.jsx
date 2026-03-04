@@ -718,49 +718,7 @@ function LayoutInner({ children }) {
               <div className="w-full flex-1 flex flex-col min-h-0">
                 <TimeAwareness />
 
-                {/* Admin Mode: Prominent Import Backup Banner */}
-                {workMode === 'admin' && (
-                  <div className="mb-6">
-                    {importStatus && (
-                      <div className={`mb-4 p-4 rounded-lg flex items-center gap-3 ${
-                        importStatus.type === 'success'
-                          ? 'bg-green-50 border border-green-200 text-green-800'
-                          : 'bg-amber-50 border border-amber-200 text-amber-800'
-                      }`}>
-                        {importStatus.type === 'success'
-                          ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                          : <AlertTriangle className="w-5 h-5 flex-shrink-0" />}
-                        <span className="font-medium">{importStatus.message}</span>
-                        <button onClick={() => setImportStatus(null)} className="mr-auto text-sm underline opacity-60 hover:opacity-100">
-                          סגור
-                        </button>
-                      </div>
-                    )}
-                    <Card className="border-2 border-dashed border-orange-300 bg-gradient-to-l from-orange-50 to-amber-50 hover:shadow-lg transition-shadow cursor-pointer"
-                          onClick={() => importFileRef.current?.click()}>
-                      <CardContent className="p-5 flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
-                          <Upload className="w-7 h-7 text-orange-600" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-foreground">ייבוא גיבוי JSON</h3>
-                          <p className="text-sm text-muted-foreground">לחצי כאן לבחור קובץ גיבוי (.json) ולשחזר את כל הנתונים</p>
-                        </div>
-                        <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6">
-                          <Upload className="w-4 h-4 ml-2" />
-                          בחר קובץ
-                        </Button>
-                        <input
-                          ref={importFileRef}
-                          type="file"
-                          accept=".json"
-                          className="hidden"
-                          onChange={handleImportJsonBackup}
-                        />
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
+                {/* Backup import moved to BackupManager page exclusively */}
 
                 <div className="flex-1 min-h-0">
                   {children}
