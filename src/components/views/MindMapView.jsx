@@ -61,22 +61,22 @@ const NODE_COLOR_MAP = {
 // Only 3 task-generating services: שכר, מע"מ, מקדמות מס
 const META_FOLDERS = {
   'P1 חשבות שכר': {
-    icon: '👥', color: '#0277BD', label: 'P1 Payroll',
+    icon: '👥', color: '#0277BD', label: 'P1 | חשבות שכר',
     departments: ['שכר'],
     complexitySubFolders: true,
   },
   'P2 הנהלת חשבונות': {
-    icon: '📊', color: '#00838F', label: 'P2 Bookkeeping',
+    icon: '📊', color: '#00838F', label: 'P2 | הנהלת חשבונות',
     departments: ['מע"מ', 'מקדמות', 'התאמות'],
     complexitySubFolders: true,
   },
   'P3 ניהול משרד': {
-    icon: '📁', color: '#546E7A', label: 'P3 Office',
+    icon: '📁', color: '#546E7A', label: 'P3 | ניהול משרד',
     departments: ['אדמיניסטרציה', 'אחר/טיוטות'],
     forceNano: true,
   },
   'P4 בית': {
-    icon: '🏠', color: '#6D4C41', label: 'P4 Home',
+    icon: '🏠', color: '#6D4C41', label: 'P4 | בית',
     departments: ['בית'],
     forceNano: true,
   },
@@ -84,21 +84,21 @@ const META_FOLDERS = {
 
 // Department folder nodes — only real departments (no ghost SS/Deductions branches)
 const BRANCH_CONFIG = {
-  'שכר':              { color: '#0277BD', icon: '👥', label: 'Payroll' },
-  'מע"מ':             { color: '#00838F', icon: '📊', label: 'VAT' },
-  'מקדמות':           { color: '#00838F', icon: '💰', label: 'Advances' },
-  'התאמות':           { color: '#00695C', icon: '🔄', label: 'Reconcile' },
-  'אדמיניסטרציה':     { color: '#546E7A', icon: '📁', label: 'Admin' },
-  'בית':              { color: '#6D4C41', icon: '🏠', label: 'Home' },
-  'אחר/טיוטות':       { color: '#78909C', icon: '📝', label: 'Others/Drafts' },
+  'שכר':              { color: '#0277BD', icon: '👥', label: 'שכר' },
+  'מע"מ':             { color: '#00838F', icon: '📊', label: 'מע"מ' },
+  'מקדמות':           { color: '#00838F', icon: '💰', label: 'מקדמות מס' },
+  'התאמות':           { color: '#00695C', icon: '🔄', label: 'התאמות חשבונות' },
+  'אדמיניסטרציה':     { color: '#546E7A', icon: '📁', label: 'אדמיניסטרציה' },
+  'בית':              { color: '#6D4C41', icon: '🏠', label: 'בית' },
+  'אחר/טיוטות':       { color: '#78909C', icon: '📝', label: 'אחר/טיוטות' },
 };
 
 // Complexity tier labels for sub-grouping inside Payroll / VAT
 const COMPLEXITY_SUB_LABELS = {
-  0: { key: 'ננו', icon: '⚡', label: 'Nano' },
-  1: { key: 'פשוט', icon: '📄', label: 'Simple' },
-  2: { key: 'בינוני', icon: '📦', label: 'Medium' },
-  3: { key: 'מורכב', icon: '🏢', label: 'Large' },
+  0: { key: 'ננו', icon: '⚡', label: 'ננו' },
+  1: { key: 'פשוט', icon: '📄', label: 'פשוט' },
+  2: { key: 'בינוני', icon: '📦', label: 'בינוני' },
+  3: { key: 'מורכב', icon: '🏢', label: 'מורכב' },
 };
 
 // Map ALL task categories to P1-P4 department keys
