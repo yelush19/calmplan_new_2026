@@ -165,15 +165,15 @@ export default function AdminTasksDashboardPage() {
   }, [filteredTasks, clientByName]);
 
   const stats = useMemo(() => {
-    const relevant = filteredTasks.filter(t => t.status !== 'not_relevant');
+    const relevant = filteredTasks;
     const total = relevant.length;
-    const completed = relevant.filter(t => t.status === 'completed').length;
+    const completed = relevant.filter(t => t.status === 'production_completed').length;
     return {
       total,
       completed,
       pct: total > 0 ? Math.round((completed / total) * 100) : 0,
       pending: relevant.filter(t => t.status === 'not_started').length,
-      inProgress: relevant.filter(t => !['not_started', 'completed', 'not_relevant'].includes(t.status)).length,
+      inProgress: relevant.filter(t => !['not_started', 'production_completed'].includes(t.status)).length,
     };
   }, [filteredTasks]);
 
@@ -184,8 +184,8 @@ export default function AdminTasksDashboardPage() {
       const updatedTask = { ...task, process_steps: updatedSteps };
       const allDone = areAllStepsDone(updatedTask);
       const updatePayload = { process_steps: updatedSteps };
-      if (allDone && task.status !== 'completed') {
-        updatePayload.status = 'completed';
+      if (allDone && task.status !== 'production_completed') {
+        updatePayload.status = 'production_completed';
       }
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
@@ -205,9 +205,9 @@ export default function AdminTasksDashboardPage() {
   const handleStatusChange = useCallback(async (task, newStatus) => {
     try {
       const updatePayload = { status: newStatus };
-      if (newStatus === 'completed') {
+      if (newStatus === 'production_completed') {
         updatePayload.process_steps = markAllStepsDone(task);
-      } else if (task.status === 'completed' && newStatus === 'not_started') {
+      } else if (task.status === 'production_completed' && newStatus === 'not_started') {
         updatePayload.process_steps = markAllStepsUndone(task);
       }
       await Task.update(task.id, updatePayload);

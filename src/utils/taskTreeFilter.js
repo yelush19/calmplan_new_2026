@@ -89,7 +89,7 @@ export function filterActivePeriodTasks(tasks) {
       // In current or previous month → include
       if (monthPrefix === currMonthPrefix || monthPrefix === prevMonthPrefix) return true;
       // Completed tasks outside active window → exclude
-      if (task.status === 'completed' || task.status === 'not_relevant') return false;
+      if (task.status === 'production_completed') return false;
       // Active tasks with future due dates → include if within 60 days
       const taskDate = new Date(dd);
       const daysDiff = (taskDate - now) / (1000 * 60 * 60 * 24);
@@ -97,7 +97,7 @@ export function filterActivePeriodTasks(tasks) {
     }
 
     // No due date: include if active (not completed/irrelevant)
-    return task.status !== 'completed' && task.status !== 'not_relevant';
+    return task.status !== 'production_completed';
   });
 }
 

@@ -29,21 +29,13 @@ const ZERO_PANIC = {
   indigo:  '#3949AB',  // Ready for Reporting
 };
 
+// 5 Golden Statuses
 const STATUS_TO_COLOR = {
-  production_completed:            '#0288D1',             // הושלם ייצור - sky blue
-  completed:                       ZERO_PANIC.green,      // הושלם
-  in_progress:                     ZERO_PANIC.blue,       // בעבודה
-  not_started:                     ZERO_PANIC.gray,       // טרם התחיל
-  remaining_completions:           '#00ACC1',             // נותרו השלמות - cyan
-  postponed:                       '#78909C',             // נדחה - blue-gray
-  waiting_for_approval:            '#AB47BC',             // לבדיקה - purple
-  waiting_for_materials:           ZERO_PANIC.amber,      // ממתין לחומרים
-  issue:                           '#E91E63',             // דורש טיפול - pink (attention!)
-  ready_for_reporting:             ZERO_PANIC.indigo,     // מוכן לדיווח
-  reported_waiting_for_payment:    '#FBC02D',             // ממתין לתשלום - yellow
-  waiting_on_client:               '#F59E0B',             // ממתין ללקוח - amber
-  pending_external:                '#1565C0',             // מחכה לצד ג' - deep blue
-  not_relevant:                    '#B0BEC5',             // לא רלוונטי - light gray
+  waiting_for_materials:  ZERO_PANIC.amber,    // ממתין לחומרים
+  not_started:            ZERO_PANIC.gray,     // לבצע
+  sent_for_review:        '#AB47BC',           // הועבר לעיון - purple
+  needs_corrections:      '#F97316',           // לבצע תיקונים - orange
+  production_completed:   ZERO_PANIC.green,    // הושלם ייצור - bright green!
 };
 
 // Cascade-aware color overrides for client nodes
@@ -171,7 +163,7 @@ function getNodeColor(task) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  if (task.status === 'completed') return ZERO_PANIC.green;
+  if (task.status === 'production_completed') return ZERO_PANIC.green;
 
   // Overdue check
   if (task.due_date) {
@@ -201,8 +193,8 @@ function getClientAggregateState(clientTasks) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const active = clientTasks.filter(t => t.status !== 'not_relevant');
-  const completed = active.filter(t => t.status === 'completed').length;
+  const active = clientTasks.filter(t => t.status !== 'production_completed');
+  const completed = active.filter(t => t.status === 'production_completed').length;
   const total = active.length;
   const completionRatio = total > 0 ? completed / total : 0;
 
@@ -214,7 +206,7 @@ function getClientAggregateState(clientTasks) {
   // Priority: overdue > due today > pending_external > ready_for_reporting > active
   // statusRing: higher = closer to center (ADHD Focus)
   const hasOverdue = clientTasks.some(t => {
-    if (t.status === 'completed' || t.status === 'not_relevant') return false;
+    if (t.status === 'production_completed') return false;
     if (!t.due_date) return false;
     const due = new Date(t.due_date);
     due.setHours(23, 59, 59, 999);
@@ -223,7 +215,7 @@ function getClientAggregateState(clientTasks) {
   if (hasOverdue) return { color: ZERO_PANIC.purple, shouldPulse: true, completionRatio, statusRing: 4 };
 
   const hasDueToday = clientTasks.some(t => {
-    if (t.status === 'completed' || t.status === 'not_relevant') return false;
+    if (t.status === 'production_completed') return false;
     if (!t.due_date) return false;
     const dueDay = new Date(t.due_date);
     dueDay.setHours(0, 0, 0, 0);
@@ -240,7 +232,7 @@ function getClientAggregateState(clientTasks) {
   if (hasReadyForReporting) return { color: ZERO_PANIC.amber, shouldPulse: false, completionRatio, isFilingReady: true, statusRing: 3 };
 
   const hasActive = clientTasks.some(t =>
-    t.status !== 'completed' && t.status !== 'not_relevant'
+    t.status !== 'production_completed'
   );
   if (hasActive) return { color: ZERO_PANIC.blue, shouldPulse: false, completionRatio, statusRing: 2 };
 
@@ -485,7 +477,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const currentMonthPrefix = format(today, 'yyyy-MM'); // e.g. "2026-02"
     const catClientMap = {};
     const activeTasks = tasks.filter(t => {
-      if (t.status === 'not_relevant') return false;
+      // No status filtering — all 5 golden statuses are valid
       // MONTH FILTER: Only show tasks WITH a due_date in the current month
       // Tasks without due_date are unscheduled — they do NOT belong on the MindMap
       if (!t.due_date || !t.due_date.startsWith(currentMonthPrefix)) return false;
@@ -531,7 +523,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         // Display name: nickname || full name
         const displayName = (client?.nickname || name || '').trim();
         // Top active task for pill display
-        const activeTasks = clientTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
+        const activeTasks = clientTasks.filter(t => t.status !== 'production_completed');
         const topTask = activeTasks[0] || null;
         // Check for waiting_on_client status
         const hasWaitingOnClient = clientTasks.some(t => t.status === 'waiting_on_client');
@@ -548,9 +540,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           topTask,
           hasWaitingOnClient,
           totalTasks: clientTasks.length,
-          completedTasks: clientTasks.filter(t => t.status === 'completed').length,
+          completedTasks: clientTasks.filter(t => t.status === 'production_completed').length,
           overdueTasks: clientTasks.filter(t => {
-            if (t.status === 'completed') return false;
+            if (t.status === 'production_completed') return false;
             if (!t.due_date) return false;
             const due = new Date(t.due_date);
             due.setHours(23, 59, 59, 999);
@@ -679,7 +671,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     // Today-only: tasks whose due_date is exactly today (for center node)
     const todayTasks = tasks.filter(t => {
-      if (t.status === 'completed' || t.status === 'not_relevant') return false;
+      if (t.status === 'production_completed') return false;
       return t.due_date === todayStr;
     });
 
@@ -2223,8 +2215,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   return dept === drawerDepartment;
                 })
               : allClientTasks;
-            const activeTasks = clientTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
-            const completedTasks = clientTasks.filter(t => t.status === 'completed' || t.status === 'not_relevant');
+            const activeTasks = clientTasks.filter(t => t.status !== 'production_completed');
+            const completedTasks = clientTasks.filter(t => t.status === 'production_completed');
 
             // Build parent→children map
             const childMap = {};
@@ -2260,7 +2252,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             })() : null;
 
             // ── Feature 4: Status cycling logic ──
-            const STATUS_CYCLE = ['not_started', 'in_progress', 'completed'];
+            const STATUS_CYCLE = ['not_started', 'sent_for_review', 'production_completed'];
             const cycleStatus = async (task, e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -2286,9 +2278,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const isHighlighted = highlightTaskId && String(highlightTaskId) === String(task.id);
 
               // Feature 4: Status dot color classes for cycling
-              const statusDotStyle = task.status === 'completed'
-                ? 'bg-emerald-500' : task.status === 'in_progress'
-                ? 'bg-sky-500' : 'bg-[#00acc1]';
+              const statusDotStyle = task.status === 'production_completed'
+                ? 'bg-emerald-500' : task.status === 'sent_for_review'
+                ? 'bg-purple-500' : task.status === 'needs_corrections'
+                ? 'bg-orange-500' : task.status === 'waiting_for_materials'
+                ? 'bg-amber-500' : 'bg-slate-400';
 
               return (
                 <React.Fragment key={task.id}>
@@ -2310,14 +2304,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         cycleStatus(task, e);
                       }}
                       className={`w-4 h-4 rounded-full shrink-0 border-2 transition-all hover:scale-125 flex items-center justify-center cursor-pointer ${
-                        task.status === 'completed' ? 'bg-emerald-500 border-emerald-500' :
-                        task.status === 'in_progress' ? 'bg-sky-500 border-sky-500' :
+                        task.status === 'production_completed' ? 'bg-emerald-500 border-emerald-500' :
+                        task.status === 'sent_for_review' ? 'bg-purple-500 border-purple-500' :
+                        task.status === 'needs_corrections' ? 'bg-orange-500 border-orange-500' :
+                        task.status === 'waiting_for_materials' ? 'bg-amber-500 border-amber-500' :
                         'bg-white border-slate-300 hover:border-sky-400'
                       }`}
                       title={`סטטוס: ${sts.text} — לחץ לשנות`}
                     >
-                      {task.status === 'completed' && <Check className="w-2.5 h-2.5 text-white" />}
-                      {task.status === 'in_progress' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      {task.status === 'production_completed' && <Check className="w-2.5 h-2.5 text-white" />}
+                      {task.status === 'sent_for_review' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </button>
 
                     <div className="flex-1 min-w-0">
@@ -2351,7 +2347,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
                   {/* Sub-task creation is now handled by QuickAddTaskDialog modal via drawerSubTaskParent */}
 
-                  {children.filter(c => c.status !== 'completed' && c.status !== 'not_relevant').map(child => renderTask(child, depth + 1))}
+                  {children.filter(c => c.status !== 'production_completed').map(child => renderTask(child, depth + 1))}
                 </React.Fragment>
               );
             };

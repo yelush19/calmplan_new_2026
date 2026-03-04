@@ -209,24 +209,24 @@ export function evaluateVatStatus(task, updatedSteps) {
   const reportPrep = updatedSteps?.report_prep?.done;
   const submission = updatedSteps?.submission?.done;
 
-  // All done = completed
+  // All done = production completed
   if (submission) {
-    return { status: 'completed' };
+    return { status: 'production_completed' };
   }
 
-  // Report prep done = ready for reporting (filing)
+  // Report prep done = sent for review
   if (reportPrep) {
-    return { status: 'ready_for_reporting' };
+    return { status: 'sent_for_review' };
   }
 
-  // Both income + expense done = ready for production
+  // Both income + expense done = sent for review
   if (incomeInput && expenseInput) {
-    return { status: 'ready_for_reporting' };
+    return { status: 'sent_for_review' };
   }
 
-  // Only one done = in progress
+  // Only one done = still open
   if (incomeInput || expenseInput) {
-    return { status: 'in_progress' };
+    return { status: 'not_started' };
   }
 
   return null;
@@ -255,11 +255,11 @@ export function evaluateTaxAdvancesStatus(task, updatedSteps, siblingTasks) {
   const vatIncomesDone = vatTask?.process_steps?.income_input?.done;
 
   if (vatIncomesDone && updatedSteps?.calculation?.done) {
-    return { status: 'ready_for_reporting' };
+    return { status: 'sent_for_review' };
   }
 
   if (updatedSteps?.submission?.done) {
-    return { status: 'completed' };
+    return { status: 'production_completed' };
   }
 
   return null;
@@ -355,15 +355,15 @@ export function evaluatePayrollStatus(task, updatedSteps) {
     return result;
   }
 
-  // Proofreading done = in review / waiting for approval
+  // Proofreading done = sent for review
   if (lastDoneIndex >= 2) { // proofreading index = 2
-    result.status = 'waiting_for_approval';
+    result.status = 'sent_for_review';
     return result;
   }
 
-  // Some steps done = in progress
+  // Some steps done = still open task
   if (lastDoneIndex >= 0) {
-    result.status = 'in_progress';
+    result.status = 'not_started';
     return result;
   }
 
@@ -446,9 +446,9 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
     return result;
   }
 
-  // Some steps done = in progress
+  // Some steps done = still open
   if (doneCount > 0) {
-    return { status: 'in_progress' };
+    return { status: 'not_started' };
   }
 
   return null;
@@ -471,27 +471,26 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
 export function evaluateRelayStatus(task, updatedSteps) {
   if (!task?.category) return null;
 
-  // Reserve Duty: claim submitted → pending_external (waiting for funds)
+  // Reserve Duty: claim submitted → waiting for materials (external wait)
   if (EXTERNAL_AFTER_SUBMIT.has(task.category)) {
-    // New flow: claim_submit → pending_funds (blue) → follow_up (back to action)
     if (updatedSteps?.pending_funds?.done && updatedSteps?.follow_up?.done) {
-      return { status: 'completed' };
+      return { status: 'production_completed' };
     }
     if (updatedSteps?.pending_funds?.done || (updatedSteps?.claim_submit?.done && !updatedSteps?.follow_up?.done)) {
-      return { status: 'pending_external' };
+      return { status: 'waiting_for_materials' };
     }
     if (updatedSteps?.follow_up?.done) {
-      return { status: 'completed' };
+      return { status: 'production_completed' };
     }
   }
 
-  // Consultants: consultation done but summary not → pending_external
+  // Consultants: consultation done but summary not → waiting for materials
   if (CONSULTANT_CATEGORIES.has(task.category)) {
     if (updatedSteps?.consultation?.done && !updatedSteps?.summary?.done) {
-      return { status: 'pending_external' };
+      return { status: 'waiting_for_materials' };
     }
     if (updatedSteps?.summary?.done) {
-      return { status: 'completed' };
+      return { status: 'production_completed' };
     }
   }
 
@@ -547,24 +546,22 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = []) {
       break;
 
     default:
-      // Generic: all steps done = completed
+      // Generic: all steps done = production_completed
       if (service.steps.length > 0) {
         const allDone = service.steps.every(s => updatedSteps?.[s.key]?.done);
         if (allDone) {
-          evaluation = { status: 'completed' };
-        } else if (service.steps.some(s => updatedSteps?.[s.key]?.done)) {
-          evaluation = { status: 'in_progress' };
+          evaluation = { status: 'production_completed' };
         }
       }
       break;
   }
 
   if (evaluation) {
-    // Don't downgrade from completed or production_completed
-    const isTerminal = task.status === 'completed' || task.status === 'production_completed';
-    const evalTerminal = evaluation.status === 'completed' || evaluation.status === 'production_completed';
+    // Don't downgrade from production_completed (the terminal trigger status)
+    const isTerminal = task.status === 'production_completed';
+    const evalTerminal = evaluation.status === 'production_completed';
     if (isTerminal && !evalTerminal) {
-      // Allow downgrade only if user explicitly changes
+      // Already at terminal — don't regress
     } else {
       result.statusUpdate = { status: evaluation.status };
     }
@@ -598,7 +595,7 @@ export function computeInsights(tasks, clients = []) {
   // Group tasks by service key
   const byService = {};
   for (const task of tasks) {
-    if (task.status === 'not_relevant' || task.status === 'completed') continue;
+    if (task.status === 'production_completed') continue;
     const service = getServiceForTask(task);
     const key = service?.key || 'other';
     if (!byService[key]) byService[key] = [];
@@ -644,7 +641,7 @@ export function computeInsights(tasks, clients = []) {
   // --- Payroll Insights ---
   const payrollTasks = byService['payroll'] || [];
   const inRevision = payrollTasks.filter(t =>
-    t.status === 'waiting_for_approval' || t.status === 'remaining_completions'
+    t.status === 'sent_for_review' || t.status === 'needs_corrections'
   );
   if (inRevision.length > 0) {
     insights.push({
@@ -679,7 +676,7 @@ export function computeInsights(tasks, clients = []) {
   for (const c of clients) { clientMap[c.name] = c; }
   const nanoPayroll = payrollTasks.filter(t => {
     const client = clientMap[t.client_name];
-    return client && getPayrollTier(client).key === 'nano' && t.status !== 'completed' && t.status !== 'production_completed';
+    return client && getPayrollTier(client).key === 'nano' && t.status !== 'production_completed';
   });
   if (nanoPayroll.length > 0) {
     insights.push({
@@ -694,32 +691,24 @@ export function computeInsights(tasks, clients = []) {
     });
   }
 
-  // --- Pending External Insights ---
-  const pendingExternal = tasks.filter(t => t.status === 'pending_external');
-  if (pendingExternal.length > 0) {
-    const overWeek = pendingExternal.filter(t => {
-      if (!t.updated_date) return false;
-      const updated = new Date(t.updated_date);
-      return (now - updated) / (1000 * 60 * 60 * 24) > 7;
-    });
-
+  // --- Waiting for Materials Insights ---
+  const waitingMaterials = tasks.filter(t => t.status === 'waiting_for_materials');
+  if (waitingMaterials.length > 0) {
     insights.push({
-      type: overWeek.length > 0 ? 'warning' : 'info',
+      type: 'info',
       category: 'external',
       icon: 'Clock',
-      color: 'blue',
-      title: `${pendingExternal.length} משימות ממתינות לצד ג'`,
-      description: overWeek.length > 0
-        ? `${overWeek.length} מחכות מעל 7 ימים!`
-        : pendingExternal.map(t => t.client_name).join(', '),
-      count: pendingExternal.length,
-      priority: overWeek.length > 0 ? 1 : 3,
+      color: 'amber',
+      title: `${waitingMaterials.length} משימות ממתינות לחומרים`,
+      description: waitingMaterials.map(t => t.client_name).join(', '),
+      count: waitingMaterials.length,
+      priority: 3,
     });
   }
 
   // --- Overdue Insights ---
   const overdue = tasks.filter(t => {
-    if (t.status === 'completed' || t.status === 'not_relevant') return false;
+    if (t.status === 'production_completed') return false;
     if (!t.due_date) return false;
     return new Date(t.due_date) < now;
   });
@@ -738,10 +727,10 @@ export function computeInsights(tasks, clients = []) {
 
   // --- Completion Progress ---
   const totalActive = tasks.filter(t =>
-    t.status !== 'not_relevant' && t.context === 'work'
+    t.context === 'work'
   ).length;
   const totalDone = tasks.filter(t =>
-    t.status === 'completed' && t.context === 'work'
+    t.status === 'production_completed' && t.context === 'work'
   ).length;
   if (totalActive > 0) {
     const pct = Math.round((totalDone / totalActive) * 100);
@@ -781,16 +770,16 @@ export function computeClientNodeState(clientName, clientTasks) {
   }
 
   const activeTasks = clientTasks.filter(t =>
-    t.status !== 'not_relevant' && t.client_name === clientName
+    t.client_name === clientName
   );
   if (activeTasks.length === 0) {
     return { completionRatio: 1, nodeColor: 'emerald', shouldPulse: false, shouldShrink: true };
   }
 
-  const completed = activeTasks.filter(t => t.status === 'completed' || t.status === 'production_completed').length;
-  const pendingExt = activeTasks.filter(t => t.status === 'pending_external').length;
+  const completed = activeTasks.filter(t => t.status === 'production_completed').length;
+  const waitingMat = activeTasks.filter(t => t.status === 'waiting_for_materials').length;
   const overdue = activeTasks.filter(t => {
-    if (t.status === 'completed' || t.status === 'production_completed' || t.status === 'not_relevant') return false;
+    if (t.status === 'production_completed') return false;
     return t.due_date && new Date(t.due_date) < new Date();
   }).length;
 
@@ -808,8 +797,8 @@ export function computeClientNodeState(clientName, clientTasks) {
   if (ratio === 1) {
     nodeColor = 'emerald';
     shouldShrink = true;
-  } else if (pendingExt > 0 && overdue === 0) {
-    nodeColor = 'blue';
+  } else if (waitingMat > 0 && overdue === 0) {
+    nodeColor = 'amber';
   } else if (overdue > 0) {
     nodeColor = 'amber';
     shouldPulse = true;

@@ -21,7 +21,14 @@ import {
   getServiceForTask,
   getTaskProcessSteps,
   toggleStep,
+  ALL_SERVICES,
 } from '@/config/processTemplates';
+import {
+  PHASE_B_SERVICES,
+  PHASE_C_SERVICES,
+  P2_PHASE_B_SERVICES,
+  P2_PHASE_C_SERVICES,
+} from '@/engines/taskCascadeEngine';
 
 /**
  * Notify other components/pages that data has changed.
@@ -57,14 +64,23 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
       t.id !== task.id
     );
 
-    // Run cascade
-    const cascade = processTaskCascade(merged, steps, siblings);
+    // CRITICAL: Run cascade with the ORIGINAL task (pre-merge) so the
+    // "already production_completed" guard doesn't block when user directly
+    // sets status to production_completed via dropdown.
+    const cascadeTask = { ...task, process_steps: steps };
+    const cascade = processTaskCascade(cascadeTask, steps, siblings);
 
     // Apply status from cascade if the update didn't already set status
     const finalUpdates = { ...updates };
     if (cascade.statusUpdate && !updates.status) {
       finalUpdates.status = cascade.statusUpdate.status;
     }
+
+    // Direct status change to production_completed: force cascade creation
+    // even if processTaskCascade didn't produce autoCreateTasks
+    // (because the guard blocked it due to step-based logic not matching)
+    const isDirectProduction = updates.status === 'production_completed' &&
+      task.status !== 'production_completed';
 
     // Optimistic update local state
     setTasks(prev => prev.map(t =>
@@ -75,11 +91,65 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
     try {
       await Task.update(taskId, { ...task, ...finalUpdates });
 
-      // Auto-create triggered tasks
-      if (cascade.tasksToCreate?.length > 0) {
+      // Auto-create triggered tasks from cascade engine
+      let tasksToCreate = cascade.tasksToCreate || [];
+
+      // If direct production_completed and cascade didn't produce tasks,
+      // manually build Phase B+C tasks based on service type
+      if (isDirectProduction && tasksToCreate.length === 0) {
+        const service = getServiceForTask(task);
+        if (service?.key === 'payroll') {
+          const buildChild = (svc, phase, label) => ({
+            title: `${svc.title} - ${task.client_name}`,
+            client_name: task.client_name,
+            client_id: task.client_id,
+            category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
+            status: 'not_started',
+            branch: 'P1',
+            due_date: task.due_date || task.date,
+            report_month: task.report_month,
+            report_year: task.report_year,
+            context: 'work',
+            is_recurring: true,
+            workflow_phase: phase,
+            master_task_id: task.id,
+            triggered_by: task.id,
+            source: 'payroll_cascade',
+          });
+          tasksToCreate = [
+            ...PHASE_B_SERVICES.map(s => buildChild(s, 'phase_b', 'שלב ב\'')),
+            ...PHASE_C_SERVICES.map(s => buildChild(s, 'phase_c', 'שלב ג\'')),
+          ];
+        } else if (service?.key === 'bookkeeping') {
+          const existingCategories = new Set(siblings.map(t => t.category));
+          const buildChild = (svc, phase) => ({
+            title: `${svc.title} - ${task.client_name}`,
+            client_name: task.client_name,
+            client_id: task.client_id,
+            category: svc.createCategory || svc.title,
+            status: 'not_started',
+            branch: 'P2',
+            due_date: task.due_date || task.date,
+            report_month: task.report_month,
+            report_year: task.report_year,
+            context: 'work',
+            is_recurring: true,
+            workflow_phase: phase,
+            master_task_id: task.id,
+            triggered_by: task.id,
+            source: 'bookkeeping_cascade',
+          });
+          tasksToCreate = [
+            ...P2_PHASE_B_SERVICES.filter(s => !existingCategories.has(s.createCategory)).map(s => buildChild(s, 'phase_b')),
+            ...P2_PHASE_C_SERVICES.filter(s => !existingCategories.has(s.createCategory)).map(s => buildChild(s, 'phase_c')),
+          ];
+        }
+      }
+
+      if (tasksToCreate.length > 0) {
         const existingTitles = new Set(tasks.map(t => t.title));
 
-        for (const newTask of cascade.tasksToCreate) {
+        for (const newTask of tasksToCreate) {
           // Don't create duplicates
           if (existingTitles.has(newTask.title)) continue;
 

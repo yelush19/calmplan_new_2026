@@ -20,12 +20,12 @@ export default function QuickStats({ tasks, sessions, isLoading, activeFilter, o
     );
   }
 
-  const completedTasks = tasks.filter(task => task.status === 'completed').length;
+  const completedTasks = tasks.filter(task => task.status === 'production_completed').length;
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
   const overdueTasks = tasks.filter(task => {
-    if (task.status === 'completed' || task.status === 'not_relevant') return false;
+    if (task.status === 'production_completed' || task.status === 'not_relevant') return false;
     if (!task.due_date) return false;
     const d = parseISO(task.due_date);
     d.setHours(23, 59, 59, 999);
@@ -33,7 +33,7 @@ export default function QuickStats({ tasks, sessions, isLoading, activeFilter, o
   });
 
   const todayTasks = tasks.filter(task => {
-    if (task.status === 'completed' || task.status === 'not_relevant') return false;
+    if (task.status === 'production_completed' || task.status === 'not_relevant') return false;
     if (!task.due_date) return false;
     return isToday(parseISO(task.due_date));
   });
@@ -51,7 +51,7 @@ export default function QuickStats({ tasks, sessions, isLoading, activeFilter, o
     },
     {
       title: "סה\"כ פעילות",
-      value: tasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant').length,
+      value: tasks.filter(t => t.status !== 'production_completed').length,
       subtitle: `${tasks.length} משימות בסה"כ`,
       icon: Target,
       color: "text-sky-600",

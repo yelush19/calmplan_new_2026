@@ -18,11 +18,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { isBimonthlyOffMonth, STATUS_CONFIG } from '@/config/processTemplates';
+import { isBimonthlyOffMonth, STATUS_CONFIG, getServiceForTask, ALL_SERVICES, getTaskProcessSteps } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
-import { processTaskCascade } from '@/engines/taskCascadeEngine';
-import { getTaskProcessSteps } from '@/config/processTemplates';
+import { processTaskCascade, PHASE_B_SERVICES, PHASE_C_SERVICES, P2_PHASE_B_SERVICES, P2_PHASE_C_SERVICES } from '@/engines/taskCascadeEngine';
 
 // === Column Groups — P2 ONLY: Tax + Bookkeeping services ===
 // Payroll columns (שכר, ביט"ל, ניכויים) belong to P1 (PayrollDashboard).
@@ -259,12 +258,12 @@ export default function ClientsDashboardPage() {
       result = result.filter(client => {
         const data = clientDataMap[client.name] || {};
         const allTasks = Object.values(data).flat();
-        const relevant = allTasks.filter(t => t.status !== 'not_relevant');
+        const relevant = allTasks;
         const checks = {
-          has_issues: relevant.some(t => t.status === 'issue' || t.status === 'issues' || t.status === 'waiting_for_materials'),
-          all_done: relevant.length > 0 && relevant.every(t => t.status === 'completed'),
-          in_progress: relevant.some(t => t.status !== 'completed' && t.status !== 'not_started' && t.status !== 'remaining_completions'),
-          remaining_completions: relevant.some(t => t.status === 'remaining_completions'),
+          has_issues: relevant.some(t => t.status === 'needs_corrections' || t.status === 'waiting_for_materials'),
+          all_done: relevant.length > 0 && relevant.every(t => t.status === 'production_completed'),
+          in_progress: relevant.some(t => t.status === 'sent_for_review' || t.status === 'needs_corrections'),
+          remaining_completions: relevant.some(t => t.status === 'needs_corrections'),
           not_started: relevant.some(t => t.status === 'not_started') || relevant.length === 0,
         };
         return statusFilter.some(f => checks[f]);
@@ -282,11 +281,9 @@ export default function ClientsDashboardPage() {
         const items = data[col.key];
         if (items && items.length > 0) {
           const best = getCellStatus(client.name, col.key);
-          // Skip not_relevant tasks - they shouldn't count in progress
-          if (best?.status === 'not_relevant') return;
           total++;
-          if (best?.status === 'completed') completed++;
-          else if (best?.status === 'issue' || best?.status === 'issues' || best?.status === 'waiting_for_materials') issues++;
+          if (best?.status === 'production_completed') completed++;
+          else if (best?.status === 'needs_corrections' || best?.status === 'waiting_for_materials') issues++;
           else if (best?.status !== 'not_started') inProgress++;
         }
       });
@@ -311,9 +308,8 @@ export default function ClientsDashboardPage() {
       const items = clientDataMap[c.name]?.[colKey];
       if (items && items.length > 0) {
         const best = getCellStatus(c.name, colKey);
-        if (best?.status === 'not_relevant') return; // Skip not_relevant
         total++;
-        if (best?.status === 'completed') done++;
+        if (best?.status === 'production_completed') done++;
       }
     });
     return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
@@ -343,17 +339,71 @@ export default function ClientsDashboardPage() {
     try {
       if (popover.task) {
         const taskObj = popover.task;
-        const merged = { ...taskObj, status: newStatus };
-        const steps = getTaskProcessSteps(merged);
+        // Run cascade with ORIGINAL task so production_completed guard works correctly
+        const steps = getTaskProcessSteps(taskObj);
         const siblings = tasks.filter(t => t.client_name === taskObj.client_name && t.id !== taskObj.id);
-        const cascade = processTaskCascade(merged, steps, siblings);
+        const cascade = processTaskCascade(taskObj, steps, siblings);
         const finalStatus = cascade.statusUpdate?.status || newStatus;
         await Task.update(taskObj.id, { status: finalStatus });
+
         // Auto-create cascade child tasks (Phase B/C)
-        if (cascade.tasksToCreate?.length > 0) {
-          for (const childDef of cascade.tasksToCreate) {
-            await Task.create(childDef);
+        // This fires when status goes to production_completed
+        let tasksToCreate = cascade.tasksToCreate || [];
+
+        // Direct production_completed from dropdown: force create Phase B/C
+        if (newStatus === 'production_completed' && taskObj.status !== 'production_completed' && tasksToCreate.length === 0) {
+          const service = getServiceForTask(taskObj);
+          if (service?.key === 'payroll') {
+            const buildChild = (svc, phase) => ({
+              title: `${svc.title} - ${taskObj.client_name}`,
+              client_name: taskObj.client_name,
+              client_id: taskObj.client_id,
+              category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
+              status: 'not_started',
+              branch: 'P1',
+              due_date: taskObj.due_date,
+              report_month: taskObj.report_month,
+              context: 'work',
+              is_recurring: true,
+              workflow_phase: phase,
+              master_task_id: taskObj.id,
+              triggered_by: taskObj.id,
+              source: 'payroll_cascade',
+            });
+            tasksToCreate = [
+              ...PHASE_B_SERVICES.map(s => buildChild(s, 'phase_b')),
+              ...PHASE_C_SERVICES.map(s => buildChild(s, 'phase_c')),
+            ];
+          } else if (service?.key === 'bookkeeping') {
+            const existingCats = new Set(siblings.map(t => t.category));
+            const buildChild = (svc, phase) => ({
+              title: `${svc.title} - ${taskObj.client_name}`,
+              client_name: taskObj.client_name,
+              client_id: taskObj.client_id,
+              category: svc.createCategory || svc.title,
+              status: 'not_started',
+              branch: 'P2',
+              due_date: taskObj.due_date,
+              report_month: taskObj.report_month,
+              context: 'work',
+              is_recurring: true,
+              workflow_phase: phase,
+              master_task_id: taskObj.id,
+              triggered_by: taskObj.id,
+              source: 'bookkeeping_cascade',
+            });
+            tasksToCreate = [
+              ...P2_PHASE_B_SERVICES.filter(s => !existingCats.has(s.createCategory)).map(s => buildChild(s, 'phase_b')),
+              ...P2_PHASE_C_SERVICES.filter(s => !existingCats.has(s.createCategory)).map(s => buildChild(s, 'phase_c')),
+            ];
           }
+        }
+
+        // Create child tasks (with duplicate prevention)
+        const existingTitles = new Set(tasks.map(t => t.title));
+        for (const childDef of tasksToCreate) {
+          if (existingTitles.has(childDef.title)) continue;
+          await Task.create(childDef);
         }
         syncNotesWithTaskStatus(taskObj.id, finalStatus);
         // Notify other pages
@@ -424,7 +474,7 @@ export default function ClientsDashboardPage() {
 
             // Check bimonthly off-month
             const isOffMonth = isBimonthlyOffMonth(client, col.key, selectedMonth);
-            const taskStatus = isOffMonth ? 'not_relevant' : 'not_started';
+            const taskStatus = 'not_started';
 
             await Task.create({
               title: `${col.createTitle} - ${client.name} - ${monthLabel}`,
@@ -576,11 +626,10 @@ export default function ClientsDashboardPage() {
         </div>
         <MultiStatusFilter
           options={[
-            { value: 'has_issues', label: 'דורש טיפול' },
-            { value: 'in_progress', label: 'בעבודה' },
-            { value: 'remaining_completions', label: 'נותרו השלמות' },
-            { value: 'not_started', label: 'טרם התחיל' },
-            { value: 'all_done', label: 'הכל הושלם' },
+            { value: 'has_issues', label: 'לבצע תיקונים' },
+            { value: 'in_progress', label: 'הועבר לעיון' },
+            { value: 'not_started', label: 'לבצע' },
+            { value: 'all_done', label: 'הושלם ייצור' },
           ]}
           selected={statusFilter}
           onChange={setStatusFilter}
@@ -669,8 +718,8 @@ export default function ClientsDashboardPage() {
                   {filteredClients.map((client, index) => {
                     const data = clientDataMap[client.name] || {};
                     const allClientTasks = Object.values(data).flat();
-                    const relevantTasks = allClientTasks.filter(t => t.status !== 'not_relevant');
-                    const clientDone = relevantTasks.filter(t => t.status === 'completed').length;
+                    const relevantTasks = allClientTasks;
+                    const clientDone = relevantTasks.filter(t => t.status === 'production_completed').length;
                     const clientTotal = relevantTasks.length;
 
                     return (
@@ -714,7 +763,7 @@ export default function ClientsDashboardPage() {
                             if (!clientNeedsService(client, col, group)) {
                               return (
                                 <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
-                                  <div className={`${STATUS_CONFIG.not_relevant.bg} text-slate-400 rounded py-1.5 text-[10px] font-medium mx-0.5`}>
+                                  <div className={`${bg-gray-100} text-slate-400 rounded py-1.5 text-[10px] font-medium mx-0.5`}>
                                     לא רלוונטי
                                   </div>
                                 </td>
@@ -727,7 +776,7 @@ export default function ClientsDashboardPage() {
                               if (isBimonthlyOffMonth(client, col.key, selectedMonth)) {
                                 return (
                                   <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
-                                    <div className={`${STATUS_CONFIG.not_relevant.bg} text-slate-400 rounded py-1.5 text-xs font-bold mx-0.5`}>
+                                    <div className={`${bg-gray-100} text-slate-400 rounded py-1.5 text-xs font-bold mx-0.5`}>
                                       דו-חודשי
                                     </div>
                                   </td>
@@ -868,7 +917,7 @@ export default function ClientsDashboardPage() {
           const groupTasks = tasks.filter(t =>
             group.columns.some(col => col.categories.includes(t.category))
           );
-          const groupDone = groupTasks.filter(t => t.status === 'completed').length;
+          const groupDone = groupTasks.filter(t => t.status === 'production_completed').length;
           const groupPct = groupTasks.length > 0 ? Math.round((groupDone / groupTasks.length) * 100) : 0;
 
           return (

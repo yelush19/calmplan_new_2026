@@ -121,7 +121,7 @@ function WorkloadHeatmap({ dailyTasks, weekCategories }) {
             const taskCount = day.tasks.length;
             const heightPct = maxTasks > 0 ? (taskCount / maxTasks) * 100 : 0;
             const isOverloaded = taskCount > MAX_DAILY_TASKS;
-            const completedCount = day.tasks.filter(t => t.status === 'completed').length;
+            const completedCount = day.tasks.filter(t => t.status === 'production_completed').length;
             const completedPct = taskCount > 0 ? (completedCount / taskCount) * 100 : 0;
 
             // Category breakdown for this day
@@ -203,7 +203,7 @@ function CategoryWeekSummary({ weekTasks }) {
       const cat = getCategoryLabel(t.category);
       if (!counts[cat]) counts[cat] = { total: 0, completed: 0 };
       counts[cat].total++;
-      if (t.status === 'completed') counts[cat].completed++;
+      if (t.status === 'production_completed') counts[cat].completed++;
     });
     return Object.entries(counts).sort((a, b) => b[1].total - a[1].total);
   }, [weekTasks]);
@@ -272,8 +272,8 @@ export default function WeeklyPlanningDashboard() {
         const taskDate = task.due_date || task.created_date;
         if (!taskDate) return true;
         const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
-        if (task.status === 'completed' && daysSince > 14) return false;
-        if (task.status !== 'completed' && daysSince > 21) return false;
+        if (task.status === 'production_completed' && daysSince > 14) return false;
+        if (task.status !== 'production_completed' && daysSince > 21) return false;
         return true;
       });
       setTasks(filtered);
@@ -318,13 +318,13 @@ export default function WeeklyPlanningDashboard() {
     });
 
     const overdueTasks = filtered.filter(t => {
-      if (t.status === 'completed' || t.status === 'not_relevant') return false;
+      if (t.status === 'production_completed') return false;
       const d = t.due_date;
       return d && d < todayStr;
     });
 
     const unassignedTasks = filtered.filter(t => {
-      if (t.status === 'completed' || t.status === 'not_relevant') return false;
+      if (t.status === 'production_completed') return false;
       return !t.due_date;
     }).sort((a, b) => {
       const pa = PRIORITY_CONFIG[a.priority]?.order ?? 9;
@@ -360,7 +360,7 @@ export default function WeeklyPlanningDashboard() {
     weekTasks.forEach(t => catSet.add(getCategoryLabel(t.category)));
     const weekCategories = Array.from(catSet).sort();
 
-    const completed = weekTasks.filter(t => t.status === 'completed').length;
+    const completed = weekTasks.filter(t => t.status === 'production_completed').length;
     const total = weekTasks.length;
 
     return {
@@ -441,7 +441,7 @@ export default function WeeklyPlanningDashboard() {
   const handleStatusChange = useCallback(async (task, newStatus) => {
     try {
       const updateData = { ...task, status: newStatus };
-      if (newStatus === 'completed') updateData.completed_date = format(new Date(), 'yyyy-MM-dd');
+      if (newStatus === 'production_completed') updateData.completed_date = format(new Date(), 'yyyy-MM-dd');
       await Task.update(task.id, updateData);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updateData } : t));
       syncNotesWithTaskStatus(task.id, newStatus);
@@ -507,7 +507,7 @@ export default function WeeklyPlanningDashboard() {
     const allActiveTasks = [];
     futureDays.forEach(day => {
       day.tasks.forEach(t => {
-        if (t.status !== 'completed') allActiveTasks.push(t);
+        if (t.status !== 'production_completed') allActiveTasks.push(t);
       });
     });
 
@@ -571,7 +571,7 @@ export default function WeeklyPlanningDashboard() {
 
   const renderTaskRow = (task) => {
     const pri = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
-    const isCompleted = task.status === 'completed';
+    const isCompleted = task.status === 'production_completed';
     const catLabel = getCategoryLabel(task.category);
 
     return (
@@ -620,8 +620,8 @@ export default function WeeklyPlanningDashboard() {
   };
 
   const renderDayTasks = (dayTasks, dayIndex) => {
-    const activeTasks = dayTasks.filter(t => t.status !== 'completed');
-    const completedTasks = dayTasks.filter(t => t.status === 'completed');
+    const activeTasks = dayTasks.filter(t => t.status !== 'production_completed');
+    const completedTasks = dayTasks.filter(t => t.status === 'production_completed');
     const showCompleted = !!expandedCompletedDays[dayIndex];
 
     const renderGrouped = (taskList) => {
@@ -1018,7 +1018,7 @@ export default function WeeklyPlanningDashboard() {
           if (!day) return null;
           const taskCount = day.tasks.length;
           const isOverloaded = taskCount > MAX_DAILY_TASKS;
-          const completedCount = day.tasks.filter(t => t.status === 'completed').length;
+          const completedCount = day.tasks.filter(t => t.status === 'production_completed').length;
           const activeCount = taskCount - completedCount;
           const isDayCollapsed = !!collapsedDays[wd.dayIndex];
 

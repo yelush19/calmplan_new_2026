@@ -70,13 +70,11 @@ class ViewErrorBoundary extends React.Component {
   }
 }
 
-// Display order for status groups in list view
+// 5 Golden Statuses — display order
 const STATUS_GROUP_ORDER = [
-  'issue', 'waiting_for_materials', 'in_progress', 'remaining_completions', 'waiting_for_approval',
-  'not_started', 'ready_for_reporting', 'pending_external', 'waiting_on_client', 'postponed', 'reported_waiting_for_payment',
-  'completed', 'not_relevant',
+  'waiting_for_materials', 'not_started', 'sent_for_review', 'needs_corrections', 'production_completed',
 ];
-const DEFAULT_COLLAPSED_STATUSES = new Set(['completed', 'not_relevant']);
+const DEFAULT_COLLAPSED_STATUSES = new Set(['production_completed']);
 
 function getTaskContext(task) {
   if (task.context === 'work' || task.context === 'home') return task.context;
@@ -94,28 +92,33 @@ const priorityConfig = {
   urgent: { text: 'דחוף', color: 'bg-rose-50 text-rose-700', dot: 'bg-rose-500', order: 0 },
 };
 
+// Hebrew → golden status migration for imported data
 const mondayStatusMapping = {
   'ממתין לחומרים': 'waiting_for_materials',
-  'בעבודה': 'in_progress',
+  'בעבודה': 'not_started',
   'ממתין לתחילת העבודה': 'not_started',
-  'לבדיקה': 'waiting_for_approval',
-  'מוכן לדיווח': 'ready_for_reporting',
-  'דיווח ממתין לתשלום': 'reported_waiting_for_payment',
-  'דווח ושולם': 'completed',
-  'בעיה': 'issue',
-  'נדחה': 'postponed',
+  'לבדיקה': 'sent_for_review',
+  'מוכן לדיווח': 'sent_for_review',
+  'דיווח ממתין לתשלום': 'not_started',
+  'דווח ושולם': 'production_completed',
+  'בעיה': 'needs_corrections',
+  'נדחה': 'not_started',
   'ממתין_לחומרים': 'waiting_for_materials',
   'ממתין_לתחילת_העבודה': 'not_started',
-  'מוכן_לדיווח': 'ready_for_reporting',
-  'דיווח_ממתין_לתשלום': 'reported_waiting_for_payment',
-  'דווח_ושולם': 'completed',
-  'בוצע': 'completed',
-  'הושלם': 'completed',
-  'סיום': 'completed',
-  'ביצוע': 'in_progress',
-  'ממתין לתשלום': 'reported_waiting_for_payment',
-  'ממתין לאישור': 'waiting_for_approval',
-  'ממתין ללקוח': 'waiting_on_client',
+  'מוכן_לדיווח': 'sent_for_review',
+  'דיווח_ממתין_לתשלום': 'not_started',
+  'דווח_ושולם': 'production_completed',
+  'בוצע': 'production_completed',
+  'הושלם': 'production_completed',
+  'הושלם ייצור': 'production_completed',
+  'סיום': 'production_completed',
+  'ביצוע': 'not_started',
+  'ממתין לתשלום': 'not_started',
+  'ממתין לאישור': 'sent_for_review',
+  'ממתין ללקוח': 'waiting_for_materials',
+  'לבצע': 'not_started',
+  'הועבר לעיון': 'sent_for_review',
+  'לבצע תיקונים': 'needs_corrections',
 };
 
 // Time period tabs
@@ -132,7 +135,7 @@ function getTimePeriods() {
       { key: 'prev_month', label: format(subMonths(now, 1), 'MMMM', { locale: he }), icon: Calendar },
       { key: 'curr_month', label: format(now, 'MMMM', { locale: he }), icon: Clock },
       { key: 'all', label: 'הכל', icon: List },
-      { key: 'completed', label: 'הושלמו', icon: CheckCircle },
+      { key: 'completed', label: 'הושלם ייצור', icon: CheckCircle },
     ],
   };
 }
@@ -297,9 +300,9 @@ export default function TasksPage() {
         case 'curr_month':
           return dueDate && dueDate >= currMonthStart && dueDate <= currMonthEnd;
         case 'active':
-          return task.status !== 'completed' && task.status !== 'not_relevant';
+          return task.status !== 'production_completed';
         case 'completed':
-          return task.status === 'completed';
+          return task.status === 'production_completed';
         case 'all':
         default:
           return true;
@@ -350,7 +353,7 @@ export default function TasksPage() {
           cmp = (a.due_date || '9999').localeCompare(b.due_date || '9999');
           break;
         case 'status': {
-          const statusOrder = ['not_started','in_progress','waiting_for_materials','waiting_for_approval','ready_for_reporting','reported_waiting_for_payment','issue','postponed','completed','not_relevant'];
+          const statusOrder = ['waiting_for_materials','not_started','sent_for_review','needs_corrections','production_completed'];
           cmp = statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
           break;
         }
@@ -457,8 +460,8 @@ export default function TasksPage() {
 
   const stats = useMemo(() => {
     const total = filteredTasks.length;
-    const completed = filteredTasks.filter(t => t.status === 'completed').length;
-    const inProgress = filteredTasks.filter(t => t.status === 'in_progress').length;
+    const completed = filteredTasks.filter(t => t.status === 'production_completed').length;
+    const inProgress = filteredTasks.filter(t => t.status === 'sent_for_review' || t.status === 'needs_corrections').length;
     return { total, completed, inProgress };
   }, [filteredTasks]);
 
@@ -629,8 +632,8 @@ export default function TasksPage() {
             switch (tab.key) {
               case 'prev_month': return d && d >= prevMonthStart && d <= prevMonthEnd;
               case 'curr_month': return d && d >= currMonthStart && d <= currMonthEnd;
-              case 'active': return t.status !== 'completed' && t.status !== 'not_relevant';
-              case 'completed': return t.status === 'completed';
+              case 'active': return t.status !== 'production_completed';
+              case 'completed': return t.status === 'production_completed';
               case 'all': return true;
               default: return true;
             }
