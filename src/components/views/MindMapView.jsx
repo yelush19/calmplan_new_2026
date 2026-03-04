@@ -1336,102 +1336,153 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           willChange: 'transform', // GPU acceleration
         }}
       >
-        {/* ── SVG Connection Lines — z-index: -1, BEHIND all nodes ──
-             DYNAMIC CONNECTIVITY: Lines use quadratic bezier curves.
-             Color: #E5E7EB (light grey). Thin. Slightly curved. ── */}
+        {/* ── SVG Connection Lines — DISCRETE EDGES between node pairs ──
+             Each edge is an independent Source→Target connection.
+             Edge 1: Hub → P1/P2/P3/P4 (always visible, thick)
+             Edge 2: P-branch → Department (visible when P expanded)
+             Edge 3: Department → Client (visible when Dept expanded)
+             Each level has distinct color/weight for visual separation. ── */}
         <svg
           width={layout.virtualW}
           height={layout.virtualH}
           className="absolute inset-0 pointer-events-none"
           style={{ overflow: 'visible', zIndex: -1 }}
         >
-          {/* ── L0→L1: Center Hub → Category Containers (curved bezier) ── */}
+          <defs>
+            {/* Arrow marker for hub→meta edges */}
+            <marker id="edge-arrow" viewBox="0 0 8 6" refX="7" refY="3"
+              markerWidth="8" markerHeight="6" orient="auto-start-reverse"
+              markerUnits="strokeWidth">
+              <path d="M 0 0 L 8 3 L 0 6 z" fill="#B0BEC5" />
+            </marker>
+            {/* Smaller arrow for dept→client edges */}
+            <marker id="edge-arrow-sm" viewBox="0 0 6 4" refX="5" refY="2"
+              markerWidth="6" markerHeight="4" orient="auto-start-reverse"
+              markerUnits="strokeWidth">
+              <path d="M 0 0 L 6 2 L 0 4 z" fill="#CFD8DC" />
+            </marker>
+          </defs>
+
+          {/* ── EDGE LEVEL 1: "היום שלי" → P1 | P2 | P3 | P4 ──
+               Always visible. 4 discrete edges from center hub.
+               Thick line with arrow, slight bezier curve. ── */}
           {layout.metaFolderPositions?.map((mf) => {
             const x1 = centerPos.x, y1 = centerPos.y;
             const x2 = mf.x, y2 = mf.y;
-            // Quadratic bezier: control point offset perpendicular to midpoint
-            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
             const dx = x2 - x1, dy = y2 - y1;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            // Slight curve: perpendicular offset = 8% of line length
-            const curveAmt = len * 0.08;
-            const cx = mx + (-dy / len) * curveAmt;
-            const cy = my + (dx / len) * curveAmt;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            // Shorten line: start 50px from hub center, end 45px before meta-folder center
+            const startFrac = 50 / len;
+            const endFrac = 45 / len;
+            const sx = x1 + dx * startFrac, sy = y1 + dy * startFrac;
+            const ex = x2 - dx * endFrac, ey = y2 - dy * endFrac;
+            // Slight curve: perpendicular offset = 6% of line length
+            const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+            const curveAmt = len * 0.06;
+            const cpx = mx + (-dy / len) * curveAmt;
+            const cpy = my + (dx / len) * curveAmt;
             return (
-              <path key={`meta-line-${mf.name}`}
-                d={`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`}
+              <path key={`edge-hub-meta-${mf.name}`}
+                d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
                 fill="none"
-                stroke="#E5E7EB"
-                strokeWidth={1.5}
-                strokeLinecap="round" />
+                stroke="#90A4AE"
+                strokeWidth={2}
+                strokeLinecap="round"
+                markerEnd="url(#edge-arrow)"
+                opacity={0.7} />
             );
           })}
 
-          {/* ── L1→L2: Category → Sub-Folder (only when expanded) ── */}
+          {/* ── EDGE LEVEL 1.5: Meta → Sub-Folder (complexity tiers, if any) ── */}
           {layout.metaSubFolderPositions?.map((sf) => {
             if (!expandedMetaFolders.has(sf.metaFolderName)) return null;
             const mfPos = layout.metaFolderPositions.find(m => m.name === sf.metaFolderName);
             if (!mfPos) return null;
             const x1 = mfPos.x, y1 = mfPos.y, x2 = sf.x, y2 = sf.y;
-            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
             const dx = x2 - x1, dy = y2 - y1;
             const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            const cx = mx + (-dy / len) * (len * 0.06);
-            const cy = my + (dx / len) * (len * 0.06);
+            const startOff = 42 / len, endOff = 20 / len;
+            const sx = x1 + dx * startOff, sy = y1 + dy * startOff;
+            const ex = x2 - dx * endOff, ey = y2 - dy * endOff;
             return (
-              <path key={`metasub-line-${sf.metaFolderName}-${sf.key}`}
-                d={`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`}
+              <path key={`edge-meta-sub-${sf.metaFolderName}-${sf.key}`}
+                d={`M ${sx} ${sy} L ${ex} ${ey}`}
                 fill="none"
-                stroke="#E5E7EB"
+                stroke="#B0BEC5"
                 strokeWidth={1.2}
-                strokeLinecap="round" />
+                strokeLinecap="round"
+                strokeDasharray="4 3"
+                opacity={0.6} />
             );
           })}
 
-          {/* ── L2→L3: Category/SubFolder → Department ── */}
+          {/* ── EDGE LEVEL 2: P-branch → Department folders ──
+               Visible only when the parent P-branch is expanded.
+               Each is a discrete edge from the meta-folder to its department. ── */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             const px = branch._metaSubX || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.x || centerPos.x;
             const py = branch._metaSubY || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.y || centerPos.y;
             const dx = branch.x - px, dy = branch.y - py;
             const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            const mx = (px + branch.x) / 2, my = (py + branch.y) / 2;
-            const cx = mx + (-dy / len) * (len * 0.06);
-            const cy = my + (dx / len) * (len * 0.06);
+            // Shorten: start 40px from parent, end 30px before dept
+            const startOff = 40 / len, endOff = 30 / len;
+            const sx = px + dx * startOff, sy = py + dy * startOff;
+            const ex = branch.x - dx * endOff, ey = branch.y - dy * endOff;
+            const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+            const cpx = mx + (-dy / len) * (len * 0.04);
+            const cpy = my + (dx / len) * (len * 0.04);
             return (
-              <path key={`dept-line-${branch.category}`}
-                d={`M ${px} ${py} Q ${cx} ${cy} ${branch.x} ${branch.y}`}
+              <path key={`edge-meta-dept-${branch.category}`}
+                d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
                 fill="none"
-                stroke="#E5E7EB"
-                strokeWidth={1}
-                strokeLinecap="round" />
+                stroke="#B0BEC5"
+                strokeWidth={1.3}
+                strokeLinecap="round"
+                opacity={0.55} />
             );
           })}
 
-          {/* ── L3→L4: Department → Client Pills ── */}
+          {/* ── EDGE LEVEL 3: Department → Client pills ──
+               Visible only when BOTH parent P-branch AND department are expanded.
+               Thinnest edges, slight curve, with small arrow. ── */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!expandedBranches.has(branch.category)) return null;
             const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN);
             return (
-              <g key={`lines-${branch.category}`}>
-                {branch.subFolderPositions?.map((sub) => (
-                  <path key={`sub-line-${sub.key}`}
-                    d={`M ${branch.x} ${branch.y} L ${sub.x} ${sub.y}`}
-                    fill="none" stroke="#E5E7EB" strokeWidth={1} strokeLinecap="round" />
-                ))}
+              <g key={`edges-dept-clients-${branch.category}`}>
+                {/* Sub-folder edges (department → complexity tier) */}
+                {branch.subFolderPositions?.map((sub) => {
+                  const dx = sub.x - branch.x, dy = sub.y - branch.y;
+                  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                  const startOff = 30 / len, endOff = 20 / len;
+                  return (
+                    <path key={`edge-dept-sub-${sub.key}`}
+                      d={`M ${branch.x + dx * startOff} ${branch.y + dy * startOff} L ${sub.x - dx * endOff} ${sub.y - dy * endOff}`}
+                      fill="none" stroke="#CFD8DC" strokeWidth={1} strokeLinecap="round"
+                      strokeDasharray="3 2" opacity={0.5} />
+                  );
+                })}
+                {/* Client pill edges */}
                 {visibleClients.map((client) => {
                   const sx = client._subFolderX || branch.x;
                   const sy = client._subFolderY || branch.y;
                   const dx = client.x - sx, dy = client.y - sy;
                   const len = Math.sqrt(dx * dx + dy * dy) || 1;
-                  const mx = (sx + client.x) / 2, my = (sy + client.y) / 2;
-                  const cx = mx + (-dy / len) * (len * 0.05);
-                  const cy = my + (dx / len) * (len * 0.05);
+                  // Shorten: start 25px from parent, end 30px before client
+                  const startOff = 25 / len, endOff = 30 / len;
+                  const x1 = sx + dx * startOff, y1 = sy + dy * startOff;
+                  const x2 = client.x - dx * endOff, y2 = client.y - dy * endOff;
+                  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+                  const cpx = mx + (-dy / len) * (len * 0.04);
+                  const cpy = my + (dx / len) * (len * 0.04);
                   return (
-                    <path key={`line-${client.name}`}
-                      d={`M ${sx} ${sy} Q ${cx} ${cy} ${client.x} ${client.y}`}
-                      fill="none" stroke="#E5E7EB" strokeWidth={0.8} strokeLinecap="round" />
+                    <path key={`edge-to-${branch.category}-${client.name}`}
+                      d={`M ${x1} ${y1} Q ${cpx} ${cpy} ${x2} ${y2}`}
+                      fill="none" stroke="#CFD8DC" strokeWidth={0.8} strokeLinecap="round"
+                      markerEnd="url(#edge-arrow-sm)"
+                      opacity={0.45} />
                   );
                 })}
               </g>
