@@ -33,15 +33,15 @@ import RealityCheck from "@/components/tasks/RealityCheck";
 import CompletionFeedback from "@/components/tasks/CompletionFeedback";
 import DesktopBridge from "@/components/desktop/DesktopBridge";
 
-// Work Modes
+// Work Modes — aligned to P1-P4 process tree
 const WORK_MODES = [
   {
     key: 'doing',
     label: 'ביצוע',
     icon: Zap,
     color: 'bg-emerald-500 text-white',
-    description: 'קנבן + משימות להיום',
-    visibleSections: ['core', 'reporting']
+    description: 'משימות יומיות + דיווחים שוטפים',
+    visibleSections: ['p1_payroll', 'p2_bookkeeping', 'p3_office']
   },
   {
     key: 'planning',
@@ -49,7 +49,7 @@ const WORK_MODES = [
     icon: Brain,
     color: 'bg-blue-500 text-white',
     description: 'תכנון שבועי + מעקב',
-    visibleSections: ['planning']
+    visibleSections: ['p3_office']
   },
   {
     key: 'admin',
@@ -57,74 +57,56 @@ const WORK_MODES = [
     icon: Settings,
     color: 'bg-[#008291]/80 text-white',
     description: 'לקוחות + ספקים + הגדרות',
-    visibleSections: ['clients', 'system']
+    visibleSections: ['p3_office']
   },
 ];
 
-// Sidebar sections – 6 clear categories
+// ============================================================
+// Sidebar sections — P1-P4 Process Tree Hierarchy
+// ============================================================
 const getSidebarSections = () => ({
-  core: {
-    title: "ליבת הביצוע",
+  // ── P1 | חשבות שכר ──
+  p1_payroll: {
+    title: "P1 | חשבות שכר",
+    icon: Calculator,
+    items: [
+      { name: "שלב ייצור ואישור", href: createPageUrl("PayrollDashboard"), icon: Zap },
+      { name: "דיווחים שוטפים (102)", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
+      { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
+      { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
+    ]
+  },
+  // ── P2 | הנהלת חשבונות ──
+  p2_bookkeeping: {
+    title: "P2 | הנהלת חשבונות",
+    icon: FileBarChart,
+    items: [
+      { name: "שלב ייצור (קליטה וסגירה)", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
+      { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
+      { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
+      { name: "תוצרים (רוה\"ס)", href: createPageUrl("PeriodicSummaryReports"), icon: FileText },
+      { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
+    ]
+  },
+  // ── P3 | ניהול משרד ──
+  p3_office: {
+    title: "P3 | ניהול משרד",
     icon: Target,
     items: [
       { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
       { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
-      { name: "ריכוז לקוחות חודשי", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
-    ]
-  },
-  reporting: {
-    title: "דיווחים",
-    icon: FileBarChart,
-    items: [
-      { name: "דיווחי מיסים", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
-      { name: "שכר ודיווחי רשויות", href: createPageUrl("PayrollDashboard"), icon: Calculator },
-      { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
-      { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
-      { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
-      { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
-      { name: "אדמיניסטרטיבי", href: createPageUrl("AdminTasksDashboard"), icon: FolderKanban },
-    ]
-  },
-  planning: {
-    title: "תכנון",
-    icon: Brain,
-    items: [
+      { name: "אדמיניסטרציה", href: createPageUrl("AdminTasksDashboard"), icon: FolderKanban },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
-      { name: "סיכום שבועי", href: createPageUrl("WeeklySummary"), icon: FileBarChart },
-      { name: "מעקב פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
-    ]
-  },
-  clients: {
-    title: "ניהול לקוחות",
-    icon: Users,
-    items: [
       { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
-      { name: "לידים", href: createPageUrl("Leads"), icon: Target },
-      { name: "קליטת לקוח חדש", href: createPageUrl("ClientOnboarding"), icon: UserCheck },
-      { name: "מרכז נתוני שכ״ט", href: createPageUrl("FeeManagement"), icon: DollarSign },
-      { name: "ניהול גבייה", href: createPageUrl("Collections"), icon: DollarSign },
-      { name: "ספקים ונותני שירותים", href: createPageUrl("ServiceProviders"), icon: BookUser },
-      { name: "ניהול חוזים", href: createPageUrl("ClientContracts"), icon: FileText },
+      { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
+      { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
     ]
   },
-  system: {
-    title: "מערכת",
-    icon: Settings,
-    items: [
-      { name: "אשף הגדרת נתונים", href: createPageUrl("SystemReadiness"), icon: Zap },
-      { name: "הגדרת מורכבות לקוחות", href: createPageUrl("BatchSetup"), icon: Scaling },
-      { name: "אוטומציות", href: createPageUrl("AutomationRules"), icon: Zap },
-      { name: "הגדרת פרמטרים", href: createPageUrl("Settings"), icon: Settings },
-      { name: "גיבוי ושחזור", href: createPageUrl("BackupManager"), icon: Shield },
-      { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Database },
-      { name: "סקירת מערכת", href: createPageUrl("SystemOverview"), icon: Eye },
-      { name: "שחזור חירום", href: createPageUrl("EmergencyRecovery"), icon: AlertTriangle },
-    ]
-  },
+  // ── P4 | בית (LENA) ──
   life: {
-    title: "LENA - בית וחיים",
+    title: "P4 | בית (LENA)",
     icon: BookHeart,
     items: [
       { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
@@ -136,7 +118,9 @@ const getSidebarSections = () => ({
 
 const getVisibleSections = (mode) => {
   const modeConfig = WORK_MODES.find(m => m.key === mode);
-  return [...modeConfig.visibleSections, 'life'];
+  const sections = [...(modeConfig?.visibleSections || ['p1_payroll', 'p2_bookkeeping', 'p3_office'])];
+  if (!sections.includes('life')) sections.push('life');
+  return sections;
 };
 
 // Deadline countdown
