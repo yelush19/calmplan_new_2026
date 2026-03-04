@@ -18,6 +18,7 @@ import {
   Network, BarChart3, Eye, EyeOff
 } from "lucide-react";
 import MindMapView from "../components/views/MindMapView";
+import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import GanttView from "../components/views/GanttView";
 import KanbanView from "../components/tasks/KanbanView";
 import TaskEditDialog from "@/components/tasks/TaskEditDialog";
@@ -221,12 +222,13 @@ export default function HomePage() {
       const in3Days = new Date(today);
       in3Days.setDate(in3Days.getDate() + 3);
 
-      const allTasks = rawTasks.filter(task => {
+      // Unified tree filter: only P1-P4 tasks in active period
+      const allTasks = getActiveTreeTasks(rawTasks).filter(task => {
+        // Additional recency filter for completed tasks (show max 7 days)
         const taskDate = task.due_date || task.created_date;
         if (!taskDate) return true;
         const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
         if (task.status === 'completed' && daysSince > 7) return false;
-        if (task.status !== 'completed' && daysSince > 30) return false;
         return true;
       });
 

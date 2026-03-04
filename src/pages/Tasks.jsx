@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import MindMapView from "../components/views/MindMapView";
 import GanttView from "../components/views/GanttView";
+import { getActiveTreeTasks, getTaskPBranch, getPBranchLabel } from '@/utils/taskTreeFilter';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -247,9 +248,11 @@ export default function TasksPage() {
   const loadTasks = async () => {
     setIsLoading(true);
     try {
-      const allTasks = await Task.list("-due_date", 5000).catch(() => []);
-      const validTasks = Array.isArray(allTasks) ? allTasks : [];
-      const processed = validTasks.map(task => {
+      const rawTasks = await Task.list("-due_date", 5000).catch(() => []);
+      const validTasks = Array.isArray(rawTasks) ? rawTasks : [];
+      // Unified tree filter: only P1-P4 tasks in active period
+      const treeTasks = getActiveTreeTasks(validTasks);
+      const processed = treeTasks.map(task => {
         let normalizedStatus = task.status;
         if (task.status && mondayStatusMapping[task.status]) {
           normalizedStatus = mondayStatusMapping[task.status];
@@ -353,7 +356,10 @@ export default function TasksPage() {
     return sorted;
   }, [filteredTasks, sortField, sortDir]);
 
-  // Group sorted tasks by status or category for the list view
+  // P-branch color dots
+  const pBranchDots = { 'P1': 'bg-blue-600', 'P2': 'bg-teal-600', 'P3': 'bg-gray-500', 'P4': 'bg-amber-700' };
+
+  // Group sorted tasks by status, category, client, or p_branch
   const groupedTasks = useMemo(() => {
     if (groupBy === 'category') {
       const groups = {};
@@ -362,7 +368,6 @@ export default function TasksPage() {
         if (!groups[cat]) groups[cat] = [];
         groups[cat].push(task);
       });
-      // Sort categories alphabetically with __none__ at end
       const catKeys = Object.keys(groups).sort((a, b) => {
         if (a === '__none__') return 1;
         if (b === '__none__') return -1;
@@ -374,6 +379,42 @@ export default function TasksPage() {
         dot: 'bg-gray-400',
         tasks: groups[cat],
       }));
+    }
+    if (groupBy === 'client') {
+      const groups = {};
+      sortedTasks.forEach(task => {
+        const client = task.client_name || '__no_client__';
+        if (!groups[client]) groups[client] = [];
+        groups[client].push(task);
+      });
+      const clientKeys = Object.keys(groups).sort((a, b) => {
+        if (a === '__no_client__') return 1;
+        if (b === '__no_client__') return -1;
+        return a.localeCompare(b, 'he');
+      });
+      return clientKeys.map(client => ({
+        key: client,
+        label: client === '__no_client__' ? 'ללא לקוח' : client,
+        dot: 'bg-sky-500',
+        tasks: groups[client],
+      }));
+    }
+    if (groupBy === 'p_branch') {
+      const groups = {};
+      sortedTasks.forEach(task => {
+        const branch = getTaskPBranch(task) || '__none__';
+        if (!groups[branch]) groups[branch] = [];
+        groups[branch].push(task);
+      });
+      const branchOrder = ['P1', 'P2', 'P3', 'P4', '__none__'];
+      return branchOrder
+        .filter(b => groups[b] && groups[b].length > 0)
+        .map(b => ({
+          key: b,
+          label: b === '__none__' ? 'לא משויך' : getPBranchLabel(b),
+          dot: pBranchDots[b] || 'bg-gray-400',
+          tasks: groups[b],
+        }));
     }
     // Default: group by status
     const groups = {};
@@ -652,21 +693,23 @@ export default function TasksPage() {
 
       {/* Group by toggle for list view */}
       {view === 'list' && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-gray-500 font-medium">קיבוץ לפי:</span>
           <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
-            <button
-              onClick={() => setGroupBy('status')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${groupBy === 'status' ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              סטטוס
-            </button>
-            <button
-              onClick={() => setGroupBy('category')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${groupBy === 'category' ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              סוג דיווח
-            </button>
+            {[
+              { key: 'status', label: 'סטטוס' },
+              { key: 'category', label: 'סוג דיווח' },
+              { key: 'client', label: 'לקוח' },
+              { key: 'p_branch', label: 'ענף (P1-P4)' },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setGroupBy(opt.key)}
+                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${groupBy === opt.key ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
           <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs mr-2">
             <button onClick={expandAllCategories} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">

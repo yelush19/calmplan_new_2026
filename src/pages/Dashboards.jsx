@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Task, Event } from '@/api/entities';
 import { CheckCircle, Clock, TrendingUp, Users, Briefcase, Home } from 'lucide-react';
+import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -27,7 +28,10 @@ export default function DashboardsPage() {
 
     const fetchDashboardData = async () => {
         setIsLoading(true);
-        const [tasks, events] = await Promise.all([Task.list(), Event.list()]);
+        const [rawTasks, events] = await Promise.all([Task.list(), Event.list()]);
+
+        // Unified filter: only P1-P4 tree tasks in active period
+        const tasks = getActiveTreeTasks(rawTasks);
 
         // Task Status
         const taskStatus = tasks.reduce((acc, task) => {
