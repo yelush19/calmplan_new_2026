@@ -265,6 +265,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const [editPopover, setEditPopover] = useState(null); // { client, x, y }
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [drawerClient, setDrawerClient] = useState(null);
+  const [drawerDepartment, setDrawerDepartment] = useState(null); // department context for filtering
   const [drawerQuickAdd, setDrawerQuickAdd] = useState(false); // show QuickAddTaskDialog from drawer
   const [drawerEditTask, setDrawerEditTask] = useState(null); // task being edited via QuickAdd
   const [drawerSubTaskParent, setDrawerSubTaskParent] = useState(null); // for sub-task creation
@@ -287,7 +288,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // 3. Regenerate with STRICT 3-service logic only
   const nuclearRan = useRef(false);
   useEffect(() => {
-    const NUCLEAR_KEY = 'calmplan-nuclear-v13-ghost-cleanup';
+    const NUCLEAR_KEY = 'calmplan-nuclear-v14-deep-cleanup';
     if (nuclearRan.current) return;
     try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
     nuclearRan.current = true;
@@ -299,34 +300,55 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         const resetMonth = resetNow.getMonth() + 1;
         const currentPrefix = `${resetYear}-${String(resetMonth).padStart(2, '0')}`;
 
-        // Step 1: Delete ALL auto-generated future tasks + 31/5 annual ghosts
-        console.log('[CalmPlan] RESET v13: Deleting future + annual ghost tasks...');
+        // Step 1: Delete ALL ghost/stale/future tasks
+        // - Future tasks (beyond current month)
+        // - 31/5 annual report ghost tasks
+        // - Past uncharacterized tasks (January and earlier)
+        // - Ghost SS/Deductions standalone tasks
+        console.log('[CalmPlan] RESET v14: Deep cleanup of ghost + past + future tasks...');
         try {
           const allTasks = await Task.list(null, 5000);
+          // Previous month prefix (keep current + prev month)
+          const prevMonthDate = new Date(resetYear, resetMonth - 2, 1);
+          const prevPrefix = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
           const ghostTasks = allTasks.filter(t => {
             if (!t.due_date) return false;
+            const monthPrefix = t.due_date.substring(0, 7);
+
+            // Keep current month and previous month
+            if (monthPrefix === currentPrefix || monthPrefix === prevPrefix) return false;
+
             // Delete future auto-generated tasks (beyond current month)
             const isFuture = t.due_date > currentPrefix + '-31';
+
             // Delete 31/5 annual report tasks (ghost balance sheet tasks)
             const isAnnualGhost = t.due_date.endsWith('-05-31') && (
               t.category === 'work_client_management' ||
               t.category === 'דוח שנתי' ||
               t.title?.includes('דוח שנתי')
             );
-            // Delete ghost SS/Deductions tasks from any month
+
+            // Delete past uncompleted tasks (January 2026 and earlier)
+            const isPastGhost = t.due_date < prevPrefix + '-01' &&
+              t.status !== 'completed' &&
+              t.source !== 'manual';
+
+            // Delete ghost SS/Deductions standalone tasks
             const isGhostService = (
               t.category === 'work_social_security' ||
               t.category === 'work_deductions' ||
               t.category === 'ביטוח לאומי' ||
               t.category === 'ניכויים'
             );
-            return isFuture || isAnnualGhost || isGhostService;
+
+            return isFuture || isAnnualGhost || isPastGhost || isGhostService;
           });
           let ghostDeleted = 0;
           for (const t of ghostTasks) {
             try { await Task.delete(t.id); ghostDeleted++; } catch {}
           }
-          console.log(`[CalmPlan] Deleted ${ghostDeleted} ghost/future tasks`);
+          console.log(`[CalmPlan] Deleted ${ghostDeleted} ghost/past/future tasks`);
         } catch (e) {
           console.warn('[CalmPlan] Ghost task cleanup warning:', e.message);
         }
@@ -673,6 +695,23 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     // Only show meta-folders that have actual tasks (no empty buckets)
     const metaFolders = Object.values(metaGroups);
 
+    // P1→P2 Sync State: calculate how many P1 payroll tasks are completed
+    const p1Payroll = metaGroups['P1 חשבות שכר'];
+    const p2Bookkeeping = metaGroups['P2 הנהלת חשבונות'];
+    let p1SyncPct = 0;
+    if (p1Payroll) {
+      const p1Branches = branches.filter(b => b.metaFolder === 'P1 חשבות שכר');
+      let p1Total = 0, p1Done = 0;
+      p1Branches.forEach(b => b.clients.forEach(c => { p1Total += c.totalTasks; p1Done += c.completedTasks; }));
+      p1SyncPct = p1Total > 0 ? Math.round((p1Done / p1Total) * 100) : 0;
+    }
+    metaFolders.forEach(mf => {
+      if (mf.name === 'P2 הנהלת חשבונות') {
+        mf.p1SyncPct = p1SyncPct;
+        mf.p1SyncReady = p1SyncPct >= 80; // P1 mostly done → P2 can proceed
+      }
+    });
+
     // Build flat client nodes for rendering
     const clientNodes = [];
     branches.forEach(branch => {
@@ -956,7 +995,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, []);
 
   const nodeClickTimerRef = useRef(null);
-  const handleNodePointerUp = useCallback((e, client) => {
+  const handleNodePointerUp = useCallback((e, client, department) => {
     const wasDragging = nodeHasDragged.current;
     draggingNode.current = null;
     nodeHasDragged.current = false;
@@ -967,6 +1006,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
     // Modal Law: single click opens drawer immediately (no double-click distinction)
     setDrawerClient(client);
+    setDrawerDepartment(department || null);
     setEditPopover(null);
     setShowDrawerCompleted(false);
   }, [savePositionsToStorage]);
@@ -1499,6 +1539,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <text x={W / 2 + 4} y={H / 2 + 12} textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10" style={{ pointerEvents: 'none' }}>
                 {mf.totalTasks} משימות · {mf.totalClients} לקוחות
               </text>
+              {/* P1→P2 Sync indicator: shows on P2 meta-folder */}
+              {mf.p1SyncPct != null && (
+                <>
+                  <rect x={W - 56} y={-12} width={56} height={18} rx={9} ry={9}
+                    fill={mf.p1SyncReady ? '#2E7D32' : '#FF8F00'} fillOpacity={0.9}
+                    stroke="white" strokeWidth={1} strokeOpacity={0.5} />
+                  <text x={W - 28} y={1} textAnchor="middle" fill="white" fontSize="8" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                    {mf.p1SyncReady ? '✓' : '⟳'} P1 {mf.p1SyncPct}%
+                  </text>
+                </>
+              )}
             </svg>
           </motion.div>
           );
@@ -1777,12 +1828,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   onMouseEnter={(e) => handleClientHover(client, e.clientX, e.clientY)}
                   onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
                   onPointerDown={(e) => handleNodePointerDown(e, nodeKey, client.x, client.y)}
-                  onPointerUp={(e) => handleNodePointerUp(e, client)}
+                  onPointerUp={(e) => handleNodePointerUp(e, client, branch.category)}
                   onDoubleClick={(e) => {
                     // Modal Law: double-click opens drawer (same as single click)
                     e.stopPropagation();
                     e.preventDefault();
                     setDrawerClient(client);
+                    setDrawerDepartment(branch.category);
                     setEditPopover(null);
                     setShowDrawerCompleted(false);
                   }}
@@ -2117,10 +2169,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       </AnimatePresence>
 
       {/* ── Client Task Drawer (Sheet) ── */}
-      <Sheet open={!!drawerClient} onOpenChange={(open) => { if (!open) { setDrawerClient(null); setHighlightTaskId(null); } }}>
+      <Sheet open={!!drawerClient} onOpenChange={(open) => { if (!open) { setDrawerClient(null); setDrawerDepartment(null); setHighlightTaskId(null); } }}>
         <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col border-l border-white/20 rounded-l-[32px]" dir="rtl" style={{ backgroundColor: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           {drawerClient && (() => {
-            const clientTasks = tasks.filter(t => t.client_name === drawerClient.name);
+            // Filter by client name, and optionally by department (P-branch context)
+            const allClientTasks = tasks.filter(t => t.client_name === drawerClient.name);
+            const clientTasks = drawerDepartment
+              ? allClientTasks.filter(t => {
+                  const dept = CATEGORY_TO_DEPARTMENT[t.category || 'אחר'] || t.category;
+                  return dept === drawerDepartment;
+                })
+              : allClientTasks;
             const activeTasks = clientTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
             const completedTasks = clientTasks.filter(t => t.status === 'completed' || t.status === 'not_relevant');
 
@@ -2259,6 +2318,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: drawerClient.color }} />
                       <SheetTitle className="text-base">{drawerClient.displayName || drawerClient.name}</SheetTitle>
+                      {drawerDepartment && (
+                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 rounded-full border border-slate-200">{drawerDepartment}</span>
+                      )}
                       <span className="text-[10px] bg-white/50 text-[#008291] px-1.5 rounded-full">{drawerClient.tierIcon} {drawerClient.tierLabel}</span>
                       <button
                         onClick={() => toggleClientFocus(drawerClient.name)}
