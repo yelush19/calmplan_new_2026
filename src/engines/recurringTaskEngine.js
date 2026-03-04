@@ -142,6 +142,15 @@ export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, 
     process_steps: processSteps,
     step_count: Object.keys(processSteps).length,
 
+    // Master Task Workflow (payroll only)
+    // Payroll tasks are containers with 3 phases:
+    //   Phase A (ייצור שכר) → Phase B (דיווחי רשויות) → Phase C (שירותים נלווים)
+    ...(serviceDef.key === 'payroll' ? {
+      is_master: true,
+      workflow_phase: 'phase_a',
+      workflow_phase_label: 'שלב א\' | ייצור שכר',
+    } : {}),
+
     // Metadata
     context: 'work',
     is_recurring: true,

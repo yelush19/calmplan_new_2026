@@ -30,6 +30,7 @@ const ZERO_PANIC = {
 };
 
 const STATUS_TO_COLOR = {
+  production_completed:            '#0288D1',             // הושלם ייצור - sky blue
   completed:                       ZERO_PANIC.green,      // הושלם
   in_progress:                     ZERO_PANIC.blue,       // בעבודה
   not_started:                     ZERO_PANIC.gray,       // טרם התחיל
