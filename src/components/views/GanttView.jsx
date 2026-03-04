@@ -12,6 +12,7 @@ import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 
 const STATUS_COLORS = {
   completed: 'bg-emerald-400',
+  production_completed: 'bg-sky-500',
   in_progress: 'bg-sky-400',
   not_started: 'bg-gray-300',
   waiting_for_materials: 'bg-amber-300',
@@ -30,17 +31,43 @@ const TIER_DURATION_DAYS = {
   quick_win: 1, standard: 1, climb: 3,
 };
 
-const SIZE_HEIGHT = { S: 'h-5', M: 'h-6', L: 'h-8', XL: 'h-10' };
+const LANE_HEIGHT = 24; // px per lane
+const LANE_GAP = 2;    // px between lanes
 
-const estimateClientSize = (client, tasks) => {
-  if (client?.size) return client.size;
-  const services = client?.service_types?.length || 0;
-  const taskCount = tasks.filter(t => t.client_name === client?.name).length;
-  if (services >= 4 || taskCount >= 8) return 'XL';
-  if (services >= 3 || taskCount >= 5) return 'L';
-  if (services >= 2 || taskCount >= 3) return 'M';
-  return 'S';
-};
+/**
+ * Allocate vertical lanes for overlapping task bars within a client row.
+ * Returns a Map<taskId, laneIndex> and the total number of lanes needed.
+ */
+function allocateLanes(clientTasks, getTaskPosition) {
+  const items = clientTasks
+    .filter(t => t.due_date)
+    .map(t => {
+      const pos = getTaskPosition(t);
+      return { id: t.id, start: pos.startDay, end: pos.startDay + pos.durationDays - 1 };
+    })
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const lanes = []; // lanes[i] = end day of last task in that lane
+  const assignment = new Map();
+
+  for (const item of items) {
+    let placed = false;
+    for (let i = 0; i < lanes.length; i++) {
+      if (item.start > lanes[i]) {
+        lanes[i] = item.end;
+        assignment.set(item.id, i);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      assignment.set(item.id, lanes.length);
+      lanes.push(item.end);
+    }
+  }
+
+  return { assignment, laneCount: Math.max(1, lanes.length) };
+}
 
 export default function GanttView({ tasks, clients, currentMonth, onEditTask }) {
   const [viewMonth, setViewMonth] = useState(currentMonth || new Date());
@@ -82,10 +109,14 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     });
   }, [monthTasks]);
 
-  const getClientSize = (clientName) => {
-    const client = clients?.find(c => c.name === clientName);
-    return estimateClientSize(client, tasks);
-  };
+  // Pre-compute lane assignments for each client group
+  const laneData = useMemo(() => {
+    const data = {};
+    for (const [clientName, clientTasks] of grouped) {
+      data[clientName] = allocateLanes(clientTasks, getTaskPosition);
+    }
+    return data;
+  }, [grouped]);
 
   // Build client lookup for tier computation
   const clientByName = useMemo(() => {
@@ -295,23 +326,25 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
 
       {/* Rows - clients */}
       {grouped.map(([clientName, clientTasks]) => {
-        const clientSize = getClientSize(clientName);
-        const heightClass = SIZE_HEIGHT[clientSize];
+        const { assignment, laneCount } = laneData[clientName] || { assignment: new Map(), laneCount: 1 };
+        const rowHeight = laneCount * (LANE_HEIGHT + LANE_GAP) + LANE_GAP;
         return (
           <div key={clientName} className="flex border-b hover:bg-gray-50/50 transition-colors">
-            <div className="w-40 shrink-0 p-2 text-sm text-gray-700 border-l flex items-center gap-1">
+            <div className="w-40 shrink-0 p-2 text-sm text-gray-700 border-l flex items-center">
               <span className="font-medium truncate">{clientName}</span>
-              <span className="text-[10px] text-gray-400">({clientSize})</span>
             </div>
             <div
               data-timeline
-              className="flex-1 relative min-h-[40px]"
+              className="flex-1 relative"
+              style={{ minHeight: `${rowHeight}px` }}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
             >
               {clientTasks.filter(t => t.due_date).map(task => {
                 const pos = getTaskPosition(task);
-                const isOverdue = task.status !== 'completed' && new Date(task.due_date) < new Date();
+                const lane = assignment.get(task.id) || 0;
+                const topPx = LANE_GAP + lane * (LANE_HEIGHT + LANE_GAP);
+                const isOverdue = task.status !== 'completed' && task.status !== 'production_completed' && new Date(task.due_date) < new Date();
                 const isDragging = draggingTask?.id === task.id;
                 const offsetPct = isDragging && dragPreviewDay
                   ? `calc(${pos.left} + ${(dragPreviewDay / daysInMonth) * 100}%)`
@@ -322,12 +355,12 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                     <TooltipTrigger asChild>
                       <motion.div
                         onPointerDown={(e) => handlePointerDown(e, task, pos)}
-                        className={`absolute top-1 ${heightClass} rounded-md touch-none
+                        className={`absolute rounded-md touch-none
                           ${task.status === 'completed' ? 'cursor-pointer' : 'cursor-pointer active:cursor-grabbing'}
                           ${STATUS_COLORS[task.status] || STATUS_COLORS.not_started}
                           ${isOverdue ? 'ring-2 ring-purple-500 animate-pulse' : ''}
                           ${isDragging ? 'opacity-80 z-20 ring-2 ring-blue-400 shadow-lg' : ''}`}
-                        style={{ left: offsetPct, width: pos.width }}
+                        style={{ left: offsetPct, width: pos.width, top: `${topPx}px`, height: `${LANE_HEIGHT}px` }}
                         initial={{ scaleX: 0, originX: 0 }}
                         animate={{ scaleX: 1 }}
                         transition={{ duration: 0.3 }}

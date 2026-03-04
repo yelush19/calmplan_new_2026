@@ -1,21 +1,17 @@
 /**
- * P2 | תוצרים (רווח והפסד)
- * ===========================
- * Financial results dashboard — shows per-client financial readiness.
+ * תוצרים — רווח והפסד
+ * =====================
+ * מציג רק לקוחות שמוגדר להם שירות pnl_reports בכרטיס הלקוח.
  *
- * Columns: שם לקוח, סטטוס התאמות, סטטוס מאזן, יתרת עו"ש (ידני), רוה"ס (ידני), מוכנות
+ * חוק מרכזי: כרטיס הלקוח הוא מקור הסמכות היחיד.
+ *   - אין pnl_reports ב-service_types → הלקוח לא מופיע כאן.
+ *   - הנה"ח (P2) היא תנאי מקדים, אך לא מעניקה זכאות אוטומטית.
  *
- * This page does NOT show VAT/advances columns — those belong to ClientsDashboard.
- * This page does NOT show payroll data — that belongs to P1.
- *
- * Data sources:
- *   - Client entity: base info + service_types
- *   - Task entity: P2 bookkeeping tasks (reconciliation, bookkeeping steps)
- *   - BalanceSheet entity: annual balance sheet workflow stage
+ * עמודות: לקוח, תדירות, יום יעד, ייצור הנה"ח (תנאי מקדים), מוכנות רוה"ס
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Client, Task, BalanceSheet } from '@/api/entities';
+import { Client, Task } from '@/api/entities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,35 +26,27 @@ import ResizableTable from '@/components/ui/ResizableTable';
 import { getTaskReportingMonth } from '@/config/automationRules';
 
 // ============================================================
-// Status configs
+// Hebrew labels
 // ============================================================
 
 const READINESS_LEVELS = {
   ready:       { label: 'מוכן',         color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', icon: CheckCircle },
   in_progress: { label: 'בתהליך',       color: 'bg-sky-100 text-sky-700',         dot: 'bg-sky-500',     icon: Clock },
-  attention:   { label: 'דורש תשומת לב', color: 'bg-amber-100 text-amber-700',    dot: 'bg-amber-500',   icon: AlertTriangle },
-  not_started: { label: 'טרם התחיל',     color: 'bg-slate-100 text-slate-600',     dot: 'bg-slate-400',   icon: Minus },
+  waiting:     { label: 'ממתין לייצור', color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-500',   icon: AlertTriangle },
+  not_started: { label: 'טרם התחיל',    color: 'bg-slate-100 text-slate-600',     dot: 'bg-slate-400',   icon: Minus },
 };
 
-const BALANCE_STAGES = {
-  closing_operations: 'פעולות סגירה',
-  editing_for_audit:  'עריכה לביקורת',
-  sent_to_auditor:    'שליחה לרו"ח',
-  auditor_questions_1: 'שאלות רו"ח 1',
-  auditor_questions_2: 'שאלות רו"ח 2',
-  signed:             'חתימה ✓',
+const FREQUENCY_HEBREW = {
+  monthly: 'חודשי',
+  bimonthly: 'דו-חודשי',
+  quarterly: 'רבעוני',
+  semi_annual: 'חצי שנתי',
+  not_applicable: 'לא רלוונטי',
 };
 
-// P2 task categories that indicate bookkeeping production
+// P2 production categories — prerequisite for P&L
 const P2_PRODUCTION_CATEGORIES = [
   'הנהלת חשבונות', 'work_bookkeeping',
-  'התאמות', 'work_reconciliation',
-];
-
-// P2 tax reporting categories (excluded from this page)
-const P2_TAX_CATEGORIES = [
-  'מע"מ', 'work_vat_reporting', 'מע"מ 874', 'work_vat_874',
-  'מקדמות מס', 'work_tax_advances',
 ];
 
 // ============================================================
@@ -68,7 +56,6 @@ const P2_TAX_CATEGORIES = [
 export default function FinancialResultsDashboard() {
   const [clients, setClients] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [balanceSheets, setBalanceSheets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1));
   const [search, setSearch] = useState('');
@@ -78,104 +65,90 @@ export default function FinancialResultsDashboard() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [clientsData, tasksData, bsData] = await Promise.all([
+      const [clientsData, tasksData] = await Promise.all([
         Client.list(null, 500).catch(() => []),
         Task.filter({ context: 'work' }).catch(() => []),
-        BalanceSheet.list(null, 500).catch(() => []),
       ]);
       setClients(clientsData || []);
       setTasks(tasksData || []);
-      setBalanceSheets(bsData || []);
     } catch (error) {
       console.error('Error loading financial data:', error);
     }
     setIsLoading(false);
   };
 
-  // Only active clients with bookkeeping services
-  const activeClients = useMemo(() =>
+  // STRICT: Only clients with pnl_reports in service_types
+  const pnlClients = useMemo(() =>
     (clients || []).filter(c => {
       if (c.status !== 'active' && c.status !== 'balance_sheet_only') return false;
       const types = c.service_types || [];
-      return types.some(st => ['bookkeeping', 'vat_reporting', 'full_service'].includes(st));
+      return types.includes('pnl_reports');
     }).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he')),
     [clients]
   );
 
-  // Tasks for selected reporting month — only P2 production tasks
+  // Tasks for selected reporting month
   const monthStr = format(selectedMonth, 'yyyy-MM');
   const monthTasks = useMemo(() =>
-    (tasks || []).filter(t => {
-      if (P2_TAX_CATEGORIES.includes(t.category)) return false; // Exclude tax reporting
-      return getTaskReportingMonth(t) === monthStr;
-    }),
+    (tasks || []).filter(t => getTaskReportingMonth(t) === monthStr),
     [tasks, monthStr]
   );
 
-  // Balance sheet lookup by client_id
-  const bsLookup = useMemo(() => {
-    const map = {};
-    (balanceSheets || []).forEach(bs => {
-      if (!map[bs.client_id] || bs.tax_year > map[bs.client_id].tax_year) {
-        map[bs.client_id] = bs;
-      }
-    });
-    return map;
-  }, [balanceSheets]);
-
-  // Build rows
+  // Build rows — one per pnl_reports client
   const rows = useMemo(() => {
-    return activeClients.map(client => {
+    return pnlClients.map(client => {
       const clientTasks = monthTasks.filter(t => t.client_name === client.name);
-      const productionTasks = clientTasks.filter(t => P2_PRODUCTION_CATEGORIES.includes(t.category));
-      const bs = bsLookup[client.id];
 
-      // Bookkeeping production status
+      // P2 production status (prerequisite check)
+      const productionTasks = clientTasks.filter(t =>
+        P2_PRODUCTION_CATEGORIES.includes(t.category)
+      );
       const totalProd = productionTasks.length;
-      const doneProd = productionTasks.filter(t => t.status === 'completed').length;
+      const doneProd = productionTasks.filter(t =>
+        t.status === 'completed' || t.status === 'production_completed'
+      ).length;
+      const productionDone = totalProd > 0 && doneProd === totalProd;
       const productionStatus = totalProd === 0 ? 'not_started'
-        : doneProd === totalProd ? 'ready'
+        : productionDone ? 'ready'
         : doneProd > 0 ? 'in_progress'
         : 'not_started';
 
-      // Reconciliation status (from task steps)
-      const reconTasks = clientTasks.filter(t =>
-        ['התאמות', 'work_reconciliation'].includes(t.category)
-      );
-      const totalRecon = reconTasks.length;
-      const doneRecon = reconTasks.filter(t => t.status === 'completed').length;
-      const reconStatus = totalRecon === 0 ? 'not_started'
-        : doneRecon === totalRecon ? 'ready'
-        : doneRecon > 0 ? 'in_progress'
-        : 'not_started';
+      // PNL frequency + target day from client card
+      const pnlFrequency = client.reporting_info?.pnl_frequency || 'not_applicable';
+      const pnlTargetDay = client.reporting_info?.pnl_target_day || '—';
 
-      // Balance sheet status
-      const bsStage = bs?.current_stage || null;
-      const bsStatus = !bsStage ? 'not_started'
-        : bsStage === 'signed' ? 'ready'
-        : 'in_progress';
-
-      // Overall readiness
-      const allReady = productionStatus === 'ready' && reconStatus === 'ready';
-      const anyInProgress = productionStatus === 'in_progress' || reconStatus === 'in_progress';
-      const overallStatus = allReady ? 'ready'
-        : anyInProgress ? 'in_progress'
-        : 'not_started';
+      // P&L readiness: depends on P2 production being done
+      let pnlStatus;
+      if (!productionDone && totalProd > 0) {
+        pnlStatus = 'waiting'; // waiting for prerequisite
+      } else if (productionDone) {
+        // Production done → P&L can proceed. Check if there's a pnl-specific task
+        const pnlTasks = clientTasks.filter(t =>
+          t.category === 'pnl_reports' || t.category === 'רווח והפסד' || t.category === 'work_pnl'
+        );
+        if (pnlTasks.length > 0) {
+          const pnlDone = pnlTasks.every(t => t.status === 'completed');
+          const pnlInProgress = pnlTasks.some(t => t.status === 'in_progress');
+          pnlStatus = pnlDone ? 'ready' : pnlInProgress ? 'in_progress' : 'not_started';
+        } else {
+          // No PNL task yet but production is done → ready to start
+          pnlStatus = 'not_started';
+        }
+      } else {
+        pnlStatus = 'not_started';
+      }
 
       return {
         client,
+        pnlFrequency,
+        pnlTargetDay,
         productionStatus,
         totalProd,
         doneProd,
-        reconStatus,
-        totalRecon,
-        doneRecon,
-        bsStage,
-        bsStatus,
-        overallStatus,
+        pnlStatus,
       };
     });
-  }, [activeClients, monthTasks, bsLookup]);
+  }, [pnlClients, monthTasks]);
 
   // Filter by search
   const filteredRows = useMemo(() => {
@@ -187,10 +160,10 @@ export default function FinancialResultsDashboard() {
   // Stats
   const stats = useMemo(() => {
     const total = rows.length;
-    const ready = rows.filter(r => r.overallStatus === 'ready').length;
-    const inProgress = rows.filter(r => r.overallStatus === 'in_progress').length;
-    const notStarted = rows.filter(r => r.overallStatus === 'not_started').length;
-    return { total, ready, inProgress, notStarted };
+    const ready = rows.filter(r => r.pnlStatus === 'ready').length;
+    const inProgress = rows.filter(r => r.pnlStatus === 'in_progress').length;
+    const waiting = rows.filter(r => r.pnlStatus === 'waiting').length;
+    return { total, ready, inProgress, waiting };
   }, [rows]);
 
   const handleMonthChange = (dir) => {
@@ -224,9 +197,9 @@ export default function FinancialResultsDashboard() {
             <TrendingUp className="w-7 h-7 text-teal-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">P2 | תוצרים (רווח והפסד)</h1>
+            <h1 className="text-2xl font-bold text-gray-800">תוצרים — רווח והפסד</h1>
             <p className="text-sm text-gray-500">
-              מוכנות כספית ללקוח — ייצור הנה"ח, התאמות, מאזן | {format(selectedMonth, 'MMMM yyyy', { locale: he })}
+              לקוחות עם שירות דוחות רוה"ס בלבד | {format(selectedMonth, 'MMMM yyyy', { locale: he })}
             </p>
           </div>
         </div>
@@ -236,8 +209,8 @@ export default function FinancialResultsDashboard() {
               <ChevronRight className="w-4 h-4" />
             </Button>
             <div className="text-center w-32">
-              <div className="text-[10px] text-slate-400">חודש דיווח</div>
-              <div className="font-semibold text-sm text-slate-700">
+              <div className="text-[10px] text-gray-400">חודש דיווח</div>
+              <div className="font-semibold text-sm text-gray-700">
                 {format(selectedMonth, 'MMMM yyyy', { locale: he })}
               </div>
             </div>
@@ -254,26 +227,26 @@ export default function FinancialResultsDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-3 text-center">
-          <div className="text-2xl font-bold text-slate-700">{stats.total}</div>
-          <div className="text-xs text-slate-500">סה"כ לקוחות</div>
+          <div className="text-2xl font-bold text-gray-700">{stats.total}</div>
+          <div className="text-xs text-gray-500">לקוחות עם רוה"ס</div>
         </CardContent></Card>
         <Card className="border-emerald-200"><CardContent className="p-3 text-center">
           <div className="text-2xl font-bold text-emerald-600">{stats.ready}</div>
-          <div className="text-xs text-slate-500">מוכנים</div>
+          <div className="text-xs text-gray-500">דוח מוכן</div>
         </CardContent></Card>
         <Card className="border-sky-200"><CardContent className="p-3 text-center">
           <div className="text-2xl font-bold text-sky-600">{stats.inProgress}</div>
-          <div className="text-xs text-slate-500">בתהליך</div>
+          <div className="text-xs text-gray-500">בתהליך</div>
         </CardContent></Card>
-        <Card className="border-slate-200"><CardContent className="p-3 text-center">
-          <div className="text-2xl font-bold text-slate-500">{stats.notStarted}</div>
-          <div className="text-xs text-slate-500">טרם התחילו</div>
+        <Card className="border-amber-200"><CardContent className="p-3 text-center">
+          <div className="text-2xl font-bold text-amber-600">{stats.waiting}</div>
+          <div className="text-xs text-gray-500">ממתין לייצור</div>
         </CardContent></Card>
       </div>
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
         <Input
           placeholder="חיפוש לקוח..."
           value={search}
@@ -288,73 +261,56 @@ export default function FinancialResultsDashboard() {
           <div className="overflow-x-auto">
             <ResizableTable className="w-full text-sm" stickyHeader maxHeight="70vh">
               <thead>
-                <tr className="border-b bg-muted/50">
+                <tr className="border-b bg-gray-50/80">
                   <th className="text-center p-2 w-10 bg-gray-100">#</th>
                   <th className="text-right p-3 font-semibold min-w-[180px] bg-gray-100 sticky right-0 z-20 border-l">
                     לקוח
                   </th>
+                  <th className="text-center p-2 font-semibold min-w-[100px] bg-gray-50">
+                    <div className="text-xs">תדירות</div>
+                  </th>
+                  <th className="text-center p-2 font-semibold min-w-[80px] bg-gray-50">
+                    <div className="text-xs">יום יעד</div>
+                  </th>
                   <th className="text-center p-2 font-semibold min-w-[130px] bg-teal-50">
                     <div className="text-xs">ייצור הנה"ח</div>
-                    <div className="text-[10px] text-muted-foreground font-normal">שלב א'</div>
+                    <div className="text-[10px] text-gray-400 font-normal">תנאי מקדים</div>
                   </th>
-                  <th className="text-center p-2 font-semibold min-w-[130px] bg-teal-50">
-                    <div className="text-xs">התאמות חשבונות</div>
-                    <div className="text-[10px] text-muted-foreground font-normal">שלב ג'</div>
-                  </th>
-                  <th className="text-center p-2 font-semibold min-w-[130px] bg-indigo-50">
-                    <div className="text-xs">מאזן שנתי</div>
-                    <div className="text-[10px] text-muted-foreground font-normal">שלב ד'</div>
-                  </th>
-                  <th className="text-center p-2 font-semibold min-w-[100px] bg-emerald-50">
-                    <div className="text-xs">מוכנות</div>
+                  <th className="text-center p-2 font-semibold min-w-[120px] bg-emerald-50">
+                    <div className="text-xs">רווח והפסד</div>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.map((row, idx) => (
-                  <tr key={row.client.id} className={`border-b hover:bg-muted/20 ${idx % 2 === 0 ? '' : 'bg-muted/10'}`}>
-                    <td className="text-center p-2 text-xs text-muted-foreground">{idx + 1}</td>
+                  <tr key={row.client.id} className={`border-b hover:bg-gray-50/40 ${idx % 2 === 0 ? '' : 'bg-gray-50/20'}`}>
+                    <td className="text-center p-2 text-xs text-gray-400">{idx + 1}</td>
                     <td className="p-3 font-medium sticky right-0 bg-white z-10 border-l">
                       {row.client.name}
+                    </td>
+                    <td className="text-center p-2 text-xs text-gray-600">
+                      {FREQUENCY_HEBREW[row.pnlFrequency] || row.pnlFrequency}
+                    </td>
+                    <td className="text-center p-2 text-xs text-gray-600">
+                      {row.pnlTargetDay}
                     </td>
                     <td className="text-center p-2">
                       <StatusBadge status={row.productionStatus} />
                       {row.totalProd > 0 && (
-                        <div className="text-[10px] text-muted-foreground mt-1">
+                        <div className="text-[10px] text-gray-400 mt-1">
                           {row.doneProd}/{row.totalProd}
                         </div>
                       )}
                     </td>
                     <td className="text-center p-2">
-                      <StatusBadge status={row.reconStatus} />
-                      {row.totalRecon > 0 && (
-                        <div className="text-[10px] text-muted-foreground mt-1">
-                          {row.doneRecon}/{row.totalRecon}
-                        </div>
-                      )}
-                    </td>
-                    <td className="text-center p-2">
-                      {row.bsStage ? (
-                        <Badge className={`text-xs px-2 py-0.5 ${
-                          row.bsStage === 'signed'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-indigo-100 text-indigo-700'
-                        }`}>
-                          {BALANCE_STAGES[row.bsStage] || row.bsStage}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="text-center p-2">
-                      <StatusBadge status={row.overallStatus} />
+                      <StatusBadge status={row.pnlStatus} />
                     </td>
                   </tr>
                 ))}
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                      {search ? 'לא נמצאו לקוחות' : 'אין לקוחות פעילים עם שירותי הנה"ח'}
+                    <td colSpan={6} className="p-8 text-center text-gray-400">
+                      {search ? 'לא נמצאו לקוחות' : 'אין לקוחות עם שירות רווח והפסד פעיל'}
                     </td>
                   </tr>
                 )}
