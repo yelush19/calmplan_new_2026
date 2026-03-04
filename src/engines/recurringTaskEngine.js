@@ -11,12 +11,16 @@
  *
  * RULES:
  *   1. ZERO GHOST DATA — A task is created ONLY if the client's service_types
- *      array contains the corresponding service key.
+ *      array EXPLICITLY contains the corresponding service key.
+ *      No derivation. No auto-linking. If it's not in service_types, it doesn't exist.
  *   2. DETERMINISTIC — No service subscription = 0 tasks. No exceptions.
  *   3. MANUAL TRIGGER ONLY — generateRecurringTasks() is called by a button.
  *      Nothing auto-generates.
  *   4. FREQUENCY-AWARE — Respects bimonthly/quarterly/semi-annual off-months.
  *      Off-month = 0 tasks for that service. Not "not_relevant". Zero.
+ *   5. CROSS-REFERENCE VALIDATION — A service is real only when service_types,
+ *      reporting_info frequency, deadlines, and tax IDs all agree.
+ *      Deadline "לא רלוונטי" overrules an active frequency.
  */
 
 import { TAX_SERVICES, PAYROLL_SERVICES, ALL_SERVICES } from '@/config/processTemplates';
@@ -34,6 +38,16 @@ import { getDueDateForCategory, isClient874, isBimonthlyOffMonth } from '@/confi
  *   - category: Hebrew category name used for task creation
  *   - frequencyField: key in client.reporting_info for frequency lookup
  */
+/**
+ * SERVICE_GROUPS — Only services that appear EXPLICITLY in client.service_types[].
+ *
+ * Social Security (ביטוח לאומי) and Deductions (ניכויים) are NOT listed here
+ * because they do not appear in any client's service_types array.
+ * They are process steps within the Payroll workflow, not standalone tasks.
+ *
+ * Payroll sub-tasks already include: Social Security filing, Deductions filing,
+ * as steps within the payroll process template.
+ */
 export const SERVICE_GROUPS = {
   tax: {
     key: 'tax',
@@ -42,7 +56,7 @@ export const SERVICE_GROUPS = {
       {
         key: 'vat',
         label: 'מע"מ',
-        serviceKey: 'vat_reporting',       // What to look for in client.service_types
+        serviceKey: 'vat_reporting',       // Must exist in client.service_types[]
         templateKey: 'vat',                // Key in ALL_SERVICES for process steps
         category: 'מע"מ',                  // Hebrew category for task entity
         frequencyField: 'vat_reporting_frequency',
@@ -50,7 +64,7 @@ export const SERVICE_GROUPS = {
       {
         key: 'tax_advances',
         label: 'מקדמות מס',
-        serviceKey: 'tax_advances',
+        serviceKey: 'tax_advances',        // Must exist in client.service_types[]
         templateKey: 'tax_advances',
         category: 'מקדמות מס',
         frequencyField: 'tax_advances_frequency',
@@ -64,28 +78,10 @@ export const SERVICE_GROUPS = {
       {
         key: 'payroll',
         label: 'שכר',
-        serviceKey: 'payroll',
+        serviceKey: 'payroll',             // Must exist in client.service_types[]
         templateKey: 'payroll',
         category: 'שכר',
         frequencyField: 'payroll_frequency',
-      },
-      {
-        key: 'social_security',
-        label: 'ביטוח לאומי',
-        serviceKey: 'payroll',              // Derived from payroll — if client has payroll, they need SS
-        templateKey: 'social_security',
-        category: 'ביטוח לאומי',
-        frequencyField: 'social_security_frequency',
-        derivedFrom: 'payroll',             // Auto-linked: payroll → social_security
-      },
-      {
-        key: 'deductions',
-        label: 'ניכויים',
-        serviceKey: 'payroll',              // Derived from payroll
-        templateKey: 'deductions',
-        category: 'ניכויים',
-        frequencyField: 'deductions_frequency',
-        derivedFrom: 'payroll',             // Auto-linked: payroll → deductions
       },
     ],
   },
@@ -126,7 +122,7 @@ export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, 
     // Hierarchy metadata
     client_id: client.id || client.entity_number,
     client_name: client.name,
-    service_group: serviceDef.derivedFrom ? serviceDef.derivedFrom : serviceDef.key,
+    service_group: serviceDef.key,
     service_key: serviceDef.key,
     parent_service: template?.dashboard || 'tax',
 
