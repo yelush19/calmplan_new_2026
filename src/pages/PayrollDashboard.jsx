@@ -293,7 +293,7 @@ export default function PayrollDashboardPage() {
             <Briefcase className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">שכר ודיווחי רשויות</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">P1 | שכר ודיווחי רשויות</h1>
             <p className="text-slate-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | שכר, ניכויים, ביטוח לאומי, מס"ב ועוד</p>
           </div>
         </div>

@@ -22,7 +22,8 @@ import { isBimonthlyOffMonth, STATUS_CONFIG } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 
-// === Column Groups ===
+// === Column Groups — P2 ONLY: Tax + Bookkeeping services ===
+// Payroll columns (שכר, ביט"ל, ניכויים) belong to P1 (PayrollDashboard).
 const COLUMN_GROUPS = [
   {
     key: 'taxes',
@@ -38,35 +39,19 @@ const COLUMN_GROUPS = [
     ],
   },
   {
-    key: 'payroll',
-    label: 'שכר',
-    bgColor: 'bg-[#00acc1]/5',
-    headerBg: 'bg-[#00acc1]',
-    headerText: 'text-white',
-    drillDownPage: 'PayrollDashboard',
-    icon: Briefcase,
-    columns: [
-      { key: 'payroll', label: 'שכר', categories: ['שכר', 'work_payroll'], createCategory: 'שכר', createTitle: 'שכר' },
-      { key: 'social_security', label: 'ביט"ל', categories: ['ביטוח לאומי', 'work_social_security'], createCategory: 'ביטוח לאומי', createTitle: 'ביטוח לאומי' },
-      { key: 'deductions', label: 'ניכויים', categories: ['ניכויים', 'work_deductions'], createCategory: 'ניכויים', createTitle: 'ניכויים' },
-    ],
-  },
-  {
-    key: 'additional',
-    label: 'שירותים נוספים',
+    key: 'p2_additional',
+    label: 'שירותי הנה"ח נוספים',
     bgColor: 'bg-indigo-50/50',
     headerBg: 'bg-indigo-600',
     headerText: 'text-white',
-    drillDownPage: 'AdditionalServicesDashboard',
+    drillDownPage: 'BookkeepingExtrasDashboard',
     icon: Settings2,
-    serviceCheck: true, // columns are only shown if client has the service
+    serviceCheck: true,
     columns: [
-      { key: 'masav_social', label: 'מס"ב סוצ\'', categories: ['מס"ב סוציאליות'], createCategory: 'מס"ב סוציאליות', createTitle: 'מס"ב סוציאליות', service: 'masav_social' },
-      { key: 'masav_employees', label: 'מס"ב עוב\'', categories: ['מס"ב עובדים'], createCategory: 'מס"ב עובדים', createTitle: 'מס"ב עובדים', service: 'masav_employees' },
-      { key: 'payslip_sending', label: 'תלושים', categories: ['משלוח תלושים'], createCategory: 'משלוח תלושים', createTitle: 'משלוח תלושים', service: 'payslip_sending' },
-      { key: 'authorities_payment', label: 'רשויות', categories: ['תשלום רשויות'], createCategory: 'תשלום רשויות', createTitle: 'תשלום רשויות', service: 'authorities_payment' },
+      { key: 'masav_suppliers', label: 'מס"ב ספקים', categories: ['מס"ב ספקים'], createCategory: 'מס"ב ספקים', createTitle: 'מס"ב ספקים', service: 'masav_suppliers' },
       { key: 'operator_reporting', label: 'מתפעל', categories: ['דיווח למתפעל'], createCategory: 'דיווח למתפעל', createTitle: 'דיווח למתפעל', service: 'operator_reporting' },
       { key: 'taml_reporting', label: 'טמל', categories: ['דיווח לטמל'], createCategory: 'דיווח לטמל', createTitle: 'דיווח לטמל', service: 'taml_reporting' },
+      { key: 'consulting', label: 'ייעוץ', categories: ['ייעוץ', 'work_consulting'], createCategory: 'ייעוץ', createTitle: 'ייעוץ', service: 'consulting' },
     ],
   },
 ];
@@ -123,6 +108,64 @@ export default function ClientsDashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to reporting month (previous)
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState([]);
+
+  // Column visibility — users can hide columns they don't need
+  const [hiddenColumns, setHiddenColumns] = useState(() => {
+    try {
+      const saved = localStorage.getItem('p2-hidden-columns');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  // Column widths — resizable (min 60px, stored in localStorage)
+  const [columnWidths, setColumnWidths] = useState(() => {
+    try {
+      const saved = localStorage.getItem('p2-column-widths');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  const toggleColumnVisibility = useCallback((colKey) => {
+    setHiddenColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(colKey)) next.delete(colKey); else next.add(colKey);
+      localStorage.setItem('p2-hidden-columns', JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
+  // Resize handler for column drag
+  const resizeRef = useRef(null);
+  const handleResizeStart = useCallback((colKey, e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = columnWidths[colKey] || 80;
+    const onMove = (moveE) => {
+      const delta = moveE.clientX - startX;
+      const newWidth = Math.max(60, startWidth + delta);
+      setColumnWidths(prev => {
+        const next = { ...prev, [colKey]: newWidth };
+        localStorage.setItem('p2-column-widths', JSON.stringify(next));
+        return next;
+      });
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [columnWidths]);
+
+  // Filter out hidden columns from groups
+  const visibleColumnGroups = useMemo(() => {
+    return COLUMN_GROUPS.map(group => ({
+      ...group,
+      columns: group.columns.filter(col => !hiddenColumns.has(col.key)),
+    })).filter(group => group.columns.length > 0);
+  }, [hiddenColumns]);
+
+  const visibleAllColumns = useMemo(() => visibleColumnGroups.flatMap(g => g.columns), [visibleColumnGroups]);
 
   // Popover state for inline editing
   const [popover, setPopover] = useState(null); // { anchorRect, clientName, clientId, colKey, group, task }
@@ -191,16 +234,8 @@ export default function ClientsDashboardPage() {
     }, items[0]);
   };
 
-  const hasPayroll = (client) => {
-    return client.service_types?.some(st =>
-      ['payroll', 'full_service', 'bookkeeping'].includes(st)
-    ) || client.reporting_info?.payroll_frequency === 'monthly';
-  };
-
   // Check if client needs a specific service column
   const clientNeedsService = (client, col, group) => {
-    // Payroll group: use existing payroll check
-    if (group.key === 'payroll') return hasPayroll(client);
     // Columns with requiredServices (tax columns)
     if (col.requiredServices) {
       return (client.service_types || []).some(st => col.requiredServices.includes(st));
@@ -427,7 +462,7 @@ export default function ClientsDashboardPage() {
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">תהליכי דיווח חודשיים</h1>
+            <h1 className="text-2xl font-bold text-gray-800">P2 | ריכוז דיווחי מיסים</h1>
             <p className="text-sm text-slate-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | לחץ על תא לשינוי סטטוס</p>
           </div>
         </div>
@@ -545,6 +580,31 @@ export default function ClientsDashboardPage() {
       ) : filteredClients.length > 0 ? (
         <Card className="border-white/30 shadow-md overflow-hidden">
           <CardContent className="p-0">
+            {/* Column visibility toggle bar */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50/80 border-b border-white/20 flex-wrap">
+              <span className="text-xs font-bold text-slate-500 ml-2">עמודות:</span>
+              {ALL_COLUMNS.map(col => (
+                <button
+                  key={col.key}
+                  onClick={() => toggleColumnVisibility(col.key)}
+                  className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${
+                    hiddenColumns.has(col.key)
+                      ? 'bg-slate-200 text-slate-400 line-through'
+                      : 'bg-emerald-100 text-emerald-700'
+                  }`}
+                >
+                  {col.label}
+                </button>
+              ))}
+              {hiddenColumns.size > 0 && (
+                <button
+                  onClick={() => { setHiddenColumns(new Set()); localStorage.removeItem('p2-hidden-columns'); }}
+                  className="text-xs px-2 py-1 text-emerald-600 hover:text-emerald-800 font-bold"
+                >
+                  הצג הכל
+                </button>
+              )}
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[750px]">
                 <thead>
@@ -553,7 +613,7 @@ export default function ClientsDashboardPage() {
                     <th rowSpan={2} className="text-right px-4 py-3 font-bold text-slate-700 text-sm bg-white/50 sticky right-0 z-20 border-b-2 border-white/30 min-w-[160px]">
                       לקוח
                     </th>
-                    {COLUMN_GROUPS.map(group => (
+                    {visibleColumnGroups.map(group => (
                       <th key={group.key} colSpan={group.columns.length}
                         className={`px-3 py-2.5 text-center font-bold text-sm border-b-2 border-white/30 border-x-2 border-white/30 ${group.headerBg} ${group.headerText}`}>
                         <Link to={createPageUrl(group.drillDownPage)}
@@ -565,15 +625,24 @@ export default function ClientsDashboardPage() {
                       </th>
                     ))}
                   </tr>
-                  {/* Sub-column headers */}
+                  {/* Sub-column headers — resizable */}
                   <tr className="border-b-2 border-white/30">
-                    {COLUMN_GROUPS.map(group =>
+                    {visibleColumnGroups.map(group =>
                       group.columns.map((col, idx) => {
                         const colStats = getColumnStats(col.key);
+                        const colW = columnWidths[col.key];
                         return (
-                          <th key={col.key} className={`px-2 py-2 text-center text-xs font-semibold text-slate-600 ${group.bgColor} ${idx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
+                          <th key={col.key}
+                            className={`px-2 py-2 text-center text-xs font-semibold text-slate-600 ${group.bgColor} ${idx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'} relative select-none`}
+                            style={colW ? { width: colW, minWidth: 60 } : { minWidth: 60 }}
+                          >
                             <div>{col.label}</div>
                             <div className="text-[10px] font-normal text-slate-400 mt-0.5">{colStats.pct}% ({colStats.done}/{colStats.total})</div>
+                            {/* Resize handle */}
+                            <div
+                              className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-emerald-400/40 transition-colors z-10"
+                              onMouseDown={(e) => handleResizeStart(col.key, e)}
+                            />
                           </th>
                         );
                       })
@@ -623,7 +692,7 @@ export default function ClientsDashboardPage() {
                         </td>
 
                         {/* Process cells */}
-                        {COLUMN_GROUPS.map(group =>
+                        {visibleColumnGroups.map(group =>
                           group.columns.map((col, colIdx) => {
                             // Service not applicable for this client
                             if (!clientNeedsService(client, col, group)) {
@@ -693,7 +762,7 @@ export default function ClientsDashboardPage() {
                     <td className="px-4 py-2.5 sticky right-0 bg-white/50 z-10 text-sm font-bold text-slate-700 border-l-2 border-white/30">
                       סה"כ ({filteredClients.length} לקוחות)
                     </td>
-                    {COLUMN_GROUPS.map(group =>
+                    {visibleColumnGroups.map(group =>
                       group.columns.map((col, colIdx) => {
                         const colStats = getColumnStats(col.key);
                         return (
@@ -778,7 +847,7 @@ export default function ClientsDashboardPage() {
 
       {/* Quick Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {COLUMN_GROUPS.map(group => {
+        {visibleColumnGroups.map(group => {
           const Icon = group.icon;
           const groupTasks = tasks.filter(t =>
             group.columns.some(col => col.categories.includes(t.category))
