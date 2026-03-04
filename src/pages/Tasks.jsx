@@ -26,6 +26,7 @@ import { he } from "date-fns/locale";
 import KanbanView from "../components/tasks/KanbanView";
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import ResizableTable from '@/components/ui/ResizableTable';
+import useTaskCascade from '@/hooks/useTaskCascade';
 
 import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/processTemplates';
 
@@ -186,6 +187,9 @@ export default function TasksPage() {
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [listSubTaskParent, setListSubTaskParent] = useState(null);
   const [collapsedParents, setCollapsedParents] = useState({});
+
+  // ── Cascade Engine Hook — ensures status changes trigger Phase B/C task creation ──
+  const { updateTaskWithCascade, updateStepWithCascade } = useTaskCascade(tasks, setTasks, clientsList);
 
   const toggleStatusGroup = (status) => {
     setCollapsedStatuses(prev => ({ ...prev, [status]: !prev[status] }));
@@ -469,8 +473,8 @@ export default function TasksPage() {
 
   const handleStatusChange = async (task, newStatus) => {
     try {
-      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
-      await Task.update(task.id, { ...task, status: newStatus });
+      // Use cascade engine so status changes trigger Phase B/C task creation
+      await updateTaskWithCascade(task.id, { status: newStatus });
       syncNotesWithTaskStatus(task.id, newStatus);
     } catch (error) {
       console.error("Error updating status:", error);
@@ -498,8 +502,8 @@ export default function TasksPage() {
       if (updatedData.due_date && editingTask.due_date && updatedData.due_date !== editingTask.due_date) {
         updatedData.reschedule_count = (editingTask.reschedule_count || 0) + 1;
       }
-      await Task.update(editingTask.id, updatedData);
-      setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...updatedData } : t));
+      // Use cascade engine so editing a task's status triggers downstream tasks
+      await updateTaskWithCascade(editingTask.id, updatedData);
       setEditingTask(null);
     } catch (error) {
       console.error("Error updating task:", error);
@@ -977,7 +981,7 @@ export default function TasksPage() {
         )
       ) : view === 'mindmap' ? (
         <ViewErrorBoundary>
-          <MindMapView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} onTaskCreated={loadTasks} focusTaskId={focusTaskId} focusClientName={focusClientName} onFocusHandled={() => { setFocusTaskId(null); setFocusClientName(null); }} />
+          <MindMapView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} onTaskCreated={loadTasks} onStatusChange={handleStatusChange} focusTaskId={focusTaskId} focusClientName={focusClientName} onFocusHandled={() => { setFocusTaskId(null); setFocusClientName(null); }} />
         </ViewErrorBoundary>
       ) : view === 'gantt' ? (
         <GanttView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} />

@@ -21,6 +21,8 @@ import { he } from 'date-fns/locale';
 import { isBimonthlyOffMonth, STATUS_CONFIG } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import { processTaskCascade } from '@/engines/taskCascadeEngine';
+import { getTaskProcessSteps } from '@/config/processTemplates';
 
 // === Column Groups — P2 ONLY: Tax + Bookkeeping services ===
 // Payroll columns (שכר, ביט"ל, ניכויים) belong to P1 (PayrollDashboard).
@@ -340,8 +342,22 @@ export default function ClientsDashboardPage() {
 
     try {
       if (popover.task) {
-        await Task.update(popover.task.id, { status: newStatus });
-        syncNotesWithTaskStatus(popover.task.id, newStatus);
+        const taskObj = popover.task;
+        const merged = { ...taskObj, status: newStatus };
+        const steps = getTaskProcessSteps(merged);
+        const siblings = tasks.filter(t => t.client_name === taskObj.client_name && t.id !== taskObj.id);
+        const cascade = processTaskCascade(merged, steps, siblings);
+        const finalStatus = cascade.statusUpdate?.status || newStatus;
+        await Task.update(taskObj.id, { status: finalStatus });
+        // Auto-create cascade child tasks (Phase B/C)
+        if (cascade.tasksToCreate?.length > 0) {
+          for (const childDef of cascade.tasksToCreate) {
+            await Task.create(childDef);
+          }
+        }
+        syncNotesWithTaskStatus(taskObj.id, finalStatus);
+        // Notify other pages
+        window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'cascade' } }));
       } else {
         // Create new task - due_date in deadline month (M+1)
         const deadlineEnd = endOfMonth(addMonths(selectedMonth, 1));

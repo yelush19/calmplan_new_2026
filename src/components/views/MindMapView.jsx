@@ -255,7 +255,7 @@ const ZOOM_STEP = 0.12;
 const POSITIONS_STORAGE_KEY = 'mindmap-positions';
 
 // ─── Main Component ─────────────────────────────────────────────
-export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDismiss, focusMode = false, onEditTask, onTaskCreated, focusTaskId = null, focusClientName = null, onFocusHandled }) {
+export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDismiss, focusMode = false, onEditTask, onTaskCreated, onStatusChange, focusTaskId = null, focusClientName = null, onFocusHandled }) {
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const spacingMountGuard = useRef(false); // ← prevents spacing effect from wiping localStorage on mount
@@ -392,7 +392,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v11-radial-spread'; // bump this to force reset
+  const LAYOUT_VERSION = 'v12-sector-locked-90deg'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -430,7 +430,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // ── STRICT COLLAPSE HIERARCHY ──
   // Level 1 (meta-folders): collapsed by default → click to reveal Level 2/3
   // Level 3 (departments): collapsed by default → click to reveal Level 4 clients
-  const MAX_VISIBLE_CHILDREN = 50; // Show all clients — no "+X עוד" pagination
+  const MAX_VISIBLE_CHILDREN = 999; // Show ALL clients — no pagination at all
   const [expandedMetaFolders, setExpandedMetaFolders] = useState(new Set());
   const [expandedBranches, setExpandedBranches] = useState(new Set());
   const toggleMetaExpand = useCallback((metaName) => {
@@ -699,8 +699,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, [focusClientName, focusTaskId, clientNodes]);
 
   // ══════════════════════════════════════════════════════════════
-  // LAYOUT: DYNAMIC PHYSICS — Vertical Displacement + Radial Categories
-  // LAW 2: child.y = parent.y + (index * 70px), 150px safety gap
+  // LAYOUT: FIXED GEOMETRIC — Radial 90° Sectors, No Overlap
+  // P1=top(-90°), P2=left(180°), P3=right(0°), P4=bottom(90°)
   // ══════════════════════════════════════════════════════════════
   const layout = useMemo(() => {
     const w = Math.max(dimensions.width, 600);
@@ -710,23 +710,24 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const cy = h / 2;
     const centerR = isWide ? 55 : 48;
 
-    // ─── Categories at cardinal positions, 280px from center ───
-    const metaCount = metaFolders.length;
-    const FIXED_ANGLES = {
-      1: [-Math.PI / 2],
-      2: [-Math.PI / 2, Math.PI / 2],
-      3: [-Math.PI / 2, Math.PI / 6, Math.PI * 5 / 6],
-      4: [-Math.PI / 2, 0, Math.PI / 2, Math.PI],
+    // ─── Fixed 90° sector angles for P1-P4 ───
+    // P1 top, P2 left, P3 right, P4 bottom (Hebrew RTL-friendly)
+    const SECTOR_ANGLES = {
+      'P1 חשבות שכר':       -Math.PI / 2,    // top (270°)
+      'P2 הנהלת חשבונות':   Math.PI,          // left (180°)
+      'P3 ניהול משרד':      0,                // right (0°)
+      'P4 בית':             Math.PI / 2,      // bottom (90°)
     };
-    const fixedAngles = FIXED_ANGLES[Math.min(metaCount, 4)] ||
-      Array.from({ length: metaCount }, (_, i) => (i * 2 * Math.PI / metaCount) - Math.PI / 2);
 
-    const basemetaDist = 280;
+    const META_DIST = 300;   // center → meta-folder hexagon
+    const DEPT_DIST = 180;   // meta-folder → department bubble
+    const CLIENT_DIST = 160; // department → client pill
+    const MIN_GAP = 150;     // minimum px between any two bubbles
 
-    let metaFolderPositions = metaFolders.map((mf, i) => {
-      const angle = fixedAngles[i] || (i * 2 * Math.PI / metaCount) - Math.PI / 2;
-      const mx = cx + Math.cos(angle) * basemetaDist;
-      const my = cy + Math.sin(angle) * basemetaDist;
+    let metaFolderPositions = metaFolders.map((mf) => {
+      const angle = SECTOR_ANGLES[mf.name] ?? 0;
+      const mx = cx + Math.cos(angle) * META_DIST;
+      const my = cy + Math.sin(angle) * META_DIST;
       const manualKey = `meta-${mf.name}`;
       const manual = manualPositions[manualKey];
       return {
@@ -738,11 +739,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     });
 
     // ═══════════════════════════════════════════════════════════
-    // RADIAL SPREADING — departments fan out around meta-folder,
-    // clients fan out around their department. Each edge is discrete.
+    // SECTOR-LOCKED RADIAL — each P-branch gets its own 90° slice.
+    // Departments fan within the sector arc, clients form a half-circle
+    // around their department. 150px minimum gap enforced.
     // ═══════════════════════════════════════════════════════════
-    const DEPT_DIST = 120;   // distance from meta-folder center to department center
-    const CLIENT_DIST = 100; // distance from department center to client center
 
     const branchPositions = branches.map((branch) => {
       const parentMeta = metaFolderPositions.find(m => m.name === branch.metaFolder);
@@ -750,37 +750,42 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         return { ...branch, x: cx, y: cy, angle: 0, clientPositions: [], subFolderPositions: null };
       }
 
-      // Find siblings (other departments under same meta-folder)
+      // Find sibling departments under same P-branch
       const siblings = branches.filter(b => b.metaFolder === branch.metaFolder);
       const sibIdx = siblings.indexOf(branch);
       const sibCount = siblings.length;
 
-      // Base angle: direction from center hub to this meta-folder (outward)
-      const baseAngle = Math.atan2(parentMeta.y - cy, parentMeta.x - cx);
+      // Sector center angle (outward from hub through meta-folder)
+      const sectorAngle = parentMeta.angle;
 
-      // Departments spread in a fan arc centered on the outward direction
-      // Arc width: 90° for 1 dept, up to 150° for 3+ depts
-      const fanArc = sibCount <= 1 ? 0 : Math.min(sibCount * 0.5, 1.5) * (Math.PI / 2);
-      const startAngle = baseAngle - fanArc / 2;
+      // Departments spread within a ±45° arc (90° total) centered on sector direction
+      const SECTOR_HALF = Math.PI / 4; // 45° each side
       const deptAngle = sibCount <= 1
-        ? baseAngle
-        : startAngle + (sibIdx / (sibCount - 1)) * fanArc;
+        ? sectorAngle
+        : sectorAngle - SECTOR_HALF + (sibIdx / (sibCount - 1)) * (2 * SECTOR_HALF);
 
       const bx = parentMeta.x + Math.cos(deptAngle) * DEPT_DIST;
       const by = parentMeta.y + Math.sin(deptAngle) * DEPT_DIST;
 
-      // Apply manual position override for this folder
+      // Apply manual position override
       const folderKey = `folder-${branch.category}`;
       const folderPos = manualPositions[folderKey];
       const finalBx = folderPos?.x ?? bx;
       const finalBy = folderPos?.y ?? by;
 
-      // Client pills: RADIAL FAN around their department center
-      const sortedClients = [...branch.clients].sort((a, b) => (b.statusRing || 0) - (a.statusRing || 0));
+      // Client pills: HALF-CIRCLE ARC around department, outward direction
+      const sortedClients = [...branch.clients].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
       const nClients = sortedClients.length;
 
-      // Client fan arc: spread wider with more clients (min 60°, max 270°)
-      const clientFanArc = nClients <= 1 ? 0 : Math.min(nClients * 0.35, 1.5) * Math.PI;
+      // Arc width scales with client count: ensure MIN_GAP between adjacent clients
+      // For n clients on a circle of radius r, arc spacing = 2πr/n
+      // We want arc spacing ≥ MIN_GAP, so r ≥ (n * MIN_GAP) / (2π * arcFraction)
+      const arcFraction = 0.5; // half-circle = π radians
+      const neededRadius = nClients > 1
+        ? Math.max(CLIENT_DIST, (nClients * MIN_GAP) / (2 * Math.PI * arcFraction))
+        : CLIENT_DIST;
+
+      const clientFanArc = nClients <= 1 ? 0 : Math.PI; // full half-circle (180°)
       const clientBaseAngle = deptAngle; // continue outward from dept
 
       const clientPositions = sortedClients.map((client, j) => {
@@ -788,14 +793,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         const clientKey = `${branch.category}-${client.name}`;
         const clientPos = manualPositions[clientKey];
 
-        // Spread clients radially around the department
+        // Spread in half-circle arc centered on outward direction
         const cAngle = nClients <= 1
           ? clientBaseAngle
           : (clientBaseAngle - clientFanArc / 2) + (j / (nClients - 1)) * clientFanArc;
 
-        // Stagger distance slightly for visual clarity (alternate near/far)
-        const distJitter = (j % 2 === 0) ? 0 : 20;
-        const cDist = CLIENT_DIST + distJitter + nodeRadius * 0.5;
+        // Stagger rows: alternate near/far for visual clarity when many clients
+        const row = Math.floor(j / Math.max(Math.ceil(nClients / 2), 1));
+        const rowOffset = (j % 2 === 0) ? 0 : 30;
+        const cDist = neededRadius + rowOffset;
 
         return {
           ...client,
@@ -1964,37 +1970,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               );
             })}
 
-            {/* ── "+X more" counter node when branch has >10 clients ── */}
-            {isBranchExpanded && branch.clientPositions.length > MAX_VISIBLE_CHILDREN && (() => {
-              const overflowCount = branch.clientPositions.length - MAX_VISIBLE_CHILDREN;
-              // Position the overflow pill near the last visible client
-              const lastVisible = branch.clientPositions[MAX_VISIBLE_CHILDREN - 1];
-              const overflowX = lastVisible ? lastVisible.x + 40 : branch.x + 80;
-              const overflowY = lastVisible ? lastVisible.y + 40 : branch.y + 60;
-              return (
-                <motion.div
-                  className="absolute z-10 flex items-center justify-center select-none"
-                  style={{
-                    left: overflowX,
-                    top: overflowY,
-                    transform: 'translate(-50%, -50%)',
-                    width: 72,
-                    height: 32,
-                    borderRadius: 16,
-                    backgroundColor: 'rgba(0,130,145,0.12)',
-                    backdropFilter: 'blur(8px)',
-                    border: '1.5px dashed #00acc1',
-                    cursor: 'pointer',
-                  }}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 0.85, scale: 1 }}
-                  whileHover={{ scale: 1.1 }}
-                  onClick={(e) => { e.stopPropagation(); setDrawerClient(null); toast.info(`${overflowCount} לקוחות נוספים ב${branch.category} — פתח את המגירה`); }}
-                >
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#008291' }}>+{overflowCount} עוד</span>
-                </motion.div>
-              );
-            })()}
+            {/* All clients shown — no overflow button */}
           </React.Fragment>
           );
         })}
@@ -2236,12 +2212,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               e.stopPropagation();
               e.preventDefault();
               const currentIdx = STATUS_CYCLE.indexOf(task.status);
-              // If status not in cycle list, start from not_started
               const nextStatus = STATUS_CYCLE[(Math.max(currentIdx, 0) + 1) % STATUS_CYCLE.length];
               try {
-                await Task.update(task.id, { status: nextStatus });
+                // Use parent's cascade-aware handler when available
+                if (onStatusChange) {
+                  await onStatusChange(task, nextStatus);
+                } else {
+                  await Task.update(task.id, { status: nextStatus });
+                }
                 toast.success(`${statusConfig[nextStatus]?.text || nextStatus}`);
-                // Force refresh after successful save
                 if (onTaskCreated) onTaskCreated();
               } catch (err) {
                 toast.error('שגיאה בעדכון סטטוס');
