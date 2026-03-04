@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { isSupabaseConfigured } from '@/api/supabaseClient';
 
-const BACKUP_CHECK_INTERVAL = 30 * 60 * 1000; // Check every 30 min
-const WORK_HOURS_START = 7;  // 07:00
-const WORK_HOURS_END = 22;   // 22:00
-const BACKUP_OVERDUE_HOURS = 2; // Alert if no backup for 2+ hours during work hours
+const BACKUP_INTERVAL_MS = 60 * 60 * 1000;   // Backup every 60 minutes
+const CHECK_INTERVAL_MS = 10 * 60 * 1000;    // Check every 10 minutes (was 30)
+const WORK_HOURS_START = 7;   // 07:00
+const WORK_HOURS_END = 22;    // 22:00
+const BACKUP_OVERDUE_HOURS = 2;
 
 // localStorage keys
 const LS_LAST_SUPA_BACKUP = 'calmplan_last_supa_backup';
-const LS_LAST_SUPA_BACKUP_TIME = 'calmplan_last_supa_backup_time'; // full ISO timestamp
+const LS_LAST_SUPA_BACKUP_TIME = 'calmplan_last_supa_backup_time';
 const LS_AUTO_BACKUP = 'calmplan_auto_backup';
 const LS_AUTO_BACKUP_DATA = 'calmplan_auto_backup_data';
 const LS_LAST_AUTO_BACKUP = 'calmplan_last_auto_backup';
@@ -25,38 +26,44 @@ function getHoursSince(isoString) {
   return diff / (1000 * 60 * 60);
 }
 
+function getMinutesUntilNext(lastBackupTime) {
+  if (!lastBackupTime) return 0;
+  const nextBackup = new Date(lastBackupTime).getTime() + BACKUP_INTERVAL_MS;
+  const remaining = nextBackup - Date.now();
+  return Math.max(0, Math.round(remaining / (1000 * 60)));
+}
+
 export default function useBackupMonitor() {
   const [backupHealth, setBackupHealth] = useState(() => {
-    if (!isSupabaseConfigured) return { status: 'disabled', message: 'Supabase לא מוגדר' };
+    if (!isSupabaseConfigured) {
+      // Even without Supabase, enable local-only backup
+      return { status: 'local_only', message: 'גיבוי מקומי פעיל', isActive: true };
+    }
     const enabled = localStorage.getItem(LS_AUTO_BACKUP) === 'true';
-    if (!enabled) return { status: 'disabled', message: 'גיבוי אוטומטי כבוי' };
-    return { status: 'checking', message: 'בודק...' };
+    if (!enabled) return { status: 'disabled', message: 'גיבוי אוטומטי כבוי', isActive: false };
+    return { status: 'checking', message: 'בודק...', isActive: true };
   });
 
   const hasInitialized = useRef(false);
   const intervalRef = useRef(null);
 
   const runSupabaseBackup = useCallback(async () => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured) return { success: false, error: 'not_configured' };
 
     try {
       const { saveDailyBackupToSupabase } = await import('@/api/supabaseDB');
       const result = await saveDailyBackupToSupabase();
       const now = new Date();
-      const today = now.toISOString().split('T')[0];
 
-      localStorage.setItem(LS_LAST_SUPA_BACKUP, today);
+      localStorage.setItem(LS_LAST_SUPA_BACKUP, now.toISOString().split('T')[0]);
       localStorage.setItem(LS_LAST_SUPA_BACKUP_TIME, now.toISOString());
-      // Clear errors on success
       localStorage.removeItem(LS_BACKUP_ERRORS);
 
       return { success: true, result };
     } catch (e) {
       console.error('Backup monitor - Supabase backup failed:', e);
-      // Track errors
       const errors = JSON.parse(localStorage.getItem(LS_BACKUP_ERRORS) || '[]');
       errors.push({ time: new Date().toISOString(), error: e.message });
-      // Keep last 10 errors
       localStorage.setItem(LS_BACKUP_ERRORS, JSON.stringify(errors.slice(-10)));
       return { success: false, error: e.message };
     }
@@ -78,64 +85,83 @@ export default function useBackupMonitor() {
   }, []);
 
   const checkAndBackup = useCallback(async () => {
-    const enabled = localStorage.getItem(LS_AUTO_BACKUP) === 'true';
-    if (!enabled || !isSupabaseConfigured) {
-      setBackupHealth({
-        status: enabled ? 'disabled' : 'disabled',
-        message: !isSupabaseConfigured ? 'Supabase לא מוגדר' : 'גיבוי אוטומטי כבוי'
-      });
-      return;
-    }
+    // Always run local backup even without Supabase
+    const supaEnabled = isSupabaseConfigured && localStorage.getItem(LS_AUTO_BACKUP) === 'true';
 
-    const lastBackupTime = localStorage.getItem(LS_LAST_SUPA_BACKUP_TIME);
+    const lastBackupTime = supaEnabled
+      ? localStorage.getItem(LS_LAST_SUPA_BACKUP_TIME)
+      : localStorage.getItem(LS_LAST_AUTO_BACKUP);
     const hoursSince = getHoursSince(lastBackupTime);
-    const errors = JSON.parse(localStorage.getItem(LS_BACKUP_ERRORS) || '[]');
-    const recentErrors = errors.filter(e => getHoursSince(e.time) < 1);
-
-    // Determine if backup is needed
-    const needsBackup = hoursSince >= 1; // Backup every hour
+    const needsBackup = hoursSince >= 1;
 
     if (needsBackup) {
-      setBackupHealth({ status: 'backing_up', message: 'מגבה עכשיו...' });
+      setBackupHealth({
+        status: 'backing_up',
+        message: 'מגבה עכשיו...',
+        isActive: true,
+      });
 
-      // Run both local and Supabase backup
-      const [localResult, supaResult] = await Promise.all([
-        runLocalBackup(),
-        runSupabaseBackup()
-      ]);
+      const localResult = await runLocalBackup();
+      let supaResult = { success: false };
+      if (supaEnabled) {
+        supaResult = await runSupabaseBackup();
+      }
 
-      if (supaResult.success) {
+      const nowIso = new Date().toISOString();
+      const minutesUntilNext = 60;
+
+      if (supaEnabled && supaResult.success) {
         setBackupHealth({
           status: 'ok',
-          message: `גיבוי תקין`,
-          lastBackup: new Date().toISOString()
+          message: 'גיבוי תקין',
+          lastBackup: nowIso,
+          nextBackupMinutes: minutesUntilNext,
+          isActive: true,
+        });
+      } else if (!supaEnabled && localResult.success) {
+        setBackupHealth({
+          status: 'local_only',
+          message: 'גיבוי מקומי תקין',
+          lastBackup: nowIso,
+          nextBackupMinutes: minutesUntilNext,
+          isActive: true,
         });
       } else {
         setBackupHealth({
           status: 'error',
-          message: `שגיאת גיבוי: ${supaResult.error}`,
-          lastBackup: lastBackupTime
+          message: `שגיאת גיבוי`,
+          lastBackup: lastBackupTime,
+          isActive: true,
         });
       }
     } else {
-      // Check health based on current state
+      const errors = JSON.parse(localStorage.getItem(LS_BACKUP_ERRORS) || '[]');
+      const recentErrors = errors.filter(e => getHoursSince(e.time) < 1);
+      const minutesUntilNext = getMinutesUntilNext(lastBackupTime);
+
       if (recentErrors.length > 0) {
         setBackupHealth({
           status: 'warning',
           message: `${recentErrors.length} שגיאות בשעה האחרונה`,
-          lastBackup: lastBackupTime
+          lastBackup: lastBackupTime,
+          nextBackupMinutes: minutesUntilNext,
+          isActive: true,
         });
       } else if (hoursSince > BACKUP_OVERDUE_HOURS && isWorkHours()) {
         setBackupHealth({
           status: 'overdue',
           message: `גיבוי אחרון לפני ${Math.round(hoursSince)} שעות`,
-          lastBackup: lastBackupTime
+          lastBackup: lastBackupTime,
+          nextBackupMinutes: minutesUntilNext,
+          isActive: true,
         });
       } else {
         setBackupHealth({
-          status: 'ok',
-          message: 'גיבוי תקין',
-          lastBackup: lastBackupTime
+          status: supaEnabled ? 'ok' : 'local_only',
+          message: supaEnabled ? 'גיבוי תקין' : 'גיבוי מקומי פעיל',
+          lastBackup: lastBackupTime,
+          nextBackupMinutes: minutesUntilNext,
+          isActive: true,
         });
       }
     }
@@ -145,15 +171,15 @@ export default function useBackupMonitor() {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
-    // Run initial check after a short delay to let app load
+    // Run initial check after app loads
     const initTimeout = setTimeout(() => {
       checkAndBackup();
     }, 5000);
 
-    // Set up periodic check
+    // Check every 10 minutes (more frequent than before)
     intervalRef.current = setInterval(() => {
       checkAndBackup();
-    }, BACKUP_CHECK_INTERVAL);
+    }, CHECK_INTERVAL_MS);
 
     return () => {
       clearTimeout(initTimeout);

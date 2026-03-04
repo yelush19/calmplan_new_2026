@@ -287,7 +287,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // 3. Regenerate with STRICT 3-service logic only
   const nuclearRan = useRef(false);
   useEffect(() => {
-    const NUCLEAR_KEY = 'calmplan-nuclear-v12-p1p4-alignment';
+    const NUCLEAR_KEY = 'calmplan-nuclear-v13-ghost-cleanup';
     if (nuclearRan.current) return;
     try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
     nuclearRan.current = true;
@@ -299,22 +299,36 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         const resetMonth = resetNow.getMonth() + 1;
         const currentPrefix = `${resetYear}-${String(resetMonth).padStart(2, '0')}`;
 
-        // Step 1: Delete future auto-generated tasks (beyond current month)
-        console.log('[CalmPlan] RESET v12: Deleting future auto-generated tasks...');
+        // Step 1: Delete ALL auto-generated future tasks + 31/5 annual ghosts
+        console.log('[CalmPlan] RESET v13: Deleting future + annual ghost tasks...');
         try {
           const allTasks = await Task.list(null, 5000);
-          const futureTasks = allTasks.filter(t => {
-            if (!t.due_date || !t.is_recurring) return false;
-            // Keep current month, delete everything after
-            return t.due_date > currentPrefix + '-31' && t.source !== 'manual';
+          const ghostTasks = allTasks.filter(t => {
+            if (!t.due_date) return false;
+            // Delete future auto-generated tasks (beyond current month)
+            const isFuture = t.due_date > currentPrefix + '-31';
+            // Delete 31/5 annual report tasks (ghost balance sheet tasks)
+            const isAnnualGhost = t.due_date.endsWith('-05-31') && (
+              t.category === 'work_client_management' ||
+              t.category === 'דוח שנתי' ||
+              t.title?.includes('דוח שנתי')
+            );
+            // Delete ghost SS/Deductions tasks from any month
+            const isGhostService = (
+              t.category === 'work_social_security' ||
+              t.category === 'work_deductions' ||
+              t.category === 'ביטוח לאומי' ||
+              t.category === 'ניכויים'
+            );
+            return isFuture || isAnnualGhost || isGhostService;
           });
-          let futureDeleted = 0;
-          for (const t of futureTasks) {
-            try { await Task.delete(t.id); futureDeleted++; } catch {}
+          let ghostDeleted = 0;
+          for (const t of ghostTasks) {
+            try { await Task.delete(t.id); ghostDeleted++; } catch {}
           }
-          console.log(`[CalmPlan] Deleted ${futureDeleted} future auto-generated tasks`);
+          console.log(`[CalmPlan] Deleted ${ghostDeleted} ghost/future tasks`);
         } catch (e) {
-          console.warn('[CalmPlan] Future task cleanup warning:', e.message);
+          console.warn('[CalmPlan] Ghost task cleanup warning:', e.message);
         }
 
         // Step 2: Wipe current month and regenerate

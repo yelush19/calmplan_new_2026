@@ -1459,37 +1459,12 @@ export const generateProcessTasks = async (params = {}) => {
       }
     }
 
-    // --- Balance Sheets / Annual Reports (use broader filter — all active clients) ---
-    if (taskType === 'all' || taskType === 'balanceSheets') {
-      for (const client of annualEligibleClients) {
-        const templateKeys = getClientTemplates(client);
-        if (!templateKeys.includes('annual_report')) continue;
-
-        const compositeKey = `${client.id || client.name}::work_client_management::${currentYear}`;
-        if (createdKeys.has(compositeKey)) continue;
-
-        const title = `${client.name} - דוח שנתי לשנת ${currentYear - 1}`;
-        try {
-          const annualDue = `${currentYear}-05-31`;
-          const scheduledStart = getScheduledStartForCategory('הנהלת חשבונות', annualDue);
-          await entities.Task.create({
-            title,
-            category: 'work_client_management',
-            client_related: true,
-            client_name: client.name,
-            client_id: client.id,
-            status: 'not_started',
-            priority: 'medium',
-            due_date: annualDue,
-            scheduled_start: scheduledStart || undefined,
-            is_recurring: true,
-          });
-          createdKeys.add(compositeKey);
-          results.summary.tasksCreated++;
-        } catch (err) {
-          results.summary.errors++;
-        }
-      }
+    // --- Balance Sheets / Annual Reports ---
+    // DISABLED: Annual report tasks (05-31) are NOT auto-generated.
+    // They require manual specification within P2 balance sheet workflow.
+    // Rule: "אין לייצר משימות ללא אפיון מקדים של תתי-המשימות בתוך העץ"
+    if (taskType === 'balanceSheets') {
+      log.push(`${timestamp()} Annual report tasks skipped — requires manual P2 workflow`);
     }
 
     // --- Reconciliations ---
