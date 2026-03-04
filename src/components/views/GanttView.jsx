@@ -109,15 +109,6 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     });
   }, [monthTasks]);
 
-  // Pre-compute lane assignments for each client group
-  const laneData = useMemo(() => {
-    const data = {};
-    for (const [clientName, clientTasks] of grouped) {
-      data[clientName] = allocateLanes(clientTasks, getTaskPosition);
-    }
-    return data;
-  }, [grouped]);
-
   // Build client lookup for tier computation
   const clientByName = useMemo(() => {
     const map = {};
@@ -167,6 +158,15 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       tierKey,
     };
   };
+
+  // Pre-compute lane assignments for each client group
+  const laneData = useMemo(() => {
+    const data = {};
+    for (const [clientName, clientTasks] of grouped) {
+      data[clientName] = allocateLanes(clientTasks, getTaskPosition);
+    }
+    return data;
+  }, [grouped, clientByName, monthStart, daysInMonth]);
 
   // ── Drag & Drop: horizontal drag to change due_date ──
   const handlePointerDown = useCallback((e, task, pos) => {
