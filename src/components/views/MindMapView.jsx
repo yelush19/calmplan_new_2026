@@ -692,7 +692,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       metaGroups[mf].totalClients = metaGroups[mf]._uniqueClientNames.size;
       metaGroups[mf].totalTasks += branch.clients.reduce((sum, c) => sum + c.totalTasks, 0);
     });
-    // Only show meta-folders that have actual tasks (no empty buckets)
+    // ALWAYS show all 4 P-branches (even if empty) for visual hierarchy stability
+    Object.entries(META_FOLDERS).forEach(([name, config]) => {
+      if (!metaGroups[name]) {
+        metaGroups[name] = {
+          name,
+          config,
+          departments: [],
+          _uniqueClientNames: new Set(),
+          totalClients: 0,
+          totalTasks: 0,
+        };
+      }
+    });
     const metaFolders = Object.values(metaGroups);
 
     // P1→P2 Sync State: calculate how many P1 payroll tasks are completed
