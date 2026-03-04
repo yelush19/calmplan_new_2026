@@ -52,12 +52,26 @@ const CONSULTANT_CATEGORIES = new Set([
 // Payroll final distribution step key
 const PAYROLL_FINAL_STEP = 'authority_payments';
 
-// Services auto-generated after payroll final distribution
-const POST_PAYROLL_SERVICES = [
-  { serviceKey: 'social_security', title: 'ביטוח לאומי וניכויים' },
-  { serviceKey: 'deductions',      title: 'ניכויים' },
-  { serviceKey: 'masav_social',    title: 'מס"ב סוציאליות' },
+// ============================================================
+// PAYROLL WORKFLOW PHASES (Master Task Container)
+// ============================================================
+// Phase A: ייצור שכר — the initial payroll task (6 steps)
+// Phase B: דיווחי רשויות — auto-created when Phase A completes
+// Phase C: שירותים נלווים — auto-created when Phase A completes
+
+export const PHASE_B_SERVICES = [
+  { serviceKey: 'deductions',        title: 'מ"ה ניכויים' },
+  { serviceKey: 'social_security',   title: 'ביטוח לאומי' },
 ];
+
+export const PHASE_C_SERVICES = [
+  { serviceKey: 'payslip_sending',   title: 'משלוח תלושים' },
+  { serviceKey: 'masav_social',      title: 'מס"ב סוציאליות' },
+  { serviceKey: 'masav_employees',   title: 'מס"ב עובדים' },
+];
+
+// Combined for backward compat
+const POST_PAYROLL_SERVICES = [...PHASE_B_SERVICES, ...PHASE_C_SERVICES];
 
 // ============================================================
 // PAYROLL COMPLEXITY TIERS
@@ -255,6 +269,14 @@ const PAYROLL_STEP_ORDER = [
 /**
  * Evaluate payroll task status based on sequential step completion.
  *
+ * MASTER TASK WORKFLOW:
+ *   Phase A (ייצור שכר): The 6-step payroll production.
+ *     V on last step → status becomes 'production_completed' (NOT 'completed').
+ *     This triggers creation of Phase B + Phase C tasks.
+ *   Phase B (דיווחי רשויות): ניכויים + ביטוח לאומי — auto-created.
+ *   Phase C (שירותים נלווים): תלושים + מס"ב — auto-created.
+ *   The master payroll task reaches 'completed' only when ALL child tasks are done.
+ *
  * @param {Object} task - The payroll task
  * @param {Object} updatedSteps - The new process_steps
  * @returns {{ status: string, autoCreateTasks?: Object[] } | null}
@@ -276,22 +298,44 @@ export function evaluatePayrollStatus(task, updatedSteps) {
 
   const result = {};
 
-  // All steps done = final distribution complete
+  // All 6 production steps done → production_completed (NOT completed)
+  // The task stays visible with a "הושלם ייצור" badge.
+  // It triggers Phase B + Phase C child tasks.
   if (lastDoneIndex === PAYROLL_STEP_ORDER.length - 1) {
-    result.status = 'completed';
-    // Auto-create post-distribution tasks
-    result.autoCreateTasks = POST_PAYROLL_SERVICES.map(svc => ({
-      serviceKey: svc.serviceKey,
-      title: `${svc.title} - ${task.client_name}`,
-      client_name: task.client_name,
-      client_id: task.client_id,
-      category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
-      status: 'not_started',
-      due_date: task.due_date,
-      reporting_month: task.reporting_month,
-      context: 'work',
-      triggered_by: task.id,
-    }));
+    // Don't re-trigger if already in production_completed or completed
+    if (task.status === 'production_completed' || task.status === 'completed') {
+      return null;
+    }
+
+    result.status = 'production_completed';
+
+    // Build auto-created tasks for Phase B (דיווחי רשויות) and Phase C (שירותים נלווים)
+    const buildChildTasks = (services, phase, phaseLabel) =>
+      services.map(svc => ({
+        serviceKey: svc.serviceKey,
+        title: `${svc.title} - ${task.client_name}`,
+        client_name: task.client_name,
+        client_id: task.client_id,
+        category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
+        status: 'not_started',
+        branch: 'P1',
+        due_date: task.due_date || task.date,
+        report_month: task.report_month,
+        report_year: task.report_year,
+        report_period: task.report_period,
+        context: 'work',
+        is_recurring: true,
+        workflow_phase: phase,
+        workflow_phase_label: phaseLabel,
+        master_task_id: task.id,
+        triggered_by: task.id,
+        source: 'payroll_cascade',
+      }));
+
+    result.autoCreateTasks = [
+      ...buildChildTasks(PHASE_B_SERVICES, 'phase_b', 'שלב ב\' | דיווחי רשויות'),
+      ...buildChildTasks(PHASE_C_SERVICES, 'phase_c', 'שלב ג\' | שירותים נלווים'),
+    ];
     return result;
   }
 
@@ -412,8 +456,10 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = []) {
   }
 
   if (evaluation) {
-    // Don't downgrade from completed to in_progress
-    if (task.status === 'completed' && evaluation.status !== 'completed') {
+    // Don't downgrade from completed or production_completed
+    const isTerminal = task.status === 'completed' || task.status === 'production_completed';
+    const evalTerminal = evaluation.status === 'completed' || evaluation.status === 'production_completed';
+    if (isTerminal && !evalTerminal) {
       // Allow downgrade only if user explicitly changes
     } else {
       result.statusUpdate = { status: evaluation.status };
@@ -509,12 +555,27 @@ export function computeInsights(tasks, clients = []) {
     });
   }
 
+  // Production-completed payroll tasks (Phase B+C pending)
+  const prodCompleted = payrollTasks.filter(t => t.status === 'production_completed');
+  if (prodCompleted.length > 0) {
+    insights.push({
+      type: 'info',
+      category: 'payroll_workflow',
+      icon: 'GitBranch',
+      color: 'sky',
+      title: `${prodCompleted.length} לקוחות - ייצור שכר הושלם, ממתינים לדיווחי רשויות`,
+      description: prodCompleted.map(t => t.client_name).join(', '),
+      count: prodCompleted.length,
+      priority: 2,
+    });
+  }
+
   // Nano quick-wins (small payroll clients that can be done fast)
   const clientMap = {};
   for (const c of clients) { clientMap[c.name] = c; }
   const nanoPayroll = payrollTasks.filter(t => {
     const client = clientMap[t.client_name];
-    return client && getPayrollTier(client).key === 'nano' && t.status !== 'completed';
+    return client && getPayrollTier(client).key === 'nano' && t.status !== 'completed' && t.status !== 'production_completed';
   });
   if (nanoPayroll.length > 0) {
     insights.push({
@@ -622,10 +683,10 @@ export function computeClientNodeState(clientName, clientTasks) {
     return { completionRatio: 1, nodeColor: 'emerald', shouldPulse: false, shouldShrink: true };
   }
 
-  const completed = activeTasks.filter(t => t.status === 'completed').length;
+  const completed = activeTasks.filter(t => t.status === 'completed' || t.status === 'production_completed').length;
   const pendingExt = activeTasks.filter(t => t.status === 'pending_external').length;
   const overdue = activeTasks.filter(t => {
-    if (t.status === 'completed' || t.status === 'not_relevant') return false;
+    if (t.status === 'completed' || t.status === 'production_completed' || t.status === 'not_relevant') return false;
     return t.due_date && new Date(t.due_date) < new Date();
   }).length;
 

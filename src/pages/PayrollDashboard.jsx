@@ -31,6 +31,7 @@ import {
   markAllStepsUndone,
   areAllStepsDone,
 } from '@/config/processTemplates';
+import { processTaskCascade } from '@/engines/taskCascadeEngine';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
@@ -93,7 +94,7 @@ export default function PayrollDashboardPage() {
 
   const syncCompletedTaskSteps = async (tasksList) => {
     for (const task of tasksList) {
-      if (task.status === 'completed' && !areAllStepsDone(task)) {
+      if ((task.status === 'completed' || task.status === 'production_completed') && !areAllStepsDone(task)) {
         const updatedSteps = markAllStepsDone(task);
         if (Object.keys(updatedSteps).length > 0) {
           await Task.update(task.id, { process_steps: updatedSteps });
@@ -187,16 +188,38 @@ export default function PayrollDashboardPage() {
     const updatedSteps = toggleStep(currentSteps, stepKey);
     try {
       const updatedTask = { ...task, process_steps: updatedSteps };
-      const allDone = areAllStepsDone(updatedTask);
       const updatePayload = { process_steps: updatedSteps };
-      if (allDone && task.status !== 'completed') {
-        updatePayload.status = 'completed';
+
+      // Run cascade engine for status transitions
+      const cascade = processTaskCascade(updatedTask, updatedSteps, filteredTasks);
+
+      if (cascade.statusUpdate) {
+        updatePayload.status = cascade.statusUpdate.status;
+      } else {
+        // Fallback for non-payroll: all done = completed
+        const allDone = areAllStepsDone(updatedTask);
+        if (allDone && task.status !== 'completed' && task.status !== 'production_completed') {
+          updatePayload.status = 'completed';
+        }
       }
+
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
+
+      // Auto-create Phase B+C child tasks when payroll production completes
+      if (cascade.tasksToCreate?.length > 0) {
+        const createdTasks = [];
+        for (const childDef of cascade.tasksToCreate) {
+          const created = await Task.create(childDef);
+          createdTasks.push(created);
+        }
+        // Add newly created tasks to local state so they appear immediately
+        setTasks(prev => [...prev, ...createdTasks]);
+      }
+
       if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
     } catch (error) { console.error("Error updating step:", error); }
-  }, []);
+  }, [filteredTasks]);
 
   const handleDateChange = useCallback(async (task, stepKey, newDate) => {
     const currentSteps = getTaskProcessSteps(task);
@@ -212,7 +235,7 @@ export default function PayrollDashboardPage() {
       const updatePayload = { status: newStatus };
       if (newStatus === 'completed') {
         updatePayload.process_steps = markAllStepsDone(task);
-      } else if (task.status === 'completed' && newStatus === 'not_started') {
+      } else if ((task.status === 'completed' || task.status === 'production_completed') && newStatus === 'not_started') {
         updatePayload.process_steps = markAllStepsUndone(task);
       }
       await Task.update(task.id, updatePayload);
