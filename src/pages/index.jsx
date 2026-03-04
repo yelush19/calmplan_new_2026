@@ -83,6 +83,8 @@ import AutomationRules from "./AutomationRules";
 
 import AdditionalServicesDashboard from "./AdditionalServicesDashboard";
 
+import PayrollReportsDashboard from "./PayrollReportsDashboard";
+
 import AdminTasksDashboard from "./AdminTasksDashboard";
 
 import ClientFiles from "./ClientFiles";
@@ -300,7 +302,11 @@ function PagesContent() {
 
                 <Route path="/AutomationRules" element={<AutomationRules />} />
 
-                <Route path="/AdditionalServicesDashboard" element={<AdditionalServicesDashboard />} />
+                <Route path="/AdditionalServicesDashboard" element={<AdditionalServicesDashboard scope="p1" />} />
+
+                <Route path="/PayrollReportsDashboard" element={<PayrollReportsDashboard />} />
+
+                <Route path="/BookkeepingExtrasDashboard" element={<AdditionalServicesDashboard scope="p2" />} />
 
                 <Route path="/AdminTasksDashboard" element={<AdminTasksDashboard />} />
 

@@ -71,9 +71,9 @@ const getSidebarSections = () => ({
     icon: Calculator,
     items: [
       { name: "שלב ייצור ואישור", href: createPageUrl("PayrollDashboard"), icon: Zap },
-      { name: "דיווחים שוטפים (102)", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
+      { name: "דיווחים שוטפים (102)", href: createPageUrl("PayrollReportsDashboard"), icon: FileBarChart },
       { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
-      { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
+      { name: "שכר - שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
     ]
   },
   // ── P2 | הנהלת חשבונות ──
@@ -85,6 +85,7 @@ const getSidebarSections = () => ({
       { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
       { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
       { name: "תוצרים (רוה\"ס)", href: createPageUrl("PeriodicSummaryReports"), icon: FileText },
+      { name: "הנה\"ח - שירותים נוספים", href: createPageUrl("BookkeepingExtrasDashboard"), icon: LayoutGrid },
       { name: "מאזנים שנתיים", href: createPageUrl("BalanceSheets"), icon: Scaling },
     ]
   },
