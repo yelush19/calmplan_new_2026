@@ -430,7 +430,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // ── STRICT COLLAPSE HIERARCHY ──
   // Level 1 (meta-folders): collapsed by default → click to reveal Level 2/3
   // Level 3 (departments): collapsed by default → click to reveal Level 4 clients
-  const MAX_VISIBLE_CHILDREN = 10;
+  const MAX_VISIBLE_CHILDREN = 50; // Show all clients — no "+X עוד" pagination
   const [expandedMetaFolders, setExpandedMetaFolders] = useState(new Set());
   const [expandedBranches, setExpandedBranches] = useState(new Set());
   const toggleMetaExpand = useCallback((metaName) => {
