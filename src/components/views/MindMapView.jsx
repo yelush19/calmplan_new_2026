@@ -55,49 +55,42 @@ const NODE_COLOR_MAP = {
   slate:   '#90A4AE',
 };
 
-// ─── HIERARCHY: 4 Business Categories (NO catch-all bucket) ───────────────
+// ─── P1-P4 Process Tree: 4 branches aligned to sidebar hierarchy ───────────
 // Root → Meta-Folder (4 hexagons) → Department → Client Leaves
-// MATH LAW: Sum of all hexagon task counts MUST equal total task count
-// After nuclear dedup: 19 clients × ~3 groups = ~57 tasks
+// ZERO GHOST DATA: No ביטוח לאומי / ניכויים standalone branches
+// Only 3 task-generating services: שכר, מע"מ, מקדמות מס
 const META_FOLDERS = {
-  'שכר': {
-    icon: '👥', color: '#0277BD', label: 'Payroll',
-    departments: ['שכר', 'ביטוח לאומי', 'ניכויים'],
+  'P1 חשבות שכר': {
+    icon: '👥', color: '#0277BD', label: 'P1 Payroll',
+    departments: ['שכר'],
     complexitySubFolders: true,
   },
-  'מע"מ ומקדמות': {
-    icon: '📊', color: '#00838F', label: 'VAT/Advances',
-    departments: ['מע"מ', 'מקדמות'],
+  'P2 הנהלת חשבונות': {
+    icon: '📊', color: '#00838F', label: 'P2 Bookkeeping',
+    departments: ['מע"מ', 'מקדמות', 'התאמות'],
     complexitySubFolders: true,
   },
-  'מאזנים': {
-    icon: '⚖️', color: '#00695C', label: 'Balance Sheets',
-    departments: ['התאמות', 'מאזנים', 'דוח שנתי'],
+  'P3 ניהול משרד': {
+    icon: '📁', color: '#546E7A', label: 'P3 Office',
+    departments: ['אדמיניסטרציה', 'אחר/טיוטות'],
+    forceNano: true,
   },
-  'שירותים נוספים': {
-    icon: '🔧', color: '#546E7A', label: 'Additional Services',
-    // Absorbs ALL unmapped categories — NO "pending" bucket
-    departments: ['הנהלת חשבונות', 'אדמיניסטרציה', 'בית', 'אחר/טיוטות'],
+  'P4 בית': {
+    icon: '🏠', color: '#6D4C41', label: 'P4 Home',
+    departments: ['בית'],
     forceNano: true,
   },
 };
 
-// Department folder nodes
+// Department folder nodes — only real departments (no ghost SS/Deductions branches)
 const BRANCH_CONFIG = {
   'שכר':              { color: '#0277BD', icon: '👥', label: 'Payroll' },
   'מע"מ':             { color: '#00838F', icon: '📊', label: 'VAT' },
-  'ביטוח לאומי':      { color: '#4527A0', icon: '🏛️', label: 'NI' },
-  'ניכויים':          { color: '#4527A0', icon: '📋', label: 'Deduct' },
   'מקדמות':           { color: '#00838F', icon: '💰', label: 'Advances' },
   'התאמות':           { color: '#00695C', icon: '🔄', label: 'Reconcile' },
-  'מאזנים':           { color: '#00695C', icon: '⚖️', label: 'Balance' },
-  'דוח שנתי':         { color: '#00695C', icon: '📑', label: 'Annual' },
-  'הנהלת חשבונות':    { color: '#546E7A', icon: '📒', label: 'Bookkeeping' },
   'אדמיניסטרציה':     { color: '#546E7A', icon: '📁', label: 'Admin' },
   'בית':              { color: '#6D4C41', icon: '🏠', label: 'Home' },
-  'ביטוח לאומי דיווח': { color: '#4527A0', icon: '🏛️', label: 'NI Report' },
-  'ניכויים דיווח':     { color: '#4527A0', icon: '📋', label: 'Deduct Report' },
-  'אחר/טיוטות':        { color: '#78909C', icon: '📝', label: 'Others/Drafts' },
+  'אחר/טיוטות':       { color: '#78909C', icon: '📝', label: 'Others/Drafts' },
 };
 
 // Complexity tier labels for sub-grouping inside Payroll / VAT
@@ -108,37 +101,37 @@ const COMPLEXITY_SUB_LABELS = {
   3: { key: 'מורכב', icon: '🏢', label: 'Large' },
 };
 
-// Map ALL task categories (Hebrew + work_* English) to department keys
+// Map ALL task categories to P1-P4 department keys
+// ZERO GHOST DATA: SS/Deductions route to שכר (payroll sub-steps, not standalone)
 const CATEGORY_TO_DEPARTMENT = {
-  // Payroll group
+  // P1 — Payroll (שכר + sub-steps)
   'שכר': 'שכר',
   'work_payroll': 'שכר',
-  // VAT/Advances group
+  'ביטוח לאומי': 'שכר',           // payroll sub-step, not standalone
+  'work_social_security': 'שכר',   // payroll sub-step, not standalone
+  'ניכויים': 'שכר',               // payroll sub-step, not standalone
+  'work_deductions': 'שכר',       // payroll sub-step, not standalone
+  // P2 — Bookkeeping (VAT + Advances + Reconciliations)
   'מע"מ': 'מע"מ',
   'work_vat_reporting': 'מע"מ',
   'מע"מ 874': 'מע"מ',
   'work_vat_874': 'מע"מ',
   'מקדמות מס': 'מקדמות',
   'work_tax_advances': 'מקדמות',
-  // Authority Reports group
-  'ביטוח לאומי': 'ביטוח לאומי',
-  'work_social_security': 'ביטוח לאומי',
-  'ניכויים': 'ניכויים',
-  'work_deductions': 'ניכויים',
-  // Balance Sheets group
   'התאמות': 'התאמות',
   'work_reconciliation': 'התאמות',
-  'מאזנים': 'מאזנים',
-  'דוח שנתי': 'דוח שנתי',
-  'work_client_management': 'דוח שנתי',
-  'work_annual_reports': 'דוח שנתי',
-  // Additional Services group
-  'הנהלת חשבונות': 'הנהלת חשבונות',
-  'work_bookkeeping': 'הנהלת חשבונות',
   'הנחש': 'התאמות',
-  'home': 'בית',
+  'הנהלת חשבונות': 'התאמות',
+  'work_bookkeeping': 'התאמות',
+  'מאזנים': 'התאמות',             // annual — routes to reconciliation branch
+  'דוח שנתי': 'אדמיניסטרציה',     // annual tasks → admin (not monthly recurring)
+  'work_client_management': 'אדמיניסטרציה',
+  'work_annual_reports': 'אדמיניסטרציה',
+  // P3 — Office
   'personal': 'אדמיניסטרציה',
   'אחר': 'אדמיניסטרציה',
+  // P4 — Home
+  'home': 'בית',
 };
 
 // ─── Node Scaling by Complexity Tier (3:1 ratio from Enterprise to Nano) ──
@@ -288,12 +281,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
   }, [tasks]);
 
-  // ── NUCLEAR RESET v11: Wipe current month tasks + regenerate with STRICT service logic ──
-  // ZERO GHOST DATA: Only vat_reporting, tax_advances, payroll in service_types[]
-  // No social_security, no deductions, no bookkeeping→VAT derivation
+  // ── NUCLEAR RESET v12: P1-P4 alignment + future task cleanup ──
+  // 1. Wipe current month ghost tasks (SS/Deductions/bookkeeping-derived)
+  // 2. Delete ALL auto-generated future tasks (beyond current+next month)
+  // 3. Regenerate with STRICT 3-service logic only
   const nuclearRan = useRef(false);
   useEffect(() => {
-    const NUCLEAR_KEY = 'calmplan-nuclear-v11-zero-ghost-data';
+    const NUCLEAR_KEY = 'calmplan-nuclear-v12-p1p4-alignment';
     if (nuclearRan.current) return;
     try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
     nuclearRan.current = true;
@@ -303,33 +297,47 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         const resetNow = new Date();
         const resetYear = resetNow.getFullYear();
         const resetMonth = resetNow.getMonth() + 1;
-        console.log(`[CalmPlan] NUCLEAR RESET v11 ZERO-GHOST-DATA: Wiping ${resetYear}-${String(resetMonth).padStart(2, '0')} tasks...`);
-        const wipeRes = await wipeAllTasksForMonth({ year: resetYear, month: resetMonth });
-        const wiped = wipeRes?.data?.deleted || 0;
-        console.log(`[CalmPlan] Wiped: ${wiped} tasks deleted`);
+        const currentPrefix = `${resetYear}-${String(resetMonth).padStart(2, '0')}`;
 
-        console.log('[CalmPlan] Regenerating with STRICT service logic (3 services only)...');
-        const genRes = await generateProcessTasks({ taskType: 'all' });
-        const created = genRes?.data?.results?.summary?.tasksCreated || 0;
-        const skipped = genRes?.data?.results?.summary?.skippedBalanceOnly || 0;
-        console.log(`[CalmPlan] ═══ TASK COUNT AUDIT ═══`);
-        console.log(`[CalmPlan] Total: ${created} tasks created, ${skipped} balance-only skipped`);
-
-        if (genRes?.data?.log) {
-          genRes.data.log.forEach(line => console.log(`[CalmPlan] ${line}`));
+        // Step 1: Delete future auto-generated tasks (beyond current month)
+        console.log('[CalmPlan] RESET v12: Deleting future auto-generated tasks...');
+        try {
+          const allTasks = await Task.list(null, 5000);
+          const futureTasks = allTasks.filter(t => {
+            if (!t.due_date || !t.is_recurring) return false;
+            // Keep current month, delete everything after
+            return t.due_date > currentPrefix + '-31' && t.source !== 'manual';
+          });
+          let futureDeleted = 0;
+          for (const t of futureTasks) {
+            try { await Task.delete(t.id); futureDeleted++; } catch {}
+          }
+          console.log(`[CalmPlan] Deleted ${futureDeleted} future auto-generated tasks`);
+        } catch (e) {
+          console.warn('[CalmPlan] Future task cleanup warning:', e.message);
         }
 
-        // AUDIT: If task count exceeds 70, something is still wrong
+        // Step 2: Wipe current month and regenerate
+        console.log(`[CalmPlan] RESET v12: Wiping ${currentPrefix} tasks...`);
+        const wipeRes = await wipeAllTasksForMonth({ year: resetYear, month: resetMonth });
+        console.log(`[CalmPlan] Wiped: ${wipeRes?.data?.deleted || 0} tasks`);
+
+        console.log('[CalmPlan] Regenerating with P1-P4 strict logic (3 services only)...');
+        const genRes = await generateProcessTasks({ taskType: 'all' });
+        const created = genRes?.data?.results?.summary?.tasksCreated || 0;
+        console.log(`[CalmPlan] Created: ${created} tasks`);
+
         if (created > 70) {
-          console.warn(`[CalmPlan] AUDIT WARNING: ${created} tasks exceeds 70! Running dedup...`);
-          const dedupRes = await dedupTasksForMonth({ year: resetYear, month: resetMonth });
-          console.log(`[CalmPlan] Dedup cleaned: ${dedupRes?.data?.deleted || 0} duplicates`);
+          console.warn(`[CalmPlan] AUDIT: ${created} > 70! Running dedup...`);
+          await dedupTasksForMonth({ year: resetYear, month: resetMonth });
         }
 
         try { localStorage.setItem(NUCLEAR_KEY, 'true'); } catch {}
+        // Clear stale manual positions since branch structure changed
+        try { localStorage.removeItem('mindmap-positions'); } catch {}
         window.location.reload();
       } catch (err) {
-        console.error('[CalmPlan] Nuclear reset error:', err);
+        console.error('[CalmPlan] Reset v12 error:', err);
         try {
           const errNow = new Date();
           const dedupRes = await dedupTasksForMonth({ year: errNow.getFullYear(), month: errNow.getMonth() + 1 });
