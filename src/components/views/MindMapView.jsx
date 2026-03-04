@@ -391,7 +391,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v10-clean-physics'; // bump this to force reset
+  const LAYOUT_VERSION = 'v11-radial-spread'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -737,10 +737,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     });
 
     // ═══════════════════════════════════════════════════════════
-    // LAW 2: VERTICAL DISPLACEMENT — child.y = parent.y + (index * 70)
-    // No radial scattering. No collision system. Clean vertical lists.
+    // RADIAL SPREADING — departments fan out around meta-folder,
+    // clients fan out around their department. Each edge is discrete.
     // ═══════════════════════════════════════════════════════════
-    const CHILD_GAP = 70;
+    const DEPT_DIST = 120;   // distance from meta-folder center to department center
+    const CLIENT_DIST = 100; // distance from department center to client center
 
     const branchPositions = branches.map((branch) => {
       const parentMeta = metaFolderPositions.find(m => m.name === branch.metaFolder);
@@ -748,14 +749,24 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         return { ...branch, x: cx, y: cy, angle: 0, clientPositions: [], subFolderPositions: null };
       }
 
-      // Find siblings (other departments under same parent category)
+      // Find siblings (other departments under same meta-folder)
       const siblings = branches.filter(b => b.metaFolder === branch.metaFolder);
       const sibIdx = siblings.indexOf(branch);
+      const sibCount = siblings.length;
 
-      // Departments stack VERTICALLY below their parent category
-      // child.y = parent.y + ((index + 1) * 70)
-      const bx = parentMeta.x;
-      const by = parentMeta.y + ((sibIdx + 1) * CHILD_GAP);
+      // Base angle: direction from center hub to this meta-folder (outward)
+      const baseAngle = Math.atan2(parentMeta.y - cy, parentMeta.x - cx);
+
+      // Departments spread in a fan arc centered on the outward direction
+      // Arc width: 90° for 1 dept, up to 150° for 3+ depts
+      const fanArc = sibCount <= 1 ? 0 : Math.min(sibCount * 0.5, 1.5) * (Math.PI / 2);
+      const startAngle = baseAngle - fanArc / 2;
+      const deptAngle = sibCount <= 1
+        ? baseAngle
+        : startAngle + (sibIdx / (sibCount - 1)) * fanArc;
+
+      const bx = parentMeta.x + Math.cos(deptAngle) * DEPT_DIST;
+      const by = parentMeta.y + Math.sin(deptAngle) * DEPT_DIST;
 
       // Apply manual position override for this folder
       const folderKey = `folder-${branch.category}`;
@@ -763,17 +774,33 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const finalBx = folderPos?.x ?? bx;
       const finalBy = folderPos?.y ?? by;
 
-      // Client pills: VERTICAL LIST below their department, 70px gap
+      // Client pills: RADIAL FAN around their department center
       const sortedClients = [...branch.clients].sort((a, b) => (b.statusRing || 0) - (a.statusRing || 0));
+      const nClients = sortedClients.length;
+
+      // Client fan arc: spread wider with more clients (min 60°, max 270°)
+      const clientFanArc = nClients <= 1 ? 0 : Math.min(nClients * 0.35, 1.5) * Math.PI;
+      const clientBaseAngle = deptAngle; // continue outward from dept
+
       const clientPositions = sortedClients.map((client, j) => {
         const nodeRadius = getNodeRadius(client.tier, isWide);
         const clientKey = `${branch.category}-${client.name}`;
         const clientPos = manualPositions[clientKey];
+
+        // Spread clients radially around the department
+        const cAngle = nClients <= 1
+          ? clientBaseAngle
+          : (clientBaseAngle - clientFanArc / 2) + (j / (nClients - 1)) * clientFanArc;
+
+        // Stagger distance slightly for visual clarity (alternate near/far)
+        const distJitter = (j % 2 === 0) ? 0 : 20;
+        const cDist = CLIENT_DIST + distJitter + nodeRadius * 0.5;
+
         return {
           ...client,
           radius: nodeRadius,
-          x: clientPos?.x ?? finalBx,
-          y: clientPos?.y ?? (finalBy + ((j + 1) * CHILD_GAP)),
+          x: clientPos?.x ?? (finalBx + Math.cos(cAngle) * cDist),
+          y: clientPos?.y ?? (finalBy + Math.sin(cAngle) * cDist),
           branchX: finalBx,
           branchY: finalBy,
         };
@@ -783,7 +810,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         ...branch,
         x: finalBx,
         y: finalBy,
-        angle: parentMeta.angle,
+        angle: deptAngle,
         clientPositions,
         subFolderPositions: null,
       };
@@ -1357,24 +1384,21 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
           {/* ── EDGE LEVEL 2: P-branch → Department folders ──
                Visible only when the parent P-branch is expanded.
-               Each is a discrete edge from the meta-folder to its department. ── */}
+               Each is a discrete edge from meta-folder CENTER to department CENTER. ── */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
-            const px = branch._metaSubX || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.x || centerPos.x;
-            const py = branch._metaSubY || layout.metaFolderPositions?.find(m => m.name === branch.metaFolder)?.y || centerPos.y;
+            const mfPos = layout.metaFolderPositions?.find(m => m.name === branch.metaFolder);
+            if (!mfPos) return null;
+            const px = mfPos.x, py = mfPos.y;
             const dx = branch.x - px, dy = branch.y - py;
             const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            // Shorten: start 40px from parent, end 30px before dept
-            const startOff = 40 / len, endOff = 30 / len;
-            const sx = px + dx * startOff, sy = py + dy * startOff;
-            const ex = branch.x - dx * endOff, ey = branch.y - dy * endOff;
-            const mx = (sx + ex) / 2, my = (sy + ey) / 2;
-            const cpx = mx + (-dy / len) * (len * 0.04);
-            const cpy = my + (dx / len) * (len * 0.04);
+            if (len < 10) return null; // skip degenerate edges
+            // Shorten: start 42px from meta center, end 28px before dept center
+            const sx = px + (dx / len) * 42, sy = py + (dy / len) * 42;
+            const ex = branch.x - (dx / len) * 28, ey = branch.y - (dy / len) * 28;
             return (
-              <path key={`edge-meta-dept-${branch.category}`}
-                d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
-                fill="none"
+              <line key={`edge-meta-dept-${branch.category}`}
+                x1={sx} y1={sy} x2={ex} y2={ey}
                 stroke="#B0BEC5"
                 strokeWidth={1.3}
                 strokeLinecap="round"
@@ -1384,44 +1408,31 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
           {/* ── EDGE LEVEL 3: Department → Client pills ──
                Visible only when BOTH parent P-branch AND department are expanded.
-               Thinnest edges, slight curve, with small arrow. ── */}
+               Each edge is a discrete straight line from department CENTER to client CENTER.
+               Radial spreading ensures edges fan out at different angles. ── */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!expandedBranches.has(branch.category)) return null;
             const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN);
             return (
               <g key={`edges-dept-clients-${branch.category}`}>
-                {/* Sub-folder edges (department → complexity tier) */}
-                {branch.subFolderPositions?.map((sub) => {
-                  const dx = sub.x - branch.x, dy = sub.y - branch.y;
-                  const len = Math.sqrt(dx * dx + dy * dy) || 1;
-                  const startOff = 30 / len, endOff = 20 / len;
-                  return (
-                    <path key={`edge-dept-sub-${sub.key}`}
-                      d={`M ${branch.x + dx * startOff} ${branch.y + dy * startOff} L ${sub.x - dx * endOff} ${sub.y - dy * endOff}`}
-                      fill="none" stroke="#CFD8DC" strokeWidth={1} strokeLinecap="round"
-                      strokeDasharray="3 2" opacity={0.5} />
-                  );
-                })}
-                {/* Client pill edges */}
                 {visibleClients.map((client) => {
-                  const sx = client._subFolderX || branch.x;
-                  const sy = client._subFolderY || branch.y;
-                  const dx = client.x - sx, dy = client.y - sy;
+                  const dx = client.x - branch.x, dy = client.y - branch.y;
                   const len = Math.sqrt(dx * dx + dy * dy) || 1;
-                  // Shorten: start 25px from parent, end 30px before client
-                  const startOff = 25 / len, endOff = 30 / len;
-                  const x1 = sx + dx * startOff, y1 = sy + dy * startOff;
-                  const x2 = client.x - dx * endOff, y2 = client.y - dy * endOff;
-                  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-                  const cpx = mx + (-dy / len) * (len * 0.04);
-                  const cpy = my + (dx / len) * (len * 0.04);
+                  if (len < 10) return null; // skip degenerate
+                  // Shorten: start 26px from dept center, end at client edge (radius + 4px)
+                  const startPx = 26;
+                  const endPx = (client.radius || 22) + 4;
+                  const sx = branch.x + (dx / len) * startPx;
+                  const sy = branch.y + (dy / len) * startPx;
+                  const ex = client.x - (dx / len) * endPx;
+                  const ey = client.y - (dy / len) * endPx;
                   return (
-                    <path key={`edge-to-${branch.category}-${client.name}`}
-                      d={`M ${x1} ${y1} Q ${cpx} ${cpy} ${x2} ${y2}`}
-                      fill="none" stroke="#CFD8DC" strokeWidth={0.8} strokeLinecap="round"
+                    <line key={`edge-to-${branch.category}-${client.name}`}
+                      x1={sx} y1={sy} x2={ex} y2={ey}
+                      stroke="#CFD8DC" strokeWidth={0.9} strokeLinecap="round"
                       markerEnd="url(#edge-arrow-sm)"
-                      opacity={0.45} />
+                      opacity={0.5} />
                   );
                 })}
               </g>
