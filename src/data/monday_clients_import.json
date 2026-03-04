@@ -44,7 +44,7 @@
   },
   {
     "name": "אנתין ילנה-ע.מורשה",
-    "status": "active",
+    "status": "balance_sheet_only",
     "entity_number": "314580036",
     "service_types": [
       "bookkeeping",
@@ -299,7 +299,7 @@
   },
   {
     "name": "השחקן-עמרי דנאור- עוסק-317500270",
-    "status": "active",
+    "status": "balance_sheet_only",
     "entity_number": "317500270",
     "service_types": [
       "payroll",
@@ -384,7 +384,7 @@
   },
   {
     "name": "מאי הירש-ע.מורשה",
-    "status": "active",
+    "status": "balance_sheet_only",
     "entity_number": "66585381",
     "service_types": [
       "bookkeeping",
@@ -637,7 +637,7 @@
   },
   {
     "name": "רחל מור -עוסק- מעמ נסגר",
-    "status": "active",
+    "status": "former",
     "entity_number": "37218658",
     "service_types": [
       "payroll",
@@ -849,7 +849,7 @@
   },
   {
     "name": "הקהילה הפתוחה",
-    "status": "active",
+    "status": "development",
     "entity_number": "",
     "service_types": [
       "bookkeeping",
@@ -1047,7 +1047,7 @@
     "entity_number": "",
     "service_types": [],
     "extra_services": "",
-    "notes": "קבוצה - לקוחות שסיימו ב-2024",
+    "notes": "",
     "tax_info": {
       "tax_id": "",
       "vat_file_number": "",
@@ -1075,7 +1075,6 @@
     "auditor": "",
     "contact_person": "",
     "contact_email": "",
-    "notes": "",
     "integration_info": {
       "calmplan_id": ""
     }
@@ -1368,7 +1367,7 @@
   },
   {
     "name": "פיץ ניהול ואחזקות",
-    "status": "active",
+    "status": "balance_sheet_only",
     "entity_number": "",
     "service_types": [
       "bookkeeping"
@@ -1408,7 +1407,7 @@
   },
   {
     "name": "רייזמן יזמות בע\"מ",
-    "status": "active",
+    "status": "balance_sheet_only",
     "entity_number": "516502671",
     "service_types": [
       "bookkeeping",
