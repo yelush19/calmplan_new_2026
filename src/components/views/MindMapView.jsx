@@ -288,39 +288,41 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
   }, [tasks]);
 
-  // ── NUCLEAR RESET v8: Wipe Feb 2026 tasks + regenerate with service-aware logic ──
-  // LAW 1.3: Before generating, DELETE all 02.2026 tasks. Then regenerate.
-  // Runs ONCE on mount. After first run, stores flag to prevent re-runs.
+  // ── NUCLEAR RESET v11: Wipe current month tasks + regenerate with STRICT service logic ──
+  // ZERO GHOST DATA: Only vat_reporting, tax_advances, payroll in service_types[]
+  // No social_security, no deductions, no bookkeeping→VAT derivation
   const nuclearRan = useRef(false);
   useEffect(() => {
-    const NUCLEAR_KEY = 'calmplan-nuclear-v10-clean-physics';
+    const NUCLEAR_KEY = 'calmplan-nuclear-v11-zero-ghost-data';
     if (nuclearRan.current) return;
     try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
     nuclearRan.current = true;
 
     (async () => {
       try {
-        console.log('[CalmPlan] CLEAN-PHYSICS NUCLEAR RESET v10: Wiping Feb 2026 tasks...');
-        const wipeRes = await wipeAllTasksForMonth({ year: 2026, month: 2 });
+        const resetNow = new Date();
+        const resetYear = resetNow.getFullYear();
+        const resetMonth = resetNow.getMonth() + 1;
+        console.log(`[CalmPlan] NUCLEAR RESET v11 ZERO-GHOST-DATA: Wiping ${resetYear}-${String(resetMonth).padStart(2, '0')} tasks...`);
+        const wipeRes = await wipeAllTasksForMonth({ year: resetYear, month: resetMonth });
         const wiped = wipeRes?.data?.deleted || 0;
         console.log(`[CalmPlan] Wiped: ${wiped} tasks deleted`);
 
-        console.log('[CalmPlan] Regenerating with Service-Grid logic...');
+        console.log('[CalmPlan] Regenerating with STRICT service logic (3 services only)...');
         const genRes = await generateProcessTasks({ taskType: 'all' });
         const created = genRes?.data?.results?.summary?.tasksCreated || 0;
         const skipped = genRes?.data?.results?.summary?.skippedBalanceOnly || 0;
         console.log(`[CalmPlan] ═══ TASK COUNT AUDIT ═══`);
         console.log(`[CalmPlan] Total: ${created} tasks created, ${skipped} balance-only skipped`);
 
-        // Log task count per category for verification
         if (genRes?.data?.log) {
           genRes.data.log.forEach(line => console.log(`[CalmPlan] ${line}`));
         }
 
-        // AUDIT: If task count exceeds 70, run dedup as safety net
+        // AUDIT: If task count exceeds 70, something is still wrong
         if (created > 70) {
           console.warn(`[CalmPlan] AUDIT WARNING: ${created} tasks exceeds 70! Running dedup...`);
-          const dedupRes = await dedupTasksForMonth({ year: 2026, month: 2 });
+          const dedupRes = await dedupTasksForMonth({ year: resetYear, month: resetMonth });
           console.log(`[CalmPlan] Dedup cleaned: ${dedupRes?.data?.deleted || 0} duplicates`);
         }
 
@@ -329,7 +331,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       } catch (err) {
         console.error('[CalmPlan] Nuclear reset error:', err);
         try {
-          const dedupRes = await dedupTasksForMonth({ year: 2026, month: 2 });
+          const errNow = new Date();
+          const dedupRes = await dedupTasksForMonth({ year: errNow.getFullYear(), month: errNow.getMonth() + 1 });
           if (dedupRes?.data?.deleted > 0) window.location.reload();
         } catch {}
       }

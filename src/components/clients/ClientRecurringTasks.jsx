@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   RefreshCw, CheckCircle, AlertTriangle, Calendar, Plus,
-  Clock, Users, FileText, Calculator, Building, Trash2,
+  Clock, FileText, Calculator, Building, Trash2,
   ChevronDown, ChevronRight, Sparkles, Eye, EyeOff
 } from 'lucide-react';
 import { Client, Task } from '@/api/entities';
@@ -22,6 +22,12 @@ import { getScheduledStartForCategory } from '@/config/automationRules';
 // ============================================================
 // Category definitions with display order
 // ============================================================
+/**
+ * REPORT_CATEGORIES — Only 3 explicit services.
+ * ZERO GHOST DATA: Only services that exist in client.service_types[] generate tasks.
+ * Social Security and Deductions are NOT here — they don't exist in any client's service_types.
+ * serviceTypeKey = the exact key that must be in client.service_types[].
+ */
 const REPORT_CATEGORIES = {
   'מע"מ': {
     label: 'מע"מ',
@@ -31,7 +37,7 @@ const REPORT_CATEGORIES = {
     bgSoft: 'bg-purple-50',
     dot: 'bg-purple-500',
     frequencyField: 'vat_reporting_frequency',
-    serviceTypeRequired: ['bookkeeping', 'bookkeeping_full', 'vat_reporting', 'full_service'],
+    serviceTypeKey: 'vat_reporting',
     dayOfMonth: 15,
     order: 1,
   },
@@ -43,33 +49,9 @@ const REPORT_CATEGORIES = {
     bgSoft: 'bg-teal-50',
     dot: 'bg-teal-500',
     frequencyField: 'tax_advances_frequency',
-    serviceTypeRequired: ['bookkeeping', 'bookkeeping_full', 'tax_advances', 'tax_reports', 'full_service'],
+    serviceTypeKey: 'tax_advances',
     dayOfMonth: 15,
     order: 2,
-  },
-  'ניכויים': {
-    label: 'ניכויים',
-    icon: Calculator,
-    color: 'bg-amber-100 text-amber-800',
-    accent: 'border-amber-400',
-    bgSoft: 'bg-amber-50',
-    dot: 'bg-amber-500',
-    frequencyField: 'deductions_frequency',
-    serviceTypeRequired: ['payroll', 'bookkeeping', 'bookkeeping_full', 'full_service'],
-    dayOfMonth: 15,
-    order: 3,
-  },
-  'ביטוח לאומי': {
-    label: 'ביטוח לאומי',
-    icon: Users,
-    color: 'bg-emerald-100 text-emerald-800',
-    accent: 'border-emerald-400',
-    bgSoft: 'bg-emerald-50',
-    dot: 'bg-emerald-500',
-    frequencyField: 'social_security_frequency',
-    serviceTypeRequired: ['payroll', 'bookkeeping', 'bookkeeping_full', 'full_service'],
-    dayOfMonth: 15,
-    order: 4,
   },
   'שכר': {
     label: 'שכר',
@@ -79,9 +61,9 @@ const REPORT_CATEGORIES = {
     bgSoft: 'bg-sky-50',
     dot: 'bg-sky-500',
     frequencyField: 'payroll_frequency',
-    serviceTypeRequired: ['payroll', 'full_service'],
+    serviceTypeKey: 'payroll',
     dayOfMonth: 15,
-    order: 5,
+    order: 3,
   },
 };
 
@@ -117,12 +99,17 @@ function getClientFrequency(categoryKey, client) {
   return freq || 'monthly';
 }
 
+/**
+ * STRICT service check — ZERO GHOST DATA.
+ * Returns true ONLY if client.service_types[] explicitly contains the exact service key.
+ * No derivation. No loose matching. No fallback-to-true.
+ */
 function clientHasService(categoryKey, client) {
   const cat = REPORT_CATEGORIES[categoryKey];
   if (!cat) return false;
   const services = client.service_types || [];
-  if (services.length === 0) return true;
-  return cat.serviceTypeRequired.some(st => services.includes(st));
+  // STRICT: must explicitly include the exact service key
+  return services.includes(cat.serviceTypeKey);
 }
 
 /**
