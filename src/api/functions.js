@@ -167,13 +167,13 @@ const PROCESS_TEMPLATES = {
 };
 
 // Map client service_types → which process templates apply
+// STRICT: Only 3 recurring services. No social_security or deductions (they are payroll sub-steps).
 const SERVICE_TYPE_TO_TEMPLATES = {
-  'bookkeeping': ['vat', 'payroll', 'tax_advances', 'social_security', 'deductions'],
-  'payroll': ['payroll', 'social_security', 'deductions'],
-  'tax_reports': ['annual_report', 'tax_advances'],
-  'vat': ['vat'],
+  'vat_reporting': ['vat'],
+  'tax_advances': ['tax_advances'],
+  'payroll': ['payroll'],
   'annual_reports': ['annual_report'],
-  'full_service': ['vat', 'payroll', 'tax_advances', 'social_security', 'annual_report', 'deductions'],
+  'full_service': ['vat', 'payroll', 'tax_advances', 'annual_report'],
 };
 
 // Bi-monthly period names (due month → period name)
@@ -226,6 +226,9 @@ function clientHasPayroll(client) {
  * Check if client has ANY monthly recurring reporting task.
  * Used to determine if a client is "reporting-active" (solid pill) vs
  * "balance-only" (ghosted pill at 60% opacity).
+ *
+ * STRICT: Only checks explicit service_types[] keys.
+ * No derivation. No loose matching via bookkeeping.
  */
 export function isReportingActiveClient(client) {
   if (!client || client.status !== 'active' || client.is_deleted === true) return false;
@@ -233,26 +236,17 @@ export function isReportingActiveClient(client) {
   const services = client.service_types || [];
   const reporting = client.reporting_info || {};
 
-  // VAT active
-  const hasVat = services.some(st =>
-    ['vat', 'vat_reporting', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
-  ) && !!reporting.vat_reporting_frequency && reporting.vat_reporting_frequency !== 'not_applicable';
+  // STRICT: service key must be explicitly in service_types[]
+  const hasVat = services.includes('vat_reporting') &&
+    !!reporting.vat_reporting_frequency && reporting.vat_reporting_frequency !== 'not_applicable';
 
-  // Payroll active
-  const hasPayroll = services.some(st => st === 'payroll' || st === 'full_service') &&
+  const hasPayroll = services.includes('payroll') &&
     !!reporting.payroll_frequency && reporting.payroll_frequency !== 'not_applicable';
 
-  // Tax advances active
-  const hasTaxAdv = services.some(st =>
-    ['tax_reports', 'tax_advances', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
-  ) && !!reporting.tax_advances_frequency && reporting.tax_advances_frequency !== 'not_applicable';
+  const hasTaxAdv = services.includes('tax_advances') &&
+    !!reporting.tax_advances_frequency && reporting.tax_advances_frequency !== 'not_applicable';
 
-  // Adjustments (bookkeeping reconciliation)
-  const hasAdjustments = services.some(st =>
-    ['bookkeeping', 'bookkeeping_full', 'full_service', 'reconciliation'].includes(st)
-  );
-
-  return hasPayroll || hasVat || hasTaxAdv || hasAdjustments;
+  return hasPayroll || hasVat || hasTaxAdv;
 }
 
 /**
@@ -269,6 +263,12 @@ export function isActiveClient(client) {
  *   (a) the service in service_types
  *   (b) the frequency in reporting_info not being 'not_applicable'
  */
+/**
+ * SERVICE-AWARE template selection — STRICT.
+ * ZERO GHOST DATA: service key must be EXPLICITLY in client.service_types[].
+ * No derivation. No loose matching (bookkeeping does NOT imply VAT).
+ * Social Security and Deductions are NOT standalone templates.
+ */
 function getClientTemplates(client) {
   const serviceTypes = client.service_types || [];
   if (serviceTypes.length === 0) return [];
@@ -276,44 +276,25 @@ function getClientTemplates(client) {
   const reporting = client.reporting_info || {};
   const templateKeys = [];
 
-  // Helper: check if frequency is explicitly set and active
   const freqIsActive = (freq) => !!freq && freq !== 'not_applicable';
 
-  // ── VAT: Only if client has VAT-related service AND vat frequency is active ──
-  const hasVatService = serviceTypes.some(st =>
-    ['vat', 'vat_reporting', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
-  );
-  if (hasVatService && freqIsActive(reporting.vat_reporting_frequency)) {
+  // STRICT: vat_reporting must be explicitly in service_types[]
+  if (serviceTypes.includes('vat_reporting') && freqIsActive(reporting.vat_reporting_frequency)) {
     templateKeys.push('vat');
   }
 
-  // ── Tax Advances: Only if applicable service AND frequency is active ──
-  const hasTaxAdvService = serviceTypes.some(st =>
-    ['tax_reports', 'tax_advances', 'bookkeeping', 'bookkeeping_full', 'full_service'].includes(st)
-  );
-  if (hasTaxAdvService && freqIsActive(reporting.tax_advances_frequency)) {
+  // STRICT: tax_advances must be explicitly in service_types[]
+  if (serviceTypes.includes('tax_advances') && freqIsActive(reporting.tax_advances_frequency)) {
     templateKeys.push('tax_advances');
   }
 
-  // ── Payroll: Only if explicit payroll service AND frequency is active ──
-  const hasPayrollService = serviceTypes.some(st =>
-    ['payroll', 'full_service'].includes(st)
-  );
-  if (hasPayrollService && freqIsActive(reporting.payroll_frequency)) {
+  // STRICT: payroll must be explicitly in service_types[]
+  // NO social_security or deductions — they are payroll sub-steps, not standalone
+  if (serviceTypes.includes('payroll') && freqIsActive(reporting.payroll_frequency)) {
     templateKeys.push('payroll');
-
-    // Social Security follows payroll — but only if its own frequency is active
-    if (freqIsActive(reporting.social_security_frequency)) {
-      templateKeys.push('social_security');
-    }
-
-    // Deductions follows payroll — but only if its own frequency is active
-    if (freqIsActive(reporting.deductions_frequency)) {
-      templateKeys.push('deductions');
-    }
   }
 
-  // ── Annual Report: Only if explicitly subscribed ──
+  // Annual Report: Only if explicitly subscribed
   const hasAnnualService = serviceTypes.some(st =>
     ['annual_reports', 'full_service', 'tax_reports'].includes(st)
   );
@@ -334,14 +315,10 @@ function getClientFrequency(templateKey, client) {
   if (template.frequency === 'yearly') return 'yearly';
   if (template.frequencyField) {
     const freq = client.reporting_info?.[template.frequencyField] || 'monthly';
-    // No quarterly - only monthly or bimonthly (except semi_annual for deductions)
+    // No quarterly - only monthly or bimonthly
     if (freq === 'quarterly') return 'bimonthly';
     return freq;
   }
-  // social_security: monthly (when payroll exists)
-  // deductions: use client's deductions_frequency setting
-  if (templateKey === 'social_security') return client.reporting_info?.social_security_frequency || 'monthly';
-  if (templateKey === 'deductions') return client.reporting_info?.deductions_frequency || 'monthly';
   return 'monthly';
 }
 
@@ -1365,8 +1342,6 @@ export const generateProcessTasks = async (params = {}) => {
     vat: 'work_vat_reporting',
     payroll: 'work_payroll',
     tax_advances: 'work_tax_advances',
-    social_security: 'work_social_security',
-    deductions: 'work_deductions',
     annual_report: 'work_client_management',
   };
 
@@ -1700,10 +1675,11 @@ export const previewTaskGeneration = async (params = {}) => {
     if (taskType === 'all' || taskType === 'mondayReports') {
       for (const client of activeClients) {
         const services = client.service_types || [];
+        // STRICT: Only pass if client has explicit recurring service
         const hasMonthlyService = services.some(st =>
-          st === 'bookkeeping' || st === 'full_service' || st === 'payroll' || st === 'vat' || st === 'tax_reports'
+          st === 'vat_reporting' || st === 'tax_advances' || st === 'payroll' || st === 'full_service'
         );
-        if (!hasMonthlyService && services.length > 0) continue;
+        if (!hasMonthlyService) continue;
 
         const templateKeys = getClientTemplates(client);
         for (const templateKey of templateKeys) {
