@@ -138,11 +138,19 @@ function getTimePeriods() {
 
 const getCategoryLabel = (cat) => {
   const labels = {
-    'מע"מ': 'מע"מ', 'מקדמות מס': 'מקדמות', 'ניכויים': 'ניכויים',
-    'ביטוח לאומי': 'ב"ל', 'שכר': 'שכר', 'דוח שנתי': 'שנתי',
-    'work_vat_reporting': 'מע"מ', 'work_tax_advances': 'מקדמות',
-    'work_deductions': 'ניכויים', 'work_social_security': 'ב"ל',
-    'work_payroll': 'שכר', 'work_client_management': 'ניהול',
+    'מע"מ': 'מע"מ', 'מע"מ 874': 'מע"מ 874', 'מקדמות מס': 'מקדמות מס',
+    'ניכויים': 'ניכויים', 'ביטוח לאומי': 'ביטוח לאומי',
+    'שכר': 'שכר', 'דוח שנתי': 'דוח שנתי',
+    'התאמות': 'התאמות חשבונות', 'הנהלת חשבונות': 'הנהלת חשבונות',
+    'מאזנים': 'מאזנים', 'הנחש': 'הנהלת חשבונות',
+    'אחר': 'אחר', 'personal': 'אישי', 'home': 'בית',
+    // English keys → Hebrew display (ZERO English in UI)
+    'work_vat_reporting': 'מע"מ', 'work_vat_874': 'מע"מ 874',
+    'work_tax_advances': 'מקדמות מס', 'work_deductions': 'ניכויים',
+    'work_social_security': 'ביטוח לאומי', 'work_payroll': 'שכר',
+    'work_client_management': 'ניהול לקוחות', 'work_annual_reports': 'דוח שנתי',
+    'work_reconciliation': 'התאמות חשבונות', 'work_bookkeeping': 'הנהלת חשבונות',
+    'work_admin': 'אדמיניסטרציה', 'work_authorities': 'רשויות',
   };
   return labels[cat] || cat;
 };

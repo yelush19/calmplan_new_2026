@@ -7,7 +7,7 @@ import { he } from 'date-fns/locale';
 import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star, Trash2, Check, RefreshCw } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Task, Client } from '@/api/entities';
-import { dedupTasksForMonth, wipeAllTasksForMonth, generateProcessTasks } from '@/api/functions';
+// dedupTasksForMonth, wipeAllTasksForMonth, generateProcessTasks removed — v15 uses deleteAll()
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -282,103 +282,42 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
   }, [tasks]);
 
-  // ── NUCLEAR RESET v12: P1-P4 alignment + future task cleanup ──
-  // 1. Wipe current month ghost tasks (SS/Deductions/bookkeeping-derived)
-  // 2. Delete ALL auto-generated future tasks (beyond current+next month)
-  // 3. Regenerate with STRICT 3-service logic only
+  // ── NUCLEAR RESET v15: TOTAL PURGE — Delete ALL tasks ──
+  // User will regenerate via "משימות חוזרות" module manually.
+  // This runs ONCE, wipes everything, then the user controls task creation.
   const nuclearRan = useRef(false);
   useEffect(() => {
-    const NUCLEAR_KEY = 'calmplan-nuclear-v14-deep-cleanup';
+    const NUCLEAR_KEY = 'calmplan-nuclear-v15-total-purge';
     if (nuclearRan.current) return;
     try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
     nuclearRan.current = true;
 
     (async () => {
       try {
-        const resetNow = new Date();
-        const resetYear = resetNow.getFullYear();
-        const resetMonth = resetNow.getMonth() + 1;
-        const currentPrefix = `${resetYear}-${String(resetMonth).padStart(2, '0')}`;
-
-        // Step 1: Delete ALL ghost/stale/future tasks
-        // - Future tasks (beyond current month)
-        // - 31/5 annual report ghost tasks
-        // - Past uncharacterized tasks (January and earlier)
-        // - Ghost SS/Deductions standalone tasks
-        console.log('[CalmPlan] RESET v14: Deep cleanup of ghost + past + future tasks...');
-        try {
-          const allTasks = await Task.list(null, 5000);
-          // Previous month prefix (keep current + prev month)
-          const prevMonthDate = new Date(resetYear, resetMonth - 2, 1);
-          const prevPrefix = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
-
-          const ghostTasks = allTasks.filter(t => {
-            if (!t.due_date) return false;
-            const monthPrefix = t.due_date.substring(0, 7);
-
-            // Keep current month and previous month
-            if (monthPrefix === currentPrefix || monthPrefix === prevPrefix) return false;
-
-            // Delete future auto-generated tasks (beyond current month)
-            const isFuture = t.due_date > currentPrefix + '-31';
-
-            // Delete 31/5 annual report tasks (ghost balance sheet tasks)
-            const isAnnualGhost = t.due_date.endsWith('-05-31') && (
-              t.category === 'work_client_management' ||
-              t.category === 'דוח שנתי' ||
-              t.title?.includes('דוח שנתי')
-            );
-
-            // Delete past uncompleted tasks (January 2026 and earlier)
-            const isPastGhost = t.due_date < prevPrefix + '-01' &&
-              t.status !== 'completed' &&
-              t.source !== 'manual';
-
-            // Delete ghost SS/Deductions standalone tasks
-            const isGhostService = (
-              t.category === 'work_social_security' ||
-              t.category === 'work_deductions' ||
-              t.category === 'ביטוח לאומי' ||
-              t.category === 'ניכויים'
-            );
-
-            return isFuture || isAnnualGhost || isPastGhost || isGhostService;
-          });
-          let ghostDeleted = 0;
-          for (const t of ghostTasks) {
-            try { await Task.delete(t.id); ghostDeleted++; } catch {}
-          }
-          console.log(`[CalmPlan] Deleted ${ghostDeleted} ghost/past/future tasks`);
-        } catch (e) {
-          console.warn('[CalmPlan] Ghost task cleanup warning:', e.message);
-        }
-
-        // Step 2: Wipe current month and regenerate
-        console.log(`[CalmPlan] RESET v12: Wiping ${currentPrefix} tasks...`);
-        const wipeRes = await wipeAllTasksForMonth({ year: resetYear, month: resetMonth });
-        console.log(`[CalmPlan] Wiped: ${wipeRes?.data?.deleted || 0} tasks`);
-
-        console.log('[CalmPlan] Regenerating with P1-P4 strict logic (3 services only)...');
-        const genRes = await generateProcessTasks({ taskType: 'all' });
-        const created = genRes?.data?.results?.summary?.tasksCreated || 0;
-        console.log(`[CalmPlan] Created: ${created} tasks`);
-
-        if (created > 70) {
-          console.warn(`[CalmPlan] AUDIT: ${created} > 70! Running dedup...`);
-          await dedupTasksForMonth({ year: resetYear, month: resetMonth });
-        }
+        console.log('[CalmPlan] RESET v15: TOTAL PURGE — deleting ALL tasks...');
+        await Task.deleteAll();
+        console.log('[CalmPlan] RESET v15: All tasks deleted. Use "משימות חוזרות" to regenerate.');
 
         try { localStorage.setItem(NUCLEAR_KEY, 'true'); } catch {}
-        // Clear stale manual positions since branch structure changed
+        // Clear stale manual positions since all data is gone
         try { localStorage.removeItem('mindmap-positions'); } catch {}
         window.location.reload();
       } catch (err) {
-        console.error('[CalmPlan] Reset v12 error:', err);
+        console.error('[CalmPlan] Reset v15 error:', err);
+        // Fallback: try deleting one by one
         try {
-          const errNow = new Date();
-          const dedupRes = await dedupTasksForMonth({ year: errNow.getFullYear(), month: errNow.getMonth() + 1 });
-          if (dedupRes?.data?.deleted > 0) window.location.reload();
-        } catch {}
+          const allTasks = await Task.list(null, 10000);
+          let deleted = 0;
+          for (const t of allTasks) {
+            try { await Task.delete(t.id); deleted++; } catch {}
+          }
+          console.log(`[CalmPlan] Fallback purge: deleted ${deleted} tasks`);
+          try { localStorage.setItem(NUCLEAR_KEY, 'true'); } catch {}
+          try { localStorage.removeItem('mindmap-positions'); } catch {}
+          window.location.reload();
+        } catch (e2) {
+          console.error('[CalmPlan] Fallback purge also failed:', e2);
+        }
       }
     })();
   }, []);
