@@ -81,7 +81,7 @@ const getSidebarSections = () => ({
     title: "P2 | הנהלת חשבונות",
     icon: FileBarChart,
     items: [
-      { name: "שלב ייצור (קליטה וסגירה)", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
+      { name: "ריכוז דיווחי מיסים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
       { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
       { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
       { name: "תוצרים (רוה\"ס)", href: createPageUrl("PeriodicSummaryReports"), icon: FileText },
