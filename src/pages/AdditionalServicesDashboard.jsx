@@ -34,26 +34,50 @@ import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 
-// Services shown on this dashboard - all additional services
-const additionalDashboardServices = Object.fromEntries(
-  Object.entries(ADDITIONAL_SERVICES).filter(([key]) => [
-    'masav_social',
-    'masav_employees',
-    'masav_authorities',
-    'masav_suppliers',
-    'payslip_sending',
-    'authorities_payment',
-    'reserve_claims',
-    'social_benefits',
-    'operator_reporting',
-    'taml_reporting',
-    'consulting',
-  ].includes(key))
-);
+// P1 Payroll extras: masav, payslips, pensions/operator/taml
+const P1_PAYROLL_EXTRAS = [
+  'masav_social', 'masav_employees', 'masav_authorities',
+  'payslip_sending', 'authorities_payment', 'reserve_claims',
+  'social_benefits', 'operator_reporting', 'taml_reporting',
+];
 
-const allAdditionalCategories = Object.values(additionalDashboardServices).flatMap(s => s.taskCategories);
+// P2 Bookkeeping extras: consulting, supplier MASAV, etc.
+const P2_BOOKKEEPING_EXTRAS = [
+  'masav_suppliers', 'consulting', 'bookkeeping',
+];
 
-export default function AdditionalServicesDashboardPage() {
+function getServicesForScope(scope) {
+  const keys = scope === 'p2' ? P2_BOOKKEEPING_EXTRAS : P1_PAYROLL_EXTRAS;
+  return Object.fromEntries(
+    Object.entries(ADDITIONAL_SERVICES).filter(([key]) => keys.includes(key))
+  );
+}
+
+const SCOPE_CONFIG = {
+  p1: {
+    title: 'שכר - שירותים נוספים',
+    subtitle: 'מס"ב עובדים, מס"ב סוציאלי, משלוח תלושים, דיווח מתפעל/טמל',
+    gradientFrom: 'from-[#0277BD]',
+    gradientTo: 'to-[#01579B]',
+    backHref: 'PayrollDashboard',
+    backLabel: 'חזור לשכר',
+    emptyTitle: 'אין שירותי שכר נוספים לחודש הנבחר',
+  },
+  p2: {
+    title: 'הנה"ח - שירותים נוספים',
+    subtitle: 'מס"ב ספקים, ייעוץ, הנהלת חשבונות',
+    gradientFrom: 'from-[#00838F]',
+    gradientTo: 'to-[#006064]',
+    backHref: 'ClientsDashboard',
+    backLabel: 'חזור להנה"ח',
+    emptyTitle: 'אין שירותי הנה"ח נוספים לחודש הנבחר',
+  },
+};
+
+export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
+  const config = SCOPE_CONFIG[scope] || SCOPE_CONFIG.p1;
+  const additionalDashboardServices = useMemo(() => getServicesForScope(scope), [scope]);
+  const allAdditionalCategories = useMemo(() => Object.values(additionalDashboardServices).flatMap(s => s.taskCategories), [additionalDashboardServices]);
   const [searchParams, setSearchParams] = useSearchParams();
   const clientFilter = searchParams.get('client') || '';
 
@@ -68,7 +92,7 @@ export default function AdditionalServicesDashboardPage() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
-  useEffect(() => { loadData(); }, [selectedMonth]);
+  useEffect(() => { loadData(); }, [selectedMonth, allAdditionalCategories]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -266,9 +290,9 @@ export default function AdditionalServicesDashboardPage() {
   return (
     <div className="p-4 md:p-6 space-y-5">
       <div className="flex items-center gap-2 flex-wrap">
-        <Link to={createPageUrl('ClientsDashboard')}>
+        <Link to={createPageUrl(config.backHref)}>
           <Button variant="outline" size="sm" className="gap-2 text-slate-600 hover:text-emerald-700">
-            <ArrowRight className="w-4 h-4" />חזור ללוח לקוחות
+            <ArrowRight className="w-4 h-4" />{config.backLabel}
           </Button>
         </Link>
         {clientFilter && (
@@ -282,12 +306,12 @@ export default function AdditionalServicesDashboardPage() {
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
+          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradientFrom} ${config.gradientTo} flex items-center justify-center shadow-md`}>
             <Settings2 className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">שירותים נוספים</h1>
-            <p className="text-slate-500">חודש: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | מס"ב, משלוח תלושים, דיווחים ועוד</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">{config.title}</h1>
+            <p className="text-slate-500">חודש: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | {config.subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -395,7 +419,7 @@ export default function AdditionalServicesDashboardPage() {
       ) : (
         <Card className="p-12 text-center border-white/20">
           <Settings2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-xl font-semibold text-slate-600 mb-2">אין שירותים נוספים לחודש הנבחר</h3>
+          <h3 className="text-xl font-semibold text-slate-600 mb-2">{config.emptyTitle}</h3>
           <p className="text-slate-500">הפעל אוטומציות כדי ליצור משימות חודשיות עבור שירותים נוספים כמו מס"ב, משלוח תלושים ועוד</p>
           <Link to={createPageUrl('AutomationRules')}>
             <Button variant="outline" className="mt-4 gap-2">
