@@ -74,6 +74,22 @@ export const PHASE_C_SERVICES = [
 const POST_PAYROLL_SERVICES = [...PHASE_B_SERVICES, ...PHASE_C_SERVICES];
 
 // ============================================================
+// P2 BOOKKEEPING WORKFLOW PHASES (Mirror of P1 cascade)
+// ============================================================
+// Phase A: ייצור הנה"ח — bookkeeping production (income + expenses + reconciliation)
+// Phase B: דיווחי מיסים — VAT + Tax Advances (triggered when production completes)
+// Phase C: תוצרים — P&L reports (triggered when production completes)
+
+export const P2_PHASE_B_SERVICES = [
+  { serviceKey: 'vat_reporting',   title: 'דיווח מע"מ',       createCategory: 'מע"מ' },
+  { serviceKey: 'tax_advances',    title: 'מקדמות מס הכנסה',  createCategory: 'מקדמות מס' },
+];
+
+export const P2_PHASE_C_SERVICES = [
+  { serviceKey: 'pnl_reports',     title: 'דוח רווח והפסד',   createCategory: 'רווח והפסד' },
+];
+
+// ============================================================
 // PAYROLL COMPLEXITY TIERS
 // ============================================================
 
@@ -355,6 +371,90 @@ export function evaluatePayrollStatus(task, updatedSteps) {
 }
 
 // ============================================================
+// 2b. P2 BOOKKEEPING CASCADE — production → tax reporting + P&L
+// ============================================================
+
+/**
+ * Evaluate bookkeeping task status based on step completion.
+ *
+ * P2 WORKFLOW:
+ *   Phase A (ייצור הנה"ח): income_input + expense_input + reconciliation steps.
+ *     All 3 done → status becomes 'production_completed'.
+ *     This triggers creation of Phase B (VAT/advances) + Phase C (P&L) tasks.
+ *   The master bookkeeping task reaches 'completed' only when all child tasks are done.
+ *
+ * @param {Object} task - The bookkeeping task
+ * @param {Object} updatedSteps - The new process_steps
+ * @param {Object[]} siblingTasks - Sibling tasks for the same client + month
+ * @returns {{ status: string, autoCreateTasks?: Object[] } | null}
+ */
+export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = []) {
+  const service = getServiceForTask(task);
+  if (!service || service.key !== 'bookkeeping') return null;
+
+  const stepKeys = service.steps.map(s => s.key);
+  const doneCount = stepKeys.filter(k => updatedSteps?.[k]?.done).length;
+  const allDone = doneCount === stepKeys.length;
+
+  if (allDone) {
+    // Don't re-trigger if already in production_completed or completed
+    if (task.status === 'production_completed' || task.status === 'completed') {
+      return null;
+    }
+
+    const result = { status: 'production_completed' };
+
+    // Build auto-created tasks for P2 Phase B (tax reporting) and Phase C (P&L)
+    const buildP2Children = (services, phase, phaseLabel) =>
+      services.map(svc => ({
+        serviceKey: svc.serviceKey,
+        title: `${svc.title} - ${task.client_name}`,
+        client_name: task.client_name,
+        client_id: task.client_id,
+        category: svc.createCategory || svc.title,
+        status: 'not_started',
+        branch: 'P2',
+        due_date: task.due_date || task.date,
+        report_month: task.report_month,
+        report_year: task.report_year,
+        report_period: task.report_period,
+        context: 'work',
+        is_recurring: true,
+        workflow_phase: phase,
+        workflow_phase_label: phaseLabel,
+        master_task_id: task.id,
+        triggered_by: task.id,
+        source: 'bookkeeping_cascade',
+      }));
+
+    // Only create tasks for services the client actually has
+    // (check sibling tasks: if VAT task already exists, don't create duplicate)
+    const existingCategories = new Set(siblingTasks.map(t => t.category));
+
+    const phaseB = P2_PHASE_B_SERVICES.filter(svc =>
+      !existingCategories.has(svc.createCategory)
+    );
+    const phaseC = P2_PHASE_C_SERVICES.filter(svc =>
+      !existingCategories.has(svc.createCategory)
+    );
+
+    result.autoCreateTasks = [
+      ...buildP2Children(phaseB, 'phase_b', 'שלב ב\' | דיווחי מיסים'),
+      ...buildP2Children(phaseC, 'phase_c', 'שלב ג\' | תוצרים'),
+    ];
+
+    return result;
+  }
+
+  // Some steps done = in progress
+  if (doneCount > 0) {
+    return { status: 'in_progress' };
+  }
+
+  return null;
+}
+
+// ============================================================
 // 3. RELAY / EXTERNAL TASKS
 // ============================================================
 
@@ -435,6 +535,10 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = []) {
 
     case 'payroll':
       evaluation = evaluatePayrollStatus(task, updatedSteps);
+      break;
+
+    case 'bookkeeping':
+      evaluation = evaluateBookkeepingStatus(task, updatedSteps, siblingTasks);
       break;
 
     case 'reserve_claims':

@@ -64,6 +64,13 @@ export default function TaxReportsDashboardPage() {
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
+  // Live-refresh: listen for cascade events from other pages
+  useEffect(() => {
+    const handler = () => loadData();
+    window.addEventListener('calmplan:data-synced', handler);
+    return () => window.removeEventListener('calmplan:data-synced', handler);
+  }, []);
+
   const loadData = async () => {
     setIsLoading(true);
     try {
