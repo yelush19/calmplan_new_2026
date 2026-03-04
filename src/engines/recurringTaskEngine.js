@@ -49,9 +49,26 @@ import { getDueDateForCategory, isClient874, isBimonthlyOffMonth } from '@/confi
  * as steps within the payroll process template.
  */
 export const SERVICE_GROUPS = {
-  tax: {
-    key: 'tax',
-    label: 'שירותי מיסים',
+  P1: {
+    key: 'P1',
+    label: 'P1 | חשבות שכר',
+    branch: 'P1',
+    services: [
+      {
+        key: 'payroll',
+        label: 'שכר',
+        serviceKey: 'payroll',             // Must exist in client.service_types[]
+        templateKey: 'payroll',
+        category: 'שכר',
+        branch: 'P1',
+        frequencyField: 'payroll_frequency',
+      },
+    ],
+  },
+  P2: {
+    key: 'P2',
+    label: 'P2 | הנהלת חשבונות',
+    branch: 'P2',
     services: [
       {
         key: 'vat',
@@ -59,6 +76,7 @@ export const SERVICE_GROUPS = {
         serviceKey: 'vat_reporting',       // Must exist in client.service_types[]
         templateKey: 'vat',                // Key in ALL_SERVICES for process steps
         category: 'מע"מ',                  // Hebrew category for task entity
+        branch: 'P2',
         frequencyField: 'vat_reporting_frequency',
       },
       {
@@ -67,21 +85,8 @@ export const SERVICE_GROUPS = {
         serviceKey: 'tax_advances',        // Must exist in client.service_types[]
         templateKey: 'tax_advances',
         category: 'מקדמות מס',
+        branch: 'P2',
         frequencyField: 'tax_advances_frequency',
-      },
-    ],
-  },
-  payroll: {
-    key: 'payroll',
-    label: 'שירותי שכר',
-    services: [
-      {
-        key: 'payroll',
-        label: 'שכר',
-        serviceKey: 'payroll',             // Must exist in client.service_types[]
-        templateKey: 'payroll',
-        category: 'שכר',
-        frequencyField: 'payroll_frequency',
       },
     ],
   },
@@ -116,6 +121,7 @@ export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, 
     // Identity
     title: `${serviceDef.label} - ${client.name} - ${monthName} ${reportYear}`,
     category: serviceDef.category,
+    branch: serviceDef.branch || 'P2',   // P1=payroll, P2=bookkeeping/tax
     status: 'not_started',
     priority: 'Medium',
 
@@ -356,10 +362,10 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
 export function buildServiceMatrix(clients, reportMonth, reportYear) {
   const activeClients = clients.filter(c => c.status === 'active');
 
-  // All main services in column order
+  // All main services in column order (P1 first, then P2)
   const allServices = [
-    ...SERVICE_GROUPS.tax.services,
-    ...SERVICE_GROUPS.payroll.services,
+    ...SERVICE_GROUPS.P1.services,
+    ...SERVICE_GROUPS.P2.services,
   ];
 
   const headers = ['#', 'Client', ...allServices.map(s => s.label), 'Total'];

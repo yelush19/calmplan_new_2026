@@ -20,15 +20,53 @@ import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_
 import { getScheduledStartForCategory } from '@/config/automationRules';
 
 // ============================================================
-// Category definitions with display order
+// P-Branch definitions: P1 = Payroll, P2 = Bookkeeping/Tax
+// ============================================================
+const P_BRANCHES = {
+  P1: {
+    key: 'P1',
+    label: 'P1 | חשבות שכר',
+    color: 'bg-sky-100 text-sky-800',
+    accent: 'border-sky-400',
+    bgSoft: 'bg-sky-50',
+    dot: 'bg-sky-500',
+    order: 1,
+    categories: ['שכר'],
+  },
+  P2: {
+    key: 'P2',
+    label: 'P2 | הנהלת חשבונות',
+    color: 'bg-purple-100 text-purple-800',
+    accent: 'border-purple-400',
+    bgSoft: 'bg-purple-50',
+    dot: 'bg-purple-500',
+    order: 2,
+    categories: ['מע"מ', 'מקדמות מס'],
+  },
+};
+
+// ============================================================
+// Category definitions with branch assignment
 // ============================================================
 /**
  * REPORT_CATEGORIES — Only 3 explicit services.
  * ZERO GHOST DATA: Only services that exist in client.service_types[] generate tasks.
- * Social Security and Deductions are NOT here — they don't exist in any client's service_types.
- * serviceTypeKey = the exact key that must be in client.service_types[].
+ * Each category is assigned to a P-branch for hierarchical tagging.
  */
 const REPORT_CATEGORIES = {
+  'שכר': {
+    label: 'שכר',
+    icon: FileText,
+    color: 'bg-sky-100 text-sky-800',
+    accent: 'border-sky-400',
+    bgSoft: 'bg-sky-50',
+    dot: 'bg-sky-500',
+    frequencyField: 'payroll_frequency',
+    serviceTypeKey: 'payroll',
+    dayOfMonth: 15,
+    order: 1,
+    branch: 'P1',
+  },
   'מע"מ': {
     label: 'מע"מ',
     icon: Calculator,
@@ -39,7 +77,8 @@ const REPORT_CATEGORIES = {
     frequencyField: 'vat_reporting_frequency',
     serviceTypeKey: 'vat_reporting',
     dayOfMonth: 15,
-    order: 1,
+    order: 2,
+    branch: 'P2',
   },
   'מקדמות מס': {
     label: 'מקדמות מס',
@@ -51,19 +90,8 @@ const REPORT_CATEGORIES = {
     frequencyField: 'tax_advances_frequency',
     serviceTypeKey: 'tax_advances',
     dayOfMonth: 15,
-    order: 2,
-  },
-  'שכר': {
-    label: 'שכר',
-    icon: FileText,
-    color: 'bg-sky-100 text-sky-800',
-    accent: 'border-sky-400',
-    bgSoft: 'bg-sky-50',
-    dot: 'bg-sky-500',
-    frequencyField: 'payroll_frequency',
-    serviceTypeKey: 'payroll',
-    dayOfMonth: 15,
     order: 3,
+    branch: 'P2',
   },
 };
 
@@ -268,16 +296,26 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             const taskId = `${client.id}_${categoryKey}_${dueDateStr}`;
             const clientIs874 = categoryKey === 'מע"מ' && isClient874(client);
             const scheduledStart = getScheduledStartForCategory(categoryKey, dueDateStr);
+            // CRITICAL: Every task MUST have a branch tag (P1/P2).
+            // Without it, the task is a "ghost" — no map sync, no filtering.
+            const branchKey = categoryDef.branch;
+            if (!branchKey || !P_BRANCHES[branchKey]) {
+              console.error(`[RecurringTasks] Category "${categoryKey}" has no valid branch tag. Skipping.`);
+              continue;
+            }
+
             tasksToCreate.push({
               _previewId: taskId, title: taskTitle,
               description: `${description}\nלקוח: ${client.name}${clientIs874 ? '\nסוג: מע"מ מפורט (874)' : ''}`,
               due_date: dueDateStr, scheduled_start: scheduledStart || undefined,
               client_name: client.name, client_id: client.id,
-              category: categoryKey, context: 'work', priority: 'high', status: 'not_started',
+              category: categoryKey, branch: branchKey,
+              context: 'work', priority: 'high', status: 'not_started',
               is_recurring: true, source: 'recurring_tasks',
               _categoryOrder: categoryDef.order, _categoryLabel: categoryDef.label,
               _categoryColor: categoryDef.color, _categoryAccent: categoryDef.accent,
               _categoryBgSoft: categoryDef.bgSoft, _categoryDot: categoryDef.dot,
+              _branchKey: branchKey, _branchLabel: P_BRANCHES[branchKey].label,
               _frequency: freq, _is874: clientIs874, period,
               _reportMonth: reportMonth,
             });
@@ -331,20 +369,41 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setSelectedTaskIds(prev => { const next = new Set(prev); next.delete(taskId); return next; });
   };
 
-  const groupedTasks = useMemo(() => {
-    const groups = {};
+  // Group tasks by P-branch → then by category within each branch
+  const groupedByBranch = useMemo(() => {
+    const branches = {};
     for (const task of previewTasks) {
-      const key = task.category;
-      if (!groups[key]) {
-        groups[key] = {
-          categoryKey: key, label: task._categoryLabel, color: task._categoryColor,
+      const bKey = task._branchKey || task.branch || 'P2';
+      if (!branches[bKey]) {
+        const branchDef = P_BRANCHES[bKey] || P_BRANCHES.P2;
+        branches[bKey] = {
+          branchKey: bKey,
+          label: branchDef.label,
+          color: branchDef.color,
+          accent: branchDef.accent,
+          bgSoft: branchDef.bgSoft,
+          dot: branchDef.dot,
+          order: branchDef.order,
+          categories: {},
+        };
+      }
+      const catKey = task.category;
+      if (!branches[bKey].categories[catKey]) {
+        branches[bKey].categories[catKey] = {
+          categoryKey: catKey, label: task._categoryLabel, color: task._categoryColor,
           accent: task._categoryAccent, bgSoft: task._categoryBgSoft, dot: task._categoryDot,
           order: task._categoryOrder, tasks: [],
         };
       }
-      groups[key].tasks.push(task);
+      branches[bKey].categories[catKey].tasks.push(task);
     }
-    return Object.values(groups).sort((a, b) => a.order - b.order);
+    // Sort branches by order, categories within each branch by order
+    return Object.values(branches)
+      .sort((a, b) => a.order - b.order)
+      .map(branch => ({
+        ...branch,
+        categories: Object.values(branch.categories).sort((a, b) => a.order - b.order),
+      }));
   }, [previewTasks]);
 
   const selectedCount = previewTasks.filter(t => selectedTaskIds.has(t._previewId)).length;
@@ -358,7 +417,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
         const {
           _previewId, _categoryOrder, _categoryLabel, _categoryColor,
           _categoryAccent, _categoryBgSoft, _categoryDot, _frequency,
-          _is874, _reportMonth, period, ...taskFields
+          _is874, _reportMonth, _branchKey, _branchLabel, period, ...taskFields
         } = taskData;
         await Task.create(taskFields);
         created++;
@@ -371,26 +430,34 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     if (onGenerateComplete) onGenerateComplete();
   };
 
-  const categorySummary = useMemo(() => {
-    const summary = {};
-    for (const [categoryKey, categoryDef] of Object.entries(REPORT_CATEGORIES)) {
-      let clientCount = 0;
-      for (const client of clients) {
-        if (!clientHasService(categoryKey, client)) continue;
-        if (getClientFrequency(categoryKey, client) === 'not_applicable') continue;
-        clientCount++;
-      }
-      if (clientCount > 0) {
-        summary[categoryKey] = { label: categoryDef.label, color: categoryDef.color, icon: categoryDef.icon, dot: categoryDef.dot, clientCount, frequencies: {} };
+  // Summary grouped by P-branch
+  const branchSummary = useMemo(() => {
+    const result = [];
+    for (const [branchKey, branchDef] of Object.entries(P_BRANCHES)) {
+      const branchCategories = [];
+      let totalClients = 0;
+      for (const catKey of branchDef.categories) {
+        const categoryDef = REPORT_CATEGORIES[catKey];
+        if (!categoryDef) continue;
+        let clientCount = 0;
+        const frequencies = {};
         for (const client of clients) {
-          if (!clientHasService(categoryKey, client)) continue;
-          const freq = getClientFrequency(categoryKey, client);
+          if (!clientHasService(catKey, client)) continue;
+          const freq = getClientFrequency(catKey, client);
           if (freq === 'not_applicable') continue;
-          summary[categoryKey].frequencies[freq] = (summary[categoryKey].frequencies[freq] || 0) + 1;
+          clientCount++;
+          frequencies[freq] = (frequencies[freq] || 0) + 1;
+        }
+        if (clientCount > 0) {
+          branchCategories.push({ key: catKey, label: categoryDef.label, icon: categoryDef.icon, dot: categoryDef.dot, clientCount, frequencies });
+          totalClients += clientCount;
         }
       }
+      if (totalClients > 0) {
+        result.push({ ...branchDef, key: branchKey, totalClients, branchCategories });
+      }
     }
-    return summary;
+    return result;
   }, [clients]);
 
   if (isLoading) {
@@ -424,32 +491,48 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-          {/* Category summary — large, spaced cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {Object.entries(categorySummary).map(([key, info]) => {
-              const Icon = info.icon;
-              return (
-                <motion.div
-                  key={key}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-4 rounded-2xl bg-white border-2 border-gray-100 hover:border-gray-200 transition-all"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-3 h-3 rounded-full ${info.dot}`} />
-                    <span className="text-base font-bold text-gray-700">{info.label}</span>
-                  </div>
-                  <p className="text-3xl font-black text-gray-800 mb-2">{info.clientCount}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(info.frequencies).map(([freq, count]) => (
-                      <span key={freq} className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">
-                        {FREQUENCY_LABELS[freq] || freq} ({count})
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
-              );
-            })}
+          {/* Branch summary — grouped under P1/P2 headers */}
+          <div className="space-y-4">
+            {branchSummary.map((branch) => (
+              <motion.div
+                key={branch.key}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`rounded-2xl border-2 ${branch.accent} overflow-hidden`}
+              >
+                {/* Branch header */}
+                <div className={`px-4 py-3 ${branch.bgSoft} flex items-center gap-3`}>
+                  <div className={`w-4 h-4 rounded-full ${branch.dot}`} />
+                  <span className="text-lg font-black text-gray-800">{branch.label}</span>
+                  <span className="text-base font-bold text-gray-500 mr-auto">{branch.totalClients} לקוחות</span>
+                </div>
+                {/* Category cards within branch */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3">
+                  {branch.branchCategories.map((cat) => {
+                    const Icon = cat.icon;
+                    return (
+                      <div
+                        key={cat.key}
+                        className="p-4 rounded-xl bg-white border border-gray-100 hover:border-gray-200 transition-all"
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className={`w-3 h-3 rounded-full ${cat.dot}`} />
+                          <span className="text-base font-bold text-gray-700">{cat.label}</span>
+                        </div>
+                        <p className="text-3xl font-black text-gray-800 mb-2">{cat.clientCount}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(cat.frequencies).map(([freq, count]) => (
+                            <span key={freq} className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">
+                              {FREQUENCY_LABELS[freq] || freq} ({count})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            ))}
           </div>
 
           {/* ============================================================ */}
@@ -660,120 +743,139 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 </Button>
               </div>
 
-              {/* Category groups — spacious, color-coded */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 bg-gray-50/50">
-                {groupedTasks.map((group, groupIdx) => {
-                  const isCollapsed = collapsedCategories.has(group.categoryKey);
-                  const groupSelectedCount = group.tasks.filter(t => selectedTaskIds.has(t._previewId)).length;
-                  const allGroupSelected = groupSelectedCount === group.tasks.length;
+              {/* Branch → Category groups — hierarchical, color-coded */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-gray-50/50">
+                {groupedByBranch.map((branch, branchIdx) => {
+                  const allBranchTasks = branch.categories.flatMap(c => c.tasks);
+                  const branchSelectedCount = allBranchTasks.filter(t => selectedTaskIds.has(t._previewId)).length;
 
                   return (
-                    <motion.div
-                      key={group.categoryKey}
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: groupIdx * 0.05 }}
-                      className={`rounded-2xl overflow-hidden border-2 ${group.accent} bg-white shadow-sm`}
-                    >
-                      {/* Category header — bold, spacious */}
-                      <div
-                        className={`flex items-center gap-3 p-4 cursor-pointer ${group.bgSoft} transition-colors`}
-                        onClick={() => toggleCollapseCategory(group.categoryKey)}
-                      >
-                        <div
-                          className="flex-shrink-0"
-                          onClick={(e) => { e.stopPropagation(); toggleCategoryAll(group.categoryKey, group.tasks); }}
-                        >
-                          <Checkbox
-                            checked={allGroupSelected}
-                            className="w-6 h-6 rounded-lg border-2"
-                          />
-                        </div>
-
-                        <div className={`w-4 h-4 rounded-full ${group.dot} flex-shrink-0`} />
-
-                        <span className="text-lg font-black text-gray-800 flex-1">
-                          {group.label}
+                    <div key={branch.branchKey} className="space-y-3">
+                      {/* Branch header */}
+                      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${branch.bgSoft} border-2 ${branch.accent}`}>
+                        <div className={`w-5 h-5 rounded-full ${branch.dot}`} />
+                        <span className="text-lg font-black text-gray-800 flex-1">{branch.label}</span>
+                        <span className="text-base font-bold text-gray-500">
+                          {branchSelectedCount}/{allBranchTasks.length}
                         </span>
-
-                        <span className="text-base font-bold text-gray-500 mx-2">
-                          {groupSelectedCount}/{group.tasks.length}
-                        </span>
-
-                        {isCollapsed ?
-                          <ChevronRight className="w-5 h-5 text-gray-400" /> :
-                          <ChevronDown className="w-5 h-5 text-gray-400" />
-                        }
                       </div>
 
-                      {/* Task items — clean cards */}
-                      <AnimatePresence>
-                        {!isCollapsed && (
+                      {/* Categories within this branch */}
+                      {branch.categories.map((group, groupIdx) => {
+                        const isCollapsed = collapsedCategories.has(group.categoryKey);
+                        const groupSelectedCount = group.tasks.filter(t => selectedTaskIds.has(t._previewId)).length;
+                        const allGroupSelected = groupSelectedCount === group.tasks.length;
+
+                        return (
                           <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
+                            key={group.categoryKey}
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: (branchIdx * 0.05) + (groupIdx * 0.03) }}
+                            className={`rounded-2xl overflow-hidden border-2 ${group.accent} bg-white shadow-sm mr-4`}
                           >
-                            <div className="p-3 space-y-2">
-                              {group.tasks.map((task, taskIdx) => {
-                                const isSelected = selectedTaskIds.has(task._previewId);
-                                return (
-                                  <motion.div
-                                    key={task._previewId}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: taskIdx * 0.02 }}
-                                    className={`flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer ${
-                                      isSelected
-                                        ? 'bg-white border-2 border-gray-200 shadow-sm'
-                                        : 'bg-gray-50 border-2 border-transparent opacity-40'
-                                    }`}
-                                    onClick={() => toggleTask(task._previewId)}
-                                  >
-                                    <Checkbox
-                                      checked={isSelected}
-                                      className="w-6 h-6 rounded-lg border-2 flex-shrink-0"
-                                      onClick={(e) => e.stopPropagation()}
-                                      onCheckedChange={() => toggleTask(task._previewId)}
-                                    />
+                            {/* Category header */}
+                            <div
+                              className={`flex items-center gap-3 p-4 cursor-pointer ${group.bgSoft} transition-colors`}
+                              onClick={() => toggleCollapseCategory(group.categoryKey)}
+                            >
+                              <div
+                                className="flex-shrink-0"
+                                onClick={(e) => { e.stopPropagation(); toggleCategoryAll(group.categoryKey, group.tasks); }}
+                              >
+                                <Checkbox
+                                  checked={allGroupSelected}
+                                  className="w-6 h-6 rounded-lg border-2"
+                                />
+                              </div>
 
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-base font-bold text-gray-800 truncate">
-                                        {task.client_name}
-                                      </p>
-                                      <div className="flex items-center gap-3 mt-1">
-                                        <span className="text-sm text-gray-500 font-medium">
-                                          {task.period}
-                                        </span>
-                                        <span className="text-sm font-bold text-emerald-600 bg-emerald-600/10 px-2.5 py-0.5 rounded-full">
-                                          {format(new Date(task.due_date), 'dd/MM')}
-                                        </span>
-                                        {task._is874 && (
-                                          <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">
-                                            874
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
+                              <div className={`w-4 h-4 rounded-full ${group.dot} flex-shrink-0`} />
 
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-gray-300 hover:text-amber-500 h-8 w-8 p-0 rounded-lg flex-shrink-0"
-                                      onClick={(e) => { e.stopPropagation(); removeFromPreview(task._previewId); }}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </motion.div>
-                                );
-                              })}
+                              <span className="text-lg font-black text-gray-800 flex-1">
+                                {group.label}
+                              </span>
+
+                              <span className="text-base font-bold text-gray-500 mx-2">
+                                {groupSelectedCount}/{group.tasks.length}
+                              </span>
+
+                              {isCollapsed ?
+                                <ChevronRight className="w-5 h-5 text-gray-400" /> :
+                                <ChevronDown className="w-5 h-5 text-gray-400" />
+                              }
                             </div>
+
+                            {/* Task items */}
+                            <AnimatePresence>
+                              {!isCollapsed && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="p-3 space-y-2">
+                                    {group.tasks.map((task, taskIdx) => {
+                                      const isSelected = selectedTaskIds.has(task._previewId);
+                                      return (
+                                        <motion.div
+                                          key={task._previewId}
+                                          initial={{ opacity: 0, x: -10 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          transition={{ delay: taskIdx * 0.02 }}
+                                          className={`flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer ${
+                                            isSelected
+                                              ? 'bg-white border-2 border-gray-200 shadow-sm'
+                                              : 'bg-gray-50 border-2 border-transparent opacity-40'
+                                          }`}
+                                          onClick={() => toggleTask(task._previewId)}
+                                        >
+                                          <Checkbox
+                                            checked={isSelected}
+                                            className="w-6 h-6 rounded-lg border-2 flex-shrink-0"
+                                            onClick={(e) => e.stopPropagation()}
+                                            onCheckedChange={() => toggleTask(task._previewId)}
+                                          />
+
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-base font-bold text-gray-800 truncate">
+                                              {task.client_name}
+                                            </p>
+                                            <div className="flex items-center gap-3 mt-1">
+                                              <span className="text-sm text-gray-500 font-medium">
+                                                {task.period}
+                                              </span>
+                                              <span className="text-sm font-bold text-emerald-600 bg-emerald-600/10 px-2.5 py-0.5 rounded-full">
+                                                {format(new Date(task.due_date), 'dd/MM')}
+                                              </span>
+                                              {task._is874 && (
+                                                <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">
+                                                  874
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-gray-300 hover:text-amber-500 h-8 w-8 p-0 rounded-lg flex-shrink-0"
+                                            onClick={(e) => { e.stopPropagation(); removeFromPreview(task._previewId); }}
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </motion.div>
+                                      );
+                                    })}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
+                        );
+                      })}
+                    </div>
                   );
                 })}
               </div>
