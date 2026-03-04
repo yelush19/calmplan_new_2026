@@ -1345,9 +1345,9 @@
     "reporting_info": {
       "vat_reporting_frequency": "bimonthly",
       "tax_advances_frequency": "not_applicable",
-      "deductions_frequency": "bimonthly",
-      "social_security_frequency": "monthly",
-      "payroll_frequency": "monthly"
+      "deductions_frequency": "not_applicable",
+      "social_security_frequency": "not_applicable",
+      "payroll_frequency": "not_applicable"
     },
     "deadlines": {
       "vat": "19_לחודש (דיגיטלי)",
