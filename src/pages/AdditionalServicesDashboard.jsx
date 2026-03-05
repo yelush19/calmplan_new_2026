@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
-  Loader, RefreshCw, ChevronLeft, ChevronRight,
+  Loader, RefreshCw, ChevronLeft, ChevronRight, ChevronDown,
   ArrowRight, Users, X, Settings2, List, LayoutGrid, Search, GanttChart, Plus
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
@@ -91,6 +91,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [collapsedServices, setCollapsedServices] = useState(new Set());
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, [selectedMonth, allAdditionalCategories]);
@@ -190,6 +191,25 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
     });
     return result;
   }, [filteredTasks, clientByName]);
+
+  const serviceKeys = useMemo(() => Object.keys(serviceData), [serviceData]);
+
+  // Default all services to collapsed on first load
+  useEffect(() => {
+    if (serviceKeys.length > 0 && collapsedServices.size === 0) {
+      setCollapsedServices(new Set(serviceKeys));
+    }
+  }, [serviceKeys]);
+
+  const toggleServiceCollapse = useCallback((key) => {
+    setCollapsedServices(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+  const expandAllServices = useCallback(() => setCollapsedServices(new Set()), []);
+  const collapseAllServices = useCallback(() => setCollapsedServices(new Set(serviceKeys)), [serviceKeys]);
 
   const stats = useMemo(() => {
     const relevant = filteredTasks.filter(t => true);
@@ -358,14 +378,20 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         </div>
       </motion.div>
 
-      <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-        <Input
-          placeholder="חיפוש לפי שם לקוח, משימה..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pr-10 h-9"
-        />
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <Input
+            placeholder="חיפוש לפי שם לקוח, משימה..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pr-10 h-9"
+          />
+        </div>
+        <div className="flex bg-white rounded-lg p-0.5 shadow-sm border border-[#E0E0E0] text-xs">
+          <button onClick={expandAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">פתח הכל</button>
+          <button onClick={collapseAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">סגור הכל</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -405,23 +431,39 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         ) : viewMode === 'timeline' ? (
           <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
         ) : (
-          <div className="space-y-6">
-            {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => (
-              <GroupedServiceTable
-                key={serviceKey}
-                service={service}
-                clientRows={clientRows}
-                onToggleStep={handleToggleStep}
-                onDateChange={handleDateChange}
-                onStatusChange={handleStatusChange}
-                onPaymentDateChange={handlePaymentDateChange}
-                onSubTaskChange={handleSubTaskChange}
-                onAttachmentUpdate={handleAttachmentUpdate}
-                onEdit={setEditingTask}
-                onDelete={handleDeleteTask}
-                onNote={setNoteTask}
-              />
-            ))}
+          <div className="space-y-4">
+            {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
+              const isCollapsed = collapsedServices.has(serviceKey);
+              return (
+                <div key={serviceKey} className="border border-[#E0E0E0] rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => toggleServiceCollapse(serviceKey)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+                      <span className="font-bold text-[#263238]">{service.label}</span>
+                      <span className="text-xs text-[#455A64]">{clientRows.length} לקוחות</span>
+                    </div>
+                  </button>
+                  {!isCollapsed && (
+                    <GroupedServiceTable
+                      service={service}
+                      clientRows={clientRows}
+                      onToggleStep={handleToggleStep}
+                      onDateChange={handleDateChange}
+                      onStatusChange={handleStatusChange}
+                      onPaymentDateChange={handlePaymentDateChange}
+                      onSubTaskChange={handleSubTaskChange}
+                      onAttachmentUpdate={handleAttachmentUpdate}
+                      onEdit={setEditingTask}
+                      onDelete={handleDeleteTask}
+                      onNote={setNoteTask}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         )
       ) : (

@@ -727,7 +727,7 @@ export default function ClientsDashboardPage() {
                         className={`border-b border-[#E0E0E0] transition-colors hover:bg-emerald-50 ${index % 2 === 0 ? 'bg-white' : 'bg-[#F5F5F5]'}`}>
                         {/* Client name cell */}
                         <td className="px-4 py-2.5 sticky right-0 z-10 border-l-2 border-[#E0E0E0]"
-                          style={{ backgroundColor: index % 2 === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
+                          style={{ backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFBFC' }}>
                           <div className="flex items-center justify-between">
                             <div>
                               <Link

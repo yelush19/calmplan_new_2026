@@ -223,27 +223,27 @@ button:focus-visible {
     background: #FFFFFF;
     border: 2px solid #B0BEC5;
     border-radius: 32px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 12px #0000000F;
   }
 
   /* CalmPlan list item */
   .calm-bubble {
     background: #FFFFFF;
     border-radius: 24px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 6px #0000000A;
     transition: all 0.2s ease;
   }
   .calm-bubble:hover {
     background: #F5F5F5;
-    box-shadow: 0 2px 12px rgba(0, 172, 193, 0.15);
+    box-shadow: 0 2px 12px #00ACC126;
   }
 
   /* Cyan glow for active/selected states */
   .calm-glow {
-    box-shadow: 0 0 15px rgba(0, 172, 193, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 0 15px #00ACC133, 0 2px 8px #00000014;
   }
   .calm-glow-active {
-    box-shadow: 0 0 20px rgba(0, 172, 193, 0.35), 0 2px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 20px #00ACC159, 0 2px 12px #0000001A;
   }
 
   /* ── bg-white MUST stay solid white — no transparency override ── */
@@ -293,7 +293,7 @@ button:focus-visible {
 
   /* Ring focus states — CalmPlan cyan */
   .ring-gray-200, .ring-gray-300 {
-    --tw-ring-color: rgba(0, 172, 193, 0.3) !important;
+    --tw-ring-color: #00ACC14D !important;
   }
 
   /* ── Muted backgrounds — solid light gray ── */
@@ -318,9 +318,9 @@ button:focus-visible {
     background: linear-gradient(
       110deg,
       transparent 25%,
-      rgba(255, 255, 255, 0.5) 45%,
-      rgba(255, 255, 255, 0.7) 50%,
-      rgba(255, 255, 255, 0.5) 55%,
+      #FFFFFF 45%,
+      #FFFFFF 50%,
+      #FFFFFF 55%,
       transparent 75%
     );
     background-size: 200% 100%;

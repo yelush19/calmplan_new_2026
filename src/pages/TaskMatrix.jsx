@@ -31,7 +31,7 @@ const DraggableTaskItem = ({ task, index, onEdit, onDelete }) => {
           {...provided.dragHandleProps}
           className={`group p-3 mb-2 rounded-lg shadow-sm cursor-grab ${snapshot.isDragging ? 'opacity-50' : 'opacity-100'} ${importanceColors[task.importance]}`}
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            backgroundColor: '#FFFFFF',
             ...provided.draggableProps.style,
           }}
         >

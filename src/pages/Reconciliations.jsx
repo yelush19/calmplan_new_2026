@@ -661,7 +661,7 @@ export default function ReconciliationsPage() {
       {/* ── Header ──────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-full" style={{ backgroundColor: 'rgba(0,130,145,0.15)' }}>
+          <div className="p-3 rounded-full" style={{ backgroundColor: '#E0F7FA' }}>
             <BookCheck className="w-8 h-8 text-[#008291]" />
           </div>
           <div>
