@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
-  RefreshCw, Search, ChevronLeft, ChevronRight, TrendingUp,
+  RefreshCw, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp,
   CheckCircle, AlertTriangle, Clock, Minus,
 } from 'lucide-react';
 import { format, subMonths, addMonths } from 'date-fns';
@@ -59,6 +59,8 @@ export default function FinancialResultsDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1));
   const [search, setSearch] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set(['ready', 'in_progress', 'waiting', 'not_started']));
+  const [allExpanded, setAllExpanded] = useState(false);
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
@@ -164,6 +166,19 @@ export default function FinancialResultsDashboard() {
     return rows.filter(r => r.client.name?.toLowerCase().includes(lower));
   }, [rows, search]);
 
+  const groupedRows = useMemo(() => {
+    const groups = {};
+    filteredRows.forEach(row => {
+      const key = row.pnlStatus || 'not_started';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(row);
+    });
+    return Object.entries(groups).sort(([a], [b]) => {
+      const order = ['waiting', 'not_started', 'in_progress', 'ready'];
+      return order.indexOf(a) - order.indexOf(b);
+    });
+  }, [filteredRows]);
+
   // Stats
   const stats = useMemo(() => {
     const total = rows.length;
@@ -251,7 +266,22 @@ export default function FinancialResultsDashboard() {
         </CardContent></Card>
       </div>
 
-      {/* Search */}
+      {/* Search + Expand/Collapse */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => {
+            if (allExpanded) {
+              setCollapsedGroups(new Set(['ready', 'in_progress', 'waiting', 'not_started']));
+              setAllExpanded(false);
+            } else {
+              setCollapsedGroups(new Set());
+              setAllExpanded(true);
+            }
+          }}>
+            {allExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+            {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
+          </Button>
+        </div>
       <div className="relative max-w-md">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
         <Input
@@ -260,6 +290,7 @@ export default function FinancialResultsDashboard() {
           onChange={(e) => setSearch(e.target.value)}
           className="pr-10 h-9"
         />
+      </div>
       </div>
 
       {/* Table */}
@@ -289,31 +320,56 @@ export default function FinancialResultsDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.map((row, idx) => (
-                  <tr key={row.client.id} className={`border-b hover:bg-[#F5F5F5] ${idx % 2 === 0 ? '' : 'bg-[#F5F5F5]'}`}>
-                    <td className="text-center p-2 text-xs text-gray-400">{idx + 1}</td>
-                    <td className="p-3 font-medium sticky right-0 bg-white z-10 border-l">
-                      {row.client.name}
-                    </td>
-                    <td className="text-center p-2 text-xs text-gray-600">
-                      {FREQUENCY_HEBREW[row.pnlFrequency] || row.pnlFrequency}
-                    </td>
-                    <td className="text-center p-2 text-xs text-gray-600">
-                      {row.pnlTargetDay}
-                    </td>
-                    <td className="text-center p-2">
-                      <StatusBadge status={row.productionStatus} />
-                      {row.totalProd > 0 && (
-                        <div className="text-[10px] text-gray-400 mt-1">
-                          {row.doneProd}/{row.totalProd}
-                        </div>
-                      )}
-                    </td>
-                    <td className="text-center p-2">
-                      <StatusBadge status={row.pnlStatus} />
-                    </td>
-                  </tr>
-                ))}
+                {groupedRows.map(([statusKey, rows]) => {
+                  const cfg = READINESS_LEVELS[statusKey] || READINESS_LEVELS.not_started;
+                  const isOpen = !collapsedGroups.has(statusKey);
+                  return (
+                    <React.Fragment key={statusKey}>
+                      <tr
+                        className="bg-[#F5F5F5] cursor-pointer hover:bg-[#EEEEEE] border-b"
+                        onClick={() => setCollapsedGroups(prev => {
+                          const next = new Set(prev);
+                          if (next.has(statusKey)) next.delete(statusKey);
+                          else next.add(statusKey);
+                          return next;
+                        })}
+                      >
+                        <td colSpan={6} className="p-2">
+                          <div className="flex items-center gap-2 font-semibold text-sm">
+                            {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            <span className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} />
+                            {cfg.label} ({rows.length})
+                          </div>
+                        </td>
+                      </tr>
+                      {isOpen && rows.map((row, idx) => (
+                        <tr key={row.client.id} className={`border-b hover:bg-[#F5F5F5] ${idx % 2 === 0 ? '' : 'bg-[#F5F5F5]'}`}>
+                          <td className="text-center p-2 text-xs text-gray-400">{idx + 1}</td>
+                          <td className="p-3 font-medium sticky right-0 bg-white z-10 border-l">
+                            {row.client.name}
+                          </td>
+                          <td className="text-center p-2 text-xs text-gray-600">
+                            {FREQUENCY_HEBREW[row.pnlFrequency] || row.pnlFrequency}
+                          </td>
+                          <td className="text-center p-2 text-xs text-gray-600">
+                            {row.pnlTargetDay}
+                          </td>
+                          <td className="text-center p-2">
+                            <StatusBadge status={row.productionStatus} />
+                            {row.totalProd > 0 && (
+                              <div className="text-[10px] text-gray-400 mt-1">
+                                {row.doneProd}/{row.totalProd}
+                              </div>
+                            )}
+                          </td>
+                          <td className="text-center p-2">
+                            <StatusBadge status={row.pnlStatus} />
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
                 {filteredRows.length === 0 && (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-gray-400">
