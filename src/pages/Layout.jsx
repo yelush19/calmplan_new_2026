@@ -11,7 +11,8 @@ import {
   ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote,
   ChevronLeft, ChevronRight, Plus, Hourglass, Maximize2, Star,
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
-  CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2
+  CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2,
+  Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -74,6 +75,7 @@ const getSidebarSections = () => ({
       { name: "דיווחים שוטפים (102)", href: createPageUrl("PayrollReportsDashboard"), icon: FileBarChart },
       { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
       { name: "שכר - שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
+      { name: "הגדרת אצוות מס\"ב", href: createPageUrl("BatchSetup"), icon: Layers },
     ]
   },
   // ── P2 | הנהלת חשבונות ──
@@ -108,6 +110,13 @@ const getSidebarSections = () => ({
       { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
       { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
       { name: "חיבור Monday", href: createPageUrl("MondayIntegration"), icon: Link2 },
+      { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
+      { name: "חוזי לקוחות", href: createPageUrl("ClientContracts"), icon: FileSignature },
+      { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
+      { name: "קבצי לקוחות", href: createPageUrl("ClientFiles"), icon: FolderOpen },
+      { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Import },
+      { name: "ניתוח נתונים", href: createPageUrl("Analytics"), icon: BarChart3 },
+      { name: "פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
     ]
   },
   // ── P4 | בית (LENA) ──

@@ -30,6 +30,7 @@ import {
   ADDITIONAL_SERVICES,
   ALL_SERVICES,
   getServiceForTask,
+  getStepsForService,
 } from '@/config/processTemplates';
 
 // ============================================================
@@ -402,27 +403,37 @@ export function evaluatePayrollStatus(task, updatedSteps) {
     const subDueDate = getSubTaskDueDate(task.due_date || task.date);
 
     // Build auto-created tasks for Phase B (דיווחי רשויות) and Phase C (שירותים נלווים)
+    // CRITICAL: Initialize process_steps from templates so sub-tasks show step checkboxes
     const buildChildTasks = (services, phase, phaseLabel) =>
-      services.map(svc => ({
-        serviceKey: svc.serviceKey,
-        title: `${svc.title} - ${task.client_name}`,
-        client_name: task.client_name,
-        client_id: task.client_id,
-        category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
-        status: 'not_started',
-        branch: 'P1',
-        due_date: subDueDate,
-        report_month: task.report_month,
-        report_year: task.report_year,
-        report_period: task.report_period,
-        context: 'work',
-        is_recurring: true,
-        workflow_phase: phase,
-        workflow_phase_label: phaseLabel,
-        master_task_id: task.id,
-        triggered_by: task.id,
-        source: 'payroll_cascade',
-      }));
+      services.map(svc => {
+        // Initialize process_steps from service template
+        const templateSteps = getStepsForService(svc.serviceKey);
+        const processSteps = {};
+        templateSteps.forEach(step => {
+          processSteps[step.key] = { done: false, date: null, notes: '' };
+        });
+        return {
+          serviceKey: svc.serviceKey,
+          title: `${svc.title} - ${task.client_name}`,
+          client_name: task.client_name,
+          client_id: task.client_id,
+          category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
+          status: 'not_started',
+          branch: 'P1',
+          due_date: subDueDate,
+          report_month: task.report_month,
+          report_year: task.report_year,
+          report_period: task.report_period,
+          context: 'work',
+          is_recurring: true,
+          workflow_phase: phase,
+          workflow_phase_label: phaseLabel,
+          master_task_id: task.id,
+          triggered_by: task.id,
+          source: 'payroll_cascade',
+          process_steps: processSteps,
+        };
+      });
 
     result.autoCreateTasks = [
       ...buildChildTasks(PHASE_B_SERVICES, 'phase_b', 'שלב ב\' | דיווחי רשויות'),
@@ -484,27 +495,36 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
     const subDueDate = getSubTaskDueDate(task.due_date || task.date);
 
     // Build auto-created tasks for P2 Phase B (tax reporting) and Phase C (P&L)
+    // CRITICAL: Initialize process_steps from templates so sub-tasks show step checkboxes
     const buildP2Children = (services, phase, phaseLabel) =>
-      services.map(svc => ({
-        serviceKey: svc.serviceKey,
-        title: `${svc.title} - ${task.client_name}`,
-        client_name: task.client_name,
-        client_id: task.client_id,
-        category: svc.createCategory || svc.title,
-        status: 'not_started',
-        branch: 'P2',
-        due_date: subDueDate,
-        report_month: task.report_month,
-        report_year: task.report_year,
-        report_period: task.report_period,
-        context: 'work',
-        is_recurring: true,
-        workflow_phase: phase,
-        workflow_phase_label: phaseLabel,
-        master_task_id: task.id,
-        triggered_by: task.id,
-        source: 'bookkeeping_cascade',
-      }));
+      services.map(svc => {
+        const templateSteps = getStepsForService(svc.serviceKey);
+        const processSteps = {};
+        templateSteps.forEach(step => {
+          processSteps[step.key] = { done: false, date: null, notes: '' };
+        });
+        return {
+          serviceKey: svc.serviceKey,
+          title: `${svc.title} - ${task.client_name}`,
+          client_name: task.client_name,
+          client_id: task.client_id,
+          category: svc.createCategory || svc.title,
+          status: 'not_started',
+          branch: 'P2',
+          due_date: subDueDate,
+          report_month: task.report_month,
+          report_year: task.report_year,
+          report_period: task.report_period,
+          context: 'work',
+          is_recurring: true,
+          workflow_phase: phase,
+          workflow_phase_label: phaseLabel,
+          master_task_id: task.id,
+          triggered_by: task.id,
+          source: 'bookkeeping_cascade',
+          process_steps: processSteps,
+        };
+      });
 
     // Only create tasks for services the client actually has
     // (check sibling tasks: if VAT task already exists, don't create duplicate)
@@ -758,23 +778,14 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = [], option
   }
 
   // ── PAYMENT METHOD INJECTION ──
-  // Inject אמצעי תשלום רשויות into payment-related task descriptions
+  // Inject אמצעי תשלום רשויות into ALL auto-created task descriptions
+  // (not just masav — deductions, social security, etc. all need it)
   if (result.tasksToCreate.length > 0 && options.clientPaymentMethod) {
     const methodLabel = PAYMENT_METHOD_LABELS[options.clientPaymentMethod] || options.clientPaymentMethod;
-    result.tasksToCreate = result.tasksToCreate.map(t => {
-      // Inject payment method into tasks that involve תשלום/מס"ב
-      const isPaymentTask = t.category?.includes('מס"ב') ||
-        t.category?.includes('תשלום') ||
-        t.serviceKey?.startsWith('masav_') ||
-        t.serviceKey === 'authorities_payment';
-      if (isPaymentTask) {
-        return {
-          ...t,
-          description: `אמצעי תשלום: ${methodLabel}${t.description ? '\n' + t.description : ''}`,
-        };
-      }
-      return t;
-    });
+    result.tasksToCreate = result.tasksToCreate.map(t => ({
+      ...t,
+      description: `אמצעי תשלום: ${methodLabel}${t.description ? '\n' + t.description : ''}`,
+    }));
   }
 
   return result;
