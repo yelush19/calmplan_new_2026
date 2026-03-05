@@ -856,7 +856,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         if (n === 0) return;
 
         // REPULSION RULE: min 180px between bubbles → compute ring radius
-        const MIN_BUBBLE_SPACING = 180; // px between bubble centers
+        const MIN_BUBBLE_SPACING = 200; // px between bubble centers (200px repulsion)
         const fanArc = n <= 1 ? 0 : Math.min(n * 0.35, 1.4) * Math.PI;
 
         // For >4 clients, split into two semi-circle rings
@@ -1498,32 +1498,39 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             );
           })}
 
-          {/* ── EDGE LEVEL 1.5: Meta → Sub-Folder (complexity tiers, if any) ── */}
-          {layout.metaSubFolderPositions?.map((sf) => {
-            if (!expandedMetaFolders.has(sf.metaFolderName)) return null;
-            const mfPos = layout.metaFolderPositions.find(m => m.name === sf.metaFolderName);
-            if (!mfPos) return null;
-            const x1 = mfPos.x, y1 = mfPos.y, x2 = sf.x, y2 = sf.y;
-            const dx = x2 - x1, dy = y2 - y1;
-            const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            const startOff = 42 / len, endOff = 20 / len;
-            const sx = x1 + dx * startOff, sy = y1 + dy * startOff;
-            const ex = x2 - dx * endOff, ey = y2 - dy * endOff;
-            return (
-              <path key={`edge-meta-sub-${sf.metaFolderName}-${sf.key}`}
-                d={`M ${sx} ${sy} L ${ex} ${ey}`}
-                fill="none"
-                stroke="#B0BEC5"
-                strokeWidth={1.2}
-                strokeLinecap="round"
-                strokeDasharray="4 3"
-                opacity={0.6} />
-            );
+          {/* ── EDGE LEVEL 2.5: Department → Tier Diamond ──
+               Visible when P-branch is expanded. Directional arrows from dept to tier diamonds. */}
+          {layout.branchPositions.map((branch) => {
+            if (!expandedMetaFolders.has(branch.metaFolder)) return null;
+            if (!branch.subFolderPositions || branch.subFolderPositions.length === 0) return null;
+            return branch.subFolderPositions.map((sub) => {
+              const dx = sub.x - branch.x, dy = sub.y - branch.y;
+              const len = Math.sqrt(dx * dx + dy * dy) || 1;
+              if (len < 10) return null;
+              const sx = branch.x + (dx / len) * 28;
+              const sy = branch.y + (dy / len) * 28;
+              const ex = sub.x - (dx / len) * 32;
+              const ey = sub.y - (dy / len) * 32;
+              const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+              const curveAmt = len * 0.04;
+              const cpx = mx + (-dy / len) * curveAmt;
+              const cpy = my + (dx / len) * curveAmt;
+              return (
+                <path key={`edge-dept-tier-${branch.category}-${sub.key}`}
+                  d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
+                  fill="none"
+                  stroke="#90A4AE"
+                  strokeWidth={1.3}
+                  strokeLinecap="round"
+                  markerEnd="url(#edge-arrow)"
+                  opacity={0.65} />
+              );
+            });
           })}
 
           {/* ── EDGE LEVEL 2: P-branch → Department folders ──
                Visible only when the parent P-branch is expanded.
-               Each is a discrete edge from meta-folder CENTER to department CENTER. ── */}
+               Directional arrows from meta-folder to department. ── */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             const mfPos = layout.metaFolderPositions?.find(m => m.name === branch.metaFolder);
@@ -1531,47 +1538,55 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             const px = mfPos.x, py = mfPos.y;
             const dx = branch.x - px, dy = branch.y - py;
             const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            if (len < 10) return null; // skip degenerate edges
-            // Shorten: start 42px from meta center, end 28px before dept center
+            if (len < 10) return null;
             const sx = px + (dx / len) * 42, sy = py + (dy / len) * 42;
             const ex = branch.x - (dx / len) * 28, ey = branch.y - (dy / len) * 28;
+            const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+            const curveAmt = len * 0.04;
+            const cpx = mx + (-dy / len) * curveAmt;
+            const cpy = my + (dx / len) * curveAmt;
             return (
-              <line key={`edge-meta-dept-${branch.category}`}
-                x1={sx} y1={sy} x2={ex} y2={ey}
-                stroke="#B0BEC5"
-                strokeWidth={1.3}
+              <path key={`edge-meta-dept-${branch.category}`}
+                d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
+                fill="none"
+                stroke="#90A4AE"
+                strokeWidth={1.5}
                 strokeLinecap="round"
-                opacity={0.55} />
+                markerEnd="url(#edge-arrow)"
+                opacity={0.65} />
             );
           })}
 
-          {/* ── EDGE LEVEL 3: Department → Client pills ──
+          {/* ── EDGE LEVEL 3: Tier Diamond → Client pills ──
                Visible only when BOTH parent P-branch AND department are expanded.
-               Each edge is a discrete straight line from department CENTER to client CENTER.
-               Radial spreading ensures edges fan out at different angles. ── */}
+               Each arrow goes from the TIER DIAMOND to its client satellites.
+               Authority Wiring: clients connect to their tier diamond parent, NOT to dept folder. */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!expandedBranches.has(branch.category)) return null;
             const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN);
             return (
-              <g key={`edges-dept-clients-${branch.category}`}>
+              <g key={`edges-tier-clients-${branch.category}`}>
                 {visibleClients.map((client) => {
-                  const dx = client.x - branch.x, dy = client.y - branch.y;
+                  // Source: tier diamond (parent), NOT department folder
+                  const srcX = client.tierX ?? branch.x;
+                  const srcY = client.tierY ?? branch.y;
+                  const dx = client.x - srcX, dy = client.y - srcY;
                   const len = Math.sqrt(dx * dx + dy * dy) || 1;
-                  if (len < 10) return null; // skip degenerate
-                  // Shorten: start 26px from dept center, end at client edge (radius + 4px)
-                  const startPx = 26;
+                  if (len < 10) return null;
+                  // Start 34px from tier diamond center, end at client pill edge
+                  const startPx = 34;
                   const endPx = (client.radius || 22) + 4;
-                  const sx = branch.x + (dx / len) * startPx;
-                  const sy = branch.y + (dy / len) * startPx;
+                  const sx = srcX + (dx / len) * startPx;
+                  const sy = srcY + (dy / len) * startPx;
                   const ex = client.x - (dx / len) * endPx;
                   const ey = client.y - (dy / len) * endPx;
                   return (
-                    <line key={`edge-to-${branch.category}-${client.name}`}
+                    <line key={`edge-tier-to-${branch.category}-${client.name}`}
                       x1={sx} y1={sy} x2={ex} y2={ey}
-                      stroke="#CFD8DC" strokeWidth={0.9} strokeLinecap="round"
+                      stroke="#90A4AE" strokeWidth={1.0} strokeLinecap="round"
                       markerEnd="url(#edge-arrow-sm)"
-                      opacity={0.5} />
+                      opacity={0.6} />
                   );
                 })}
               </g>

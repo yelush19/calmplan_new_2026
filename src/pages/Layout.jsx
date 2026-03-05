@@ -358,7 +358,7 @@ function LayoutInner({ children }) {
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
       <div className="h-screen flex flex-col">
         {/* === TOP HEADER BAR === */}
-        <header className="border-b border-white/20 px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-xl backdrop-blur-xl" style={{ backgroundColor: 'rgba(255,255,255,0.45)' }}>
+        <header className="border-b border-[#B0BEC5] px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-xl" style={{ backgroundColor: '#FFFFFF' }}>
           {/* Right: Logo + Mobile menu */}
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="md:hidden h-7 w-7" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -421,7 +421,7 @@ function LayoutInner({ children }) {
                   )}
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[380px] border-l border-white/20 rounded-l-[32px]" style={{ backgroundColor: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+              <SheetContent side="right" className="w-[380px] border-l border-[#B0BEC5] rounded-l-[32px]" style={{ backgroundColor: '#FFFFFF' }}>
                 <SheetHeader>
                   <SheetTitle className="text-purple-700 flex items-center gap-2">
                     <Hourglass className="w-5 h-5" /> משימות ממתינות לטיפול
@@ -462,12 +462,12 @@ function LayoutInner({ children }) {
         <div className="flex-1 flex flex-row">
           {/* === SIDEBAR === */}
           {!focusMode && (
-            <aside className={`hidden md:flex flex-col border-l border-white/20 backdrop-blur-xl shadow-xl transition-all duration-300 shrink-0
-              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`} style={{ backgroundColor: 'rgba(255,255,255,0.45)' }}>
+            <aside className={`hidden md:flex flex-col border-l border-[#B0BEC5] shadow-xl transition-all duration-300 shrink-0
+              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`} style={{ backgroundColor: '#FFFFFF' }}>
 
               {/* Toggle button */}
               <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="self-start p-2 m-2 rounded-[32px] hover:bg-white/50 transition-colors">
+                className="self-start p-2 m-2 rounded-[32px] hover:bg-[#E0E0E0] transition-colors">
                 {sidebarCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
 
@@ -480,7 +480,7 @@ function LayoutInner({ children }) {
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setWorkMode(mode.key)}
-                          className={`p-2 rounded-[32px] transition-all ${workMode === mode.key ? mode.color + ' shadow-md' : 'text-gray-400 hover:bg-white/50'}`}
+                          className={`p-2 rounded-[32px] transition-all ${workMode === mode.key ? mode.color + ' shadow-md' : 'text-[#455A64] hover:bg-[#E0E0E0]'}`}
                         >
                           <mode.icon className="w-4 h-4" />
                         </button>
@@ -488,7 +488,7 @@ function LayoutInner({ children }) {
                       <TooltipContent side="left">{mode.label}</TooltipContent>
                     </Tooltip>
                   ))}
-                  <div className="w-8 border-b border-white/20 my-1" />
+                  <div className="w-8 border-b border-[#B0BEC5] my-1" />
                   {/* Nav icons */}
                   {Object.entries(sidebarSections)
                     .filter(([key]) => getVisibleSections(workMode).includes(key))
@@ -497,7 +497,7 @@ function LayoutInner({ children }) {
                         <Tooltip key={item.href}>
                           <TooltipTrigger asChild>
                             <Link to={item.href} className={`p-2 rounded-[32px] transition-colors
-                              ${isActive(item.href) ? 'bg-white/60 text-[#008291]' : 'text-gray-400 hover:bg-white/50 hover:text-gray-600'}`}>
+                              ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291]' : 'text-[#455A64] hover:bg-[#E0E0E0] hover:text-[#37474F]'}`}>
                               <item.icon className="w-5 h-5" />
                             </Link>
                           </TooltipTrigger>
@@ -515,14 +515,14 @@ function LayoutInner({ children }) {
                   </div>
 
                   {/* Work Mode Selector */}
-                  <div className="px-3 py-2 border-b border-white/20">
+                  <div className="px-3 py-2 border-b border-[#B0BEC5]">
                     <div className="flex gap-1">
                       {WORK_MODES.map(mode => (
                         <button
                           key={mode.key}
                           onClick={() => setWorkMode(mode.key)}
                           className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-[32px] text-xs font-medium transition-all
-                            ${workMode === mode.key ? mode.color + ' shadow-md scale-105' : 'bg-white/40 text-gray-600 hover:bg-white/60'}`}
+                            ${workMode === mode.key ? mode.color + ' shadow-md scale-105' : 'bg-[#F5F5F5] text-[#37474F] hover:bg-[#E8F5F7]'}`}
                         >
                           <mode.icon className="w-4 h-4" />
                           {mode.label}
@@ -533,7 +533,7 @@ function LayoutInner({ children }) {
 
                   {/* Pinned Clients (pin-only, no auto-recent) */}
                   {pinnedClients.length > 0 && (
-                    <div className="px-3 py-2 border-b border-white/20">
+                    <div className="px-3 py-2 border-b border-[#B0BEC5]">
                       <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
                         <Star className="w-3 h-3" /> גישה מהירה
                       </h3>
@@ -541,7 +541,7 @@ function LayoutInner({ children }) {
                         <Link key={client.id}
                           to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm text-gray-600 hover:bg-white/50 transition-colors">
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm text-[#37474F] hover:bg-[#E0E0E0] transition-colors">
                           <div className="w-2 h-2 rounded-full bg-emerald-400" />
                           {client.name}
                         </Link>
@@ -551,7 +551,7 @@ function LayoutInner({ children }) {
 
                   {/* "התפריט שלי" — user-customized menu */}
                   {myMenu.length > 0 && (
-                    <div className="px-3 py-2 border-b border-white/20">
+                    <div className="px-3 py-2 border-b border-[#B0BEC5]">
                       <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
                         <Star className="w-3 h-3 text-amber-400" /> התפריט שלי
                       </h3>
@@ -566,7 +566,7 @@ function LayoutInner({ children }) {
                           <Link key={href} to={href}
                             onClick={() => setIsMobileMenuOpen(false)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm transition-colors
-                              ${isActive(href) ? 'bg-white/60 text-[#008291] font-medium shadow-sm' : 'text-gray-600 hover:bg-white/50'}`}>
+                              ${isActive(href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
                             <menuItem.icon className="w-3.5 h-3.5" />
                             {menuItem.name}
                           </Link>
@@ -577,7 +577,7 @@ function LayoutInner({ children }) {
 
                   {/* Daily Focus — top 5 tasks due today */}
                   {dailyFocusTasks.length > 0 && (
-                    <div className="px-3 py-2 border-b border-white/20">
+                    <div className="px-3 py-2 border-b border-[#B0BEC5]">
                       <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
                         <Target className="w-3 h-3 text-rose-400" /> מיקוד יומי
                       </h3>
@@ -585,11 +585,11 @@ function LayoutInner({ children }) {
                         <Link key={task.id}
                           to={createPageUrl("Tasks")}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-xs text-gray-600 hover:bg-white/50 transition-colors">
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-xs text-[#37474F] hover:bg-[#E0E0E0] transition-colors">
                           <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
                           <span className="truncate flex-1">{task.title}</span>
                           {task.client_name && (
-                            <span className="text-[9px] bg-white/60 text-gray-500 px-1.5 rounded-full shrink-0">{task.client_name}</span>
+                            <span className="text-[9px] bg-[#E8F5F7] text-[#546E7A] px-1.5 rounded-full shrink-0">{task.client_name}</span>
                           )}
                         </Link>
                       ))}
@@ -610,13 +610,13 @@ function LayoutInner({ children }) {
                               <Link to={item.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
                                 className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
-                                  ${isActive(item.href) ? 'bg-white/60 text-[#008291] font-medium shadow-sm' : 'text-gray-600 hover:bg-white/50'}`}>
+                                  ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
                                 <item.icon className="w-4 h-4" />
                                 {item.name}
                               </Link>
                               <button
                                 onClick={() => toggleMyMenu(item.href)}
-                                className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/50"
+                                className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
                                 title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
                               >
                                 <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
@@ -635,8 +635,8 @@ function LayoutInner({ children }) {
           {isMobileMenuOpen && (
             <>
               <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)} />
-              <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 backdrop-blur-xl bg-white/45 border-l border-white/20 shadow-xl overflow-y-auto">
-                <div className="p-4 border-b border-white/20 flex items-center justify-between">
+              <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 bg-white border-l-2 border-[#B0BEC5] shadow-xl overflow-y-auto">
+                <div className="p-4 border-b border-[#B0BEC5] flex items-center justify-between">
                   <Link to={createPageUrl("Home")} className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
                       <Brain className="w-5 h-5 text-primary-foreground" />
@@ -657,14 +657,14 @@ function LayoutInner({ children }) {
                 </div>
 
                 {/* Work Mode Selector */}
-                <div className="px-3 py-2 border-b border-white/20">
+                <div className="px-3 py-2 border-b border-[#B0BEC5]">
                   <div className="flex gap-1">
                     {WORK_MODES.map(mode => (
                       <button
                         key={mode.key}
                         onClick={() => setWorkMode(mode.key)}
                         className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-[32px] text-xs font-medium transition-all
-                          ${workMode === mode.key ? mode.color + ' shadow-md' : 'bg-white/40 text-gray-600 hover:bg-white/60'}`}
+                          ${workMode === mode.key ? mode.color + ' shadow-md' : 'bg-[#F5F5F5] text-[#37474F] hover:bg-[#E8F5F7]'}`}
                       >
                         <mode.icon className="w-4 h-4" />
                         {mode.label}
@@ -686,7 +686,7 @@ function LayoutInner({ children }) {
                           <Link key={item.href} to={item.href}
                             onClick={() => setIsMobileMenuOpen(false)}
                             className={`flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
-                              ${isActive(item.href) ? 'bg-white/60 text-[#008291] font-medium shadow-sm' : 'text-gray-600 hover:bg-white/50'}`}>
+                              ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
                             <item.icon className="w-4 h-4" />
                             {item.name}
                           </Link>
@@ -702,7 +702,7 @@ function LayoutInner({ children }) {
           <main className="flex-1 flex flex-col min-h-0">
             {/* Desktop sub-header (page title + back) */}
             {!isHomePage && (
-              <div className="hidden md:block p-4 border-b border-white/20 bg-gradient-to-r from-primary/5 to-secondary/5">
+              <div className="hidden md:block p-4 border-b border-[#B0BEC5] bg-gradient-to-r from-primary/5 to-secondary/5">
                 <div className="max-w-full mx-auto flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-foreground">{findPageTitle()}</h2>
                   <Link to={createPageUrl("Home")}>
@@ -717,7 +717,7 @@ function LayoutInner({ children }) {
 
             {/* Mobile sub-header */}
             {!isHomePage && (
-              <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-white/20">
+              <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-[#B0BEC5]">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold text-foreground">{findPageTitle()}</h2>
                   <Link to={createPageUrl("Home")}>
@@ -804,7 +804,7 @@ function LayoutInner({ children }) {
         <>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setNotesOpen(false)} />
           <div
-            className="fixed bottom-20 left-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[70vh] backdrop-blur-xl bg-white/45 border border-white/20 rounded-[32px] shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-20 left-4 z-50 w-[320px] max-w-[calc(100vw-2rem)] max-h-[70vh] bg-white border-2 border-[#B0BEC5] rounded-[32px] shadow-2xl flex flex-col overflow-hidden"
             style={{ direction: 'rtl' }}
           >
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-l from-amber-100 to-amber-50 border-b border-amber-200 shrink-0">
