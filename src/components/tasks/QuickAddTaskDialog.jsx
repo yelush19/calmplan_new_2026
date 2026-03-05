@@ -74,26 +74,26 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
         type="button"
         onClick={() => { if (!disabled) { setIsOpen(!isOpen); setTimeout(() => inputRef.current?.focus(), 50); } }}
         disabled={disabled}
-        className={`w-full flex items-center justify-between h-9 px-3 text-xs border border-white/30 rounded-[24px] transition-colors backdrop-blur-sm ${disabled ? 'bg-white/20 cursor-not-allowed opacity-60' : 'bg-white/40 hover:bg-white/60'}`}
+        className={`w-full flex items-center justify-between h-9 px-3 text-xs border border-[#B0BEC5] rounded-[24px] transition-colors  ${disabled ? 'bg-[#F5F5F5] cursor-not-allowed opacity-60' : 'bg-[#F5F5F5] hover:bg-[#E0E0E0]'}`}
       >
-        <span className={`truncate ${!selectedItem && value === '__none__' ? 'text-slate-500' : 'text-slate-700'}`}>
+        <span className={`truncate ${!selectedItem && value === '__none__' ? 'text-[#455A64]' : 'text-[#263238]'}`}>
           {displayLabel}
         </span>
-        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 top-full mt-1 w-full backdrop-blur-xl bg-white/70 border border-white/20 rounded-[24px] shadow-xl max-h-60 flex flex-col">
+        <div className="absolute z-50 top-full mt-1 w-full bg-white border-2 border-[#B0BEC5] rounded-[24px] shadow-xl max-h-60 flex flex-col">
           {/* Search input */}
-          <div className="p-1.5 border-b border-white/20">
+          <div className="p-1.5 border-b border-[#B0BEC5]">
             <div className="relative">
-              <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300" />
+              <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#546E7A]" />
               <input
                 ref={inputRef}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="חפש..."
-                className="w-full h-7 text-xs pr-7 pl-2 border border-white/30 rounded-[16px] bg-white/40 backdrop-blur-sm focus:outline-none focus:ring-1 focus:ring-[#00acc1] focus:bg-white/60"
+                className="w-full h-7 text-xs pr-7 pl-2 border border-[#B0BEC5] rounded-[16px] bg-[#F5F5F5]  focus:outline-none focus:ring-1 focus:ring-[#00acc1] focus:bg-white/60"
               />
             </div>
           </div>
@@ -104,7 +104,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
               <button
                 type="button"
                 onClick={() => { onChange('__none__'); setIsOpen(false); }}
-                className={`w-full text-right px-3 py-1.5 text-xs hover:bg-white/50 transition-colors rounded-[12px] ${value === '__none__' ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-slate-500'}`}
+                className={`w-full text-right px-3 py-1.5 text-xs hover:bg-[#E0E0E0] transition-colors rounded-[12px] ${value === '__none__' ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-[#455A64]'}`}
               >
                 {noneLabel}
               </button>
@@ -117,7 +117,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                 if (groupItems.length === 0) return null;
                 return (
                   <div key={group.key}>
-                    <div className="px-3 py-1 text-[10px] font-bold text-slate-500 bg-white/30 sticky top-0">
+                    <div className="px-3 py-1 text-[10px] font-bold text-[#455A64] bg-[#F5F5F5] sticky top-0">
                       {group.label}
                     </div>
                     {groupItems.map(item => {
@@ -128,7 +128,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                           type="button"
                           key={itemKey}
                           onClick={() => { onChange(itemKey); setIsOpen(false); }}
-                          className={`w-full text-right px-3 py-1.5 text-xs hover:bg-white/50 transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-slate-700'}`}
+                          className={`w-full text-right px-3 py-1.5 text-xs hover:bg-[#E0E0E0] transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-[#263238]'}`}
                         >
                           {renderItem ? renderItem(item) : item.label || item.name}
                         </button>
@@ -147,7 +147,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                     type="button"
                     key={itemKey}
                     onClick={() => { onChange(itemKey); setIsOpen(false); }}
-                    className={`w-full text-right px-3 py-1.5 text-xs hover:bg-white/50 transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-slate-700'}`}
+                    className={`w-full text-right px-3 py-1.5 text-xs hover:bg-[#E0E0E0] transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-[#263238]'}`}
                   >
                     {renderItem ? renderItem(item) : item.label || item.name}
                   </button>
@@ -156,7 +156,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
             )}
 
             {filtered.length === 0 && !allowNone && (
-              <div className="text-center py-3 text-xs text-gray-400">לא נמצאו תוצאות</div>
+              <div className="text-center py-3 text-xs text-[#455A64]">לא נמצאו תוצאות</div>
             )}
           </div>
         </div>

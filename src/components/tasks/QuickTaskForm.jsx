@@ -117,7 +117,7 @@ export default function QuickTaskForm({ quadrant, onClose, onSave }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <motion.div
@@ -133,7 +133,7 @@ export default function QuickTaskForm({ quadrant, onClose, onSave }) {
               <quadrantInfo.icon className="w-8 h-8" />
               <div>
                 <div className="font-bold">{quadrantInfo.title}</div>
-                <div className="text-sm font-normal text-gray-600">{quadrantInfo.subtitle}</div>
+                <div className="text-sm font-normal text-[#37474F]">{quadrantInfo.subtitle}</div>
               </div>
             </CardTitle>
             <Button variant="ghost" size="icon" onClick={onClose}>
@@ -143,8 +143,8 @@ export default function QuickTaskForm({ quadrant, onClose, onSave }) {
           
           <CardContent className="p-6">
             {quadrantInfo.advice && (
-              <div className="mb-6 p-4 bg-white/80 rounded-lg border">
-                <p className="text-sm text-gray-700">💡 <strong>טיפ:</strong> {quadrantInfo.advice}</p>
+              <div className="mb-6 p-4 bg-[#F5F5F5] rounded-lg border">
+                <p className="text-sm text-[#263238]">💡 <strong>טיפ:</strong> {quadrantInfo.advice}</p>
               </div>
             )}
             

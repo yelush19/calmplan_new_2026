@@ -166,7 +166,7 @@ button:focus-visible {
   body {
     @apply text-foreground;
     font-family: 'Varela Round', 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
-    background: linear-gradient(135deg, #e0f7fa 0%, #f1f8e9 35%, #e8eaf6 65%, #e0f2f1 100%);
+    background: #F9FAFB;
     min-height: 100vh;
   }
   h1, h2, h3, h4, h5, h6, .heading {
@@ -181,66 +181,60 @@ button:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   CalmPlan ZERO_PANIC Global Glassmorphism Theme
-   Applied to ALL pages — no gray coffins, no flat cards.
-   Every surface is a floating, frosted-glass panel.
+   CalmPlan ZERO GRAY Global Policy
+   SOLID WHITE backgrounds, BLACK text, NO transparency, NO blur.
+   Applied to ALL pages — every new page inherits this automatically.
    ═══════════════════════════════════════════════════════════════ */
 
 @layer components {
-  /* Kill ALL bg-gray-xx everywhere — override with glass (Visual Constitution: bg-white/45) */
+  /* ── ZERO GRAY: All gray backgrounds → solid white or light gray ── */
   .bg-gray-50, .bg-gray-100, .bg-gray-200 {
-    background-color: rgba(255, 255, 255, 0.45) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
+    background-color: #F5F5F5 !important;
   }
   .bg-gray-300, .bg-gray-400, .bg-gray-500,
   .bg-gray-600, .bg-gray-700, .bg-gray-800, .bg-gray-900 {
-    background-color: rgba(255, 255, 255, 0.35) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    color: var(--neutral-dark) !important;
+    background-color: #EEEEEE !important;
+    color: #263238 !important;
   }
 
-  /* Global border softening — no more harsh borders */
+  /* ── Borders: solid visible borders, no transparency ── */
   .border-gray-100, .border-gray-200, .border-gray-300 {
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    border-color: #B0BEC5 !important;
   }
 
-  /* Scrollbar styling for glass aesthetic */
+  /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: #FAFAFA;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(0, 130, 145, 0.2);
+    background: #B0BEC5;
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 130, 145, 0.4);
+    background: #78909C;
   }
 
-  /* CalmPlan glass card utility — use on any container */
+  /* CalmPlan card utility — solid white, rounded */
   .calm-glass {
-    background: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #FFFFFF;
+    border: 2px solid #B0BEC5;
     border-radius: 32px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   }
 
-  /* CalmPlan floating bubble — for list items */
+  /* CalmPlan list item */
   .calm-bubble {
-    background: rgba(255, 255, 255, 0.7);
+    background: #FFFFFF;
     border-radius: 24px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
     transition: all 0.2s ease;
   }
   .calm-bubble:hover {
-    background: rgba(255, 255, 255, 0.9);
+    background: #F5F5F5;
     box-shadow: 0 2px 12px rgba(0, 172, 193, 0.15);
   }
 
@@ -252,83 +246,64 @@ button:focus-visible {
     box-shadow: 0 0 20px rgba(0, 172, 193, 0.35), 0 2px 12px rgba(0, 0, 0, 0.1);
   }
 
-  /* Override any remaining flat white backgrounds → glass (Visual Constitution) */
+  /* ── bg-white MUST stay solid white — no transparency override ── */
   .bg-white {
-    background-color: rgba(255, 255, 255, 0.45) !important;
+    background-color: #FFFFFF !important;
   }
 
-  /* Force glass on Radix popover / card / dialog backgrounds */
+  /* ── Radix popover / card / dialog — solid white ── */
   .bg-background, .bg-card, .bg-popover {
-    background-color: rgba(255, 255, 255, 0.45) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
+    background-color: #FFFFFF !important;
   }
 
-  /* Slate color overrides — redirect to glass-compatible values */
+  /* ── Slate overrides — solid backgrounds ── */
   .bg-slate-50, .bg-slate-100, .bg-slate-200 {
-    background-color: rgba(255, 255, 255, 0.45) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
+    background-color: #F5F5F5 !important;
   }
   .bg-slate-300, .bg-slate-400, .bg-slate-500,
   .bg-slate-600, .bg-slate-700, .bg-slate-800, .bg-slate-900 {
-    background-color: rgba(255, 255, 255, 0.35) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
+    background-color: #EEEEEE !important;
+    color: #263238 !important;
   }
 
-  /* Ensure all divide lines use glass borders */
+  /* ── Divide lines — solid borders ── */
   .divide-gray-100 > * + *,
   .divide-gray-200 > * + *,
   .divide-gray-300 > * + * {
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    border-color: #B0BEC5 !important;
   }
 
-  /* Hover states — gray hover → glass hover */
+  /* ── Hover states — solid hover colors ── */
   .hover\:bg-gray-50:hover,
   .hover\:bg-gray-100:hover,
   .hover\:bg-gray-200:hover {
-    background-color: rgba(255, 255, 255, 0.6) !important;
+    background-color: #E0E0E0 !important;
   }
 
-  /* Text-gray softening — keep readable but less harsh */
+  /* ── Text colors: dark and readable, no faded rgba ── */
   .text-gray-400, .text-gray-500 {
-    color: rgba(45, 52, 54, 0.5) !important;
+    color: #455A64 !important;
   }
   .text-gray-600, .text-gray-700 {
-    color: rgba(45, 52, 54, 0.75) !important;
+    color: #37474F !important;
   }
   .text-gray-800, .text-gray-900 {
-    color: var(--neutral-dark) !important;
+    color: #263238 !important;
   }
 
-  /* Ring focus states — use CalmPlan cyan */
+  /* Ring focus states — CalmPlan cyan */
   .ring-gray-200, .ring-gray-300 {
     --tw-ring-color: rgba(0, 172, 193, 0.3) !important;
   }
 
-  /* All muted backgrounds get glass treatment */
+  /* ── Muted backgrounds — solid light gray ── */
   .bg-muted {
-    background-color: rgba(255, 255, 255, 0.35) !important;
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
+    background-color: #F5F5F5 !important;
   }
 
-  /* Slate grays too — full range */
-  .bg-slate-50, .bg-slate-100, .bg-slate-200 {
-    background-color: rgba(255, 255, 255, 0.45) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-  }
-  .bg-slate-300, .bg-slate-400, .bg-slate-500,
-  .bg-slate-600, .bg-slate-700, .bg-slate-800, .bg-slate-900 {
-    background-color: rgba(255, 255, 255, 0.35) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    color: var(--neutral-dark) !important;
-  }
+  /* ── Slate borders — solid ── */
   .border-slate-100, .border-slate-200, .border-slate-300 {
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    border-color: #B0BEC5 !important;
   }
 
   /* ─── MindMap Level 3 Sparkle Hover ─────────────────────── */
