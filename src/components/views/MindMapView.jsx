@@ -171,21 +171,28 @@ const BASE_RADIUS_WIDE = 36;
 const SIZE_LABELS = { 0: 'ננו', 1: 'פשוט', 2: 'בינוני', 3: 'מורכב' };
 
 /**
- * 3-tier classification based on service_types count:
- *   ננו (0): 1 service or no client data
- *   בינוני (1): 2-3 services
- *   גדול (2): 4+ services OR pnl_reports active
+ * 3-tier classification for MindMap display:
+ *   ננו (0): small clients (< 5 employees, < 20 min/month)
+ *   בינוני (1): medium clients (< 15 employees, < 30 min/month)
+ *   גדול (2): large/complex clients (15+ employees OR 45+ min/month)
+ *
+ * Uses computeComplexityTier() from complexity.js which reads:
+ *   - client.complexity_level (manual override)
+ *   - client.employee_count
+ *   - client.business_info.estimated_monthly_hours
+ *
+ * Falls back to task count if no client data available.
+ * Clamps tier 3 (מורכב) → tier 2 (גדול) for 3-tier MindMap display.
  */
 function getComplexityTier(client, tasks) {
   if (!client) {
     const taskCount = tasks.length;
     return taskCount >= 6 ? 2 : taskCount >= 3 ? 1 : 0;
   }
-  const serviceCount = (client.service_types || []).length;
-  const hasPnl = (client.service_types || []).includes('pnl_reports');
-  if (hasPnl || serviceCount >= 4) return 2; // גדול
-  if (serviceCount >= 2) return 1; // בינוני
-  return 0; // ננו
+  // Use the canonical complexity computation from complexity.js
+  const rawTier = computeComplexityTier(client);
+  // Clamp to 0-2 for 3-tier MindMap display (tier 3 → tier 2)
+  return Math.min(rawTier, 2);
 }
 
 function getNodeRadius(tier, isWide = false) {
@@ -427,7 +434,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v15-foundation-laws-diamond'; // bump this to force reset
+  const LAYOUT_VERSION = 'v16-tier-fix-180px-spacing'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -761,12 +768,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       'P4 בית':             Math.PI / 2,
     };
 
-    // ─── ANTI-OVERLAP: Compact fan layout, max 120px arms ───
-    const META_DIST = 120;    // center → meta-folder (max arm length)
-    const DEPT_DIST = 80;     // meta → department
-    const TIER_DIST = 55;     // department → tier diamond
-    const CLIENT_DIST = 45;   // tier diamond → client pill
-    const CLIENT_GAP = 28;    // min px between adjacent client pills
+    // ─── ANTI-OVERLAP: Fan layout with 180px bubble spacing ───
+    const META_DIST = 180;    // center → meta-folder (180px arm)
+    const DEPT_DIST = 120;    // meta → department
+    const TIER_DIST = 80;     // department → tier diamond
+    const CLIENT_DIST = 70;   // tier diamond → client pill
+    const CLIENT_GAP = 40;    // min px between adjacent client pills (prevents overlap)
 
     let metaFolderPositions = metaFolders.map((mf) => {
       const angle = SECTOR_ANGLES[mf.name] ?? 0;
@@ -890,7 +897,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           const clientKey = `${branch.category}-${client.name}`;
           const clientPos = manualPositions[clientKey];
           const cAngle = n <= 1 ? deptAngle : (deptAngle - fanArc / 2) + (j / (n - 1)) * fanArc;
-          const cDist = CLIENT_DIST;
+          const cDist = CLIENT_DIST; // 70px from tier diamond
           clientPositions.push({
             ...client,
             radius: nodeRadius,
@@ -1694,32 +1701,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             }}
           >
             <svg width={SW + 10} height={SH + 10} viewBox={`-5 -5 ${SW + 10} ${SH + 10}`} style={{ overflow: 'visible' }}>
-              <defs>
-                <linearGradient id={`subGlass-${si}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="white" stopOpacity="0.12" />
-                  <stop offset="100%" stopColor="white" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              {/* Glass-morphism rectangle — semi-transparent white */}
+              {/* Zero Gray: solid white bg, vivid border */}
               <rect x={0} y={0} width={SW} height={SH}
                 rx={SCR} ry={SCR}
-                fill="rgba(255,255,255,0.28)"
-                stroke="rgba(0,172,193,0.4)"
-                strokeWidth={1.2} />
-              {/* Inner border for glass depth */}
-              <rect x={1.5} y={1.5} width={SW - 3} height={SH - 3}
-                rx={SCR - 1} ry={SCR - 1}
-                fill="none"
-                stroke="rgba(255,255,255,0.15)"
-                strokeWidth={0.8} />
-              {/* Glass highlight */}
-              <rect x={8} y={4} width={SW * 0.45} height={SH * 0.3}
-                rx={8} ry={8}
-                fill={`url(#subGlass-${si})`} />
+                fill="#FFFFFF"
+                stroke="#00838F"
+                strokeWidth={1.5} />
               <text x={SW / 2} y={SH / 2 - 3} textAnchor="middle" fill="#006064" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
                 {sf.icon} {sf.key}
               </text>
-              <text x={SW / 2} y={SH / 2 + 12} textAnchor="middle" fill="#607D8B" fontSize="9" style={{ pointerEvents: 'none' }}>
+              <text x={SW / 2} y={SH / 2 + 12} textAnchor="middle" fill="#37474F" fontSize="9" style={{ pointerEvents: 'none' }}>
                 {sf.departments?.length || 0} קטגוריות
               </text>
             </svg>
@@ -1753,36 +1744,22 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               onPointerUp={(e) => handleFolderPointerUp(e, branch.category)}
             >
               <svg width={FW + 10} height={FH + 10} viewBox={`-5 -5 ${FW + 10} ${FH + 10}`} style={{ overflow: 'visible' }}>
-                <defs>
-                  <linearGradient id={`folderGlass-${i}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="white" stopOpacity="0.12" />
-                    <stop offset="100%" stopColor="white" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                {/* Glass-morphism rectangle */}
+                {/* Zero Gray: solid white bg, vivid border */}
                 <rect x={0} y={0} width={FW} height={FH}
                   rx={FCR} ry={FCR}
-                  fill="rgba(255,255,255,0.32)"
-                  stroke={isBranchExpanded ? '#00838F' : 'rgba(144,202,249,0.5)'}
-                  strokeWidth={isBranchExpanded ? 1.8 : 1.2} />
-                {/* Inner glass border */}
-                <rect x={1.5} y={1.5} width={FW - 3} height={FH - 3}
-                  rx={FCR - 1} ry={FCR - 1}
-                  fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={0.8} />
-                {/* Glass highlight */}
-                <rect x={8} y={3} width={FW * 0.45} height={FH * 0.28}
-                  rx={8} ry={8}
-                  fill={`url(#folderGlass-${i})`} />
+                  fill="#FFFFFF"
+                  stroke={isBranchExpanded ? '#00838F' : '#90CAF9'}
+                  strokeWidth={isBranchExpanded ? 2 : 1.5} />
                 {/* Expand/collapse indicator */}
-                <text x="14" y={FH / 2 + 1} textAnchor="middle" fill="#607D8B" fontSize="9" style={{ pointerEvents: 'none' }}>
+                <text x="14" y={FH / 2 + 1} textAnchor="middle" fill="#37474F" fontSize="9" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                   {isBranchExpanded ? '▼' : '▶'}
                 </text>
                 {/* Label */}
-                <text x={FW / 2 + 4} y={FH / 2 - 2} textAnchor="middle" fill="#37474F" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                <text x={FW / 2 + 4} y={FH / 2 - 2} textAnchor="middle" fill="#000000" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
                   {branch.config.icon} {branch.category}
                 </text>
                 {/* Count badge */}
-                <circle cx={FW - 16} cy={14} r="10" fill="rgba(255,255,255,0.45)" stroke="rgba(144,202,249,0.5)" strokeWidth={0.8} />
+                <circle cx={FW - 16} cy={14} r="10" fill="#E3F2FD" stroke="#90CAF9" strokeWidth={1} />
                 <text x={FW - 16} y={18} textAnchor="middle" fill="#37474F" fontSize="9" fontWeight="bold" style={{ pointerEvents: 'none' }}>
                   {branch.clients.length}
                 </text>
