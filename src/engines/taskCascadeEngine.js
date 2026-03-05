@@ -208,20 +208,20 @@ export function evaluateVatStatus(task, updatedSteps) {
   const expenseInput = updatedSteps?.expense_input?.done;
   const reportPrep = updatedSteps?.report_prep?.done;
   const submission = updatedSteps?.submission?.done;
+  const payment = updatedSteps?.payment?.done;
 
-  // All done = production completed
-  if (submission) {
-    return { status: 'production_completed' };
+  // Both דיווח + תשלום done = production_completed (handled by authority evaluator)
+  // Submission done only (no payment yet) = sent_for_review (handled by authority evaluator)
+  // So here we only handle pre-submission logic:
+
+  // Report prep done = needs_corrections (data ready, needs review before submission)
+  if (reportPrep && !submission) {
+    return { status: 'not_started' };
   }
 
-  // Report prep done = sent for review
-  if (reportPrep) {
-    return { status: 'sent_for_review' };
-  }
-
-  // Both income + expense done = sent for review
-  if (incomeInput && expenseInput) {
-    return { status: 'sent_for_review' };
+  // Both income + expense done = ready for report prep
+  if (incomeInput && expenseInput && !reportPrep) {
+    return { status: 'not_started' };
   }
 
   // Only one done = still open
@@ -254,12 +254,10 @@ export function evaluateTaxAdvancesStatus(task, updatedSteps, siblingTasks) {
 
   const vatIncomesDone = vatTask?.process_steps?.income_input?.done;
 
-  if (vatIncomesDone && updatedSteps?.calculation?.done) {
-    return { status: 'sent_for_review' };
-  }
-
-  if (updatedSteps?.submission?.done) {
-    return { status: 'production_completed' };
+  // Authority evaluator handles submission+payment → production_completed
+  // Here we only handle pre-submission logic:
+  if (vatIncomesDone && updatedSteps?.calculation?.done && !updatedSteps?.submission?.done) {
+    return { status: 'not_started' };
   }
 
   return null;
@@ -455,6 +453,94 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
 }
 
 // ============================================================
+// 2c. SOCIAL SECURITY CHAIN (מס"ב סוציאליות)
+// ============================================================
+// Dependency chain:
+//   "משלוח קובץ למתפעל" (הושלם) → status: waiting_for_materials (ממתין לקובץ ממתפעל)
+//   → "קבלת קובץ ממתפעל" (הושלם) → status: not_started (לבצע)
+//   → "הכנת קובץ + העלאה" (הושלם) → status: sent_for_review
+//   → "משלוח אסמכתאות" (הושלם) → status: production_completed
+
+/**
+ * Evaluate מס"ב סוציאליות task status based on the social security chain.
+ *
+ * @param {Object} task - The masav_social task
+ * @param {Object} updatedSteps - The new process_steps
+ * @returns {{ status: string } | null}
+ */
+export function evaluateMasavSocialStatus(task, updatedSteps) {
+  const service = getServiceForTask(task);
+  if (!service || service.key !== 'masav_social') return null;
+
+  const sendToOperator = updatedSteps?.send_to_operator?.done;
+  const receiveFile = updatedSteps?.receive_file?.done;
+  const filePrep = updatedSteps?.file_prep?.done;
+  const upload = updatedSteps?.upload?.done;
+  const sendReceipts = updatedSteps?.send_receipts?.done;
+
+  // Full chain complete → production_completed
+  if (sendReceipts) {
+    return { status: 'production_completed' };
+  }
+
+  // Upload done → sent for review (awaiting confirmation)
+  if (upload) {
+    return { status: 'sent_for_review' };
+  }
+
+  // File prep done → still in progress (not_started)
+  if (filePrep) {
+    return { status: 'not_started' };
+  }
+
+  // File received from operator → ready to work (לבצע)
+  if (receiveFile) {
+    return { status: 'not_started' };
+  }
+
+  // Sent to operator, waiting for response → waiting_for_materials
+  if (sendToOperator && !receiveFile) {
+    return { status: 'waiting_for_materials' };
+  }
+
+  return null;
+}
+
+// ============================================================
+// 2d. AUTHORITY TASK EVALUATOR (generic for דיווח + תשלום)
+// ============================================================
+
+/**
+ * Evaluate authority tasks (מע"מ, מקדמות, בט"ל, ניכויים).
+ * These have דיווח (submission) + תשלום (payment) as final sub-steps.
+ * Payment step completion → production_completed.
+ * Submission without payment → sent_for_review.
+ *
+ * @param {Object} task - The authority task
+ * @param {Object} updatedSteps - The new process_steps
+ * @returns {{ status: string } | null}
+ */
+export function evaluateAuthorityStatus(task, updatedSteps) {
+  const service = getServiceForTask(task);
+  if (!service || service.taskType !== 'authority') return null;
+
+  const submission = updatedSteps?.submission?.done;
+  const payment = updatedSteps?.payment?.done;
+
+  // Both דיווח + תשלום done → production_completed
+  if (submission && payment) {
+    return { status: 'production_completed' };
+  }
+
+  // דיווח done, תשלום pending → sent_for_review
+  if (submission && !payment) {
+    return { status: 'sent_for_review' };
+  }
+
+  return null;
+}
+
+// ============================================================
 // 3. RELAY / EXTERNAL TASKS
 // ============================================================
 
@@ -525,11 +611,18 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = []) {
 
   switch (service.key) {
     case 'vat':
-      evaluation = evaluateVatStatus(task, updatedSteps);
+      // VAT is authority type: check authority דיווח+תשלום first, then VAT-specific logic
+      evaluation = evaluateAuthorityStatus(task, updatedSteps) || evaluateVatStatus(task, updatedSteps);
       break;
 
     case 'tax_advances':
-      evaluation = evaluateTaxAdvancesStatus(task, updatedSteps, siblingTasks);
+      evaluation = evaluateAuthorityStatus(task, updatedSteps) || evaluateTaxAdvancesStatus(task, updatedSteps, siblingTasks);
+      break;
+
+    case 'social_security':
+    case 'deductions':
+      // Authority tasks: דיווח + תשלום sub-steps
+      evaluation = evaluateAuthorityStatus(task, updatedSteps);
       break;
 
     case 'payroll':
@@ -538,6 +631,11 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = []) {
 
     case 'bookkeeping':
       evaluation = evaluateBookkeepingStatus(task, updatedSteps, siblingTasks);
+      break;
+
+    case 'masav_social':
+      // Social Security Chain: full dependency chain evaluation
+      evaluation = evaluateMasavSocialStatus(task, updatedSteps);
       break;
 
     case 'reserve_claims':

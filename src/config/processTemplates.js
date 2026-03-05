@@ -18,6 +18,7 @@ export const TAX_SERVICES = {
     key: 'vat',
     label: 'מע"מ',
     dashboard: 'tax',
+    taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['מע"מ', 'work_vat_reporting'],
     createCategory: 'מע"מ',
     steps: [
@@ -25,6 +26,7 @@ export const TAX_SERVICES = {
       { key: 'expense_input',  label: 'קליטת הוצאות',  icon: 'download', allowMultiple: true },
       { key: 'report_prep',    label: 'הכנת דו"ח',     icon: 'file-text' },
       { key: 'submission',     label: 'דיווח',          icon: 'send' },
+      { key: 'payment',        label: 'תשלום',          icon: 'landmark' },
     ],
   },
 
@@ -32,11 +34,13 @@ export const TAX_SERVICES = {
     key: 'tax_advances',
     label: 'מקדמות מס הכנסה',
     dashboard: 'tax',
+    taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['מקדמות מס', 'work_tax_advances'],
     createCategory: 'מקדמות מס',
     steps: [
       { key: 'calculation',  label: 'חישוב מקדמות', icon: 'calculator' },
-      { key: 'submission',   label: 'דיווח ותשלום',  icon: 'send' },
+      { key: 'submission',   label: 'דיווח',         icon: 'send' },
+      { key: 'payment',      label: 'תשלום',         icon: 'landmark' },
     ],
   },
 
@@ -63,6 +67,7 @@ export const PAYROLL_SERVICES = {
     key: 'payroll',
     label: 'שכר',
     dashboard: 'payroll',
+    taskType: 'linear',  // Linear task — no דיווח/תשלום sub-tasks
     taskCategories: ['שכר', 'work_payroll'],
     createCategory: 'שכר',
     steps: [
@@ -79,11 +84,13 @@ export const PAYROLL_SERVICES = {
     key: 'social_security',
     label: 'ביטוח לאומי',
     dashboard: 'payroll',
+    taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['ביטוח לאומי', 'work_social_security'],
     createCategory: 'ביטוח לאומי',
     steps: [
       { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
       { key: 'submission',   label: 'דיווח',       icon: 'send' },
+      { key: 'payment',      label: 'תשלום',       icon: 'landmark' },
     ],
   },
 
@@ -91,11 +98,13 @@ export const PAYROLL_SERVICES = {
     key: 'deductions',
     label: 'ניכויים',
     dashboard: 'payroll',
+    taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['ניכויים', 'work_deductions'],
     createCategory: 'ניכויים',
     steps: [
       { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
       { key: 'submission',   label: 'דיווח',       icon: 'send' },
+      { key: 'payment',      label: 'תשלום',       icon: 'landmark' },
     ],
   },
 };
@@ -208,6 +217,7 @@ export const ADDITIONAL_SERVICES = {
     key: 'masav_employees',
     label: 'מס"ב עובדים',
     dashboard: 'payroll',
+    taskType: 'linear',  // Linear task — no דיווח/תשלום sub-tasks
     taskCategories: ['מס"ב עובדים', 'work_masav'],
     createCategory: 'מס"ב עובדים',
     steps: [
@@ -290,12 +300,17 @@ export const ADDITIONAL_SERVICES = {
     key: 'masav_social',
     label: 'מס"ב סוציאליות',
     dashboard: 'payroll',
+    taskType: 'linear',  // Linear task — full chain encoded as steps
     taskCategories: ['מס"ב סוציאליות', 'work_masav_social'],
     createCategory: 'מס"ב סוציאליות',
+    // Social Security Chain:
+    // send_to_operator(הושלם) → waiting_for_materials → receive_file(הושלם) → לבצע → file_prep → upload → send_receipts
     steps: [
-      { key: 'file_prep',    label: 'הכנת קובץ',   icon: 'file-text' },
-      { key: 'upload',       label: 'העלאה',        icon: 'upload' },
-      { key: 'confirmation', label: 'אישור ביצוע',  icon: 'check-circle' },
+      { key: 'send_to_operator', label: 'משלוח קובץ למתפעל', icon: 'send' },
+      { key: 'receive_file',     label: 'קבלת קובץ ממתפעל',  icon: 'inbox' },
+      { key: 'file_prep',        label: 'הכנת קובץ מס"ב',    icon: 'file-text' },
+      { key: 'upload',           label: 'העלאה',              icon: 'upload' },
+      { key: 'send_receipts',    label: 'משלוח אסמכתאות',     icon: 'check-circle' },
     ],
   },
 
@@ -353,6 +368,7 @@ export const ADDITIONAL_SERVICES = {
     key: 'payslip_sending',
     label: 'משלוח תלושים',
     dashboard: 'payroll',
+    taskType: 'linear',  // Linear task — no דיווח/תשלום sub-tasks
     taskCategories: ['משלוח תלושים', 'work_payslip_sending'],
     createCategory: 'משלוח תלושים',
     steps: [
@@ -387,6 +403,26 @@ export function getServiceForTask(task) {
   return Object.values(ALL_SERVICES).find(service =>
     service.taskCategories.includes(task.category)
   );
+}
+
+/**
+ * Check if a task is an "authority" task (gets דיווח + תשלום sub-tasks).
+ * Authority tasks: מע"מ, מקדמות מס, ביטוח לאומי, ניכויים.
+ * All others (שכר, מס"ב, תלושים) are linear — no sub-tasks.
+ */
+export function isAuthorityTask(task) {
+  const service = getServiceForTask(task);
+  return service?.taskType === 'authority';
+}
+
+/**
+ * Get the "דיווח" + "תשלום" sub-steps for authority tasks only.
+ * Returns empty array for linear/non-authority tasks.
+ */
+export function getAuthoritySubSteps(task) {
+  const service = getServiceForTask(task);
+  if (service?.taskType !== 'authority') return [];
+  return (service.steps || []).filter(s => s.key === 'submission' || s.key === 'payment');
 }
 
 /**
