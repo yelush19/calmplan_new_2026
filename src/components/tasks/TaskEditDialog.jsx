@@ -16,6 +16,7 @@ import {
   Calendar, Clock, Timer, Wand2, Paperclip, GitBranchPlus, ChevronLeft
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import { Task } from '@/api/entities';
 import { differenceInDays, format, parseISO, isValid } from 'date-fns';
@@ -125,6 +126,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
         notes: task.notes || '',
         sub_tasks: task.sub_tasks || [],
         complexity: task.complexity || 'low',
+        cognitive_load: task.cognitive_load ?? null,
       });
       setNewSubTitle('');
       setNewSubDue('');
@@ -207,8 +209,8 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             />
           </div>
 
-          {/* Status + Priority + Complexity row */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Status + Priority row */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">סטטוס</Label>
               <Select value={editData.status} onValueChange={(v) => setEditData(prev => ({ ...prev, status: v }))}>
@@ -245,6 +247,10 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Complexity + Cognitive Load row */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">מורכבות</Label>
               <Select value={editData.complexity || 'low'} onValueChange={(v) => setEditData(prev => ({ ...prev, complexity: v }))}>
@@ -255,6 +261,28 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                   {COMPLEXITY_OPTIONS.map(c => (
                     <SelectItem key={c.value} value={c.value} className="text-xs">
                       {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">עומס קוגניטיבי</Label>
+              <Select
+                value={editData.cognitive_load != null ? String(editData.cognitive_load) : ''}
+                onValueChange={(v) => setEditData(prev => ({ ...prev, cognitive_load: v ? parseInt(v, 10) : null }))}
+              >
+                <SelectTrigger className="text-xs h-9">
+                  <SelectValue placeholder="בחר טייר" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(COMPLEXITY_TIERS).map(([tier, info]) => (
+                    <SelectItem key={tier} value={tier} className="text-xs">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{info.icon}</span>
+                        {info.label}
+                        <span className="text-[#78909C]">({info.maxMinutes} דק׳)</span>
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -115,6 +115,7 @@ export default function ClientManagementPage() {
   const [isMigratingDev, setIsMigratingDev] = useState(false);
   const devMigrationDone = useRef(false);
   const [automationRules, setAutomationRules] = useState([]);
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
 
   const handleMigrateDevToProjects = async (clientsList) => {
     const devClients = (clientsList || clients).filter(c => c.status === 'development');
@@ -395,6 +396,31 @@ export default function ClientManagementPage() {
     development: 'פיתוח',
     onboarding_pending: 'ממתין לקליטה',
     balance_sheet_only: 'סגירת מאזן בלבד'
+  };
+
+  // Group clients by status for collapsible sections
+  const STATUS_ORDER = ['active', 'onboarding_pending', 'potential', 'balance_sheet_only', 'inactive', 'former', 'development'];
+  const groupedClients = React.useMemo(() => {
+    const groups = {};
+    for (const client of filteredClients) {
+      const status = client.status || 'active';
+      if (!groups[status]) groups[status] = [];
+      groups[status].push(client);
+    }
+    return STATUS_ORDER.filter(s => groups[s]?.length > 0).map(s => ({
+      status: s,
+      label: statusLabels[s] || s,
+      clients: groups[s],
+    }));
+  }, [filteredClients]);
+
+  const toggleGroup = (status) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
   };
 
   // Auto-create periodic reports and balance sheets for new/updated active clients
@@ -1076,6 +1102,29 @@ export default function ClientManagementPage() {
               <div className="text-gray-500">טוען לקוחות...</div>
             </div>
           ) : (
+            <>
+            {/* Collapse/Expand all buttons */}
+            {groupedClients.length > 1 && (
+              <div className="flex items-center gap-2 mb-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-[#455A64] h-7"
+                  onClick={() => setCollapsedGroups(new Set(groupedClients.map(g => g.status)))}
+                >
+                  כווץ הכל
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-[#455A64] h-7"
+                  onClick={() => setCollapsedGroups(new Set())}
+                >
+                  הרחב הכל
+                </Button>
+              </div>
+            )}
+
             <AnimatePresence mode="wait">
               {view === 'grid' ? (
                 <motion.div
@@ -1083,22 +1132,38 @@ export default function ClientManagementPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+                  className="space-y-4"
                 >
-                  {filteredClients.map(client => (
-                    <ClientCard
-                      key={client.id}
-                      client={client}
-                      isSelected={selectedClientIds.has(client.id)}
-                      onToggleSelect={() => handleToggleSelectClient(client.id)}
-                      onEdit={(c) => { setSelectedClient(c); setShowClientForm(true); }}
-                      onSelectTasks={setSelectedTasksClient}
-                      onSelectAccounts={setSelectedAccountsClient}
-                      onSelectCollections={setSelectedCollectionsClient}
-                      onSelectContracts={setSelectedContractsClient}
-                      onSelectFiles={setSelectedFilesClient}
-                      onDelete={() => handleDeleteClient(client.id)}
-                    />
+                  {groupedClients.map(group => (
+                    <div key={group.status}>
+                      <button
+                        onClick={() => toggleGroup(group.status)}
+                        className="flex items-center gap-2 w-full text-right py-2 px-3 rounded-lg hover:bg-[#F5F5F5] transition-colors mb-2"
+                      >
+                        <ChevronDown className={`w-4 h-4 text-[#455A64] transition-transform ${collapsedGroups.has(group.status) ? '-rotate-90' : ''}`} />
+                        <span className="text-sm font-semibold text-[#263238]">{group.label}</span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{group.clients.length}</Badge>
+                      </button>
+                      {!collapsedGroups.has(group.status) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                          {group.clients.map(client => (
+                            <ClientCard
+                              key={client.id}
+                              client={client}
+                              isSelected={selectedClientIds.has(client.id)}
+                              onToggleSelect={() => handleToggleSelectClient(client.id)}
+                              onEdit={(c) => { setSelectedClient(c); setShowClientForm(true); }}
+                              onSelectTasks={setSelectedTasksClient}
+                              onSelectAccounts={setSelectedAccountsClient}
+                              onSelectCollections={setSelectedCollectionsClient}
+                              onSelectContracts={setSelectedContractsClient}
+                              onSelectFiles={setSelectedFilesClient}
+                              onDelete={() => handleDeleteClient(client.id)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </motion.div>
               ) : (
@@ -1107,32 +1172,45 @@ export default function ClientManagementPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="space-y-2"
+                  className="space-y-3"
                 >
-                  <Card>
-                    <CardContent className="p-0">
-                      <div className="divide-y">
-                        {filteredClients.map(client => (
-                          <ClientListItem
-                            key={client.id}
-                            client={client}
-                            isSelected={selectedClientIds.has(client.id)}
-                            onToggleSelect={() => handleToggleSelectClient(client.id)}
-                            onEdit={(c) => { setSelectedClient(c); setShowClientForm(true); }}
-                            onSelectTasks={setSelectedTasksClient}
-                            onSelectAccounts={setSelectedAccountsClient}
-                            onSelectCollections={setSelectedCollectionsClient}
-                            onSelectContracts={setSelectedContractsClient}
-                            onSelectFiles={setSelectedFilesClient}
-                            onDelete={() => handleDeleteClient(client.id)}
-                          />
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {groupedClients.map(group => (
+                    <Card key={group.status}>
+                      <button
+                        onClick={() => toggleGroup(group.status)}
+                        className="flex items-center gap-2 w-full text-right py-2.5 px-4 hover:bg-[#F5F5F5] transition-colors"
+                      >
+                        <ChevronDown className={`w-4 h-4 text-[#455A64] transition-transform ${collapsedGroups.has(group.status) ? '-rotate-90' : ''}`} />
+                        <span className="text-sm font-semibold text-[#263238]">{group.label}</span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{group.clients.length}</Badge>
+                      </button>
+                      {!collapsedGroups.has(group.status) && (
+                        <CardContent className="p-0">
+                          <div className="divide-y">
+                            {group.clients.map(client => (
+                              <ClientListItem
+                                key={client.id}
+                                client={client}
+                                isSelected={selectedClientIds.has(client.id)}
+                                onToggleSelect={() => handleToggleSelectClient(client.id)}
+                                onEdit={(c) => { setSelectedClient(c); setShowClientForm(true); }}
+                                onSelectTasks={setSelectedTasksClient}
+                                onSelectAccounts={setSelectedAccountsClient}
+                                onSelectCollections={setSelectedCollectionsClient}
+                                onSelectContracts={setSelectedContractsClient}
+                                onSelectFiles={setSelectedFilesClient}
+                                onDelete={() => handleDeleteClient(client.id)}
+                              />
+                            ))}
+                          </div>
+                        </CardContent>
+                      )}
+                    </Card>
+                  ))}
                 </motion.div>
               )}
             </AnimatePresence>
+            </>
           )}
 
           {!isLoading && clients.length > 0 && filteredClients.length === 0 && (
