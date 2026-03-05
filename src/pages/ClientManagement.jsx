@@ -115,7 +115,7 @@ export default function ClientManagementPage() {
   const [isMigratingDev, setIsMigratingDev] = useState(false);
   const devMigrationDone = useRef(false);
   const [automationRules, setAutomationRules] = useState([]);
-  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set(['active', 'onboarding_pending', 'potential', 'balance_sheet_only', 'inactive', 'former', 'development']));
 
   const handleMigrateDevToProjects = async (clientsList) => {
     const devClients = (clientsList || clients).filter(c => c.status === 'development');

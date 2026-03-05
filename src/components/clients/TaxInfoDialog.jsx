@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Copy, CheckCircle } from 'lucide-react';
@@ -59,6 +59,9 @@ export default function TaxInfoDialog({ client, open, onClose }) {
             <FileText className="w-4 h-4 text-emerald-600" />
             פרטי מס - {client.name}
           </DialogTitle>
+          <DialogDescription className="text-sm text-[#37474F]">
+            צפייה בפרטי המס והמזהים של הלקוח.
+          </DialogDescription>
         </DialogHeader>
 
         {!hasTaxData ? (

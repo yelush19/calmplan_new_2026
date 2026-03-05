@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 const serviceProviderTypes = {
@@ -288,6 +289,9 @@ export default function ClientServiceProvidersTab({ clientId, clientName }) {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>הוסף נותן שירות ל{clientName}</DialogTitle>
+            <DialogDescription className="text-sm text-[#37474F]">
+              בחירת נותן שירות קיים ושיוכו ללקוח עם תפקיד מתאים.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>

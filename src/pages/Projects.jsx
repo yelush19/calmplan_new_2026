@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Pencil, Trash2, ExternalLink, GitBranch, Globe, Server,
-  FolderKanban, X, Check, Database, BarChart3, HardDrive, TrainFront
+  FolderKanban, X, Check, Database, BarChart3, HardDrive, TrainFront,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { loadPlatformConfig } from '@/config/platformConfig';
 
@@ -67,6 +68,12 @@ export default function Projects() {
   const [formData, setFormData] = useState({ ...emptyProject });
   const [isCreating, setIsCreating] = useState(false);
   const [platforms, setPlatforms] = useState([]);
+  const [collapsedGroups, setCollapsedGroups] = useState(() => {
+    const init = {};
+    statusOptions.forEach(s => { init[s.value] = true; });
+    return init;
+  });
+  const [allExpanded, setAllExpanded] = useState(false);
 
   useEffect(() => {
     loadProjects();
@@ -320,7 +327,7 @@ export default function Projects() {
         </Card>
       )}
 
-      {/* Projects Grid */}
+      {/* Projects Grid - Grouped by Status */}
       {projects.length === 0 && !isCreating ? (
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
@@ -330,106 +337,152 @@ export default function Projects() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map((project) => {
-            const statusConf = getStatusConfig(project.status);
-            const plat = getPlatformForProject(project);
-            const PlatIcon = plat ? getPlatformIcon(plat.icon) : null;
-            return (
-              <Card key={project.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{project.name}</CardTitle>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <Badge className={statusConf.color}>{statusConf.label}</Badge>
-                        {plat && (
-                          <Badge className={`text-[10px] gap-1 ${plat.color}`}>
-                            {PlatIcon && <PlatIcon className="w-3 h-3" />}
-                            {plat.name}
-                          </Badge>
-                        )}
-                      </div>
+        <>
+          <div className="flex items-center justify-end mb-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (allExpanded) {
+                  const collapsed = {};
+                  statusOptions.forEach(s => { collapsed[s.value] = true; });
+                  setCollapsedGroups(collapsed);
+                  setAllExpanded(false);
+                } else {
+                  setCollapsedGroups({});
+                  setAllExpanded(true);
+                }
+              }}
+              className="text-xs gap-1"
+            >
+              {allExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
+            </Button>
+          </div>
+          <div className="space-y-3">
+            {statusOptions.map(statusOpt => {
+              const groupProjects = projects.filter(p => (p.status || 'planning') === statusOpt.value);
+              if (groupProjects.length === 0) return null;
+              const groupKey = statusOpt.value;
+              return (
+                <div key={groupKey} className="mb-2">
+                  <button
+                    onClick={() => setCollapsedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }))}
+                    className="w-full flex items-center justify-between p-2 rounded-lg bg-[#F5F5F5] hover:bg-[#E0E0E0] transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className={`w-4 h-4 transition-transform ${collapsedGroups[groupKey] ? '-rotate-90' : ''}`} />
+                      <span className="font-bold text-[#000000] text-sm">{statusOpt.label}</span>
+                      <span className="text-xs text-[#455A64]">({groupProjects.length} פרויקטים)</span>
                     </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => startEdit(project)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(project.id)} className="text-amber-500 hover:text-amber-700">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <FolderKanban className="w-4 h-4" />
-                    {getSystemTypeLabel(project.system_type)}
-                  </div>
+                  </button>
+                  {!collapsedGroups[groupKey] && (
+                    <div className="mt-1 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {groupProjects.map((project) => {
+                        const statusConf = getStatusConfig(project.status);
+                        const plat = getPlatformForProject(project);
+                        const PlatIcon = plat ? getPlatformIcon(plat.icon) : null;
+                        return (
+                          <Card key={project.id} className="hover:shadow-md transition-shadow">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <CardTitle className="text-lg">{project.name}</CardTitle>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <Badge className={statusConf.color}>{statusConf.label}</Badge>
+                                    {plat && (
+                                      <Badge className={`text-[10px] gap-1 ${plat.color}`}>
+                                        {PlatIcon && <PlatIcon className="w-3 h-3" />}
+                                        {plat.name}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="icon" onClick={() => startEdit(project)}>
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleDelete(project.id)} className="text-amber-500 hover:text-amber-700">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <FolderKanban className="w-4 h-4" />
+                                {getSystemTypeLabel(project.system_type)}
+                              </div>
 
-                  {project.description && (
-                    <p className="text-sm text-muted-foreground">{project.description}</p>
-                  )}
+                              {project.description && (
+                                <p className="text-sm text-muted-foreground">{project.description}</p>
+                              )}
 
-                  {project.tech_stack && (
-                    <div className="flex flex-wrap gap-1">
-                      {project.tech_stack.split(',').map((tech, i) => (
-                        <Badge key={i} variant="outline" className="text-xs">{tech.trim()}</Badge>
-                      ))}
-                    </div>
-                  )}
+                              {project.tech_stack && (
+                                <div className="flex flex-wrap gap-1">
+                                  {project.tech_stack.split(',').map((tech, i) => (
+                                    <Badge key={i} variant="outline" className="text-xs">{tech.trim()}</Badge>
+                                  ))}
+                                </div>
+                              )}
 
-                  {/* Platform-specific fields */}
-                  {plat && project.platform_data && Object.keys(project.platform_data).some(k => project.platform_data[k]) && (
-                    <div className="border rounded-md p-2 space-y-1 text-xs bg-gray-50" dir="ltr">
-                      {plat.fields.map(field => {
-                        const val = project.platform_data?.[field.key];
-                        if (!val) return null;
-                        return field.type === 'url' ? (
-                          <a key={field.key} href={val} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
-                            {PlatIcon && <PlatIcon className="w-3 h-3" />}
-                            <span className="truncate">{val.replace('https://', '')}</span>
-                          </a>
-                        ) : (
-                          <div key={field.key} className="flex items-center gap-1 text-muted-foreground">
-                            <span className="text-gray-400">{field.label}:</span> {val}
-                          </div>
+                              {/* Platform-specific fields */}
+                              {plat && project.platform_data && Object.keys(project.platform_data).some(k => project.platform_data[k]) && (
+                                <div className="border rounded-md p-2 space-y-1 text-xs bg-gray-50" dir="ltr">
+                                  {plat.fields.map(field => {
+                                    const val = project.platform_data?.[field.key];
+                                    if (!val) return null;
+                                    return field.type === 'url' ? (
+                                      <a key={field.key} href={val} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                                        {PlatIcon && <PlatIcon className="w-3 h-3" />}
+                                        <span className="truncate">{val.replace('https://', '')}</span>
+                                      </a>
+                                    ) : (
+                                      <div key={field.key} className="flex items-center gap-1 text-muted-foreground">
+                                        <span className="text-gray-400">{field.label}:</span> {val}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              <div className="border-t pt-2 space-y-1 text-xs" dir="ltr">
+                                {project.git_repo && (
+                                  <a href={project.git_repo} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                                    <GitBranch className="w-3 h-3" /> {project.git_repo.replace('https://github.com/', '')}
+                                  </a>
+                                )}
+                                {project.supabase_url && (
+                                  <a href={project.supabase_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
+                                    <Database className="w-3 h-3" /> {project.supabase_url.replace('https://', '')}
+                                  </a>
+                                )}
+                                {project.subdomain && (
+                                  <div className="flex items-center gap-1 text-muted-foreground">
+                                    <Globe className="w-3 h-3" /> {project.subdomain}
+                                  </div>
+                                )}
+                                {project.production_url && (
+                                  <a href={project.production_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                                    <ExternalLink className="w-3 h-3" /> {project.production_url.replace('https://', '')}
+                                  </a>
+                                )}
+                              </div>
+
+                              {project.notes && (
+                                <p className="text-xs text-muted-foreground border-t pt-2">{project.notes}</p>
+                              )}
+                            </CardContent>
+                          </Card>
                         );
                       })}
                     </div>
                   )}
-
-                  <div className="border-t pt-2 space-y-1 text-xs" dir="ltr">
-                    {project.git_repo && (
-                      <a href={project.git_repo} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
-                        <GitBranch className="w-3 h-3" /> {project.git_repo.replace('https://github.com/', '')}
-                      </a>
-                    )}
-                    {project.supabase_url && (
-                      <a href={project.supabase_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
-                        <Database className="w-3 h-3" /> {project.supabase_url.replace('https://', '')}
-                      </a>
-                    )}
-                    {project.subdomain && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Globe className="w-3 h-3" /> {project.subdomain}
-                      </div>
-                    )}
-                    {project.production_url && (
-                      <a href={project.production_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
-                        <ExternalLink className="w-3 h-3" /> {project.production_url.replace('https://', '')}
-                      </a>
-                    )}
-                  </div>
-
-                  {project.notes && (
-                    <p className="text-xs text-muted-foreground border-t pt-2">{project.notes}</p>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

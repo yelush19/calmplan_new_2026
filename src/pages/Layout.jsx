@@ -41,37 +41,38 @@ const WORK_MODES = [
     key: 'doing',
     label: 'ביצוע',
     icon: Zap,
-    color: 'bg-emerald-500 text-white',
+    color: 'bg-emerald-600 text-white',
     description: 'משימות יומיות + דיווחים שוטפים',
-    visibleSections: ['p1_payroll', 'p2_bookkeeping', 'p3_office']
+    visibleSections: ['p1_payroll', 'p2_bookkeeping', 'p3_doing']
   },
   {
     key: 'planning',
     label: 'תכנון',
     icon: Brain,
-    color: 'bg-blue-500 text-white',
-    description: 'תכנון שבועי + מעקב',
-    visibleSections: ['p3_office']
+    color: 'bg-blue-600 text-white',
+    description: 'אוטומציות, הגדרות חוזרות, אפיון עומס',
+    visibleSections: ['p3_planning']
   },
   {
     key: 'admin',
     label: 'ניהול',
     icon: Settings,
-    color: 'bg-[#006d7a] text-white',
-    description: 'לקוחות + ספקים + הגדרות',
-    visibleSections: ['p3_office']
+    color: 'bg-purple-700 text-white',
+    description: 'לקוחות + ספקים + ניתוח עסקי',
+    visibleSections: ['p3_admin']
   },
 ];
 
 // ============================================================
 // Sidebar sections — P1-P4 Process Tree Hierarchy
+// Split P3 into doing/planning/admin for clear separation
 // ============================================================
 const getSidebarSections = () => ({
   // ── P1 | חשבות שכר ──
   p1_payroll: {
     title: "P1 | חשבות שכר",
     icon: Calculator,
-    mode: 'doing',
+    tabColor: 'border-emerald-600',
     items: [
       { name: "שלב ייצור ואישור", href: createPageUrl("PayrollDashboard"), icon: Zap },
       { name: "דיווחים שוטפים (102)", href: createPageUrl("PayrollReportsDashboard"), icon: FileBarChart },
@@ -83,7 +84,7 @@ const getSidebarSections = () => ({
   p2_bookkeeping: {
     title: "P2 | הנהלת חשבונות",
     icon: FileBarChart,
-    mode: 'doing',
+    tabColor: 'border-emerald-600',
     items: [
       { name: "ריכוז דיווחי מיסים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
       { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
@@ -93,48 +94,56 @@ const getSidebarSections = () => ({
       { name: "שירותים נוספים", href: createPageUrl("BookkeepingExtrasDashboard"), icon: LayoutGrid },
     ]
   },
-  // ── P3 | ביצוע ותכנון (לוחות עבודה) ──
+  // ── P3 | ביצוע (משימות + לו"ז בלבד) ──
   p3_doing: {
-    title: "P3 | ביצוע ותכנון",
+    title: "P3 | ביצוע",
     icon: Target,
-    mode: 'doing',
+    tabColor: 'border-emerald-600',
     items: [
       { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       { name: "אדמיניסטרציה", href: createPageUrl("AdminTasksDashboard"), icon: FolderKanban },
+      { name: "פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
+    ]
+  },
+  // ── P3 | תכנון (תשתית עבודה + הגדרות מערכת) ──
+  p3_planning: {
+    title: "P3 | תכנון",
+    icon: Brain,
+    tabColor: 'border-blue-600',
+    items: [
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
       { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
-      { name: "פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
-      { name: "ניתוח נתונים", href: createPageUrl("Analytics"), icon: BarChart3 },
-    ]
-  },
-  // ── P3 | ניהול (הגדרות, לקוחות, אוטומציה) ──
-  p3_admin: {
-    title: "P3 | ניהול והגדרות",
-    icon: Settings,
-    mode: 'admin',
-    items: [
-      { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
-      { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
-      { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
       { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
       { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
       { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
       { name: "חיבור Monday", href: createPageUrl("MondayIntegration"), icon: Link2 },
+      { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Import },
+      { name: "מוכנות מערכת", href: createPageUrl("SystemReadiness"), icon: Shield },
+    ]
+  },
+  // ── P3 | ניהול עסקי (לקוחות + ספקים + ניתוח) ──
+  p3_admin: {
+    title: "P3 | ניהול עסקי",
+    icon: Building2,
+    tabColor: 'border-purple-700',
+    items: [
+      { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+      { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
+      { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
       { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
       { name: "חוזי לקוחות", href: createPageUrl("ClientContracts"), icon: FileSignature },
       { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
       { name: "קבצי לקוחות", href: createPageUrl("ClientFiles"), icon: FolderOpen },
-      { name: "מוכנות מערכת", href: createPageUrl("SystemReadiness"), icon: Shield },
-      { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Import },
+      { name: "ניתוח נתונים", href: createPageUrl("Analytics"), icon: BarChart3 },
     ]
   },
   // ── P4 | בית (LENA) ──
   life: {
     title: "P4 | בית (LENA)",
     icon: BookHeart,
-    mode: 'all',
+    tabColor: 'border-[#008291]',
     items: [
       { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
       { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
@@ -143,11 +152,21 @@ const getSidebarSections = () => ({
   },
 });
 
+// Map sidebar sections to their parent work mode for auto-switching
+const SECTION_TO_MODE = {
+  p1_payroll: 'doing',
+  p2_bookkeeping: 'doing',
+  p3_doing: 'doing',
+  p3_planning: 'planning',
+  p3_admin: 'admin',
+  life: null, // visible in all modes
+};
+
 const getVisibleSections = (mode) => {
   if (mode === 'doing') return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'life'];
-  if (mode === 'planning') return ['p3_doing', 'life'];
+  if (mode === 'planning') return ['p3_planning', 'life'];
   if (mode === 'admin') return ['p3_admin', 'life'];
-  return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_admin', 'life'];
+  return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_planning', 'p3_admin', 'life'];
 };
 
 // Deadline countdown
@@ -226,7 +245,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_admin', 'life']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_planning', 'p3_admin', 'life']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
@@ -544,7 +563,11 @@ function LayoutInner({ children }) {
                       </button>
                       {isOpen && section.items.map(item => (
                         <Link key={item.href} to={item.href}
-                          onClick={() => setIsMobileMenuOpen(false)}
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            const targetMode = SECTION_TO_MODE[key];
+                            if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
+                          }}
                           className={`flex items-center gap-2 px-6 py-1.5 rounded-xl text-sm transition-colors
                             ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
                           <item.icon className="w-3.5 h-3.5" />
@@ -684,36 +707,18 @@ function LayoutInner({ children }) {
                         </div>
                       )}
 
-                      {/* Daily Focus — top 5 tasks due today */}
-                      {dailyFocusTasks.length > 0 && (
-                        <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                          <h3 className="text-xs font-bold text-[#000000] mb-2 flex items-center gap-1">
-                            <Target className="w-3 h-3 text-rose-400" /> מיקוד יומי
-                          </h3>
-                          {dailyFocusTasks.map(task => (
-                            <Link key={task.id}
-                              to={createPageUrl("Tasks")}
-                              onClick={() => setIsMobileMenuOpen(false)}
-                              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs text-[#000000] hover:bg-[#F5F5F5] transition-colors">
-                              <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
-                              <span className="truncate flex-1">{task.title}</span>
-                              {task.client_name && (
-                                <span className="text-[9px] bg-[#E8F5F7] text-[#000000] px-1.5 rounded-full shrink-0">{task.client_name}</span>
-                              )}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-
                       {/* Navigation sections — Accordion */}
                       <nav className="flex-1 p-2">
-                        {/* Daily Focus — always visible at top */}
+                        {/* Daily Focus — single entry point (no duplication) */}
                         <Link to={createPageUrl("Home")}
                           onClick={() => setIsMobileMenuOpen(false)}
                           className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors mb-2
                             ${isActive(createPageUrl("Home")) ? 'bg-[#E8F5F7] text-[#008291]' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
                           <Eye className="w-4 h-4" />
                           פוקוס יומי
+                          {dailyFocusTasks.length > 0 && (
+                            <Badge className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0">{dailyFocusTasks.length}</Badge>
+                          )}
                         </Link>
 
                         {Object.entries(sidebarSections)
@@ -728,7 +733,7 @@ function LayoutInner({ children }) {
                                     if (next.has(key)) next.delete(key); else next.add(key);
                                     return next;
                                   })}
-                                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-[#000000] hover:bg-[#F5F5F5] transition-colors"
+                                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-[#000000] hover:bg-[#F5F5F5] transition-colors border-r-3 ${section.tabColor || ''}`}
                                 >
                                   <div className="flex items-center gap-2">
                                     <section.icon className="w-4 h-4 text-[#008291]" />
@@ -741,7 +746,14 @@ function LayoutInner({ children }) {
                                     {section.items.map(item => (
                                       <div key={item.href} className="flex items-center group">
                                         <Link to={item.href}
-                                          onClick={() => setIsMobileMenuOpen(false)}
+                                          onClick={() => {
+                                            setIsMobileMenuOpen(false);
+                                            // Smart nav: auto-switch work mode if navigating to a different section's page
+                                            const targetMode = SECTION_TO_MODE[key];
+                                            if (targetMode && targetMode !== workMode) {
+                                              setWorkMode(targetMode);
+                                            }
+                                          }}
                                           className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors
                                             ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
                                           <item.icon className="w-3.5 h-3.5" />

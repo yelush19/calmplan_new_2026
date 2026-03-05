@@ -12,11 +12,11 @@ import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 
 // 5 Golden Statuses
 const STATUS_COLORS = {
-  waiting_for_materials: 'bg-amber-500',
-  not_started:           'bg-blue-600',
-  sent_for_review:       'bg-purple-600',
-  needs_corrections:     'bg-orange-600',
-  production_completed:  'bg-emerald-600',
+  waiting_for_materials: 'bg-amber-500 border border-amber-700',
+  not_started:           'bg-blue-600 border border-blue-800',
+  sent_for_review:       'bg-purple-600 border border-purple-800',
+  needs_corrections:     'bg-orange-600 border border-orange-800',
+  production_completed:  'bg-emerald-600 border border-emerald-800',
 };
 
 // Estimated work-hours → calendar days mapping
@@ -256,22 +256,22 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       {/* ── Month navigation header ── */}
       <div className="flex items-center justify-between px-3 py-2 border-b bg-[#FAFBFC]">
         <div className="flex items-center gap-2">
-          <button onClick={goToPrevMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 text-xs">
+          <button onClick={goToPrevMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-[#E0E0E0] transition-colors text-[#263238] text-xs">
             <ChevronRight className="w-4 h-4" />
-            {prevMonthCount > 0 && <span className="text-gray-400">({prevMonthCount})</span>}
+            {prevMonthCount > 0 && <span className="text-[#37474F]">({prevMonthCount})</span>}
           </button>
           <div className="flex items-center gap-1.5">
             <CalendarDays className="w-4 h-4 text-blue-500" />
-            <span className="text-sm font-bold text-gray-800">
+            <span className="text-sm font-bold text-[#000000]">
               {format(monthStart, 'MMMM yyyy', { locale: he })}
             </span>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-[#37474F]">
               ({monthTasks.length} משימות)
             </span>
           </div>
-          <button onClick={goToNextMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 text-xs">
+          <button onClick={goToNextMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-[#E0E0E0] transition-colors text-[#263238] text-xs">
             <ChevronLeft className="w-4 h-4" />
-            {nextMonthCount > 0 && <span className="text-gray-400">({nextMonthCount})</span>}
+            {nextMonthCount > 0 && <span className="text-[#37474F]">({nextMonthCount})</span>}
           </button>
         </div>
         {!isCurrentMonth && (
@@ -282,17 +282,17 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       </div>
 
       {monthTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
-          <CalendarDays className="w-8 h-8 text-gray-300" />
+        <div className="flex flex-col items-center justify-center py-12 text-[#37474F] gap-2">
+          <CalendarDays className="w-8 h-8 text-[#546E7A]" />
           <p className="text-sm">אין משימות בחודש {format(monthStart, 'MMMM', { locale: he })}</p>
           <div className="flex gap-2 mt-2">
             {prevMonthCount > 0 && (
-              <button onClick={goToPrevMonth} className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs transition-colors">
+              <button onClick={goToPrevMonth} className="px-3 py-1 rounded-lg bg-[#E0E0E0] hover:bg-[#E0E0E0] text-[#263238] text-xs transition-colors">
                 ← {format(subMonths(monthStart, 1), 'MMMM', { locale: he })} ({prevMonthCount})
               </button>
             )}
             {nextMonthCount > 0 && (
-              <button onClick={goToNextMonth} className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs transition-colors">
+              <button onClick={goToNextMonth} className="px-3 py-1 rounded-lg bg-[#E0E0E0] hover:bg-[#E0E0E0] text-[#263238] text-xs transition-colors">
                 {format(addMonths(monthStart, 1), 'MMMM', { locale: he })} ({nextMonthCount}) →
               </button>
             )}
@@ -364,17 +364,17 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                     </TooltipTrigger>
                     <TooltipContent className="!bg-gray-900 !border-gray-700 !text-white">
                       <p className="font-medium !text-white">{task.title}</p>
-                      <p className="text-xs !text-gray-300">
+                      <p className="text-xs !text-[#546E7A]">
                         {task.category} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}
                         {pos.tierKey && ` \u2022 ${pos.tierKey}`}
                       </p>
                       {pos.durationDays > 1 && (
-                        <p className="text-[10px] !text-gray-400">{pos.durationDays} ימי עבודה</p>
+                        <p className="text-[10px] !text-[#37474F]">{pos.durationDays} ימי עבודה</p>
                       )}
                       {(task.reschedule_count || 0) > 0 && (
                         <p className="text-[10px] text-amber-400">נדחה {task.reschedule_count} פעמים {task.reschedule_count > 3 ? '🐌' : ''}</p>
                       )}
-                      <p className="text-[10px] text-gray-400 mt-0.5">לחץ לעריכה | גרור לשינוי תאריך</p>
+                      <p className="text-[10px] text-[#37474F] mt-0.5">לחץ לעריכה | גרור לשינוי תאריך</p>
                     </TooltipContent>
                   </Tooltip>
                 );

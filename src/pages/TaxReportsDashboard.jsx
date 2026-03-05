@@ -522,7 +522,7 @@ export default function TaxReportsDashboardPage() {
         </div>
       ) : Object.keys(serviceData).length > 0 ? (
         viewMode === 'kanban' ? (
-          <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} clients={clients} />
+          <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (
           <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
         ) : (

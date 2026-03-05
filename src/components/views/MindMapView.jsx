@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Badge } from '@/components/ui/badge';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
+import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { computeComplexityTier, getBubbleRadius, getTierInfo } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 
@@ -2774,17 +2775,31 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         }}
       />
 
-      {/* ── QuickAddTaskDialog for editing a task from drawer ── */}
-      <QuickAddTaskDialog
+      {/* ── TaskEditDialog for editing a task from drawer (uniform across all views) ── */}
+      <TaskEditDialog
+        task={drawerEditTask}
         open={!!drawerEditTask}
-        onOpenChange={(val) => { if (!val) setDrawerEditTask(null); }}
-        taskToEdit={drawerEditTask}
-        defaultClientId={drawerEditTask?.client_id || drawerClient?.clientId || null}
-        lockedClient={!!drawerEditTask?.client_id}
-        onCreated={() => {
-          setDrawerEditTask(null);
-          onTaskCreated?.();
+        onClose={() => setDrawerEditTask(null)}
+        onSave={async (taskId, updatedData) => {
+          try {
+            await Task.update(taskId, updatedData);
+            setDrawerEditTask(null);
+            onTaskCreated?.();
+          } catch (err) {
+            console.error('שגיאה בעדכון משימה:', err);
+          }
         }}
+        onDelete={async (task) => {
+          try {
+            await Task.delete(task.id);
+            setDrawerEditTask(null);
+            onTaskCreated?.();
+          } catch (err) {
+            console.error('שגיאה במחיקת משימה:', err);
+          }
+        }}
+        allTasks={tasks}
+        onTaskCreated={() => { onTaskCreated?.(); }}
       />
 
       {/* ── Focus Mode Indicator ── */}

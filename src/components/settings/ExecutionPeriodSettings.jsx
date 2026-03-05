@@ -132,7 +132,7 @@ export default function ExecutionPeriodSettings() {
                       <Input
                         type="number"
                         min="1"
-                        max="28"
+                        max="31"
                         value={p.start_day ?? ''}
                         onChange={(e) => handleChange(category, 'start_day', e.target.value)}
                         placeholder="—"

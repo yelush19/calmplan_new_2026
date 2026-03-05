@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -371,6 +371,9 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
             <Plus className="w-5 h-5" />
             {taskToEdit ? 'עריכת משימה' : defaultParentId ? 'הוספת תת-משימה' : 'הוספת משימה מהירה'}
           </DialogTitle>
+          <DialogDescription className="text-sm text-[#37474F]">
+            {taskToEdit ? 'עדכון פרטי המשימה הקיימת.' : 'מלא את הפרטים ליצירת משימה חדשה במערכת.'}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           {/* Parent breadcrumb */}
