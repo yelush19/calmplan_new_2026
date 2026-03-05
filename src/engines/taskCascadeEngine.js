@@ -470,7 +470,7 @@ export function evaluatePayrollStatus(task, updatedSteps) {
           triggered_by: task.id,
           source: 'payroll_cascade',
           process_steps: processSteps,
-          estimated_duration: svc.serviceKey === 'masav_employees' ? 15 : undefined,
+          estimated_duration: svc.serviceKey.startsWith('masav_') ? 15 : undefined,
         };
       });
 

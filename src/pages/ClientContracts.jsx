@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   FileText, Plus, Search, Calendar, Building, User, Clock,
-  CheckCircle, AlertCircle, RefreshCw, Eye, Edit, Trash2, Download
+  CheckCircle, AlertCircle, RefreshCw, Eye, Edit, Trash2, Download,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Client } from '@/api/entities';
 import { format, parseISO, differenceInDays } from 'date-fns';
@@ -47,6 +48,8 @@ export default function ClientContractsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set(Object.keys(contractStatusLabels)));
+  const [allExpanded, setAllExpanded] = useState(false);
 
   useEffect(() => {
     loadClients();
@@ -103,6 +106,16 @@ export default function ClientContractsPage() {
 
     return 'active';
   };
+
+  const groupedClients = useMemo(() => {
+    const groups = {};
+    filteredClients.forEach(client => {
+      const status = getContractStatus(client);
+      if (!groups[status]) groups[status] = [];
+      groups[status].push(client);
+    });
+    return Object.entries(groups);
+  }, [filteredClients]);
 
   const getContractStats = () => {
     const stats = {
@@ -245,6 +258,22 @@ export default function ClientContractsPage() {
         </CardHeader>
       </Card>
 
+      {/* Expand/Collapse All */}
+      <div className="flex items-center gap-2 mb-4">
+        <Button variant="outline" size="sm" onClick={() => {
+          if (allExpanded) {
+            setCollapsedGroups(new Set(Object.keys(contractStatusLabels)));
+            setAllExpanded(false);
+          } else {
+            setCollapsedGroups(new Set());
+            setAllExpanded(true);
+          }
+        }}>
+          {allExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+          {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
+        </Button>
+      </div>
+
       {/* Contracts List */}
       <div className="space-y-4">
         {filteredClients.length === 0 ? (
@@ -254,105 +283,135 @@ export default function ClientContractsPage() {
             <p className="text-gray-500">נסה לשנות את פרמטרי החיפוש.</p>
           </Card>
         ) : (
-          <AnimatePresence>
-            {filteredClients.map((client, index) => {
-              const contract = client.contract_info || {};
-              const status = getContractStatus(client);
-              const daysUntilEnd = contract.end_date
-                ? differenceInDays(parseISO(contract.end_date), new Date())
-                : null;
-
-              return (
-                <motion.div
-                  key={client.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+          groupedClients.map(([status, groupClients]) => {
+            const isCollapsed = collapsedGroups.has(status);
+            return (
+              <div key={status} className="space-y-2">
+                <button
+                  onClick={() => {
+                    setCollapsedGroups(prev => {
+                      const next = new Set(prev);
+                      if (next.has(status)) {
+                        next.delete(status);
+                      } else {
+                        next.add(status);
+                      }
+                      return next;
+                    });
+                  }}
+                  className="flex items-center gap-2 w-full text-right px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
-                  <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                        {/* Client Info */}
-                        <div className="flex items-start gap-4 flex-1">
-                          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Building className="w-6 h-6 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-lg">{client.name}</h3>
-                              <Badge className={`${contractStatusColors[status]} border`}>
-                                {contractStatusLabels[status]}
-                              </Badge>
-                            </div>
+                  {isCollapsed ? <ChevronDown className="w-5 h-5 text-gray-500" /> : <ChevronUp className="w-5 h-5 text-gray-500" />}
+                  <Badge className={`${contractStatusColors[status]} border`}>
+                    {contractStatusLabels[status]}
+                  </Badge>
+                  <span className="text-sm text-gray-500">({groupClients.length})</span>
+                </button>
 
-                            {/* Services */}
-                            {client.service_types?.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {client.service_types.slice(0, 3).map(service => (
-                                  <Badge key={service} variant="outline" className="text-xs">
-                                    {serviceTypeLabels[service] || service}
-                                  </Badge>
-                                ))}
-                                {client.service_types.length > 3 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{client.service_types.length - 3}
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
+                {!isCollapsed && (
+                  <AnimatePresence>
+                    {groupClients.map((client, index) => {
+                      const contract = client.contract_info || {};
+                      const clientStatus = getContractStatus(client);
+                      const daysUntilEnd = contract.end_date
+                        ? differenceInDays(parseISO(contract.end_date), new Date())
+                        : null;
 
-                            {/* Contract Dates */}
-                            <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
-                              {contract.start_date && (
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="w-4 h-4" />
-                                  <span>התחלה: {format(parseISO(contract.start_date), 'd בMMM yyyy', { locale: he })}</span>
+                      return (
+                        <motion.div
+                          key={client.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                        >
+                          <Card className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-4">
+                              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                                {/* Client Info */}
+                                <div className="flex items-start gap-4 flex-1">
+                                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Building className="w-6 h-6 text-primary" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h3 className="font-semibold text-lg">{client.name}</h3>
+                                      <Badge className={`${contractStatusColors[clientStatus]} border`}>
+                                        {contractStatusLabels[clientStatus]}
+                                      </Badge>
+                                    </div>
+
+                                    {/* Services */}
+                                    {client.service_types?.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-2">
+                                        {client.service_types.slice(0, 3).map(service => (
+                                          <Badge key={service} variant="outline" className="text-xs">
+                                            {serviceTypeLabels[service] || service}
+                                          </Badge>
+                                        ))}
+                                        {client.service_types.length > 3 && (
+                                          <Badge variant="outline" className="text-xs">
+                                            +{client.service_types.length - 3}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Contract Dates */}
+                                    <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
+                                      {contract.start_date && (
+                                        <div className="flex items-center gap-1">
+                                          <Calendar className="w-4 h-4" />
+                                          <span>התחלה: {format(parseISO(contract.start_date), 'd בMMM yyyy', { locale: he })}</span>
+                                        </div>
+                                      )}
+                                      {contract.end_date && (
+                                        <div className="flex items-center gap-1">
+                                          <Clock className="w-4 h-4" />
+                                          <span>סיום: {format(parseISO(contract.end_date), 'd בMMM yyyy', { locale: he })}</span>
+                                          {daysUntilEnd !== null && daysUntilEnd >= 0 && daysUntilEnd <= 30 && (
+                                            <Badge className="bg-yellow-100 text-yellow-800 text-xs mr-1">
+                                              {daysUntilEnd} ימים
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      )}
+                                      {contract.monthly_fee && (
+                                        <div className="flex items-center gap-1">
+                                          <span>תשלום חודשי: ₪{contract.monthly_fee.toLocaleString()}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
-                              {contract.end_date && (
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-4 h-4" />
-                                  <span>סיום: {format(parseISO(contract.end_date), 'd בMMM yyyy', { locale: he })}</span>
-                                  {daysUntilEnd !== null && daysUntilEnd >= 0 && daysUntilEnd <= 30 && (
-                                    <Badge className="bg-yellow-100 text-yellow-800 text-xs mr-1">
-                                      {daysUntilEnd} ימים
-                                    </Badge>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-2">
+                                  <Button variant="outline" size="sm">
+                                    <Eye className="w-4 h-4 ml-1" />
+                                    צפייה
+                                  </Button>
+                                  <Button variant="outline" size="sm">
+                                    <Edit className="w-4 h-4 ml-1" />
+                                    עריכה
+                                  </Button>
+                                  {contract.document_url && (
+                                    <Button variant="outline" size="sm">
+                                      <Download className="w-4 h-4 ml-1" />
+                                      הורדה
+                                    </Button>
                                   )}
                                 </div>
-                              )}
-                              {contract.monthly_fee && (
-                                <div className="flex items-center gap-1">
-                                  <span>תשלום חודשי: ₪{contract.monthly_fee.toLocaleString()}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 ml-1" />
-                            צפייה
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4 ml-1" />
-                            עריכה
-                          </Button>
-                          {contract.document_url && (
-                            <Button variant="outline" size="sm">
-                              <Download className="w-4 h-4 ml-1" />
-                              הורדה
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>
