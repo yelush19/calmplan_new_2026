@@ -38,6 +38,35 @@ const STATUS_TO_COLOR = {
   production_completed:   ZERO_PANIC.green,    // הושלם ייצור - bright green!
 };
 
+// Status labels for bubble display (Iron Rule: must match table exactly)
+const STATUS_LABELS = {
+  waiting_for_materials:  'ממתין לחומרים',
+  not_started:            'לבצע',
+  sent_for_review:        'הועבר לעיון',
+  needs_corrections:      'לבצע תיקונים',
+  production_completed:   'הושלם ייצור',
+};
+
+// Priority for worst-status-wins (higher = worse = more urgent)
+const STATUS_URGENCY = {
+  production_completed:   0,
+  not_started:            1,
+  sent_for_review:        2,
+  needs_corrections:      3,
+  waiting_for_materials:  4,
+};
+
+function getWorstClientStatus(clientTasks) {
+  if (!clientTasks || clientTasks.length === 0) return 'not_started';
+  const active = clientTasks.filter(t => t.status !== 'production_completed');
+  if (active.length === 0) return 'production_completed';
+  return active.reduce((worst, t) => {
+    const wp = STATUS_URGENCY[worst] ?? 1;
+    const cp = STATUS_URGENCY[t.status] ?? 1;
+    return cp > wp ? t.status : worst;
+  }, 'production_completed');
+}
+
 // Cascade-aware color overrides for client nodes
 const NODE_COLOR_MAP = {
   emerald: '#2E7D32',
@@ -223,18 +252,20 @@ function getClientAggregateState(clientTasks) {
   });
   if (hasDueToday) return { color: ZERO_PANIC.orange, shouldPulse: false, completionRatio, statusRing: 4 };
 
-  // Pending external = blue (ball is not in Lena's court) - mid ring
-  const hasPendingExternal = clientTasks.some(t => t.status === 'pending_external');
-  if (hasPendingExternal) return { color: '#1565C0', shouldPulse: false, completionRatio, statusRing: 1 };
+  // 5 Golden Statuses priority: waiting_for_materials > needs_corrections > sent_for_review > not_started
+  const hasWaiting = clientTasks.some(t => t.status === 'waiting_for_materials');
+  if (hasWaiting) return { color: ZERO_PANIC.amber, shouldPulse: false, completionRatio, statusRing: 3 };
 
-  // Ready for reporting = AMBER GLOW (ADHD Focus: pull toward center)
-  const hasReadyForReporting = clientTasks.some(t => t.status === 'ready_for_reporting');
-  if (hasReadyForReporting) return { color: ZERO_PANIC.amber, shouldPulse: false, completionRatio, isFilingReady: true, statusRing: 3 };
+  const hasCorrections = clientTasks.some(t => t.status === 'needs_corrections');
+  if (hasCorrections) return { color: '#F97316', shouldPulse: false, completionRatio, statusRing: 3 };
+
+  const hasSentForReview = clientTasks.some(t => t.status === 'sent_for_review');
+  if (hasSentForReview) return { color: '#AB47BC', shouldPulse: false, completionRatio, statusRing: 2 };
 
   const hasActive = clientTasks.some(t =>
     t.status !== 'production_completed'
   );
-  if (hasActive) return { color: ZERO_PANIC.blue, shouldPulse: false, completionRatio, statusRing: 2 };
+  if (hasActive) return { color: ZERO_PANIC.gray, shouldPulse: false, completionRatio, statusRing: 1 };
 
   return { color: ZERO_PANIC.green, shouldPulse: false, completionRatio, statusRing: 0 };
 }
@@ -390,7 +421,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v13-grape-cluster-compact'; // bump this to force reset
+  const LAYOUT_VERSION = 'v14-ultra-compact-status-sync'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -527,6 +558,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         const topTask = activeTasks[0] || null;
         // Check for waiting_on_client status
         const hasWaitingOnClient = clientTasks.some(t => t.status === 'waiting_on_client');
+        // Iron Rule: compute worst status for bubble label sync
+        const worstStatus = getWorstClientStatus(clientTasks);
+        const worstStatusLabel = STATUS_LABELS[worstStatus] || 'לבצע';
+        const worstStatusColor = STATUS_TO_COLOR[worstStatus] || ZERO_PANIC.gray;
         return {
           name,
           displayName,
@@ -536,6 +571,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           tierLabel: tierInfo.label,
           tierIcon: tierInfo.icon,
           ...getClientAggregateState(clientTasks),
+          worstStatus,
+          worstStatusLabel,
+          worstStatusColor,
           tasks: clientTasks,
           topTask,
           hasWaitingOnClient,
@@ -716,12 +754,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       'P4 בית':             Math.PI / 2,
     };
 
-    // ─── 50% SHORTER ARMS — compact grape-cluster ───
-    const META_DIST = 150;    // center → meta-folder (was 300)
-    const DEPT_DIST = 90;     // meta → department (was 180)
-    const TIER_DIST = 70;     // department → tier sub-node (NEW)
-    const CLIENT_DIST = 55;   // tier → client pill (was 160)
-    const CLIENT_GAP = 40;    // min px between adjacent client pills
+    // ─── 60% SHORTER ARMS — ultra-compact grape-cluster (fits one screen) ───
+    const META_DIST = 60;     // center → meta-folder (was 150)
+    const DEPT_DIST = 36;     // meta → department (was 90)
+    const TIER_DIST = 28;     // department → tier sub-node (was 70)
+    const CLIENT_DIST = 22;   // tier → client pill (was 55)
+    const CLIENT_GAP = 16;    // min px between adjacent client pills (was 40)
 
     let metaFolderPositions = metaFolders.map((mf) => {
       const angle = SECTOR_ANGLES[mf.name] ?? 0;
@@ -973,14 +1011,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) nodeHasDragged.current = true;
 
       if (node.isFolder) {
-        // Folder drag: move folder + all children without their own manual override
+        // Folder drag: move folder + ALL children (no child left behind!)
         setManualPositions(prev => {
           const next = { ...prev, [node.key]: { x: node.origX + dx, y: node.origY + dy } };
           if (node.childPositions) {
             node.childPositions.forEach(child => {
-              if (!prev[child.key]) {
-                next[child.key] = { x: child.x + dx, y: child.y + dy };
-              }
+              next[child.key] = { x: child.x + dx, y: child.y + dy };
             });
           }
           return next;
@@ -1054,10 +1090,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         childPositions.push({ key: `metasub-${sf.metaFolderName}-${sf.key}`, x: sf.x, y: sf.y });
       }
     });
-    // Department branches + their clients
+    // Department branches + their tier sub-nodes + client pills
     layout.branchPositions.forEach(branch => {
       if (branch.metaFolder === metaName) {
         childPositions.push({ key: `folder-${branch.category}`, x: branch.x, y: branch.y });
+        // Include tier sub-folder nodes
+        branch.subFolderPositions?.forEach(sub => {
+          childPositions.push({ key: sub.key, x: sub.x, y: sub.y });
+        });
         branch.clientPositions.forEach(cp => {
           childPositions.push({ key: `${branch.category}-${cp.name}`, x: cp.x, y: cp.y });
         });
@@ -1764,6 +1804,33 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   filter: 'brightness(1.2)',
                 }}
                 onClick={(e) => { e.stopPropagation(); toggleBranchExpand(branch.category); }}
+                data-node-draggable
+                onPointerDown={(e) => {
+                  // Tier sub-node drag: move this tier + all its client children
+                  e.stopPropagation();
+                  nodeHasDragged.current = false;
+                  const tierKey = sub.key.startsWith('tier-') ? sub.key : `tier-${branch.category}-${sub.key}`;
+                  const childPositions = [];
+                  branch.clientPositions.forEach(cp => {
+                    if (cp.tierKey === tierKey) {
+                      childPositions.push({ key: `${branch.category}-${cp.name}`, x: cp.x, y: cp.y });
+                    }
+                  });
+                  draggingNode.current = {
+                    key: tierKey, startX: e.clientX, startY: e.clientY,
+                    origX: sub.x, origY: sub.y, isFolder: true, childPositions,
+                  };
+                }}
+                onPointerUp={(e) => {
+                  const wasDragging = nodeHasDragged.current;
+                  draggingNode.current = null;
+                  nodeHasDragged.current = false;
+                  if (wasDragging) {
+                    setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
+                    return;
+                  }
+                  toggleBranchExpand(branch.category);
+                }}
               >
                 <svg width="96" height="38" viewBox="0 0 96 38" style={{ overflow: 'visible' }}>
                   {/* Level 3 — Folder-Tab shape, Dashed Border, bg-white/20, Sparkle on hover */}
@@ -1945,15 +2012,29 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     {client.displayName}
                   </span>
 
+                  {/* Iron Rule: Status label — synced with task table */}
+                  <span
+                    className="leading-tight text-center px-1.5 truncate w-full font-semibold"
+                    style={{
+                      fontSize: finalH < 45 ? '7px' : '8px',
+                      color: client.worstStatusColor,
+                      maxWidth: finalW - 12,
+                      marginTop: '1px',
+                      textShadow: '0 0.5px 1px rgba(255,255,255,0.8)',
+                    }}
+                  >
+                    {client.worstStatusLabel}
+                  </span>
+
                   {/* Top task title */}
                   {truncatedTask && (
                     <span
                       className="leading-tight text-center px-2 truncate w-full"
                       style={{
-                        fontSize: finalH < 45 ? '8px' : '9px',
-                        opacity: isGhost ? 0.7 : 0.75,
+                        fontSize: finalH < 45 ? '7px' : '8px',
+                        opacity: isGhost ? 0.7 : 0.65,
                         maxWidth: finalW - 12,
-                        marginTop: '1px',
+                        marginTop: '0px',
                       }}
                     >
                       {truncatedTask}
