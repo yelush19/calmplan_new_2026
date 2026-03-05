@@ -332,6 +332,44 @@ button:focus-visible {
     opacity: 1;
     animation: mindmap-shimmer 1.5s ease-in-out infinite;
   }
+
+  /* ═══ AUDIT: Solid White Rule ═══ */
+  /* Kill ALL transparency patterns */
+  [class*="bg-white/"], [class*="bg-black/"] {
+    opacity: 1 !important;
+  }
+
+  /* Kill ALL backdrop-blur */
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* ═══ AUDIT: Black Text Rule ═══ */
+  /* All body text must be solid black */
+  body, p, span, div, li, td, th, label, a {
+    color: #000000;
+  }
+  .text-muted-foreground {
+    color: #37474F !important;
+  }
+
+  /* Preserve white text on colored backgrounds */
+  .text-white, [class*="text-white"] {
+    color: #FFFFFF !important;
+  }
+
+  /* Preserve colored text for status indicators */
+  .text-emerald-500, .text-emerald-600, .text-emerald-700,
+  .text-amber-500, .text-amber-600, .text-amber-700,
+  .text-blue-500, .text-blue-600, .text-blue-700,
+  .text-purple-500, .text-purple-600, .text-purple-700,
+  .text-orange-500, .text-orange-600, .text-orange-700,
+  .text-rose-400, .text-rose-500, .text-rose-600,
+  .text-violet-600, .text-violet-800,
+  [class*="text-primary"] {
+    color: revert-layer;
+  }
 }
 
 /* ─── Shimmer Keyframes (outside @layer for global scope) ─── */

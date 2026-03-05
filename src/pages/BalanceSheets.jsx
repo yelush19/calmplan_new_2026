@@ -198,8 +198,8 @@ export default function BalanceSheetsPage() {
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear() - 1));
 
-  // Collapsible stages
-  const [collapsedStages, setCollapsedStages] = useState(new Set());
+  // Collapsible stages - default ALL collapsed (zero-scroll policy)
+  const [collapsedStages, setCollapsedStages] = useState(() => new Set(WORKFLOW_STAGES.map(s => s.key)));
 
   // Template state
   const [templates, setTemplates] = useState(DEFAULT_STAGE_TEMPLATES);

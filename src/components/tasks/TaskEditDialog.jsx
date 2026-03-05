@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -196,6 +197,9 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             <Pencil className="w-4 h-4" />
             עריכת משימה
           </DialogTitle>
+          <DialogDescription className="text-sm text-[#37474F]">
+            עדכון פרטי המשימה, סטטוס, עדיפות ותתי-משימות
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">

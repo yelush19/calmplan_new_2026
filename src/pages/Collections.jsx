@@ -3,13 +3,20 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Plus, Filter, FileText, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { DollarSign, Plus, Filter, FileText, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Invoice, Client } from '@/api/entities';
 
 export default function CollectionsPage() {
     const [invoices, setInvoices] = useState([]);
     const [clients, setClients] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const STATUS_KEYS = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
+    const [collapsedGroups, setCollapsedGroups] = useState(() => {
+        const init = {};
+        ['draft', 'sent', 'paid', 'overdue', 'cancelled'].forEach(k => { init[k] = true; });
+        return init;
+    });
+    const [allExpanded, setAllExpanded] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -80,7 +87,30 @@ export default function CollectionsPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>רשימת חשבוניות</CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>רשימת חשבוניות</CardTitle>
+                        {invoices.length > 0 && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    if (allExpanded) {
+                                        const collapsed = {};
+                                        STATUS_KEYS.forEach(k => { collapsed[k] = true; });
+                                        setCollapsedGroups(collapsed);
+                                        setAllExpanded(false);
+                                    } else {
+                                        setCollapsedGroups({});
+                                        setAllExpanded(true);
+                                    }
+                                }}
+                                className="text-xs gap-1"
+                            >
+                                {allExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
+                            </Button>
+                        )}
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
@@ -97,24 +127,45 @@ export default function CollectionsPage() {
                                 </Button>
                             </div>
                         ) : (
-                            invoices.map(invoice => {
-                                const config = statusConfig[invoice.status] || statusConfig.draft;
+                            STATUS_KEYS.map(statusKey => {
+                                const groupInvoices = invoices.filter(inv => (inv.status || 'draft') === statusKey);
+                                if (groupInvoices.length === 0) return null;
+                                const config = statusConfig[statusKey] || statusConfig.draft;
                                 const StatusIcon = config.icon;
                                 return (
-                                    <div key={invoice.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-center gap-4">
-                                        <div>
-                                            <p className="font-bold text-lg">{invoice.client_name || 'לקוח לא ידוע'}</p>
-                                            <p className="text-sm text-gray-600">חשבונית #{invoice.invoice_number || '—'} {invoice.issue_date ? `מתאריך ${new Date(invoice.issue_date).toLocaleDateString('he-IL')}` : ''}</p>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <p className="font-bold text-xl">₪{(invoice.amount || 0).toLocaleString()}</p>
-                                            <Badge className={config.color}>
-                                                <StatusIcon className="w-4 h-4 ml-2" />
-                                                {config.label}
-                                            </Badge>
-                                        </div>
+                                    <div key={statusKey} className="mb-2">
+                                        <button
+                                            onClick={() => setCollapsedGroups(prev => ({ ...prev, [statusKey]: !prev[statusKey] }))}
+                                            className="w-full flex items-center justify-between p-2 rounded-lg bg-[#F5F5F5] hover:bg-[#E0E0E0] transition-colors"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <ChevronDown className={`w-4 h-4 transition-transform ${collapsedGroups[statusKey] ? '-rotate-90' : ''}`} />
+                                                <StatusIcon className="w-4 h-4" />
+                                                <span className="font-bold text-[#000000] text-sm">{config.label}</span>
+                                                <span className="text-xs text-[#455A64]">({groupInvoices.length} חשבוניות)</span>
+                                            </div>
+                                        </button>
+                                        {!collapsedGroups[statusKey] && (
+                                            <div className="mt-1 space-y-2">
+                                                {groupInvoices.map(invoice => (
+                                                    <div key={invoice.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-center gap-4">
+                                                        <div>
+                                                            <p className="font-bold text-lg">{invoice.client_name || 'לקוח לא ידוע'}</p>
+                                                            <p className="text-sm text-gray-600">חשבונית #{invoice.invoice_number || '—'} {invoice.issue_date ? `מתאריך ${new Date(invoice.issue_date).toLocaleDateString('he-IL')}` : ''}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-4">
+                                                            <p className="font-bold text-xl">₪{(invoice.amount || 0).toLocaleString()}</p>
+                                                            <Badge className={config.color}>
+                                                                <StatusIcon className="w-4 h-4 ml-2" />
+                                                                {config.label}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                )
+                                );
                             })
                         )}
                     </div>

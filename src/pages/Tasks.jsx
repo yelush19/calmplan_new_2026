@@ -74,7 +74,8 @@ class ViewErrorBoundary extends React.Component {
 const STATUS_GROUP_ORDER = [
   'waiting_for_materials', 'not_started', 'sent_for_review', 'needs_corrections', 'production_completed',
 ];
-const DEFAULT_COLLAPSED_STATUSES = new Set(['production_completed']);
+// Default: ALL status groups start collapsed for zero-scroll policy
+const DEFAULT_COLLAPSED_STATUSES = new Set(['waiting_for_materials', 'not_started', 'sent_for_review', 'needs_corrections', 'production_completed']);
 
 function getTaskContext(task) {
   if (task.context === 'work' || task.context === 'home') return task.context;
@@ -199,6 +200,13 @@ export default function TasksPage() {
   };
   const toggleCategoryGroup = (key) => {
     setCollapsedCategories(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+  const expandAllGroups = () => { setCollapsedStatuses({}); setCollapsedCategories({}); };
+  const collapseAllGroups = () => {
+    const statusKeys = {};
+    STATUS_GROUP_ORDER.forEach(s => { statusKeys[s] = true; });
+    setCollapsedStatuses(statusKeys);
+    collapseAllCategories();
   };
   const expandAllCategories = () => setCollapsedCategories({});
   const collapseAllCategories = () => {
@@ -727,11 +735,11 @@ export default function TasksPage() {
             ))}
           </div>
           <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs mr-2">
-            <button onClick={expandAllCategories} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
-              פתח הכל
+            <button onClick={expandAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+              הרחב הכל
             </button>
-            <button onClick={collapseAllCategories} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
-              סגור הכל
+            <button onClick={collapseAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+              כווץ הכל
             </button>
           </div>
         </div>

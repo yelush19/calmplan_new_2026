@@ -24,7 +24,8 @@ import {
   Eye,
   UserPlus,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ChevronUp
 } from 'lucide-react';
 import { Lead, Client } from '@/api/entities';
 import { format, parseISO } from 'date-fns';
@@ -57,7 +58,7 @@ export default function LeadsPage() {
   const [statusFilter, setStatusFilter] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
   const [isConverting, setIsConverting] = useState(false);
-  const [collapsedStatuses, setCollapsedStatuses] = useState(new Set(['client_active', 'closed_lost']));
+  const [collapsedStatuses, setCollapsedStatuses] = useState(() => new Set(Object.keys(statusLabels)));
 
   useEffect(() => {
     loadLeads();
@@ -322,6 +323,26 @@ export default function LeadsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Expand/Collapse All */}
+      <div className="flex items-center justify-end mb-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const allCollapsed = collapsedStatuses.size >= Object.keys(statusLabels).length;
+            if (allCollapsed) {
+              setCollapsedStatuses(new Set());
+            } else {
+              setCollapsedStatuses(new Set(Object.keys(statusLabels)));
+            }
+          }}
+          className="text-xs gap-1"
+        >
+          {collapsedStatuses.size >= Object.keys(statusLabels).length ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+          {collapsedStatuses.size >= Object.keys(statusLabels).length ? 'הרחב הכל' : 'כווץ הכל'}
+        </Button>
+      </div>
 
       {/* Leads grouped by status with collapsible sections */}
       <div className="space-y-3">

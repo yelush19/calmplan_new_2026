@@ -838,30 +838,75 @@ function EmptyState({ icon, text }) {
 }
 
 function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
-  const [showAll, setShowAll] = useState(false);
-  const visibleTasks = showAll ? tasks : tasks.slice(0, 15);
+  // Group tasks by client for collapsible display
+  const [collapsedClients, setCollapsedClients] = useState({});
+  const [allExpanded, setAllExpanded] = useState(false);
+
+  const grouped = useMemo(() => {
+    const groups = {};
+    tasks.forEach(task => {
+      const key = task.client_name || 'ללא לקוח';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(task);
+    });
+    return Object.entries(groups).sort(([, a], [, b]) => b.length - a.length);
+  }, [tasks]);
+
+  // If 5 or fewer tasks, show flat list (no grouping needed)
+  if (tasks.length <= 5) {
+    return (
+      <div className="space-y-2">
+        {tasks.map(task => (
+          <TaskRow key={task.id} task={task} onStatusChange={onStatusChange} onPaymentDateChange={onPaymentDateChange} onEdit={onEdit} onNote={onNote} showDeadlineContext={showDeadlineContext} showDate={showDate} showPaymentDate={showPaymentDate} />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-2">
-      {visibleTasks.map(task => (
-        <TaskRow
-          key={task.id}
-          task={task}
-          onStatusChange={onStatusChange}
-          onPaymentDateChange={onPaymentDateChange}
-          onEdit={onEdit}
-          onNote={onNote}
-          showDeadlineContext={showDeadlineContext}
-          showDate={showDate}
-          showPaymentDate={showPaymentDate}
-        />
-      ))}
-      {tasks.length > 15 && (
-        <Button variant="ghost" size="sm" className="w-full text-gray-500" onClick={() => setShowAll(!showAll)}>
-          <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showAll ? 'rotate-180' : ''}`} />
-          {showAll ? 'הצג פחות' : `עוד ${tasks.length - 15} משימות`}
-        </Button>
-      )}
+    <div className="space-y-1">
+      {/* Expand/Collapse All */}
+      <div className="flex justify-end mb-1">
+        <button
+          onClick={() => {
+            if (allExpanded) {
+              const collapsed = {};
+              grouped.forEach(([key]) => { collapsed[key] = true; });
+              setCollapsedClients(collapsed);
+              setAllExpanded(false);
+            } else {
+              setCollapsedClients({});
+              setAllExpanded(true);
+            }
+          }}
+          className="text-[10px] text-[#455A64] hover:text-[#000000] flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#F5F5F5]"
+        >
+          <ChevronDown className={`w-3 h-3 transition-transform ${allExpanded ? 'rotate-180' : ''}`} />
+          {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
+        </button>
+      </div>
+      {grouped.map(([clientName, clientTasks]) => {
+        const isCollapsed = collapsedClients[clientName];
+        return (
+          <div key={clientName} className="mb-1">
+            <button
+              onClick={() => setCollapsedClients(prev => ({ ...prev, [clientName]: !prev[clientName] }))}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#F5F5F5] hover:bg-[#E0E0E0] transition-colors text-left"
+            >
+              <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+              <span className="text-xs font-bold text-[#000000]">{clientName}</span>
+              <span className="text-[10px] text-[#455A64]">({clientTasks.length})</span>
+            </button>
+            {!isCollapsed && (
+              <div className="space-y-1 mt-1 mr-2">
+                {clientTasks.map(task => (
+                  <TaskRow key={task.id} task={task} onStatusChange={onStatusChange} onPaymentDateChange={onPaymentDateChange} onEdit={onEdit} onNote={onNote} showDeadlineContext={showDeadlineContext} showDate={showDate} showPaymentDate={showPaymentDate} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

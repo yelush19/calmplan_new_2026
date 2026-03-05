@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Building, User, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, User, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { ServiceProvider } from '@/api/entities';
 import { ServiceCompany } from '@/api/entities';
 import ServiceProviderForm from '../components/service-providers/ServiceProviderForm';
@@ -26,6 +26,17 @@ export default function ServiceProvidersPage() {
   const [editingCompany, setEditingCompany] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [companyFilter, setCompanyFilter] = useState('all');
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [allExpanded, setAllExpanded] = useState(false);
+
+  // Initialize collapsed state for provider groups (by company)
+  useEffect(() => {
+    if (serviceCompanies.length > 0 && Object.keys(collapsedGroups).length === 0) {
+      const init = { '__no_company': true };
+      serviceCompanies.forEach(c => { init[c.id] = true; });
+      setCollapsedGroups(init);
+    }
+  }, [serviceCompanies]);
 
   useEffect(() => {
     loadData();
@@ -244,30 +255,83 @@ export default function ServiceProvidersPage() {
               </div>
 
               {activeTab === TABS.PROVIDERS && (
-                <div className="space-y-4">
-                  {filteredProviders.map(provider => (
-                    <Card key={provider.id}>
-                      <CardContent className="p-4 flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          <div className="bg-blue-100 p-3 rounded-full">
-                            <User className="w-6 h-6 text-blue-600" />
+                <div className="space-y-3">
+                  {/* Expand/Collapse All */}
+                  <div className="flex items-center justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (allExpanded) {
+                          const collapsed = { '__no_company': true };
+                          serviceCompanies.forEach(c => { collapsed[c.id] = true; });
+                          setCollapsedGroups(collapsed);
+                          setAllExpanded(false);
+                        } else {
+                          setCollapsedGroups({});
+                          setAllExpanded(true);
+                        }
+                      }}
+                      className="text-xs gap-1"
+                    >
+                      {allExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
+                    </Button>
+                  </div>
+                  {(() => {
+                    // Group providers by company
+                    const groups = {};
+                    filteredProviders.forEach(p => {
+                      const key = p.service_company_id || '__no_company';
+                      if (!groups[key]) groups[key] = [];
+                      groups[key].push(p);
+                    });
+                    const groupEntries = [
+                      ...serviceCompanies.filter(c => groups[c.id]).map(c => ({ key: c.id, label: c.name, providers: groups[c.id] })),
+                      ...(groups['__no_company'] ? [{ key: '__no_company', label: 'ללא חברה', providers: groups['__no_company'] }] : []),
+                    ];
+                    return groupEntries.map(group => (
+                      <div key={group.key} className="mb-2">
+                        <button
+                          onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.key]: !prev[group.key] }))}
+                          className="w-full flex items-center justify-between p-2 rounded-lg bg-[#F5F5F5] hover:bg-[#E0E0E0] transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <ChevronDown className={`w-4 h-4 transition-transform ${collapsedGroups[group.key] ? '-rotate-90' : ''}`} />
+                            <span className="font-bold text-[#000000] text-sm">{group.label}</span>
+                            <span className="text-xs text-[#455A64]">({group.providers.length} נותני שירות)</span>
                           </div>
-                          <div>
-                            <p className="font-semibold">{provider.name}</p>
-                            {provider.company_name && <p className="text-sm text-gray-700 font-medium">{provider.company_name}</p>}
-                            <p className="text-sm text-gray-500">{provider.role}</p>
-                            {provider.service_company_id && (
-                              <p className="text-xs text-gray-400">{getCompanyName(provider.service_company_id)}</p>
-                            )}
+                        </button>
+                        {!collapsedGroups[group.key] && (
+                          <div className="mt-1 space-y-2">
+                            {group.providers.map(provider => (
+                              <Card key={provider.id}>
+                                <CardContent className="p-4 flex justify-between items-center">
+                                  <div className="flex items-center gap-4">
+                                    <div className="bg-blue-100 p-3 rounded-full">
+                                      <User className="w-6 h-6 text-blue-600" />
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold">{provider.name}</p>
+                                      {provider.company_name && <p className="text-sm text-gray-700 font-medium">{provider.company_name}</p>}
+                                      <p className="text-sm text-gray-500">{provider.role}</p>
+                                      {provider.service_company_id && (
+                                        <p className="text-xs text-gray-400">{getCompanyName(provider.service_company_id)}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditProvider(provider)}><Edit className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteProvider(provider.id)} className="text-amber-500 hover:text-amber-600"><Trash2 className="h-4 w-4" /></Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
                           </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditProvider(provider)}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteProvider(provider.id)} className="text-amber-500 hover:text-amber-600"><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        )}
+                      </div>
+                    ));
+                  })()}
                 </div>
               )}
 
