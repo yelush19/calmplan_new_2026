@@ -12,6 +12,7 @@ import { Task, Client, Dashboard } from '@/api/entities';
 import { Switch } from '@/components/ui/switch';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { getScheduledStartForCategory } from '@/config/automationRules';
+import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 import { getBranchForCategory } from '@/engines/taskCascadeEngine';
 import { format, parseISO, subMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -182,6 +183,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
   const [status, setStatus] = useState('not_started');
   const [reportingDeadline, setReportingDeadline] = useState('');
   const [submitAsIs, setSubmitAsIs] = useState(false);
+  const [cognitiveLoad, setCognitiveLoad] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [loadWarning, setLoadWarning] = useState(null);
 
@@ -245,6 +247,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         setParentId(taskToEdit.parent_id || defaultParentId || '__none__');
         setStatus(taskToEdit.status || 'not_started');
         setReportingDeadline(taskToEdit.reporting_deadline || '');
+        setCognitiveLoad(taskToEdit.cognitive_load ?? null);
         setSubmitAsIs(false);
       } else {
         setTitle('');
@@ -258,6 +261,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         setParentId(defaultParentId || '__none__');
         setStatus('not_started');
         setReportingDeadline('');
+        setCognitiveLoad(null);
         setSubmitAsIs(false);
       }
     }
@@ -339,6 +343,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         }),
         ...(reportingDeadline && { reporting_deadline: reportingDeadline }),
         ...(submitAsIs && { submit_as_is: true }),
+        ...(cognitiveLoad != null && { cognitive_load: cognitiveLoad }),
       };
 
       // Auto P-branch assignment: P1=שכר, P2=הנה"ח, P3=משרד
@@ -592,6 +597,33 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
                 min="0"
               />
             </div>
+          </div>
+
+          {/* Cognitive Load (same as TaskEditDialog) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-medium">עומס קוגניטיבי</Label>
+              <Select
+                value={cognitiveLoad != null ? String(cognitiveLoad) : ''}
+                onValueChange={(v) => setCognitiveLoad(v ? parseInt(v, 10) : null)}
+              >
+                <SelectTrigger className="text-xs h-9">
+                  <SelectValue placeholder="בחר טייר" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(COMPLEXITY_TIERS).map(([tier, info]) => (
+                    <SelectItem key={tier} value={tier} className="text-xs">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{info.icon}</span>
+                        {info.label}
+                        <span className="text-[#78909C]">({info.maxMinutes} דק׳)</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div />
           </div>
 
           {/* SMART Anchor: Daily Load Warning */}
