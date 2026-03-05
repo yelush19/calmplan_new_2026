@@ -1026,7 +1026,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                       <Input
                         type="number"
                         min="1"
-                        max="28"
+                        max="31"
                         value={formData.reporting_info.pnl_target_day || ''}
                         onChange={(e) => handleInputChange('pnl_target_day', parseInt(e.target.value) || '', 'reporting_info')}
                         placeholder="לדוגמה: 15"
@@ -1071,7 +1071,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                           <Input
                             type="number"
                             min="1"
-                            max="28"
+                            max="31"
                             value={(formData.reporting_info.masav_suppliers_cycle_dates || [])[idx] || ''}
                             onChange={(e) => {
                               const dates = [...(formData.reporting_info.masav_suppliers_cycle_dates || [])];
