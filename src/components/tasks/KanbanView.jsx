@@ -127,7 +127,7 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allT
           {...provided.dragHandleProps}
           className={`mb-2 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow ${getPriorityColor(task.priority)} ${snapshot.isDragging ? 'ring-2 ring-primary' : ''}`}
         >
-          <div className="p-2.5 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+          <div className="p-2.5 cursor-pointer" onClick={() => { if (onEdit) { onEdit(task); } else { setExpanded(!expanded); } }}>
             {/* Row 1: Client name + due date */}
             <div className="flex justify-between items-center gap-1">
               <span className="font-bold text-xs text-gray-800 truncate">
