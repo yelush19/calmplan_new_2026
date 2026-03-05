@@ -58,6 +58,7 @@ export default function TaxReportsDashboardPage() {
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [filingSprintActive, setFilingSprintActive] = useState(false);
   const [filingSprintIdx, setFilingSprintIdx] = useState(0);
   const { confirm, ConfirmDialogComponent } = useConfirm();
@@ -166,6 +167,25 @@ export default function TaxReportsDashboardPage() {
     });
     return result;
   }, [filteredTasks, clientByName]);
+
+  const serviceKeys = useMemo(() => Object.keys(serviceData), [serviceData]);
+
+  // Default all services to collapsed on first load
+  useEffect(() => {
+    if (serviceKeys.length > 0 && collapsedServices.size === 0) {
+      setCollapsedServices(new Set(serviceKeys));
+    }
+  }, [serviceKeys]);
+
+  const toggleServiceCollapse = useCallback((key) => {
+    setCollapsedServices(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+  const expandAllServices = useCallback(() => setCollapsedServices(new Set()), []);
+  const collapseAllServices = useCallback(() => setCollapsedServices(new Set(serviceKeys)), [serviceKeys]);
 
   // Stats (excludes not_relevant tasks)
   const stats = useMemo(() => {
@@ -363,14 +383,20 @@ export default function TaxReportsDashboardPage() {
         </div>
       </motion.div>
 
-      <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-        <Input
-          placeholder="חיפוש לפי שם לקוח, משימה..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pr-10 h-9"
-        />
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <Input
+            placeholder="חיפוש לפי שם לקוח, משימה..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pr-10 h-9"
+          />
+        </div>
+        <div className="flex bg-white rounded-lg p-0.5 shadow-sm border border-[#E0E0E0] text-xs">
+          <button onClick={expandAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">פתח הכל</button>
+          <button onClick={collapseAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">סגור הכל</button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -500,24 +526,40 @@ export default function TaxReportsDashboardPage() {
         ) : viewMode === 'timeline' ? (
           <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
         ) : (
-          <div className="space-y-6">
-            {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => (
-              <GroupedServiceTable
-                key={serviceKey}
-                service={service}
-                clientRows={clientRows}
-                onToggleStep={handleToggleStep}
-                onDateChange={handleDateChange}
-                onStatusChange={handleStatusChange}
-                onPaymentDateChange={handlePaymentDateChange}
-                onSubTaskChange={handleSubTaskChange}
-                onAttachmentUpdate={handleAttachmentUpdate}
-                getClientIds={getTaxIds}
-                onEdit={setEditingTask}
-                onDelete={handleDeleteTask}
-                onNote={setNoteTask}
-              />
-            ))}
+          <div className="space-y-4">
+            {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
+              const isCollapsed = collapsedServices.has(serviceKey);
+              return (
+                <div key={serviceKey} className="border border-[#E0E0E0] rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => toggleServiceCollapse(serviceKey)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+                      <span className="font-bold text-[#263238]">{service.label}</span>
+                      <span className="text-xs text-[#455A64]">{clientRows.length} לקוחות</span>
+                    </div>
+                  </button>
+                  {!isCollapsed && (
+                    <GroupedServiceTable
+                      service={service}
+                      clientRows={clientRows}
+                      onToggleStep={handleToggleStep}
+                      onDateChange={handleDateChange}
+                      onStatusChange={handleStatusChange}
+                      onPaymentDateChange={handlePaymentDateChange}
+                      onSubTaskChange={handleSubTaskChange}
+                      onAttachmentUpdate={handleAttachmentUpdate}
+                      getClientIds={getTaxIds}
+                      onEdit={setEditingTask}
+                      onDelete={handleDeleteTask}
+                      onNote={setNoteTask}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         )
       ) : (

@@ -72,8 +72,8 @@ function ExecutionBar({ startDate, dueDate }) {
   );
 }
 
-// These statuses start collapsed
-const DEFAULT_COLLAPSED = new Set(['production_completed']);
+// ALL statuses start collapsed by default
+const DEFAULT_COLLAPSED = new Set(['waiting_for_materials', 'not_started', 'sent_for_review', 'needs_corrections', 'production_completed']);
 
 export default function GroupedServiceTable({
   service,

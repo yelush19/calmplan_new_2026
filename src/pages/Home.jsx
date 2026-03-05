@@ -507,8 +507,8 @@ export default function HomePage() {
             className="absolute top-2 right-2 z-30"
           >
           <div
-            className="flex flex-col rounded-xl border border-gray-200/60 shadow-lg overflow-hidden transition-all duration-300"
-            style={{ backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', width: statsExpanded ? '220px' : '180px' }}
+            className="flex flex-col rounded-xl border border-[#E0E0E0] shadow-lg overflow-hidden transition-all duration-300"
+            style={{ backgroundColor: '#FFFFFF', width: statsExpanded ? '220px' : '180px' }}
           >
             {/* Header — always visible, click to expand/collapse */}
             <button
@@ -635,7 +635,7 @@ export default function HomePage() {
           >
           <div
             className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#E0E0E0] shadow-md"
-            style={{ backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
+            style={{ backgroundColor: '#FFFFFF' }}
           >
             <Target className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
             <span className="text-[10px] font-semibold text-gray-600 ml-0.5">מרכז השליטה</span>
@@ -668,7 +668,7 @@ export default function HomePage() {
             >
             <div
               className="flex gap-1.5 overflow-x-auto px-2 py-1.5 rounded-lg border border-[#E0E0E0]"
-              style={{ backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+              style={{ backgroundColor: '#FFFFFF' }}
             >
               {insights.slice(0, 4).map((insight, i) => {
                 const colorMap = {
@@ -702,7 +702,7 @@ export default function HomePage() {
           >
           <div
             className="flex gap-1.5 px-2 py-1.5 rounded-lg border border-[#E0E0E0]"
-            style={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+            style={{ backgroundColor: '#FFFFFF' }}
           >
             <Link to={createPageUrl("WeeklyPlanningDashboard")}>
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50 cursor-pointer transition-colors">
