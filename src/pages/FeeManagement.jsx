@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DollarSign, TrendingUp, TrendingDown, Users, Search, ArrowUpDown,
-  Star, Link2, UserX
+  Star, Link2, UserX, ChevronDown, ChevronUp, ChevronRight
 } from 'lucide-react';
 import ResizableTable from '@/components/ui/ResizableTable';
 
@@ -94,7 +94,18 @@ function FeeStatusBadge({ client, allClients }) {
   return null;
 }
 
+const FEE_TIERS = [
+  { key: 'no_fee', label: 'ללא שכ״ט', test: (fee, c) => fee === 0 && !c.fee_status },
+  { key: 'special', label: 'סטטוס מיוחד (OTH / מקושר)', test: (fee, c) => fee === 0 && !!c.fee_status },
+  { key: 'low', label: 'שכ״ט נמוך (עד ₪500)', test: (fee) => fee > 0 && fee <= 500 },
+  { key: 'mid', label: 'שכ״ט בינוני (₪500–₪1,500)', test: (fee) => fee > 500 && fee <= 1500 },
+  { key: 'high', label: 'שכ״ט גבוה (מעל ₪1,500)', test: (fee) => fee > 1500 },
+];
+
 function ClientFeeTable({ clients, allClients, search, sortBy, title, showFeeStatus = false }) {
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set(FEE_TIERS.map(t => t.key)));
+  const [allExpanded, setAllExpanded] = useState(false);
+
   const filtered = useMemo(() => {
     let result = clients.filter(c =>
       !search || c.name?.toLowerCase().includes(search.toLowerCase())
@@ -110,12 +121,39 @@ function ClientFeeTable({ clients, allClients, search, sortBy, title, showFeeSta
     return result;
   }, [clients, search, sortBy]);
 
+  const grouped = useMemo(() => {
+    const groups = {};
+    FEE_TIERS.forEach(t => { groups[t.key] = []; });
+    filtered.forEach(client => {
+      const fee = parseFloat(client.monthly_fee) || 0;
+      const tier = FEE_TIERS.find(t => t.test(fee, client));
+      if (tier) groups[tier.key].push(client);
+    });
+    return FEE_TIERS.map(t => ({ ...t, clients: groups[t.key] })).filter(g => g.clients.length > 0);
+  }, [filtered]);
+
   if (filtered.length === 0) return null;
+
+  const colCount = showFeeStatus ? 5 : 4;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => {
+            if (allExpanded) {
+              setCollapsedGroups(new Set(FEE_TIERS.map(t => t.key)));
+              setAllExpanded(false);
+            } else {
+              setCollapsedGroups(new Set());
+              setAllExpanded(true);
+            }
+          }}>
+            {allExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+            {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
@@ -130,52 +168,75 @@ function ClientFeeTable({ clients, allClients, search, sortBy, title, showFeeSta
               </tr>
             </thead>
             <tbody>
-              {filtered.map((client) => {
-                const fee = parseFloat(client.monthly_fee) || 0;
-                const isOth = client.fee_status === 'oth';
-                const isLinked = client.fee_status === 'linked_to_parent';
-                const hasSpecialStatus = isOth || isLinked;
+              {grouped.map(group => {
+                const isOpen = !collapsedGroups.has(group.key);
                 return (
-                  <tr key={client.id} className={`border-b hover:bg-muted transition-colors ${hasSpecialStatus ? 'bg-[#F5F5F5]' : ''}`}>
-                    <td className="p-3 font-medium">{client.name}</td>
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-1">
-                        {(client.service_types || []).slice(0, 3).map(st => (
-                          <Badge key={st} className={`${serviceTypeColors[st] || 'bg-gray-50 text-gray-700 border-gray-200'} text-xs px-2 py-0.5 border`}>
-                            {serviceTypeLabels[st] || st}
-                          </Badge>
-                        ))}
-                        {(client.service_types || []).length > 3 && (
-                          <Badge variant="outline" className="text-xs">+{client.service_types.length - 3}</Badge>
-                        )}
-                      </div>
-                    </td>
-                    {showFeeStatus && (
-                      <td className="p-3">
-                        {fee === 0 && hasSpecialStatus ? (
-                          <FeeStatusBadge client={client} allClients={allClients} />
-                        ) : fee === 0 ? (
-                          <span className="text-yellow-600 text-xs">לא מוגדר</span>
-                        ) : null}
+                  <React.Fragment key={group.key}>
+                    <tr
+                      className="bg-[#F5F5F5] cursor-pointer hover:bg-[#EEEEEE] border-b"
+                      onClick={() => setCollapsedGroups(prev => {
+                        const next = new Set(prev);
+                        if (next.has(group.key)) next.delete(group.key);
+                        else next.add(group.key);
+                        return next;
+                      })}
+                    >
+                      <td colSpan={colCount} className="p-2">
+                        <div className="flex items-center gap-2 font-semibold text-sm">
+                          {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          {group.label} ({group.clients.length})
+                        </div>
                       </td>
-                    )}
-                    <td className="p-3">
-                      {fee > 0 ? (
-                        <span className="font-semibold text-green-700">₪{fee.toLocaleString()}</span>
-                      ) : hasSpecialStatus ? (
-                        <span className="text-gray-400">—</span>
-                      ) : (
-                        <span className="text-muted-foreground">לא הוגדר</span>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      {fee > 0 ? (
-                        <span className="text-muted-foreground">₪{(fee * 12).toLocaleString()}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </td>
-                  </tr>
+                    </tr>
+                    {isOpen && group.clients.map((client) => {
+                      const fee = parseFloat(client.monthly_fee) || 0;
+                      const isOth = client.fee_status === 'oth';
+                      const isLinked = client.fee_status === 'linked_to_parent';
+                      const hasSpecialStatus = isOth || isLinked;
+                      return (
+                        <tr key={client.id} className="border-b hover:bg-muted transition-colors">
+                          <td className="p-3 font-medium">{client.name}</td>
+                          <td className="p-3">
+                            <div className="flex flex-wrap gap-1">
+                              {(client.service_types || []).slice(0, 3).map(st => (
+                                <Badge key={st} className={`${serviceTypeColors[st] || 'bg-gray-50 text-gray-700 border-gray-200'} text-xs px-2 py-0.5 border`}>
+                                  {serviceTypeLabels[st] || st}
+                                </Badge>
+                              ))}
+                              {(client.service_types || []).length > 3 && (
+                                <Badge variant="outline" className="text-xs">+{client.service_types.length - 3}</Badge>
+                              )}
+                            </div>
+                          </td>
+                          {showFeeStatus && (
+                            <td className="p-3">
+                              {fee === 0 && hasSpecialStatus ? (
+                                <FeeStatusBadge client={client} allClients={allClients} />
+                              ) : fee === 0 ? (
+                                <span className="text-yellow-600 text-xs">לא מוגדר</span>
+                              ) : null}
+                            </td>
+                          )}
+                          <td className="p-3">
+                            {fee > 0 ? (
+                              <span className="font-semibold text-green-700">₪{fee.toLocaleString()}</span>
+                            ) : hasSpecialStatus ? (
+                              <span className="text-gray-400">—</span>
+                            ) : (
+                              <span className="text-muted-foreground">לא הוגדר</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {fee > 0 ? (
+                              <span className="text-muted-foreground">₪{(fee * 12).toLocaleString()}</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
                 );
               })}
             </tbody>

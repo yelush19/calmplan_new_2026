@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Plus, RefreshCw, CheckCircle, AlertCircle, Clock, Calendar,
-  ChevronLeft, ChevronRight, FileText, Search, Pencil, Save, X,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileText, Search, Pencil, Save, X,
   AlertTriangle, Check, CheckSquare, Square, Trash2, UserPlus
 } from 'lucide-react';
 import ResizableTable from '@/components/ui/ResizableTable';
@@ -326,6 +326,8 @@ export default function PeriodicSummaryReports() {
   const [search, setSearch] = useState('');
   const [selectedClientIds, setSelectedClientIds] = useState(new Set());
   const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set(['all_submitted', 'partial', 'no_reports']));
+  const [allGroupsExpanded, setAllGroupsExpanded] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -400,6 +402,31 @@ export default function PeriodicSummaryReports() {
       c.name?.toLowerCase().includes(search.toLowerCase())
     );
   }, [allDisplayedClients, search]);
+
+  // Group clients by completion status
+  const CLIENT_STATUS_GROUPS = [
+    { key: 'no_reports', label: 'ללא דיווחים', dot: 'bg-slate-400' },
+    { key: 'partial', label: 'דיווחים חלקיים', dot: 'bg-amber-500' },
+    { key: 'all_submitted', label: 'כל הדיווחים הוגשו', dot: 'bg-emerald-500' },
+  ];
+
+  const groupedFilteredClients = useMemo(() => {
+    const groups = { no_reports: [], partial: [], all_submitted: [] };
+    const columns = Object.entries(REPORT_TYPES).flatMap(([typeKey, typeDef]) =>
+      typeDef.periods.map(period => ({ typeKey, period }))
+    );
+    filteredClients.forEach(client => {
+      const clientReports = reportLookup[client.id] || {};
+      const totalCols = columns.length;
+      const submittedCols = columns.filter(col =>
+        clientReports[col.typeKey]?.[col.period]?.status === 'submitted'
+      ).length;
+      if (submittedCols === 0 && !reportLookup[client.id]) groups.no_reports.push(client);
+      else if (submittedCols === totalCols) groups.all_submitted.push(client);
+      else groups.partial.push(client);
+    });
+    return CLIENT_STATUS_GROUPS.map(g => ({ ...g, clients: groups[g.key] })).filter(g => g.clients.length > 0);
+  }, [filteredClients, reportLookup]);
 
   // Stats
   const stats = useMemo(() => {
@@ -667,6 +694,18 @@ export default function PeriodicSummaryReports() {
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddClientDialog(true)}>
           <UserPlus className="w-4 h-4" /> הוסף לקוח
         </Button>
+        <Button variant="outline" size="sm" onClick={() => {
+          if (allGroupsExpanded) {
+            setCollapsedGroups(new Set(['all_submitted', 'partial', 'no_reports']));
+            setAllGroupsExpanded(false);
+          } else {
+            setCollapsedGroups(new Set());
+            setAllGroupsExpanded(true);
+          }
+        }}>
+          {allGroupsExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+          {allGroupsExpanded ? 'כווץ הכל' : 'הרחב הכל'}
+        </Button>
 
         {selectedClientIds.size > 0 && (
           <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
@@ -707,37 +746,61 @@ export default function PeriodicSummaryReports() {
                 </tr>
               </thead>
               <tbody>
-                {filteredClients.map((client, idx) => {
-                  const clientReports = reportLookup[client.id] || {};
-                  const isSelected = selectedClientIds.has(client.id);
+                {groupedFilteredClients.map(group => {
+                  const isOpen = !collapsedGroups.has(group.key);
                   return (
-                    <tr key={client.id} className={`group border-b ${isSelected ? 'bg-blue-50' : idx % 2 === 0 ? '' : 'bg-muted'} hover:bg-muted`}>
-                      <td className="text-center p-2 sticky right-0 bg-white z-10">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleToggleClient(client.id)}
-                        />
-                      </td>
-                      <td className="p-3 font-medium sticky right-10 bg-white z-10 border-l">
-                        <div className="flex items-center gap-2">
-                          <span className="flex-1">{client.name}</span>
-                          <button
-                            onClick={() => handleDeleteClientReports(client.id)}
-                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-amber-500 transition-all p-0.5"
-                            title="מחק דיווחים ללקוח"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                      {columns.map(col => (
-                        <ReportCell
-                          key={`${col.typeKey}_${col.period}`}
-                          report={clientReports[col.typeKey]?.[col.period]}
-                          onEdit={setEditingReport}
-                        />
-                      ))}
-                    </tr>
+                    <React.Fragment key={group.key}>
+                      <tr
+                        className="bg-[#F5F5F5] cursor-pointer hover:bg-[#EEEEEE] border-b"
+                        onClick={() => setCollapsedGroups(prev => {
+                          const next = new Set(prev);
+                          if (next.has(group.key)) next.delete(group.key);
+                          else next.add(group.key);
+                          return next;
+                        })}
+                      >
+                        <td colSpan={columns.length + 2} className="p-2">
+                          <div className="flex items-center gap-2 font-semibold text-sm">
+                            {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            <span className={`w-2.5 h-2.5 rounded-full ${group.dot}`} />
+                            {group.label} ({group.clients.length})
+                          </div>
+                        </td>
+                      </tr>
+                      {isOpen && group.clients.map((client, idx) => {
+                        const clientReports = reportLookup[client.id] || {};
+                        const isSelected = selectedClientIds.has(client.id);
+                        return (
+                          <tr key={client.id} className={`group border-b ${isSelected ? 'bg-blue-50' : idx % 2 === 0 ? '' : 'bg-muted'} hover:bg-muted`}>
+                            <td className="text-center p-2 sticky right-0 bg-white z-10">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => handleToggleClient(client.id)}
+                              />
+                            </td>
+                            <td className="p-3 font-medium sticky right-10 bg-white z-10 border-l">
+                              <div className="flex items-center gap-2">
+                                <span className="flex-1">{client.name}</span>
+                                <button
+                                  onClick={() => handleDeleteClientReports(client.id)}
+                                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-amber-500 transition-all p-0.5"
+                                  title="מחק דיווחים ללקוח"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                            {columns.map(col => (
+                              <ReportCell
+                                key={`${col.typeKey}_${col.period}`}
+                                report={clientReports[col.typeKey]?.[col.period]}
+                                onEdit={setEditingReport}
+                              />
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
                   );
                 })}
                 {filteredClients.length === 0 && (
