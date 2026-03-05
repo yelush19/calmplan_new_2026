@@ -128,6 +128,14 @@ const COMPLEXITY_SUB_LABELS = {
   2: { key: 'גדול', icon: '🏢', label: 'גדול', color: DIAMOND_COLORS[2] },
 };
 
+// ── FUNCTION BUCKETS: 3 functional sub-categories under each tier diamond ──
+const FUNCTION_BUCKETS = {
+  production: { key: 'production', label: 'ייצור', icon: '⚙️', color: '#1565C0' },
+  reports:    { key: 'reports',    label: 'דיווחים', icon: '📋', color: '#00838F' },
+  services:   { key: 'services',   label: 'שירותים', icon: '🔧', color: '#6D4C41' },
+};
+const FUNCTION_BUCKET_ORDER = ['production', 'reports', 'services'];
+
 // Map ALL task categories to P1-P4 department keys
 // ZERO GHOST DATA: SS/Deductions route to שכר (payroll sub-steps, not standalone)
 const CATEGORY_TO_DEPARTMENT = {
@@ -436,7 +444,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v17-tier-distribution-semicircle'; // bump this to force reset
+  const LAYOUT_VERSION = 'v18-functional-branching'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -659,6 +667,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           const t = client.tier || 0;
           client._complexitySubFolder = COMPLEXITY_SUB_LABELS[t]?.key || `tier-${t}`;
           client._diamondColor = DIAMOND_COLORS[t] || '#455A64';
+          // ── FUNCTIONAL BRANCHING: assign client to ייצור / דיווחים / שירותים נוספים ──
+          const ws = client.worstStatus || 'not_started';
+          if (ws === 'not_started' || ws === 'needs_corrections') {
+            client._functionBucket = 'production';   // ייצור
+          } else if (ws === 'sent_for_review' || ws === 'production_completed') {
+            client._functionBucket = 'reports';       // דיווחים
+          } else {
+            client._functionBucket = 'services';      // שירותים נוספים
+          }
         });
       }
     });
@@ -843,80 +860,117 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         };
       });
 
-      // ── CLIENT MINI-FAN: grape berries around each tier node ──
-      // DUAL SEMI-CIRCLE: when >4 clients, split into inner ring + outer ring
-      // to prevent overlap while maintaining 180px+ separation
+      // ── FUNCTIONAL BRANCHING: Tier Diamond → Function Bubbles → Clients ──
+      // Each tier diamond spawns up to 3 function bubbles (ייצור / דיווחים / שירותים)
+      // Clients are satellites around their function bubble, NOT directly on the tier diamond.
+      const FUNC_DIST = 65;    // tier diamond → function bubble distance
+      const CLIENT_FROM_FUNC = 60; // function bubble → client distance
+      const MIN_BUBBLE_SPACING = 200; // px between bubble centers (200px repulsion)
+
+      const functionBubblePositions = [];
       const clientPositions = [];
+
       subFolderPositions.forEach((tierNode) => {
         const tierClients = branch.clients
           .filter(c => c._complexitySubFolder === tierNode.key.replace(`tier-${branch.category}-`, ''))
           .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
 
-        const n = tierClients.length;
-        if (n === 0) return;
+        if (tierClients.length === 0) return;
 
-        // REPULSION RULE: min 180px between bubbles → compute ring radius
-        const MIN_BUBBLE_SPACING = 200; // px between bubble centers (200px repulsion)
-        const fanArc = n <= 1 ? 0 : Math.min(n * 0.35, 1.4) * Math.PI;
+        // Group clients by function bucket
+        const bucketGroups = {};
+        tierClients.forEach(c => {
+          const bucket = c._functionBucket || 'production';
+          if (!bucketGroups[bucket]) bucketGroups[bucket] = [];
+          bucketGroups[bucket].push(c);
+        });
 
-        // For >4 clients, split into two semi-circle rings
-        const maxPerRing = 5;
-        const useDoubleRing = n > maxPerRing;
-        const ring1Count = useDoubleRing ? Math.ceil(n / 2) : n;
-        const ring2Count = useDoubleRing ? n - ring1Count : 0;
+        // Only create function bubbles for buckets that have clients
+        const activeBuckets = FUNCTION_BUCKET_ORDER.filter(b => bucketGroups[b]?.length > 0);
+        const nBuckets = activeBuckets.length;
+        const bucketFanArc = nBuckets <= 1 ? 0 : Math.PI * 0.5; // 90° fan
 
-        // Inner ring radius: ensure MIN_BUBBLE_SPACING between adjacent clients
-        const ring1Arc = ring1Count <= 1 ? 0 : fanArc;
-        const ring1R = ring1Count <= 1
-          ? CLIENT_DIST
-          : Math.max(CLIENT_DIST, (ring1Count * MIN_BUBBLE_SPACING) / (2 * Math.PI * (ring1Arc / (2 * Math.PI))));
+        activeBuckets.forEach((bucketKey, bi) => {
+          const bucketInfo = FUNCTION_BUCKETS[bucketKey];
+          const bucketAngle = nBuckets <= 1
+            ? tierNode.angle
+            : tierNode.angle - bucketFanArc / 2 + (bi / (nBuckets - 1)) * bucketFanArc;
 
-        // Outer ring: larger radius
-        const ring2Arc = ring2Count <= 1 ? 0 : fanArc;
-        const ring2R = ring2Count <= 1
-          ? ring1R + MIN_BUBBLE_SPACING
-          : Math.max(ring1R + MIN_BUBBLE_SPACING * 0.6, (ring2Count * MIN_BUBBLE_SPACING) / (2 * Math.PI * (ring2Arc / (2 * Math.PI))));
+          const fbKey = `func-${branch.category}-${tierNode.key}-${bucketKey}`;
+          const fbManual = manualPositions[fbKey];
+          const fbX = fbManual?.x ?? (tierNode.x + Math.cos(bucketAngle) * FUNC_DIST);
+          const fbY = fbManual?.y ?? (tierNode.y + Math.sin(bucketAngle) * FUNC_DIST);
 
-        tierClients.forEach((client, j) => {
-          const nodeRadius = getNodeRadius(client.tier, isWide);
-          const clientKey = `${branch.category}-${client.name}`;
-          const clientPos = manualPositions[clientKey];
-
-          let cAngle, cDist;
-          if (!useDoubleRing) {
-            // Single ring
-            cAngle = n <= 1
-              ? tierNode.angle
-              : (tierNode.angle - fanArc / 2) + (j / (n - 1)) * fanArc;
-            cDist = ring1R;
-          } else if (j < ring1Count) {
-            // Inner ring
-            cAngle = ring1Count <= 1
-              ? tierNode.angle
-              : (tierNode.angle - ring1Arc / 2) + (j / (ring1Count - 1)) * ring1Arc;
-            cDist = ring1R;
-          } else {
-            // Outer ring
-            const k = j - ring1Count;
-            cAngle = ring2Count <= 1
-              ? tierNode.angle
-              : (tierNode.angle - ring2Arc / 2) + (k / (ring2Count - 1)) * ring2Arc;
-            cDist = ring2R;
-          }
-
-          const absX = clientPos?.x ?? (tierNode.x + Math.cos(cAngle) * cDist);
-          const absY = clientPos?.y ?? (tierNode.y + Math.sin(cAngle) * cDist);
-
-          clientPositions.push({
-            ...client,
-            radius: nodeRadius,
-            x: absX,
-            y: absY,
-            branchX: finalBx,
-            branchY: finalBy,
+          functionBubblePositions.push({
+            key: fbKey,
+            bucketKey,
+            label: bucketInfo.label,
+            icon: bucketInfo.icon,
+            color: bucketInfo.color,
+            x: fbX,
+            y: fbY,
+            angle: bucketAngle,
             tierKey: tierNode.key,
             tierX: tierNode.x,
             tierY: tierNode.y,
+            clientCount: bucketGroups[bucketKey].length,
+          });
+
+          // Position clients as compact fan around this function bubble
+          const bucketClients = bucketGroups[bucketKey];
+          const n = bucketClients.length;
+          const fanArc = n <= 1 ? 0 : Math.min(n * 0.4, 1.2) * Math.PI;
+
+          const maxPerRing = 4;
+          const useDoubleRing = n > maxPerRing;
+          const ring1Count = useDoubleRing ? Math.ceil(n / 2) : n;
+          const ring2Count = useDoubleRing ? n - ring1Count : 0;
+
+          const ring1Arc = ring1Count <= 1 ? 0 : fanArc;
+          const ring1R = ring1Count <= 1
+            ? CLIENT_FROM_FUNC
+            : Math.max(CLIENT_FROM_FUNC, (ring1Count * MIN_BUBBLE_SPACING) / (2 * Math.PI * (ring1Arc / (2 * Math.PI))));
+
+          const ring2Arc = ring2Count <= 1 ? 0 : fanArc;
+          const ring2R = ring2Count <= 1
+            ? ring1R + MIN_BUBBLE_SPACING * 0.6
+            : Math.max(ring1R + MIN_BUBBLE_SPACING * 0.5, (ring2Count * MIN_BUBBLE_SPACING) / (2 * Math.PI * (ring2Arc / (2 * Math.PI))));
+
+          bucketClients.forEach((client, j) => {
+            const nodeRadius = getNodeRadius(client.tier, isWide);
+            const clientKey = `${branch.category}-${client.name}`;
+            const clientPos = manualPositions[clientKey];
+
+            let cAngle, cDist;
+            if (!useDoubleRing) {
+              cAngle = n <= 1 ? bucketAngle : (bucketAngle - fanArc / 2) + (j / (n - 1)) * fanArc;
+              cDist = ring1R;
+            } else if (j < ring1Count) {
+              cAngle = ring1Count <= 1 ? bucketAngle : (bucketAngle - ring1Arc / 2) + (j / (ring1Count - 1)) * ring1Arc;
+              cDist = ring1R;
+            } else {
+              const k = j - ring1Count;
+              cAngle = ring2Count <= 1 ? bucketAngle : (bucketAngle - ring2Arc / 2) + (k / (ring2Count - 1)) * ring2Arc;
+              cDist = ring2R;
+            }
+
+            const absX = clientPos?.x ?? (fbX + Math.cos(cAngle) * cDist);
+            const absY = clientPos?.y ?? (fbY + Math.sin(cAngle) * cDist);
+
+            clientPositions.push({
+              ...client,
+              radius: nodeRadius,
+              x: absX,
+              y: absY,
+              branchX: finalBx,
+              branchY: finalBy,
+              tierKey: tierNode.key,
+              tierX: tierNode.x,
+              tierY: tierNode.y,
+              funcBubbleKey: fbKey,
+              funcBubbleX: fbX,
+              funcBubbleY: fbY,
+            });
           });
         });
       });
@@ -931,7 +985,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           const clientKey = `${branch.category}-${client.name}`;
           const clientPos = manualPositions[clientKey];
           const cAngle = n <= 1 ? deptAngle : (deptAngle - fanArc / 2) + (j / (n - 1)) * fanArc;
-          const cDist = CLIENT_DIST; // 70px from tier diamond
+          const cDist = CLIENT_FROM_FUNC;
           clientPositions.push({
             ...client,
             radius: nodeRadius,
@@ -950,6 +1004,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         angle: deptAngle,
         clientPositions,
         subFolderPositions,
+        functionBubblePositions,
       };
     });
 
@@ -1113,16 +1168,33 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     draggingNode.current = null;
     nodeHasDragged.current = false;
     if (wasDragging) {
-      // onNodeDragStop: save positions immediately to localStorage
       setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
       return;
     }
-    // Modal Law: single click opens drawer immediately (no double-click distinction)
-    setDrawerClient(client);
-    setDrawerDepartment(department || null);
-    setEditPopover(null);
-    setShowDrawerCompleted(false);
-  }, [savePositionsToStorage]);
+    // ── Deep Linking: navigate to relevant page based on function bucket ──
+    const bucket = client._functionBucket || 'production';
+    const clientId = client.clientId;
+    if (clientId) {
+      if (bucket === 'production') {
+        navigate(`/Tasks?clientId=${clientId}`);
+      } else if (bucket === 'reports') {
+        // Route to reports dashboard depending on department
+        if (department === 'שכר') {
+          navigate(`/PayrollReportsDashboard?clientId=${clientId}`);
+        } else {
+          navigate(`/TaxReportsDashboard?clientId=${clientId}`);
+        }
+      } else {
+        navigate(`/ClientManagement?clientId=${clientId}`);
+      }
+    } else {
+      // Fallback: open drawer if no clientId
+      setDrawerClient(client);
+      setDrawerDepartment(department || null);
+      setEditPopover(null);
+      setShowDrawerCompleted(false);
+    }
+  }, [savePositionsToStorage, navigate]);
 
   // ── Meta-folder drag handlers: move all sub-folders + department branches + their children ──
   const handleMetaPointerDown = useCallback((e, metaKey, currentX, currentY) => {
@@ -1144,6 +1216,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         // Include tier sub-folder nodes
         branch.subFolderPositions?.forEach(sub => {
           childPositions.push({ key: sub.key, x: sub.x, y: sub.y });
+        });
+        // Include function bubbles
+        branch.functionBubblePositions?.forEach(fb => {
+          childPositions.push({ key: fb.key, x: fb.x, y: fb.y });
         });
         branch.clientPositions.forEach(cp => {
           childPositions.push({ key: `${branch.category}-${cp.name}`, x: cp.x, y: cp.y });
@@ -1167,6 +1243,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       // Include tier sub-folder nodes
       branch.subFolderPositions?.forEach(sub => {
         childPositions.push({ key: sub.key, x: sub.x, y: sub.y });
+      });
+      // Include function bubbles
+      branch.functionBubblePositions?.forEach(fb => {
+        childPositions.push({ key: fb.key, x: fb.x, y: fb.y });
       });
       // Include client pills
       branch.clientPositions.forEach(cp => {
@@ -1557,36 +1637,61 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             );
           })}
 
-          {/* ── EDGE LEVEL 3: Tier Diamond → Client pills ──
-               Visible only when BOTH parent P-branch AND department are expanded.
-               Each arrow goes from the TIER DIAMOND to its client satellites.
-               Authority Wiring: clients connect to their tier diamond parent, NOT to dept folder. */}
+          {/* ── EDGE LEVEL 3: Tier Diamond → Function Bubbles ──
+               Visible when P-branch + department expanded. Arrows from diamond to function bubbles. */}
+          {layout.branchPositions.map((branch) => {
+            if (!expandedMetaFolders.has(branch.metaFolder)) return null;
+            if (!expandedBranches.has(branch.category)) return null;
+            if (!branch.functionBubblePositions) return null;
+            return (
+              <g key={`edges-tier-func-${branch.category}`}>
+                {branch.functionBubblePositions.map((fb) => {
+                  const dx = fb.x - fb.tierX, dy = fb.y - fb.tierY;
+                  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                  if (len < 10) return null;
+                  const sx = fb.tierX + (dx / len) * 34;
+                  const sy = fb.tierY + (dy / len) * 34;
+                  const ex = fb.x - (dx / len) * 22;
+                  const ey = fb.y - (dy / len) * 22;
+                  return (
+                    <line key={`edge-tier-func-${fb.key}`}
+                      x1={sx} y1={sy} x2={ex} y2={ey}
+                      stroke={fb.color} strokeWidth={1.2} strokeLinecap="round"
+                      markerEnd="url(#edge-arrow-sm)"
+                      opacity={0.65} />
+                  );
+                })}
+              </g>
+            );
+          })}
+
+          {/* ── EDGE LEVEL 4: Function Bubble → Client pills ──
+               Each arrow goes from function bubble to its client satellites.
+               Authority Wiring: diamond → function → client */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!expandedBranches.has(branch.category)) return null;
             const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN);
             return (
-              <g key={`edges-tier-clients-${branch.category}`}>
+              <g key={`edges-func-clients-${branch.category}`}>
                 {visibleClients.map((client) => {
-                  // Source: tier diamond (parent), NOT department folder
-                  const srcX = client.tierX ?? branch.x;
-                  const srcY = client.tierY ?? branch.y;
+                  const srcX = client.funcBubbleX ?? client.tierX ?? branch.x;
+                  const srcY = client.funcBubbleY ?? client.tierY ?? branch.y;
                   const dx = client.x - srcX, dy = client.y - srcY;
                   const len = Math.sqrt(dx * dx + dy * dy) || 1;
                   if (len < 10) return null;
-                  // Start 34px from tier diamond center, end at client pill edge
-                  const startPx = 34;
+                  const startPx = 22;
                   const endPx = (client.radius || 22) + 4;
                   const sx = srcX + (dx / len) * startPx;
                   const sy = srcY + (dy / len) * startPx;
                   const ex = client.x - (dx / len) * endPx;
                   const ey = client.y - (dy / len) * endPx;
                   return (
-                    <line key={`edge-tier-to-${branch.category}-${client.name}`}
+                    <line key={`edge-func-to-${branch.category}-${client.name}`}
                       x1={sx} y1={sy} x2={ex} y2={ey}
-                      stroke="#90A4AE" strokeWidth={1.0} strokeLinecap="round"
+                      stroke="#B0BEC5" strokeWidth={0.9} strokeLinecap="round"
                       markerEnd="url(#edge-arrow-sm)"
-                      opacity={0.6} />
+                      opacity={0.55} />
                   );
                 })}
               </g>
@@ -1818,6 +1923,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   nodeHasDragged.current = false;
                   const tierKey = sub.key.startsWith('tier-') ? sub.key : `tier-${branch.category}-${sub.key}`;
                   const childPositions = [];
+                  // Include function bubbles under this tier
+                  branch.functionBubblePositions?.forEach(fb => {
+                    if (fb.tierKey === tierKey) {
+                      childPositions.push({ key: fb.key, x: fb.x, y: fb.y });
+                    }
+                  });
+                  // Include client pills under this tier
                   branch.clientPositions.forEach(cp => {
                     if (cp.tierKey === tierKey) {
                       childPositions.push({ key: `${branch.category}-${cp.name}`, x: cp.x, y: cp.y });
@@ -1854,6 +1966,62 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     {sub.label || sub.key}
                   </text>
                 </svg>
+              </motion.div>
+            ))}
+
+            {/* ── Function Bubbles: ייצור / דיווחים / שירותים — between tier diamonds and clients ── */}
+            {isBranchExpanded && branch.functionBubblePositions?.map((fb, fi) => (
+              <motion.div
+                key={fb.key}
+                className="absolute z-10 select-none"
+                style={{
+                  left: fb.x,
+                  top: fb.y,
+                  transform: 'translate(-50%, -50%)',
+                  opacity: isSpotlit(branch.category) ? 0.95 : 0.15,
+                  transition: 'opacity 0.4s ease-in-out',
+                }}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: isSpotlit(branch.category) ? 0.95 : 0.15, scale: 1 }}
+                transition={{ delay: i * 0.08 + fi * 0.04 + 0.15, type: 'spring', stiffness: 200 }}
+                whileHover={{ scale: 1.1 }}
+                data-node-draggable
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  nodeHasDragged.current = false;
+                  const childPositions = [];
+                  branch.clientPositions.forEach(cp => {
+                    if (cp.funcBubbleKey === fb.key) {
+                      childPositions.push({ key: `${branch.category}-${cp.name}`, x: cp.x, y: cp.y });
+                    }
+                  });
+                  draggingNode.current = {
+                    key: fb.key, startX: e.clientX, startY: e.clientY,
+                    origX: fb.x, origY: fb.y, isFolder: true, childPositions,
+                  };
+                }}
+                onPointerUp={() => {
+                  const wasDragging = nodeHasDragged.current;
+                  draggingNode.current = null;
+                  nodeHasDragged.current = false;
+                  if (wasDragging) {
+                    setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
+                  }
+                }}
+              >
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 shadow-md"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderColor: fb.color,
+                    minWidth: 70,
+                    cursor: 'grab',
+                  }}
+                >
+                  <span className="text-sm">{fb.icon}</span>
+                  <span className="text-xs font-bold" style={{ color: fb.color }}>{fb.label}</span>
+                  <span className="text-[9px] font-medium px-1.5 rounded-full" style={{ backgroundColor: fb.color + '20', color: fb.color }}>{fb.clientCount}</span>
+                </div>
               </motion.div>
             ))}
 
