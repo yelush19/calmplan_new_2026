@@ -13,7 +13,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Plus, Hourglass, Maximize2, Star,
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
   CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2,
-  Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import
+  Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import, Scale
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -115,6 +115,7 @@ const getSidebarSections = () => ({
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
       { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
+      { name: "משקלות שירותים", href: createPageUrl("ServiceWeightsSettings"), icon: Scale },
     ],
     subGroups: [
       { key: 'p3_automation', label: 'אוטומציה והגדרות', icon: Workflow, items: [

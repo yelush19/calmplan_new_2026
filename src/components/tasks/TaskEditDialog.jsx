@@ -19,8 +19,7 @@ import {
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 import { computeComplexityTier, getTierInfo } from '@/lib/complexity';
-import { getServiceWeight } from '@/config/serviceWeights';
-import { Client, Task } from '@/api/entities';
+import { Client, Task, SystemConfig } from '@/api/entities';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import { differenceInDays, format, parseISO, isValid } from 'date-fns';
 import { getScheduledStartForCategory } from '@/config/automationRules';
@@ -115,7 +114,10 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
   const [showChildTaskDialog, setShowChildTaskDialog] = useState(false);
   const [loadWarning, setLoadWarning] = useState(null);
 
-  // ── DNA SYNC: Pull cognitive load + duration from client's complexity tier ──
+  // ── DNA SYNC: Pull cognitive load + duration from CLIENT's real data ──
+  // Priority: task stored value > client complexity tier > 15 min default
+  // No invented service weights — all data comes from BatchSetup (Client entity)
+  // Optional per-service overrides stored in SystemConfig by the user
   useEffect(() => {
     if (!task || !open) return;
 
@@ -139,38 +141,54 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
     setNewSubTime('');
     setNewSubPriority('medium');
 
-    // ── Priority chain: task stored value > client tier > service weight > 15 min ──
-    // Get service weight for this task's category
-    const serviceWeight = getServiceWeight(task.category);
-
     // If task already has BOTH duration and cognitive load stored, use as-is
     if (baseData.estimated_duration && baseData.cognitive_load != null) {
       setEditData(baseData);
       return;
     }
 
-    // Fetch client data to auto-fill from complexity tier
-    if (task.client_id) {
-      Client.list().then(clients => {
+    // Fetch real client data + optional service overrides from SystemConfig
+    const fetchAndFill = async () => {
+      let serviceOverrides = {};
+      try {
+        const configs = await SystemConfig.list(null, 100);
+        const swConfig = configs.find(c => c.config_key === 'service_weights');
+        if (swConfig?.data) serviceOverrides = swConfig.data;
+      } catch { /* no overrides available */ }
+
+      if (!task.client_id) {
+        // No client — check user-defined service override, else 15 min default
+        const override = serviceOverrides[task.category];
+        if (!baseData.estimated_duration) baseData.estimated_duration = override?.duration || 15;
+        if (baseData.cognitive_load == null) baseData.cognitive_load = override?.cognitiveLoad ?? 0;
+        setEditData(baseData);
+        return;
+      }
+
+      try {
+        const clients = await Client.list();
         const client = clients.find(c => c.id === task.client_id);
         if (!client) {
-          // No client found — use service weight
-          if (!baseData.estimated_duration) baseData.estimated_duration = serviceWeight.duration;
-          if (baseData.cognitive_load == null) baseData.cognitive_load = serviceWeight.cognitiveLoad;
+          if (!baseData.estimated_duration) baseData.estimated_duration = 15;
+          if (baseData.cognitive_load == null) baseData.cognitive_load = 0;
           setEditData(baseData);
           return;
         }
 
+        // ── REAL DATA: compute tier from client's BatchSetup data ──
         const tier = computeComplexityTier(client);
         const tierInfo = getTierInfo(tier);
 
-        // Duration: max(service weight, tier maxMinutes) — heavier client = more time
+        // Check if user defined a per-service override in settings
+        const override = serviceOverrides[task.category];
+
+        // Duration: user override > client tier maxMinutes
         if (!baseData.estimated_duration) {
-          baseData.estimated_duration = Math.max(serviceWeight.duration, tierInfo.maxMinutes || 15);
+          baseData.estimated_duration = override?.duration || tierInfo.maxMinutes || 15;
         }
-        // Cognitive load: max(service base, client tier) — harder = higher load
+        // Cognitive load: user override > client tier
         if (baseData.cognitive_load == null) {
-          baseData.cognitive_load = Math.max(serviceWeight.cognitiveLoad, tier);
+          baseData.cognitive_load = override?.cognitiveLoad ?? tier;
         }
         // Complexity text from tier
         if (baseData.complexity === 'low' && tier >= 2) {
@@ -178,18 +196,14 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
         }
 
         setEditData(baseData);
-      }).catch(() => {
-        // Fallback: use service weight
-        if (!baseData.estimated_duration) baseData.estimated_duration = serviceWeight.duration;
-        if (baseData.cognitive_load == null) baseData.cognitive_load = serviceWeight.cognitiveLoad;
+      } catch {
+        if (!baseData.estimated_duration) baseData.estimated_duration = 15;
+        if (baseData.cognitive_load == null) baseData.cognitive_load = 0;
         setEditData(baseData);
-      });
-    } else {
-      // No client — use service weight
-      if (!baseData.estimated_duration) baseData.estimated_duration = serviceWeight.duration;
-      if (baseData.cognitive_load == null) baseData.cognitive_load = serviceWeight.cognitiveLoad;
-      setEditData(baseData);
-    }
+      }
+    };
+
+    fetchAndFill();
   }, [task, open]);
 
   // SMART Anchor: daily load feasibility check
