@@ -186,10 +186,12 @@ const SIZE_LABELS = { 0: 'ננו', 1: 'פשוט', 2: 'בינוני', 3: 'מור�
  */
 function getComplexityTier(client, tasks) {
   if (!client) {
+    // No client record — use task count heuristic
     const taskCount = tasks.length;
     return taskCount >= 6 ? 2 : taskCount >= 3 ? 1 : 0;
   }
   // Use the canonical complexity computation from complexity.js
+  // (now has smart fallback for clients with no employee/hours data)
   const rawTier = computeComplexityTier(client);
   // Clamp to 0-2 for 3-tier MindMap display (tier 3 → tier 2)
   return Math.min(rawTier, 2);
@@ -434,7 +436,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v16-tier-fix-180px-spacing'; // bump this to force reset
+  const LAYOUT_VERSION = 'v17-tier-distribution-semicircle'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -842,6 +844,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       });
 
       // ── CLIENT MINI-FAN: grape berries around each tier node ──
+      // DUAL SEMI-CIRCLE: when >4 clients, split into inner ring + outer ring
+      // to prevent overlap while maintaining 180px+ separation
       const clientPositions = [];
       subFolderPositions.forEach((tierNode) => {
         const tierClients = branch.clients
@@ -849,27 +853,57 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
 
         const n = tierClients.length;
-        // Mini-fan arc: tighter for few clients, wider for many
-        const fanArc = n <= 1 ? 0 : Math.min(n * 0.3, 1.2) * Math.PI;
-        // Scale radius so clients don't overlap: min CLIENT_DIST, grow if needed
-        const neededR = n > 1
-          ? Math.max(CLIENT_DIST, (n * CLIENT_GAP) / (2 * Math.PI * 0.5))
-          : CLIENT_DIST;
+        if (n === 0) return;
+
+        // REPULSION RULE: min 180px between bubbles → compute ring radius
+        const MIN_BUBBLE_SPACING = 180; // px between bubble centers
+        const fanArc = n <= 1 ? 0 : Math.min(n * 0.35, 1.4) * Math.PI;
+
+        // For >4 clients, split into two semi-circle rings
+        const maxPerRing = 5;
+        const useDoubleRing = n > maxPerRing;
+        const ring1Count = useDoubleRing ? Math.ceil(n / 2) : n;
+        const ring2Count = useDoubleRing ? n - ring1Count : 0;
+
+        // Inner ring radius: ensure MIN_BUBBLE_SPACING between adjacent clients
+        const ring1Arc = ring1Count <= 1 ? 0 : fanArc;
+        const ring1R = ring1Count <= 1
+          ? CLIENT_DIST
+          : Math.max(CLIENT_DIST, (ring1Count * MIN_BUBBLE_SPACING) / (2 * Math.PI * (ring1Arc / (2 * Math.PI))));
+
+        // Outer ring: larger radius
+        const ring2Arc = ring2Count <= 1 ? 0 : fanArc;
+        const ring2R = ring2Count <= 1
+          ? ring1R + MIN_BUBBLE_SPACING
+          : Math.max(ring1R + MIN_BUBBLE_SPACING * 0.6, (ring2Count * MIN_BUBBLE_SPACING) / (2 * Math.PI * (ring2Arc / (2 * Math.PI))));
 
         tierClients.forEach((client, j) => {
           const nodeRadius = getNodeRadius(client.tier, isWide);
           const clientKey = `${branch.category}-${client.name}`;
           const clientPos = manualPositions[clientKey];
 
-          const cAngle = n <= 1
-            ? tierNode.angle
-            : (tierNode.angle - fanArc / 2) + (j / (n - 1)) * fanArc;
+          let cAngle, cDist;
+          if (!useDoubleRing) {
+            // Single ring
+            cAngle = n <= 1
+              ? tierNode.angle
+              : (tierNode.angle - fanArc / 2) + (j / (n - 1)) * fanArc;
+            cDist = ring1R;
+          } else if (j < ring1Count) {
+            // Inner ring
+            cAngle = ring1Count <= 1
+              ? tierNode.angle
+              : (tierNode.angle - ring1Arc / 2) + (j / (ring1Count - 1)) * ring1Arc;
+            cDist = ring1R;
+          } else {
+            // Outer ring
+            const k = j - ring1Count;
+            cAngle = ring2Count <= 1
+              ? tierNode.angle
+              : (tierNode.angle - ring2Arc / 2) + (k / (ring2Count - 1)) * ring2Arc;
+            cDist = ring2R;
+          }
 
-          // Anti-Overlap: fixed radius, no random jitter
-          const cDist = neededR;
-
-          // NESTED COORDINATES: client pos relative to tier node
-          // If tier node moves, client moves with it (via group drag)
           const absX = clientPos?.x ?? (tierNode.x + Math.cos(cAngle) * cDist);
           const absY = clientPos?.y ?? (tierNode.y + Math.sin(cAngle) * cDist);
 
@@ -1319,12 +1353,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   if (fetchError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" dir="rtl">
-        <div className="p-6 rounded-[32px] backdrop-blur-2xl bg-white/40 border border-white/20 shadow-2xl flex flex-col items-center gap-4 max-w-sm">
-          <div className="w-16 h-16 rounded-full bg-rose-100/60 flex items-center justify-center">
+        <div className="p-6 rounded-[32px] bg-white border-2 border-[#B0BEC5] shadow-xl flex flex-col items-center gap-4 max-w-sm">
+          <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center">
             <Cloud className="w-8 h-8 text-rose-500" />
           </div>
-          <p className="text-lg font-bold text-slate-700">שגיאת חיבור</p>
-          <p className="text-sm text-slate-500 text-center">{fetchError}</p>
+          <p className="text-lg font-bold text-[#000000]">שגיאת חיבור</p>
+          <p className="text-sm text-[#37474F] text-center">{fetchError}</p>
           <button
             onClick={() => { setFetchError(null); window.location.reload(); }}
             className="px-6 py-2.5 rounded-full bg-[#008291] hover:bg-[#006d7a] text-white font-medium text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
@@ -1364,8 +1398,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   if (tasks.length === 0 && inboxItems.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400 gap-3">
-        <Sparkles className="w-12 h-12 text-slate-300" />
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-[#455A64] gap-3">
+        <Sparkles className="w-12 h-12 text-[#B0BEC5]" />
         <p className="text-lg font-medium">המפה ריקה</p>
         <p className="text-sm">משימות חדשות יופיעו כאן אוטומטית</p>
       </div>
@@ -1373,7 +1407,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }
 
   const containerClasses = isFullscreen
-    ? "fixed inset-0 z-[9999] bg-gradient-to-br from-white/60 via-blue-50/30 to-white/40"
+    ? "fixed inset-0 z-[9999]"
     : "relative w-full h-full";
 
   // APPLE-INSPIRED: Clean light grey background — NO turquoise soup
@@ -1556,7 +1590,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             top: centerPos.y - layout.centerR,
             zIndex: 10,
             background: 'linear-gradient(135deg, #1E3A5F, #0F2744)',
-            boxShadow: '0 8px 24px rgba(15,39,68,0.25), 0 2px 8px rgba(0,0,0,0.08)',
+            boxShadow: '0 8px 24px #0F274440, 0 2px 8px #00000014',
             cursor: draggingNode.current?.key === 'center-node' ? 'grabbing' : 'grab',
           }}
           initial={{ scale: 0 }}
@@ -1576,8 +1610,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           }}
         >
           <span className="font-bold leading-tight text-base">היום שלי</span>
-          <span className="opacity-80 mt-0.5 text-xs">{todayTasks.length} משימות להיום</span>
-          <span className="opacity-60 text-[11px]">{centerLabel}</span>
+          <span className="mt-0.5 text-xs">{todayTasks.length} משימות להיום</span>
+          <span className="text-[11px]">{centerLabel}</span>
         </motion.div>
 
         {/* ── LAW 3: Level 1 — SOFT-SQUARE Category Containers (Deep Teal, 24px corners, outer glow) ── */}
@@ -1591,7 +1625,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             className="absolute z-10 select-none touch-none"
             style={{
               left: mf.x,
-              filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))',
+              filter: 'drop-shadow(0 4px 6px #0000001A)',
               top: mf.y,
               transform: 'translate(-50%, -50%)',
               cursor: 'pointer',
@@ -1610,59 +1644,35 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             }}
           >
             <svg width={W + 20} height={H + 20} viewBox={`-10 -10 ${W + 20} ${H + 20}`} style={{ overflow: 'visible' }}>
-              <defs>
-                <linearGradient id={`metaSoftGrad-${mi}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#00695C" stopOpacity="0.95" />
-                  <stop offset="100%" stopColor="#004D40" stopOpacity="0.92" />
-                </linearGradient>
-                <linearGradient id={`metaGlassGrad-${mi}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="white" stopOpacity="0.15" />
-                  <stop offset="100%" stopColor="white" stopOpacity="0" />
-                </linearGradient>
-                <filter id={`metaGlow-${mi}`} x="-30%" y="-30%" width="160%" height="160%">
-                  <feGaussianBlur stdDeviation="6" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-              </defs>
-              {/* Outer glow ring */}
+              {/* Outer border ring */}
               <rect x={-4} y={-4} width={W + 8} height={H + 8}
                 rx={CR + 4} ry={CR + 4}
-                fill="none" stroke="#00897B" strokeWidth="1.5"
-                strokeOpacity={isMetaExpanded ? 0.4 : 0.2}
-                filter={`url(#metaGlow-${mi})`} />
-              {/* Shadow */}
-              <rect x={2} y={3} width={W} height={H}
-                rx={CR} ry={CR}
-                fill="rgba(0,0,0,0.12)" />
-              {/* Main body — Deep Teal solid soft-square */}
+                fill="none" stroke={isMetaExpanded ? '#00897B' : '#B0BEC5'} strokeWidth="1.5" />
+              {/* Main body — Deep Teal solid (Zero Gray: no gradient opacity) */}
               <rect x={0} y={0} width={W} height={H}
                 rx={CR} ry={CR}
-                fill={`url(#metaSoftGrad-${mi})`}
-                stroke={isMetaExpanded ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)'}
+                fill="#004D40"
+                stroke={isMetaExpanded ? '#FFFFFF' : '#80CBC4'}
                 strokeWidth={isMetaExpanded ? 2.5 : 1.5} />
-              {/* Glass highlight (top-left) */}
-              <rect x={8} y={4} width={W * 0.5} height={H * 0.3}
-                rx={CR / 2} ry={CR / 2}
-                fill={`url(#metaGlassGrad-${mi})`} />
               {/* Expand indicator */}
-              <text x="18" y={H / 2 + 1} textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="10" style={{ pointerEvents: 'none' }}>
+              <text x="18" y={H / 2 + 1} textAnchor="middle" fill="#B2DFDB" fontSize="10" style={{ pointerEvents: 'none' }}>
                 {isMetaExpanded ? '▼' : '▶'}
               </text>
               {/* Label */}
-              <text x={W / 2 + 4} y={H / 2 - 6} textAnchor="middle" fill="white" fontSize="14" fontWeight="700"
-                style={{ pointerEvents: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
+              <text x={W / 2 + 4} y={H / 2 - 6} textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="700"
+                style={{ pointerEvents: 'none' }}>
                 {mf.config?.icon || '📂'} {mf.name}
               </text>
               {/* Stats */}
-              <text x={W / 2 + 4} y={H / 2 + 12} textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10" style={{ pointerEvents: 'none' }}>
+              <text x={W / 2 + 4} y={H / 2 + 12} textAnchor="middle" fill="#B2DFDB" fontSize="10" style={{ pointerEvents: 'none' }}>
                 {mf.totalTasks} משימות · {mf.totalClients} לקוחות
               </text>
               {/* P1→P2 Sync indicator: shows on P2 meta-folder */}
               {mf.p1SyncPct != null && (
                 <>
                   <rect x={W - 56} y={-12} width={56} height={18} rx={9} ry={9}
-                    fill={mf.p1SyncReady ? '#2E7D32' : '#FF8F00'} fillOpacity={0.9}
-                    stroke="white" strokeWidth={1} strokeOpacity={0.5} />
+                    fill={mf.p1SyncReady ? '#2E7D32' : '#FF8F00'}
+                    stroke="#FFFFFF" strokeWidth={1} />
                   <text x={W - 28} y={1} textAnchor="middle" fill="white" fontSize="8" fontWeight="700" style={{ pointerEvents: 'none' }}>
                     {mf.p1SyncReady ? '✓' : '⟳'} P1 {mf.p1SyncPct}%
                   </text>
@@ -1684,7 +1694,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             style={{
               left: sf.x,
               top: sf.y,
-              filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))',
+              filter: 'drop-shadow(0 4px 6px #0000001A)',
               transform: 'translate(-50%, -50%)',
               cursor: 'grab',
             }}
@@ -1783,10 +1793,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 transition={{ delay: i * 0.08 + si * 0.05 + 0.1, type: 'spring', stiffness: 200 }}
                 whileHover={{
                   scale: 1.15,
-                  boxShadow: '0 0 25px rgba(0,172,193,0.8), 0 0 50px rgba(0,172,193,0.4)',
+                  boxShadow: '0 0 25px #00ACC1CC, 0 0 50px #00ACC166',
                   filter: 'brightness(1.2)',
                 }}
-                onClick={(e) => { e.stopPropagation(); toggleBranchExpand(branch.category); }}
                 data-node-draggable
                 onPointerDown={(e) => {
                   // Tier sub-node drag: move this tier + all its client children
@@ -1940,9 +1949,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     style={{
                       width: 18,
                       height: 18,
-                      backgroundColor: 'rgba(255,255,255,0.95)',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                      border: '1px solid rgba(0,0,0,0.1)',
+                      backgroundColor: '#FFFFFF',
+                      boxShadow: '0 1px 3px #00000033',
+                      border: '1px solid #B0BEC5',
                       display: isHovered ? 'flex' : 'none',
                     }}
                     onClick={(e) => {
@@ -1956,7 +1965,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     }}
                     title="מחק משימה"
                   >
-                    <Trash2 className="w-2.5 h-2.5 text-slate-500 hover:text-red-500" />
+                    <Trash2 className="w-2.5 h-2.5 text-[#78909C] hover:text-red-500" />
                   </button>
 
                   {/* Client display name — Zero Gray: black bold text */}
@@ -2013,7 +2022,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                           height: '100%',
                           width: `${(client.completedTasks / client.totalTasks) * 100}%`,
                           backgroundColor: diamondColor,
-                          opacity: 0.8,
                           borderRadius: '0 0 999px 999px',
                           transition: 'width 0.3s ease',
                         }}
@@ -2030,8 +2038,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         height: 20,
                         fontSize: '9px',
                         backgroundColor: client.overdueTasks > 0 ? '#D32F2F' : diamondColor,
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                        border: '1.5px solid rgba(255,255,255,0.8)',
+                        boxShadow: '0 1px 3px #00000040',
+                        border: '1.5px solid #FFFFFF',
                       }}
                     >
                       {client.totalTasks - client.completedTasks}
@@ -2044,9 +2052,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     style={{
                       width: 20,
                       height: 20,
-                      backgroundColor: isFocused ? '#06B6D4' : 'rgba(255,255,255,0.85)',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                      border: isFocused ? '1.5px solid #0891B2' : '1.5px solid rgba(0,0,0,0.1)',
+                      backgroundColor: isFocused ? '#06B6D4' : '#FFFFFF',
+                      boxShadow: '0 1px 3px #00000033',
+                      border: isFocused ? '1.5px solid #0891B2' : '1.5px solid #B0BEC5',
                     }}
                     onClick={(e) => toggleClientFocus(client.name, e)}
                     title={isFocused ? 'הסר מפוקוס' : 'סמן כפוקוס'}
@@ -2072,7 +2080,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-purple-200 p-3 max-w-[240px]">
+          <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-300 p-3 max-w-[240px]">
             <div className="flex items-center gap-2 mb-2">
               <div className="p-1.5 bg-purple-100 rounded-lg">
                 <Cloud className="w-4 h-4 text-purple-600" />
@@ -2106,40 +2114,40 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       <div className="absolute top-3 left-3 z-40 flex flex-col gap-1.5">
         <button
           onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
-          className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white/90 backdrop-blur-sm shadow-lg border border-white/20 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-all"
+          className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white shadow-lg border-2 border-[#B0BEC5] text-[#37474F] hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-all"
           title={isFullscreen ? 'יציאה ממסך מלא (Esc)' : 'מסך מלא'}
         >
           {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
-          className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white/90 backdrop-blur-sm shadow-lg border border-white/20 text-slate-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all"
+          className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white shadow-lg border-2 border-[#B0BEC5] text-[#37474F] hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all"
           title="הגדל"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
-          className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white/90 backdrop-blur-sm shadow-lg border border-white/20 text-slate-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all"
+          className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white shadow-lg border-2 border-[#B0BEC5] text-[#37474F] hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all"
           title="הקטן"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); handleFitAll(); }}
-          className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white/90 backdrop-blur-sm shadow-lg border border-white/20 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all"
+          className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white shadow-lg border-2 border-[#B0BEC5] text-[#37474F] hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all"
           title="התאם הכל"
         >
           <Move className="w-4 h-4" />
         </button>
         {/* Zoom level indicator */}
-        <div className="flex items-center justify-center h-7 rounded-lg bg-white/80 backdrop-blur-sm shadow border border-white/20 text-[10px] text-slate-500 font-medium">
+        <div className="flex items-center justify-center h-7 rounded-lg bg-white shadow border-2 border-[#B0BEC5] text-[10px] text-[#37474F] font-medium">
           {Math.round(zoom * 100)}%
         </div>
 
         {/* Spacing / Distance slider */}
-        <div className="mt-2 flex flex-col items-center gap-1 bg-white/90 backdrop-blur-sm rounded-[32px] shadow-lg border border-white/20 px-2 py-2" onClick={(e) => e.stopPropagation()}>
-          <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
+        <div className="mt-2 flex flex-col items-center gap-1 bg-white rounded-[32px] shadow-lg border-2 border-[#B0BEC5] px-2 py-2" onClick={(e) => e.stopPropagation()}>
+          <SlidersHorizontal className="w-3.5 h-3.5 text-[#37474F]" />
           <input
             type="range"
             min="0.5"
@@ -2151,16 +2159,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             style={{ writingMode: 'horizontal-tb' }}
             title={`מרווח: ${Math.round(spacingFactor * 100)}%`}
           />
-          <span className="text-[9px] text-slate-400">{Math.round(spacingFactor * 100)}%</span>
+          <span className="text-[9px] text-[#37474F]">{Math.round(spacingFactor * 100)}%</span>
         </div>
 
         {/* Crisis Mode toggle */}
         <button
           onClick={(e) => { e.stopPropagation(); setCrisisMode(prev => !prev); }}
-          className={`flex items-center justify-center w-9 h-9 rounded-[32px] backdrop-blur-sm shadow-lg border transition-all ${
+          className={`flex items-center justify-center w-9 h-9 rounded-[32px] shadow-lg border-2 transition-all ${
             crisisMode
               ? 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600'
-              : 'bg-white/90 text-slate-600 border-white/20 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200'
+              : 'bg-white text-[#37474F] border-[#B0BEC5] hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200'
           }`}
           title={crisisMode ? 'מצב חירום פעיל — לחץ לביטול' : 'מצב חירום — סנן משימות לא דחופות'}
         >
@@ -2171,7 +2179,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {Object.keys(manualPositions).length > 0 && (
           <button
             onClick={(e) => { e.stopPropagation(); setManualPositions({}); setAutoFitDone(false); localStorage.removeItem(POSITIONS_STORAGE_KEY); }}
-            className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white/90 backdrop-blur-sm shadow-lg border border-white/20 text-slate-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all text-[10px] font-medium"
+            className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white shadow-lg border-2 border-[#B0BEC5] text-[#455A64] hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all text-[10px] font-medium"
             title="איפוס מיקומים ידניים"
           >
             ↺
@@ -2183,7 +2191,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
       {/* ── Crisis Mode Banner ── */}
       {crisisMode && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 bg-amber-500/90 backdrop-blur-sm text-white rounded-full px-4 py-1.5 shadow-lg text-xs font-bold flex items-center gap-2">
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 bg-amber-500 text-white rounded-full px-4 py-1.5 shadow-lg text-xs font-bold flex items-center gap-2">
           <span>⚡</span>
           <span>מצב חירום — מוצגות רק משימות דחופות</span>
           <button onClick={() => setCrisisMode(false)} className="hover:bg-amber-600 rounded-full p-0.5 ml-1">
@@ -2195,9 +2203,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       {/* ── Pan hint (shows briefly on first load) ── */}
       {!autoFitDone && (
         <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl px-6 py-4 text-center">
-            <Move className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-            <p className="text-sm text-slate-600 font-medium">מחשב תצוגה...</p>
+          <div className="bg-white rounded-2xl shadow-xl border-2 border-[#B0BEC5] px-6 py-4 text-center">
+            <Move className="w-8 h-8 text-[#455A64] mx-auto mb-2" />
+            <p className="text-sm text-[#000000] font-medium">מחשב תצוגה...</p>
           </div>
         </div>
       )}
@@ -2206,7 +2214,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       <AnimatePresence>
         {tooltip && (
           <motion.div
-            className="fixed z-[10000] backdrop-blur-xl bg-white/80 rounded-[32px] shadow-2xl border border-white/20 p-3 pointer-events-none"
+            className="fixed z-[10000] bg-white rounded-[32px] shadow-2xl border-2 border-[#455A64] p-3 pointer-events-none"
             style={{
               left: Math.min(tooltip.x + 15, window.innerWidth - 220),
               top: tooltip.y - 10,
@@ -2218,11 +2226,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           >
             <div className="flex items-center gap-2 mb-1.5">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tooltip.color }} />
-              <span className="font-bold text-sm text-slate-800">{tooltip.displayName || tooltip.name}</span>
+              <span className="font-bold text-sm text-[#000000]">{tooltip.displayName || tooltip.name}</span>
               {tooltip.nickname && tooltip.nickname !== tooltip.name && (
-                <span className="text-[10px] text-slate-400">({tooltip.name})</span>
+                <span className="text-[10px] text-[#455A64]">({tooltip.name})</span>
               )}
-              <span className="text-[10px] bg-white/50 text-[#008291] px-1.5 rounded-full">{tooltip.tierIcon} {tooltip.tierLabel}</span>
+              <span className="text-[10px] bg-[#E0F2F1] text-[#008291] px-1.5 rounded-full">{tooltip.tierIcon} {tooltip.tierLabel}</span>
               {tooltip.isFilingReady && (
                 <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded font-semibold">מוכן לדיווח</span>
               )}
@@ -2231,23 +2239,23 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               )}
             </div>
             {tooltip.topTaskTitle && (
-              <p className="text-[11px] text-slate-500 mb-1 truncate max-w-[200px]">📋 {tooltip.topTaskTitle}</p>
+              <p className="text-[11px] text-[#37474F] mb-1 truncate max-w-[200px]">📋 {tooltip.topTaskTitle}</p>
             )}
-            <div className="flex items-center gap-3 text-[11px] text-slate-600">
+            <div className="flex items-center gap-3 text-[11px] text-[#000000]">
               <span>{tooltip.total} משימות</span>
               <span className="text-green-600">{tooltip.completed} הושלמו</span>
               {tooltip.overdue > 0 && (
                 <span style={{ color: ZERO_PANIC.purple }}>{tooltip.overdue} באיחור</span>
               )}
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">גרור להזיז · לחיצה כפולה → לוח העבודה</p>
+            <p className="text-[10px] text-[#455A64] mt-1">גרור להזיז · לחיצה כפולה → לוח העבודה</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* ── Client Task Drawer (Sheet) ── */}
       <Sheet open={!!drawerClient} onOpenChange={(open) => { if (!open) { setDrawerClient(null); setDrawerDepartment(null); setHighlightTaskId(null); } }}>
-        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col border-l border-white/20 rounded-l-[32px]" dir="rtl" style={{ backgroundColor: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col border-l-2 border-[#B0BEC5] rounded-l-[32px]" dir="rtl" style={{ backgroundColor: '#FFFFFF' }}>
           {drawerClient && (() => {
             // Filter by client name, and optionally by department (P-branch context)
             const allClientTasks = tasks.filter(t => t.client_name === drawerClient.name);
@@ -2329,7 +2337,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               return (
                 <React.Fragment key={task.id}>
                   <div
-                    className={`flex items-center gap-2 px-4 py-2.5 bg-white/70 rounded-[24px] shadow-sm mb-2 mx-2 hover:bg-white/90 hover:shadow-md transition-all cursor-pointer group ${isHighlighted ? 'ring-2 ring-cyan-500 bg-cyan-50/70' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-[24px] shadow-sm mb-2 mx-2 border border-[#E0E0E0] hover:shadow-md transition-all cursor-pointer group ${isHighlighted ? 'ring-2 ring-cyan-500 bg-cyan-50' : ''}`}
                     style={{ paddingRight: `${16 + depth * 20}px` }}
                     onClick={() => {
                       // Modal Law: click opens QuickAdd in edit mode
@@ -2360,11 +2368,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
                     <div className="flex-1 min-w-0">
                       {/* Modal Law: no inline editing — click row to open full dialog */}
-                      <p className="text-sm text-slate-800 truncate">
+                      <p className="text-sm text-[#000000] truncate">
                         {task.title}
                       </p>
                       {task.due_date && (
-                        <p className="text-[10px] text-slate-400">{format(new Date(task.due_date), 'd/M', { locale: he })}</p>
+                        <p className="text-[10px] text-[#455A64]">{format(new Date(task.due_date), 'd/M', { locale: he })}</p>
                       )}
                     </div>
                     <Badge className={`${sts.color} text-[9px] px-1.5 py-0 shrink-0`}>{sts.text}</Badge>
@@ -2380,7 +2388,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         if (clickTimerRef.current) { clearTimeout(clickTimerRef.current); clickTimerRef.current = null; }
                         setDrawerSubTaskParent(task);
                       }}
-                      className="p-1 rounded-[32px] hover:bg-emerald-50 text-slate-300 hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                      className="p-1 rounded-[32px] hover:bg-emerald-50 text-[#B0BEC5] hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-all shrink-0"
                       title="הוסף תת-משימה"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -2397,25 +2405,25 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             return (
               <>
                 {/* Drawer Header */}
-                <div className="px-5 pt-5 pb-3 border-b border-white/20 bg-white/40 backdrop-blur-md rounded-tr-[32px]">
+                <div className="px-5 pt-5 pb-3 border-b-2 border-[#E0E0E0] bg-white rounded-tr-[32px]">
                   <SheetHeader className="text-right">
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: drawerClient.color }} />
                       <SheetTitle className="text-base">{drawerClient.displayName || drawerClient.name}</SheetTitle>
                       {drawerDepartment && (
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 rounded-full border border-slate-200">{drawerDepartment}</span>
+                        <span className="text-[10px] bg-[#E0F2F1] text-[#004D40] px-1.5 rounded-full border border-[#80CBC4]">{drawerDepartment}</span>
                       )}
-                      <span className="text-[10px] bg-white/50 text-[#008291] px-1.5 rounded-full">{drawerClient.tierIcon} {drawerClient.tierLabel}</span>
+                      <span className="text-[10px] bg-[#E0F2F1] text-[#008291] px-1.5 rounded-full">{drawerClient.tierIcon} {drawerClient.tierLabel}</span>
                       <button
                         onClick={() => toggleClientFocus(drawerClient.name)}
-                        className={`p-1 rounded-full transition-colors ${focusedClients.has(drawerClient.name) ? 'bg-cyan-100 text-cyan-600' : 'bg-white/50 text-slate-400 hover:text-cyan-500'}`}
+                        className={`p-1 rounded-full transition-colors ${focusedClients.has(drawerClient.name) ? 'bg-cyan-100 text-cyan-600' : 'bg-[#E0F2F1] text-[#455A64] hover:text-cyan-500'}`}
                         title={focusedClients.has(drawerClient.name) ? 'הסר מפוקוס' : 'סמן כפוקוס'}
                       >
                         <Star className="w-3.5 h-3.5" style={{ fill: focusedClients.has(drawerClient.name) ? 'currentColor' : 'none' }} />
                       </button>
                     </div>
                     <SheetDescription className="text-right">
-                      <span className="text-xs text-slate-500">{activeTasks.length} פעילות · {completedTasks.length} הושלמו</span>
+                      <span className="text-xs text-[#37474F]">{activeTasks.length} פעילות · {completedTasks.length} הושלמו</span>
                     </SheetDescription>
                   </SheetHeader>
                   <div className="flex gap-2 mt-3">
@@ -2442,14 +2450,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 {/* Active Tasks List */}
                 <div className="flex-1 overflow-y-auto px-1 py-2">
                   {rootActive.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
-                      <CheckCircle className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                    <div className="text-center py-8 text-[#455A64]">
+                      <CheckCircle className="w-8 h-8 mx-auto mb-2 text-[#B0BEC5]" />
                       <p className="text-sm">אין משימות פעילות</p>
                     </div>
                   ) : zoneGroups ? (
                     zoneGroups.map(group => (
                       <div key={group.zone}>
-                        <div className="px-4 py-1.5 text-[10px] font-bold text-[#008291]/60 bg-white/30 backdrop-blur-sm sticky top-0 border-b border-white/20">
+                        <div className="px-4 py-1.5 text-[10px] font-bold text-[#008291] bg-[#E0F2F1] sticky top-0 border-b border-[#B0BEC5]">
                           📍 {group.zone}
                         </div>
                         {group.tasks.map(task => renderTask(task, 0))}
@@ -2464,7 +2472,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <div className="border-t mt-2">
                       <button
                         onClick={() => setShowDrawerCompleted(!showDrawerCompleted)}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-slate-500 hover:bg-white/40 transition-colors rounded-[32px] mx-2"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-[#37474F] hover:bg-[#E0F2F1] transition-colors rounded-[32px] mx-2"
                       >
                         <ChevronDown className={`w-3 h-3 transition-transform ${showDrawerCompleted ? '' : 'rotate-[-90deg]'}`} />
                         <CheckCircle className="w-3 h-3 text-green-500" />
@@ -2475,7 +2483,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         return (
                           <div
                             key={task.id}
-                            className="flex items-center gap-2 px-4 py-2 bg-white/40 rounded-[24px] mx-2 mb-1.5 hover:bg-white/60 cursor-pointer opacity-50 transition-all"
+                            className="flex items-center gap-2 px-4 py-2 bg-[#F5F5F5] rounded-[24px] mx-2 mb-1.5 hover:bg-[#EEEEEE] cursor-pointer transition-all"
                             onClick={() => setDrawerEditTask(task)}
                           >
                             <button
@@ -2485,7 +2493,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                             >
                               <Check className="w-2 h-2 text-white" />
                             </button>
-                            <p className="text-xs text-slate-400 flex-1 truncate line-through">{task.title}</p>
+                            <p className="text-xs text-[#78909C] flex-1 truncate line-through">{task.title}</p>
                           </div>
                         );
                       })}
@@ -2540,13 +2548,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       {/* ── Focus Mode Indicator ── */}
       {focusMode && selectedBranch && (
         <motion.div
-          className="absolute bottom-4 right-4 z-30 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-md border border-white/20 text-xs text-slate-600"
+          className="absolute bottom-4 right-4 z-30 bg-white rounded-lg px-3 py-1.5 shadow-md border-2 border-[#B0BEC5] text-xs text-[#000000]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
           Spotlight: <strong>{selectedBranch}</strong>
           <button
-            className="mr-2 text-slate-400 hover:text-gray-700"
+            className="mr-2 text-[#455A64] hover:text-[#000000]"
             onClick={() => setSelectedBranch(null)}
           >
             ×
@@ -2556,7 +2564,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
       {/* ── Fullscreen exit hint ── */}
       {isFullscreen && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 bg-white/80 backdrop-blur-sm rounded-full px-4 py-1.5 shadow-md border border-white/20 text-xs text-slate-500">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 bg-white rounded-full px-4 py-1.5 shadow-md border-2 border-[#B0BEC5] text-xs text-[#000000]">
           ESC ליציאה ממסך מלא
         </div>
       )}

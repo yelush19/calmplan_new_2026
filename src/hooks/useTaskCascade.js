@@ -109,48 +109,57 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
         const service = getServiceForTask(task);
         const subDueDate = getSubTaskDueDate(task.due_date || task.date);
         if (service?.key === 'payroll') {
-          const buildChild = (svc, phase, label) => ({
-            serviceKey: svc.serviceKey,
-            title: `${svc.title} - ${task.client_name}`,
-            client_name: task.client_name,
-            client_id: task.client_id,
-            category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
-            status: 'not_started',
-            branch: 'P1',
-            due_date: subDueDate,
-            report_month: task.report_month,
-            report_year: task.report_year,
-            context: 'work',
-            is_recurring: true,
-            workflow_phase: phase,
-            master_task_id: task.id,
-            triggered_by: task.id,
-            source: 'payroll_cascade',
-          });
+          const buildChild = (svc, phase, label) => {
+            // Initialize process_steps from template
+            const templateSteps = getTaskProcessSteps({ category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title });
+            return {
+              serviceKey: svc.serviceKey,
+              title: `${svc.title} - ${task.client_name}`,
+              client_name: task.client_name,
+              client_id: task.client_id,
+              category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
+              status: 'not_started',
+              branch: 'P1',
+              due_date: subDueDate,
+              report_month: task.report_month,
+              report_year: task.report_year,
+              context: 'work',
+              is_recurring: true,
+              workflow_phase: phase,
+              master_task_id: task.id,
+              triggered_by: task.id,
+              source: 'payroll_cascade',
+              process_steps: templateSteps,
+            };
+          };
           tasksToCreate = [
             ...PHASE_B_SERVICES.map(s => buildChild(s, 'phase_b', 'שלב ב\'')),
             ...PHASE_C_SERVICES.map(s => buildChild(s, 'phase_c', 'שלב ג\'')),
           ];
         } else if (service?.key === 'bookkeeping') {
           const existingCategories = new Set(siblings.map(t => t.category));
-          const buildChild = (svc, phase) => ({
-            serviceKey: svc.serviceKey,
-            title: `${svc.title} - ${task.client_name}`,
-            client_name: task.client_name,
-            client_id: task.client_id,
-            category: svc.createCategory || svc.title,
-            status: 'not_started',
-            branch: 'P2',
-            due_date: subDueDate,
-            report_month: task.report_month,
-            report_year: task.report_year,
-            context: 'work',
-            is_recurring: true,
-            workflow_phase: phase,
-            master_task_id: task.id,
-            triggered_by: task.id,
-            source: 'bookkeeping_cascade',
-          });
+          const buildChild = (svc, phase) => {
+            const templateSteps = getTaskProcessSteps({ category: svc.createCategory || svc.title });
+            return {
+              serviceKey: svc.serviceKey,
+              title: `${svc.title} - ${task.client_name}`,
+              client_name: task.client_name,
+              client_id: task.client_id,
+              category: svc.createCategory || svc.title,
+              status: 'not_started',
+              branch: 'P2',
+              due_date: subDueDate,
+              report_month: task.report_month,
+              report_year: task.report_year,
+              context: 'work',
+              is_recurring: true,
+              workflow_phase: phase,
+              master_task_id: task.id,
+              triggered_by: task.id,
+              source: 'bookkeeping_cascade',
+              process_steps: templateSteps,
+            };
+          };
           tasksToCreate = [
             ...P2_PHASE_B_SERVICES.filter(s => !existingCategories.has(s.createCategory)).map(s => buildChild(s, 'phase_b')),
             ...P2_PHASE_C_SERVICES.filter(s => !existingCategories.has(s.createCategory)).map(s => buildChild(s, 'phase_c')),
