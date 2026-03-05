@@ -256,7 +256,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
   return (
     <div className="bg-white rounded-2xl border overflow-x-auto">
       {/* ── Month navigation header ── */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-[#FAFBFC]">
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-white">
         <div className="flex items-center gap-2">
           <button onClick={goToPrevMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-[#E0E0E0] transition-colors text-[#263238] text-xs">
             <ChevronRight className="w-4 h-4" />
@@ -304,14 +304,14 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       <>
 
       {/* Header - days of month */}
-      <div className="flex border-b bg-[#FAFBFC] sticky top-0 z-10">
+      <div className="flex border-b bg-white sticky top-0 z-10">
         <div className="w-40 shrink-0 p-2 text-sm font-bold text-[#000000] border-l">משימה / לקוח</div>
         <div className="flex-1 flex">
           {days.map(day => {
             const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
             return (
               <div key={day.toISOString()}
-                className={`flex-1 text-center text-[10px] p-1 border-l border-gray-100
+                className={`flex-1 text-center text-[10px] p-1 border-l border-[#000000]/20
                   ${day.getDay() === 6 ? 'bg-violet-50' : ''}
                   ${isToday ? 'bg-blue-100 font-bold text-blue-700' : ''}`}>
                 {format(day, 'd')}
@@ -326,7 +326,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
         const { assignment, laneCount } = laneData[clientName] || { assignment: new Map(), laneCount: 1 };
         const rowHeight = laneCount * (LANE_HEIGHT + LANE_GAP) + LANE_GAP;
         return (
-          <div key={clientName} className="flex border-b hover:bg-[#F5F5F5] transition-colors">
+          <div key={clientName} className="flex border-b hover:bg-white transition-colors">
             <div className="w-40 shrink-0 p-2 text-sm text-[#000000] border-l flex items-center">
               <span className="font-medium truncate">{clientName}</span>
             </div>

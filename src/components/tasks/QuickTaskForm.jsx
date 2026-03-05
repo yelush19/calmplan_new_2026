@@ -13,7 +13,7 @@ export default function QuickTaskForm({ quadrant, onClose, onSave }) {
     title: "",
     description: "",
     category: "work",
-    estimated_minutes: 30,
+    estimated_minutes: 15,
     // Set priority and importance based on quadrant
     priority: getDefaultPriority(quadrant),
     importance: getDefaultImportance(quadrant)
