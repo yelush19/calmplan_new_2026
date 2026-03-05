@@ -766,6 +766,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     onFocusHandled?.();
   }, [focusClientName, focusTaskId, clientNodes]);
 
+  // ── Staleness guard: discard saved positions that drifted too far from computed ──
+  // When data changes (clients added/removed), computed positions shift but saved
+  // absolute positions remain — causing nodes to appear "lost" far from their parent.
+  const STALE_THRESHOLD = 400; // px — if saved pos is >400px from computed, discard it
+  const guardPos = (savedPos, computedX, computedY) => {
+    if (!savedPos || typeof savedPos.x !== 'number') return { x: computedX, y: computedY };
+    const dx = savedPos.x - computedX;
+    const dy = savedPos.y - computedY;
+    if (dx * dx + dy * dy > STALE_THRESHOLD * STALE_THRESHOLD) return { x: computedX, y: computedY };
+    return savedPos;
+  };
+
   // ══════════════════════════════════════════════════════════════
   // LAYOUT: COMPACT GRAPE-CLUSTER — 50% shorter arms, tier sub-nodes
   // Hub → Meta(P1-P4) → Dept → Tier(ננו/בינוני/גדול) → Client mini-fan
@@ -849,11 +861,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
         const tierKey = `tier-${branch.category}-${sf.key}`;
         const tierPos = manualPositions[tierKey];
+        const guardedTier = guardPos(tierPos, tx, ty);
         return {
           ...sf,
           key: tierKey,
-          x: tierPos?.x ?? tx,
-          y: tierPos?.y ?? ty,
+          x: guardedTier.x,
+          y: guardedTier.y,
           angle: tierAngle,
           parentX: finalBx,
           parentY: finalBy,
@@ -898,8 +911,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
           const fbKey = `func-${branch.category}-${tierNode.key}-${bucketKey}`;
           const fbManual = manualPositions[fbKey];
-          const fbX = fbManual?.x ?? (tierNode.x + Math.cos(bucketAngle) * FUNC_DIST);
-          const fbY = fbManual?.y ?? (tierNode.y + Math.sin(bucketAngle) * FUNC_DIST);
+          const computedFbXi = tierNode.x + Math.cos(bucketAngle) * FUNC_DIST;
+          const computedFbYi = tierNode.y + Math.sin(bucketAngle) * FUNC_DIST;
+          const guardedFbI = guardPos(fbManual, computedFbXi, computedFbYi);
+          const fbX = guardedFbI.x;
+          const fbY = guardedFbI.y;
 
           functionBubblePositions.push({
             key: fbKey,
@@ -954,8 +970,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               cDist = ring2R;
             }
 
-            const absX = clientPos?.x ?? (fbX + Math.cos(cAngle) * cDist);
-            const absY = clientPos?.y ?? (fbY + Math.sin(cAngle) * cDist);
+            const computedCX = fbX + Math.cos(cAngle) * cDist;
+            const computedCY = fbY + Math.sin(cAngle) * cDist;
+            const guardedClient = guardPos(clientPos, computedCX, computedCY);
+            const absX = guardedClient.x;
+            const absY = guardedClient.y;
 
             clientPositions.push({
               ...client,
@@ -986,11 +1005,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           const clientPos = manualPositions[clientKey];
           const cAngle = n <= 1 ? deptAngle : (deptAngle - fanArc / 2) + (j / (n - 1)) * fanArc;
           const cDist = CLIENT_FROM_FUNC;
+          const computedFbX = finalBx + Math.cos(cAngle) * cDist;
+          const computedFbY = finalBy + Math.sin(cAngle) * cDist;
+          const guardedFb = guardPos(clientPos, computedFbX, computedFbY);
           clientPositions.push({
             ...client,
             radius: nodeRadius,
-            x: clientPos?.x ?? (finalBx + Math.cos(cAngle) * cDist),
-            y: clientPos?.y ?? (finalBy + Math.sin(cAngle) * cDist),
+            x: guardedFb.x,
+            y: guardedFb.y,
             branchX: finalBx,
             branchY: finalBy,
           });
