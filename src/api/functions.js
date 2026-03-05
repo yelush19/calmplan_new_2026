@@ -1586,6 +1586,76 @@ export const cleanupYearEndOnlyTasks = async () => {
   }
 };
 
+// ===== P3 GHOST CLEANUP: Delete placeholder/orphan tasks in P3 =====
+// Removes tasks that: have no title/empty title, no client, no category,
+// or are placeholder stubs that aren't actionable.
+export const cleanupP3GhostTasks = async () => {
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  let deleted = 0;
+
+  try {
+    const allTasks = await entities.Task.list();
+    const allClients = await entities.Client.list();
+    const activeClientNames = new Set(
+      allClients.filter(c => c.status === 'active' && !c.is_deleted).map(c => c.name)
+    );
+
+    // P3 categories (admin/other) — catch-all for ghost tasks
+    const p3Categories = new Set([
+      'work_client_management', 'work_annual_reports', 'דוח שנתי',
+      'personal', 'אחר', 'כללי', 'work_general', 'work_admin',
+      'אדמיניסטרציה', 'לחזור ללקוח', 'work_callback',
+      'פגישה', 'work_meeting', 'מעקב שיווק', 'work_marketing',
+    ]);
+
+    const ghostTasks = allTasks.filter(task => {
+      // Ghost condition 1: No title or empty title
+      if (!task.title || task.title.trim() === '') return true;
+
+      // Ghost condition 2: P3 category with no client AND no meaningful content
+      const isP3 = p3Categories.has(task.category) ||
+        (task.context === 'work' && !task.category);
+      if (isP3 && !task.client_name && !task.description && task.status === 'not_started') {
+        return true;
+      }
+
+      // Ghost condition 3: References a deleted/non-existent client
+      if (task.client_name && task.context === 'work' &&
+          !activeClientNames.has(task.client_name) &&
+          task.status !== 'production_completed') {
+        return true;
+      }
+
+      // Ghost condition 4: Placeholder titles (generic stubs)
+      const placeholderPatterns = [
+        /^placeholder/i, /^test\s/i, /^TODO$/i, /^$/,
+        /^משימה חדשה$/, /^ללא כותרת$/,
+      ];
+      if (placeholderPatterns.some(p => p.test(task.title?.trim()))) return true;
+
+      return false;
+    });
+
+    log.push(`${timestamp()} נמצאו ${ghostTasks.length} משימות רפאים ב-P3`);
+
+    for (const task of ghostTasks) {
+      try {
+        await entities.Task.delete(task.id);
+        deleted++;
+        log.push(`${timestamp()} נמחקה: "${task.title || '(ריק)'}" [${task.category || 'ללא'}]`);
+      } catch (err) {
+        log.push(`${timestamp()} שגיאה: ${err.message}`);
+      }
+    }
+
+    log.push(`${timestamp()} סה"כ נמחקו ${deleted} משימות רפאים`);
+    return { data: { success: true, deleted, log } };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
+};
+
 // ===== WIPE & RESET: Delete ALL tasks for a given month =====
 // LAW 1.3: Nuclear wipe before generation - DELETE FROM tasks WHERE period = 'MM.YYYY'
 export const wipeAllTasksForMonth = async (params = {}) => {

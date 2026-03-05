@@ -301,16 +301,20 @@ export const ADDITIONAL_SERVICES = {
     label: 'מס"ב סוציאליות',
     dashboard: 'payroll',
     taskType: 'linear',  // Linear task — full chain encoded as steps
+    sequentialSteps: true, // ENFORCE: each step requires previous step to be done
     taskCategories: ['מס"ב סוציאליות', 'work_masav_social'],
     createCategory: 'מס"ב סוציאליות',
-    // Social Security Chain:
-    // send_to_operator(הושלם) → waiting_for_materials → receive_file(הושלם) → לבצע → file_prep → upload → send_receipts
+    // Social Security Chain (ENFORCED LINEAR):
+    // 1. send_to_operator(הושלם) → status: waiting_for_materials (ממתין לקובץ ממתפעל)
+    // 2. receive_file(הושלם) → status: not_started (לבצע - הזנת קובץ משנה)
+    // 3. file_prep + upload(הושלם) → status: sent_for_review
+    // 4. send_receipts(הושלם) → status: production_completed (פותח משלוח אסמכתאות)
     steps: [
       { key: 'send_to_operator', label: 'משלוח קובץ למתפעל', icon: 'send' },
-      { key: 'receive_file',     label: 'קבלת קובץ ממתפעל',  icon: 'inbox' },
-      { key: 'file_prep',        label: 'הכנת קובץ מס"ב',    icon: 'file-text' },
-      { key: 'upload',           label: 'העלאה',              icon: 'upload' },
-      { key: 'send_receipts',    label: 'משלוח אסמכתאות',     icon: 'check-circle' },
+      { key: 'receive_file',     label: 'קבלת קובץ ממתפעל',  icon: 'inbox',       requiresPrev: true },
+      { key: 'file_prep',        label: 'הכנת קובץ מס"ב',    icon: 'file-text',   requiresPrev: true },
+      { key: 'upload',           label: 'העלאה',              icon: 'upload',      requiresPrev: true },
+      { key: 'send_receipts',    label: 'משלוח אסמכתאות',     icon: 'check-circle', requiresPrev: true },
     ],
   },
 
@@ -474,6 +478,30 @@ export function getStepsForTask(task) {
     return service.highComplexitySteps;
   }
   return service.steps;
+}
+
+/**
+ * Check if a step is locked (cannot be toggled) due to sequential enforcement.
+ * For services with sequentialSteps=true, a step is locked unless all previous steps are done.
+ *
+ * @param {Object} task - Task entity
+ * @param {string} stepKey - The step key to check
+ * @returns {boolean} true if the step is locked
+ */
+export function isStepLocked(task, stepKey) {
+  const service = getServiceForTask(task);
+  if (!service?.sequentialSteps) return false;
+
+  const steps = service.steps || [];
+  const currentSteps = task.process_steps || {};
+  const stepIndex = steps.findIndex(s => s.key === stepKey);
+  if (stepIndex <= 0) return false; // First step is never locked
+
+  // Check if ALL previous steps are done
+  for (let i = 0; i < stepIndex; i++) {
+    if (!currentSteps[steps[i].key]?.done) return true;
+  }
+  return false;
 }
 
 /**

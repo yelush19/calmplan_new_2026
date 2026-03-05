@@ -16,6 +16,8 @@ import {
   processTaskCascade,
   computeInsights,
   computeClientNodeState,
+  filterByClientServices,
+  getSubTaskDueDate,
 } from '@/engines/taskCascadeEngine';
 import {
   getServiceForTask,
@@ -68,7 +70,14 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
     // "already production_completed" guard doesn't block when user directly
     // sets status to production_completed via dropdown.
     const cascadeTask = { ...task, process_steps: steps };
-    const cascade = processTaskCascade(cascadeTask, steps, siblings);
+
+    // Service Filtering: find client and pass service_types + payment method
+    const client = clients.find(c => c.name === task.client_name || c.id === task.client_id);
+    const cascadeOptions = {
+      clientServices: client?.service_types || [],
+      clientPaymentMethod: client?.authorities_payment_method || '',
+    };
+    const cascade = processTaskCascade(cascadeTask, steps, siblings, cascadeOptions);
 
     // Apply status from cascade if the update didn't already set status
     const finalUpdates = { ...updates };
@@ -98,15 +107,17 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
       // manually build Phase B+C tasks based on service type
       if (isDirectProduction && tasksToCreate.length === 0) {
         const service = getServiceForTask(task);
+        const subDueDate = getSubTaskDueDate(task.due_date || task.date);
         if (service?.key === 'payroll') {
           const buildChild = (svc, phase, label) => ({
+            serviceKey: svc.serviceKey,
             title: `${svc.title} - ${task.client_name}`,
             client_name: task.client_name,
             client_id: task.client_id,
             category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
             status: 'not_started',
             branch: 'P1',
-            due_date: task.due_date || task.date,
+            due_date: subDueDate,
             report_month: task.report_month,
             report_year: task.report_year,
             context: 'work',
@@ -123,13 +134,14 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
         } else if (service?.key === 'bookkeeping') {
           const existingCategories = new Set(siblings.map(t => t.category));
           const buildChild = (svc, phase) => ({
+            serviceKey: svc.serviceKey,
             title: `${svc.title} - ${task.client_name}`,
             client_name: task.client_name,
             client_id: task.client_id,
             category: svc.createCategory || svc.title,
             status: 'not_started',
             branch: 'P2',
-            due_date: task.due_date || task.date,
+            due_date: subDueDate,
             report_month: task.report_month,
             report_year: task.report_year,
             context: 'work',
@@ -143,6 +155,10 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
             ...P2_PHASE_B_SERVICES.filter(s => !existingCategories.has(s.createCategory)).map(s => buildChild(s, 'phase_b')),
             ...P2_PHASE_C_SERVICES.filter(s => !existingCategories.has(s.createCategory)).map(s => buildChild(s, 'phase_c')),
           ];
+        }
+        // Service Filtering: apply חוק בל יעבור to manually built tasks too
+        if (tasksToCreate.length > 0 && client?.service_types) {
+          tasksToCreate = filterByClientServices(tasksToCreate, client.service_types);
         }
       }
 
@@ -190,7 +206,14 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
     );
 
     const merged = { ...task, process_steps: updatedSteps };
-    const cascade = processTaskCascade(merged, updatedSteps, siblings);
+
+    // Service Filtering: find client and pass service_types + payment method
+    const client = clients.find(c => c.name === task.client_name || c.id === task.client_id);
+    const cascadeOptions = {
+      clientServices: client?.service_types || [],
+      clientPaymentMethod: client?.authorities_payment_method || '',
+    };
+    const cascade = processTaskCascade(merged, updatedSteps, siblings, cascadeOptions);
 
     const updates = { process_steps: updatedSteps };
     if (cascade.statusUpdate) {

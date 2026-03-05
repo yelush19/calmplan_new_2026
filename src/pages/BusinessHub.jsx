@@ -25,7 +25,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { Task, AccountReconciliation, Dashboard } from '@/api/entities';
-import { generateProcessTasks, cleanupYearEndOnlyTasks, dedupTasksForMonth, wipeAllTasksForMonth, previewTaskGeneration } from '@/api/functions';
+import { generateProcessTasks, cleanupYearEndOnlyTasks, cleanupP3GhostTasks, dedupTasksForMonth, wipeAllTasksForMonth, previewTaskGeneration } from '@/api/functions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const StatCard = ({ title, value, icon: Icon, link, isLoading }) => {
@@ -178,6 +178,26 @@ export default function BusinessHubPage() {
       }
     } catch (error) {
       setTaskGenerationResult({ type: 'error', message: 'שגיאה בניקוי משימות' });
+    } finally {
+      setIsGeneratingTasks(false);
+    }
+  };
+
+  const handleCleanupP3Ghosts = async () => {
+    setIsGeneratingTasks(true);
+    setTaskGenerationResult(null);
+    try {
+      const response = await cleanupP3GhostTasks();
+      if (response.data.success) {
+        setTaskGenerationResult({
+          type: 'success',
+          message: `נוקו ${response.data.deleted} משימות רפאים מ-P3`,
+        });
+      } else {
+        setTaskGenerationResult({ type: 'error', message: response.data.error || 'שגיאה בניקוי P3' });
+      }
+    } catch (error) {
+      setTaskGenerationResult({ type: 'error', message: 'שגיאה בניקוי משימות P3' });
     } finally {
       setIsGeneratingTasks(false);
     }
@@ -468,6 +488,15 @@ export default function BusinessHubPage() {
               >
                 <AlertCircle className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
                 הסר כפילויות 02.2026
+              </Button>
+              <Button
+                onClick={handleCleanupP3Ghosts}
+                disabled={isGeneratingTasks}
+                variant="outline"
+                className="w-full mt-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+              >
+                <AlertCircle className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+                ניקוי משימות רפאים P3
               </Button>
             </CardContent>
           </Card>

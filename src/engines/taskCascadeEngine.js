@@ -19,6 +19,9 @@
  *
  * 4. Proactive Insights:
  *    Computes ADHD-friendly summaries: "3 clients need VAT production"
+ *
+ * 5. Service Filtering (בל יעבור):
+ *    NEVER create מס"ב/סוציאליות tasks unless service is active in client card.
  */
 
 import {
@@ -72,6 +75,78 @@ export const PHASE_C_SERVICES = [
 
 // Combined for backward compat
 const POST_PAYROLL_SERVICES = [...PHASE_B_SERVICES, ...PHASE_C_SERVICES];
+
+// ============================================================
+// SERVICE FILTERING (חוק בל יעבור)
+// ============================================================
+// Maps cascade serviceKey → client.service_types key.
+// Used to filter auto-created tasks: only create if the client
+// has the corresponding service flagged as active.
+const CASCADE_SERVICE_TO_CLIENT_SERVICE = {
+  deductions:        'deductions',
+  social_security:   'social_security',
+  payslip_sending:   'payslip_sending',
+  masav_social:      'masav_social',
+  masav_employees:   'masav_employees',
+  masav_authorities: 'masav_authorities',
+  masav_suppliers:   'masav_suppliers',
+  authorities_payment: 'authorities_payment',
+  vat_reporting:     'vat_reporting',
+  tax_advances:      'tax_advances',
+  pnl_reports:       'pnl_reports',
+};
+
+/**
+ * Filter auto-created tasks based on client's active services (service_types[]).
+ * חוק בל יעבור: NEVER create a task for a service the client doesn't have.
+ *
+ * @param {Object[]} tasksToCreate - Array of task blueprints from cascade
+ * @param {string[]} clientServices - client.service_types array
+ * @returns {Object[]} filtered tasks
+ */
+export function filterByClientServices(tasksToCreate, clientServices) {
+  if (!clientServices || clientServices.length === 0) return tasksToCreate;
+  return tasksToCreate.filter(task => {
+    const requiredService = CASCADE_SERVICE_TO_CLIENT_SERVICE[task.serviceKey];
+    // If no mapping exists, allow the task (it's not service-gated)
+    if (!requiredService) return true;
+    return clientServices.includes(requiredService);
+  });
+}
+
+// ============================================================
+// DUE DATE HELPER (15th of next month)
+// ============================================================
+
+/**
+ * Calculate due date for auto-created sub-tasks: 15th of the month AFTER
+ * the parent task's due month.
+ *
+ * @param {string} parentDueDate - YYYY-MM-DD format
+ * @returns {string} YYYY-MM-DD (15th of next month)
+ */
+export function getSubTaskDueDate(parentDueDate) {
+  if (!parentDueDate) {
+    // Fallback: 15th of next month from now
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 15);
+    return nextMonth.toISOString().split('T')[0];
+  }
+  const d = new Date(parentDueDate);
+  const nextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 15);
+  return nextMonth.toISOString().split('T')[0];
+}
+
+// ============================================================
+// PAYMENT METHOD LABELS (for task description injection)
+// ============================================================
+const PAYMENT_METHOD_LABELS = {
+  masav:                'מס"ב',
+  credit_card:          'כרטיס אשראי',
+  bank_standing_order:  'הו"ק בנקאית',
+  standing_order:       'כתב אישור (כ"א)',
+  check:                'המחאה',
+};
 
 // ============================================================
 // P2 BOOKKEEPING WORKFLOW PHASES (Mirror of P1 cascade)
@@ -323,6 +398,9 @@ export function evaluatePayrollStatus(task, updatedSteps) {
 
     result.status = 'production_completed';
 
+    // Due date for sub-tasks: 15th of the month after parent's due date
+    const subDueDate = getSubTaskDueDate(task.due_date || task.date);
+
     // Build auto-created tasks for Phase B (דיווחי רשויות) and Phase C (שירותים נלווים)
     const buildChildTasks = (services, phase, phaseLabel) =>
       services.map(svc => ({
@@ -333,7 +411,7 @@ export function evaluatePayrollStatus(task, updatedSteps) {
         category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
         status: 'not_started',
         branch: 'P1',
-        due_date: task.due_date || task.date,
+        due_date: subDueDate,
         report_month: task.report_month,
         report_year: task.report_year,
         report_period: task.report_period,
@@ -402,6 +480,9 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
 
     const result = { status: 'production_completed' };
 
+    // Due date for sub-tasks: 15th of the month after parent's due date
+    const subDueDate = getSubTaskDueDate(task.due_date || task.date);
+
     // Build auto-created tasks for P2 Phase B (tax reporting) and Phase C (P&L)
     const buildP2Children = (services, phase, phaseLabel) =>
       services.map(svc => ({
@@ -412,7 +493,7 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
         category: svc.createCategory || svc.title,
         status: 'not_started',
         branch: 'P2',
-        due_date: task.due_date || task.date,
+        due_date: subDueDate,
         report_month: task.report_month,
         report_year: task.report_year,
         report_period: task.report_period,
@@ -594,9 +675,10 @@ export function evaluateRelayStatus(task, updatedSteps) {
  * @param {Object} task - The updated task (with new values)
  * @param {Object} updatedSteps - The task's new process_steps
  * @param {Object[]} siblingTasks - All tasks for same client + reporting month
+ * @param {Object} options - { clientServices?: string[], clientPaymentMethod?: string }
  * @returns {Object} { statusUpdate, tasksToCreate, tasksToUpdate }
  */
-export function processTaskCascade(task, updatedSteps, siblingTasks = []) {
+export function processTaskCascade(task, updatedSteps, siblingTasks = [], options = {}) {
   const result = {
     statusUpdate: null,     // { status: string } or null
     tasksToCreate: [],      // new tasks to auto-generate
@@ -667,6 +749,32 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = []) {
     if (evaluation.autoCreateTasks) {
       result.tasksToCreate = evaluation.autoCreateTasks;
     }
+  }
+
+  // ── SERVICE FILTERING (חוק בל יעבור) ──
+  // Filter out auto-created tasks for services the client doesn't have
+  if (result.tasksToCreate.length > 0 && options.clientServices) {
+    result.tasksToCreate = filterByClientServices(result.tasksToCreate, options.clientServices);
+  }
+
+  // ── PAYMENT METHOD INJECTION ──
+  // Inject אמצעי תשלום רשויות into payment-related task descriptions
+  if (result.tasksToCreate.length > 0 && options.clientPaymentMethod) {
+    const methodLabel = PAYMENT_METHOD_LABELS[options.clientPaymentMethod] || options.clientPaymentMethod;
+    result.tasksToCreate = result.tasksToCreate.map(t => {
+      // Inject payment method into tasks that involve תשלום/מס"ב
+      const isPaymentTask = t.category?.includes('מס"ב') ||
+        t.category?.includes('תשלום') ||
+        t.serviceKey?.startsWith('masav_') ||
+        t.serviceKey === 'authorities_payment';
+      if (isPaymentTask) {
+        return {
+          ...t,
+          description: `אמצעי תשלום: ${methodLabel}${t.description ? '\n' + t.description : ''}`,
+        };
+      }
+      return t;
+    });
   }
 
   return result;
