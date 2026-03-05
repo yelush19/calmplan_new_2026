@@ -410,8 +410,9 @@ export default function AutomationRules() {
   };
 
   const handleDueDateChange = (catKey, value, variant = null) => {
-    const day = value ? parseInt(value) : null;
-    const validDay = day && day >= 1 && day <= 31 ? day : null;
+    // Accept raw numeric input; clamp to 1-31 on save
+    const day = value === '' ? null : parseInt(value, 10);
+    const validDay = (day != null && !isNaN(day)) ? Math.max(1, Math.min(31, day)) : null;
     setServiceDueDates(prev => {
       const existing = prev[catKey] || {};
       if (variant) {

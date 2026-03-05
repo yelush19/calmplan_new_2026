@@ -12,11 +12,11 @@ import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 
 // 5 Golden Statuses
 const STATUS_COLORS = {
-  waiting_for_materials: 'bg-amber-300',
-  not_started:           'bg-slate-300',
-  sent_for_review:       'bg-purple-400',
-  needs_corrections:     'bg-orange-400',
-  production_completed:  'bg-emerald-500',
+  waiting_for_materials: 'bg-amber-500',
+  not_started:           'bg-slate-500',
+  sent_for_review:       'bg-purple-600',
+  needs_corrections:     'bg-orange-600',
+  production_completed:  'bg-emerald-600',
 };
 
 // Estimated work-hours → calendar days mapping
@@ -254,7 +254,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
   return (
     <div className="bg-white rounded-2xl border overflow-x-auto">
       {/* ── Month navigation header ── */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-l from-gray-50 to-white">
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-[#FAFBFC]">
         <div className="flex items-center gap-2">
           <button onClick={goToPrevMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 text-xs">
             <ChevronRight className="w-4 h-4" />
@@ -302,8 +302,8 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       <>
 
       {/* Header - days of month */}
-      <div className="flex border-b bg-gray-50 sticky top-0 z-10">
-        <div className="w-40 shrink-0 p-2 text-sm font-medium text-gray-600 border-l">משימה / לקוח</div>
+      <div className="flex border-b bg-[#FAFBFC] sticky top-0 z-10">
+        <div className="w-40 shrink-0 p-2 text-sm font-bold text-[#37474F] border-l">משימה / לקוח</div>
         <div className="flex-1 flex">
           {days.map(day => {
             const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
@@ -389,7 +389,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
         const todayFraction = differenceInDays(new Date(), monthStart) / daysInMonth;
         return (
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10 pointer-events-none"
+            className="absolute top-0 bottom-0 w-1 bg-blue-600 z-10 pointer-events-none"
             style={{ left: `calc(${todayFraction * 100}% + ${160 * (1 - todayFraction)}px)` }}
           />
         );

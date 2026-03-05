@@ -136,6 +136,36 @@ const FUNCTION_BUCKETS = {
 };
 const FUNCTION_BUCKET_ORDER = ['production', 'reports', 'services'];
 
+// ── CATEGORY → FUNCTION BUCKET: determines which bubble a task belongs to ──
+// Iron Rule: ביטוח לאומי / מע"מ / ניכויים → דיווחים (reports)
+//            הכנת שכר / ליתאי              → ייצור (production)
+//            everything else                → שירותים (services)
+const CATEGORY_TO_FUNCTION = {
+  // Reports (דיווחים)
+  'ביטוח לאומי':       'reports',
+  'work_social_security': 'reports',
+  'מע"מ':              'reports',
+  'work_vat_reporting': 'reports',
+  'מע"מ 874':          'reports',
+  'work_vat_874':       'reports',
+  'ניכויים':           'reports',
+  'work_deductions':    'reports',
+  'מקדמות מס':         'reports',
+  'work_tax_advances':  'reports',
+  // Production (ייצור)
+  'שכר':               'production',
+  'work_payroll':       'production',
+  'הכנת שכר':          'production',
+  'ליתאי':             'production',
+  'התאמות':            'production',
+  'work_reconciliation': 'production',
+  'הנהלת חשבונות':     'production',
+  'work_bookkeeping':   'production',
+  'מאזנים':            'production',
+  'דוח שנתי':          'production',
+  'work_annual_reports': 'production',
+};
+
 // Map ALL task categories to P1-P4 department keys
 // ZERO GHOST DATA: SS/Deductions route to שכר (payroll sub-steps, not standalone)
 const CATEGORY_TO_DEPARTMENT = {
@@ -667,14 +697,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           const t = client.tier || 0;
           client._complexitySubFolder = COMPLEXITY_SUB_LABELS[t]?.key || `tier-${t}`;
           client._diamondColor = DIAMOND_COLORS[t] || '#455A64';
-          // ── FUNCTIONAL BRANCHING: assign client to ייצור / דיווחים / שירותים נוספים ──
-          const ws = client.worstStatus || 'not_started';
-          if (ws === 'not_started' || ws === 'needs_corrections') {
-            client._functionBucket = 'production';   // ייצור
-          } else if (ws === 'sent_for_review' || ws === 'production_completed') {
-            client._functionBucket = 'reports';       // דיווחים
+          // ── FUNCTIONAL BRANCHING: assign client by dominant task category ──
+          // Count tasks per function bucket using CATEGORY_TO_FUNCTION mapping
+          const bucketCounts = { production: 0, reports: 0, services: 0 };
+          (client.tasks || []).forEach(task => {
+            const bucket = CATEGORY_TO_FUNCTION[task.category] || 'services';
+            bucketCounts[bucket]++;
+          });
+          // Assign to the bucket with the most tasks (ties → production > reports > services)
+          if (bucketCounts.production >= bucketCounts.reports && bucketCounts.production >= bucketCounts.services) {
+            client._functionBucket = 'production';
+          } else if (bucketCounts.reports >= bucketCounts.services) {
+            client._functionBucket = 'reports';
           } else {
-            client._functionBucket = 'services';      // שירותים נוספים
+            client._functionBucket = 'services';
           }
         });
       }
@@ -898,8 +934,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           bucketGroups[bucket].push(c);
         });
 
-        // Only create function bubbles for buckets that have clients
-        const activeBuckets = FUNCTION_BUCKET_ORDER.filter(b => bucketGroups[b]?.length > 0);
+        // ALWAYS show all 3 function bubbles (ייצור / דיווחים / שירותים) under every diamond
+        const activeBuckets = FUNCTION_BUCKET_ORDER;
         const nBuckets = activeBuckets.length;
         const bucketFanArc = nBuckets <= 1 ? 0 : Math.PI * 0.5; // 90° fan
 
@@ -929,12 +965,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             tierKey: tierNode.key,
             tierX: tierNode.x,
             tierY: tierNode.y,
-            clientCount: bucketGroups[bucketKey].length,
+            clientCount: (bucketGroups[bucketKey] || []).length,
           });
 
           // Position clients as compact fan around this function bubble
-          const bucketClients = bucketGroups[bucketKey];
+          const bucketClients = bucketGroups[bucketKey] || [];
           const n = bucketClients.length;
+          if (n === 0) return; // empty bubble — no clients to position
           const fanArc = n <= 1 ? 0 : Math.min(n * 0.4, 1.2) * Math.PI;
 
           const maxPerRing = 4;
