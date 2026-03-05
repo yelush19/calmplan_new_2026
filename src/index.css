@@ -281,6 +281,9 @@ button:focus-visible {
   }
 
   /* ── Text colors: dark and readable, no faded rgba ── */
+  .text-gray-300 {
+    color: #546E7A !important;
+  }
   .text-gray-400, .text-gray-500 {
     color: #455A64 !important;
   }
