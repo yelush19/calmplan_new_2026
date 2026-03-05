@@ -545,7 +545,7 @@ export default function TasksPage() {
     return (
       <th
         onClick={() => toggleSort(field)}
-        className="px-3 py-2.5 text-right text-xs font-bold text-gray-600 cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap bg-white"
+        className="px-3 py-2.5 text-right text-xs font-bold text-[#37474F] cursor-pointer hover:bg-[#F0F0F0] select-none whitespace-nowrap bg-[#FAFBFC]"
       >
         <div className="flex items-center gap-1">
           {children}
@@ -758,11 +758,11 @@ export default function TasksPage() {
                 <tr className="border-b border-gray-200">
                   <SortHeader field="client_name">לקוח</SortHeader>
                   <SortHeader field="category">סוג דיווח</SortHeader>
-                  <th className="px-3 py-2.5 text-right text-xs font-bold text-gray-600 bg-white">תיאור</th>
+                  <th className="px-3 py-2.5 text-right text-xs font-bold text-[#37474F] bg-[#FAFBFC]">תיאור</th>
                   <SortHeader field="due_date">תאריך יעד</SortHeader>
                   <SortHeader field="status">סטטוס</SortHeader>
                   <SortHeader field="priority">עדיפות</SortHeader>
-                  <th className="px-3 py-2.5 text-right text-xs font-bold text-gray-600 bg-white w-10"></th>
+                  <th className="px-3 py-2.5 text-right text-xs font-bold text-[#37474F] bg-[#FAFBFC] w-10"></th>
                 </tr>
               </thead>
               <tbody>
@@ -772,7 +772,7 @@ export default function TasksPage() {
                     <React.Fragment key={groupKey}>
                       {/* Group header row */}
                       <tr
-                        className="cursor-pointer select-none hover:bg-[#F5F5F5] transition-colors bg-[#F5F5F5]"
+                        className="cursor-pointer select-none hover:bg-[#F0F0F0] transition-colors bg-[#FAFBFC]"
                         onClick={() => toggleStatusGroup(groupKey)}
                       >
                         <td colSpan={7} className="py-2 px-3 border-b border-gray-100">
