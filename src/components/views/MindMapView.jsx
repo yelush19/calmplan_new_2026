@@ -16,26 +16,26 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import { computeComplexityTier, getBubbleRadius, getTierInfo } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 
-// ─── Zero-Panic Palette (Cyan/Teal — NO RED) ───────────────────
+// ─── Zero-Panic Palette (Cyan/Teal — NO RED, NO GRAY) ───────────────────
 const ZERO_PANIC = {
   orange:  '#00acc1',  // Cyan for focus (Due Today / Critical)
   purple:  '#008291',  // Teal for importance (Overdue / Late)
   green:   '#2E7D32',  // Done
   blue:    '#008291',  // Teal — Active / In Progress
-  gray:    '#90A4AE',  // Not Started
+  gray:    '#455A64',  // Zero Gray Policy: dark slate instead of light gray
   amber:   '#FF8F00',  // Waiting / Issue
   teal:    '#008291',  // Primary teal
   cyan:    '#00acc1',  // Secondary cyan
   indigo:  '#3949AB',  // Ready for Reporting
 };
 
-// 5 Golden Statuses
+// 5 Golden Statuses — Zero Gray: vivid colors only
 const STATUS_TO_COLOR = {
-  waiting_for_materials:  ZERO_PANIC.amber,    // ממתין לחומרים
-  not_started:            ZERO_PANIC.gray,     // לבצע
-  sent_for_review:        '#AB47BC',           // הועבר לעיון - purple
-  needs_corrections:      '#F97316',           // לבצע תיקונים - orange
-  production_completed:   ZERO_PANIC.green,    // הושלם ייצור - bright green!
+  waiting_for_materials:  ZERO_PANIC.amber,    // ממתין לחומרים — amber
+  not_started:            '#1565C0',           // לבצע — vivid blue (Zero Gray)
+  sent_for_review:        '#AB47BC',           // הועבר לעיון — purple
+  needs_corrections:      '#F97316',           // לבצע תיקונים — orange
+  production_completed:   ZERO_PANIC.green,    // הושלם ייצור — bright green
 };
 
 // Status labels for bubble display (Iron Rule: must match table exactly)
@@ -67,14 +67,14 @@ function getWorstClientStatus(clientTasks) {
   }, 'production_completed');
 }
 
-// Cascade-aware color overrides for client nodes
+// Cascade-aware color overrides for client nodes (Zero Gray: no slate/gray)
 const NODE_COLOR_MAP = {
   emerald: '#2E7D32',
   blue:    '#1565C0',
   amber:   '#FF8F00',
   teal:    '#00897B',
   sky:     '#0288D1',
-  slate:   '#90A4AE',
+  slate:   '#455A64',
 };
 
 // ─── P1-P4 Process Tree: 4 branches aligned to sidebar hierarchy ───────────
@@ -115,11 +115,17 @@ const BRANCH_CONFIG = {
   'אחר/טיוטות':       { color: '#78909C', icon: '📝', label: 'אחר/טיוטות' },
 };
 
-// Complexity tier labels for sub-grouping — 3 tiers: ננו, בינוני, גדול
+// Diamond Standard: 3 tiers with fixed vivid colors (Zero Gray Policy)
+// ננו = תכלת (Light Cyan), בינוני = טורקיז חי (Teal), גדול = כחול עמוק (Deep Blue)
+const DIAMOND_COLORS = {
+  0: '#00acc1',  // ננו — תכלת
+  1: '#00838F',  // בינוני — טורקיז חי (Teal)
+  2: '#01579B',  // גדול — כחול עמוק
+};
 const COMPLEXITY_SUB_LABELS = {
-  0: { key: 'ננו', icon: '⚡', label: 'ננו', color: '#00acc1' },
-  1: { key: 'בינוני', icon: '📦', label: 'בינוני', color: '#0288D1' },
-  2: { key: 'גדול', icon: '🏢', label: 'גדול', color: '#01579B' },
+  0: { key: 'ננו', icon: '⚡', label: 'ננו', color: DIAMOND_COLORS[0] },
+  1: { key: 'בינוני', icon: '📦', label: 'בינוני', color: DIAMOND_COLORS[1] },
+  2: { key: 'גדול', icon: '🏢', label: 'גדול', color: DIAMOND_COLORS[2] },
 };
 
 // Map ALL task categories to P1-P4 department keys
@@ -206,7 +212,7 @@ function getNodeColor(task) {
     if (dueDay.getTime() === today.getTime()) return ZERO_PANIC.orange;  // Due today = orange
   }
 
-  return STATUS_TO_COLOR[task.status] || ZERO_PANIC.blue || '#90A4AE';
+  return STATUS_TO_COLOR[task.status] || ZERO_PANIC.blue || '#455A64';
 }
 
 /**
@@ -216,7 +222,7 @@ function getNodeColor(task) {
  */
 function getClientAggregateState(clientTasks) {
   if (!clientTasks || clientTasks.length === 0) {
-    return { color: ZERO_PANIC.gray, shouldPulse: false, completionRatio: 0, statusRing: 0 };
+    return { color: '#1565C0', shouldPulse: false, completionRatio: 0, statusRing: 0 };
   }
 
   const today = new Date();
@@ -265,7 +271,7 @@ function getClientAggregateState(clientTasks) {
   const hasActive = clientTasks.some(t =>
     t.status !== 'production_completed'
   );
-  if (hasActive) return { color: ZERO_PANIC.gray, shouldPulse: false, completionRatio, statusRing: 1 };
+  if (hasActive) return { color: '#1565C0', shouldPulse: false, completionRatio, statusRing: 1 };
 
   return { color: ZERO_PANIC.green, shouldPulse: false, completionRatio, statusRing: 0 };
 }
@@ -421,7 +427,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v14-ultra-compact-status-sync'; // bump this to force reset
+  const LAYOUT_VERSION = 'v15-foundation-laws-diamond'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -636,13 +642,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             key: COMPLEXITY_SUB_LABELS[t]?.key || `tier-${t}`,
             icon: COMPLEXITY_SUB_LABELS[t]?.icon || '📄',
             label: COMPLEXITY_SUB_LABELS[t]?.label || `Tier ${t}`,
-            color: COMPLEXITY_SUB_LABELS[t]?.color || '#90A4AE',
+            color: COMPLEXITY_SUB_LABELS[t]?.color || '#455A64',
             tier: t,
             clientNames: tierGroups[t].map(c => c.name),
           }));
         branch.clients.forEach(client => {
           const t = client.tier || 0;
           client._complexitySubFolder = COMPLEXITY_SUB_LABELS[t]?.key || `tier-${t}`;
+          client._diamondColor = DIAMOND_COLORS[t] || '#455A64';
         });
       }
     });
@@ -754,12 +761,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       'P4 בית':             Math.PI / 2,
     };
 
-    // ─── 60% SHORTER ARMS — ultra-compact grape-cluster (fits one screen) ───
-    const META_DIST = 60;     // center → meta-folder (was 150)
-    const DEPT_DIST = 36;     // meta → department (was 90)
-    const TIER_DIST = 28;     // department → tier sub-node (was 70)
-    const CLIENT_DIST = 22;   // tier → client pill (was 55)
-    const CLIENT_GAP = 16;    // min px between adjacent client pills (was 40)
+    // ─── ANTI-OVERLAP: Compact fan layout, max 120px arms ───
+    const META_DIST = 120;    // center → meta-folder (max arm length)
+    const DEPT_DIST = 80;     // meta → department
+    const TIER_DIST = 55;     // department → tier diamond
+    const CLIENT_DIST = 45;   // tier diamond → client pill
+    const CLIENT_GAP = 28;    // min px between adjacent client pills
 
     let metaFolderPositions = metaFolders.map((mf) => {
       const angle = SECTOR_ANGLES[mf.name] ?? 0;
@@ -851,9 +858,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             ? tierNode.angle
             : (tierNode.angle - fanArc / 2) + (j / (n - 1)) * fanArc;
 
-          // Alternate near/far for grape-berry effect
-          const jitter = (j % 2 === 0) ? 0 : 15;
-          const cDist = neededR + jitter;
+          // Anti-Overlap: fixed radius, no random jitter
+          const cDist = neededR;
 
           // NESTED COORDINATES: client pos relative to tier node
           // If tier node moves, client moves with it (via group drag)
@@ -884,7 +890,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           const clientKey = `${branch.category}-${client.name}`;
           const clientPos = manualPositions[clientKey];
           const cAngle = n <= 1 ? deptAngle : (deptAngle - fanArc / 2) + (j / (n - 1)) * fanArc;
-          const cDist = CLIENT_DIST + (j % 2 === 0 ? 0 : 15);
+          const cDist = CLIENT_DIST;
           clientPositions.push({
             ...client,
             radius: nodeRadius,
@@ -1443,7 +1449,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <path key={`edge-hub-meta-${mf.name}`}
                 d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
                 fill="none"
-                stroke="#90A4AE"
+                stroke="#455A64"
                 strokeWidth={2}
                 strokeLinecap="round"
                 markerEnd="url(#edge-arrow)"
@@ -1832,30 +1838,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   toggleBranchExpand(branch.category);
                 }}
               >
-                <svg width="96" height="38" viewBox="0 0 96 38" style={{ overflow: 'visible' }}>
-                  {/* Level 3 — Folder-Tab shape, Dashed Border, bg-white/20, Sparkle on hover */}
-                  <path d="M0,8 L0,30 Q0,38 8,38 L88,38 Q96,38 96,30 L96,8 Q96,0 88,0 L36,0 L30,6 L8,6 Q0,6 0,8 Z"
-                    fill="rgba(255,255,255,0.20)"
-                    stroke="#00acc1"
-                    strokeWidth={1.5}
-                    strokeDasharray="5 3"
+                {/* Diamond Standard: Rhombus shape with tier-specific vivid color */}
+                <svg width="64" height="64" viewBox="0 0 64 64" style={{ overflow: 'visible' }}>
+                  <polygon
+                    points="32,2 62,32 32,62 2,32"
+                    fill={sub.color || '#00acc1'}
+                    stroke="#fff"
+                    strokeWidth={2.5}
                   />
-                  {/* Shimmer overlay — animated via CSS */}
-                  <path d="M0,8 L0,30 Q0,38 8,38 L88,38 Q96,38 96,30 L96,8 Q96,0 88,0 L36,0 L30,6 L8,6 Q0,6 0,8 Z"
-                    fill="url(#subFolderShimmer)"
-                    opacity={0.25}
-                    className="mindmap-shimmer-fill"
-                  />
-                  <defs>
-                    <linearGradient id="subFolderShimmer" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="white" stopOpacity="0" />
-                      <stop offset="40%" stopColor="white" stopOpacity="0.8" />
-                      <stop offset="60%" stopColor="white" stopOpacity="0.8" />
-                      <stop offset="100%" stopColor="white" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <text x="48" y="26" textAnchor="middle" fill="#008291" fontSize="10" fontWeight="700" style={{ pointerEvents: 'none' }}>
-                    📂 {sub.key}
+                  <text x="32" y="30" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="800" style={{ pointerEvents: 'none' }}>
+                    {sub.icon}
+                  </text>
+                  <text x="32" y="44" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                    {sub.label || sub.key}
                   </text>
                 </svg>
               </motion.div>
@@ -1885,21 +1880,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const finalW = (isAllDone ? pillWidth * 0.85 : pillWidth) * complexityScale;
               const finalH = (isAllDone ? pillHeight * 0.85 : pillHeight) * complexityScale;
 
-              // ── STATUS-BASED COLORS (The Color Revolution) ──
-              // L4 uses STATUS colors ONLY: Green=Done, Teal=InProgress, Glass=ToDo
-              const statusColor = isAllDone ? '#2E7D32' : client.statusRing >= 2 ? '#00838F' : '#607D8B';
-              const statusBg = isAllDone ? 'rgba(46,125,50,0.08)' : client.statusRing >= 2 ? 'rgba(0,131,143,0.06)' : 'rgba(255,255,255,0.35)';
-              const statusGlow = isAllDone
-                ? '0 0 12px rgba(46,125,50,0.3)'           // Green
-                : client.statusRing >= 2
-                  ? '0 0 12px rgba(0,131,143,0.25)'        // Teal
-                  : '0 2px 6px rgba(0,0,0,0.06)';          // Glass
-              const complexityGlow = isHighComplexity ? ', 0 0 14px rgba(0,131,143,0.2)' : '';
-              const hoverGlow = `0 4px 12px rgba(0,0,0,0.12), 0 0 16px ${statusColor}44`;
-              const focusGlow = '0 0 16px #06B6D466, 0 0 6px #06B6D444';
-              const normalShadow = isFilingReady
-                ? `0 0 14px ${ZERO_PANIC.amber}44`
-                : statusGlow + complexityGlow;
+              // ── ZERO GRAY POLICY: Black text, white bg, vivid borders ──
+              // Diamond Standard: client border inherits tier diamond color
+              const diamondColor = client._diamondColor || '#00acc1';
+              const statusColor = '#000000'; // Zero Gray: always black text
+              const statusBg = isAllDone ? '#E8F5E9' : '#FFFFFF'; // White or light green
+              const normalShadow = `0 2px 8px ${diamondColor}33`;
+              const hoverGlow = `0 4px 14px ${diamondColor}55`;
+              const focusGlow = `0 0 16px ${diamondColor}66`;
 
               // Top task title (truncated)
               const topTaskTitle = client.topTask?.title || '';
@@ -1908,12 +1896,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               // Focus state
               const isFocused = focusedClients.has(client.name);
 
-              // Border: frozen > focus > waiting > filing-ready > ghost > normal
-              // Status-color borders: Done=green, Active=teal, Todo=glass-white
-              const statusBorderColor = isAllDone ? 'rgba(46,125,50,0.5)' : client.statusRing >= 2 ? 'rgba(0,131,143,0.4)' : 'rgba(200,210,220,0.5)';
-              const borderColor = isFrozen ? '#6B7280' : isFocused ? '#06B6D4' : isWaitingOnClient ? '#f59e0b' : isFilingReady ? ZERO_PANIC.amber : isGhost ? '#90A4AE' : (isHovered ? '#fff' : statusBorderColor);
-              const borderStyle = isFrozen ? 'dashed' : isGhost ? 'dashed' : 'solid';
-              const borderWidth = isFrozen ? 2.5 : isFocused ? 3.5 : isWaitingOnClient ? 2.5 : isFilingReady ? 3 : 1.5;
+              // Diamond Standard: client border = parent tier diamond color
+              // Override for special states (focus, frozen, etc.)
+              const borderColor = isFrozen ? '#455A64' : isFocused ? '#06B6D4' : isAllDone ? '#2E7D32' : diamondColor;
+              const borderStyle = isFrozen ? 'dashed' : 'solid';
+              const borderWidth = isFocused ? 3.5 : 2.5;
 
               const nodeKey = `${branch.category}-${client.name}`;
               const isDragging = draggingNode.current?.key === nodeKey;
@@ -1929,25 +1916,23 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     height: finalH,
                     left: client.x - finalW / 2,
                     top: client.y - finalH / 2,
-                    // Level 4 — Status Glass: Done=green-tint, Active=teal-tint, Todo=pure-glass
-                    backgroundColor: isGhost ? 'rgba(255,255,255,0.85)' : statusBg,
-                    backdropFilter: isGhost ? 'none' : 'blur(12px)',
-                    WebkitBackdropFilter: isGhost ? 'none' : 'blur(12px)',
-                    borderColor: isGhost ? client.color : borderColor,
+                    // Zero Gray Policy: solid white bg, no transparency
+                    backgroundColor: statusBg,
+                    borderColor,
                     borderStyle,
-                    borderWidth: isFrozen ? borderWidth : isAllDone ? borderWidth : Math.max(borderWidth, 2.5),
+                    borderWidth,
                     borderRadius: finalH / 2,
-                    // L4: Status-based text color (Green/Teal/Slate)
+                    // Zero Gray Policy: black text always
                     color: statusColor,
                     boxShadow: isHovered ? hoverGlow : isFocused ? focusGlow : normalShadow,
-                    opacity: isSpotlit(branch.category) ? (isFrozen ? 0.4 : isAllDone ? 0.35 : 1) : 0.12,
-                    filter: isFrozen ? 'saturate(0.15) brightness(0.7)' : isAllDone ? 'saturate(0.3) brightness(0.85)' : 'none',
+                    opacity: isSpotlit(branch.category) ? (isFrozen ? 0.5 : isAllDone ? 0.6 : 1) : 0.15,
+                    filter: isFrozen ? 'saturate(0.3)' : 'none',
                     cursor: isDragging ? 'grabbing' : 'grab',
-                    transition: 'opacity 0.4s ease-in-out, box-shadow 0.3s ease, border-color 0.2s ease, filter 0.4s ease',
+                    transition: 'opacity 0.3s ease, box-shadow 0.3s ease, border-color 0.2s ease',
                   }}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{
-                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.35 : 1) : 0.12,
+                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.6 : 1) : 0.15,
                     scale: 1,
                   }}
                   transition={{
@@ -1997,12 +1982,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <Trash2 className="w-2.5 h-2.5 text-slate-500 hover:text-red-500" />
                   </button>
 
-                  {/* Client display name — Modal Law: no inline rename */}
+                  {/* Client display name — Zero Gray: black bold text */}
                   <span
                     className="font-bold leading-tight text-center px-2 truncate w-full"
                     style={{
                       fontSize: finalH < 45 ? '10px' : finalH < 55 ? '11px' : '12px',
-                      textShadow: '0 1px 2px rgba(255,255,255,0.6)',
+                      color: '#000000',
                       maxWidth: finalW - 12,
                     }}
                   >
@@ -2012,27 +1997,26 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     {client.displayName}
                   </span>
 
-                  {/* Iron Rule: Status label — synced with task table */}
+                  {/* Iron Rule: Status label — synced with task table, vivid color */}
                   <span
-                    className="leading-tight text-center px-1.5 truncate w-full font-semibold"
+                    className="leading-tight text-center px-1.5 truncate w-full font-bold"
                     style={{
-                      fontSize: finalH < 45 ? '7px' : '8px',
+                      fontSize: finalH < 45 ? '7.5px' : '8.5px',
                       color: client.worstStatusColor,
                       maxWidth: finalW - 12,
                       marginTop: '1px',
-                      textShadow: '0 0.5px 1px rgba(255,255,255,0.8)',
                     }}
                   >
                     {client.worstStatusLabel}
                   </span>
 
-                  {/* Top task title */}
+                  {/* Top task title — Zero Gray: dark text, no fading */}
                   {truncatedTask && (
                     <span
                       className="leading-tight text-center px-2 truncate w-full"
                       style={{
                         fontSize: finalH < 45 ? '7px' : '8px',
-                        opacity: isGhost ? 0.7 : 0.65,
+                        color: '#37474F',
                         maxWidth: finalW - 12,
                         marginTop: '0px',
                       }}
@@ -2051,8 +2035,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         style={{
                           height: '100%',
                           width: `${(client.completedTasks / client.totalTasks) * 100}%`,
-                          backgroundColor: isFilingReady ? ZERO_PANIC.amber : client.color,
-                          opacity: 0.6,
+                          backgroundColor: diamondColor,
+                          opacity: 0.8,
                           borderRadius: '0 0 999px 999px',
                           transition: 'width 0.3s ease',
                         }}
@@ -2068,7 +2052,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         width: 20,
                         height: 20,
                         fontSize: '9px',
-                        backgroundColor: client.overdueTasks > 0 ? ZERO_PANIC.purple : client.color,
+                        backgroundColor: client.overdueTasks > 0 ? '#D32F2F' : diamondColor,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                         border: '1.5px solid rgba(255,255,255,0.8)',
                       }}
