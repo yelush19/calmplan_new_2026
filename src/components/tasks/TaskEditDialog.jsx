@@ -18,8 +18,10 @@ import {
 } from 'lucide-react';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
+import { computeComplexityTier, getTierInfo } from '@/lib/complexity';
+import { getServiceWeight } from '@/config/serviceWeights';
+import { Client, Task } from '@/api/entities';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
-import { Task } from '@/api/entities';
 import { differenceInDays, format, parseISO, isValid } from 'date-fns';
 import { getScheduledStartForCategory } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
@@ -113,26 +115,80 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
   const [showChildTaskDialog, setShowChildTaskDialog] = useState(false);
   const [loadWarning, setLoadWarning] = useState(null);
 
+  // ── DNA SYNC: Pull cognitive load + duration from client's complexity tier ──
   useEffect(() => {
-    if (task && open) {
-      setEditData({
-        title: task.title || '',
-        description: task.description || '',
-        status: task.status || 'not_started',
-        priority: task.priority || 'medium',
-        due_date: task.due_date || '',
-        due_time: task.due_time || '',
-        estimated_duration: task.estimated_duration || '',
-        scheduled_start: task.scheduled_start || '',
-        notes: task.notes || '',
-        sub_tasks: task.sub_tasks || [],
-        complexity: task.complexity || 'low',
-        cognitive_load: task.cognitive_load ?? null,
+    if (!task || !open) return;
+
+    const baseData = {
+      title: task.title || '',
+      description: task.description || '',
+      status: task.status || 'not_started',
+      priority: task.priority || 'medium',
+      due_date: task.due_date || '',
+      due_time: task.due_time || '',
+      estimated_duration: task.estimated_duration || '',
+      scheduled_start: task.scheduled_start || '',
+      notes: task.notes || '',
+      sub_tasks: task.sub_tasks || [],
+      complexity: task.complexity || 'low',
+      cognitive_load: task.cognitive_load ?? null,
+    };
+
+    setNewSubTitle('');
+    setNewSubDue('');
+    setNewSubTime('');
+    setNewSubPriority('medium');
+
+    // ── Priority chain: task stored value > client tier > service weight > 15 min ──
+    // Get service weight for this task's category
+    const serviceWeight = getServiceWeight(task.category);
+
+    // If task already has BOTH duration and cognitive load stored, use as-is
+    if (baseData.estimated_duration && baseData.cognitive_load != null) {
+      setEditData(baseData);
+      return;
+    }
+
+    // Fetch client data to auto-fill from complexity tier
+    if (task.client_id) {
+      Client.list().then(clients => {
+        const client = clients.find(c => c.id === task.client_id);
+        if (!client) {
+          // No client found — use service weight
+          if (!baseData.estimated_duration) baseData.estimated_duration = serviceWeight.duration;
+          if (baseData.cognitive_load == null) baseData.cognitive_load = serviceWeight.cognitiveLoad;
+          setEditData(baseData);
+          return;
+        }
+
+        const tier = computeComplexityTier(client);
+        const tierInfo = getTierInfo(tier);
+
+        // Duration: max(service weight, tier maxMinutes) — heavier client = more time
+        if (!baseData.estimated_duration) {
+          baseData.estimated_duration = Math.max(serviceWeight.duration, tierInfo.maxMinutes || 15);
+        }
+        // Cognitive load: max(service base, client tier) — harder = higher load
+        if (baseData.cognitive_load == null) {
+          baseData.cognitive_load = Math.max(serviceWeight.cognitiveLoad, tier);
+        }
+        // Complexity text from tier
+        if (baseData.complexity === 'low' && tier >= 2) {
+          baseData.complexity = tier >= 3 ? 'high' : 'medium';
+        }
+
+        setEditData(baseData);
+      }).catch(() => {
+        // Fallback: use service weight
+        if (!baseData.estimated_duration) baseData.estimated_duration = serviceWeight.duration;
+        if (baseData.cognitive_load == null) baseData.cognitive_load = serviceWeight.cognitiveLoad;
+        setEditData(baseData);
       });
-      setNewSubTitle('');
-      setNewSubDue('');
-      setNewSubTime('');
-      setNewSubPriority('medium');
+    } else {
+      // No client — use service weight
+      if (!baseData.estimated_duration) baseData.estimated_duration = serviceWeight.duration;
+      if (baseData.cognitive_load == null) baseData.cognitive_load = serviceWeight.cognitiveLoad;
+      setEditData(baseData);
     }
   }, [task, open]);
 
@@ -368,7 +424,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                   type="number"
                   value={editData.estimated_duration}
                   onChange={(e) => setEditData(prev => ({ ...prev, estimated_duration: e.target.value }))}
-                  placeholder="30"
+                  placeholder="15"
                   className="text-sm h-9"
                   dir="ltr"
                   min="0"

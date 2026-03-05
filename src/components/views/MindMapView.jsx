@@ -950,33 +950,31 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const siblings = branches.filter(b => b.metaFolder === branch.metaFolder);
       const sibIdx = siblings.indexOf(branch);
       const sibCount = siblings.length;
-      const sectorAngle = parentMeta.angle;
 
-      // Departments fan within ±40° arc
-      const SECTOR_HALF = Math.PI * 0.4;
-      const deptAngle = sibCount <= 1
-        ? sectorAngle
-        : sectorAngle - SECTOR_HALF + (sibIdx / (sibCount - 1)) * (2 * SECTOR_HALF);
+      // ── TOP-DOWN TREE: departments spread HORIZONTALLY below their meta-folder ──
+      // All children go BELOW parent (positive Y), spread evenly on X axis
+      const deptAngle = Math.PI / 2; // always downward
+      const spreadWidth = Math.max(sibCount - 1, 1) * 160; // horizontal spread
+      const offsetX = sibCount <= 1 ? 0 : -spreadWidth / 2 + sibIdx * (spreadWidth / (sibCount - 1));
 
-      const bx = parentMeta.x + Math.cos(deptAngle) * DEPT_DIST;
-      const by = parentMeta.y + Math.sin(deptAngle) * DEPT_DIST;
+      const bx = parentMeta.x + offsetX;
+      const by = parentMeta.y + DEPT_DIST;
 
       const folderKey = `folder-${branch.category}`;
       const folderPos = manualPositions[folderKey];
       const finalBx = folderPos?.x ?? bx;
       const finalBy = folderPos?.y ?? by;
 
-      // ── TIER SUB-NODES: ננו / בינוני / גדול ──
+      // ── TIER SUB-NODES: ננו / בינוני / גדול — horizontal spread BELOW dept ──
       const subFolders = branch.config?.subFolders || [];
       const nTiers = subFolders.length;
-      const tierFanArc = nTiers <= 1 ? 0 : Math.PI * 0.5; // 90° fan
+      const tierSpreadW = Math.max(nTiers - 1, 1) * 120;
 
       const subFolderPositions = subFolders.map((sf, ti) => {
-        const tierAngle = nTiers <= 1
-          ? deptAngle
-          : deptAngle - tierFanArc / 2 + (ti / (nTiers - 1)) * tierFanArc;
-        const tx = finalBx + Math.cos(tierAngle) * TIER_DIST;
-        const ty = finalBy + Math.sin(tierAngle) * TIER_DIST;
+        const tierAngle = Math.PI / 2; // always downward
+        const tierOffsetX = nTiers <= 1 ? 0 : -tierSpreadW / 2 + ti * (tierSpreadW / (nTiers - 1));
+        const tx = finalBx + tierOffsetX;
+        const ty = finalBy + TIER_DIST;
 
         const tierKey = `tier-${branch.category}-${sf.key}`;
         const tierPos = manualPositions[tierKey];
@@ -1018,23 +1016,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         });
 
         // ALWAYS show all 3 function bubbles (ייצור / דיווחים / שירותים) under every diamond
-        // DOWNWARD CASCADE: function bubbles spread horizontally BELOW their tier diamond
+        // PURE HORIZONTAL SPREAD: bubbles go side by side BELOW their tier diamond
         const activeBuckets = FUNCTION_BUCKET_ORDER;
         const nBuckets = activeBuckets.length;
-        // Use a narrow horizontal spread angle centered on "straight down" from the tier
-        const downAngle = Math.PI / 2; // straight down
-        const bucketFanArc = nBuckets <= 1 ? 0 : Math.PI * 0.6; // 108° horizontal fan
+        const bucketSpreadW = Math.max(nBuckets - 1, 1) * 140;
 
         activeBuckets.forEach((bucketKey, bi) => {
           const bucketInfo = FUNCTION_BUCKETS[bucketKey];
-          const bucketAngle = nBuckets <= 1
-            ? downAngle
-            : downAngle - bucketFanArc / 2 + (bi / (nBuckets - 1)) * bucketFanArc;
+          const bucketAngle = Math.PI / 2; // always downward
+          const bucketOffsetX = nBuckets <= 1 ? 0 : -bucketSpreadW / 2 + bi * (bucketSpreadW / (nBuckets - 1));
 
           const fbKey = `func-${branch.category}-${tierNode.key}-${bucketKey}`;
           const fbManual = manualPositions[fbKey];
-          const computedFbXi = tierNode.x + Math.cos(bucketAngle) * FUNC_DIST;
-          const computedFbYi = tierNode.y + Math.sin(bucketAngle) * FUNC_DIST;
+          const computedFbXi = tierNode.x + bucketOffsetX;
+          const computedFbYi = tierNode.y + FUNC_DIST;
           const guardedFbI = guardPos(fbManual, computedFbXi, computedFbYi);
           const fbX = guardedFbI.x;
           const fbY = guardedFbI.y;
@@ -1055,46 +1050,27 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           });
 
           // Position clients as compact fan around this function bubble
+          // ── GRID LAYOUT: clients in rows BELOW their function bubble ──
           const bucketClients = bucketGroups[bucketKey] || [];
           const n = bucketClients.length;
-          if (n === 0) return; // empty bubble — no clients to position
-          const fanArc = n <= 1 ? 0 : Math.min(n * 0.4, 1.2) * Math.PI;
-
-          const maxPerRing = 4;
-          const useDoubleRing = n > maxPerRing;
-          const ring1Count = useDoubleRing ? Math.ceil(n / 2) : n;
-          const ring2Count = useDoubleRing ? n - ring1Count : 0;
-
-          const ring1Arc = ring1Count <= 1 ? 0 : fanArc;
-          const ring1R = ring1Count <= 1
-            ? CLIENT_FROM_FUNC
-            : Math.max(CLIENT_FROM_FUNC, (ring1Count * MIN_BUBBLE_SPACING) / (2 * Math.PI * (ring1Arc / (2 * Math.PI))));
-
-          const ring2Arc = ring2Count <= 1 ? 0 : fanArc;
-          const ring2R = ring2Count <= 1
-            ? ring1R + MIN_BUBBLE_SPACING * 0.6
-            : Math.max(ring1R + MIN_BUBBLE_SPACING * 0.5, (ring2Count * MIN_BUBBLE_SPACING) / (2 * Math.PI * (ring2Arc / (2 * Math.PI))));
+          if (n === 0) return;
+          const COLS = 3; // max 3 clients per row
+          const COL_GAP = 110; // horizontal gap between clients
+          const ROW_GAP = 65;  // vertical gap between rows
 
           bucketClients.forEach((client, j) => {
             const nodeRadius = getNodeRadius(client.tier, isWide);
             const clientKey = `${branch.category}-${client.name}`;
             const clientPos = manualPositions[clientKey];
 
-            let cAngle, cDist;
-            if (!useDoubleRing) {
-              cAngle = n <= 1 ? bucketAngle : (bucketAngle - fanArc / 2) + (j / (n - 1)) * fanArc;
-              cDist = ring1R;
-            } else if (j < ring1Count) {
-              cAngle = ring1Count <= 1 ? bucketAngle : (bucketAngle - ring1Arc / 2) + (j / (ring1Count - 1)) * ring1Arc;
-              cDist = ring1R;
-            } else {
-              const k = j - ring1Count;
-              cAngle = ring2Count <= 1 ? bucketAngle : (bucketAngle - ring2Arc / 2) + (k / (ring2Count - 1)) * ring2Arc;
-              cDist = ring2R;
-            }
+            const row = Math.floor(j / COLS);
+            const col = j % COLS;
+            const rowCount = Math.min(n - row * COLS, COLS);
+            const rowWidth = (rowCount - 1) * COL_GAP;
+            const colOffset = -rowWidth / 2 + col * COL_GAP;
 
-            const computedCX = fbX + Math.cos(cAngle) * cDist;
-            const computedCY = fbY + Math.sin(cAngle) * cDist;
+            const computedCX = fbX + colOffset;
+            const computedCY = fbY + CLIENT_FROM_FUNC + row * ROW_GAP;
             const guardedClient = guardPos(clientPos, computedCX, computedCY);
             const absX = guardedClient.x;
             const absY = guardedClient.y;
@@ -1117,19 +1093,22 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         });
       });
 
-      // Clients not assigned to any tier sub-folder (fallback — no sub-folders)
+      // Clients not assigned to any tier sub-folder (fallback — grid below dept)
       if (subFolderPositions.length === 0) {
         const sortedClients = [...branch.clients].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
         const n = sortedClients.length;
-        const fanArc = n <= 1 ? 0 : Math.PI * 0.6;
+        const FCOLS = 3, FCOL_GAP = 110, FROW_GAP = 65;
         sortedClients.forEach((client, j) => {
           const nodeRadius = getNodeRadius(client.tier, isWide);
           const clientKey = `${branch.category}-${client.name}`;
           const clientPos = manualPositions[clientKey];
-          const cAngle = n <= 1 ? deptAngle : (deptAngle - fanArc / 2) + (j / (n - 1)) * fanArc;
-          const cDist = CLIENT_FROM_FUNC;
-          const computedFbX = finalBx + Math.cos(cAngle) * cDist;
-          const computedFbY = finalBy + Math.sin(cAngle) * cDist;
+          const row = Math.floor(j / FCOLS);
+          const col = j % FCOLS;
+          const rowCount = Math.min(n - row * FCOLS, FCOLS);
+          const rowWidth = (rowCount - 1) * FCOL_GAP;
+          const colOffset = -rowWidth / 2 + col * FCOL_GAP;
+          const computedFbX = finalBx + colOffset;
+          const computedFbY = finalBy + CLIENT_FROM_FUNC + row * FROW_GAP;
           const guardedFb = guardPos(clientPos, computedFbX, computedFbY);
           clientPositions.push({
             ...client,
@@ -1154,22 +1133,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     });
 
     // ═══ COLLISION DETECTION: push overlapping bubbles apart ═══
-    // Collect ALL positioned nodes for repulsion pass
     const allNodes = [];
     branchPositions.forEach(branch => {
-      // Department nodes
-      allNodes.push({ ref: branch, r: 40 });
-      // Sub-folder (tier diamond) nodes
-      branch.subFolderPositions?.forEach(sf => allNodes.push({ ref: sf, r: 36 }));
-      // Function bubbles
-      branch.functionBubblePositions?.forEach(fb => allNodes.push({ ref: fb, r: 45 }));
-      // Client pills
-      branch.clientPositions?.forEach(cp => allNodes.push({ ref: cp, r: cp.radius || 30 }));
+      allNodes.push({ ref: branch, r: 50, weight: 3 }); // dept nodes are heavy
+      branch.subFolderPositions?.forEach(sf => allNodes.push({ ref: sf, r: 40, weight: 2 }));
+      branch.functionBubblePositions?.forEach(fb => allNodes.push({ ref: fb, r: 50, weight: 1 }));
+      branch.clientPositions?.forEach(cp => allNodes.push({ ref: cp, r: cp.radius || 35, weight: 0 }));
     });
 
-    // Simple repulsion: 3 passes to push apart overlapping nodes
-    const MIN_SEP = 70; // minimum distance between any two node centers
-    for (let pass = 0; pass < 3; pass++) {
+    // 6-pass repulsion — stronger separation, downward-only push
+    const MIN_SEP = 50;
+    for (let pass = 0; pass < 6; pass++) {
       for (let i = 0; i < allNodes.length; i++) {
         for (let j = i + 1; j < allNodes.length; j++) {
           const a = allNodes[i].ref, b = allNodes[j].ref;
@@ -1179,11 +1153,15 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           if (dist < minDist) {
             const overlap = (minDist - dist) / 2;
             const nx = dx / dist, ny = dy / dist;
-            // Push apart — bias DOWNWARD (positive Y) for the lower node
-            b.x += nx * overlap;
-            b.y += Math.abs(ny * overlap) + overlap * 0.3; // downward bias
-            a.x -= nx * overlap;
-            a.y -= Math.abs(ny * overlap) * 0.1; // parent stays mostly put
+            // Lighter node moves more, heavier node moves less
+            const aWeight = allNodes[i].weight, bWeight = allNodes[j].weight;
+            const bRatio = aWeight >= bWeight ? 0.8 : 0.4;
+            const aRatio = 1 - bRatio;
+            // Push HORIZONTALLY to avoid vertical stacking
+            b.x += nx * overlap * bRatio;
+            b.y += Math.max(ny * overlap * bRatio, overlap * 0.15); // slight downward push
+            a.x -= nx * overlap * aRatio;
+            a.y -= ny * overlap * aRatio * 0.3;
           }
         }
       }
