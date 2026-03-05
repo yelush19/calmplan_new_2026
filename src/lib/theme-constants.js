@@ -12,32 +12,22 @@ export const CATEGORY_GRADIENTS = {
   consulting: { from: '#64748b', to: '#475569', label: 'ייעוץ' },
 };
 
-// Status visual treatments
+// 5 Golden Status visual treatments
 export const STATUS_STYLES = {
-  not_started: { color: '#94a3b8', glowIntensity: 0, animation: null, label: 'ממתין' },
-  in_progress: { color: '#3b82f6', glowIntensity: 0.6, animation: null, label: 'בעבודה' },
-  waiting_for_materials: { color: '#0ea5e9', glowIntensity: 0.3, animation: 'calm-pulse', label: 'ממתין לחומרים' },
-  waiting_for_external: { color: '#0ea5e9', glowIntensity: 0.3, animation: 'calm-pulse', label: 'ממתין לגורם חיצוני' },
-  waiting_for_approval: { color: '#0ea5e9', glowIntensity: 0.3, animation: 'calm-pulse', label: 'לבדיקה' },
-  ready_for_reporting: { color: '#f59e0b', glowIntensity: 0.8, animation: 'glow-pulse', label: 'מוכן לדיווח' },
-  reported_waiting_for_payment: { color: '#f59e0b', glowIntensity: 0.5, animation: null, label: 'ממתין לתשלום' },
-  completed: { color: '#22c55e', glowIntensity: 0.2, animation: null, label: 'הושלם' },
-  issue: { color: '#ef4444', glowIntensity: 0.9, animation: 'glow-pulse', label: 'בעיה' },
-  postponed: { color: '#94a3b8', glowIntensity: 0, animation: null, label: 'נדחה' },
+  waiting_for_materials:  { color: '#f59e0b', glowIntensity: 0.3, animation: 'calm-pulse', label: 'ממתין לחומרים' },
+  not_started:            { color: '#94a3b8', glowIntensity: 0,   animation: null,         label: 'לבצע' },
+  sent_for_review:        { color: '#a855f7', glowIntensity: 0.5, animation: null,         label: 'הועבר לעיון' },
+  needs_corrections:      { color: '#f97316', glowIntensity: 0.7, animation: 'glow-pulse', label: 'לבצע תיקונים' },
+  production_completed:   { color: '#22c55e', glowIntensity: 0.2, animation: null,         label: 'הושלם ייצור' },
 };
 
 // Status priority for worst-status-wins aggregation (higher = worse)
 export const STATUS_PRIORITY = {
-  completed: 0,
-  not_started: 1,
-  postponed: 1,
-  in_progress: 2,
-  reported_waiting_for_payment: 3,
-  waiting_for_approval: 4,
-  waiting_for_materials: 5,
-  waiting_for_external: 5,
-  ready_for_reporting: 6,
-  issue: 7,
+  production_completed:   0,
+  not_started:            1,
+  sent_for_review:        2,
+  needs_corrections:      3,
+  waiting_for_materials:  4,
 };
 
 // Board category definitions for MindMap ring-1 nodes

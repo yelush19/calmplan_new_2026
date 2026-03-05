@@ -124,8 +124,8 @@ export default function WeeklySummary() {
     const nextWeekStart = new Date(weekEnd);
     nextWeekStart.setDate(nextWeekStart.getDate() + 1);
 
-    const active = filteredRawTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
-    const completed = filteredRawTasks.filter(t => t.status === 'completed');
+    const active = filteredRawTasks.filter(t => t.status !== 'production_completed');
+    const completed = filteredRawTasks.filter(t => t.status === 'production_completed');
 
     const overdue = active.filter(task => {
       const d = task.due_date;

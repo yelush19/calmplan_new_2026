@@ -47,7 +47,6 @@ export default function TaskFilters({ filters, setFilters, context, clients }) {
   const currentCategories = context === 'work' ? workCategories : homeCategories;
 
   const statusOptions = Object.entries(STATUS_CONFIG)
-    .filter(([k]) => k !== 'issues')
     .map(([value, cfg]) => ({ value, label: cfg.label }));
 
   return (

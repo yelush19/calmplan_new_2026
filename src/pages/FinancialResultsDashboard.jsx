@@ -112,7 +112,7 @@ export default function FinancialResultsDashboard() {
       );
       const totalProd = productionTasks.length;
       const doneProd = productionTasks.filter(t =>
-        t.status === 'completed' || t.status === 'production_completed'
+        t.status === 'production_completed'
       ).length;
       const productionDone = totalProd > 0 && doneProd === totalProd;
       const productionStatus = totalProd === 0 ? 'not_started'
@@ -134,8 +134,8 @@ export default function FinancialResultsDashboard() {
           t.category === 'pnl_reports' || t.category === 'רווח והפסד' || t.category === 'work_pnl'
         );
         if (pnlTasks.length > 0) {
-          const pnlDone = pnlTasks.every(t => t.status === 'completed');
-          const pnlInProgress = pnlTasks.some(t => t.status === 'in_progress');
+          const pnlDone = pnlTasks.every(t => t.status === 'production_completed');
+          const pnlInProgress = pnlTasks.some(t => t.status === 'sent_for_review' || t.status === 'needs_corrections');
           pnlStatus = pnlDone ? 'ready' : pnlInProgress ? 'in_progress' : 'not_started';
         } else {
           // No PNL task yet but production is done → ready to start

@@ -14,20 +14,13 @@ import {
 } from '@/config/processTemplates';
 import { getVatEnergyTier, getPayrollTier } from '@/engines/taskCascadeEngine';
 
-// Status display order by priority (lower = more urgent = shown first)
+// 5 Golden Statuses — display order by priority
 const STATUS_DISPLAY_ORDER = [
-  'issue',                        // 0 - דורש טיפול
-  'waiting_for_materials',        // 1 - ממתין לחומרים
-  'in_progress',                  // 2 - בעבודה
-  'remaining_completions',        // 2 - נותרו השלמות
-  'waiting_for_approval',         // 2 - לבדיקה
-  'not_started',                  // 3 - טרם התחיל
-  'ready_for_reporting',          // 3 - מוכן לדיווח
-  'postponed',                    // 4 - נדחה
-  'reported_waiting_for_payment', // 4 - ממתין לתשלום
-  'pending_external',             // 3 - מחכה לצד ג'
-  'completed',                    // 5 - הושלם
-  'not_relevant',                 // 6 - לא רלוונטי
+  'waiting_for_materials',   // 1 - ממתין לחומרים
+  'not_started',             // 2 - לבצע
+  'sent_for_review',         // 3 - הועבר לעיון
+  'needs_corrections',       // 3 - לבצע תיקונים
+  'production_completed',    // 5 - הושלם ייצור
 ];
 
 function ExecutionBar({ startDate, dueDate }) {
@@ -80,7 +73,7 @@ function ExecutionBar({ startDate, dueDate }) {
 }
 
 // These statuses start collapsed
-const DEFAULT_COLLAPSED = new Set(['completed', 'not_relevant']);
+const DEFAULT_COLLAPSED = new Set(['production_completed']);
 
 export default function GroupedServiceTable({
   service,
@@ -96,8 +89,8 @@ export default function GroupedServiceTable({
   onDelete,
   onNote,
 }) {
-  const relevantRows = clientRows.filter(r => r.task.status !== 'not_relevant');
-  const completedCount = relevantRows.filter(r => r.task.status === 'completed').length;
+  const relevantRows = clientRows;
+  const completedCount = relevantRows.filter(r => r.task.status === 'production_completed').length;
 
   // Group rows by status
   const statusGroups = useMemo(() => {
@@ -214,8 +207,8 @@ export default function GroupedServiceTable({
                         {/* Mini progress for this group */}
                         <div className="flex-1 max-w-[120px] bg-gray-100 rounded-full h-1 mr-auto">
                           <div
-                            className={`h-1 rounded-full transition-all ${status === 'completed' ? 'bg-emerald-500' : status === 'not_relevant' ? 'bg-gray-300' : 'bg-sky-400'}`}
-                            style={{ width: `${rows.length > 0 ? Math.round((rows.filter(r => r.task.status === 'completed').length / rows.length) * 100) : 0}%` }}
+                            className={`h-1 rounded-full transition-all ${status === 'production_completed' ? 'bg-emerald-500' : 'bg-sky-400'}`}
+                            style={{ width: `${rows.length > 0 ? Math.round((rows.filter(r => r.task.status === 'production_completed').length / rows.length) * 100) : 0}%` }}
                           />
                         </div>
                       </div>
@@ -275,7 +268,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
   const isQuickWin = vatTier?.key === 'quick_win' || payrollTier?.key === 'nano';
   const isClimb = vatTier?.key === 'climb';
 
-  const statusOptions = ['not_started', 'in_progress', 'waiting_for_materials', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment', 'pending_external', 'completed', 'not_relevant'];
+  const statusOptions = ['waiting_for_materials', 'not_started', 'sent_for_review', 'needs_corrections', 'production_completed'];
 
   const subTasks = task.sub_tasks || [];
 
@@ -291,8 +284,8 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
   const handleToggleSubTask = (subId) => {
     const updated = subTasks.map(st => st.id === subId ? { ...st, done: !st.done } : st);
     onSubTaskChange(task, updated);
-    if (updated.every(st => st.done) && updated.length > 0 && task.status !== 'completed') {
-      onStatusChange(task, 'ready_for_reporting');
+    if (updated.every(st => st.done) && updated.length > 0 && task.status !== 'production_completed') {
+      onStatusChange(task, 'sent_for_review');
     }
   };
 
@@ -316,12 +309,12 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
             <div className="min-w-0">
               <div className="flex items-center gap-1">
                 <span className="truncate block max-w-[160px] font-medium text-gray-800 text-xs">{clientName}</span>
-                {isQuickWin && task.status !== 'completed' && (
+                {isQuickWin && task.status !== 'production_completed' && (
                   <span className="text-emerald-500 shrink-0" title="Quick Win">
                     <Zap className="w-3.5 h-3.5" />
                   </span>
                 )}
-                {isClimb && task.status !== 'completed' && (
+                {isClimb && task.status !== 'production_completed' && (
                   <Badge className="text-[8px] px-1 py-0 bg-purple-100 text-purple-600 border-purple-200 shrink-0">45+</Badge>
                 )}
               </div>
@@ -391,7 +384,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                       >
                         <div className={`w-2.5 h-2.5 rounded-full ${cfg.bg} border ${cfg.border}`} />
                         {cfg.label}
-                        {s === 'completed' && <span className="text-[9px] text-gray-400 mr-auto">(+כל השלבים)</span>}
+                        {s === 'production_completed' && <span className="text-[9px] text-gray-400 mr-auto">(+כל השלבים)</span>}
                       </button>
                     );
                   })}
@@ -423,9 +416,9 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
           <td colSpan={service.steps.length + 2} className="px-4 py-2">
             <div className="space-y-1.5 mr-6">
               {/* Fast-Track button for nano payroll */}
-              {payrollTier?.fastTrack && task.status !== 'completed' && (
+              {payrollTier?.fastTrack && task.status !== 'production_completed' && (
                 <button
-                  onClick={() => onStatusChange(task, 'completed')}
+                  onClick={() => onStatusChange(task, 'production_completed')}
                   className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold transition-colors shadow-sm"
                 >
                   <FastForward className="w-4 h-4" />
@@ -433,7 +426,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                 </button>
               )}
               {/* Climb task progress bar */}
-              {isClimb && task.status !== 'completed' && (
+              {isClimb && task.status !== 'production_completed' && (
                 <div className="bg-purple-50 rounded-lg px-3 py-2 border border-purple-100">
                   <div className="flex items-center justify-between text-xs text-purple-700 font-medium mb-1">
                     <span>משימת עומק - {task.estimated_duration || 45}+ דקות</span>

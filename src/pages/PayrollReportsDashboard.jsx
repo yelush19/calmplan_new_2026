@@ -89,7 +89,7 @@ export default function PayrollReportsDashboardPage() {
 
   const syncCompletedTaskSteps = async (tasksList) => {
     for (const task of tasksList) {
-      if (task.status === 'completed' && !areAllStepsDone(task)) {
+      if (task.status === 'production_completed' && !areAllStepsDone(task)) {
         const updatedSteps = markAllStepsDone(task);
         if (Object.keys(updatedSteps).length > 0) {
           await Task.update(task.id, { process_steps: updatedSteps });
@@ -146,17 +146,17 @@ export default function PayrollReportsDashboardPage() {
 
   const sortedServiceKeys = useMemo(() => {
     return Object.keys(serviceData).sort((a, b) => {
-      const aCompleted = serviceData[a].clientRows.every(r => r.task.status === 'completed');
-      const bCompleted = serviceData[b].clientRows.every(r => r.task.status === 'completed');
+      const aCompleted = serviceData[a].clientRows.every(r => r.task.status === 'production_completed');
+      const bCompleted = serviceData[b].clientRows.every(r => r.task.status === 'production_completed');
       if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
       return 0;
     });
   }, [serviceData]);
 
   const stats = useMemo(() => {
-    const relevant = filteredTasks.filter(t => t.status !== 'not_relevant');
+    const relevant = filteredTasks.filter(t => true);
     const total = relevant.length;
-    const completed = relevant.filter(t => t.status === 'completed').length;
+    const completed = relevant.filter(t => t.status === 'production_completed').length;
     let totalSteps = 0, doneSteps = 0;
     relevant.forEach(task => {
       const service = getServiceForTask(task);
@@ -175,7 +175,7 @@ export default function PayrollReportsDashboardPage() {
       const updatedTask = { ...task, process_steps: updatedSteps };
       const allDone = areAllStepsDone(updatedTask);
       const updatePayload = { process_steps: updatedSteps };
-      if (allDone && task.status !== 'completed') updatePayload.status = 'completed';
+      if (allDone && task.status !== 'production_completed') updatePayload.status = 'production_completed';
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
@@ -194,8 +194,8 @@ export default function PayrollReportsDashboardPage() {
   const handleStatusChange = useCallback(async (task, newStatus) => {
     try {
       const updatePayload = { status: newStatus };
-      if (newStatus === 'completed') updatePayload.process_steps = markAllStepsDone(task);
-      else if (task.status === 'completed' && newStatus === 'not_started') updatePayload.process_steps = markAllStepsUndone(task);
+      if (newStatus === 'production_completed') updatePayload.process_steps = markAllStepsDone(task);
+      else if (task.status === 'production_completed' && newStatus === 'not_started') updatePayload.process_steps = markAllStepsUndone(task);
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       syncNotesWithTaskStatus(task.id, newStatus);

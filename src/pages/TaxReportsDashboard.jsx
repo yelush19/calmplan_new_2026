@@ -108,7 +108,7 @@ export default function TaxReportsDashboardPage() {
   // Auto-fix: completed tasks should have all steps marked done
   const syncCompletedTaskSteps = async (tasksList) => {
     for (const task of tasksList) {
-      if (task.status === 'completed' && !areAllStepsDone(task)) {
+      if (task.status === 'production_completed' && !areAllStepsDone(task)) {
         const updatedSteps = markAllStepsDone(task);
         if (Object.keys(updatedSteps).length > 0) {
           await Task.update(task.id, { process_steps: updatedSteps });
@@ -169,9 +169,9 @@ export default function TaxReportsDashboardPage() {
 
   // Stats (excludes not_relevant tasks)
   const stats = useMemo(() => {
-    const relevant = filteredTasks.filter(t => t.status !== 'not_relevant');
+    const relevant = filteredTasks;
     const total = relevant.length;
-    const completed = relevant.filter(t => t.status === 'completed').length;
+    const completed = relevant.filter(t => t.status === 'production_completed').length;
     let totalSteps = 0, doneSteps = 0;
     relevant.forEach(task => {
       const service = getServiceForTask(task);
@@ -184,9 +184,9 @@ export default function TaxReportsDashboardPage() {
     return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0 };
   }, [filteredTasks]);
 
-  // Filing Sprint: tasks that are ready_for_reporting (ready to file)
+  // Filing Sprint: tasks that are sent_for_review (ready to file)
   const filingSprintTasks = useMemo(() => {
-    return filteredTasks.filter(t => t.status === 'ready_for_reporting');
+    return filteredTasks.filter(t => t.status === 'sent_for_review');
   }, [filteredTasks]);
 
   const canStartFilingSprint = filingSprintTasks.length >= 2;
@@ -200,7 +200,7 @@ export default function TaxReportsDashboardPage() {
     // Mark current task as completed and advance
     const currentTask = filingSprintTasks[filingSprintIdx];
     if (currentTask) {
-      await handleStatusChange(currentTask, 'completed');
+      await handleStatusChange(currentTask, 'production_completed');
       if (filingSprintIdx < filingSprintTasks.length - 1) {
         setFilingSprintIdx(prev => prev + 1);
       } else {
@@ -217,8 +217,8 @@ export default function TaxReportsDashboardPage() {
       const updatedTask = { ...task, process_steps: updatedSteps };
       const allDone = areAllStepsDone(updatedTask);
       const updatePayload = { process_steps: updatedSteps };
-      if (allDone && task.status !== 'completed') {
-        updatePayload.status = 'completed';
+      if (allDone && task.status !== 'production_completed') {
+        updatePayload.status = 'production_completed';
       }
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
@@ -238,9 +238,9 @@ export default function TaxReportsDashboardPage() {
   const handleStatusChange = useCallback(async (task, newStatus) => {
     try {
       const updatePayload = { status: newStatus };
-      if (newStatus === 'completed') {
+      if (newStatus === 'production_completed') {
         updatePayload.process_steps = markAllStepsDone(task);
-      } else if (task.status === 'completed' && newStatus === 'not_started') {
+      } else if (task.status === 'production_completed' && newStatus === 'not_started') {
         updatePayload.process_steps = markAllStepsUndone(task);
       }
       await Task.update(task.id, updatePayload);

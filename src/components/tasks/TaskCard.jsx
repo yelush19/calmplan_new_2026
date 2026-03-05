@@ -192,7 +192,6 @@ export default function TaskCard({
   const isClimb = vatTier?.key === 'climb';
 
   const statusOptions = Object.entries(STATUS_CONFIG)
-    .filter(([k]) => k !== 'issues') // skip duplicate
     .map(([value, cfg]) => ({ value, label: cfg.label }));
 
   const priorityOptions = [

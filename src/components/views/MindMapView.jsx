@@ -29,21 +29,13 @@ const ZERO_PANIC = {
   indigo:  '#3949AB',  // Ready for Reporting
 };
 
+// 5 Golden Statuses
 const STATUS_TO_COLOR = {
-  production_completed:            '#0288D1',             // הושלם ייצור - sky blue
-  completed:                       ZERO_PANIC.green,      // הושלם
-  in_progress:                     ZERO_PANIC.blue,       // בעבודה
-  not_started:                     ZERO_PANIC.gray,       // טרם התחיל
-  remaining_completions:           '#00ACC1',             // נותרו השלמות - cyan
-  postponed:                       '#78909C',             // נדחה - blue-gray
-  waiting_for_approval:            '#AB47BC',             // לבדיקה - purple
-  waiting_for_materials:           ZERO_PANIC.amber,      // ממתין לחומרים
-  issue:                           '#E91E63',             // דורש טיפול - pink (attention!)
-  ready_for_reporting:             ZERO_PANIC.indigo,     // מוכן לדיווח
-  reported_waiting_for_payment:    '#FBC02D',             // ממתין לתשלום - yellow
-  waiting_on_client:               '#F59E0B',             // ממתין ללקוח - amber
-  pending_external:                '#1565C0',             // מחכה לצד ג' - deep blue
-  not_relevant:                    '#B0BEC5',             // לא רלוונטי - light gray
+  waiting_for_materials:  ZERO_PANIC.amber,    // ממתין לחומרים
+  not_started:            ZERO_PANIC.gray,     // לבצע
+  sent_for_review:        '#AB47BC',           // הועבר לעיון - purple
+  needs_corrections:      '#F97316',           // לבצע תיקונים - orange
+  production_completed:   ZERO_PANIC.green,    // הושלם ייצור - bright green!
 };
 
 // Cascade-aware color overrides for client nodes
@@ -74,7 +66,7 @@ const META_FOLDERS = {
   'P3 ניהול משרד': {
     icon: '📁', color: '#546E7A', label: 'P3 | ניהול משרד',
     departments: ['אדמיניסטרציה', 'אחר/טיוטות'],
-    forceNano: true,
+    complexitySubFolders: true,
   },
   'P4 בית': {
     icon: '🏠', color: '#6D4C41', label: 'P4 | בית',
@@ -94,12 +86,11 @@ const BRANCH_CONFIG = {
   'אחר/טיוטות':       { color: '#78909C', icon: '📝', label: 'אחר/טיוטות' },
 };
 
-// Complexity tier labels for sub-grouping inside Payroll / VAT
+// Complexity tier labels for sub-grouping — 3 tiers: ננו, בינוני, גדול
 const COMPLEXITY_SUB_LABELS = {
-  0: { key: 'ננו', icon: '⚡', label: 'ננו' },
-  1: { key: 'פשוט', icon: '📄', label: 'פשוט' },
-  2: { key: 'בינוני', icon: '📦', label: 'בינוני' },
-  3: { key: 'מורכב', icon: '🏢', label: 'מורכב' },
+  0: { key: 'ננו', icon: '⚡', label: 'ננו', color: '#00acc1' },
+  1: { key: 'בינוני', icon: '📦', label: 'בינוני', color: '#0288D1' },
+  2: { key: 'גדול', icon: '🏢', label: 'גדול', color: '#01579B' },
 };
 
 // Map ALL task categories to P1-P4 department keys
@@ -144,15 +135,22 @@ const BASE_RADIUS_WIDE = 36;
 // Legacy S/M/L kept for tooltip display only
 const SIZE_LABELS = { 0: 'ננו', 1: 'פשוט', 2: 'בינוני', 3: 'מורכב' };
 
+/**
+ * 3-tier classification based on service_types count:
+ *   ננו (0): 1 service or no client data
+ *   בינוני (1): 2-3 services
+ *   גדול (2): 4+ services OR pnl_reports active
+ */
 function getComplexityTier(client, tasks) {
-  // If client entity available, use full computation (respects manual override)
-  if (client) return computeComplexityTier(client);
-  // Fallback: estimate from task count when no client entity
-  const taskCount = tasks.length;
-  if (taskCount >= 8) return 3;
-  if (taskCount >= 4) return 2;
-  if (taskCount >= 2) return 1;
-  return 0;
+  if (!client) {
+    const taskCount = tasks.length;
+    return taskCount >= 6 ? 2 : taskCount >= 3 ? 1 : 0;
+  }
+  const serviceCount = (client.service_types || []).length;
+  const hasPnl = (client.service_types || []).includes('pnl_reports');
+  if (hasPnl || serviceCount >= 4) return 2; // גדול
+  if (serviceCount >= 2) return 1; // בינוני
+  return 0; // ננו
 }
 
 function getNodeRadius(tier, isWide = false) {
@@ -165,7 +163,7 @@ function getNodeColor(task) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  if (task.status === 'completed') return ZERO_PANIC.green;
+  if (task.status === 'production_completed') return ZERO_PANIC.green;
 
   // Overdue check
   if (task.due_date) {
@@ -195,8 +193,8 @@ function getClientAggregateState(clientTasks) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const active = clientTasks.filter(t => t.status !== 'not_relevant');
-  const completed = active.filter(t => t.status === 'completed').length;
+  const active = clientTasks.filter(t => t.status !== 'production_completed');
+  const completed = active.filter(t => t.status === 'production_completed').length;
   const total = active.length;
   const completionRatio = total > 0 ? completed / total : 0;
 
@@ -208,7 +206,7 @@ function getClientAggregateState(clientTasks) {
   // Priority: overdue > due today > pending_external > ready_for_reporting > active
   // statusRing: higher = closer to center (ADHD Focus)
   const hasOverdue = clientTasks.some(t => {
-    if (t.status === 'completed' || t.status === 'not_relevant') return false;
+    if (t.status === 'production_completed') return false;
     if (!t.due_date) return false;
     const due = new Date(t.due_date);
     due.setHours(23, 59, 59, 999);
@@ -217,7 +215,7 @@ function getClientAggregateState(clientTasks) {
   if (hasOverdue) return { color: ZERO_PANIC.purple, shouldPulse: true, completionRatio, statusRing: 4 };
 
   const hasDueToday = clientTasks.some(t => {
-    if (t.status === 'completed' || t.status === 'not_relevant') return false;
+    if (t.status === 'production_completed') return false;
     if (!t.due_date) return false;
     const dueDay = new Date(t.due_date);
     dueDay.setHours(0, 0, 0, 0);
@@ -234,7 +232,7 @@ function getClientAggregateState(clientTasks) {
   if (hasReadyForReporting) return { color: ZERO_PANIC.amber, shouldPulse: false, completionRatio, isFilingReady: true, statusRing: 3 };
 
   const hasActive = clientTasks.some(t =>
-    t.status !== 'completed' && t.status !== 'not_relevant'
+    t.status !== 'production_completed'
   );
   if (hasActive) return { color: ZERO_PANIC.blue, shouldPulse: false, completionRatio, statusRing: 2 };
 
@@ -392,7 +390,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v12-sector-locked-90deg'; // bump this to force reset
+  const LAYOUT_VERSION = 'v13-grape-cluster-compact'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -479,7 +477,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const currentMonthPrefix = format(today, 'yyyy-MM'); // e.g. "2026-02"
     const catClientMap = {};
     const activeTasks = tasks.filter(t => {
-      if (t.status === 'not_relevant') return false;
+      // No status filtering — all 5 golden statuses are valid
       // MONTH FILTER: Only show tasks WITH a due_date in the current month
       // Tasks without due_date are unscheduled — they do NOT belong on the MindMap
       if (!t.due_date || !t.due_date.startsWith(currentMonthPrefix)) return false;
@@ -525,7 +523,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         // Display name: nickname || full name
         const displayName = (client?.nickname || name || '').trim();
         // Top active task for pill display
-        const activeTasks = clientTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
+        const activeTasks = clientTasks.filter(t => t.status !== 'production_completed');
         const topTask = activeTasks[0] || null;
         // Check for waiting_on_client status
         const hasWaitingOnClient = clientTasks.some(t => t.status === 'waiting_on_client');
@@ -542,9 +540,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           topTask,
           hasWaitingOnClient,
           totalTasks: clientTasks.length,
-          completedTasks: clientTasks.filter(t => t.status === 'completed').length,
+          completedTasks: clientTasks.filter(t => t.status === 'production_completed').length,
           overdueTasks: clientTasks.filter(t => {
-            if (t.status === 'completed') return false;
+            if (t.status === 'production_completed') return false;
             if (!t.due_date) return false;
             const due = new Date(t.due_date);
             due.setHours(23, 59, 59, 999);
@@ -581,18 +579,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       }
     });
 
-    // ── COMPLEXITY SUB-GROUPS: Inside Payroll and VAT, group clients by tier ──
+    // ── COMPLEXITY SUB-GROUPS: 3-tier (ננו/בינוני/גדול) for ALL branches ──
     branches.forEach(branch => {
       if (branch.metaConfig?.complexitySubFolders) {
-        // Build tier groups from clients in this branch
+        // Build tier groups — clamp to 0-2 range
         const tierGroups = {};
         branch.clients.forEach(client => {
-          const t = client.tier || 0;
+          const t = Math.min(client.tier || 0, 2); // clamp to 3-tier max
+          client.tier = t; // normalize
           if (!tierGroups[t]) tierGroups[t] = [];
           tierGroups[t].push(client);
         });
-        // Generate sub-folder entries for each tier that has clients
-        branch.config = { ...branch.config }; // clone to avoid mutation
+        branch.config = { ...branch.config };
         branch.config.subFolders = Object.keys(tierGroups)
           .map(Number)
           .sort()
@@ -600,14 +598,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             key: COMPLEXITY_SUB_LABELS[t]?.key || `tier-${t}`,
             icon: COMPLEXITY_SUB_LABELS[t]?.icon || '📄',
             label: COMPLEXITY_SUB_LABELS[t]?.label || `Tier ${t}`,
+            color: COMPLEXITY_SUB_LABELS[t]?.color || '#90A4AE',
             tier: t,
             clientNames: tierGroups[t].map(c => c.name),
           }));
-        // Tag each client with its complexity sub-folder
         branch.clients.forEach(client => {
           const t = client.tier || 0;
-          const subLabel = COMPLEXITY_SUB_LABELS[t]?.key || `tier-${t}`;
-          client._complexitySubFolder = subLabel;
+          client._complexitySubFolder = COMPLEXITY_SUB_LABELS[t]?.key || `tier-${t}`;
         });
       }
     });
@@ -674,7 +671,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
     // Today-only: tasks whose due_date is exactly today (for center node)
     const todayTasks = tasks.filter(t => {
-      if (t.status === 'completed' || t.status === 'not_relevant') return false;
+      if (t.status === 'production_completed') return false;
       return t.due_date === todayStr;
     });
 
@@ -699,8 +696,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, [focusClientName, focusTaskId, clientNodes]);
 
   // ══════════════════════════════════════════════════════════════
-  // LAYOUT: FIXED GEOMETRIC — Radial 90° Sectors, No Overlap
-  // P1=top(-90°), P2=left(180°), P3=right(0°), P4=bottom(90°)
+  // LAYOUT: COMPACT GRAPE-CLUSTER — 50% shorter arms, tier sub-nodes
+  // Hub → Meta(P1-P4) → Dept → Tier(ננו/בינוני/גדול) → Client mini-fan
+  // Group dragging: client pos = tier pos + relative offset (nested coords)
   // ══════════════════════════════════════════════════════════════
   const layout = useMemo(() => {
     const w = Math.max(dimensions.width, 600);
@@ -710,19 +708,20 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const cy = h / 2;
     const centerR = isWide ? 55 : 48;
 
-    // ─── Fixed 90° sector angles for P1-P4 ───
-    // P1 top, P2 left, P3 right, P4 bottom (Hebrew RTL-friendly)
+    // Fixed 90° sector angles: P1=top, P2=left, P3=right, P4=bottom
     const SECTOR_ANGLES = {
-      'P1 חשבות שכר':       -Math.PI / 2,    // top (270°)
-      'P2 הנהלת חשבונות':   Math.PI,          // left (180°)
-      'P3 ניהול משרד':      0,                // right (0°)
-      'P4 בית':             Math.PI / 2,      // bottom (90°)
+      'P1 חשבות שכר':       -Math.PI / 2,
+      'P2 הנהלת חשבונות':   Math.PI,
+      'P3 ניהול משרד':      0,
+      'P4 בית':             Math.PI / 2,
     };
 
-    const META_DIST = 300;   // center → meta-folder hexagon
-    const DEPT_DIST = 180;   // meta-folder → department bubble
-    const CLIENT_DIST = 160; // department → client pill
-    const MIN_GAP = 150;     // minimum px between any two bubbles
+    // ─── 50% SHORTER ARMS — compact grape-cluster ───
+    const META_DIST = 150;    // center → meta-folder (was 300)
+    const DEPT_DIST = 90;     // meta → department (was 180)
+    const TIER_DIST = 70;     // department → tier sub-node (NEW)
+    const CLIENT_DIST = 55;   // tier → client pill (was 160)
+    const CLIENT_GAP = 40;    // min px between adjacent client pills
 
     let metaFolderPositions = metaFolders.map((mf) => {
       const angle = SECTOR_ANGLES[mf.name] ?? 0;
@@ -730,36 +729,29 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const my = cy + Math.sin(angle) * META_DIST;
       const manualKey = `meta-${mf.name}`;
       const manual = manualPositions[manualKey];
-      return {
-        ...mf,
-        x: manual?.x ?? mx,
-        y: manual?.y ?? my,
-        angle,
-      };
+      return { ...mf, x: manual?.x ?? mx, y: manual?.y ?? my, angle };
     });
 
     // ═══════════════════════════════════════════════════════════
-    // SECTOR-LOCKED RADIAL — each P-branch gets its own 90° slice.
-    // Departments fan within the sector arc, clients form a half-circle
-    // around their department. 150px minimum gap enforced.
+    // GRAPE-CLUSTER LAYOUT:
+    //   Hub → Meta-folder → Department → Tier sub-nodes → Client mini-fans
+    //   Each tier sub-node is a small bubble (ננו/בינוני/גדול).
+    //   Clients are "grape berries" clustered tightly around their tier node.
     // ═══════════════════════════════════════════════════════════
 
     const branchPositions = branches.map((branch) => {
       const parentMeta = metaFolderPositions.find(m => m.name === branch.metaFolder);
       if (!parentMeta) {
-        return { ...branch, x: cx, y: cy, angle: 0, clientPositions: [], subFolderPositions: null };
+        return { ...branch, x: cx, y: cy, angle: 0, clientPositions: [], subFolderPositions: [] };
       }
 
-      // Find sibling departments under same P-branch
       const siblings = branches.filter(b => b.metaFolder === branch.metaFolder);
       const sibIdx = siblings.indexOf(branch);
       const sibCount = siblings.length;
-
-      // Sector center angle (outward from hub through meta-folder)
       const sectorAngle = parentMeta.angle;
 
-      // Departments spread within a ±45° arc (90° total) centered on sector direction
-      const SECTOR_HALF = Math.PI / 4; // 45° each side
+      // Departments fan within ±40° arc
+      const SECTOR_HALF = Math.PI * 0.4;
       const deptAngle = sibCount <= 1
         ? sectorAngle
         : sectorAngle - SECTOR_HALF + (sibIdx / (sibCount - 1)) * (2 * SECTOR_HALF);
@@ -767,51 +759,104 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const bx = parentMeta.x + Math.cos(deptAngle) * DEPT_DIST;
       const by = parentMeta.y + Math.sin(deptAngle) * DEPT_DIST;
 
-      // Apply manual position override
       const folderKey = `folder-${branch.category}`;
       const folderPos = manualPositions[folderKey];
       const finalBx = folderPos?.x ?? bx;
       const finalBy = folderPos?.y ?? by;
 
-      // Client pills: HALF-CIRCLE ARC around department, outward direction
-      const sortedClients = [...branch.clients].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
-      const nClients = sortedClients.length;
+      // ── TIER SUB-NODES: ננו / בינוני / גדול ──
+      const subFolders = branch.config?.subFolders || [];
+      const nTiers = subFolders.length;
+      const tierFanArc = nTiers <= 1 ? 0 : Math.PI * 0.5; // 90° fan
 
-      // Arc width scales with client count: ensure MIN_GAP between adjacent clients
-      // For n clients on a circle of radius r, arc spacing = 2πr/n
-      // We want arc spacing ≥ MIN_GAP, so r ≥ (n * MIN_GAP) / (2π * arcFraction)
-      const arcFraction = 0.5; // half-circle = π radians
-      const neededRadius = nClients > 1
-        ? Math.max(CLIENT_DIST, (nClients * MIN_GAP) / (2 * Math.PI * arcFraction))
-        : CLIENT_DIST;
+      const subFolderPositions = subFolders.map((sf, ti) => {
+        const tierAngle = nTiers <= 1
+          ? deptAngle
+          : deptAngle - tierFanArc / 2 + (ti / (nTiers - 1)) * tierFanArc;
+        const tx = finalBx + Math.cos(tierAngle) * TIER_DIST;
+        const ty = finalBy + Math.sin(tierAngle) * TIER_DIST;
 
-      const clientFanArc = nClients <= 1 ? 0 : Math.PI; // full half-circle (180°)
-      const clientBaseAngle = deptAngle; // continue outward from dept
-
-      const clientPositions = sortedClients.map((client, j) => {
-        const nodeRadius = getNodeRadius(client.tier, isWide);
-        const clientKey = `${branch.category}-${client.name}`;
-        const clientPos = manualPositions[clientKey];
-
-        // Spread in half-circle arc centered on outward direction
-        const cAngle = nClients <= 1
-          ? clientBaseAngle
-          : (clientBaseAngle - clientFanArc / 2) + (j / (nClients - 1)) * clientFanArc;
-
-        // Stagger rows: alternate near/far for visual clarity when many clients
-        const row = Math.floor(j / Math.max(Math.ceil(nClients / 2), 1));
-        const rowOffset = (j % 2 === 0) ? 0 : 30;
-        const cDist = neededRadius + rowOffset;
-
+        const tierKey = `tier-${branch.category}-${sf.key}`;
+        const tierPos = manualPositions[tierKey];
         return {
-          ...client,
-          radius: nodeRadius,
-          x: clientPos?.x ?? (finalBx + Math.cos(cAngle) * cDist),
-          y: clientPos?.y ?? (finalBy + Math.sin(cAngle) * cDist),
-          branchX: finalBx,
-          branchY: finalBy,
+          ...sf,
+          key: tierKey,
+          x: tierPos?.x ?? tx,
+          y: tierPos?.y ?? ty,
+          angle: tierAngle,
+          parentX: finalBx,
+          parentY: finalBy,
         };
       });
+
+      // ── CLIENT MINI-FAN: grape berries around each tier node ──
+      const clientPositions = [];
+      subFolderPositions.forEach((tierNode) => {
+        const tierClients = branch.clients
+          .filter(c => c._complexitySubFolder === tierNode.key.replace(`tier-${branch.category}-`, ''))
+          .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
+
+        const n = tierClients.length;
+        // Mini-fan arc: tighter for few clients, wider for many
+        const fanArc = n <= 1 ? 0 : Math.min(n * 0.3, 1.2) * Math.PI;
+        // Scale radius so clients don't overlap: min CLIENT_DIST, grow if needed
+        const neededR = n > 1
+          ? Math.max(CLIENT_DIST, (n * CLIENT_GAP) / (2 * Math.PI * 0.5))
+          : CLIENT_DIST;
+
+        tierClients.forEach((client, j) => {
+          const nodeRadius = getNodeRadius(client.tier, isWide);
+          const clientKey = `${branch.category}-${client.name}`;
+          const clientPos = manualPositions[clientKey];
+
+          const cAngle = n <= 1
+            ? tierNode.angle
+            : (tierNode.angle - fanArc / 2) + (j / (n - 1)) * fanArc;
+
+          // Alternate near/far for grape-berry effect
+          const jitter = (j % 2 === 0) ? 0 : 15;
+          const cDist = neededR + jitter;
+
+          // NESTED COORDINATES: client pos relative to tier node
+          // If tier node moves, client moves with it (via group drag)
+          const absX = clientPos?.x ?? (tierNode.x + Math.cos(cAngle) * cDist);
+          const absY = clientPos?.y ?? (tierNode.y + Math.sin(cAngle) * cDist);
+
+          clientPositions.push({
+            ...client,
+            radius: nodeRadius,
+            x: absX,
+            y: absY,
+            branchX: finalBx,
+            branchY: finalBy,
+            tierKey: tierNode.key,
+            tierX: tierNode.x,
+            tierY: tierNode.y,
+          });
+        });
+      });
+
+      // Clients not assigned to any tier sub-folder (fallback — no sub-folders)
+      if (subFolderPositions.length === 0) {
+        const sortedClients = [...branch.clients].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
+        const n = sortedClients.length;
+        const fanArc = n <= 1 ? 0 : Math.PI * 0.6;
+        sortedClients.forEach((client, j) => {
+          const nodeRadius = getNodeRadius(client.tier, isWide);
+          const clientKey = `${branch.category}-${client.name}`;
+          const clientPos = manualPositions[clientKey];
+          const cAngle = n <= 1 ? deptAngle : (deptAngle - fanArc / 2) + (j / (n - 1)) * fanArc;
+          const cDist = CLIENT_DIST + (j % 2 === 0 ? 0 : 15);
+          clientPositions.push({
+            ...client,
+            radius: nodeRadius,
+            x: clientPos?.x ?? (finalBx + Math.cos(cAngle) * cDist),
+            y: clientPos?.y ?? (finalBy + Math.sin(cAngle) * cDist),
+            branchX: finalBx,
+            branchY: finalBy,
+          });
+        });
+      }
 
       return {
         ...branch,
@@ -819,7 +864,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         y: finalBy,
         angle: deptAngle,
         clientPositions,
-        subFolderPositions: null,
+        subFolderPositions,
       };
     });
 
@@ -1032,9 +1077,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     const branch = layout.branchPositions.find(b => b.category === category);
     const childPositions = [];
     if (branch) {
-      // Include sub-folder nodes
+      // Include tier sub-folder nodes
       branch.subFolderPositions?.forEach(sub => {
-        childPositions.push({ key: `sub-${category}-${sub.key}`, x: sub.x, y: sub.y });
+        childPositions.push({ key: sub.key, x: sub.x, y: sub.y });
       });
       // Include client pills
       branch.clientPositions.forEach(cp => {
@@ -2170,8 +2215,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   return dept === drawerDepartment;
                 })
               : allClientTasks;
-            const activeTasks = clientTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
-            const completedTasks = clientTasks.filter(t => t.status === 'completed' || t.status === 'not_relevant');
+            const activeTasks = clientTasks.filter(t => t.status !== 'production_completed');
+            const completedTasks = clientTasks.filter(t => t.status === 'production_completed');
 
             // Build parent→children map
             const childMap = {};
@@ -2207,7 +2252,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             })() : null;
 
             // ── Feature 4: Status cycling logic ──
-            const STATUS_CYCLE = ['not_started', 'in_progress', 'completed'];
+            const STATUS_CYCLE = ['not_started', 'sent_for_review', 'production_completed'];
             const cycleStatus = async (task, e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -2233,9 +2278,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const isHighlighted = highlightTaskId && String(highlightTaskId) === String(task.id);
 
               // Feature 4: Status dot color classes for cycling
-              const statusDotStyle = task.status === 'completed'
-                ? 'bg-emerald-500' : task.status === 'in_progress'
-                ? 'bg-sky-500' : 'bg-[#00acc1]';
+              const statusDotStyle = task.status === 'production_completed'
+                ? 'bg-emerald-500' : task.status === 'sent_for_review'
+                ? 'bg-purple-500' : task.status === 'needs_corrections'
+                ? 'bg-orange-500' : task.status === 'waiting_for_materials'
+                ? 'bg-amber-500' : 'bg-slate-400';
 
               return (
                 <React.Fragment key={task.id}>
@@ -2257,14 +2304,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                         cycleStatus(task, e);
                       }}
                       className={`w-4 h-4 rounded-full shrink-0 border-2 transition-all hover:scale-125 flex items-center justify-center cursor-pointer ${
-                        task.status === 'completed' ? 'bg-emerald-500 border-emerald-500' :
-                        task.status === 'in_progress' ? 'bg-sky-500 border-sky-500' :
+                        task.status === 'production_completed' ? 'bg-emerald-500 border-emerald-500' :
+                        task.status === 'sent_for_review' ? 'bg-purple-500 border-purple-500' :
+                        task.status === 'needs_corrections' ? 'bg-orange-500 border-orange-500' :
+                        task.status === 'waiting_for_materials' ? 'bg-amber-500 border-amber-500' :
                         'bg-white border-slate-300 hover:border-sky-400'
                       }`}
                       title={`סטטוס: ${sts.text} — לחץ לשנות`}
                     >
-                      {task.status === 'completed' && <Check className="w-2.5 h-2.5 text-white" />}
-                      {task.status === 'in_progress' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      {task.status === 'production_completed' && <Check className="w-2.5 h-2.5 text-white" />}
+                      {task.status === 'sent_for_review' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </button>
 
                     <div className="flex-1 min-w-0">
@@ -2298,7 +2347,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
                   {/* Sub-task creation is now handled by QuickAddTaskDialog modal via drawerSubTaskParent */}
 
-                  {children.filter(c => c.status !== 'completed' && c.status !== 'not_relevant').map(child => renderTask(child, depth + 1))}
+                  {children.filter(c => c.status !== 'production_completed').map(child => renderTask(child, depth + 1))}
                 </React.Fragment>
               );
             };

@@ -562,39 +562,59 @@ export function areAllStepsDone(task) {
   return templateSteps.every(s => steps[s.key]?.done);
 }
 
-// Status definitions shared across dashboards
-// Dashboard status config (used in process dashboards)
+// ============================================================
+// THE GOLDEN LIST — 5 exclusive workflow statuses
+// ============================================================
+// Safe migration: old statuses are mapped (not deleted) to preserve data.
+// The trigger: "הושלם ייצור" is the ONLY status that fires cascade creation.
+
 export const STATUS_CONFIG = {
-  not_started:                   { label: 'טרם התחיל',        bg: 'bg-slate-200',      text: 'text-slate-800',    border: 'border-slate-300',   priority: 3 },
-  remaining_completions:         { label: 'נותרו השלמות',   bg: 'bg-cyan-200',       text: 'text-cyan-800',     border: 'border-cyan-300',    priority: 2 },
-  in_progress:                   { label: 'בעבודה',         bg: 'bg-emerald-200',    text: 'text-emerald-900',  border: 'border-emerald-300', priority: 2 },
-  production_completed:          { label: 'הושלם ייצור',    bg: 'bg-sky-400',        text: 'text-white',        border: 'border-sky-500',     priority: 4 },
-  completed:                     { label: 'הושלם',          bg: 'bg-emerald-400',    text: 'text-white',        border: 'border-emerald-500', priority: 5 },
-  postponed:                     { label: 'נדחה',           bg: 'bg-gray-300',       text: 'text-gray-600',     border: 'border-gray-400',    priority: 4 },
-  waiting_for_approval:          { label: 'לבדיקה',         bg: 'bg-amber-200',      text: 'text-amber-900',    border: 'border-amber-300',   priority: 2 },
-  waiting_for_materials:         { label: 'ממתין לחומרים',  bg: 'bg-amber-100',      text: 'text-amber-800',    border: 'border-amber-200',   priority: 1 },
-  issue:                         { label: 'דורש טיפול',     bg: 'bg-amber-300',      text: 'text-amber-900',    border: 'border-amber-400',   priority: 0 },
-  ready_for_reporting:           { label: 'מוכן לדיווח',    bg: 'bg-teal-200',       text: 'text-teal-900',     border: 'border-teal-300',    priority: 3 },
-  reported_waiting_for_payment:  { label: 'ממתין לתשלום',   bg: 'bg-sky-200',        text: 'text-sky-900',      border: 'border-sky-300',     priority: 4 },
-  pending_external:              { label: "מחכה לצד ג'",    bg: 'bg-blue-200',       text: 'text-blue-900',     border: 'border-blue-300',    priority: 3 },
-  waiting_on_client:             { label: 'ממתין ללקוח',    bg: 'bg-amber-200',      text: 'text-amber-800',    border: 'border-amber-300',   priority: 1 },
-  not_relevant:                  { label: 'לא רלוונטי',     bg: 'bg-gray-100',       text: 'text-gray-400',     border: 'border-gray-200',    priority: 6 },
+  waiting_for_materials:  { label: 'ממתין לחומרים',  bg: 'bg-amber-100',   text: 'text-amber-800',   border: 'border-amber-200',   priority: 1 },
+  not_started:            { label: 'לבצע',           bg: 'bg-slate-200',   text: 'text-slate-800',   border: 'border-slate-300',   priority: 2 },
+  sent_for_review:        { label: 'הועבר לעיון',    bg: 'bg-purple-200',  text: 'text-purple-800',  border: 'border-purple-300',  priority: 3 },
+  needs_corrections:      { label: 'לבצע תיקונים',   bg: 'bg-orange-200',  text: 'text-orange-800',  border: 'border-orange-300',  priority: 3 },
+  production_completed:   { label: 'הושלם ייצור',    bg: 'bg-emerald-400', text: 'text-white',       border: 'border-emerald-500', priority: 5 },
 };
 
-// Simple badge-style status config (used in task lists/pages)
 export const TASK_STATUS_CONFIG = {
-  not_started:                   { text: 'טרם התחיל',         color: 'bg-slate-100 text-slate-700',     dot: 'bg-slate-400' },
-  remaining_completions:         { text: 'נותרו השלמות',     color: 'bg-cyan-100 text-cyan-700',      dot: 'bg-cyan-400' },
-  in_progress:                   { text: 'בעבודה',          color: 'bg-sky-100 text-sky-700',         dot: 'bg-sky-500' },
-  production_completed:          { text: 'הושלם ייצור',     color: 'bg-sky-100 text-sky-700',         dot: 'bg-sky-500' },
-  completed:                     { text: 'הושלם',           color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-  postponed:                     { text: 'נדחה',            color: 'bg-neutral-100 text-neutral-600', dot: 'bg-neutral-400' },
-  waiting_for_approval:          { text: 'לבדיקה',          color: 'bg-purple-100 text-purple-700',   dot: 'bg-purple-500' },
-  waiting_for_materials:         { text: 'ממתין לחומרים',   color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-500' },
-  issue:                         { text: 'דורש טיפול',      color: 'bg-pink-100 text-pink-700',       dot: 'bg-pink-500' },
-  ready_for_reporting:           { text: 'מוכן לדיווח',     color: 'bg-teal-100 text-teal-700',       dot: 'bg-teal-500' },
-  reported_waiting_for_payment:  { text: 'ממתין לתשלום',    color: 'bg-yellow-100 text-yellow-700',   dot: 'bg-yellow-500' },
-  pending_external:              { text: "מחכה לצד ג'",     color: 'bg-blue-100 text-blue-700',       dot: 'bg-blue-500' },
-  waiting_on_client:             { text: 'ממתין ללקוח',     color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-400' },
-  not_relevant:                  { text: 'לא רלוונטי',      color: 'bg-gray-50 text-gray-400',        dot: 'bg-gray-300' },
+  waiting_for_materials:  { text: 'ממתין לחומרים',  color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-500' },
+  not_started:            { text: 'לבצע',           color: 'bg-slate-100 text-slate-700',     dot: 'bg-slate-400' },
+  sent_for_review:        { text: 'הועבר לעיון',    color: 'bg-purple-100 text-purple-700',   dot: 'bg-purple-500' },
+  needs_corrections:      { text: 'לבצע תיקונים',   color: 'bg-orange-100 text-orange-700',   dot: 'bg-orange-500' },
+  production_completed:   { text: 'הושלם ייצור',    color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
 };
+
+// ============================================================
+// SAFE STATUS MIGRATION MAP — old status → new status
+// No data is deleted. Existing tasks with legacy statuses get remapped.
+// ============================================================
+export const STATUS_MIGRATION_MAP = {
+  // Direct mappings
+  waiting_for_materials:         'waiting_for_materials',
+  not_started:                   'not_started',
+  production_completed:          'production_completed',
+  // "בעבודה" / active → "לבצע"
+  in_progress:                   'not_started',
+  remaining_completions:         'not_started',
+  // "הושלם" / 100% → "הושלם ייצור"
+  completed:                     'production_completed',
+  // "לבדיקה" → "הועבר לעיון"
+  waiting_for_approval:          'sent_for_review',
+  // All others → "לבצע"
+  postponed:                     'not_started',
+  issue:                         'needs_corrections',
+  ready_for_reporting:           'not_started',
+  reported_waiting_for_payment:  'not_started',
+  pending_external:              'not_started',
+  waiting_on_client:             'waiting_for_materials',
+  not_relevant:                  'production_completed',
+};
+
+/**
+ * Normalize any legacy status to one of the 5 golden statuses.
+ * Safe: returns the status as-is if already valid.
+ */
+export function migrateStatus(status) {
+  if (STATUS_CONFIG[status]) return status;
+  return STATUS_MIGRATION_MAP[status] || 'not_started';
+}

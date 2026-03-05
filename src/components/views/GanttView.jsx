@@ -10,18 +10,13 @@ import { getPayrollTier, getVatEnergyTier, getTaskComplexity } from '@/engines/t
 import { getServiceForTask } from '@/config/processTemplates';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 
+// 5 Golden Statuses
 const STATUS_COLORS = {
-  completed: 'bg-emerald-400',
-  production_completed: 'bg-sky-500',
-  in_progress: 'bg-sky-400',
-  not_started: 'bg-gray-300',
   waiting_for_materials: 'bg-amber-300',
-  issue: 'bg-amber-500',
-  reported_waiting_for_payment: 'bg-violet-300',
-  ready_for_reporting: 'bg-indigo-300',
-  waiting_for_approval: 'bg-cyan-300',
-  pending_external: 'bg-blue-400',
-  postponed: 'bg-gray-400',
+  not_started:           'bg-slate-300',
+  sent_for_review:       'bg-purple-400',
+  needs_corrections:     'bg-orange-400',
+  production_completed:  'bg-emerald-500',
 };
 
 // Estimated work-hours → calendar days mapping

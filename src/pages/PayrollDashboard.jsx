@@ -101,7 +101,7 @@ export default function PayrollDashboardPage() {
 
   const syncCompletedTaskSteps = async (tasksList) => {
     for (const task of tasksList) {
-      if ((task.status === 'completed' || task.status === 'production_completed') && !areAllStepsDone(task)) {
+      if (task.status === 'production_completed' && !areAllStepsDone(task)) {
         const updatedSteps = markAllStepsDone(task);
         if (Object.keys(updatedSteps).length > 0) {
           await Task.update(task.id, { process_steps: updatedSteps });
@@ -163,8 +163,8 @@ export default function PayrollDashboardPage() {
     return Object.keys(serviceData).sort((a, b) => {
       const aRows = serviceData[a].clientRows;
       const bRows = serviceData[b].clientRows;
-      const aActive = aRows.filter(r => r.task.status !== 'completed' && r.task.status !== 'not_relevant').length;
-      const bActive = bRows.filter(r => r.task.status !== 'completed' && r.task.status !== 'not_relevant').length;
+      const aActive = aRows.filter(r => r.task.status !== 'production_completed').length;
+      const bActive = bRows.filter(r => r.task.status !== 'production_completed').length;
       const aAllDone = aActive === 0;
       const bAllDone = bActive === 0;
       // Fully completed services go to bottom
@@ -175,9 +175,9 @@ export default function PayrollDashboardPage() {
   }, [serviceData]);
 
   const stats = useMemo(() => {
-    const relevant = filteredTasks.filter(t => t.status !== 'not_relevant');
+    const relevant = filteredTasks;
     const total = relevant.length;
-    const completed = relevant.filter(t => t.status === 'completed').length;
+    const completed = relevant.filter(t => t.status === 'production_completed').length;
     let totalSteps = 0, doneSteps = 0;
     relevant.forEach(task => {
       const service = getServiceForTask(task);
@@ -203,10 +203,10 @@ export default function PayrollDashboardPage() {
       if (cascade.statusUpdate) {
         updatePayload.status = cascade.statusUpdate.status;
       } else {
-        // Fallback for non-payroll: all done = completed
+        // Fallback: all done = production_completed
         const allDone = areAllStepsDone(updatedTask);
-        if (allDone && task.status !== 'completed' && task.status !== 'production_completed') {
-          updatePayload.status = 'completed';
+        if (allDone && task.status !== 'production_completed') {
+          updatePayload.status = 'production_completed';
         }
       }
 
@@ -240,9 +240,9 @@ export default function PayrollDashboardPage() {
   const handleStatusChange = useCallback(async (task, newStatus) => {
     try {
       const updatePayload = { status: newStatus };
-      if (newStatus === 'completed') {
+      if (newStatus === 'production_completed') {
         updatePayload.process_steps = markAllStepsDone(task);
-      } else if ((task.status === 'completed' || task.status === 'production_completed') && newStatus === 'not_started') {
+      } else if (task.status === 'production_completed' && newStatus === 'not_started') {
         updatePayload.process_steps = markAllStepsUndone(task);
       }
       await Task.update(task.id, updatePayload);

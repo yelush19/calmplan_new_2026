@@ -14,16 +14,17 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 // ============================================================
 // Column mapping: status → kanban column
 // ============================================================
+// 5 Golden Statuses → 3 Kanban columns
 const columnMapping = {
-  todo: ['not_started', 'postponed', 'waiting_for_materials', 'issue', 'waiting_on_client'],
-  in_progress: ['in_progress', 'remaining_completions', 'waiting_for_approval', 'ready_for_reporting', 'reported_waiting_for_payment', 'pending_external', 'production_completed'],
-  completed: ['completed', 'not_relevant'],
+  todo: ['waiting_for_materials', 'not_started', 'needs_corrections'],
+  in_progress: ['sent_for_review'],
+  completed: ['production_completed'],
 };
 
 const columnsConfig = {
-  todo: { title: 'טרם התחיל', color: 'bg-slate-50', headerColor: 'bg-slate-200', tasks: [] },
-  in_progress: { title: 'בביצוע', color: 'bg-sky-50', headerColor: 'bg-sky-200', tasks: [] },
-  completed: { title: 'הושלם', color: 'bg-emerald-50', headerColor: 'bg-emerald-200', tasks: [] },
+  todo: { title: 'לבצע', color: 'bg-slate-50', headerColor: 'bg-slate-200', tasks: [] },
+  in_progress: { title: 'הועבר לעיון', color: 'bg-purple-50', headerColor: 'bg-purple-200', tasks: [] },
+  completed: { title: 'הושלם ייצור', color: 'bg-emerald-50', headerColor: 'bg-emerald-200', tasks: [] },
 };
 
 // ============================================================
@@ -80,7 +81,6 @@ function getTaskBranch(task) {
 
 const statusOptions = Object.fromEntries(
   Object.entries(STATUS_CONFIG)
-    .filter(([k]) => k !== 'issues')
     .map(([k, cfg]) => [k, { text: cfg.label, dot: cfg.bg }])
 );
 

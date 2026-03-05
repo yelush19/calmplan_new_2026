@@ -228,11 +228,11 @@ export default function HomePage() {
         const taskDate = task.due_date || task.created_date;
         if (!taskDate) return true;
         const daysSince = Math.floor((nowMs - new Date(taskDate).getTime()) / (1000 * 60 * 60 * 24));
-        if (task.status === 'completed' && daysSince > 7) return false;
+        if (task.status === 'production_completed' && daysSince > 7) return false;
         return true;
       });
 
-      const activeTasks = allTasks.filter(t => t.status !== 'completed' && t.status !== 'not_relevant');
+      const activeTasks = allTasks.filter(t => t.status !== 'production_completed');
 
       // Inbox items = tasks with source 'quick-capture' that have no category/client
       const inbox = activeTasks.filter(t =>
@@ -289,7 +289,7 @@ export default function HomePage() {
         homeCount,
         totalActive: activeTasks.length,
         completedToday: allTasks.filter(t => {
-          if (t.status !== 'completed') return false;
+          if (t.status !== 'production_completed') return false;
           const d = t.updated_date || t.due_date;
           if (!d) return false;
           try { return isToday(parseISO(d)); } catch { return false; }
@@ -315,23 +315,21 @@ export default function HomePage() {
       syncNotesWithTaskStatus(task.id, newStatus);
 
       // Dispatch completion event for CompletionFeedback
-      if (newStatus === 'completed') {
+      if (newStatus === 'production_completed') {
         window.dispatchEvent(new CustomEvent('calmplan:task-completed', { detail: { task } }));
       }
 
       setData(prev => {
         if (!prev) return prev;
         const updateInList = (list) => list.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
-        const filterCompleted = (list) => list.filter(t => !(t.id === task.id && (newStatus === 'completed' || newStatus === 'not_relevant')));
+        const filterCompleted = (list) => list.filter(t => !(t.id === task.id && newStatus === 'production_completed'));
         return {
           ...prev,
           overdue: filterCompleted(updateInList(prev.overdue)),
           today: filterCompleted(updateInList(prev.today)),
           upcoming: filterCompleted(updateInList(prev.upcoming)),
-          payment: newStatus === 'reported_waiting_for_payment'
-            ? [...prev.payment, { ...task, status: newStatus }]
-            : prev.payment.filter(t => t.id !== task.id),
-          completedToday: newStatus === 'completed' ? prev.completedToday + 1 : prev.completedToday,
+          payment: prev.payment.filter(t => t.id !== task.id),
+          completedToday: newStatus === 'production_completed' ? prev.completedToday + 1 : prev.completedToday,
         };
       });
     } catch (err) {
