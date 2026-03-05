@@ -11,7 +11,7 @@ import {
   ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote,
   ChevronLeft, ChevronRight, Plus, Hourglass, Maximize2, Star,
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
-  CalendarPlus, LayoutGrid, TrendingUp
+  CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -104,6 +104,10 @@ const getSidebarSections = () => ({
       { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
       { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
       { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
+      { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
+      { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
+      { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
+      { name: "חיבור Monday", href: createPageUrl("MondayIntegration"), icon: Link2 },
     ]
   },
   // ── P4 | בית (LENA) ──
