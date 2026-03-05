@@ -513,7 +513,7 @@ export default function HomePage() {
             {/* Header — always visible, click to expand/collapse */}
             <button
               onClick={() => setStatsExpanded(!statsExpanded)}
-              className="flex items-center justify-between w-full px-3 py-1.5 hover:bg-gray-50/60 transition-colors"
+              className="flex items-center justify-between w-full px-3 py-1.5 hover:bg-[#F5F5F5] transition-colors"
             >
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-gray-800">
@@ -634,12 +634,12 @@ export default function HomePage() {
             className="absolute top-2 left-1/2 -translate-x-1/2 z-30"
           >
           <div
-            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-white/40 shadow-md"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#E0E0E0] shadow-md"
             style={{ backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
           >
             <Target className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
             <span className="text-[10px] font-semibold text-gray-600 ml-0.5">מרכז השליטה</span>
-            <div className="flex bg-gray-100/80 rounded-md p-0.5 mr-1">
+            <div className="flex bg-[#F5F5F5] rounded-md p-0.5 mr-1">
               <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-5 w-5" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
                 <Network className="w-2.5 h-2.5" />
               </Button>
@@ -667,15 +667,15 @@ export default function HomePage() {
               style={{ right: '220px' }}
             >
             <div
-              className="flex gap-1.5 overflow-x-auto px-2 py-1.5 rounded-lg border border-white/40"
+              className="flex gap-1.5 overflow-x-auto px-2 py-1.5 rounded-lg border border-[#E0E0E0]"
               style={{ backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
             >
               {insights.slice(0, 4).map((insight, i) => {
                 const colorMap = {
-                  teal: { bg: 'bg-teal-50/80', text: 'text-teal-700', icon: 'text-teal-500' },
-                  amber: { bg: 'bg-amber-50/80', text: 'text-amber-700', icon: 'text-amber-500' },
-                  blue: { bg: 'bg-blue-50/80', text: 'text-blue-700', icon: 'text-blue-500' },
-                  emerald: { bg: 'bg-emerald-50/80', text: 'text-emerald-700', icon: 'text-emerald-500' },
+                  teal: { bg: 'bg-teal-50', text: 'text-teal-700', icon: 'text-teal-500' },
+                  amber: { bg: 'bg-amber-50', text: 'text-amber-700', icon: 'text-amber-500' },
+                  blue: { bg: 'bg-blue-50', text: 'text-blue-700', icon: 'text-blue-500' },
+                  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: 'text-emerald-500' },
                 };
                 const c = colorMap[insight.color] || colorMap.teal;
                 return (
@@ -701,7 +701,7 @@ export default function HomePage() {
             className="absolute bottom-2 right-2 z-30"
           >
           <div
-            className="flex gap-1.5 px-2 py-1.5 rounded-lg border border-white/40"
+            className="flex gap-1.5 px-2 py-1.5 rounded-lg border border-[#E0E0E0]"
             style={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
           >
             <Link to={createPageUrl("WeeklyPlanningDashboard")}>
@@ -781,7 +781,7 @@ export default function HomePage() {
               {focusView === 'gantt' ? (
                 <div className="relative h-full">
                   <GanttView tasks={allFocusTasks} clients={clients} />
-                  <button onClick={() => setFocusView('mindmap')} className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 shadow-md border border-emerald-200 text-emerald-700 text-xs font-medium">
+                  <button onClick={() => setFocusView('mindmap')} className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white shadow-md border border-emerald-200 text-emerald-700 text-xs font-medium">
                     <Network className="w-3.5 h-3.5" /><span>חזרה למפה</span>
                   </button>
                 </div>
@@ -894,7 +894,7 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
     : null;
 
   return (
-    <div className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-orange-50/30' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}>
+    <div className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-orange-50' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm text-gray-800 truncate">{task.title}</span>

@@ -106,10 +106,9 @@ export default function MindMapCanvas({ clients, tasks, reconciliations, onNodeC
       <div
         className="absolute bottom-4 left-4 px-3 py-1 rounded-full text-xs font-mono"
         style={{
-          background: 'rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          color: 'rgba(255,255,255,0.5)',
+          background: '#1e293b',
+          border: '1px solid #334155',
+          color: '#94a3b8',
         }}
       >
         {Math.round(transform.scale * 100)}%

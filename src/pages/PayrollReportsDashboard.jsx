@@ -263,7 +263,7 @@ export default function PayrollReportsDashboardPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-5 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]">
+    <div className="p-4 md:p-6 space-y-5 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
       <div className="flex items-center gap-2 flex-wrap">
         <Link to={createPageUrl('PayrollDashboard')}>
           <Button variant="outline" size="sm" className="gap-2 text-slate-600 hover:text-blue-700">
@@ -273,7 +273,7 @@ export default function PayrollReportsDashboardPage() {
         {clientFilter && (
           <Badge className="bg-[#0277BD] text-white text-sm px-3 py-1.5 gap-2">
             <Users className="w-3.5 h-3.5" />{clientFilter}
-            <button onClick={clearClientFilter} className="hover:bg-white/20 rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
+            <button onClick={clearClientFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
           </Badge>
         )}
       </div>
@@ -290,7 +290,7 @@ export default function PayrollReportsDashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1 bg-white rounded-lg border border-white/20 p-1 shadow-sm">
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-[#E0E0E0] p-1 shadow-sm">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -304,7 +304,7 @@ export default function PayrollReportsDashboardPage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
-          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-white/20 p-0.5">
+          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-[#E0E0E0] p-0.5">
             <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')}>
               <List className="w-4 h-4" />
             </Button>
@@ -336,7 +336,7 @@ export default function PayrollReportsDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-white/30 to-white border-white/20 shadow-sm">
+        <Card className="bg-gradient-to-br from-[#F5F5F5] to-white border-[#E0E0E0] shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-slate-700">{stats.total}</div>
             <div className="text-xs text-slate-500">סה"כ דיווחים</div>
@@ -348,7 +348,7 @@ export default function PayrollReportsDashboardPage() {
             <div className="text-xs text-slate-500">הושלמו</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-emerald-50/50 to-white border-emerald-200 shadow-sm">
+        <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-emerald-700">{stats.pct}%</div>
             <div className="text-xs text-slate-500">דיווחים שהושלמו</div>
@@ -396,7 +396,7 @@ export default function PayrollReportsDashboardPage() {
           </div>
         )
       ) : (
-        <Card className="p-12 text-center border-white/20">
+        <Card className="p-12 text-center border-[#E0E0E0]">
           <FileBarChart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <h3 className="text-xl font-semibold text-slate-600 mb-2">אין דיווחים שוטפים לחודש הנבחר</h3>
           <p className="text-slate-500">נסי לבחור חודש אחר או להפעיל אוטומציות ליצירת דיווחים חודשיים</p>

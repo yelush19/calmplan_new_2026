@@ -136,7 +136,7 @@ function ClientFeeTable({ clients, allClients, search, sortBy, title, showFeeSta
                 const isLinked = client.fee_status === 'linked_to_parent';
                 const hasSpecialStatus = isOth || isLinked;
                 return (
-                  <tr key={client.id} className={`border-b hover:bg-muted/30 transition-colors ${hasSpecialStatus ? 'bg-gray-50/50' : ''}`}>
+                  <tr key={client.id} className={`border-b hover:bg-muted transition-colors ${hasSpecialStatus ? 'bg-[#F5F5F5]' : ''}`}>
                     <td className="p-3 font-medium">{client.name}</td>
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1">
@@ -314,7 +314,7 @@ export default function FeeManagement() {
             <p className="text-2xl font-bold">₪{Math.round(avgFee).toLocaleString()}</p>
           </CardContent>
         </Card>
-        <Card className="border-dashed border-2 border-amber-300 bg-amber-50/30">
+        <Card className="border-dashed border-2 border-amber-300 bg-amber-50">
           <CardContent className="p-4 text-center">
             <Star className="w-6 h-6 text-amber-500 mx-auto mb-1" />
             <p className="text-sm text-amber-700">הכנסה צפויה (פוטנציאליים)</p>

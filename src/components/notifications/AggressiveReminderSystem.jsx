@@ -235,7 +235,7 @@ export default function AggressiveReminderSystem({ onTaskCount }) {
     >
       {/* Overdue - calm amber */}
       {overdueReminders.length > 0 && (
-        <Card className="border-2 border-amber-200 bg-amber-50/80 shadow-sm">
+        <Card className="border-2 border-amber-200 bg-amber-50 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
@@ -269,7 +269,7 @@ export default function AggressiveReminderSystem({ onTaskCount }) {
 
       {/* Today's deadlines - warm orange */}
       {todayReminders.length > 0 && (
-        <Card className="border border-orange-200 bg-orange-50/60">
+        <Card className="border border-orange-200 bg-orange-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 bg-orange-400 rounded-full flex items-center justify-center">
@@ -295,7 +295,7 @@ export default function AggressiveReminderSystem({ onTaskCount }) {
 
       {/* Coming soon (1-3 days) */}
       {soonReminders.length > 0 && (
-        <Card className="border border-violet-200 bg-violet-50/40">
+        <Card className="border border-violet-200 bg-violet-50">
           <CardContent className="p-4">
             <div
               className="flex items-center justify-between cursor-pointer"
@@ -336,7 +336,7 @@ export default function AggressiveReminderSystem({ onTaskCount }) {
 
       {/* Upcoming (4-7 days) */}
       {upcomingReminders.length > 0 && (
-        <Card className="border border-stone-200 bg-stone-50/30">
+        <Card className="border border-stone-200 bg-stone-50">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 text-sm text-stone-600">
               <Calendar className="w-4 h-4" />
@@ -420,7 +420,7 @@ function ReminderItem({ reminder, canDismiss, onDismiss }) {
           variant="ghost"
           size="sm"
           onClick={() => onDismiss(reminder.id)}
-          className={`flex-shrink-0 ${config.textLight} hover:bg-white/50`}
+          className={`flex-shrink-0 ${config.textLight} hover:bg-[#F5F5F5]`}
           title="הסתר להיום"
         >
           <X className="w-4 h-4" />

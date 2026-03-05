@@ -235,7 +235,7 @@ export default function BatchSetupPage() {
               return (
                 <TableRow
                   key={client.id}
-                  className={`${isEdited ? 'bg-amber-50/50' : ''} ${isMissingData ? 'bg-red-50/30' : ''}`}
+                  className={`${isEdited ? 'bg-amber-50' : ''} ${isMissingData ? 'bg-red-50' : ''}`}
                 >
                   {/* Row number */}
                   <TableCell className="text-center text-muted-foreground text-xs">

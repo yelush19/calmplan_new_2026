@@ -83,7 +83,7 @@ const LITAY_PARAM_GROUPS = [
     key: 'service_types',
     label: 'סוגי שירותים',
     icon: Tag,
-    color: 'border-blue-200 bg-blue-50/50',
+    color: 'border-blue-200 bg-blue-50',
     iconColor: 'text-blue-600',
     placeholder: 'הוסף סוג שירות...',
     description: 'שירותים שניתן לשייך ללקוח בכרטיס לקוח',
@@ -92,7 +92,7 @@ const LITAY_PARAM_GROUPS = [
     key: 'report_types',
     label: 'סוגי דיווח',
     icon: FileText,
-    color: 'border-purple-200 bg-purple-50/50',
+    color: 'border-purple-200 bg-purple-50',
     iconColor: 'text-purple-600',
     placeholder: 'הוסף סוג דיווח...',
     description: 'סוגי דוחות ודיווחים תקופתיים',
@@ -101,7 +101,7 @@ const LITAY_PARAM_GROUPS = [
     key: 'reporting_frequencies',
     label: 'תדירויות דיווח',
     icon: CalendarClock,
-    color: 'border-amber-200 bg-amber-50/50',
+    color: 'border-amber-200 bg-amber-50',
     iconColor: 'text-amber-600',
     placeholder: 'הוסף תדירות...',
     description: 'אפשרויות תדירות (חודשי, דו-חודשי וכו\')',
@@ -110,7 +110,7 @@ const LITAY_PARAM_GROUPS = [
     key: 'balance_processes',
     label: 'שלבי מאזן',
     icon: BarChart3,
-    color: 'border-emerald-200 bg-emerald-50/50',
+    color: 'border-emerald-200 bg-emerald-50',
     iconColor: 'text-emerald-600',
     placeholder: 'הוסף שלב...',
     description: 'שלבי תהליך הכנת מאזן שנתי',
@@ -314,7 +314,7 @@ function LenaSettings() {
       </div>
 
       {/* Display Name */}
-      <Card className="border-pink-200 bg-pink-50/30">
+      <Card className="border-pink-200 bg-pink-50">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">שם תצוגה</Label>
@@ -334,7 +334,7 @@ function LenaSettings() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Daily Schedule */}
-        <Card className="border-pink-200 bg-pink-50/30">
+        <Card className="border-pink-200 bg-pink-50">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <Clock className="w-4 h-4 text-pink-600" />
@@ -377,18 +377,18 @@ function LenaSettings() {
           <CardContent className="space-y-2">
             {recommendation ? (
               recommendation.recommendations?.map((rec, index) => (
-                <div key={index} className="bg-white/60 p-2.5 rounded-lg border border-amber-100">
+                <div key={index} className="bg-white p-2.5 rounded-lg border border-amber-100">
                   <p className="font-semibold text-xs text-amber-800">{rec.title}</p>
                   <p className="text-xs text-gray-600">{rec.message}</p>
                 </div>
               ))
             ) : (
               <>
-                <div className="bg-white/60 p-2.5 rounded-lg border border-amber-100">
+                <div className="bg-white p-2.5 rounded-lg border border-amber-100">
                   <p className="font-semibold text-xs text-amber-800">תכנן זמן ריכוז</p>
                   <p className="text-xs text-gray-600">הקדש 2-3 שעות רצופות למשימות חשובות</p>
                 </div>
-                <div className="bg-white/60 p-2.5 rounded-lg border border-amber-100">
+                <div className="bg-white p-2.5 rounded-lg border border-amber-100">
                   <p className="font-semibold text-xs text-amber-800">סיכום יומי</p>
                   <p className="text-xs text-gray-600">כל ערב בדוק מה הושג ומה נשאר ליום הבא</p>
                 </div>
@@ -398,7 +398,7 @@ function LenaSettings() {
         </Card>
 
         {/* Meal reminders */}
-        <Card className="border-orange-200 bg-orange-50/30">
+        <Card className="border-orange-200 bg-orange-50">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2">
@@ -423,7 +423,7 @@ function LenaSettings() {
         </Card>
 
         {/* Break reminders */}
-        <Card className="border-green-200 bg-green-50/30">
+        <Card className="border-green-200 bg-green-50">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-600" />
@@ -512,7 +512,7 @@ function CloudSyncSection() {
   };
 
   return (
-    <Card className={`border-2 ${isSupabaseConfigured ? 'border-green-200 bg-green-50/30' : 'border-orange-200 bg-orange-50/30'}`}>
+    <Card className={`border-2 ${isSupabaseConfigured ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}`}>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
           <Cloud className={`w-4 h-4 ${isSupabaseConfigured ? 'text-green-600' : 'text-orange-500'}`} />

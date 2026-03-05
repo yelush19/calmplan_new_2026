@@ -1244,7 +1244,7 @@ export default function ClientManagementPage() {
             onClientUpdate={loadClients}
           />
           {isSaving && (
-            <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-white flex items-center justify-center">
               <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-3">
                 <RefreshCw className="w-5 h-5 animate-spin text-primary" />
                 <span className="font-medium">שומר...</span>

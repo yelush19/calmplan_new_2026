@@ -164,7 +164,7 @@ export default function RoadmapPage() {
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.02 }}
                                     className={`p-4 rounded-lg flex items-start transition-colors duration-300 ${
-                                        item.status === 'completed' ? 'bg-green-50/70 border border-green-200' : 'bg-white hover:bg-gray-50 border border-gray-200'
+                                        item.status === 'completed' ? 'bg-green-50 border border-green-200' : 'bg-white hover:bg-gray-50 border border-gray-200'
                                     }`}
                                 >
                                     <Checkbox

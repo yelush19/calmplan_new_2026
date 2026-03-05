@@ -563,7 +563,7 @@ export default function TasksPage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-600/10 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-600 flex items-center justify-center mb-4">
             <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
           </div>
           <p className="text-lg text-gray-500">טוען משימות...</p>
@@ -584,7 +584,7 @@ export default function TasksPage() {
               <Badge className={`text-sm px-2.5 py-1 gap-1.5 ${contextFilter === 'work' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                 {contextFilter === 'work' ? <Briefcase className="w-3.5 h-3.5" /> : <HomeIcon className="w-3.5 h-3.5" />}
                 {contextFilter === 'work' ? 'עבודה' : 'בית'}
-                <button onClick={() => setContextFilter('all')} className="hover:bg-white/40 rounded-full p-0.5 mr-0.5">
+                <button onClick={() => setContextFilter('all')} className="hover:bg-[#F5F5F5] rounded-full p-0.5 mr-0.5">
                   <X className="w-3 h-3" />
                 </button>
               </Badge>
@@ -650,7 +650,7 @@ export default function TasksPage() {
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
-              <Badge className={`text-[10px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+              <Badge className={`text-[10px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? 'bg-[#F5F5F5] text-white' : 'bg-gray-100 text-gray-500'}`}>
                 {count}
               </Badge>
             </button>
@@ -772,7 +772,7 @@ export default function TasksPage() {
                     <React.Fragment key={groupKey}>
                       {/* Group header row */}
                       <tr
-                        className="cursor-pointer select-none hover:bg-gray-50/80 transition-colors bg-gray-50/50"
+                        className="cursor-pointer select-none hover:bg-[#F5F5F5] transition-colors bg-[#F5F5F5]"
                         onClick={() => toggleStatusGroup(groupKey)}
                       >
                         <td colSpan={7} className="py-2 px-3 border-b border-gray-100">
@@ -805,7 +805,7 @@ export default function TasksPage() {
                             <React.Fragment key={catKey}>
                               {showCatHeaders && (
                                 <tr
-                                  className="cursor-pointer select-none hover:bg-gray-50/60 transition-colors"
+                                  className="cursor-pointer select-none hover:bg-[#F5F5F5] transition-colors"
                                   onClick={() => toggleCategoryGroup(catKey)}
                                 >
                                   <td colSpan={7} className="py-1.5 px-6 border-b border-gray-50">

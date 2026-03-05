@@ -65,7 +65,7 @@ const DraggableTaskItem = ({ task, index, onEdit, onDelete }) => {
 
 const DroppableQuadrant = ({ quadrant, tasks, onEdit, onDelete }) => {
   return (
-    <div className={`rounded-xl shadow-lg h-[400px] flex flex-col bg-white/80`}>
+    <div className={`rounded-xl shadow-lg h-[400px] flex flex-col bg-white`}>
       <CardHeader className={`border-b-4 border-${quadrant.color}-400 rounded-t-xl`}>
         <CardTitle className={`text-xl font-bold text-${quadrant.color}-700`}>{quadrant.title}</CardTitle>
         <p className="text-sm text-gray-500">{quadrant.description}</p>

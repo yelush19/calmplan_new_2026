@@ -82,7 +82,7 @@ export default function ReconciliationForm({ onClose, onSave }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-lg">
                 <form onSubmit={handleSubmit}>
                     <Card className="bg-white shadow-xl">

@@ -212,7 +212,7 @@ export default function MondayDataImport({ onComplete }) {
   };
 
   return (
-    <Card className="border-blue-200 bg-blue-50/50">
+    <Card className="border-blue-200 bg-blue-50">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Upload className="w-5 h-5 text-blue-600" />

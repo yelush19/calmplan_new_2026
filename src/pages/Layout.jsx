@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, useMotionValue } from "framer-motion";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,7 +57,7 @@ const WORK_MODES = [
     key: 'admin',
     label: 'ניהול',
     icon: Settings,
-    color: 'bg-[#008291]/80 text-white',
+    color: 'bg-[#006d7a] text-white',
     description: 'לקוחות + ספקים + הגדרות',
     visibleSections: ['p3_office']
   },
@@ -459,290 +460,311 @@ function LayoutInner({ children }) {
           </div>
         </header>
 
-        <div className="flex-1 flex flex-row">
-          {/* === SIDEBAR === */}
-          {!focusMode && (
-            <aside className={`hidden md:flex flex-col border-l border-[#B0BEC5] shadow-xl transition-all duration-300 shrink-0
-              ${sidebarCollapsed ? 'w-14' : 'w-56 max-w-[224px]'}`} style={{ backgroundColor: '#FFFFFF' }}>
+        {/* === MOBILE SIDEBAR === */}
+        {isMobileMenuOpen && (
+          <>
+            <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)} />
+            <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 bg-white border-l-2 border-[#B0BEC5] shadow-xl overflow-y-auto">
+              <div className="p-4 border-b border-[#B0BEC5] flex items-center justify-between">
+                <Link to={createPageUrl("Home")} className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
+                    <Brain className="w-5 h-5 text-primary-foreground" />
+                  </div>
+                  <h1 className="text-lg font-bold">CalmPlan</h1>
+                </Link>
+                <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="px-4 pt-2 pb-0 text-center">
+                <p className="block font-black text-2xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
+              </div>
 
-              {/* Toggle button */}
-              <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="self-start p-2 m-2 rounded-[32px] hover:bg-[#E0E0E0] transition-colors">
-                {sidebarCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </button>
+              {/* Mobile search */}
+              <div className="px-4 py-2">
+                <GlobalSearch />
+              </div>
 
-              {sidebarCollapsed ? (
-                /* Collapsed: icons only */
-                <div className="flex flex-col items-center gap-1 py-2 overflow-y-auto flex-1">
-                  {/* Work Mode indicators */}
+              {/* Work Mode Selector */}
+              <div className="px-3 py-2 border-b border-[#B0BEC5]">
+                <div className="flex gap-1">
                   {WORK_MODES.map(mode => (
-                    <Tooltip key={mode.key}>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setWorkMode(mode.key)}
-                          className={`p-2 rounded-[32px] transition-all ${workMode === mode.key ? mode.color + ' shadow-md' : 'text-[#455A64] hover:bg-[#E0E0E0]'}`}
-                        >
-                          <mode.icon className="w-4 h-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">{mode.label}</TooltipContent>
-                    </Tooltip>
+                    <button
+                      key={mode.key}
+                      onClick={() => setWorkMode(mode.key)}
+                      className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-[32px] text-xs font-medium transition-all
+                        ${workMode === mode.key ? mode.color + ' shadow-md' : 'bg-[#F5F5F5] text-[#37474F] hover:bg-[#E8F5F7]'}`}
+                    >
+                      <mode.icon className="w-4 h-4" />
+                      {mode.label}
+                    </button>
                   ))}
-                  <div className="w-8 border-b border-[#B0BEC5] my-1" />
-                  {/* Nav icons */}
-                  {Object.entries(sidebarSections)
-                    .filter(([key]) => getVisibleSections(workMode).includes(key))
-                    .map(([, section]) => (
-                      section.items.map(item => (
-                        <Tooltip key={item.href}>
-                          <TooltipTrigger asChild>
-                            <Link to={item.href} className={`p-2 rounded-[32px] transition-colors
-                              ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291]' : 'text-[#455A64] hover:bg-[#E0E0E0] hover:text-[#37474F]'}`}>
-                              <item.icon className="w-5 h-5" />
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="left">{item.name}</TooltipContent>
-                        </Tooltip>
-                      ))
-                    ))}
                 </div>
-              ) : (
-                /* Expanded: full sidebar */
-                <div className="flex flex-col flex-1 overflow-y-auto">
-                  {/* Mantra — very top of sidebar */}
-                  <div className="px-3 pt-3 pb-1 text-center">
-                    <p className="block font-black text-2xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
-                  </div>
+              </div>
 
-                  {/* Work Mode Selector */}
-                  <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                    <div className="flex gap-1">
+              {/* Mobile navigation */}
+              <nav className="p-3">
+                {Object.entries(sidebarSections)
+                  .filter(([key]) => getVisibleSections(workMode).includes(key))
+                  .map(([key, section]) => (
+                    <div key={key} className="mb-3">
+                      <h3 className="text-xs font-bold text-[#008291]/60 uppercase mb-2 flex items-center gap-1 px-3">
+                        <section.icon className="w-3 h-3" /> {section.title}
+                      </h3>
+                      {section.items.map(item => (
+                        <Link key={item.href} to={item.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
+                            ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
+                          <item.icon className="w-4 h-4" />
+                          {item.name}
+                        </Link>
+                      ))}
+                    </div>
+                  ))}
+              </nav>
+            </div>
+          </>
+        )}
+
+        {/* === DESKTOP: Resizable Sidebar + Main Content === */}
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          {/* === SIDEBAR PANEL (Desktop only, hidden on mobile) === */}
+          {!focusMode && (
+            <>
+              <ResizablePanel
+                defaultSize={sidebarCollapsed ? 4 : 15}
+                minSize={sidebarCollapsed ? 4 : 10}
+                maxSize={sidebarCollapsed ? 4 : 22}
+                collapsible={false}
+                className="hidden md:flex"
+                style={{ overflow: 'hidden' }}
+              >
+                <aside className="flex flex-col border-l border-[#B0BEC5] shadow-xl h-full w-full" style={{ backgroundColor: '#FFFFFF' }}>
+
+                  {/* Toggle button */}
+                  <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    className="self-start p-2 m-2 rounded-[32px] hover:bg-[#E0E0E0] transition-colors">
+                    {sidebarCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </button>
+
+                  {sidebarCollapsed ? (
+                    /* Collapsed: icons only */
+                    <div className="flex flex-col items-center gap-1 py-2 overflow-y-auto flex-1">
+                      {/* Work Mode indicators */}
                       {WORK_MODES.map(mode => (
-                        <button
-                          key={mode.key}
-                          onClick={() => setWorkMode(mode.key)}
-                          className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-[32px] text-xs font-medium transition-all
-                            ${workMode === mode.key ? mode.color + ' shadow-md scale-105' : 'bg-[#F5F5F5] text-[#37474F] hover:bg-[#E8F5F7]'}`}
-                        >
-                          <mode.icon className="w-4 h-4" />
-                          {mode.label}
-                        </button>
+                        <Tooltip key={mode.key}>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => setWorkMode(mode.key)}
+                              className={`p-2 rounded-[32px] transition-all ${workMode === mode.key ? mode.color + ' shadow-md' : 'text-[#455A64] hover:bg-[#E0E0E0]'}`}
+                            >
+                              <mode.icon className="w-4 h-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">{mode.label}</TooltipContent>
+                        </Tooltip>
                       ))}
+                      <div className="w-8 border-b border-[#B0BEC5] my-1" />
+                      {/* Nav icons */}
+                      {Object.entries(sidebarSections)
+                        .filter(([key]) => getVisibleSections(workMode).includes(key))
+                        .map(([, section]) => (
+                          section.items.map(item => (
+                            <Tooltip key={item.href}>
+                              <TooltipTrigger asChild>
+                                <Link to={item.href} className={`p-2 rounded-[32px] transition-colors
+                                  ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291]' : 'text-[#455A64] hover:bg-[#E0E0E0] hover:text-[#37474F]'}`}>
+                                  <item.icon className="w-5 h-5" />
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">{item.name}</TooltipContent>
+                            </Tooltip>
+                          ))
+                        ))}
                     </div>
-                  </div>
+                  ) : (
+                    /* Expanded: full sidebar */
+                    <div className="flex flex-col flex-1 overflow-y-auto">
+                      {/* Mantra — very top of sidebar */}
+                      <div className="px-3 pt-3 pb-1 text-center">
+                        <p className="block font-black text-2xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
+                      </div>
 
-                  {/* Pinned Clients (pin-only, no auto-recent) */}
-                  {pinnedClients.length > 0 && (
-                    <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                      <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
-                        <Star className="w-3 h-3" /> גישה מהירה
-                      </h3>
-                      {pinnedClients.slice(0, 8).map(client => (
-                        <Link key={client.id}
-                          to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm text-[#37474F] hover:bg-[#E0E0E0] transition-colors">
-                          <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                          {client.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* "התפריט שלי" — user-customized menu */}
-                  {myMenu.length > 0 && (
-                    <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                      <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
-                        <Star className="w-3 h-3 text-amber-400" /> התפריט שלי
-                      </h3>
-                      {myMenu.map(href => {
-                        let menuItem = null;
-                        for (const section of Object.values(sidebarSections)) {
-                          menuItem = section.items.find(i => i.href === href);
-                          if (menuItem) break;
-                        }
-                        if (!menuItem) return null;
-                        return (
-                          <Link key={href} to={href}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm transition-colors
-                              ${isActive(href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
-                            <menuItem.icon className="w-3.5 h-3.5" />
-                            {menuItem.name}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Daily Focus — top 5 tasks due today */}
-                  {dailyFocusTasks.length > 0 && (
-                    <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                      <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
-                        <Target className="w-3 h-3 text-rose-400" /> מיקוד יומי
-                      </h3>
-                      {dailyFocusTasks.map(task => (
-                        <Link key={task.id}
-                          to={createPageUrl("Tasks")}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-xs text-[#37474F] hover:bg-[#E0E0E0] transition-colors">
-                          <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
-                          <span className="truncate flex-1">{task.title}</span>
-                          {task.client_name && (
-                            <span className="text-[9px] bg-[#E8F5F7] text-[#546E7A] px-1.5 rounded-full shrink-0">{task.client_name}</span>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Navigation sections */}
-                  <nav className="flex-1 p-3">
-                    {Object.entries(sidebarSections)
-                      .filter(([key]) => getVisibleSections(workMode).includes(key))
-                      .map(([key, section]) => (
-                        <div key={key} className="mb-3">
-                          <h3 className="text-xs font-bold text-[#008291]/60 uppercase mb-2 flex items-center gap-1 px-3">
-                            <section.icon className="w-3 h-3" /> {section.title}
-                          </h3>
-                          {section.items.map(item => (
-                            <div key={item.href} className="flex items-center group">
-                              <Link to={item.href}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
-                                  ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
-                                <item.icon className="w-4 h-4" />
-                                {item.name}
-                              </Link>
-                              <button
-                                onClick={() => toggleMyMenu(item.href)}
-                                className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
-                                title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
-                              >
-                                <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
-                              </button>
-                            </div>
+                      {/* Work Mode Selector */}
+                      <div className="px-3 py-2 border-b border-[#B0BEC5]">
+                        <div className="flex gap-1">
+                          {WORK_MODES.map(mode => (
+                            <button
+                              key={mode.key}
+                              onClick={() => setWorkMode(mode.key)}
+                              className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-[32px] text-xs font-medium transition-all
+                                ${workMode === mode.key ? mode.color + ' shadow-md scale-105' : 'bg-[#F5F5F5] text-[#37474F] hover:bg-[#E8F5F7]'}`}
+                            >
+                              <mode.icon className="w-4 h-4" />
+                              {mode.label}
+                            </button>
                           ))}
                         </div>
-                      ))}
-                  </nav>
-                </div>
-              )}
-            </aside>
-          )}
-
-          {/* === MOBILE SIDEBAR === */}
-          {isMobileMenuOpen && (
-            <>
-              <div className="md:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setIsMobileMenuOpen(false)} />
-              <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 bg-white border-l-2 border-[#B0BEC5] shadow-xl overflow-y-auto">
-                <div className="p-4 border-b border-[#B0BEC5] flex items-center justify-between">
-                  <Link to={createPageUrl("Home")} className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                      <Brain className="w-5 h-5 text-primary-foreground" />
-                    </div>
-                    <h1 className="text-lg font-bold">CalmPlan</h1>
-                  </Link>
-                  <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-                <div className="px-4 pt-2 pb-0 text-center">
-                  <p className="block font-black text-2xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#008291] to-[#00acc1]">✨ עשוי טוב יותר ממושלם</p>
-                </div>
-
-                {/* Mobile search */}
-                <div className="px-4 py-2">
-                  <GlobalSearch />
-                </div>
-
-                {/* Work Mode Selector */}
-                <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                  <div className="flex gap-1">
-                    {WORK_MODES.map(mode => (
-                      <button
-                        key={mode.key}
-                        onClick={() => setWorkMode(mode.key)}
-                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-[32px] text-xs font-medium transition-all
-                          ${workMode === mode.key ? mode.color + ' shadow-md' : 'bg-[#F5F5F5] text-[#37474F] hover:bg-[#E8F5F7]'}`}
-                      >
-                        <mode.icon className="w-4 h-4" />
-                        {mode.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Mobile navigation */}
-                <nav className="p-3">
-                  {Object.entries(sidebarSections)
-                    .filter(([key]) => getVisibleSections(workMode).includes(key))
-                    .map(([key, section]) => (
-                      <div key={key} className="mb-3">
-                        <h3 className="text-xs font-bold text-[#008291]/60 uppercase mb-2 flex items-center gap-1 px-3">
-                          <section.icon className="w-3 h-3" /> {section.title}
-                        </h3>
-                        {section.items.map(item => (
-                          <Link key={item.href} to={item.href}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
-                              ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
-                            <item.icon className="w-4 h-4" />
-                            {item.name}
-                          </Link>
-                        ))}
                       </div>
-                    ))}
-                </nav>
-              </div>
+
+                      {/* Pinned Clients (pin-only, no auto-recent) */}
+                      {pinnedClients.length > 0 && (
+                        <div className="px-3 py-2 border-b border-[#B0BEC5]">
+                          <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
+                            <Star className="w-3 h-3" /> גישה מהירה
+                          </h3>
+                          {pinnedClients.slice(0, 8).map(client => (
+                            <Link key={client.id}
+                              to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm text-[#37474F] hover:bg-[#E0E0E0] transition-colors">
+                              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                              {client.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* "התפריט שלי" — user-customized menu */}
+                      {myMenu.length > 0 && (
+                        <div className="px-3 py-2 border-b border-[#B0BEC5]">
+                          <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
+                            <Star className="w-3 h-3 text-amber-400" /> התפריט שלי
+                          </h3>
+                          {myMenu.map(href => {
+                            let menuItem = null;
+                            for (const section of Object.values(sidebarSections)) {
+                              menuItem = section.items.find(i => i.href === href);
+                              if (menuItem) break;
+                            }
+                            if (!menuItem) return null;
+                            return (
+                              <Link key={href} to={href}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm transition-colors
+                                  ${isActive(href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
+                                <menuItem.icon className="w-3.5 h-3.5" />
+                                {menuItem.name}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Daily Focus — top 5 tasks due today */}
+                      {dailyFocusTasks.length > 0 && (
+                        <div className="px-3 py-2 border-b border-[#B0BEC5]">
+                          <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
+                            <Target className="w-3 h-3 text-rose-400" /> מיקוד יומי
+                          </h3>
+                          {dailyFocusTasks.map(task => (
+                            <Link key={task.id}
+                              to={createPageUrl("Tasks")}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-xs text-[#37474F] hover:bg-[#E0E0E0] transition-colors">
+                              <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                              <span className="truncate flex-1">{task.title}</span>
+                              {task.client_name && (
+                                <span className="text-[9px] bg-[#E8F5F7] text-[#546E7A] px-1.5 rounded-full shrink-0">{task.client_name}</span>
+                              )}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Navigation sections */}
+                      <nav className="flex-1 p-3">
+                        {Object.entries(sidebarSections)
+                          .filter(([key]) => getVisibleSections(workMode).includes(key))
+                          .map(([key, section]) => (
+                            <div key={key} className="mb-3">
+                              <h3 className="text-xs font-bold text-[#008291]/60 uppercase mb-2 flex items-center gap-1 px-3">
+                                <section.icon className="w-3 h-3" /> {section.title}
+                              </h3>
+                              {section.items.map(item => (
+                                <div key={item.href} className="flex items-center group">
+                                  <Link to={item.href}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
+                                      ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
+                                    <item.icon className="w-4 h-4" />
+                                    {item.name}
+                                  </Link>
+                                  <button
+                                    onClick={() => toggleMyMenu(item.href)}
+                                    className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
+                                    title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
+                                  >
+                                    <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                      </nav>
+                    </div>
+                  )}
+                </aside>
+              </ResizablePanel>
+
+              {/* Drag handle between sidebar and main — visible only when sidebar expanded */}
+              {!sidebarCollapsed && (
+                <ResizableHandle
+                  withHandle
+                  className="hidden md:flex border-l border-[#B0BEC5] bg-[#F5F5F5] hover:bg-[#E0E0E0] transition-colors w-[6px]"
+                />
+              )}
             </>
           )}
 
-          {/* === MAIN CONTENT === */}
-          <main className="flex-1 flex flex-col min-h-0">
-            {/* Desktop sub-header (page title + back) */}
-            {!isHomePage && (
-              <div className="hidden md:block p-4 border-b border-[#B0BEC5] bg-gradient-to-r from-primary/5 to-secondary/5">
-                <div className="max-w-full mx-auto flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-foreground">{findPageTitle()}</h2>
-                  <Link to={createPageUrl("Home")}>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <ArrowRight className="w-4 h-4" />
-                      חזור לדף הבית
-                    </Button>
-                  </Link>
+          {/* === MAIN CONTENT PANEL === */}
+          <ResizablePanel defaultSize={focusMode || sidebarCollapsed ? 96 : 85} minSize={60}>
+            <main className="flex flex-col min-h-0 h-full">
+              {/* Desktop sub-header (page title + back) */}
+              {!isHomePage && (
+                <div className="hidden md:block p-4 border-b border-[#B0BEC5]" style={{ backgroundColor: '#FAFBFC' }}>
+                  <div className="max-w-full mx-auto flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-foreground">{findPageTitle()}</h2>
+                    <Link to={createPageUrl("Home")}>
+                      <Button variant="outline" className="flex items-center gap-2">
+                        <ArrowRight className="w-4 h-4" />
+                        חזור לדף הבית
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Mobile sub-header */}
+              {!isHomePage && (
+                <div className="md:hidden px-4 py-3 border-b border-[#B0BEC5]" style={{ backgroundColor: '#FAFBFC' }}>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-foreground">{findPageTitle()}</h2>
+                    <Link to={createPageUrl("Home")}>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <ArrowRight className="w-4 h-4" />
+                        חזור לבית
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-auto p-1.5 md:p-2 flex flex-col" style={{ backgroundColor: '#F9FAFB' }}>
+                <div className="w-full flex-1 flex flex-col min-h-0">
+                  <TimeAwareness />
+
+                  {/* Backup import moved to BackupManager page exclusively */}
+
+                  <div className="flex-1 min-h-0">
+                    {children}
+                  </div>
                 </div>
               </div>
-            )}
-
-            {/* Mobile sub-header */}
-            {!isHomePage && (
-              <div className="md:hidden bg-gradient-to-r from-primary/5 to-secondary/5 px-4 py-3 border-b border-[#B0BEC5]">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-foreground">{findPageTitle()}</h2>
-                  <Link to={createPageUrl("Home")}>
-                    <Button variant="outline" size="sm" className="flex items-center gap-2">
-                      <ArrowRight className="w-4 h-4" />
-                      חזור לבית
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            <div className="flex-1 overflow-auto p-1.5 md:p-2 bg-neutral-bg/30 flex flex-col">
-              <div className="w-full flex-1 flex flex-col min-h-0">
-                <TimeAwareness />
-
-                {/* Backup import moved to BackupManager page exclusively */}
-
-                <div className="flex-1 min-h-0">
-                  {children}
-                </div>
-              </div>
-            </div>
-          </main>
-        </div>
+            </main>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
 
       {/* Reality Check & Completion Feedback */}

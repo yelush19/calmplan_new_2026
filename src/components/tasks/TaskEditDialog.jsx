@@ -367,7 +367,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             <textarea
               value={editData.notes}
               onChange={(e) => setEditData(prev => ({ ...prev, notes: e.target.value }))}
-              className="w-full text-sm border border-white/20 rounded-md p-2 min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full text-sm border border-[#E0E0E0] rounded-md p-2 min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="הוסף הערה..."
             />
           </div>

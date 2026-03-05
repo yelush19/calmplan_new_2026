@@ -324,7 +324,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
         const { assignment, laneCount } = laneData[clientName] || { assignment: new Map(), laneCount: 1 };
         const rowHeight = laneCount * (LANE_HEIGHT + LANE_GAP) + LANE_GAP;
         return (
-          <div key={clientName} className="flex border-b hover:bg-gray-50/50 transition-colors">
+          <div key={clientName} className="flex border-b hover:bg-[#F5F5F5] transition-colors">
             <div className="w-40 shrink-0 p-2 text-sm text-gray-700 border-l flex items-center">
               <span className="font-medium truncate">{clientName}</span>
             </div>
@@ -362,7 +362,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                         whileHover={!isDragging ? { y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' } : undefined}
                       />
                     </TooltipTrigger>
-                    <TooltipContent className="!bg-gray-900/95 backdrop-blur-sm !border-gray-700 !text-white">
+                    <TooltipContent className="!bg-gray-900 !border-gray-700 !text-white">
                       <p className="font-medium !text-white">{task.title}</p>
                       <p className="text-xs !text-gray-300">
                         {task.category} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}

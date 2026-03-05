@@ -93,7 +93,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="חפש..."
-                className="w-full h-7 text-xs pr-7 pl-2 border border-[#B0BEC5] rounded-[16px] bg-[#F5F5F5]  focus:outline-none focus:ring-1 focus:ring-[#00acc1] focus:bg-white/60"
+                className="w-full h-7 text-xs pr-7 pl-2 border border-[#B0BEC5] rounded-[16px] bg-[#F5F5F5]  focus:outline-none focus:ring-1 focus:ring-[#00acc1] focus:bg-white"
               />
             </div>
           </div>
@@ -104,7 +104,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
               <button
                 type="button"
                 onClick={() => { onChange('__none__'); setIsOpen(false); }}
-                className={`w-full text-right px-3 py-1.5 text-xs hover:bg-[#E0E0E0] transition-colors rounded-[12px] ${value === '__none__' ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-[#455A64]'}`}
+                className={`w-full text-right px-3 py-1.5 text-xs hover:bg-[#E0E0E0] transition-colors rounded-[12px] ${value === '__none__' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'text-[#455A64]'}`}
               >
                 {noneLabel}
               </button>
@@ -128,7 +128,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                           type="button"
                           key={itemKey}
                           onClick={() => { onChange(itemKey); setIsOpen(false); }}
-                          className={`w-full text-right px-3 py-1.5 text-xs hover:bg-[#E0E0E0] transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-[#263238]'}`}
+                          className={`w-full text-right px-3 py-1.5 text-xs hover:bg-[#E0E0E0] transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-100 text-emerald-700 font-medium' : 'text-[#263238]'}`}
                         >
                           {renderItem ? renderItem(item) : item.label || item.name}
                         </button>
@@ -147,7 +147,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                     type="button"
                     key={itemKey}
                     onClick={() => { onChange(itemKey); setIsOpen(false); }}
-                    className={`w-full text-right px-3 py-1.5 text-xs hover:bg-[#E0E0E0] transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-500/10 text-emerald-700 font-medium' : 'text-[#263238]'}`}
+                    className={`w-full text-right px-3 py-1.5 text-xs hover:bg-[#E0E0E0] transition-colors rounded-[12px] ${isSelected ? 'bg-emerald-100 text-emerald-700 font-medium' : 'text-[#263238]'}`}
                   >
                     {renderItem ? renderItem(item) : item.label || item.name}
                   </button>

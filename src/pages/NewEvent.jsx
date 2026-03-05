@@ -260,7 +260,7 @@ export default function NewEventPage() {
       className="max-w-4xl mx-auto space-y-8 p-4"
     >
       <Card className="shadow-xl border-border">
-        <CardHeader className="bg-gradient-to-l from-primary/10 to-muted/50 border-b border-border">
+        <CardHeader className="bg-[#F5F5F5] border-b border-border">
           <CardTitle className="flex items-center gap-3 text-3xl font-bold text-neutral-dark">
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
               <Calendar className="w-5 h-5 text-white" />

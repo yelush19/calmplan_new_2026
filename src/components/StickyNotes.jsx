@@ -116,7 +116,7 @@ function NoteAttachments({ noteId, attachments = [], clientName, onUpdate }) {
               <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate max-w-[120px]">
                 {att.file_name}
               </a>
-              <button onClick={() => handleDelete(att.id)} className="opacity-0 group-hover/att:opacity-100 p-0.5 hover:bg-white/50 rounded">
+              <button onClick={() => handleDelete(att.id)} className="opacity-0 group-hover/att:opacity-100 p-0.5 hover:bg-[#F5F5F5] rounded">
                 <X className="w-2.5 h-2.5" />
               </button>
             </div>
@@ -270,25 +270,25 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="p-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/50 space-y-2">
+            <div className="p-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 space-y-2">
               <Input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder="כותרת הפתק..."
-                className="bg-white/80 border-amber-200 text-base"
+                className="bg-white border-amber-200 text-base"
                 autoFocus
               />
               <Textarea
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}
                 placeholder="תוכן..."
-                className="bg-white/80 border-amber-200 text-sm min-h-[60px]"
+                className="bg-white border-amber-200 text-sm min-h-[60px]"
                 rows={2}
               />
               {/* Extra fields row */}
               <div className="grid grid-cols-2 gap-2">
                 <Select value={newClientName || '__none__'} onValueChange={(v) => setNewClientName(v === '__none__' ? '' : v)}>
-                  <SelectTrigger className="bg-white/80 border-amber-200 text-sm h-9">
+                  <SelectTrigger className="bg-white border-amber-200 text-sm h-9">
                     <SelectValue placeholder="לקוח (אופציונלי)" />
                   </SelectTrigger>
                   <SelectContent>
@@ -299,7 +299,7 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                   </SelectContent>
                 </Select>
                 <Select value={newCategory || '__none__'} onValueChange={(v) => setNewCategory(v === '__none__' ? '' : v)}>
-                  <SelectTrigger className="bg-white/80 border-amber-200 text-sm h-9">
+                  <SelectTrigger className="bg-white border-amber-200 text-sm h-9">
                     <SelectValue placeholder="קטגוריה" />
                   </SelectTrigger>
                   <SelectContent>
@@ -311,7 +311,7 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Select value={newUrgency} onValueChange={setNewUrgency}>
-                  <SelectTrigger className="bg-white/80 border-amber-200 text-sm h-9">
+                  <SelectTrigger className="bg-white border-amber-200 text-sm h-9">
                     <SelectValue placeholder="דחיפות" />
                   </SelectTrigger>
                   <SelectContent>
@@ -324,7 +324,7 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                   type="date"
                   value={newDueDate}
                   onChange={(e) => setNewDueDate(e.target.value)}
-                  className="bg-white/80 border-amber-200 text-sm h-9"
+                  className="bg-white border-amber-200 text-sm h-9"
                   placeholder="תאריך יעד"
                 />
               </div>
@@ -389,13 +389,13 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                     <Input
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className="bg-white/60 border-current text-sm font-bold"
+                      className="bg-white border-current text-sm font-bold"
                       autoFocus
                     />
                     <Textarea
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
-                      className="bg-white/60 border-current text-xs min-h-[40px]"
+                      className="bg-white border-current text-xs min-h-[40px]"
                       rows={2}
                     />
                     <div className="grid grid-cols-2 gap-2">
@@ -403,11 +403,11 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                         type="date"
                         value={editDueDate}
                         onChange={(e) => setEditDueDate(e.target.value)}
-                        className="bg-white/60 border-current text-xs h-7"
+                        className="bg-white border-current text-xs h-7"
                         dir="ltr"
                       />
                       <Select value={editUrgency} onValueChange={setEditUrgency}>
-                        <SelectTrigger className="bg-white/60 border-current text-xs h-7">
+                        <SelectTrigger className="bg-white border-current text-xs h-7">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -476,21 +476,21 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                     <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => togglePin(note)}
-                        className="p-1 rounded-full hover:bg-white/50 transition-colors"
+                        className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
                         title={note.pinned ? 'הסר הצמדה' : 'הצמד'}
                       >
                         {note.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
                       </button>
                       <button
                         onClick={() => startEdit(note)}
-                        className="p-1 rounded-full hover:bg-white/50 transition-colors"
+                        className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
                         title="ערוך"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => deleteNote(note.id)}
-                        className="p-1 rounded-full hover:bg-white/50 transition-colors"
+                        className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
                         title="מחק"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

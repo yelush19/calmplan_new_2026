@@ -464,7 +464,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     return (
       <Card className="border-0 shadow-lg">
         <CardContent className="p-12 text-center">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-600/10 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 flex items-center justify-center mb-4">
             <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
           </div>
           <p className="text-lg text-gray-500">טוען נתונים...</p>
@@ -593,7 +593,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 variant="ghost"
                 size="sm"
                 onClick={selectCurrentMonth}
-                className="rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-600/10"
+                className="rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-100"
               >
                 חודש נוכחי
               </Button>
@@ -601,7 +601,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 variant="ghost"
                 size="sm"
                 onClick={selectAllMonths}
-                className="rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-600/10"
+                className="rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-100"
               >
                 כל השנה
               </Button>
@@ -681,7 +681,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             {previewTasks.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {Array.from(selectedMonths).sort((a, b) => a - b).map(m => (
-                  <span key={m} className="text-xs font-bold bg-emerald-600/15 text-emerald-600 px-2.5 py-1 rounded-full">
+                  <span key={m} className="text-xs font-bold bg-emerald-100 text-emerald-600 px-2.5 py-1 rounded-full">
                     {HEBREW_MONTH_NAMES[m - 1]} {selectedYear}
                   </span>
                 ))}
@@ -744,7 +744,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
               </div>
 
               {/* Branch → Category groups — hierarchical, color-coded */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-gray-50/50">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-[#F5F5F5]">
                 {groupedByBranch.map((branch, branchIdx) => {
                   const allBranchTasks = branch.categories.flatMap(c => c.tasks);
                   const branchSelectedCount = allBranchTasks.filter(t => selectedTaskIds.has(t._previewId)).length;
@@ -846,7 +846,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                                               <span className="text-sm text-gray-500 font-medium">
                                                 {task.period}
                                               </span>
-                                              <span className="text-sm font-bold text-emerald-600 bg-emerald-600/10 px-2.5 py-0.5 rounded-full">
+                                              <span className="text-sm font-bold text-emerald-600 bg-emerald-100 px-2.5 py-0.5 rounded-full">
                                                 {format(new Date(task.due_date), 'dd/MM')}
                                               </span>
                                               {task._is874 && (

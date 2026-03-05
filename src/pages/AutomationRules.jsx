@@ -1240,7 +1240,7 @@ export default function AutomationRules() {
       {/* Due Dates + Cleanup Tool - side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
       {/* Service Due Dates Editor */}
-      <Card className="border-2 border-blue-200 bg-blue-50/30">
+      <Card className="border-2 border-blue-200 bg-blue-50">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <CalendarDays className="w-5 h-5 text-blue-600" />

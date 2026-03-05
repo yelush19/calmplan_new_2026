@@ -22,11 +22,11 @@ import { toast } from 'sonner';
 
 // ─── Status Configuration — Glassmorphism Pill Styles ──────────
 const statusConfig = {
-  not_started:            { label: 'לא התחיל',       pill: 'bg-white/40 text-slate-700 border border-white/30 backdrop-blur-sm', icon: Clock },
-  waiting_for_materials:  { label: 'ממתין לחומרים',   pill: 'bg-amber-100/80 text-amber-800 border border-amber-200',            icon: AlertCircle },
-  in_progress:            { label: 'בתהליך',          pill: 'bg-[#00acc1]/15 text-[#00acc1] border border-[#00acc1]/30',         icon: Clock },
-  completed:              { label: 'הושלם',           pill: 'bg-teal-100/80 text-teal-800 border border-teal-200',               icon: CheckCircle },
-  issues:                 { label: 'בעיות',           pill: 'bg-rose-100/80 text-rose-800 border border-rose-200',               icon: AlertCircle },
+  not_started:            { label: 'לא התחיל',       pill: 'bg-white text-slate-700 border border-[#E0E0E0] ', icon: Clock },
+  waiting_for_materials:  { label: 'ממתין לחומרים',   pill: 'bg-amber-100 text-amber-800 border border-amber-200',            icon: AlertCircle },
+  in_progress:            { label: 'בתהליך',          pill: 'bg-[#00acc1] text-[#00acc1] border border-[#00acc1]',         icon: Clock },
+  completed:              { label: 'הושלם',           pill: 'bg-teal-100 text-teal-800 border border-teal-200',               icon: CheckCircle },
+  issues:                 { label: 'בעיות',           pill: 'bg-rose-100 text-rose-800 border border-rose-200',               icon: AlertCircle },
 };
 
 const frequencyLabels = {
@@ -121,7 +121,7 @@ function ClientDrawer({ client, tasks, open, onClose }) {
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent side="right" className="w-[400px] backdrop-blur-xl bg-white/60 border-l border-white/20 rounded-l-[32px]">
+      <SheetContent side="right" className="w-[400px] bg-white border-l border-[#E0E0E0] rounded-l-[32px]">
         <SheetHeader className="text-right">
           <SheetTitle className="text-lg flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-[#008291]" />
@@ -137,7 +137,7 @@ function ClientDrawer({ client, tasks, open, onClose }) {
             <p className="text-sm text-slate-400 text-center py-8">אין משימות פעילות ללקוח זה</p>
           ) : (
             clientTasks.map(task => (
-              <div key={task.id} className="p-3 bg-white/70 backdrop-blur-sm rounded-[16px] shadow-sm border border-white/30">
+              <div key={task.id} className="p-3 bg-white  rounded-[16px] shadow-sm border border-[#E0E0E0]">
                 <p className="font-medium text-sm text-slate-800">{task.title}</p>
                 <div className="flex items-center gap-2 mt-1.5">
                   <Badge className={`text-[10px] rounded-full px-2 ${statusConfig[task.status]?.pill || statusConfig.not_started.pill}`}>
@@ -181,7 +181,7 @@ function BulkActionDialog({ open, onClose, selectedCount, onApply }) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="backdrop-blur-xl bg-white/80 border-white/30 rounded-[24px] max-w-md">
+      <DialogContent className="bg-white border-[#E0E0E0] rounded-[24px] max-w-md">
         <DialogHeader>
           <DialogTitle>עדכון גורף</DialogTitle>
           <DialogDescription>עדכון {selectedCount} חשבונות נבחרים בפעולה אחת</DialogDescription>
@@ -193,16 +193,16 @@ function BulkActionDialog({ open, onClose, selectedCount, onApply }) {
               type="date"
               value={bulkDate}
               onChange={(e) => setBulkDate(e.target.value)}
-              className="rounded-[16px] bg-white/60 border-white/30 backdrop-blur-sm mt-1"
+              className="rounded-[16px] bg-white border-[#E0E0E0]  mt-1"
             />
           </div>
           <div>
             <Label>סטטוס חדש</Label>
             <Select value={bulkStatus} onValueChange={setBulkStatus}>
-              <SelectTrigger className="rounded-[16px] bg-white/60 border-white/30 backdrop-blur-sm mt-1">
+              <SelectTrigger className="rounded-[16px] bg-white border-[#E0E0E0]  mt-1">
                 <SelectValue placeholder="ללא שינוי" />
               </SelectTrigger>
-              <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[16px]">
+              <SelectContent className="bg-white  border-[#E0E0E0] rounded-[16px]">
                 {Object.entries(statusConfig).map(([k, c]) => (
                   <SelectItem key={k} value={k}>{c.label}</SelectItem>
                 ))}
@@ -275,7 +275,7 @@ function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSa
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="backdrop-blur-xl bg-white/80 border-white/30 rounded-[24px] max-w-lg">
+      <DialogContent className="bg-white border-[#E0E0E0] rounded-[24px] max-w-lg">
         <DialogHeader>
           <DialogTitle>{reconciliation?.id ? 'עריכת התאמה' : 'הוספת התאמה חדשה'}</DialogTitle>
           <DialogDescription>פרטי התאמת חשבון</DialogDescription>
@@ -285,26 +285,26 @@ function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSa
             <div>
               <Label>לקוח</Label>
               <Select value={formData.client_id} onValueChange={(v) => setFormData(prev => ({ ...prev, client_id: v, client_account_id: '' }))}>
-                <SelectTrigger className="rounded-[12px] bg-white/60 border-white/30"><SelectValue placeholder="בחר לקוח" /></SelectTrigger>
-                <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[12px]">{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="rounded-[12px] bg-white border-[#E0E0E0]"><SelectValue placeholder="בחר לקוח" /></SelectTrigger>
+                <SelectContent className="bg-white  border-[#E0E0E0] rounded-[12px]">{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label>חשבון</Label>
               <Select value={formData.client_account_id} onValueChange={(v) => setFormData(prev => ({ ...prev, client_account_id: v }))} disabled={clientAccounts.length === 0}>
-                <SelectTrigger className="rounded-[12px] bg-white/60 border-white/30"><SelectValue placeholder="בחר חשבון" /></SelectTrigger>
-                <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[12px]">{clientAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="rounded-[12px] bg-white border-[#E0E0E0]"><SelectValue placeholder="בחר חשבון" /></SelectTrigger>
+                <SelectContent className="bg-white  border-[#E0E0E0] rounded-[12px]">{clientAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.account_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label>תקופה</Label>
-              <Input value={formData.period} onChange={(e) => setFormData(prev => ({ ...prev, period: e.target.value }))} placeholder="ינואר 2026" className="rounded-[12px] bg-white/60 border-white/30" />
+              <Input value={formData.period} onChange={(e) => setFormData(prev => ({ ...prev, period: e.target.value }))} placeholder="ינואר 2026" className="rounded-[12px] bg-white border-[#E0E0E0]" />
             </div>
             <div>
               <Label>סוג</Label>
               <Select value={formData.reconciliation_type} onValueChange={(v) => setFormData(prev => ({ ...prev, reconciliation_type: v }))}>
-                <SelectTrigger className="rounded-[12px] bg-white/60 border-white/30"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[12px]">
+                <SelectTrigger className="rounded-[12px] bg-white border-[#E0E0E0]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white  border-[#E0E0E0] rounded-[12px]">
                   <SelectItem value="bank_credit">בנק/אשראי</SelectItem>
                   <SelectItem value="internal">פנימי</SelectItem>
                 </SelectContent>
@@ -313,20 +313,20 @@ function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSa
             <div>
               <Label>סטטוס</Label>
               <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v }))}>
-                <SelectTrigger className="rounded-[12px] bg-white/60 border-white/30"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-white/90 backdrop-blur-xl border-white/30 rounded-[12px]">
+                <SelectTrigger className="rounded-[12px] bg-white border-[#E0E0E0]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white  border-[#E0E0E0] rounded-[12px]">
                   {Object.entries(statusConfig).map(([k, c]) => <SelectItem key={k} value={k}>{c.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>תאריך יעד</Label>
-              <Input type="date" value={formData.due_date} onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))} className="rounded-[12px] bg-white/60 border-white/30" />
+              <Input type="date" value={formData.due_date} onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))} className="rounded-[12px] bg-white border-[#E0E0E0]" />
             </div>
           </div>
           <div>
             <Label>הערות</Label>
-            <Textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="הערות..." className="min-h-[60px] rounded-[12px] bg-white/60 border-white/30" />
+            <Textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="הערות..." className="min-h-[60px] rounded-[12px] bg-white border-[#E0E0E0]" />
           </div>
         </div>
         <DialogFooter>
@@ -353,8 +353,8 @@ function ClientGroupHeader({
     <div
       className={`flex items-center justify-between p-3 cursor-pointer transition-all rounded-[16px] ${
         isExpanded
-          ? 'bg-white/50 backdrop-blur-sm border border-white/30 shadow-sm'
-          : 'hover:bg-white/30'
+          ? 'bg-white  border border-[#E0E0E0] shadow-sm'
+          : 'hover:bg-[#F5F5F5]'
       }`}
     >
       <div className="flex items-center gap-3 flex-1" onClick={onToggle}>
@@ -384,14 +384,14 @@ function ClientGroupHeader({
           {laggingCount > 0 && (
             <Badge className={`text-[10px] rounded-full px-2 ${
               worstSeverity === 'critical' || worstSeverity === 'high'
-                ? 'bg-rose-100/80 text-rose-700 border border-rose-200'
-                : 'bg-amber-100/80 text-amber-700 border border-amber-200'
+                ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                : 'bg-amber-100 text-amber-700 border border-amber-200'
             }`}>
               {laggingCount} בפיגור
             </Badge>
           )}
           {completedCount === totalAccounts && totalAccounts > 0 && (
-            <Badge className="text-[10px] rounded-full bg-teal-100/80 text-teal-700 border border-teal-200 px-2">
+            <Badge className="text-[10px] rounded-full bg-teal-100 text-teal-700 border border-teal-200 px-2">
               הכל מעודכן
             </Badge>
           )}
@@ -657,7 +657,7 @@ export default function ReconciliationsPage() {
   }, []);
 
   return (
-    <div className="space-y-6 p-4 md:p-6 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]" dir="rtl">
+    <div className="space-y-6 p-4 md:p-6 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]" dir="rtl">
       {/* ── Header ──────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-3">
@@ -691,23 +691,23 @@ export default function ReconciliationsPage() {
 
       {/* ── Summary Cards — glass style ─────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
+        <div className="p-4 rounded-[20px]  bg-white border border-[#E0E0E0] shadow-sm">
           <div className="text-2xl font-bold text-[#008291]">{totalClients}</div>
           <div className="text-xs text-slate-500">לקוחות פעילים</div>
         </div>
-        <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
+        <div className="p-4 rounded-[20px]  bg-white border border-[#E0E0E0] shadow-sm">
           <div className="text-2xl font-bold text-[#008291]">{rows.length}</div>
           <div className="text-xs text-slate-500">חשבונות פעילים</div>
         </div>
-        <div className={`p-4 rounded-[20px] backdrop-blur-sm border shadow-sm ${overdueCount > 0 ? 'bg-amber-50/60 border-amber-200/50' : 'bg-white/50 border-white/30'}`}>
+        <div className={`p-4 rounded-[20px]  border shadow-sm ${overdueCount > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-[#E0E0E0]'}`}>
           <div className={`text-2xl font-bold ${overdueCount > 0 ? 'text-amber-600' : 'text-[#008291]'}`}>{overdueCount}</div>
           <div className="text-xs text-slate-500">בפיגור</div>
         </div>
-        <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
+        <div className="p-4 rounded-[20px]  bg-white border border-[#E0E0E0] shadow-sm">
           <div className="text-2xl font-bold text-[#00acc1]">{pendingCount}</div>
           <div className="text-xs text-slate-500">פתוחות</div>
         </div>
-        <div className="p-4 rounded-[20px] backdrop-blur-sm bg-white/50 border border-white/30 shadow-sm">
+        <div className="p-4 rounded-[20px]  bg-white border border-[#E0E0E0] shadow-sm">
           <div className="text-2xl font-bold text-teal-600">{completedCount}</div>
           <div className="text-xs text-slate-500">הושלמו</div>
         </div>
@@ -715,14 +715,14 @@ export default function ReconciliationsPage() {
 
       {/* ── Overdue Alert ───────────────────────────────────────── */}
       {overdueCount > 0 && (
-        <div className="bg-amber-50/60 backdrop-blur-sm border border-amber-200/50 rounded-[16px] p-3 flex items-center gap-2 text-amber-800">
+        <div className="bg-amber-50  border border-amber-200 rounded-[16px] p-3 flex items-center gap-2 text-amber-800">
           <AlertTriangle className="w-5 h-5 shrink-0" />
           <span className="font-medium text-sm">{overdueCount} חשבונות בפיגור התאמה!</span>
         </div>
       )}
 
       {/* ── Filter & Search Bar — glass container ───────────────── */}
-      <div className="backdrop-blur-xl bg-white/45 border border-white/20 rounded-[24px] p-4 shadow-sm">
+      <div className="bg-white border border-[#E0E0E0] rounded-[24px] p-4 shadow-sm">
         <div className="flex flex-col md:flex-row items-center gap-4">
           {/* Lag Filter */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -735,7 +735,7 @@ export default function ReconciliationsPage() {
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   lagFilter === opt.key
                     ? 'bg-[#008291] text-white shadow-md'
-                    : 'bg-white/50 text-slate-600 border border-white/30 hover:bg-white/70'
+                    : 'bg-white text-slate-600 border border-[#E0E0E0] hover:bg-white'
                 }`}
               >
                 {opt.label}
@@ -747,7 +747,7 @@ export default function ReconciliationsPage() {
                 className={`px-3 py-1.5 rounded-r-full text-xs font-medium transition-all ${
                   lagFilter === 'custom'
                     ? 'bg-[#008291] text-white shadow-md'
-                    : 'bg-white/50 text-slate-600 border border-white/30 hover:bg-white/70'
+                    : 'bg-white text-slate-600 border border-[#E0E0E0] hover:bg-white'
                 }`}
               >
                 מותאם
@@ -759,7 +759,7 @@ export default function ReconciliationsPage() {
                   value={customLagDays}
                   onChange={(e) => setCustomLagDays(e.target.value)}
                   placeholder="ימים"
-                  className="w-20 h-8 text-xs rounded-l-full rounded-r-none bg-white/60 border-white/30 backdrop-blur-sm"
+                  className="w-20 h-8 text-xs rounded-l-full rounded-r-none bg-white border-[#E0E0E0] "
                 />
               )}
             </div>
@@ -772,7 +772,7 @@ export default function ReconciliationsPage() {
               placeholder="חיפוש לקוח או חשבון..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 rounded-[16px] bg-white/60 border-white/30 backdrop-blur-sm"
+              className="pr-10 rounded-[16px] bg-white border-[#E0E0E0] "
             />
           </div>
         </div>
@@ -816,7 +816,7 @@ export default function ReconciliationsPage() {
           <span className="mr-3 text-slate-500">טוען נתונים...</span>
         </div>
       ) : clientGroups.length === 0 ? (
-        <div className="text-center py-16 backdrop-blur-sm bg-white/30 rounded-[24px] border border-white/20">
+        <div className="text-center py-16  bg-[#F5F5F5] rounded-[24px] border border-[#E0E0E0]">
           <BookCheck className="w-12 h-12 mx-auto mb-3 text-slate-300" />
           <p className="text-slate-400 text-sm">אין חשבונות להצגה</p>
         </div>
@@ -829,7 +829,7 @@ export default function ReconciliationsPage() {
               <motion.div
                 key={clientName}
                 layout
-                className="backdrop-blur-xl bg-white/45 border border-white/20 rounded-[24px] shadow-sm overflow-hidden"
+                className="bg-white border border-[#E0E0E0] rounded-[24px] shadow-sm overflow-hidden"
               >
                 {/* Client Accordion Header */}
                 <ClientGroupHeader
@@ -881,14 +881,14 @@ export default function ReconciliationsPage() {
                                   initial={{ opacity: 0, x: -10 }}
                                   animate={{ opacity: 1, x: 0 }}
                                   transition={{ delay: idx * 0.03 }}
-                                  className={`border-b border-white/20 transition-colors ${
+                                  className={`border-b border-[#E0E0E0] transition-colors ${
                                     isChecked
                                       ? 'bg-[#008291]/5'
                                       : row.daysOverdue > 30
-                                        ? 'bg-rose-50/20 hover:bg-rose-50/40'
+                                        ? 'bg-rose-50 hover:bg-rose-50'
                                         : row.daysOverdue > 0
-                                          ? 'bg-amber-50/20 hover:bg-amber-50/40'
-                                          : 'bg-white/20 hover:bg-white/40'
+                                          ? 'bg-amber-50 hover:bg-amber-50'
+                                          : 'bg-[#F5F5F5] hover:bg-white'
                                   }`}
                                 >
                                   {/* Checkbox */}
@@ -909,13 +909,13 @@ export default function ReconciliationsPage() {
                                   </td>
                                   {/* Type */}
                                   <td className="p-3 text-center">
-                                    <Badge className="text-[10px] rounded-full bg-white/50 text-slate-600 border border-white/30">
+                                    <Badge className="text-[10px] rounded-full bg-white text-slate-600 border border-[#E0E0E0]">
                                       {accountTypeLabels[row.accountType] || row.accountType}
                                     </Badge>
                                   </td>
                                   {/* Frequency */}
                                   <td className="p-3 text-center">
-                                    <Badge className="text-[10px] rounded-full bg-white/50 text-slate-600 border border-white/30">
+                                    <Badge className="text-[10px] rounded-full bg-white text-slate-600 border border-[#E0E0E0]">
                                       {frequencyLabels[row.frequency] || 'חודשי'}
                                     </Badge>
                                   </td>
@@ -932,8 +932,8 @@ export default function ReconciliationsPage() {
                                     {row.daysOverdue > 0 ? (
                                       <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                                         row.daysOverdue > 30
-                                          ? 'bg-rose-100/60 text-rose-700'
-                                          : 'bg-amber-100/60 text-amber-700'
+                                          ? 'bg-rose-100 text-rose-700'
+                                          : 'bg-amber-100 text-amber-700'
                                       }`}>
                                         {row.daysOverdue} ימים
                                       </span>
@@ -944,7 +944,7 @@ export default function ReconciliationsPage() {
                                   {/* Status — Interactive Glass Button */}
                                   <td className="p-3 text-center">
                                     <button
-                                      className={`inline-flex items-center gap-1.5 text-[10px] rounded-full px-3 py-1.5 font-medium backdrop-blur-sm border shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ${stsCfg.pill}`}
+                                      className={`inline-flex items-center gap-1.5 text-[10px] rounded-full px-3 py-1.5 font-medium  border shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ${stsCfg.pill}`}
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         const statusCycle = ['not_started', 'in_progress', 'completed'];
@@ -980,7 +980,7 @@ export default function ReconciliationsPage() {
                                     <div className="flex items-center justify-center gap-1.5">
                                       <Button
                                         size="sm"
-                                        className="text-[10px] gap-1 rounded-full backdrop-blur-sm bg-white/40 hover:bg-[#008291] text-[#008291] hover:text-white border border-[#008291]/30 hover:border-transparent shadow-sm hover:shadow-lg transition-all"
+                                        className="text-[10px] gap-1 rounded-full  bg-white hover:bg-[#008291] text-[#008291] hover:text-white border border-[#008291]/30 hover:border-transparent shadow-sm hover:shadow-lg transition-all"
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           try {

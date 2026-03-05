@@ -100,7 +100,7 @@ export default function DashboardsPage() {
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="p-4 sm:p-6 md:p-8 backdrop-blur-xl bg-white/45 border border-white/20 rounded-[32px] shadow-xl"
+            className="p-4 sm:p-6 md:p-8 bg-white border border-[#E0E0E0] rounded-[32px] shadow-xl"
         >
             <h1 className="text-4xl font-bold text-slate-800 mb-8 text-center">דשבורד ניתוח נתונים</h1>
             

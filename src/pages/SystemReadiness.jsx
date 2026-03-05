@@ -358,10 +358,10 @@ export default function SystemReadiness() {
                 return (
                   <tr
                     key={client.id}
-                    className={`border-b border-gray-50 transition-colors ${isEdited ? 'bg-blue-50/30' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'} hover:bg-gray-100/50`}
+                    className={`border-b border-gray-50 transition-colors ${isEdited ? 'bg-blue-50' : idx % 2 === 0 ? 'bg-white' : 'bg-[#F5F5F5]'} hover:bg-[#F5F5F5]`}
                   >
                     {/* Client name */}
-                    <td className={`py-2 px-4 sticky right-0 z-10 ${isEdited ? 'bg-blue-50/30' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                    <td className={`py-2 px-4 sticky right-0 z-10 ${isEdited ? 'bg-blue-50' : idx % 2 === 0 ? 'bg-white' : 'bg-[#F5F5F5]'}`}>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-gray-800 text-xs truncate max-w-[160px]">{client.name}</span>
                         {isEdited && (
