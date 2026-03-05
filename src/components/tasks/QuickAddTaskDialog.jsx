@@ -12,6 +12,7 @@ import { Task, Client, Dashboard } from '@/api/entities';
 import { Switch } from '@/components/ui/switch';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { getScheduledStartForCategory } from '@/config/automationRules';
+import { getBranchForCategory } from '@/engines/taskCascadeEngine';
 import { format, parseISO, subMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -339,6 +340,12 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         ...(reportingDeadline && { reporting_deadline: reportingDeadline }),
         ...(submitAsIs && { submit_as_is: true }),
       };
+
+      // Auto P-branch assignment: P1=שכר, P2=הנה"ח, P3=משרד
+      if (!taskPayload.branch && taskPayload.category) {
+        const autoBranch = getBranchForCategory(taskPayload.category);
+        if (autoBranch) taskPayload.branch = autoBranch;
+      }
 
       if (taskToEdit?.id) {
         await Task.update(taskToEdit.id, taskPayload);
