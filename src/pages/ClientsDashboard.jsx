@@ -42,7 +42,7 @@ const COLUMN_GROUPS = [
   {
     key: 'p2_additional',
     label: 'שירותי הנה"ח נוספים',
-    bgColor: 'bg-indigo-50/50',
+    bgColor: 'bg-indigo-50',
     headerBg: 'bg-indigo-600',
     headerText: 'text-white',
     drillDownPage: 'BookkeepingExtrasDashboard',
@@ -62,7 +62,7 @@ const ALL_COLUMNS = COLUMN_GROUPS.flatMap(g => g.columns);
 // Statuses available for quick-change (excluding 'issues' duplicate)
 const CHANGEABLE_STATUSES = Object.entries(STATUS_CONFIG).filter(([k]) => k !== 'issues');
 
-const EMPTY_STATUS = { label: '-', bg: 'bg-white/40', text: 'text-slate-300' };
+const EMPTY_STATUS = { label: '-', bg: 'bg-white', text: 'text-slate-300' };
 
 // Popover positioned near a cell
 function CellPopover({ anchorRect, onClose, children }) {
@@ -93,7 +93,7 @@ function CellPopover({ anchorRect, onClose, children }) {
   return (
     <div
       ref={popoverRef}
-      className="fixed z-50 bg-white rounded-lg shadow-xl border border-white/20 p-2 min-w-[200px] animate-in fade-in-0 zoom-in-95"
+      className="fixed z-50 bg-white rounded-lg shadow-xl border border-[#E0E0E0] p-2 min-w-[200px] animate-in fade-in-0 zoom-in-95"
       style={{ top, left }}
     >
       {children}
@@ -519,7 +519,7 @@ export default function ClientsDashboardPage() {
   }, [isUpdating]);
 
   return (
-    <div className="p-4 md:p-6 space-y-4 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]">
+    <div className="p-4 md:p-6 space-y-4 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -533,7 +533,7 @@ export default function ClientsDashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1 bg-white rounded-lg border border-white/20 p-1 shadow-sm">
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-[#E0E0E0] p-1 shadow-sm">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -584,13 +584,13 @@ export default function ClientsDashboardPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="bg-gradient-to-br from-gray-50 to-white border-white/20 shadow-sm">
+        <Card className="bg-gradient-to-br from-gray-50 to-white border-[#E0E0E0] shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-slate-700">{filteredClients.length}</div>
             <div className="text-xs text-slate-500">לקוחות פעילים</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-gray-50 to-white border-white/20 shadow-sm">
+        <Card className="bg-gradient-to-br from-gray-50 to-white border-[#E0E0E0] shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-slate-600">{stats.total}</div>
             <div className="text-xs text-slate-500">תהליכים</div>
@@ -622,7 +622,7 @@ export default function ClientsDashboardPage() {
           <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
           <Input placeholder="חיפוש לקוח..." value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10 h-9 text-sm border-white/20 bg-white" />
+            className="pr-10 h-9 text-sm border-[#E0E0E0] bg-white" />
         </div>
         <MultiStatusFilter
           options={[
@@ -643,10 +643,10 @@ export default function ClientsDashboardPage() {
           <Loader className="w-10 h-10 animate-spin text-emerald-500" />
         </div>
       ) : filteredClients.length > 0 ? (
-        <Card className="border-white/30 shadow-md overflow-hidden">
+        <Card className="border-[#E0E0E0] shadow-md overflow-hidden">
           <CardContent className="p-0">
             {/* Column visibility toggle bar */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50/80 border-b border-white/20 flex-wrap">
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-[#E0E0E0] flex-wrap">
               <span className="text-xs font-bold text-slate-500 ml-2">עמודות:</span>
               {ALL_COLUMNS.map(col => (
                 <button
@@ -675,12 +675,12 @@ export default function ClientsDashboardPage() {
                 <thead>
                   {/* Group headers */}
                   <tr>
-                    <th rowSpan={2} className="text-right px-4 py-3 font-bold text-slate-700 text-sm bg-white/50 sticky right-0 z-20 border-b-2 border-white/30 min-w-[160px]">
+                    <th rowSpan={2} className="text-right px-4 py-3 font-bold text-slate-700 text-sm bg-white sticky right-0 z-20 border-b-2 border-[#E0E0E0] min-w-[160px]">
                       לקוח
                     </th>
                     {visibleColumnGroups.map(group => (
                       <th key={group.key} colSpan={group.columns.length}
-                        className={`px-3 py-2.5 text-center font-bold text-sm border-b-2 border-white/30 border-x-2 border-white/30 ${group.headerBg} ${group.headerText}`}>
+                        className={`px-3 py-2.5 text-center font-bold text-sm border-b-2 border-[#E0E0E0] border-x-2 border-[#E0E0E0] ${group.headerBg} ${group.headerText}`}>
                         <Link to={createPageUrl(group.drillDownPage)}
                           className="inline-flex items-center gap-2 hover:opacity-80 transition-opacity">
                           <group.icon className="w-4 h-4" />
@@ -691,21 +691,21 @@ export default function ClientsDashboardPage() {
                     ))}
                   </tr>
                   {/* Sub-column headers — resizable */}
-                  <tr className="border-b-2 border-white/30">
+                  <tr className="border-b-2 border-[#E0E0E0]">
                     {visibleColumnGroups.map(group =>
                       group.columns.map((col, idx) => {
                         const colStats = getColumnStats(col.key);
                         const colW = columnWidths[col.key];
                         return (
                           <th key={col.key}
-                            className={`px-2 py-2 text-center text-xs font-semibold text-slate-600 ${group.bgColor} ${idx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'} relative select-none`}
+                            className={`px-2 py-2 text-center text-xs font-semibold text-slate-600 ${group.bgColor} ${idx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'} relative select-none`}
                             style={colW ? { width: colW, minWidth: 60 } : { minWidth: 60 }}
                           >
                             <div>{col.label}</div>
                             <div className="text-[10px] font-normal text-slate-400 mt-0.5">{colStats.pct}% ({colStats.done}/{colStats.total})</div>
                             {/* Resize handle */}
                             <div
-                              className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-emerald-400/40 transition-colors z-10"
+                              className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-emerald-400 transition-colors z-10"
                               onMouseDown={(e) => handleResizeStart(col.key, e)}
                             />
                           </th>
@@ -724,9 +724,9 @@ export default function ClientsDashboardPage() {
 
                     return (
                       <tr key={client.id}
-                        className={`border-b border-white/20 transition-colors hover:bg-emerald-50/30 ${index % 2 === 0 ? 'bg-white' : 'bg-white/30/40'}`}>
+                        className={`border-b border-[#E0E0E0] transition-colors hover:bg-emerald-50 ${index % 2 === 0 ? 'bg-white' : 'bg-[#F5F5F5]'}`}>
                         {/* Client name cell */}
-                        <td className="px-4 py-2.5 sticky right-0 z-10 border-l-2 border-white/30"
+                        <td className="px-4 py-2.5 sticky right-0 z-10 border-l-2 border-[#E0E0E0]"
                           style={{ backgroundColor: index % 2 === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
                           <div className="flex items-center justify-between">
                             <div>
@@ -762,7 +762,7 @@ export default function ClientsDashboardPage() {
                             // Service not applicable for this client
                             if (!clientNeedsService(client, col, group)) {
                               return (
-                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
+                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'}`}>
                                   <div className={`${bg-gray-100} text-slate-400 rounded py-1.5 text-[10px] font-medium mx-0.5`}>
                                     לא רלוונטי
                                   </div>
@@ -775,7 +775,7 @@ export default function ClientsDashboardPage() {
                               // Check if bimonthly off-month → show "לא רלוונטי"
                               if (isBimonthlyOffMonth(client, col.key, selectedMonth)) {
                                 return (
-                                  <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
+                                  <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'}`}>
                                     <div className={`${bg-gray-100} text-slate-400 rounded py-1.5 text-xs font-bold mx-0.5`}>
                                       דו-חודשי
                                     </div>
@@ -784,10 +784,10 @@ export default function ClientsDashboardPage() {
                               }
                               // Empty cell - clickable to create task
                               return (
-                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
+                                <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'}`}>
                                   <button
                                     onClick={(e) => handleCreateTask(e, client, col, group)}
-                                    className="w-full bg-white hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded py-1.5 text-xs font-medium mx-0.5 border border-dashed border-white/20 hover:border-emerald-300 transition-all cursor-pointer group/empty"
+                                    className="w-full bg-white hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded py-1.5 text-xs font-medium mx-0.5 border border-dashed border-[#E0E0E0] hover:border-emerald-300 transition-all cursor-pointer group/empty"
                                     title={`צור משימת ${col.label} עבור ${client.name}`}
                                   >
                                     <span className="group-hover/empty:hidden">-</span>
@@ -802,7 +802,7 @@ export default function ClientsDashboardPage() {
                             const isActive = popover?.clientName === client.name && popover?.colKey === col.key;
 
                             return (
-                              <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
+                              <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'}`}>
                                 <button
                                   onClick={(e) => handleCellClick(e, client, col, group)}
                                   className={`w-full ${config.bg} text-gray-900 rounded py-1.5 text-xs font-bold mx-0.5 hover:opacity-80 hover:shadow-sm transition-all cursor-pointer ${isActive ? 'ring-2 ring-emerald-500 ring-offset-1' : ''}`}
@@ -823,18 +823,18 @@ export default function ClientsDashboardPage() {
                 </tbody>
                 {/* Footer */}
                 <tfoot>
-                  <tr className="bg-white/50 border-t-2 border-white/30">
-                    <td className="px-4 py-2.5 sticky right-0 bg-white/50 z-10 text-sm font-bold text-slate-700 border-l-2 border-white/30">
+                  <tr className="bg-white border-t-2 border-[#E0E0E0]">
+                    <td className="px-4 py-2.5 sticky right-0 bg-white z-10 text-sm font-bold text-slate-700 border-l-2 border-[#E0E0E0]">
                       סה"כ ({filteredClients.length} לקוחות)
                     </td>
                     {visibleColumnGroups.map(group =>
                       group.columns.map((col, colIdx) => {
                         const colStats = getColumnStats(col.key);
                         return (
-                          <td key={col.key} className={`px-2 py-2.5 text-center ${colIdx === 0 ? 'border-r-2 border-white/30' : 'border-r border-white/20'}`}>
+                          <td key={col.key} className={`px-2 py-2.5 text-center ${colIdx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'}`}>
                             <div className="text-sm font-bold text-slate-700">{colStats.pct}%</div>
                             <div className="text-[10px] text-slate-500">{colStats.done}/{colStats.total}</div>
-                            <div className="w-full bg-white/40 rounded-full h-1.5 mt-1">
+                            <div className="w-full bg-white rounded-full h-1.5 mt-1">
                               <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${colStats.pct}%` }} />
                             </div>
                           </td>
@@ -848,7 +848,7 @@ export default function ClientsDashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="p-12 text-center border-white/20 shadow-sm">
+        <Card className="p-12 text-center border-[#E0E0E0] shadow-sm">
           <Users className="w-14 h-14 mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-semibold text-slate-600 mb-2">אין לקוחות פעילים להצגה</h3>
           <p className="text-sm text-slate-400 mb-4">הוסף לקוחות דרך ניהול לקוחות או שנה סינון</p>
@@ -899,7 +899,7 @@ export default function ClientsDashboardPage() {
                     navigateToDrillDown(popover.group, popover.clientName);
                     setPopover(null);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded text-xs text-slate-600 hover:bg-white/50 transition-all cursor-pointer"
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded text-xs text-slate-600 hover:bg-white transition-all cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   צפה בפירוט מלא
@@ -922,7 +922,7 @@ export default function ClientsDashboardPage() {
 
           return (
             <Link key={group.key} to={createPageUrl(group.drillDownPage)}>
-              <Card className="border-white/20 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
+              <Card className="border-[#E0E0E0] hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${group.headerBg} shadow-sm`}>
                     <Icon className="w-6 h-6 text-white" />
@@ -932,7 +932,7 @@ export default function ClientsDashboardPage() {
                     <div className="text-xs text-slate-400">
                       {groupDone}/{groupTasks.length} הושלמו
                     </div>
-                    <div className="w-full bg-white/40 rounded-full h-1.5 mt-1.5">
+                    <div className="w-full bg-white rounded-full h-1.5 mt-1.5">
                       <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${groupPct}%` }} />
                     </div>
                   </div>
@@ -943,9 +943,9 @@ export default function ClientsDashboardPage() {
           );
         })}
         <Link to={createPageUrl('ClientManagement')}>
-          <Card className="border-white/20 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
+          <Card className="border-[#E0E0E0] hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/300 shadow-sm">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#F5F5F5]0 shadow-sm">
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">

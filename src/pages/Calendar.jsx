@@ -184,7 +184,7 @@ export default function CalendarPage() {
     <div className="space-y-4">
       {/* Summary Strip - ADHD friendly quick overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-emerald-200 bg-emerald-50/80 cursor-pointer hover:shadow-md transition-shadow" onClick={goToToday}>
+        <Card className="border-emerald-200 bg-emerald-50 cursor-pointer hover:shadow-md transition-shadow" onClick={goToToday}>
           <CardContent className="p-3 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
               <CalendarIcon className="w-5 h-5 text-white" />
@@ -196,7 +196,7 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-sky-200 bg-sky-50/80">
+        <Card className="border-sky-200 bg-sky-50">
           <CardContent className="p-3 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center">
               <Target className="w-5 h-5 text-white" />
@@ -208,7 +208,7 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
 
-        <Card className={`${overdueTasks.length > 0 ? 'border-amber-200 bg-amber-50/80' : 'border-gray-200 bg-gray-50'}`}>
+        <Card className={`${overdueTasks.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}>
           <CardContent className="p-3 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl ${overdueTasks.length > 0 ? 'bg-amber-500' : 'bg-gray-400'} flex items-center justify-center`}>
               <Clock className="w-5 h-5 text-white" />
@@ -388,12 +388,12 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
     >
-      <Card className="shadow-sm overflow-hidden backdrop-blur-xl bg-white/45 border-white/20 rounded-[32px]">
+      <Card className="shadow-sm overflow-hidden bg-white border-[#E0E0E0] rounded-[32px]">
         <CardContent className="p-0" style={{ height: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
           {/* Day headers */}
-          <div className="grid grid-cols-7 border-b border-white/20 shrink-0">
+          <div className="grid grid-cols-7 border-b border-[#E0E0E0] shrink-0">
             {DAYS_HE.map((d, i) => (
-              <div key={i} className="p-2 text-center text-xs font-semibold text-[#008291] bg-white/30">
+              <div key={i} className="p-2 text-center text-xs font-semibold text-[#008291] bg-[#F5F5F5]">
                 {d}
               </div>
             ))}
@@ -401,7 +401,7 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
           {/* Weeks — fixed height grid, no scroll */}
           <div className="flex-1 grid" style={{ gridTemplateRows: `repeat(${rowCount}, 1fr)` }}>
             {weeks.map((week, wi) => (
-              <div key={wi} className="grid grid-cols-7 border-b border-white/10 last:border-b-0 min-h-0">
+              <div key={wi} className="grid grid-cols-7 border-b border-[#E0E0E0] last:border-b-0 min-h-0">
                 {week.map((d, di) => {
                   const items = getItemsForDate(d);
                   const inMonth = isSameMonth(d, currentDate);
@@ -413,11 +413,11 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
                     <button
                       key={di}
                       onClick={() => onSelectDate(d)}
-                      className={`relative p-1.5 border-l border-white/10 first:border-l-0 text-right transition-colors overflow-hidden rounded-lg m-0.5 ${
-                        !inMonth ? 'bg-white/10 opacity-40' :
-                        isSelected ? 'bg-emerald-100/50 backdrop-blur-sm' :
-                        isTodayDate ? 'bg-amber-50/50 backdrop-blur-sm' :
-                        'bg-white/20 hover:bg-white/40 backdrop-blur-sm'
+                      className={`relative p-1.5 border-l border-[#E0E0E0] first:border-l-0 text-right transition-colors overflow-hidden rounded-lg m-0.5 ${
+                        !inMonth ? 'bg-[#F5F5F5] opacity-40' :
+                        isSelected ? 'bg-emerald-100 ' :
+                        isTodayDate ? 'bg-amber-50 ' :
+                        'bg-[#F5F5F5] hover:bg-[#F5F5F5] '
                       }`}
                     >
                       <span className={`text-sm font-semibold ${
@@ -474,12 +474,12 @@ function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, ge
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
     >
-      <Card className="shadow-sm overflow-hidden backdrop-blur-xl bg-white/45 border-white/20 rounded-[32px]">
+      <Card className="shadow-sm overflow-hidden bg-white border-[#E0E0E0] rounded-[32px]">
         <CardContent className="p-0" style={{ height: 'calc(100vh - 280px)', display: 'flex', flexDirection: 'column' }}>
           {/* Day headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }} className="border-b border-white/20 shrink-0">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }} className="border-b border-[#E0E0E0] shrink-0">
             {DAYS_HE.map((d, i) => (
-              <div key={i} className="p-2 text-center text-xs font-semibold text-[#008291] bg-white/30">
+              <div key={i} className="p-2 text-center text-xs font-semibold text-[#008291] bg-[#F5F5F5]">
                 {d}
               </div>
             ))}
@@ -495,10 +495,10 @@ function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, ge
                 <button
                   key={idx}
                   onClick={() => onSelectDate(day)}
-                  className={`flex flex-col p-1.5 border-l border-white/10 first:border-l-0 transition-colors overflow-hidden ${
-                    isTodayDate ? 'bg-emerald-100/50 backdrop-blur-sm' :
-                    isWeekend ? 'bg-white/10 opacity-60' :
-                    'bg-white/20 hover:bg-white/40 backdrop-blur-sm'
+                  className={`flex flex-col p-1.5 border-l border-[#E0E0E0] first:border-l-0 transition-colors overflow-hidden ${
+                    isTodayDate ? 'bg-emerald-100 ' :
+                    isWeekend ? 'bg-[#F5F5F5] opacity-60' :
+                    'bg-[#F5F5F5] hover:bg-[#F5F5F5] '
                   }`}
                 >
                   {/* Day number */}
@@ -596,7 +596,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
       className="space-y-3"
     >
       {/* Day header */}
-      <Card className={`shadow-sm backdrop-blur-xl bg-white/45 border-white/20 rounded-[32px] ${isTodayDate ? 'ring-1 ring-emerald-200' : ''}`}>
+      <Card className={`shadow-sm bg-white border-[#E0E0E0] rounded-[32px] ${isTodayDate ? 'ring-1 ring-emerald-200' : ''}`}>
         <CardContent className="p-4 text-center">
           <h2 className="text-xl font-bold text-gray-800">
             {format(date, 'EEEE', { locale: he })}
@@ -613,7 +613,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
 
       {/* All-day items */}
       {allDayItems.length > 0 && (
-        <Card className="shadow-sm backdrop-blur-xl bg-white/45 border-white/20 rounded-[24px]">
+        <Card className="shadow-sm bg-white border-[#E0E0E0] rounded-[24px]">
           <CardContent className="p-3">
             <p className="text-xs font-bold text-[#008291] mb-2">כל היום</p>
             <div className="space-y-1.5">
@@ -630,7 +630,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
                     <span className="flex-1 text-sm font-medium truncate">{item.title}</span>
                     {item.client_name && <span className="text-[10px] text-gray-400">{item.client_name}</span>}
                     {item.itemType === 'task' && (
-                      <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/50"><Pin className="w-3 h-3 text-amber-600" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white"><Pin className="w-3 h-3 text-amber-600" /></button>
                     )}
                   </div>
                 );
@@ -641,17 +641,17 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
       )}
 
       {/* Time grid */}
-      <Card className="shadow-sm backdrop-blur-xl bg-white/45 border-white/20 rounded-[24px] overflow-hidden">
+      <Card className="shadow-sm bg-white border-[#E0E0E0] rounded-[24px] overflow-hidden">
         <CardContent className="p-0">
           <div className="relative overflow-y-auto" style={{ height: 'calc(100vh - 380px)' }}>
             {/* Hour rows */}
             {HOURS.map(h => (
               <div
                 key={h}
-                className="flex border-b border-white/15"
+                className="flex border-b border-[#E0E0E0]"
                 style={{ height: HOUR_HEIGHT }}
               >
-                <div className="w-14 shrink-0 text-[10px] font-semibold text-[#008291]/60 text-center pt-1 border-l border-white/15">
+                <div className="w-14 shrink-0 text-[10px] font-semibold text-[#008291] text-center pt-1 border-l border-[#E0E0E0]">
                   {String(h).padStart(2, '0')}:00
                 </div>
                 <div className="flex-1 relative">
@@ -669,7 +669,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
                         <span className="flex-1 text-sm font-medium truncate">{item.title}</span>
                         {item.client_name && <span className="text-[10px] text-gray-400 hidden md:inline">{item.client_name}</span>}
                         {item.itemType === 'task' && (
-                          <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/50"><Pin className="w-3 h-3 text-amber-600" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white"><Pin className="w-3 h-3 text-amber-600" /></button>
                         )}
                       </div>
                     );
@@ -691,7 +691,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
       </Card>
 
       {items.length === 0 && (
-        <Card className="shadow-sm backdrop-blur-xl bg-white/45 border-white/20 rounded-[24px]">
+        <Card className="shadow-sm bg-white border-[#E0E0E0] rounded-[24px]">
           <CardContent className="p-8 text-center">
             <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p className="text-lg text-gray-400">יום פנוי</p>

@@ -771,7 +771,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                   </div>
                   {/* אמצעי תשלום רשויות */}
                   {(formData.service_types || []).includes('authorities_payment') && (
-                    <div className="border-2 border-orange-200 rounded-lg p-3 bg-orange-50/30 space-y-2">
+                    <div className="border-2 border-orange-200 rounded-lg p-3 bg-orange-50 space-y-2">
                       <Label className="font-bold">אמצעי תשלום רשויות</Label>
                       <Select
                         value={formData.authorities_payment_method || 'masav'}
@@ -914,7 +914,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               </div>
 
               {/* שכר - FIRST, because it controls social security and deductions */}
-              <div className="border-2 border-blue-200 rounded-xl p-4 space-y-2 bg-blue-50/30">
+              <div className="border-2 border-blue-200 rounded-xl p-4 space-y-2 bg-blue-50">
                 <Label className="text-base font-bold">שכר</Label>
                 <p className="text-xs text-gray-500">תדירות עיבוד שכר — שולט גם על ביטוח לאומי ומ״ה ניכויים</p>
                 <Select value={formData.reporting_info.payroll_frequency} onValueChange={(value) => {
@@ -1039,7 +1039,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
 
               {/* מס"ב ספקים - סייקלים */}
               {(formData.service_types || []).includes('masav_suppliers') && (
-                <div className="border-2 border-purple-200 rounded-xl p-4 space-y-3 bg-purple-50/30">
+                <div className="border-2 border-purple-200 rounded-xl p-4 space-y-3 bg-purple-50">
                   <Label className="text-base font-bold">מס״ב ספקים - סייקלים</Label>
                   <p className="text-xs text-gray-500">כמה סייקלים בחודש ובאילו תאריכים</p>
                   <div className="flex items-center gap-3">

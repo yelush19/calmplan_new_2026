@@ -843,7 +843,7 @@ export default function WeeklyPlanningDashboard() {
       )}
 
       {/* Planning Tools */}
-      <Card className="border-0 shadow-sm bg-indigo-50/50">
+      <Card className="border-0 shadow-sm bg-indigo-50">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2 text-indigo-800">
             <Zap className="w-4 h-4" />
@@ -885,7 +885,7 @@ export default function WeeklyPlanningDashboard() {
 
       {/* Unassigned Tasks Pool */}
       {showUnassigned && unassignedTasks.length > 0 && (
-        <Card className="border-2 border-indigo-200 bg-indigo-50/30">
+        <Card className="border-2 border-indigo-200 bg-indigo-50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2 text-indigo-800">
               <Inbox className="w-4 h-4" />
@@ -946,7 +946,7 @@ export default function WeeklyPlanningDashboard() {
 
       {/* Overdue tasks */}
       {overdueTasks.length > 0 && (
-        <Card className="border-2 border-amber-200 bg-amber-50/50">
+        <Card className="border-2 border-amber-200 bg-amber-50">
           <CardHeader className="pb-2 cursor-pointer" onClick={() => toggleDay('overdue')}>
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm flex items-center gap-2 text-amber-800">

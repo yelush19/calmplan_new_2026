@@ -24,7 +24,7 @@ export default function SmartNudge({ nudge }) {
     >
       <Card className={`bg-gradient-to-tr ${colorClasses}`}>
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-white/50 flex-shrink-0 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-white flex-shrink-0 flex items-center justify-center">
             <Icon className="w-6 h-6" />
           </div>
           <div>

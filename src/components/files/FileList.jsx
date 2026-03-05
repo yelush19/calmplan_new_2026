@@ -326,7 +326,7 @@ export default function FileList({
                   return (
                     <tr
                       key={file.id}
-                      className={`hover:bg-gray-50 transition-colors ${selectedIds.has(file.id) ? 'bg-blue-50/50' : ''}`}
+                      className={`hover:bg-gray-50 transition-colors ${selectedIds.has(file.id) ? 'bg-blue-50' : ''}`}
                     >
                       <td className="p-3">
                         <Checkbox

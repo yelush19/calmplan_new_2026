@@ -22,7 +22,7 @@ const DrawerClose = DrawerPrimitive.Close
 const DrawerOverlay = React.forwardRef(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/60 backdrop-blur-sm", className)}
+    className={cn("fixed inset-0 z-50 bg-black/60", className)}
     {...props} />
 ))
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
@@ -33,12 +33,12 @@ const DrawerContent = React.forwardRef(({ className, children, ...props }, ref) 
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[24px] border border-white/20 backdrop-blur-2xl shadow-2xl",
+        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[24px] border border-[#E0E0E0] shadow-2xl",
         className
       )}
-      style={{ backgroundColor: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)', borderTop: '1px solid rgba(255,255,255,0.2)' }}
+      style={{ backgroundColor: '#FFFFFF', borderTop: '1px solid #E0E0E0' }}
       {...props}>
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-white/30" />
+      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-[#F5F5F5]" />
       {children}
     </DrawerPrimitive.Content>
   </DrawerPortal>

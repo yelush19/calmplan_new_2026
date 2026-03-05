@@ -371,7 +371,7 @@ export default function WeeklySummary() {
           {expandedSection === 'overdue' && (
             <CardContent className="space-y-3 pt-0">
               {analysis.topClients.map(([clientName, data]) => (
-                <div key={clientName} className="border rounded-lg p-3 bg-amber-50/30">
+                <div key={clientName} className="border rounded-lg p-3 bg-amber-50">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-amber-600" />

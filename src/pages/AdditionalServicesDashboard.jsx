@@ -306,7 +306,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         {clientFilter && (
           <Badge className="bg-[#008291] text-white text-sm px-3 py-1.5 gap-2">
             <Users className="w-3.5 h-3.5" />{clientFilter}
-            <button onClick={clearClientFilter} className="hover:bg-white/20 rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
+            <button onClick={clearClientFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
           </Badge>
         )}
       </div>
@@ -323,7 +323,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1 bg-white rounded-lg border border-white/20 p-1 shadow-sm">
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-[#E0E0E0] p-1 shadow-sm">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -337,7 +337,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
-          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-white/20 p-0.5">
+          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-[#E0E0E0] p-0.5">
             <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')}>
               <List className="w-4 h-4" />
             </Button>
@@ -369,7 +369,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-white/30 to-white border-white/20 shadow-sm">
+        <Card className="bg-gradient-to-br from-[#F5F5F5] to-white border-[#E0E0E0] shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-slate-700">{stats.total}</div>
             <div className="text-xs text-slate-500">סה"כ תהליכים</div>
@@ -425,7 +425,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           </div>
         )
       ) : (
-        <Card className="p-12 text-center border-white/20">
+        <Card className="p-12 text-center border-[#E0E0E0]">
           <Settings2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <h3 className="text-xl font-semibold text-slate-600 mb-2">{config.emptyTitle}</h3>
           <p className="text-slate-500">הפעל אוטומציות כדי ליצור משימות חודשיות עבור שירותים נוספים כמו מס"ב, משלוח תלושים ועוד</p>

@@ -188,7 +188,7 @@ export default function GroupedServiceTable({
                 <React.Fragment key={status}>
                   {/* Status group header */}
                   <tr
-                    className="cursor-pointer select-none hover:bg-gray-50/80 transition-colors"
+                    className="cursor-pointer select-none hover:bg-[#F5F5F5] transition-colors"
                     onClick={() => toggleGroup(status)}
                   >
                     <td
@@ -295,9 +295,9 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
 
   return (
     <>
-      <tr className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50/40' : isEven ? 'bg-white' : 'bg-gray-50/30'} hover:bg-gray-100/50`}>
+      <tr className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50' : isEven ? 'bg-white' : 'bg-[#F5F5F5]'} hover:bg-[#F5F5F5]`}>
         {/* Client name + IDs */}
-        <td className={`py-1.5 px-4 sticky right-0 z-10 ${allDone ? 'bg-emerald-50/40' : isEven ? 'bg-white' : 'bg-gray-50/30'}`}>
+        <td className={`py-1.5 px-4 sticky right-0 z-10 ${allDone ? 'bg-emerald-50' : isEven ? 'bg-white' : 'bg-[#F5F5F5]'}`}>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setShowSubTasks(!showSubTasks)}
@@ -412,7 +412,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
       </tr>
       {/* Sub-tasks row */}
       {showSubTasks && (
-        <tr className="bg-indigo-50/30">
+        <tr className="bg-indigo-50">
           <td colSpan={service.steps.length + 2} className="px-4 py-2">
             <div className="space-y-1.5 mr-6">
               {/* Fast-Track button for nano payroll */}

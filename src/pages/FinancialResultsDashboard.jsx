@@ -196,7 +196,7 @@ export default function FinancialResultsDashboard() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]">
+    <div className="space-y-6 p-4 md:p-6 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -268,7 +268,7 @@ export default function FinancialResultsDashboard() {
           <div className="overflow-x-auto">
             <ResizableTable className="w-full text-sm" stickyHeader maxHeight="70vh">
               <thead>
-                <tr className="border-b bg-gray-50/80">
+                <tr className="border-b bg-[#F5F5F5]">
                   <th className="text-center p-2 w-10 bg-gray-100">#</th>
                   <th className="text-right p-3 font-semibold min-w-[180px] bg-gray-100 sticky right-0 z-20 border-l">
                     לקוח
@@ -290,7 +290,7 @@ export default function FinancialResultsDashboard() {
               </thead>
               <tbody>
                 {filteredRows.map((row, idx) => (
-                  <tr key={row.client.id} className={`border-b hover:bg-gray-50/40 ${idx % 2 === 0 ? '' : 'bg-gray-50/20'}`}>
+                  <tr key={row.client.id} className={`border-b hover:bg-[#F5F5F5] ${idx % 2 === 0 ? '' : 'bg-[#F5F5F5]'}`}>
                     <td className="text-center p-2 text-xs text-gray-400">{idx + 1}</td>
                     <td className="p-3 font-medium sticky right-0 bg-white z-10 border-l">
                       {row.client.name}

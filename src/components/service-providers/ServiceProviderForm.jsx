@@ -154,7 +154,7 @@ export default function ServiceProviderForm({ provider, serviceCompanyId, onSubm
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
       onClick={onCancel}
     >
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white shadow-xl" onClick={e => e.stopPropagation()}>

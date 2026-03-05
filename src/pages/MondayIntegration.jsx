@@ -1256,7 +1256,7 @@ export default function MondayIntegrationPage() {
               </div>
             )}
 
-            <div className="bg-green-100/50 p-3 rounded-lg">
+            <div className="bg-green-100 p-3 rounded-lg">
               <p className="text-sm text-green-800 font-semibold mb-2">
                 השירותים שיתווספו (15 סוגים):
               </p>
@@ -1355,7 +1355,7 @@ export default function MondayIntegrationPage() {
                         <p className="text-sm font-semibold">לוחות שנוצרו:</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
                           {monthlyBoardsResult.boards.map((board, index) => (
-                            <div key={index} className="bg-white/50 p-2 rounded">
+                            <div key={index} className="bg-white p-2 rounded">
                               {board.monthName} {board.processType && board.processType !== 'reports' ? `(${board.processType === 'reconciliations' ? 'התאמות' : 'מאזנים'})` : ''}
                             </div>
                           ))}
@@ -1443,7 +1443,7 @@ export default function MondayIntegrationPage() {
               </Button>
             </div>
 
-            <div className="bg-indigo-100/50 p-3 rounded-lg">
+            <div className="bg-indigo-100 p-3 rounded-lg">
               <p className="text-sm text-indigo-800 flex items-start gap-2">
                 <span className="font-bold text-lg">💡</span>
                 <span>

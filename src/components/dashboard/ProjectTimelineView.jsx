@@ -115,7 +115,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
         {Object.entries(grouped).map(([category, catTasks]) => (
           <div key={category}>
             {/* Category header */}
-            <div className="flex bg-gray-50/80 border-b border-gray-100">
+            <div className="flex bg-[#F5F5F5] border-b border-gray-100">
               <div className="w-[200px] shrink-0 px-3 py-1 text-[10px] font-bold text-gray-600 border-l">
                 {category}
                 <span className="text-gray-400 font-normal mr-1">({catTasks.length})</span>
@@ -135,7 +135,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
               return (
                 <div
                   key={task.id}
-                  className="flex border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                  className="flex border-b border-gray-50 hover:bg-[#F5F5F5] transition-colors cursor-pointer group"
                   onClick={() => onEdit?.(task)}
                 >
                   {/* Task info */}

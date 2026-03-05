@@ -199,7 +199,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const hasReporting = reportingRow1.length > 0 || reportingRow2.length > 0;
 
   return (
-    <Card className={`w-full transform transition-all duration-300 shadow-sm hover:shadow-lg border flex flex-col group ${isSelected ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50/30' : 'border-neutral-light/80 bg-white'}`}>
+    <Card className={`w-full transform transition-all duration-300 shadow-sm hover:shadow-lg border flex flex-col group ${isSelected ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50' : 'border-neutral-light/80 bg-white'}`}>
       <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex justify-between items-start gap-2">
             <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -397,16 +397,16 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         )}
       </CardContent>
       
-      <CardFooter className="grid grid-cols-4 gap-1 p-2 border-t bg-neutral-light/20 flex-shrink-0">
-          <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
+      <CardFooter className="grid grid-cols-4 gap-1 p-2 border-t bg-[#F5F5F5] flex-shrink-0">
+          <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
             <Edit className="w-3 h-3 ml-1" />
             עריכה
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectTasks(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectTasks(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
             <CheckSquare className="w-3 h-3 ml-1" />
             משימות
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectFiles?.(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectFiles?.(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
             <FolderOpen className="w-3 h-3 ml-1" />
             קבצים
           </Button>
@@ -414,19 +414,19 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
             <Receipt className="w-3 h-3 ml-1" />
             פרטי מס
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectAccounts(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectAccounts(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
             <Building className="w-3 h-3 ml-1" />
             חשבונות
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectCollections(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectCollections(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
               <DollarSign className="w-3 h-3 ml-1" />
               גבייה
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectContracts(client)} className="h-8 text-xs text-neutral-medium hover:bg-neutral-light/50 hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectContracts(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
               <FileText className="w-3 h-3 ml-1" />
               חוזים
           </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete} className="h-8 text-xs text-status-error hover:bg-status-error/10 hover:text-status-error">
+          <Button variant="ghost" size="sm" onClick={onDelete} className="h-8 text-xs text-status-error hover:bg-rose-100 hover:text-status-error">
               <Trash2 className="w-3 h-3 ml-1" />
               מחיקה
           </Button>

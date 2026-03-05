@@ -37,6 +37,39 @@ import {
 // CONSTANTS
 // ============================================================
 
+// Auto P-branch assignment based on task category
+const CATEGORY_TO_BRANCH = {
+  // P1 — Payroll
+  'work_payroll': 'P1', 'payroll': 'P1', 'שכר': 'P1',
+  'work_deductions': 'P1', 'deductions': 'P1', 'ניכויים': 'P1', 'מ"ה ניכויים': 'P1',
+  'work_social_security': 'P1', 'social_security': 'P1', 'ביטוח לאומי': 'P1',
+  'masav_social': 'P1', 'מס"ב סוציאליות': 'P1',
+  'masav_employees': 'P1', 'מס"ב עובדים': 'P1',
+  'payslip_sending': 'P1', 'משלוח תלושים': 'P1',
+  // P2 — Bookkeeping
+  'work_bookkeeping': 'P2', 'bookkeeping': 'P2', 'הנה"ח': 'P2',
+  'work_vat_reporting': 'P2', 'vat_reporting': 'P2', 'מע"מ': 'P2', 'דיווח מע"מ': 'P2',
+  'work_tax_advances': 'P2', 'tax_advances': 'P2', 'מקדמות מס': 'P2', 'מקדמות מס הכנסה': 'P2',
+  'pnl_reports': 'P2', 'רווח והפסד': 'P2', 'דוח רווח והפסד': 'P2',
+  'work_annual_reports': 'P2', 'annual_reports': 'P2', 'מאזנים': 'P2',
+  'work_balance_sheets': 'P2', 'balance_sheets': 'P2',
+  'work_financial_reports': 'P2',
+  // P3 — Office Management
+  'work_additional': 'P3', 'work_extra': 'P3', 'work_other': 'P3',
+  'consulting': 'P3', 'ייעוץ': 'P3', 'work_consulting': 'P3',
+  'reconciliation': 'P3', 'התאמות': 'P3',
+  'מילואים': 'P3', 'work_reserve_claims': 'P3',
+};
+
+/**
+ * Determine P-branch from task category.
+ * Falls back to null if no mapping found.
+ */
+export function getBranchForCategory(category) {
+  if (!category) return null;
+  return CATEGORY_TO_BRANCH[category] || null;
+}
+
 // Categories that are "relay" / external-dependent
 const RELAY_CATEGORIES = new Set([
   'מילואים', 'work_reserve_claims',
@@ -786,6 +819,16 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = [], option
       ...t,
       description: `אמצעי תשלום: ${methodLabel}${t.description ? '\n' + t.description : ''}`,
     }));
+  }
+
+  // ── AUTO P-BRANCH ASSIGNMENT ──
+  // Ensure all cascade-created tasks have a branch assigned based on category
+  if (result.tasksToCreate.length > 0) {
+    result.tasksToCreate = result.tasksToCreate.map(t => {
+      if (t.branch) return t; // already assigned (e.g. payroll/bookkeeping builders)
+      const autoBranch = getBranchForCategory(t.category) || getBranchForCategory(t.serviceKey);
+      return autoBranch ? { ...t, branch: autoBranch } : t;
+    });
   }
 
   return result;

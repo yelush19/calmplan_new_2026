@@ -261,7 +261,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className={`p-4 border rounded-lg flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-gray-50/50 ${account.account_status === 'problem' ? 'border-amber-300 bg-amber-50/30' : account.account_status === 'inactive' ? 'opacity-60' : ''}`}
+                                className={`p-4 border rounded-lg flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-[#F5F5F5] ${account.account_status === 'problem' ? 'border-amber-300 bg-amber-50' : account.account_status === 'inactive' ? 'opacity-60' : ''}`}
                             >
                                 <div className="flex items-center gap-3 flex-1">
                                     <span className="text-blue-600">{accountTypeIcons[account.account_type]}</span>

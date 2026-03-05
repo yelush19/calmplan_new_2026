@@ -226,11 +226,11 @@ export default function GlobalSearch() {
       {/* Search trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground bg-white/40 hover:bg-white/60 rounded-[32px] border border-white/20 backdrop-blur-sm transition-all"
+        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground bg-white hover:bg-[#EEEEEE] rounded-[32px] border border-[#E0E0E0] transition-all"
       >
         <Search className="w-4 h-4" />
         <span className="flex-1 text-right">חיפוש או ביצוע פעולה...</span>
-        <kbd className="hidden md:inline-flex items-center gap-0.5 rounded-full border border-white/30 bg-white/50 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+        <kbd className="hidden md:inline-flex items-center gap-0.5 rounded-full border border-[#E0E0E0] bg-white px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
           Ctrl+K
         </kbd>
       </button>

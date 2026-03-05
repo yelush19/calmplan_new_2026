@@ -330,7 +330,7 @@ export default function CleanupTool({ rules = [] }) {
   }, {}) : {};
 
   return (
-    <Card className="border-2 border-teal-300 bg-teal-50/30">
+    <Card className="border-2 border-teal-300 bg-teal-50">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-base">
@@ -433,7 +433,7 @@ export default function CleanupTool({ rules = [] }) {
                                 return (
                                   <div
                                     key={item.id}
-                                    className={`flex items-start gap-2 px-4 py-2 text-xs transition-colors ${isSelected ? 'bg-teal-50/50' : ''}`}
+                                    className={`flex items-start gap-2 px-4 py-2 text-xs transition-colors ${isSelected ? 'bg-teal-50' : ''}`}
                                   >
                                     <input
                                       type="checkbox"

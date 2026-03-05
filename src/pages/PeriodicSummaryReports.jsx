@@ -572,7 +572,7 @@ export default function PeriodicSummaryReports() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 backdrop-blur-xl bg-white/45 border border-white/20 shadow-xl rounded-[32px]">
+    <div className="space-y-6 p-4 md:p-6 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -711,7 +711,7 @@ export default function PeriodicSummaryReports() {
                   const clientReports = reportLookup[client.id] || {};
                   const isSelected = selectedClientIds.has(client.id);
                   return (
-                    <tr key={client.id} className={`group border-b ${isSelected ? 'bg-blue-50/50' : idx % 2 === 0 ? '' : 'bg-muted/20'} hover:bg-muted/30`}>
+                    <tr key={client.id} className={`group border-b ${isSelected ? 'bg-blue-50' : idx % 2 === 0 ? '' : 'bg-muted'} hover:bg-muted`}>
                       <td className="text-center p-2 sticky right-0 bg-white z-10">
                         <Checkbox
                           checked={isSelected}
