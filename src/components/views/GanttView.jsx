@@ -13,7 +13,7 @@ import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 // 5 Golden Statuses
 const STATUS_COLORS = {
   waiting_for_materials: 'bg-amber-500',
-  not_started:           'bg-slate-500',
+  not_started:           'bg-blue-600',
   sent_for_review:       'bg-purple-600',
   needs_corrections:     'bg-orange-600',
   production_completed:  'bg-emerald-600',

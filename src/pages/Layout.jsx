@@ -10,7 +10,7 @@ import {
   BarChart3, Settings, Menu, X, Users, Scaling, FileText,
   Soup, BookHeart, Eye, Calendar, BookUser, Calculator, UserCheck, Database,
   ArrowRight, FileBarChart, Repeat, FolderKanban, Zap, StickyNote,
-  ChevronLeft, ChevronRight, Plus, Hourglass, Maximize2, Star,
+  ChevronLeft, ChevronRight, ChevronDown, Plus, Hourglass, Maximize2, Star,
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
   CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2,
   Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import
@@ -71,6 +71,7 @@ const getSidebarSections = () => ({
   p1_payroll: {
     title: "P1 | חשבות שכר",
     icon: Calculator,
+    mode: 'doing',
     items: [
       { name: "שלב ייצור ואישור", href: createPageUrl("PayrollDashboard"), icon: Zap },
       { name: "דיווחים שוטפים (102)", href: createPageUrl("PayrollReportsDashboard"), icon: FileBarChart },
@@ -79,10 +80,10 @@ const getSidebarSections = () => ({
     ]
   },
   // ── P2 | הנהלת חשבונות ──
-  // Value chain: ייצור → דיווחי מיסים → התאמות → תוצרים
   p2_bookkeeping: {
     title: "P2 | הנהלת חשבונות",
     icon: FileBarChart,
+    mode: 'doing',
     items: [
       { name: "ריכוז דיווחי מיסים", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
       { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
@@ -92,39 +93,48 @@ const getSidebarSections = () => ({
       { name: "שירותים נוספים", href: createPageUrl("BookkeepingExtrasDashboard"), icon: LayoutGrid },
     ]
   },
-  // ── P3 | ניהול משרד ──
-  p3_office: {
-    title: "P3 | ניהול משרד",
+  // ── P3 | ביצוע ותכנון (לוחות עבודה) ──
+  p3_doing: {
+    title: "P3 | ביצוע ותכנון",
     icon: Target,
+    mode: 'doing',
     items: [
-      { name: "פוקוס יומי", href: createPageUrl("Home"), icon: Eye },
       { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       { name: "אדמיניסטרציה", href: createPageUrl("AdminTasksDashboard"), icon: FolderKanban },
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
-      { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
       { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
-      { name: "מוכנות מערכת", href: createPageUrl("SystemReadiness"), icon: Shield },
+      { name: "פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
+      { name: "ניתוח נתונים", href: createPageUrl("Analytics"), icon: BarChart3 },
+    ]
+  },
+  // ── P3 | ניהול (הגדרות, לקוחות, אוטומציה) ──
+  p3_admin: {
+    title: "P3 | ניהול והגדרות",
+    icon: Settings,
+    mode: 'admin',
+    items: [
+      { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
       { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
+      { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
+      { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
       { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
       { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
-      { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
-      { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
       { name: "חיבור Monday", href: createPageUrl("MondayIntegration"), icon: Link2 },
       { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
       { name: "חוזי לקוחות", href: createPageUrl("ClientContracts"), icon: FileSignature },
       { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
       { name: "קבצי לקוחות", href: createPageUrl("ClientFiles"), icon: FolderOpen },
+      { name: "מוכנות מערכת", href: createPageUrl("SystemReadiness"), icon: Shield },
       { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Import },
-      { name: "ניתוח נתונים", href: createPageUrl("Analytics"), icon: BarChart3 },
-      { name: "פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
     ]
   },
   // ── P4 | בית (LENA) ──
   life: {
     title: "P4 | בית (LENA)",
     icon: BookHeart,
+    mode: 'all',
     items: [
       { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
       { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
@@ -134,10 +144,10 @@ const getSidebarSections = () => ({
 });
 
 const getVisibleSections = (mode) => {
-  const modeConfig = WORK_MODES.find(m => m.key === mode);
-  const sections = [...(modeConfig?.visibleSections || ['p1_payroll', 'p2_bookkeeping', 'p3_office'])];
-  if (!sections.includes('life')) sections.push('life');
-  return sections;
+  if (mode === 'doing') return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'life'];
+  if (mode === 'planning') return ['p3_doing', 'life'];
+  if (mode === 'admin') return ['p3_admin', 'life'];
+  return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_admin', 'life'];
 };
 
 // Deadline countdown
@@ -216,6 +226,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_admin', 'life']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
@@ -502,26 +513,47 @@ function LayoutInner({ children }) {
                 </div>
               </div>
 
-              {/* Mobile navigation */}
-              <nav className="p-3">
+              {/* Mobile navigation — Accordion */}
+              <nav className="p-2">
+                <Link to={createPageUrl("Home")}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors mb-2
+                    ${isActive(createPageUrl("Home")) ? 'bg-[#E8F5F7] text-[#008291]' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                  <Eye className="w-4 h-4" />
+                  פוקוס יומי
+                </Link>
                 {Object.entries(sidebarSections)
                   .filter(([key]) => getVisibleSections(workMode).includes(key))
-                  .map(([key, section]) => (
-                    <div key={key} className="mb-3">
-                      <h3 className="text-xs font-bold text-[#008291]/60 uppercase mb-2 flex items-center gap-1 px-3">
-                        <section.icon className="w-3 h-3" /> {section.title}
-                      </h3>
-                      {section.items.map(item => (
+                  .map(([key, section]) => {
+                    const isOpen = !collapsedSections.has(key);
+                    return (
+                    <div key={key} className="mb-1">
+                      <button
+                        onClick={() => setCollapsedSections(prev => {
+                          const next = new Set(prev);
+                          if (next.has(key)) next.delete(key); else next.add(key);
+                          return next;
+                        })}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-[#000000] hover:bg-[#F5F5F5] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <section.icon className="w-4 h-4 text-[#008291]" />
+                          <span>{section.title}</span>
+                        </div>
+                        <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                      </button>
+                      {isOpen && section.items.map(item => (
                         <Link key={item.href} to={item.href}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
-                            ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
-                          <item.icon className="w-4 h-4" />
+                          className={`flex items-center gap-2 px-6 py-1.5 rounded-xl text-sm transition-colors
+                            ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                          <item.icon className="w-3.5 h-3.5" />
                           {item.name}
                         </Link>
                       ))}
                     </div>
-                  ))}
+                    );
+                  })}
               </nav>
             </div>
           </>
@@ -611,14 +643,14 @@ function LayoutInner({ children }) {
                       {/* Pinned Clients (pin-only, no auto-recent) */}
                       {pinnedClients.length > 0 && (
                         <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                          <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
-                            <Star className="w-3 h-3" /> גישה מהירה
+                          <h3 className="text-xs font-bold text-[#000000] mb-2 flex items-center gap-1">
+                            <Star className="w-3 h-3 text-[#008291]" /> גישה מהירה
                           </h3>
                           {pinnedClients.slice(0, 8).map(client => (
                             <Link key={client.id}
                               to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
                               onClick={() => setIsMobileMenuOpen(false)}
-                              className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm text-[#37474F] hover:bg-[#E0E0E0] transition-colors">
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-[#000000] hover:bg-[#F5F5F5] transition-colors">
                               <div className="w-2 h-2 rounded-full bg-emerald-400" />
                               {client.name}
                             </Link>
@@ -629,7 +661,7 @@ function LayoutInner({ children }) {
                       {/* "התפריט שלי" — user-customized menu */}
                       {myMenu.length > 0 && (
                         <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                          <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
+                          <h3 className="text-xs font-bold text-[#000000] mb-2 flex items-center gap-1">
                             <Star className="w-3 h-3 text-amber-400" /> התפריט שלי
                           </h3>
                           {myMenu.map(href => {
@@ -642,8 +674,8 @@ function LayoutInner({ children }) {
                             return (
                               <Link key={href} to={href}
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-sm transition-colors
-                                  ${isActive(href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors
+                                  ${isActive(href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
                                 <menuItem.icon className="w-3.5 h-3.5" />
                                 {menuItem.name}
                               </Link>
@@ -655,53 +687,80 @@ function LayoutInner({ children }) {
                       {/* Daily Focus — top 5 tasks due today */}
                       {dailyFocusTasks.length > 0 && (
                         <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                          <h3 className="text-xs font-bold text-[#008291]/60 mb-2 flex items-center gap-1">
+                          <h3 className="text-xs font-bold text-[#000000] mb-2 flex items-center gap-1">
                             <Target className="w-3 h-3 text-rose-400" /> מיקוד יומי
                           </h3>
                           {dailyFocusTasks.map(task => (
                             <Link key={task.id}
                               to={createPageUrl("Tasks")}
                               onClick={() => setIsMobileMenuOpen(false)}
-                              className="flex items-center gap-2 px-3 py-1.5 rounded-[32px] text-xs text-[#37474F] hover:bg-[#E0E0E0] transition-colors">
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs text-[#000000] hover:bg-[#F5F5F5] transition-colors">
                               <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
                               <span className="truncate flex-1">{task.title}</span>
                               {task.client_name && (
-                                <span className="text-[9px] bg-[#E8F5F7] text-[#546E7A] px-1.5 rounded-full shrink-0">{task.client_name}</span>
+                                <span className="text-[9px] bg-[#E8F5F7] text-[#000000] px-1.5 rounded-full shrink-0">{task.client_name}</span>
                               )}
                             </Link>
                           ))}
                         </div>
                       )}
 
-                      {/* Navigation sections */}
-                      <nav className="flex-1 p-3">
+                      {/* Navigation sections — Accordion */}
+                      <nav className="flex-1 p-2">
+                        {/* Daily Focus — always visible at top */}
+                        <Link to={createPageUrl("Home")}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors mb-2
+                            ${isActive(createPageUrl("Home")) ? 'bg-[#E8F5F7] text-[#008291]' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                          <Eye className="w-4 h-4" />
+                          פוקוס יומי
+                        </Link>
+
                         {Object.entries(sidebarSections)
                           .filter(([key]) => getVisibleSections(workMode).includes(key))
-                          .map(([key, section]) => (
-                            <div key={key} className="mb-3">
-                              <h3 className="text-xs font-bold text-[#008291]/60 uppercase mb-2 flex items-center gap-1 px-3">
-                                <section.icon className="w-3 h-3" /> {section.title}
-                              </h3>
-                              {section.items.map(item => (
-                                <div key={item.href} className="flex items-center group">
-                                  <Link to={item.href}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-[32px] text-sm transition-colors
-                                      ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-medium shadow-sm' : 'text-[#37474F] hover:bg-[#E0E0E0]'}`}>
-                                    <item.icon className="w-4 h-4" />
-                                    {item.name}
-                                  </Link>
-                                  <button
-                                    onClick={() => toggleMyMenu(item.href)}
-                                    className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
-                                    title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
-                                  >
-                                    <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
+                          .map(([key, section]) => {
+                            const isOpen = !collapsedSections.has(key);
+                            return (
+                              <div key={key} className="mb-1">
+                                <button
+                                  onClick={() => setCollapsedSections(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(key)) next.delete(key); else next.add(key);
+                                    return next;
+                                  })}
+                                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-[#000000] hover:bg-[#F5F5F5] transition-colors"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <section.icon className="w-4 h-4 text-[#008291]" />
+                                    <span>{section.title}</span>
+                                  </div>
+                                  <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                                </button>
+                                {isOpen && (
+                                  <div className="mr-3 border-r-2 border-[#E0E0E0] pr-1 mt-0.5 mb-1">
+                                    {section.items.map(item => (
+                                      <div key={item.href} className="flex items-center group">
+                                        <Link to={item.href}
+                                          onClick={() => setIsMobileMenuOpen(false)}
+                                          className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors
+                                            ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                                          <item.icon className="w-3.5 h-3.5" />
+                                          {item.name}
+                                        </Link>
+                                        <button
+                                          onClick={() => toggleMyMenu(item.href)}
+                                          className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
+                                          title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
+                                        >
+                                          <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                       </nav>
                     </div>
                   )}

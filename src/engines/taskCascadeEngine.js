@@ -32,6 +32,7 @@ import {
   getServiceForTask,
   getStepsForService,
 } from '@/config/processTemplates';
+import { getScheduledStartForCategory } from '@/config/automationRules';
 
 // ============================================================
 // CONSTANTS
@@ -445,15 +446,18 @@ export function evaluatePayrollStatus(task, updatedSteps) {
         templateSteps.forEach(step => {
           processSteps[step.key] = { done: false, date: null, notes: '' };
         });
+        const childCategory = ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title;
+        const autoStart = getScheduledStartForCategory(childCategory, subDueDate);
         return {
           serviceKey: svc.serviceKey,
           title: `${svc.title} - ${task.client_name}`,
           client_name: task.client_name,
           client_id: task.client_id,
-          category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
+          category: childCategory,
           status: 'not_started',
           branch: 'P1',
           due_date: subDueDate,
+          scheduled_start: autoStart || undefined,
           report_month: task.report_month,
           report_year: task.report_year,
           report_period: task.report_period,
@@ -461,10 +465,12 @@ export function evaluatePayrollStatus(task, updatedSteps) {
           is_recurring: true,
           workflow_phase: phase,
           workflow_phase_label: phaseLabel,
+          parent_id: task.id,
           master_task_id: task.id,
           triggered_by: task.id,
           source: 'payroll_cascade',
           process_steps: processSteps,
+          estimated_duration: svc.serviceKey === 'masav_employees' ? 15 : undefined,
         };
       });
 
