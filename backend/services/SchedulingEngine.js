@@ -228,7 +228,7 @@ class SchedulingEngine {
           ...task,
           day: bestSlot.day,
           startTime: bestSlot.startTime,
-          endTime: this.addTime(bestSlot.startTime, task.estimatedDuration || 30),
+          endTime: this.addTime(bestSlot.startTime, task.estimatedDuration || 15),
           location: bestSlot.location,
           matchScore: bestSlot.score
         };
@@ -258,7 +258,7 @@ class SchedulingEngine {
     Object.entries(availableSlots).forEach(([day, slots]) => {
       slots.forEach(slot => {
         // בדוק אם המשימה מתאימה לחלון
-        if (slot.duration < (task.estimatedDuration || 30)) return;
+        if (slot.duration < (task.estimatedDuration || 15)) return;
         
         const score = this.calculateSlotScore(task, slot, day, preferences);
         
@@ -370,7 +370,7 @@ class SchedulingEngine {
       if (Array.isArray(categoryTasks)) {
         optimized.metadata.totalTasks += categoryTasks.length;
         optimized.metadata.totalHours += categoryTasks.reduce((sum, task) => 
-          sum + (task.estimatedDuration || 30) / 60, 0
+          sum + (task.estimatedDuration || 15) / 60, 0
         );
       }
     });
@@ -514,7 +514,7 @@ class SchedulingEngine {
       if (Array.isArray(categoryTasks)) {
         categoryTasks.forEach(task => {
           if (task.day === day) {
-            totalMinutes += task.estimatedDuration || 30;
+            totalMinutes += task.estimatedDuration || 15;
           }
         });
       }
@@ -525,7 +525,7 @@ class SchedulingEngine {
   
   updateRemainingSlots(slots, usedSlot, task) {
     const daySlots = slots[usedSlot.day];
-    const taskDuration = task.estimatedDuration || 30;
+    const taskDuration = task.estimatedDuration || 15;
     
     for (let i = 0; i < daySlots.length; i++) {
       const slot = daySlots[i];

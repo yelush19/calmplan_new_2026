@@ -10,13 +10,15 @@ import { getPayrollTier, getVatEnergyTier, getTaskComplexity } from '@/engines/t
 import { getServiceForTask } from '@/config/processTemplates';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 
-// 5 Golden Statuses
+// Full Status Colors — solid, visible, zero gray
 const STATUS_COLORS = {
-  waiting_for_materials: 'bg-amber-500 border border-amber-700',
   not_started:           'bg-blue-600 border border-blue-800',
+  in_progress:           'bg-orange-500 border border-orange-700',
+  waiting_for_materials: 'bg-amber-500 border border-amber-700',
   sent_for_review:       'bg-purple-600 border border-purple-800',
   needs_corrections:     'bg-orange-600 border border-orange-800',
   production_completed:  'bg-emerald-600 border border-emerald-800',
+  completed:             'bg-emerald-700 border border-emerald-900',
 };
 
 // Estimated work-hours → calendar days mapping
@@ -258,20 +260,20 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
         <div className="flex items-center gap-2">
           <button onClick={goToPrevMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-[#E0E0E0] transition-colors text-[#263238] text-xs">
             <ChevronRight className="w-4 h-4" />
-            {prevMonthCount > 0 && <span className="text-[#37474F]">({prevMonthCount})</span>}
+            {prevMonthCount > 0 && <span className="text-[#000000]">({prevMonthCount})</span>}
           </button>
           <div className="flex items-center gap-1.5">
             <CalendarDays className="w-4 h-4 text-blue-500" />
             <span className="text-sm font-bold text-[#000000]">
               {format(monthStart, 'MMMM yyyy', { locale: he })}
             </span>
-            <span className="text-xs text-[#37474F]">
+            <span className="text-xs text-[#000000]">
               ({monthTasks.length} משימות)
             </span>
           </div>
           <button onClick={goToNextMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-[#E0E0E0] transition-colors text-[#263238] text-xs">
             <ChevronLeft className="w-4 h-4" />
-            {nextMonthCount > 0 && <span className="text-[#37474F]">({nextMonthCount})</span>}
+            {nextMonthCount > 0 && <span className="text-[#000000]">({nextMonthCount})</span>}
           </button>
         </div>
         {!isCurrentMonth && (
@@ -282,7 +284,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       </div>
 
       {monthTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-[#37474F] gap-2">
+        <div className="flex flex-col items-center justify-center py-12 text-[#000000] gap-2">
           <CalendarDays className="w-8 h-8 text-[#546E7A]" />
           <p className="text-sm">אין משימות בחודש {format(monthStart, 'MMMM', { locale: he })}</p>
           <div className="flex gap-2 mt-2">
@@ -303,7 +305,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
 
       {/* Header - days of month */}
       <div className="flex border-b bg-[#FAFBFC] sticky top-0 z-10">
-        <div className="w-40 shrink-0 p-2 text-sm font-bold text-[#37474F] border-l">משימה / לקוח</div>
+        <div className="w-40 shrink-0 p-2 text-sm font-bold text-[#000000] border-l">משימה / לקוח</div>
         <div className="flex-1 flex">
           {days.map(day => {
             const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
@@ -325,7 +327,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
         const rowHeight = laneCount * (LANE_HEIGHT + LANE_GAP) + LANE_GAP;
         return (
           <div key={clientName} className="flex border-b hover:bg-[#F5F5F5] transition-colors">
-            <div className="w-40 shrink-0 p-2 text-sm text-gray-700 border-l flex items-center">
+            <div className="w-40 shrink-0 p-2 text-sm text-[#000000] border-l flex items-center">
               <span className="font-medium truncate">{clientName}</span>
             </div>
             <div
@@ -364,17 +366,17 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                     </TooltipTrigger>
                     <TooltipContent className="!bg-gray-900 !border-gray-700 !text-white">
                       <p className="font-medium !text-white">{task.title}</p>
-                      <p className="text-xs !text-[#546E7A]">
+                      <p className="text-xs !text-[#B0BEC5]">
                         {task.category} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}
                         {pos.tierKey && ` \u2022 ${pos.tierKey}`}
                       </p>
                       {pos.durationDays > 1 && (
-                        <p className="text-[10px] !text-[#37474F]">{pos.durationDays} ימי עבודה</p>
+                        <p className="text-[10px] !text-[#000000]">{pos.durationDays} ימי עבודה</p>
                       )}
                       {(task.reschedule_count || 0) > 0 && (
                         <p className="text-[10px] text-amber-400">נדחה {task.reschedule_count} פעמים {task.reschedule_count > 3 ? '🐌' : ''}</p>
                       )}
-                      <p className="text-[10px] text-[#37474F] mt-0.5">לחץ לעריכה | גרור לשינוי תאריך</p>
+                      <p className="text-[10px] text-[#000000] mt-0.5">לחץ לעריכה | גרור לשינוי תאריך</p>
                     </TooltipContent>
                   </Tooltip>
                 );

@@ -153,6 +153,12 @@ const CATEGORY_TO_FUNCTION = {
   'work_deductions':    'reports',
   'מקדמות מס':         'reports',
   'work_tax_advances':  'reports',
+  'תשלום רשויות':      'reports',
+  'work_authorities_payment': 'reports',
+  'דיווח למתפעל':      'reports',
+  'work_operator_reporting': 'reports',
+  'דיווח לטמל':        'reports',
+  'work_taml_reporting': 'reports',
   // Production (ייצור)
   'שכר':               'production',
   'work_payroll':       'production',
@@ -163,21 +169,62 @@ const CATEGORY_TO_FUNCTION = {
   'הנהלת חשבונות':     'production',
   'work_bookkeeping':   'production',
   'מאזנים':            'production',
+  'מאזן':              'production',
   'דוח שנתי':          'production',
   'work_annual_reports': 'production',
+  'רווח והפסד':        'production',
+  'work_pnl':           'production',
+  // Services (שירותים) — MASAV, consulting, admin, marketing
+  'מס"ב סוציאליות':    'services',
+  'work_masav_social':  'services',
+  'מס"ב רשויות':       'services',
+  'work_masav_authorities': 'services',
+  'מס"ב ספקים':        'services',
+  'work_masav_suppliers': 'services',
+  'מס"ב עובדים':       'services',
+  'work_masav':         'services',
+  'משלוח תלושים':      'services',
+  'work_payslip_sending': 'services',
+  'סוציאליות':         'services',
+  'work_social_benefits': 'services',
+  'מילואים':           'services',
+  'work_reserve_claims': 'services',
+  'הנחיות מס"ב ממתפעל': 'services',
+  'ייעוץ':             'services',
+  'work_consulting':    'services',
+  'מעקב שיווק':        'services',
+  'work_marketing':     'services',
+  'לחזור ללקוח':       'services',
+  'work_callback':      'services',
+  'פגישה':             'services',
+  'work_meeting':       'services',
+  'כללי':              'services',
+  'work_general':       'services',
+  'אדמיניסטרציה':      'services',
+  'work_admin':         'services',
+  'work_client_management': 'services',
 };
 
 // Map ALL task categories to P1-P4 department keys
 // ZERO GHOST DATA: SS/Deductions route to שכר (payroll sub-steps, not standalone)
 const CATEGORY_TO_DEPARTMENT = {
-  // P1 — Payroll (שכר + sub-steps)
+  // P1 — Payroll (שכר + sub-steps + MASAV payroll)
   'שכר': 'שכר',
   'work_payroll': 'שכר',
   'ביטוח לאומי': 'שכר',           // payroll sub-step, not standalone
   'work_social_security': 'שכר',   // payroll sub-step, not standalone
   'ניכויים': 'שכר',               // payroll sub-step, not standalone
   'work_deductions': 'שכר',       // payroll sub-step, not standalone
-  // P2 — Bookkeeping (VAT + Advances + Reconciliations)
+  'מס"ב עובדים': 'שכר',           // MASAV employees → payroll
+  'work_masav': 'שכר',
+  'מס"ב סוציאליות': 'שכר',        // MASAV social → payroll
+  'work_masav_social': 'שכר',
+  'סוציאליות': 'שכר',
+  'work_social_benefits': 'שכר',
+  'משלוח תלושים': 'שכר',          // payslip sending → payroll
+  'work_payslip_sending': 'שכר',
+  'הנחיות מס"ב ממתפעל': 'שכר',    // operator MASAV instructions → payroll
+  // P2 — Bookkeeping (VAT + Advances + Reconciliations + Authorities)
   'מע"מ': 'מע"מ',
   'work_vat_reporting': 'מע"מ',
   'מע"מ 874': 'מע"מ',
@@ -190,12 +237,39 @@ const CATEGORY_TO_DEPARTMENT = {
   'הנהלת חשבונות': 'התאמות',
   'work_bookkeeping': 'התאמות',
   'מאזנים': 'התאמות',             // annual — routes to reconciliation branch
+  'מאזן': 'התאמות',
   'דוח שנתי': 'אדמיניסטרציה',     // annual tasks → admin (not monthly recurring)
-  'work_client_management': 'אדמיניסטרציה',
   'work_annual_reports': 'אדמיניסטרציה',
-  // P3 — Office
+  'רווח והפסד': 'התאמות',
+  'work_pnl': 'התאמות',
+  'תשלום רשויות': 'מע"מ',         // authorities payment → VAT/bookkeeping branch
+  'work_authorities_payment': 'מע"מ',
+  'מס"ב רשויות': 'מע"מ',          // MASAV authorities → bookkeeping
+  'work_masav_authorities': 'מע"מ',
+  'מס"ב ספקים': 'מע"מ',           // MASAV suppliers → bookkeeping
+  'work_masav_suppliers': 'מע"מ',
+  'דיווח למתפעל': 'מע"מ',         // operator reporting → bookkeeping
+  'work_operator_reporting': 'מע"מ',
+  'דיווח לטמל': 'מע"מ',           // TAML reporting → bookkeeping
+  'work_taml_reporting': 'מע"מ',
+  'מילואים': 'שכר',               // reserve claims → payroll
+  'work_reserve_claims': 'שכר',
+  // P3 — Office (admin, consulting, marketing, meetings)
+  'work_client_management': 'אדמיניסטרציה',
   'personal': 'אדמיניסטרציה',
   'אחר': 'אדמיניסטרציה',
+  'אדמיניסטרציה': 'אדמיניסטרציה',
+  'work_admin': 'אדמיניסטרציה',
+  'ייעוץ': 'אדמיניסטרציה',
+  'work_consulting': 'אדמיניסטרציה',
+  'מעקב שיווק': 'אדמיניסטרציה',
+  'work_marketing': 'אדמיניסטרציה',
+  'לחזור ללקוח': 'אדמיניסטרציה',
+  'work_callback': 'אדמיניסטרציה',
+  'פגישה': 'אדמיניסטרציה',
+  'work_meeting': 'אדמיניסטרציה',
+  'כללי': 'אדמיניסטרציה',
+  'work_general': 'אדמיניסטרציה',
   // P4 — Home
   'home': 'בית',
 };
@@ -516,6 +590,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const MAX_VISIBLE_CHILDREN = 999; // Show ALL clients — no pagination at all
   const [expandedMetaFolders, setExpandedMetaFolders] = useState(new Set());
   const [expandedBranches, setExpandedBranches] = useState(new Set());
+  const [expandedFuncBubbles, setExpandedFuncBubbles] = useState(new Set());
+  const toggleFuncBubbleExpand = useCallback((fbKey) => {
+    setExpandedFuncBubbles(prev => {
+      const next = new Set(prev);
+      if (next.has(fbKey)) next.delete(fbKey); else next.add(fbKey);
+      return next;
+    });
+  }, []);
   const toggleMetaExpand = useCallback((metaName) => {
     setExpandedMetaFolders(prev => {
       const next = new Set(prev);
@@ -1594,17 +1676,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           style={{ overflow: 'visible', zIndex: -1 }}
         >
           <defs>
-            {/* Arrow marker for hub→meta edges */}
-            <marker id="edge-arrow" viewBox="0 0 8 6" refX="7" refY="3"
+            {/* Arrow marker — sharp, black, clear */}
+            <marker id="edge-arrow" viewBox="0 0 10 8" refX="9" refY="4"
+              markerWidth="10" markerHeight="8" orient="auto-start-reverse"
+              markerUnits="strokeWidth">
+              <path d="M 0 0 L 10 4 L 0 8 z" fill="#000000" />
+            </marker>
+            {/* Smaller arrow — sharp, black */}
+            <marker id="edge-arrow-sm" viewBox="0 0 8 6" refX="7" refY="3"
               markerWidth="8" markerHeight="6" orient="auto-start-reverse"
               markerUnits="strokeWidth">
-              <path d="M 0 0 L 8 3 L 0 6 z" fill="#B0BEC5" />
-            </marker>
-            {/* Smaller arrow for dept→client edges */}
-            <marker id="edge-arrow-sm" viewBox="0 0 6 4" refX="5" refY="2"
-              markerWidth="6" markerHeight="4" orient="auto-start-reverse"
-              markerUnits="strokeWidth">
-              <path d="M 0 0 L 6 2 L 0 4 z" fill="#CFD8DC" />
+              <path d="M 0 0 L 8 3 L 0 6 z" fill="#000000" />
             </marker>
           </defs>
 
@@ -1630,11 +1712,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <path key={`edge-hub-meta-${mf.name}`}
                 d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
                 fill="none"
-                stroke="#455A64"
+                stroke="#000000"
                 strokeWidth={2}
                 strokeLinecap="round"
                 markerEnd="url(#edge-arrow)"
-                opacity={0.7} />
+                opacity={0.85} />
             );
           })}
 
@@ -1659,11 +1741,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 <path key={`edge-dept-tier-${branch.category}-${sub.key}`}
                   d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
                   fill="none"
-                  stroke="#90A4AE"
-                  strokeWidth={1.3}
+                  stroke="#000000"
+                  strokeWidth={1.5}
                   strokeLinecap="round"
                   markerEnd="url(#edge-arrow)"
-                  opacity={0.65} />
+                  opacity={0.8} />
               );
             });
           })}
@@ -1689,11 +1771,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <path key={`edge-meta-dept-${branch.category}`}
                 d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
                 fill="none"
-                stroke="#90A4AE"
+                stroke="#000000"
                 strokeWidth={1.5}
                 strokeLinecap="round"
                 markerEnd="url(#edge-arrow)"
-                opacity={0.65} />
+                opacity={0.8} />
             );
           })}
 
@@ -1713,12 +1795,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   const sy = fb.tierY + (dy / len) * 34;
                   const ex = fb.x - (dx / len) * 22;
                   const ey = fb.y - (dy / len) * 22;
+                  const lmx = (sx + ex) / 2, lmy = (sy + ey) / 2;
+                  const lca = len * 0.04;
+                  const lcpx = lmx + (-dy / len) * lca;
+                  const lcpy = lmy + (dx / len) * lca;
                   return (
-                    <line key={`edge-tier-func-${fb.key}`}
-                      x1={sx} y1={sy} x2={ex} y2={ey}
-                      stroke={fb.color} strokeWidth={1.2} strokeLinecap="round"
+                    <path key={`edge-tier-func-${fb.key}`}
+                      d={`M ${sx} ${sy} Q ${lcpx} ${lcpy} ${ex} ${ey}`}
+                      fill="none"
+                      stroke="#000000" strokeWidth={1.3} strokeLinecap="round"
                       markerEnd="url(#edge-arrow-sm)"
-                      opacity={0.65} />
+                      opacity={0.75} />
                   );
                 })}
               </g>
@@ -1727,11 +1814,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
           {/* ── EDGE LEVEL 4: Function Bubble → Client pills ──
                Each arrow goes from function bubble to its client satellites.
-               Authority Wiring: diamond → function → client */}
+               Only visible when function bubble is expanded. */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!expandedBranches.has(branch.category)) return null;
-            const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN);
+            const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN).filter(c => expandedFuncBubbles.has(c.funcBubbleKey));
             return (
               <g key={`edges-func-clients-${branch.category}`}>
                 {visibleClients.map((client) => {
@@ -1746,12 +1833,17 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   const sy = srcY + (dy / len) * startPx;
                   const ex = client.x - (dx / len) * endPx;
                   const ey = client.y - (dy / len) * endPx;
+                  const cmx = (sx + ex) / 2, cmy = (sy + ey) / 2;
+                  const cca = len * 0.03;
+                  const ccpx = cmx + (-dy / len) * cca;
+                  const ccpy = cmy + (dx / len) * cca;
                   return (
-                    <line key={`edge-func-to-${branch.category}-${client.name}`}
-                      x1={sx} y1={sy} x2={ex} y2={ey}
-                      stroke="#B0BEC5" strokeWidth={0.9} strokeLinecap="round"
+                    <path key={`edge-func-to-${branch.category}-${client.name}`}
+                      d={`M ${sx} ${sy} Q ${ccpx} ${ccpy} ${ex} ${ey}`}
+                      fill="none"
+                      stroke="#000000" strokeWidth={1.1} strokeLinecap="round"
                       markerEnd="url(#edge-arrow-sm)"
-                      opacity={0.55} />
+                      opacity={0.7} />
                   );
                 })}
               </g>
@@ -1834,9 +1926,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 fill="#004D40"
                 stroke={isMetaExpanded ? '#FFFFFF' : '#80CBC4'}
                 strokeWidth={isMetaExpanded ? 2.5 : 1.5} />
-              {/* Expand indicator */}
-              <text x="18" y={H / 2 + 1} textAnchor="middle" fill="#B2DFDB" fontSize="10" style={{ pointerEvents: 'none' }}>
-                {isMetaExpanded ? '▼' : '▶'}
+              {/* +/- Expand indicator */}
+              <circle cx={W - 14} cy={14} r={10} fill={isMetaExpanded ? '#00897B' : '#37474F'} stroke="#FFFFFF" strokeWidth={1.5} />
+              <text x={W - 14} y={18} textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                {isMetaExpanded ? '−' : '+'}
               </text>
               {/* Label */}
               <text x={W / 2 + 4} y={H / 2 - 6} textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="700"
@@ -2025,6 +2118,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   <text x="32" y="44" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="700" style={{ pointerEvents: 'none' }}>
                     {sub.label || sub.key}
                   </text>
+                  {/* +/- collapse button */}
+                  <circle cx="54" cy="8" r="8" fill={expandedBranches.has(branch.category) ? '#00897B' : '#37474F'} stroke="#fff" strokeWidth={1.2} />
+                  <text x="54" y="12" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                    {expandedBranches.has(branch.category) ? '−' : '+'}
+                  </text>
                 </svg>
               </motion.div>
             ))}
@@ -2066,6 +2164,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   nodeHasDragged.current = false;
                   if (wasDragging) {
                     setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
+                  } else {
+                    toggleFuncBubbleExpand(fb.key);
                   }
                 }}
               >
@@ -2075,18 +2175,23 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     backgroundColor: '#FFFFFF',
                     borderColor: fb.color,
                     minWidth: 70,
-                    cursor: 'grab',
+                    cursor: 'pointer',
                   }}
                 >
                   <span className="text-sm">{fb.icon}</span>
                   <span className="text-xs font-bold" style={{ color: fb.color }}>{fb.label}</span>
                   <span className="text-[9px] font-medium px-1.5 rounded-full" style={{ backgroundColor: fb.color + '20', color: fb.color }}>{fb.clientCount}</span>
+                  {/* +/- collapse indicator */}
+                  <span className="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
+                    style={{ backgroundColor: expandedFuncBubbles.has(fb.key) ? '#00897B' : '#37474F', minWidth: 16, minHeight: 16 }}>
+                    {expandedFuncBubbles.has(fb.key) ? '−' : '+'}
+                  </span>
                 </div>
               </motion.div>
             ))}
 
-            {/* ── Client Leaf Nodes — ONLY when branch is expanded, max 10 visible ── */}
-            {isBranchExpanded && branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN).map((client, j) => {
+            {/* ── Client Leaf Nodes — ONLY when branch + function bubble expanded ── */}
+            {isBranchExpanded && branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN).filter(client => expandedFuncBubbles.has(client.funcBubbleKey)).map((client, j) => {
               const isHovered = hoveredNode === client.name;
               const isAllDone = client.completionRatio === 1 && client.totalTasks > 0;
               const isFilingReady = client.isFilingReady;
