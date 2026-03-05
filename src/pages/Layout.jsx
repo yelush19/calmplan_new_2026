@@ -75,7 +75,6 @@ const getSidebarSections = () => ({
       { name: "דיווחים שוטפים (102)", href: createPageUrl("PayrollReportsDashboard"), icon: FileBarChart },
       { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
       { name: "שכר - שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
-      { name: "הגדרת אצוות מס\"ב", href: createPageUrl("BatchSetup"), icon: Layers },
     ]
   },
   // ── P2 | הנהלת חשבונות ──
@@ -104,6 +103,8 @@ const getSidebarSections = () => ({
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
       { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+      { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
+      { name: "מוכנות מערכת", href: createPageUrl("SystemReadiness"), icon: Shield },
       { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
       { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
       { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
