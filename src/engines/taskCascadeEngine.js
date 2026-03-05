@@ -558,6 +558,7 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
           is_recurring: true,
           workflow_phase: phase,
           workflow_phase_label: phaseLabel,
+          parent_id: task.id,
           master_task_id: task.id,
           triggered_by: task.id,
           source: 'bookkeeping_cascade',
