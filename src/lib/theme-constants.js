@@ -96,9 +96,9 @@ export const BOARD_CATEGORIES = [
 
 // Complexity tiers - Enterprise (tier 3) is 3x the size of Nano (tier 0)
 export const COMPLEXITY_TIERS = {
-  0: { label: 'ננו', icon: '⚡', maxEmployees: 5, maxMinutes: 20, bubbleScale: 0.55 },
+  0: { label: 'ננו', icon: '⚡', maxEmployees: 5, maxMinutes: 15, bubbleScale: 0.55 },
   1: { label: 'פשוט', icon: '🟢', maxEmployees: 15, maxMinutes: 30, bubbleScale: 0.85 },
-  2: { label: 'בינוני', icon: '🟡', maxEmployees: 50, maxMinutes: 45, bubbleScale: 1.25 },
+  2: { label: 'בינוני', icon: '🟡', maxEmployees: 50, maxMinutes: 30, bubbleScale: 1.25 },
   3: { label: 'מורכב', icon: '🧗', maxEmployees: Infinity, maxMinutes: 45, bubbleScale: 1.65 },
 };
 
