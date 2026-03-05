@@ -115,12 +115,18 @@ const getSidebarSections = () => ({
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
       { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
-      { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
-      { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
-      { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
-      { name: "חיבור Monday", href: createPageUrl("MondayIntegration"), icon: Link2 },
-      { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Import },
-      { name: "מוכנות מערכת", href: createPageUrl("SystemReadiness"), icon: Shield },
+    ],
+    subGroups: [
+      { key: 'p3_automation', label: 'אוטומציה והגדרות', icon: Workflow, items: [
+        { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
+        { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
+        { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
+      ]},
+      { key: 'p3_integrations', label: 'חיבורים וייבוא', icon: Link2, items: [
+        { name: "חיבור Monday", href: createPageUrl("MondayIntegration"), icon: Link2 },
+        { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Import },
+        { name: "מוכנות מערכת", href: createPageUrl("SystemReadiness"), icon: Shield },
+      ]},
     ]
   },
   // ── P3 | ניהול עסקי (לקוחות + ספקים + ניתוח) ──
@@ -132,11 +138,17 @@ const getSidebarSections = () => ({
       { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
       { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
       { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
-      { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
-      { name: "חוזי לקוחות", href: createPageUrl("ClientContracts"), icon: FileSignature },
-      { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
-      { name: "קבצי לקוחות", href: createPageUrl("ClientFiles"), icon: FolderOpen },
-      { name: "ניתוח נתונים", href: createPageUrl("Analytics"), icon: BarChart3 },
+    ],
+    subGroups: [
+      { key: 'p3_finance', label: 'כספים וחוזים', icon: Receipt, items: [
+        { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
+        { name: "חוזי לקוחות", href: createPageUrl("ClientContracts"), icon: FileSignature },
+      ]},
+      { key: 'p3_resources', label: 'משאבים וניתוח', icon: Briefcase, items: [
+        { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
+        { name: "קבצי לקוחות", href: createPageUrl("ClientFiles"), icon: FolderOpen },
+        { name: "ניתוח נתונים", href: createPageUrl("Analytics"), icon: BarChart3 },
+      ]},
     ]
   },
   // ── P4 | בית (LENA) ──
@@ -245,7 +257,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_planning', 'p3_admin', 'life']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['personal_tools', 'p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_planning', 'p3_admin', 'life', 'p3_automation', 'p3_integrations', 'p3_finance', 'p3_resources']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
@@ -561,19 +573,57 @@ function LayoutInner({ children }) {
                         </div>
                         <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${isOpen ? '' : '-rotate-90'}`} />
                       </button>
-                      {isOpen && section.items.map(item => (
-                        <Link key={item.href} to={item.href}
-                          onClick={() => {
-                            setIsMobileMenuOpen(false);
-                            const targetMode = SECTION_TO_MODE[key];
-                            if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
-                          }}
-                          className={`flex items-center gap-2 px-6 py-1.5 rounded-xl text-sm transition-colors
-                            ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
-                          <item.icon className="w-3.5 h-3.5" />
-                          {item.name}
-                        </Link>
-                      ))}
+                      {isOpen && (
+                        <>
+                          {section.items.map(item => (
+                            <Link key={item.href} to={item.href}
+                              onClick={() => {
+                                setIsMobileMenuOpen(false);
+                                const targetMode = SECTION_TO_MODE[key];
+                                if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
+                              }}
+                              className={`flex items-center gap-2 px-6 py-1.5 rounded-xl text-sm transition-colors
+                                ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                              <item.icon className="w-3.5 h-3.5" />
+                              {item.name}
+                            </Link>
+                          ))}
+                          {section.subGroups?.map(sg => {
+                            const sgOpen = !collapsedSections.has(sg.key);
+                            return (
+                              <div key={sg.key} className="mr-3">
+                                <button
+                                  onClick={() => setCollapsedSections(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(sg.key)) next.delete(sg.key); else next.add(sg.key);
+                                    return next;
+                                  })}
+                                  className="w-full flex items-center justify-between px-6 py-1.5 text-xs font-bold text-[#37474F] hover:bg-[#F5F5F5] rounded-xl"
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <sg.icon className="w-3 h-3 text-[#546E7A]" />
+                                    <span>{sg.label}</span>
+                                  </div>
+                                  <ChevronDown className={`w-3 h-3 text-[#455A64] transition-transform ${sgOpen ? '' : '-rotate-90'}`} />
+                                </button>
+                                {sgOpen && sg.items.map(item => (
+                                  <Link key={item.href} to={item.href}
+                                    onClick={() => {
+                                      setIsMobileMenuOpen(false);
+                                      const targetMode = SECTION_TO_MODE[key];
+                                      if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
+                                    }}
+                                    className={`flex items-center gap-2 px-8 py-1 rounded-xl text-sm transition-colors
+                                      ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                                    <item.icon className="w-3 h-3" />
+                                    {item.name}
+                                  </Link>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
                     </div>
                     );
                   })}
@@ -663,47 +713,65 @@ function LayoutInner({ children }) {
                         </div>
                       </div>
 
-                      {/* Pinned Clients (pin-only, no auto-recent) */}
-                      {pinnedClients.length > 0 && (
-                        <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                          <h3 className="text-xs font-bold text-[#000000] mb-2 flex items-center gap-1">
-                            <Star className="w-3 h-3 text-[#008291]" /> גישה מהירה
-                          </h3>
-                          {pinnedClients.slice(0, 8).map(client => (
-                            <Link key={client.id}
-                              to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
-                              onClick={() => setIsMobileMenuOpen(false)}
-                              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-[#000000] hover:bg-[#F5F5F5] transition-colors">
-                              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                              {client.name}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* "התפריט שלי" — user-customized menu */}
-                      {myMenu.length > 0 && (
-                        <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                          <h3 className="text-xs font-bold text-[#000000] mb-2 flex items-center gap-1">
-                            <Star className="w-3 h-3 text-amber-400" /> התפריט שלי
-                          </h3>
-                          {myMenu.map(href => {
-                            let menuItem = null;
-                            for (const section of Object.values(sidebarSections)) {
-                              menuItem = section.items.find(i => i.href === href);
-                              if (menuItem) break;
-                            }
-                            if (!menuItem) return null;
-                            return (
-                              <Link key={href} to={href}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors
-                                  ${isActive(href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
-                                <menuItem.icon className="w-3.5 h-3.5" />
-                                {menuItem.name}
-                              </Link>
-                            );
-                          })}
+                      {/* כלים אישיים — Collapsible accordion for pinned clients + my menu */}
+                      {(pinnedClients.length > 0 || myMenu.length > 0) && (
+                        <div className="px-2 py-1">
+                          <button
+                            onClick={() => setCollapsedSections(prev => {
+                              const next = new Set(prev);
+                              if (next.has('personal_tools')) next.delete('personal_tools'); else next.add('personal_tools');
+                              return next;
+                            })}
+                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-[#000000] hover:bg-[#F5F5F5] transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Star className="w-4 h-4 text-[#008291]" />
+                              <span>כלים אישיים</span>
+                            </div>
+                            <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${!collapsedSections.has('personal_tools') ? '' : '-rotate-90'}`} />
+                          </button>
+                          {!collapsedSections.has('personal_tools') && (
+                            <div className="mr-3 border-r-2 border-[#E0E0E0] pr-1 mt-0.5 mb-1">
+                              {/* Pinned Clients */}
+                              {pinnedClients.length > 0 && (
+                                <>
+                                  <h4 className="text-[10px] font-bold text-[#455A64] px-3 pt-1 pb-0.5">גישה מהירה</h4>
+                                  {pinnedClients.slice(0, 8).map(client => (
+                                    <Link key={client.id}
+                                      to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
+                                      onClick={() => setIsMobileMenuOpen(false)}
+                                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-[#000000] hover:bg-[#F5F5F5] transition-colors">
+                                      <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                                      {client.name}
+                                    </Link>
+                                  ))}
+                                </>
+                              )}
+                              {/* My Menu */}
+                              {myMenu.length > 0 && (
+                                <>
+                                  <h4 className="text-[10px] font-bold text-[#455A64] px-3 pt-1 pb-0.5">התפריט שלי</h4>
+                                  {myMenu.map(href => {
+                                    let menuItem = null;
+                                    for (const section of Object.values(sidebarSections)) {
+                                      menuItem = section.items.find(i => i.href === href);
+                                      if (menuItem) break;
+                                    }
+                                    if (!menuItem) return null;
+                                    return (
+                                      <Link key={href} to={href}
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors
+                                          ${isActive(href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                                        <menuItem.icon className="w-3.5 h-3.5" />
+                                        {menuItem.name}
+                                      </Link>
+                                    );
+                                  })}
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -748,7 +816,6 @@ function LayoutInner({ children }) {
                                         <Link to={item.href}
                                           onClick={() => {
                                             setIsMobileMenuOpen(false);
-                                            // Smart nav: auto-switch work mode if navigating to a different section's page
                                             const targetMode = SECTION_TO_MODE[key];
                                             if (targetMode && targetMode !== workMode) {
                                               setWorkMode(targetMode);
@@ -768,6 +835,54 @@ function LayoutInner({ children }) {
                                         </button>
                                       </div>
                                     ))}
+                                    {/* Sub-group folders (max 5 items per level) */}
+                                    {section.subGroups?.map(sg => {
+                                      const sgOpen = !collapsedSections.has(sg.key);
+                                      return (
+                                        <div key={sg.key} className="mt-0.5">
+                                          <button
+                                            onClick={() => setCollapsedSections(prev => {
+                                              const next = new Set(prev);
+                                              if (next.has(sg.key)) next.delete(sg.key); else next.add(sg.key);
+                                              return next;
+                                            })}
+                                            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold text-[#37474F] hover:bg-[#F5F5F5] transition-colors"
+                                          >
+                                            <div className="flex items-center gap-1.5">
+                                              <sg.icon className="w-3 h-3 text-[#546E7A]" />
+                                              <span>{sg.label}</span>
+                                            </div>
+                                            <ChevronDown className={`w-3 h-3 text-[#455A64] transition-transform ${sgOpen ? '' : '-rotate-90'}`} />
+                                          </button>
+                                          {sgOpen && (
+                                            <div className="mr-3 border-r-2 border-[#E8F5F7] pr-1">
+                                              {sg.items.map(item => (
+                                                <div key={item.href} className="flex items-center group">
+                                                  <Link to={item.href}
+                                                    onClick={() => {
+                                                      setIsMobileMenuOpen(false);
+                                                      const targetMode = SECTION_TO_MODE[key];
+                                                      if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
+                                                    }}
+                                                    className={`flex-1 flex items-center gap-2 px-3 py-1 rounded-xl text-sm transition-colors
+                                                      ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#008291] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                                                    <item.icon className="w-3 h-3" />
+                                                    {item.name}
+                                                  </Link>
+                                                  <button
+                                                    onClick={() => toggleMyMenu(item.href)}
+                                                    className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
+                                                    title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
+                                                  >
+                                                    <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
+                                                  </button>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
