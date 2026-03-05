@@ -918,12 +918,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       'P4 בית':             Math.PI / 2,
     };
 
-    // ─── ANTI-OVERLAP: Fan layout with 180px bubble spacing ───
-    const META_DIST = 180;    // center → meta-folder (180px arm)
-    const DEPT_DIST = 120;    // meta → department
-    const TIER_DIST = 80;     // department → tier diamond
-    const CLIENT_DIST = 70;   // tier diamond → client pill
-    const CLIENT_GAP = 40;    // min px between adjacent client pills (prevents overlap)
+    // ─── ANTI-OVERLAP: Generous spacing + downward cascade ───
+    const META_DIST = 220;    // center → meta-folder (wide arm)
+    const DEPT_DIST = 160;    // meta → department (generous)
+    const TIER_DIST = 110;    // department → tier diamond
+    const CLIENT_DIST = 90;   // tier diamond → client pill
+    const CLIENT_GAP = 55;    // min px between adjacent client pills (prevents overlap)
 
     let metaFolderPositions = metaFolders.map((mf) => {
       const angle = SECTOR_ANGLES[mf.name] ?? 0;
@@ -995,9 +995,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       // ── FUNCTIONAL BRANCHING: Tier Diamond → Function Bubbles → Clients ──
       // Each tier diamond spawns up to 3 function bubbles (ייצור / דיווחים / שירותים)
       // Clients are satellites around their function bubble, NOT directly on the tier diamond.
-      const FUNC_DIST = 65;    // tier diamond → function bubble distance
-      const CLIENT_FROM_FUNC = 60; // function bubble → client distance
-      const MIN_BUBBLE_SPACING = 200; // px between bubble centers (200px repulsion)
+      const FUNC_DIST = 90;    // tier diamond → function bubble distance (generous)
+      const CLIENT_FROM_FUNC = 85; // function bubble → client distance (generous)
+      const MIN_BUBBLE_SPACING = 120; // px between bubble centers (repulsion)
 
       const functionBubblePositions = [];
       const clientPositions = [];
@@ -1018,15 +1018,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         });
 
         // ALWAYS show all 3 function bubbles (ייצור / דיווחים / שירותים) under every diamond
+        // DOWNWARD CASCADE: function bubbles spread horizontally BELOW their tier diamond
         const activeBuckets = FUNCTION_BUCKET_ORDER;
         const nBuckets = activeBuckets.length;
-        const bucketFanArc = nBuckets <= 1 ? 0 : Math.PI * 0.5; // 90° fan
+        // Use a narrow horizontal spread angle centered on "straight down" from the tier
+        const downAngle = Math.PI / 2; // straight down
+        const bucketFanArc = nBuckets <= 1 ? 0 : Math.PI * 0.6; // 108° horizontal fan
 
         activeBuckets.forEach((bucketKey, bi) => {
           const bucketInfo = FUNCTION_BUCKETS[bucketKey];
           const bucketAngle = nBuckets <= 1
-            ? tierNode.angle
-            : tierNode.angle - bucketFanArc / 2 + (bi / (nBuckets - 1)) * bucketFanArc;
+            ? downAngle
+            : downAngle - bucketFanArc / 2 + (bi / (nBuckets - 1)) * bucketFanArc;
 
           const fbKey = `func-${branch.category}-${tierNode.key}-${bucketKey}`;
           const fbManual = manualPositions[fbKey];
@@ -1149,6 +1152,42 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         functionBubblePositions,
       };
     });
+
+    // ═══ COLLISION DETECTION: push overlapping bubbles apart ═══
+    // Collect ALL positioned nodes for repulsion pass
+    const allNodes = [];
+    branchPositions.forEach(branch => {
+      // Department nodes
+      allNodes.push({ ref: branch, r: 40 });
+      // Sub-folder (tier diamond) nodes
+      branch.subFolderPositions?.forEach(sf => allNodes.push({ ref: sf, r: 36 }));
+      // Function bubbles
+      branch.functionBubblePositions?.forEach(fb => allNodes.push({ ref: fb, r: 45 }));
+      // Client pills
+      branch.clientPositions?.forEach(cp => allNodes.push({ ref: cp, r: cp.radius || 30 }));
+    });
+
+    // Simple repulsion: 3 passes to push apart overlapping nodes
+    const MIN_SEP = 70; // minimum distance between any two node centers
+    for (let pass = 0; pass < 3; pass++) {
+      for (let i = 0; i < allNodes.length; i++) {
+        for (let j = i + 1; j < allNodes.length; j++) {
+          const a = allNodes[i].ref, b = allNodes[j].ref;
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const minDist = allNodes[i].r + allNodes[j].r + MIN_SEP;
+          if (dist < minDist) {
+            const overlap = (minDist - dist) / 2;
+            const nx = dx / dist, ny = dy / dist;
+            // Push apart — bias DOWNWARD (positive Y) for the lower node
+            b.x += nx * overlap;
+            b.y += Math.abs(ny * overlap) + overlap * 0.3; // downward bias
+            a.x -= nx * overlap;
+            a.y -= Math.abs(ny * overlap) * 0.1; // parent stays mostly put
+          }
+        }
+      }
+    }
 
     return { cx, cy, centerR, branchPositions, metaFolderPositions, metaSubFolderPositions: [], virtualW: w, virtualH: h, isWide };
   }, [branches, metaFolders, dimensions, spacingFactor, manualPositions, expandedMetaFolders]);

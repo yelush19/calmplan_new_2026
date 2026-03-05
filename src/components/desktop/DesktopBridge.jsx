@@ -64,8 +64,8 @@ export default function DesktopBridge({ currentTask, tasks = [], onTaskCreated, 
       const taskSize = currentTask.size || 'M';
 
       // Calculate time allocation based on size
-      const sizeMinutes = { S: 15, M: 30, L: 60 };
-      const allocatedMinutes = sizeMinutes[taskSize] || 30;
+      const sizeMinutes = { S: 15, M: 15, L: 45 };
+      const allocatedMinutes = sizeMinutes[taskSize] || 15;
 
       // Calculate elapsed time
       const startTime = currentTask.startTime

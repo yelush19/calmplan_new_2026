@@ -584,13 +584,13 @@ export default function ClientsDashboardPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="bg-gradient-to-br from-gray-50 to-white border-[#E0E0E0] shadow-sm">
+        <Card className="bg-white border-[#E0E0E0] shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-slate-700">{filteredClients.length}</div>
             <div className="text-xs text-slate-500">לקוחות פעילים</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-gray-50 to-white border-[#E0E0E0] shadow-sm">
+        <Card className="bg-white border-[#E0E0E0] shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-slate-600">{stats.total}</div>
             <div className="text-xs text-slate-500">תהליכים</div>
@@ -763,7 +763,7 @@ export default function ClientsDashboardPage() {
                             if (!clientNeedsService(client, col, group)) {
                               return (
                                 <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'}`}>
-                                  <div className={`${bg-gray-100} text-slate-400 rounded py-1.5 text-[10px] font-medium mx-0.5`}>
+                                  <div className="bg-gray-100 text-slate-400 rounded py-1.5 text-[10px] font-medium mx-0.5">
                                     לא רלוונטי
                                   </div>
                                 </td>
@@ -776,7 +776,7 @@ export default function ClientsDashboardPage() {
                               if (isBimonthlyOffMonth(client, col.key, selectedMonth)) {
                                 return (
                                   <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'}`}>
-                                    <div className={`${bg-gray-100} text-slate-400 rounded py-1.5 text-xs font-bold mx-0.5`}>
+                                    <div className="bg-gray-100 text-slate-400 rounded py-1.5 text-xs font-bold mx-0.5">
                                       דו-חודשי
                                     </div>
                                   </td>
@@ -945,7 +945,7 @@ export default function ClientsDashboardPage() {
         <Link to={createPageUrl('ClientManagement')}>
           <Card className="border-[#E0E0E0] hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#F5F5F5]0 shadow-sm">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#008291] shadow-sm">
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">

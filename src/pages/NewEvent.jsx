@@ -41,7 +41,7 @@ export default function NewEventPage() {
     due_date: "",
     priority: "medium",
     category: "work",
-    estimated_minutes: 30
+    estimated_minutes: 15
   });
 
   const [conflict, setConflict] = useState(null);
@@ -183,7 +183,7 @@ export default function NewEventPage() {
   const addTask = () => {
     if (!newTask.title) return;
     setRelatedTasks(prev => [...prev, { ...newTask, id: Date.now() }]);
-    setNewTask({ title: "", description: "", due_date: "", priority: "medium", category: "work", estimated_minutes: 30 });
+    setNewTask({ title: "", description: "", due_date: "", priority: "medium", category: "work", estimated_minutes: 15 });
     setShowTaskForm(false);
   };
 

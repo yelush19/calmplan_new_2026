@@ -83,16 +83,16 @@ button:focus-visible {
     --secondary-foreground: 0 0% 100%;
     --accent: 158 92% 30%;
     --accent-foreground: 0 0% 100%;
-    --background: 210 40% 98%;
-    --foreground: 192 9% 19%;
-    --muted: 210 30% 96%;
-    --muted-foreground: 200 7% 42%;
-    --card: 210 40% 98%;
-    --card-foreground: 192 9% 19%;
-    --popover: 210 40% 98%;
-    --popover-foreground: 192 9% 19%;
-    --border: 200 16% 85%;
-    --input: 200 16% 85%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --muted: 0 0% 97%;
+    --muted-foreground: 0 0% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --border: 0 0% 0%;
+    --input: 0 0% 75%;
     --ring: 160 80% 39%;
     --destructive: 5 79% 57%;
     --destructive-foreground: 0 0% 100%;
@@ -102,13 +102,13 @@ button:focus-visible {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 0 0% 0%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 97%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 0%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     /* CalmPlan custom tokens */
     --neutral-dark: #2d3436;
@@ -166,13 +166,14 @@ button:focus-visible {
   body {
     @apply text-foreground;
     font-family: 'Varela Round', 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
-    background: #F9FAFB;
+    background: #FFFFFF;
     min-height: 100vh;
+    color: #000000;
   }
   h1, h2, h3, h4, h5, h6, .heading {
     font-family: 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
     font-weight: 600;
-    color: var(--neutral-dark);
+    color: #000000;
   }
   .btn, button {
     font-family: 'Assistant', 'Varela Round', 'Heebo', sans-serif;
@@ -187,14 +188,17 @@ button:focus-visible {
    ═══════════════════════════════════════════════════════════════ */
 
 @layer components {
-  /* ── ZERO GRAY: All gray backgrounds → solid white or light gray ── */
-  .bg-gray-50, .bg-gray-100, .bg-gray-200 {
+  /* ── ZERO GRAY: All gray backgrounds → solid white ── */
+  .bg-gray-50, .bg-gray-100 {
+    background-color: #FFFFFF !important;
+  }
+  .bg-gray-200, .bg-gray-300 {
     background-color: #F5F5F5 !important;
   }
-  .bg-gray-300, .bg-gray-400, .bg-gray-500,
+  .bg-gray-400, .bg-gray-500,
   .bg-gray-600, .bg-gray-700, .bg-gray-800, .bg-gray-900 {
     background-color: #EEEEEE !important;
-    color: #263238 !important;
+    color: #000000 !important;
   }
 
   /* ── Borders: solid visible borders, no transparency ── */
@@ -218,32 +222,35 @@ button:focus-visible {
     background: #78909C;
   }
 
-  /* CalmPlan card utility — solid white, rounded */
+  /* CalmPlan card utility — solid white, black border, no shadow */
   .calm-glass {
     background: #FFFFFF;
-    border: 2px solid #B0BEC5;
+    border: 1px solid #000000;
     border-radius: 32px;
-    box-shadow: 0 2px 12px #0000000F;
+    box-shadow: none;
   }
 
-  /* CalmPlan list item */
+  /* CalmPlan list item — white, thin border */
   .calm-bubble {
     background: #FFFFFF;
     border-radius: 24px;
-    box-shadow: 0 1px 6px #0000000A;
+    border: 1px solid #E0E0E0;
+    box-shadow: none;
     transition: all 0.2s ease;
   }
   .calm-bubble:hover {
-    background: #F5F5F5;
-    box-shadow: 0 2px 12px #00ACC126;
+    background: #FFFFFF;
+    border-color: #000000;
   }
 
-  /* Cyan glow for active/selected states */
+  /* Cyan glow — thin teal border only */
   .calm-glow {
-    box-shadow: 0 0 15px #00ACC133, 0 2px 8px #00000014;
+    border: 2px solid #00ACC1;
+    box-shadow: none;
   }
   .calm-glow-active {
-    box-shadow: 0 0 20px #00ACC159, 0 2px 12px #0000001A;
+    border: 2px solid #008291;
+    box-shadow: none;
   }
 
   /* ── bg-white MUST stay solid white — no transparency override ── */
@@ -256,14 +263,17 @@ button:focus-visible {
     background-color: #FFFFFF !important;
   }
 
-  /* ── Slate overrides — solid backgrounds ── */
-  .bg-slate-50, .bg-slate-100, .bg-slate-200 {
+  /* ── Slate overrides — solid white backgrounds ── */
+  .bg-slate-50, .bg-slate-100 {
+    background-color: #FFFFFF !important;
+  }
+  .bg-slate-200, .bg-slate-300 {
     background-color: #F5F5F5 !important;
   }
-  .bg-slate-300, .bg-slate-400, .bg-slate-500,
+  .bg-slate-400, .bg-slate-500,
   .bg-slate-600, .bg-slate-700, .bg-slate-800, .bg-slate-900 {
     background-color: #EEEEEE !important;
-    color: #263238 !important;
+    color: #000000 !important;
   }
 
   /* ── Divide lines — solid borders ── */
@@ -280,18 +290,27 @@ button:focus-visible {
     background-color: #E0E0E0 !important;
   }
 
-  /* ── Text colors: dark and readable, no faded rgba ── */
-  .text-gray-300 {
-    color: #546E7A !important;
-  }
-  .text-gray-400, .text-gray-500 {
-    color: #455A64 !important;
+  /* ── Text colors: BLACK — no gray text anywhere ── */
+  .text-gray-300, .text-gray-400, .text-gray-500 {
+    color: #000000 !important;
   }
   .text-gray-600, .text-gray-700 {
-    color: #37474F !important;
+    color: #000000 !important;
   }
   .text-gray-800, .text-gray-900 {
-    color: #263238 !important;
+    color: #000000 !important;
+  }
+  .text-slate-300, .text-slate-400, .text-slate-500 {
+    color: #000000 !important;
+  }
+  .text-slate-600, .text-slate-700 {
+    color: #000000 !important;
+  }
+  .text-slate-800, .text-slate-900 {
+    color: #000000 !important;
+  }
+  .text-muted-foreground {
+    color: #000000 !important;
   }
 
   /* Ring focus states — CalmPlan cyan */
@@ -299,9 +318,23 @@ button:focus-visible {
     --tw-ring-color: #00ACC14D !important;
   }
 
-  /* ── Muted backgrounds — solid light gray ── */
+  /* ── Muted backgrounds — solid white ── */
   .bg-muted {
-    background-color: #F5F5F5 !important;
+    background-color: #FFFFFF !important;
+  }
+
+  /* ── ZERO SHADOW: kill all shadows globally, use borders instead ── */
+  .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl {
+    box-shadow: none !important;
+    border: 1px solid #E0E0E0 !important;
+  }
+  .shadow-none {
+    box-shadow: none !important;
+  }
+
+  /* ── bg-[#FAFBFC] and bg-[#F9FAFB] overrides ── */
+  [class*="bg-[#FAFBFC]"], [class*="bg-[#F9FAFB]"] {
+    background-color: #FFFFFF !important;
   }
 
   /* ── Slate borders — solid ── */
