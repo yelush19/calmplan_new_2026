@@ -15,7 +15,7 @@ import TaskMatrix from "./TaskMatrix";
 
 import Settings from "./Settings";
 
-import MondayIntegration from "./MondayIntegration";
+// MondayIntegration removed (Kill Monday directive)
 
 import Recommendations from "./Recommendations";
 
@@ -61,7 +61,7 @@ import SystemOverview from "./SystemOverview";
 
 import EmergencyReset from "./EmergencyReset";
 
-import FullSync from "./FullSync";
+// FullSync removed (Kill Monday directive)
 
 import WeeklyPlanningDashboard from "./WeeklyPlanningDashboard";
 
@@ -99,6 +99,8 @@ import BatchSetup from "./BatchSetup";
 
 import FinancialResultsDashboard from "./FinancialResultsDashboard";
 
+import MyFocus from "./MyFocus";
+
 import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -117,7 +119,7 @@ const PAGES = {
     
     Settings: Settings,
     
-    MondayIntegration: MondayIntegration,
+    // MondayIntegration: removed (Kill Monday)
     
     Recommendations: Recommendations,
     
@@ -163,7 +165,7 @@ const PAGES = {
     
     EmergencyReset: EmergencyReset,
     
-    FullSync: FullSync,
+    // FullSync: removed (Kill Monday)
     
     WeeklyPlanningDashboard: WeeklyPlanningDashboard,
     
@@ -198,6 +200,8 @@ const PAGES = {
     BatchSetup: BatchSetup,
 
     FinancialResultsDashboard: FinancialResultsDashboard,
+
+    MyFocus: MyFocus,
 
 }
 
@@ -240,7 +244,7 @@ function PagesContent() {
                 
                 <Route path="/Settings" element={<Settings />} />
                 
-                <Route path="/MondayIntegration" element={<MondayIntegration />} />
+                {/* MondayIntegration route removed — Kill Monday */}
                 
                 <Route path="/Recommendations" element={<Recommendations />} />
                 
@@ -286,7 +290,7 @@ function PagesContent() {
                 
                 <Route path="/EmergencyReset" element={<EmergencyReset />} />
                 
-                <Route path="/FullSync" element={<FullSync />} />
+                {/* FullSync route removed — Kill Monday */}
                 
                 <Route path="/WeeklyPlanningDashboard" element={<WeeklyPlanningDashboard />} />
                 
@@ -325,6 +329,8 @@ function PagesContent() {
                 <Route path="/BatchSetup" element={<BatchSetup />} />
 
                 <Route path="/FinancialResultsDashboard" element={<FinancialResultsDashboard />} />
+
+                <Route path="/MyFocus" element={<MyFocus />} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">

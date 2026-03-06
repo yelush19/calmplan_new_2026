@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, CheckCircle, AlertTriangle, Database } from 'lucide-react';
-import { syncAllBoards } from '@/api/functions';
+// syncAllBoards removed (Kill Monday directive)
 
 export default function FullSyncPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -16,7 +16,7 @@ export default function FullSyncPage() {
         setResults(null);
 
         try {
-            const response = await syncAllBoards();
+            return // Monday sync disabled;
             if (response.data.success) {
                 setResults(response.data);
             } else {

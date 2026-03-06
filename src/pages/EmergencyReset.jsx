@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Trash2, RefreshCw, Database, AlertTriangle } from 'lucide-react';
 import { emergencyReset } from '@/api/functions';
-import { mondayApi } from '@/api/functions';
+// mondayApi removed (Kill Monday directive)
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 export default function EmergencyResetPage() {
@@ -16,7 +16,7 @@ export default function EmergencyResetPage() {
     const handleFullReset = async () => {
         const ok = await confirm({
             title: 'איפוס מלא של המערכת',
-            description: 'פעולה הרסנית! כל הנתונים יימחקו ויישאר רק מה שב-Monday.\nפעולה זו בלתי הפיכה!',
+            description: 'פעולה הרסנית! כל הנתונים יימחקו.\nפעולה זו בלתי הפיכה!',
             confirmText: 'מחק הכל ואפס',
             delayMs: 5000,
         });
@@ -40,21 +40,7 @@ export default function EmergencyResetPage() {
             // שלב 3: סנכרון מחדש מ-Monday
             const syncResults = [];
             
-            // סנכרון לקוחות
-            try {
-                const clientSync = await mondayApi({ action: 'syncClients' });
-                syncResults.push(`לקוחות: ${clientSync.data.created?.length || 0} נוצרו`);
-            } catch (e) {
-                syncResults.push(`לקוחות: שגיאה - ${e.message}`);
-            }
-
-            // סנכרון משימות דיווח
-            try {
-                const reportSync = await mondayApi({ action: 'syncTasks' });
-                syncResults.push(`משימות דיווח: ${reportSync.data.created?.length || 0} נוצרו`);
-            } catch (e) {
-                syncResults.push(`משימות דיווח: שגיאה - ${e.message}`);
-            }
+            // Monday sync removed — data from DNA only
 
             setResult({
                 success: true,
@@ -78,7 +64,7 @@ export default function EmergencyResetPage() {
             {ConfirmDialogComponent}
             <div className="text-center">
                 <h1 className="text-3xl font-bold text-amber-600 mb-2">איפוס מלא של המערכת</h1>
-                <p className="text-gray-600">מחיקה מלאה של כל הנתונים וסנכרון מחדש מ-Monday בלבד</p>
+                <p className="text-gray-600">מחיקה מלאה של כל הנתונים</p>
             </div>
 
             <Card className="border-amber-200 bg-amber-50">
@@ -93,15 +79,15 @@ export default function EmergencyResetPage() {
                         <h3 className="font-bold mb-2">מה יקרה:</h3>
                         <ul className="list-disc list-inside space-y-1 text-sm">
                             <li>🗑️ מחיקה מלאה של כל המשימות, לקוחות ואירועים</li>
-                            <li>🔄 סנכרון מחדש רק מ-Monday.com</li>
+                            <li>🔄 איפוס מלא של כל הנתונים</li>
                             <li>✨ מערכת נקייה ללא כפילויות</li>
-                            <li>📊 רק הנתונים הנכונים מ-Monday יישארו</li>
+                            <li>📊 המערכת נקייה לחלוטין</li>
                         </ul>
                     </div>
 
                     <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                         <p className="text-yellow-800 font-medium">
-                            ⚠️ פעולה זו בלתי הפיכה! וודא שכל הנתונים החשובים שלך נמצאים ב-Monday.com
+                            ⚠️ פעולה זו בלתי הפיכה! וודאו שיש גיבוי לפני ביצוע
                         </p>
                     </div>
 

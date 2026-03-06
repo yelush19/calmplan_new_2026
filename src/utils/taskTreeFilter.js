@@ -58,7 +58,7 @@ export function getPBranchLabel(pBranch) {
  * - Current month + previous month (by due_date)
  * - OR active status (no due_date but not completed/irrelevant)
  * - Exclude 31/5 annual ghost tasks
- * - Exclude tasks older than 60 days
+ * - Rule of 31: include tasks within 62-day window (2 full months)
  */
 export function filterActivePeriodTasks(tasks) {
   const now = new Date();
@@ -90,10 +90,10 @@ export function filterActivePeriodTasks(tasks) {
       if (monthPrefix === currMonthPrefix || monthPrefix === prevMonthPrefix) return true;
       // Completed tasks outside active window → exclude
       if (task.status === 'production_completed') return false;
-      // Active tasks with future due dates → include if within 60 days
+      // Rule of 31: Active tasks with future due dates → include full month range (31 days each direction)
       const taskDate = new Date(dd);
       const daysDiff = (taskDate - now) / (1000 * 60 * 60 * 24);
-      return daysDiff >= -60 && daysDiff <= 60;
+      return daysDiff >= -62 && daysDiff <= 62;
     }
 
     // No due date: include if active (not completed/irrelevant)

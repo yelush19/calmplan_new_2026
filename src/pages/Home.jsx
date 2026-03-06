@@ -127,6 +127,7 @@ function sortByPriority(tasks) {
 }
 
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
 
 const FOCUS_TABS = [
   { key: 'overdue', label: 'באיחור', icon: AlertTriangle, color: 'text-[#7B1FA2]', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
@@ -483,16 +484,133 @@ export default function HomePage() {
   const todayTotal = data.today.length + (data.overdue?.length || 0);
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
 
+  // ── KPI CAPACITY METRICS (from DNA) ──
+  const capacityKPIs = useMemo(() => {
+    const activeTasks = data.activeTasks || allFocusTasks || [];
+    return calculateCapacity(activeTasks);
+  }, [data.activeTasks, allFocusTasks]);
+
+  const taskFeed = useMemo(() => {
+    const activeTasks = data.activeTasks || allFocusTasks || [];
+    return getTaskFeed(activeTasks.filter(t => t.status !== 'production_completed'));
+  }, [data.activeTasks, allFocusTasks]);
+
   return (
     <motion.div
-      className="relative w-full h-full flex-1"
+      className="relative w-full h-full flex-1 flex flex-col"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {/* ═══ MINDMAP VIEW — FULL BLEED, TAKES 100% OF SPACE ═══ */}
+      {/* ═══ KPI BAR — Professional Dashboard Grid (Always visible) ═══ */}
+      <div className="flex-none bg-white border-b border-[#E0E0E0] px-4 py-2 z-20">
+        <div className="flex items-center gap-4 overflow-x-auto">
+          {/* KPI 1: Total Capacity */}
+          <div className="flex items-center gap-2 min-w-[140px]">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-500 font-medium">קיבולת יומית</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-bold text-[#00838F]">
+                  {(capacityKPIs.totalMinutes / 60).toFixed(1)}
+                </span>
+                <span className="text-xs text-gray-400">/ {(capacityKPIs.dailyCapacityMinutes / 60)}h</span>
+              </div>
+            </div>
+            <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold"
+              style={{
+                background: `conic-gradient(#00838F ${capacityKPIs.utilizationPercent * 3.6}deg, #E0E0E0 0deg)`,
+                color: capacityKPIs.utilizationPercent > 100 ? '#800000' : '#00838F',
+              }}>
+              <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[8px]">
+                {capacityKPIs.utilizationPercent}%
+              </div>
+            </div>
+          </div>
+
+          <div className="w-px h-10 bg-gray-200" />
+
+          {/* KPI 2: Cognitive Load Mix */}
+          <div className="flex items-center gap-2 min-w-[180px]">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-500 font-medium">מיקס עומס קוגניטיבי</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {[3, 2, 1, 0].map(tier => {
+                  const count = capacityKPIs.cognitiveLoadMix[tier] || 0;
+                  if (count === 0) return null;
+                  const lc = LOAD_COLORS[tier];
+                  return (
+                    <div key={tier} className="flex items-center gap-0.5">
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: lc.color }} />
+                      <span className="text-xs font-semibold" style={{ color: lc.color }}>{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="w-px h-10 bg-gray-200" />
+
+          {/* KPI 3: Efficiency Score */}
+          <div className="flex items-center gap-2 min-w-[120px]">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-500 font-medium">יעילות</span>
+              <span className="text-xl font-bold" style={{
+                color: capacityKPIs.efficiencyScore >= 75 ? '#2E7D32' :
+                       capacityKPIs.efficiencyScore >= 50 ? '#F57C00' : '#800000'
+              }}>
+                {capacityKPIs.efficiencyScore}%
+              </span>
+            </div>
+          </div>
+
+          <div className="w-px h-10 bg-gray-200" />
+
+          {/* KPI 4: P-Priority Split */}
+          <div className="flex items-center gap-2 min-w-[150px]">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-500 font-medium">עומס לפי מחלקה</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                {Object.entries(capacityKPIs.loadByPriority).map(([p, mins]) => (
+                  mins > 0 && <div key={p} className="flex items-center gap-0.5">
+                    <span className="text-[10px] font-bold text-gray-600">{p}</span>
+                    <span className="text-xs font-semibold text-[#00838F]">{Math.round(mins / 60 * 10) / 10}h</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1" />
+
+          {/* View Switcher */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+            {[
+              { key: 'mindmap', label: 'מפה', icon: '🧠' },
+              { key: 'feed', label: 'זרימה', icon: '📋' },
+              { key: 'gantt', label: 'גאנט', icon: '📊' },
+              { key: 'kanban', label: 'קנבן', icon: '📌' },
+            ].map(v => (
+              <button
+                key={v.key}
+                onClick={() => setFocusView(v.key)}
+                className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                  focusView === v.key
+                    ? 'bg-white shadow text-[#00838F] font-bold'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {v.icon} {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ VIEW CONTENT ═══ */}
+      {/* ═══ MINDMAP VIEW — FULL BLEED ═══ */}
       {focusView === 'mindmap' ? (
-        <div className="w-full h-full relative">
+        <div className="flex-1 relative">
           <MindMapView
             tasks={data.activeTasks || allFocusTasks}
             clients={clients}
@@ -780,13 +898,63 @@ export default function HomePage() {
             <CardContent className="flex-1 min-h-0 pt-2 pb-2">
               {focusView === 'gantt' ? (
                 <div className="relative h-full">
-                  <GanttView tasks={allFocusTasks} clients={clients} />
+                  <GanttView tasks={allFocusTasks} clients={clients} onEditTask={handleEditTask} />
                   <button onClick={() => setFocusView('mindmap')} className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white shadow-md border border-emerald-200 text-emerald-700 text-xs font-medium">
                     <Network className="w-3.5 h-3.5" /><span>חזרה למפה</span>
                   </button>
                 </div>
               ) : focusView === 'kanban' ? (
                 <KanbanView tasks={allFocusTasks} onTaskStatusChange={handleStatusChange} onDeleteTask={(taskId) => handleDeleteTask({ id: taskId })} onEditTask={handleEditTask} />
+              ) : focusView === 'feed' ? (
+                <div className="h-full overflow-y-auto space-y-1 px-1">
+                  {taskFeed.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                      <List className="w-8 h-8 mb-2" />
+                      <p className="text-sm">אין משימות פעילות</p>
+                    </div>
+                  ) : (
+                    taskFeed.map((task, idx) => {
+                      const lc = task._loadColor || LOAD_COLORS[0];
+                      return (
+                        <motion.div
+                          key={task.id || idx}
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.02 }}
+                          onClick={() => handleEditTask(task)}
+                          className="flex items-center gap-2 p-2 rounded-lg border border-gray-100 hover:shadow-md hover:border-gray-200 cursor-pointer transition-all bg-white"
+                          style={{ borderRight: `4px solid ${lc.color}` }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold truncate">{task.title}</span>
+                              {task.client_name && (
+                                <span className="text-[10px] text-gray-400 truncate">• {task.client_name}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: lc.color + '20', color: lc.color }}>
+                                {lc.label}
+                              </span>
+                              <span className="text-[10px] text-gray-400">{task._duration} דק׳</span>
+                              {task.due_date && (
+                                <span className="text-[10px] text-gray-400">{format(parseISO(task.due_date), 'dd/MM')}</span>
+                              )}
+                              <span className="text-[10px] font-medium" style={{ color: lc.color }}>{task._priority}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {statusConfig[task.status] && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#F5F5F5' }}>
+                                {statusConfig[task.status]?.label || task.status}
+                              </span>
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </div>
               ) : (
                 <AnimatePresence mode="wait">
                   <motion.div key={activeTab} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.12 }}>

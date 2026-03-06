@@ -43,7 +43,7 @@ import {
   FolderKanban
 } from 'lucide-react';
 import { Client, Project, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount, Lead } from '@/api/entities';
-import { mondayApi } from '@/api/functions';
+// mondayApi removed (Kill Monday directive)
 import { exportClientsToExcel } from '@/api/functions';
 import { importClientsFromExcel } from '@/api/functions';
 import { exportClientAccountsTemplate } from '@/api/functions';
@@ -57,7 +57,7 @@ import { ALL_SERVICES } from '@/config/processTemplates';
 import ClientCollections from '@/components/clients/ClientCollections';
 import ClientContractsManager from '@/components/clients/ClientContractsManager';
 import ClientTasksTab from '@/components/clients/ClientTasksTab';
-import MondayDataImport from '@/components/clients/MondayDataImport';
+// MondayDataImport removed (Kill Monday directive)
 import ClientFilesManager from '@/components/files/ClientFilesManager';
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
@@ -231,15 +231,11 @@ export default function ClientManagementPage() {
     setIsSyncing(true);
     setSyncMessage(null);
     try {
-      const response = await mondayApi({ action: 'syncClients' });
-      if (response && response.data && response.data.success) {
-        setSyncMessage({ type: 'success', message: 'סנכרון Monday הושלם בהצלחה.', details: response.data.log });
-      } else {
-        setSyncMessage({ type: 'error', message: 'שגיאה בסנכרון Monday.', details: response.data?.log || [response.data?.error || 'שגיאה לא ידועה'] });
-      }
+      // Monday sync removed — data comes from CalmPlan DNA
+      setSyncMessage({ type: 'success', message: 'נתונים נטענים ממקור האפיון (DNA).' });
       await loadClients();
     } catch (error) {
-      console.error("Error syncing with Monday:", error);
+      console.error("Error loading data:", error);
       setSyncMessage({ type: 'error', message: 'שגיאה קריטית בסנכרון Monday.', details: [error.message] });
     } finally {
       setIsSyncing(false);
@@ -359,18 +355,7 @@ export default function ClientManagementPage() {
 
       await Promise.all(updatePromises);
 
-      // Push status changes to Monday.com in background
-      const allClients = await Client.list();
-      for (const clientId of selectedClientIds) {
-        const client = allClients.find(c => c.id === clientId);
-        if (client?.monday_board_id && client?.monday_item_id) {
-          mondayApi({
-            action: 'pushClientToMonday',
-            clientId,
-            boardId: client.monday_board_id,
-          }).catch(err => console.warn('⚠️ סנכרון ל-Monday נכשל:', err.message));
-        }
-      }
+      // Monday push removed — DNA is sole source of truth
 
       alert(`✅ עודכנו ${selectedClientIds.size} לקוחות לסטטוס "${statusLabels[bulkNewStatus]}"`);
       setSelectedClientIds(new Set());
@@ -792,23 +777,7 @@ export default function ClientManagementPage() {
         cleanupTasksForServiceChange(savedClientId, clientData.name, selectedClient.service_types, clientData.service_types);
       }
 
-      // Push to Monday.com in background (don't block UI)
-      if (savedClientId) {
-        const boardId = clientData.monday_board_id || selectedClient?.monday_board_id;
-        if (boardId) {
-          mondayApi({
-            action: 'pushClientToMonday',
-            clientId: savedClientId,
-            boardId,
-          }).then(res => {
-            if (!res.data?.success) {
-              console.warn('⚠️ סנכרון ל-Monday נכשל:', res.data?.error);
-            }
-          }).catch(err => {
-            console.warn('⚠️ סנכרון ל-Monday נכשל:', err.message);
-          });
-        }
-      }
+      // Monday push removed — DNA is sole source of truth
 
       setSelectedClient(null);
       setShowClientForm(false);
@@ -1400,7 +1369,10 @@ export default function ClientManagementPage() {
             <DialogTitle>ייבוא נתוני Monday.com</DialogTitle>
             <DialogDescription>ייבוא נתוני לקוחות וחשבונות בנק מ-Monday.com</DialogDescription>
           </DialogHeader>
-          <MondayDataImport onComplete={() => { setShowMondayImport(false); loadClients(); }} />
+          {/* MondayDataImport removed — Kill Monday directive */}
+          <div className="p-4 text-center text-amber-700 bg-amber-50 rounded-lg">
+            <p>ייבוא Monday.com הושבת. השתמשו בייבוא נתונים או בממשק ה-UI.</p>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
