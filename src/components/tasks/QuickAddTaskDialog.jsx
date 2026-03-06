@@ -335,7 +335,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
         ...(selectedBoard && {
           board_id: selectedBoard.id,
           board_name: selectedBoard.name || selectedBoard.board_name,
-          monday_board_id: selectedBoard.monday_board_id || undefined,
+          // monday_board_id removed — Monday data quarantined
         }),
         ...(selectedParent && {
           parent_id: selectedParent.id,
