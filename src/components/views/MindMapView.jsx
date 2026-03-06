@@ -16,6 +16,7 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { computeComplexityTier, getBubbleRadius, getTierInfo } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
+import { buildCollisionNodes, resolveCollisions } from '@/engines/mapCollisionEngine';
 
 // ─── Zero-Panic Palette (Cyan/Teal — NO RED, NO GRAY) ───────────────────
 const ZERO_PANIC = {
@@ -1132,40 +1133,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       };
     });
 
-    // ═══ COLLISION DETECTION: push overlapping bubbles apart ═══
-    const allNodes = [];
-    branchPositions.forEach(branch => {
-      allNodes.push({ ref: branch, r: 50, weight: 3 }); // dept nodes are heavy
-      branch.subFolderPositions?.forEach(sf => allNodes.push({ ref: sf, r: 40, weight: 2 }));
-      branch.functionBubblePositions?.forEach(fb => allNodes.push({ ref: fb, r: 50, weight: 1 }));
-      branch.clientPositions?.forEach(cp => allNodes.push({ ref: cp, r: cp.radius || 35, weight: 0 }));
-    });
-
-    // 6-pass repulsion — stronger separation, downward-only push
-    const MIN_SEP = 50;
-    for (let pass = 0; pass < 6; pass++) {
-      for (let i = 0; i < allNodes.length; i++) {
-        for (let j = i + 1; j < allNodes.length; j++) {
-          const a = allNodes[i].ref, b = allNodes[j].ref;
-          const dx = b.x - a.x, dy = b.y - a.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const minDist = allNodes[i].r + allNodes[j].r + MIN_SEP;
-          if (dist < minDist) {
-            const overlap = (minDist - dist) / 2;
-            const nx = dx / dist, ny = dy / dist;
-            // Lighter node moves more, heavier node moves less
-            const aWeight = allNodes[i].weight, bWeight = allNodes[j].weight;
-            const bRatio = aWeight >= bWeight ? 0.8 : 0.4;
-            const aRatio = 1 - bRatio;
-            // Push HORIZONTALLY to avoid vertical stacking
-            b.x += nx * overlap * bRatio;
-            b.y += Math.max(ny * overlap * bRatio, overlap * 0.15); // slight downward push
-            a.x -= nx * overlap * aRatio;
-            a.y -= ny * overlap * aRatio * 0.3;
-          }
-        }
-      }
-    }
+    // ═══ COLLISION ENGINE: zero-overlap guarantee ═══
+    // Uses AABB for pills (rectangular), circle for diamonds/dept nodes.
+    // Iterates until convergence — no fixed pass count.
+    const collisionNodes = buildCollisionNodes(branchPositions, isWide);
+    resolveCollisions(collisionNodes);
 
     return { cx, cy, centerR, branchPositions, metaFolderPositions, metaSubFolderPositions: [], virtualW: w, virtualH: h, isWide };
   }, [branches, metaFolders, dimensions, spacingFactor, manualPositions, expandedMetaFolders]);
