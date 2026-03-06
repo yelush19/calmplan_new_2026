@@ -33,7 +33,7 @@ export default function FullSyncPage() {
         <div className="space-y-6 p-6">
             <div className="text-center">
                 <h1 className="text-3xl font-bold mb-2">סנכרון מלא - כל הלוחות</h1>
-                <p className="text-gray-600">סנכרון כל 7 הלוחות מ-Monday למערכת</p>
+                <p className="text-gray-600">סנכרון נתונים — הופסק (CalmPlan DNA הוא מקור האמת)</p>
             </div>
 
             <Card className="max-w-2xl mx-auto">
@@ -46,7 +46,7 @@ export default function FullSyncPage() {
                 <CardContent>
                     <div className="space-y-4">
                         <p className="text-sm text-gray-600">
-                            פעולה זו תמחק את כל הנתונים הקיימים ותטען מחדש מ-Monday
+                            עמוד זה הושבת. CalmPlan DNA הוא מקור האמת היחיד.
                         </p>
                         
                         <Button 

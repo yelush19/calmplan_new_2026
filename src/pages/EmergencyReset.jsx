@@ -48,7 +48,7 @@ export default function EmergencyResetPage() {
                 details: [
                     `נמחקו: ${deleteResult.data.deleted} רשומות ישנות`,
                     ...syncResults,
-                    'המערכת נקייה ומסונכרנת עם Monday בלבד!'
+                    'המערכת נקייה ומסונכרנת.'
                 ]
             });
 

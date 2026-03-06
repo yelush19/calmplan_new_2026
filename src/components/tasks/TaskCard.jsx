@@ -497,7 +497,7 @@ export default function TaskCard({
                                 e.stopPropagation(); 
                                 window.open(task.external_app_link, '_blank', 'noopener,noreferrer'); 
                             }}
-                            title="פתח ב-Monday.com"
+                            title="פתח קישור חיצוני"
                         >
                             <ExternalLink className="w-4 h-4" />
                         </Button>

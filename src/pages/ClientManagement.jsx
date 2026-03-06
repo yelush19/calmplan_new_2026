@@ -236,7 +236,7 @@ export default function ClientManagementPage() {
       await loadClients();
     } catch (error) {
       console.error("Error loading data:", error);
-      setSyncMessage({ type: 'error', message: 'שגיאה קריטית בסנכרון Monday.', details: [error.message] });
+      setSyncMessage({ type: 'error', message: 'שגיאה בטעינת נתונים.', details: [error.message] });
     } finally {
       setIsSyncing(false);
     }
@@ -905,14 +905,7 @@ export default function ClientManagementPage() {
                   />
                 </label>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowMondayImport(true)}>
-                <Upload className="w-4 h-4 ml-2" />
-                ייבוא נתוני Monday
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleSync} disabled={isSyncing}>
-                <RefreshCw className={`w-4 h-4 ml-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                סנכרון Monday
-              </DropdownMenuItem>
+              {/* Monday import/sync removed — CalmPlan DNA is the source of truth */}
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" onClick={handleAddNewClient} className="bg-primary hover:bg-accent text-white" disabled={isSaving}>
@@ -1194,7 +1187,7 @@ export default function ClientManagementPage() {
             <Card className="p-12 text-center">
               <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
               <h3 className="text-xl font-semibold text-gray-600 mb-2">לא נמצאו לקוחות</h3>
-              <p className="text-gray-500 mb-4">התחל על ידי הוספת הלקוח הראשון שלך או סנכרון עם Monday.com.</p>
+              <p className="text-gray-500 mb-4">התחל על ידי הוספת הלקוח הראשון שלך.</p>
               <Button onClick={handleAddNewClient} className="bg-primary hover:bg-accent text-white">
                 <Plus className="w-4 h-4 ml-2" />
                 הוסף לקוח ראשון
@@ -1362,19 +1355,7 @@ export default function ClientManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Monday Data Import Dialog */}
-      <Dialog open={showMondayImport} onOpenChange={setShowMondayImport}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>ייבוא נתוני Monday.com</DialogTitle>
-            <DialogDescription>ייבוא נתוני לקוחות וחשבונות בנק מ-Monday.com</DialogDescription>
-          </DialogHeader>
-          {/* MondayDataImport removed — Kill Monday directive */}
-          <div className="p-4 text-center text-amber-700 bg-amber-50 rounded-lg">
-            <p>ייבוא Monday.com הושבת. השתמשו בייבוא נתונים או בממשק ה-UI.</p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Monday Data Import Dialog — removed (Kill Monday directive) */}
     </div>
   );
 }

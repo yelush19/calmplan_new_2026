@@ -98,7 +98,7 @@ export default function TreatmentInput({ onPlanCreated, onCancel }) {
   // FIX: Always start on Sunday of current week, not next week
   const [weekStartDate, setWeekStartDate] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [allTherapists, setAllTherapists] = useState([]); // New state for all therapists
-  const [mondayTreatments, setMondayTreatments] = useState([]); // New state for Monday synced treatments
+  // Monday treatments removed — CalmPlan DNA is the source of truth
 
   // Fetch therapists on component mount
   useEffect(() => {
@@ -113,136 +113,7 @@ export default function TreatmentInput({ onPlanCreated, onCancel }) {
     loadTherapists();
   }, []);
 
-  // Load Monday synced treatments for the selected week
-  useEffect(() => {
-    const loadMondayTreatments = async () => {
-      try {
-        console.log('🔍 DEBUG: Starting to load Monday treatments...');
-        
-        const dashboards = await Dashboard.list();
-        console.log('🔍 DEBUG: Found dashboards:', dashboards);
-        
-        const treatmentsBoardConfig = dashboards.find(d => d.type === 'weekly_planning');
-        console.log('🔍 DEBUG: Treatment board config:', treatmentsBoardConfig);
-        
-        if (!treatmentsBoardConfig || !treatmentsBoardConfig.monday_board_id) {
-            console.warn("⚠️  Treatments board not configured in Monday Integration settings. Skipping Monday treatment import.");
-            setMondayTreatments([]);
-            setTreatments(prev => prev.filter(t => !t.isFromMonday)); // Clear old monday treatments
-            return;
-        }
-        
-        const treatmentsBoardId = treatmentsBoardConfig.monday_board_id;
-        console.log(`🔍 DEBUG: Looking for treatments from board ID: ${treatmentsBoardId}`);
-
-        // First check if the board is synced to Task table
-        const mondayTasks = await Task.filter({
-          'monday_board_id': treatmentsBoardId,
-        });
-
-        console.log(`🔍 DEBUG: Found ${mondayTasks.length} treatments from board ${treatmentsBoardId}`);
-        
-        if (mondayTasks.length === 0) {
-          console.warn(`⚠️  No treatments found for board ${treatmentsBoardId}. Make sure the board is synced in Monday Integration.`);
-          setMondayTreatments([]);
-          setTreatments(prev => prev.filter(t => !t.isFromMonday));
-          return;
-        }
-
-        console.log('🔍 DEBUG: Sample Monday task:', mondayTasks[0]);
-
-        // Helper to get column value by title
-        const getColumnValue = (task, columnTitle, parseJson = true) => {
-            const column = (task.column_values || []).find(cv => cv.title === columnTitle);
-            if (!column || column.value === null || column.value === undefined) return null;
-            try {
-                const parsed = parseJson ? JSON.parse(column.value) : column.value;
-                if (typeof parsed === 'string' && parsed.trim() === '') return null;
-                return parsed;
-            } catch (e) {
-                return column.value;
-            }
-        };
-
-        // Convert Monday tasks to treatment format - PROPERLY extract data
-        const convertedTreatments = (mondayTasks || []).map(task => {
-          let treatmentDate = new Date(weekStartDate); // Default to start of week
-          let startTime = '09:00';
-          let endTime = '10:00';
-          
-          // Extract data from Monday columns
-          const mondayDateData = getColumnValue(task, 'תאריך', true);
-          const mondayStartTime = getColumnValue(task, 'שעת התחלה', false);
-          const mondayEndTime = getColumnValue(task, 'שעת סיום', false);
-          
-          if (mondayDateData && mondayDateData.date) {
-            const parsedDate = parse(mondayDateData.date, 'yyyy-MM-dd', new Date());
-            if (isValid(parsedDate)) {
-              treatmentDate = parsedDate;
-            }
-          }
-
-          if (mondayStartTime) startTime = mondayStartTime;
-          if (mondayEndTime) endTime = mondayEndTime;
-          
-          const statusRaw = getColumnValue(task, 'סטטוס', true);
-          const cognitiveLoadRaw = getColumnValue(task, 'עומס קוגניטיבי', true);
-          const treatmentRoom = getColumnValue(task, 'אולם טיפול', false) || '';
-
-          const statusFromMonday = statusRaw?.label || 'מתוכנן';
-          const normalizedStatus = {
-            'מתוכנן': 'planned',
-            'הושלם': 'completed', 
-            'בוטל': 'cancelled',
-          }[statusFromMonday] || 'planned';
-
-          const cognitiveLoadFromMonday = cognitiveLoadRaw?.label || 'בינוני';
-          const normalizedCognitiveLoad = {
-            'נמוך': 'low',
-            'בינוני': 'medium',
-            'גבוה': 'high',
-          }[cognitiveLoadFromMonday] || 'medium';
-
-          // Format date for the treatment object
-          const formattedDate = format(treatmentDate, 'yyyy-MM-dd') + 'T00:00:00.000Z';
-
-          return {
-            id: `monday-${task.id}`,
-            date: formattedDate,
-            start: startTime,
-            end: endTime,
-            patient: task.client_name || 'לא צוין',
-            location: task.location || 'לא צוין',
-            therapist: getColumnValue(task, 'מטפל/ת', false) || '',
-            treatmentType: task.title || 'טיפול לא מזוהה',
-            notes: task.description || '',
-            treatmentRoom: treatmentRoom,
-            status: normalizedStatus,
-            calmPlanId: task.monday_item_id || task.id,
-            cognitiveLoad: normalizedCognitiveLoad,
-            isFromMonday: true,
-            originalMondayData: task
-          };
-        });
-
-        console.log('🔍 DEBUG: Converted treatments:', convertedTreatments);
-
-        setMondayTreatments(convertedTreatments);
-        
-        // Merge with existing treatments, ensuring no duplication
-        setTreatments(prev => {
-          const nonMondayTreatments = prev.filter(t => !t.isFromMonday);
-          return [...nonMondayTreatments, ...convertedTreatments];
-        });
-        
-      } catch (error) {
-        console.error("❌ Failed to load Monday treatments:", error);
-        setMondayTreatments([]);
-      }
-    };
-
-    loadMondayTreatments();
-  }, [weekStartDate]); // Re-run when the selected week changes
+  // Monday treatment sync removed — CalmPlan DNA is the source of truth
 
   const manualSave = async () => {
     if (treatments.length === 0) {
@@ -611,15 +482,10 @@ export default function TreatmentInput({ onPlanCreated, onCancel }) {
                   });
 
                   return (
-                  <div key={treatment.id} className={`p-4 rounded-lg border space-y-3 ${conflicts[treatment.id] ? 'border-amber-500 bg-amber-50' : 'border-gray-200'} ${treatment.isFromMonday ? 'bg-blue-50 border-blue-200' : ''}`}>
+                  <div key={treatment.id} className={`p-4 rounded-lg border space-y-3 ${conflicts[treatment.id] ? 'border-amber-500 bg-amber-50' : 'border-gray-200'}`}>
                     <div className="flex justify-between items-center">
                       <h4 className="font-semibold flex items-center gap-2">
                           טיפול #{index + 1}
-                          {treatment.isFromMonday && (
-                            <Badge variant="secondary" className="text-xs">
-                              מ-Monday
-                            </Badge>
-                          )}
                       </h4>
                       <div className="flex items-center gap-2">
                         {treatment.status && (

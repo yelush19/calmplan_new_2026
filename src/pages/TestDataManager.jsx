@@ -115,7 +115,7 @@ export default function TestDataManager() {
         return;
     }
 
-    if (!window.confirm(`⚠️ האם למחוק ${demoTasks.length} רשומות דמו? רשומות אמיתיות ורשומות מ-Monday לא יימחקו.`)) {
+    if (!window.confirm(`⚠️ האם למחוק ${demoTasks.length} רשומות דמו? רשומות אמיתיות לא יימחקו.`)) {
       return;
     }
 
@@ -149,7 +149,7 @@ export default function TestDataManager() {
         return;
     }
 
-    if (!window.confirm(`⚠️ האם למחוק ${duplicateTasks.length} כפילויות? רק משימות מ-Monday ונתוני דמו יישארו.`)) {
+    if (!window.confirm(`⚠️ האם למחוק ${duplicateTasks.length} כפילויות? רק משימות מוגנות ונתוני דמו יישארו.`)) {
       return;
     }
 
@@ -388,7 +388,7 @@ export default function TestDataManager() {
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard title="נתוני דמו" count={stats.demo} icon={Trash2} color="border-orange-500" />
               <StatCard title="נתוני אמת" count={stats.real} icon={Database} color="border-blue-500" />
-              <StatCard title="מקור Monday (מוגן)" count={stats.monday} icon={ShieldCheck} color="border-green-500" />
+              <StatCard title="מקור חיצוני (מוגן)" count={stats.monday} icon={ShieldCheck} color="border-green-500" />
             </CardContent>
           </Card>
           

@@ -2148,7 +2148,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               filter: isFocusDimmed ? 'blur(2px) drop-shadow(0 2px 4px #00000010)' : 'drop-shadow(0 4px 6px #0000001A)',
               transform: !isFocusDimmed && focusBranch ? 'translate(-50%, -50%) scale(1.05)' : 'translate(-50%, -50%)',
               top: mf.y,
-              transform: 'translate(-50%, -50%)',
               cursor: 'pointer',
             }}
             initial={{ opacity: 0, scale: 0 }}

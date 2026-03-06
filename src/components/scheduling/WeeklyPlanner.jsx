@@ -172,7 +172,7 @@ export default function WeeklyPlanner() {
           <CardContent className="p-4 flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-yellow-600" />
             <p className="text-yellow-800">
-              אין משימות פתוחות לתכנון. סנכרן משימות מ-Monday.com או צור משימות חדשות.
+              אין משימות פתוחות לתכנון. צור משימות חדשות או בדוק את לוח המשימות.
             </p>
           </CardContent>
         </Card>
