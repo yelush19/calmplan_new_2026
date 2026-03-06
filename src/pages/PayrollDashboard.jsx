@@ -11,6 +11,7 @@ import {
   ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus, ChevronDown
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
+import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -19,6 +20,7 @@ import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
 import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
+import { getServiceWeight } from '@/config/serviceWeights';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   PAYROLL_SERVICES,
@@ -59,6 +61,7 @@ export default function PayrollDashboardPage() {
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [collapsedServices, setCollapsedServices] = useState(new Set());
+  const [cognitiveFilter, setCognitiveFilter] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, [selectedMonth]);
@@ -131,8 +134,14 @@ export default function PayrollDashboardPage() {
         t.category?.toLowerCase().includes(lower)
       );
     }
+    if (cognitiveFilter !== null) {
+      result = result.filter(t => {
+        const w = getServiceWeight(t.category);
+        return (w.cognitiveLoad ?? 0) === cognitiveFilter;
+      });
+    }
     return result;
-  }, [tasks, clientFilter, searchTerm]);
+  }, [tasks, clientFilter, searchTerm, cognitiveFilter]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
@@ -423,6 +432,11 @@ export default function PayrollDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cognitive Capacity Header — "מד דופק" above all views */}
+      {!isLoading && tasks.length > 0 && (
+        <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
+      )}
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">

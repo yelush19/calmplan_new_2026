@@ -12,6 +12,8 @@ import {
   Zap, Flame, ChevronDown
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
+import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
+import { getServiceWeight } from '@/config/serviceWeights';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -59,6 +61,7 @@ export default function TaxReportsDashboardPage() {
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [collapsedServices, setCollapsedServices] = useState(new Set());
+  const [cognitiveFilter, setCognitiveFilter] = useState(null);
   const [filingSprintActive, setFilingSprintActive] = useState(false);
   const [filingSprintIdx, setFilingSprintIdx] = useState(0);
   const { confirm, ConfirmDialogComponent } = useConfirm();
@@ -139,8 +142,14 @@ export default function TaxReportsDashboardPage() {
         t.category?.toLowerCase().includes(lower)
       );
     }
+    if (cognitiveFilter !== null) {
+      result = result.filter(t => {
+        const w = getServiceWeight(t.category);
+        return (w.cognitiveLoad ?? 0) === cognitiveFilter;
+      });
+    }
     return result;
-  }, [tasks, clientFilter, searchTerm]);
+  }, [tasks, clientFilter, searchTerm, cognitiveFilter]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
@@ -513,6 +522,11 @@ export default function TaxReportsDashboardPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Cognitive Capacity Header — "מד דופק" above all views */}
+      {!isLoading && tasks.length > 0 && (
+        <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
       )}
 
       {/* Content */}

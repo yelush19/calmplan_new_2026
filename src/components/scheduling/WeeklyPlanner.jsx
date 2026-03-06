@@ -56,12 +56,9 @@ export default function WeeklyPlanner() {
         'reports_main', 'reports_126_856_2025', 'reports_126_856_2024', 'weekly_tasks', 'balance_sheets'];
       const homeBoardTypes = ['family_tasks', 'wellbeing'];
 
-      const workBoardIds = boardConfigs
-        .filter(c => workBoardTypes.includes(c.type) && c.monday_board_id)
-        .map(c => c.monday_board_id);
-      const homeBoardIds = boardConfigs
-        .filter(c => homeBoardTypes.includes(c.type) && c.monday_board_id)
-        .map(c => c.monday_board_id);
+      // Monday board IDs removed — use task context field instead
+      const workBoardIds = [];
+      const homeBoardIds = [];
 
       const allTasks = await Task.list(null, 5000).catch(() => []);
 
@@ -77,7 +74,7 @@ export default function WeeklyPlanner() {
         return dateStr <= weekEndStr;
       }).map(t => {
         let type = 'work';
-        if (t.monday_board_id && homeBoardIds.includes(t.monday_board_id)) {
+        if (t.context === 'home' || t.category?.startsWith('home_')) {
           type = 'family';
         }
         return {

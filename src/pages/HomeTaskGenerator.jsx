@@ -89,7 +89,7 @@ export default function HomeTaskGeneratorPage() {
   const [newCustomTask, setNewCustomTask] = useState({
     title: '',
     category: 'home_cleaning_general',
-    duration: 30,
+    duration: 15,
     priority: 'medium',
     description: ''
   });
@@ -140,7 +140,7 @@ export default function HomeTaskGeneratorPage() {
     setNewCustomTask({
       title: '',
       category: 'home_cleaning_general',
-      duration: 30,
+      duration: 15,
       priority: 'medium',
       description: ''
     });
