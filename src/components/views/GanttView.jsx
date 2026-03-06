@@ -8,21 +8,36 @@ import { toast } from 'sonner';
 import { getScheduledStartForCategory } from '@/config/automationRules';
 import { getPayrollTier, getVatEnergyTier, getTaskComplexity } from '@/engines/taskCascadeEngine';
 import { getServiceForTask } from '@/config/processTemplates';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { getServiceWeight } from '@/config/serviceWeights';
+import { LOAD_COLORS } from '@/lib/theme-constants';
+import { ChevronLeft, ChevronRight, CalendarDays, ArrowRight } from 'lucide-react';
 
-// Full Status Colors — solid, visible, zero gray
+// Full Status Colors — DNA functional colors (no gray)
 const STATUS_COLORS = {
-  not_started:           'bg-blue-600 border border-blue-800',
-  in_progress:           'bg-orange-500 border border-orange-700',
-  waiting_for_materials: 'bg-amber-500 border border-amber-700',
-  sent_for_review:       'bg-purple-600 border border-purple-800',
-  needs_corrections:     'bg-orange-600 border border-orange-800',
-  production_completed:  'bg-emerald-600 border border-emerald-800',
-  completed:             'bg-emerald-700 border border-emerald-900',
+  not_started:           { bg: '#1565C0', border: '#0D47A1', text: '#fff' },
+  in_progress:           { bg: '#F57C00', border: '#E65100', text: '#fff' },
+  waiting_for_materials: { bg: '#FF8F00', border: '#FF6F00', text: '#fff' },
+  sent_for_review:       { bg: '#7B1FA2', border: '#6A1B9A', text: '#fff' },
+  needs_corrections:     { bg: '#E65100', border: '#BF360C', text: '#fff' },
+  production_completed:  { bg: '#2E7D32', border: '#1B5E20', text: '#fff' },
+  completed:             { bg: '#1B5E20', border: '#004D40', text: '#fff' },
 };
 
-// Estimated work-hours → calendar days mapping
-// Quick Win / Nano = 0.5 day, Standard/Small = 1 day, Mid = 2 days, Enterprise/Climb = 3+ days
+// DNA-driven: duration in minutes → calendar days (1 day = 480 min = 8h)
+function getDNADurationDays(task) {
+  const sw = getServiceWeight(task.category);
+  const minutes = (task.estimated_time && task.estimated_time > 0) ? task.estimated_time : sw.duration;
+  return Math.max(1, Math.ceil(minutes / 480)); // minimum 1 day
+}
+
+// Get cognitive load color for a task from DNA
+function getTaskLoadColor(task) {
+  const sw = getServiceWeight(task.category);
+  const load = typeof task.cognitive_load === 'number' ? task.cognitive_load : sw.cognitiveLoad;
+  return LOAD_COLORS[Math.min(3, Math.max(0, load))] || LOAD_COLORS[0];
+}
+
+// Estimated work-hours → calendar days mapping (legacy fallback)
 const TIER_DURATION_DAYS = {
   nano: 1, small: 2, mid: 3, enterprise: 5,
   quick_win: 1, standard: 1, climb: 3,
@@ -124,7 +139,15 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     let endDay = Math.min(daysInMonth - 1, differenceInDays(end, monthStart));
     let width = Math.max(1, endDay - startDay + 1);
 
-    // Tier-aware duration: if the task has a known tier, enforce minimum bar width
+    // DNA-driven duration: enforce minimum bar width from serviceWeights
+    const dnaDays = getDNADurationDays(task);
+    if (width < dnaDays) {
+      const newStart = Math.max(0, endDay - dnaDays + 1);
+      startDay = newStart;
+      width = dnaDays;
+    }
+
+    // Legacy tier-aware fallback
     const client = clientByName[task.client_name];
     const service = getServiceForTask(task);
     let tierKey = null;
@@ -139,7 +162,6 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
 
     if (tierKey && TIER_DURATION_DAYS[tierKey]) {
       const tierDays = TIER_DURATION_DAYS[tierKey];
-      // Enforce minimum width from tier, but don't shrink manually-set spans
       if (width < tierDays) {
         const newStart = Math.max(0, endDay - tierDays + 1);
         startDay = newStart;
@@ -147,12 +169,17 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       }
     }
 
+    // Get cognitive load color from DNA
+    const loadColor = getTaskLoadColor(task);
+
     return {
       left: `${(startDay / daysInMonth) * 100}%`,
       width: `${(width / daysInMonth) * 100}%`,
       startDay,
       durationDays: width,
       tierKey,
+      loadColor,
+      dnaDays,
     };
   };
 
@@ -276,11 +303,25 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
             {nextMonthCount > 0 && <span className="text-[#000000]">({nextMonthCount})</span>}
           </button>
         </div>
-        {!isCurrentMonth && (
-          <button onClick={goToCurrentMonth} className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium transition-colors">
-            חזור להיום
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* DNA Load Legend */}
+          <div className="flex items-center gap-1.5">
+            {[3, 2, 1, 0].map(tier => {
+              const lc = LOAD_COLORS[tier];
+              return (
+                <div key={tier} className="flex items-center gap-0.5">
+                  <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: lc.color }} />
+                  <span className="text-[9px] text-gray-500">{lc.label}</span>
+                </div>
+              );
+            })}
+          </div>
+          {!isCurrentMonth && (
+            <button onClick={goToCurrentMonth} className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium transition-colors">
+              חזור להיום
+            </button>
+          )}
+        </div>
       </div>
 
       {monthTasks.length === 0 ? (
@@ -325,6 +366,8 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       {grouped.map(([clientName, clientTasks]) => {
         const { assignment, laneCount } = laneData[clientName] || { assignment: new Map(), laneCount: 1 };
         const rowHeight = laneCount * (LANE_HEIGHT + LANE_GAP) + LANE_GAP;
+        // Build dependency map: tasks sorted by due_date form sequential chain
+        const sortedTasks = [...clientTasks].filter(t => t.due_date).sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
         return (
           <div key={clientName} className="flex border-b hover:bg-white transition-colors">
             <div className="w-40 shrink-0 p-2 text-sm text-[#000000] border-l flex items-center">
@@ -337,7 +380,38 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
             >
-              {clientTasks.filter(t => t.due_date).map(task => {
+              {/* ── Dependency arrows between sequential tasks ── */}
+              <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ zIndex: 5 }}>
+                <defs>
+                  <marker id="dep-arrow" viewBox="0 0 8 6" refX="7" refY="3"
+                    markerWidth="6" markerHeight="5" orient="auto">
+                    <path d="M 0 0 L 8 3 L 0 6 z" fill="#546E7A" />
+                  </marker>
+                </defs>
+                {sortedTasks.map((task, idx) => {
+                  if (idx === 0) return null;
+                  const prevTask = sortedTasks[idx - 1];
+                  const prevPos = getTaskPosition(prevTask);
+                  const curPos = getTaskPosition(task);
+                  const prevLane = assignment.get(prevTask.id) || 0;
+                  const curLane = assignment.get(task.id) || 0;
+                  // Calculate pixel positions from percentages
+                  const prevEndPct = parseFloat(prevPos.left) + parseFloat(prevPos.width);
+                  const curStartPct = parseFloat(curPos.left);
+                  if (curStartPct <= prevEndPct) return null; // overlapping, no arrow
+                  const prevTopPx = LANE_GAP + prevLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
+                  const curTopPx = LANE_GAP + curLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
+                  return (
+                    <line key={`dep-${prevTask.id}-${task.id}`}
+                      x1={`${prevEndPct}%`} y1={prevTopPx}
+                      x2={`${curStartPct}%`} y2={curTopPx}
+                      stroke="#546E7A" strokeWidth="1.5" strokeDasharray="4 2"
+                      markerEnd="url(#dep-arrow)" opacity="0.5" />
+                  );
+                })}
+              </svg>
+
+              {sortedTasks.map(task => {
                 const pos = getTaskPosition(task);
                 const lane = assignment.get(task.id) || 0;
                 const topPx = LANE_GAP + lane * (LANE_HEIGHT + LANE_GAP);
@@ -346,37 +420,56 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                 const offsetPct = isDragging && dragPreviewDay
                   ? `calc(${pos.left} + ${(dragPreviewDay / daysInMonth) * 100}%)`
                   : pos.left;
+                const statusColor = STATUS_COLORS[task.status] || STATUS_COLORS.not_started;
+                const loadColor = pos.loadColor;
 
                 return (
                   <Tooltip key={task.id}>
                     <TooltipTrigger asChild>
                       <motion.div
                         onPointerDown={(e) => handlePointerDown(e, task, pos)}
-                        className={`absolute rounded-md touch-none
+                        className={`absolute rounded-md touch-none overflow-hidden
                           ${task.status === 'completed' ? 'cursor-pointer' : 'cursor-pointer active:cursor-grabbing'}
-                          ${STATUS_COLORS[task.status] || STATUS_COLORS.not_started}
                           ${isOverdue ? 'ring-2 ring-purple-500 animate-pulse' : ''}
                           ${isDragging ? 'opacity-80 z-20 ring-2 ring-blue-400 shadow-lg' : ''}`}
-                        style={{ left: offsetPct, width: pos.width, top: `${topPx}px`, height: `${LANE_HEIGHT}px` }}
+                        style={{
+                          left: offsetPct, width: pos.width, top: `${topPx}px`, height: `${LANE_HEIGHT}px`,
+                          backgroundColor: statusColor.bg,
+                          borderLeft: `3px solid ${loadColor.color}`,
+                          borderTop: `1px solid ${statusColor.border}`,
+                          borderBottom: `1px solid ${statusColor.border}`,
+                          borderRight: `1px solid ${statusColor.border}`,
+                        }}
                         initial={{ scaleX: 0, originX: 0 }}
                         animate={{ scaleX: 1 }}
                         transition={{ duration: 0.3 }}
                         whileHover={!isDragging ? { y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' } : undefined}
-                      />
+                      >
+                        {/* Task title inside bar (visible on wider bars) */}
+                        {pos.durationDays >= 2 && (
+                          <span className="absolute inset-0 flex items-center px-1.5 text-[9px] font-medium text-white truncate pointer-events-none">
+                            {task.title}
+                          </span>
+                        )}
+                      </motion.div>
                     </TooltipTrigger>
                     <TooltipContent className="!bg-gray-900 !border-gray-700 !text-white">
                       <p className="font-medium !text-white">{task.title}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: loadColor.color }} />
+                        <span className="text-xs !text-[#B0BEC5]">{loadColor.label}</span>
+                      </div>
                       <p className="text-xs !text-[#B0BEC5]">
                         {task.category} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}
-                        {pos.tierKey && ` \u2022 ${pos.tierKey}`}
+                        {` \u2022 ${getServiceWeight(task.category).duration} דק׳ (DNA)`}
                       </p>
                       {pos.durationDays > 1 && (
-                        <p className="text-[10px] !text-[#000000]">{pos.durationDays} ימי עבודה</p>
+                        <p className="text-[10px] !text-[#B0BEC5]">{pos.durationDays} ימי עבודה</p>
                       )}
                       {(task.reschedule_count || 0) > 0 && (
                         <p className="text-[10px] text-amber-400">נדחה {task.reschedule_count} פעמים {task.reschedule_count > 3 ? '🐌' : ''}</p>
                       )}
-                      <p className="text-[10px] text-[#000000] mt-0.5">לחץ לעריכה | גרור לשינוי תאריך</p>
+                      <p className="text-[10px] text-[#B0BEC5] mt-0.5">לחץ לעריכה | גרור לשינוי תאריך</p>
                     </TooltipContent>
                   </Tooltip>
                 );

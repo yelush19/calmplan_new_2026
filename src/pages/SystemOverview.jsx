@@ -60,12 +60,12 @@ export default function SystemOverviewPage() {
         const analysis = {
           total: entities.length,
           withCalmPlanId: entities.filter(e => e.id).length, // All should have this
-          withMondayBoardId: entities.filter(e => e.monday_board_id).length,
-          withMondayItemId: entities.filter(e => e.monday_item_id).length,
-          withAllIds: entities.filter(e => e.id && e.monday_board_id && e.monday_item_id).length,
-          missingBoardId: entities.filter(e => e.id && !e.monday_board_id),
-          missingItemId: entities.filter(e => e.id && e.monday_board_id && !e.monday_item_id),
-          missingBoth: entities.filter(e => e.id && !e.monday_board_id && !e.monday_item_id)
+          withLegacyIds: 0, // Monday fields removed
+          withDNASource: entities.length, // all from DNA
+          withAllIds: entities.filter(e => e.id).length,
+          missingBoardId: [],
+          missingItemId: [],
+          missingBoth: []
         };
 
         // Show samples of problematic records

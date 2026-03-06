@@ -31,7 +31,7 @@ const roadmapTasks = [
     
     // שלב 4: אינטגרציות
     {"title": "[BASE44] משימה 4.1: אינטגרציה מלאה עם המנועים", "details": "חיבור הממשקים למנועי התכנון והלמידה, בדיקות ותיקון באגים.", "status": "pending", "order": 16},
-    {"title": "[Claude] משימה 4.2: תיקון Monday Sync", "details": "מעבר ל-WebHooks או פיצול לפונקציות קטנות יותר.", "status": "pending", "order": 17},
+    {"title": "[Claude] משימה 4.2: חיבור DNA Engine", "details": "חיבור מלא למנוע ה-DNA של CalmPlan.", "status": "pending", "order": 17},
     
     // שלב 5: בדיקות מקצה לקצה 🆕
     {"title": "[צוות] משימה 5.1: בדיקת Flow מלא", "details": "TreatmentInput → createWeeklyPlan → WeeklyPlanner - וידוא שהכל עובד ביחד.", "status": "pending", "order": 18},

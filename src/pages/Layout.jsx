@@ -122,8 +122,7 @@ const getSidebarSections = () => ({
         { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
         { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
       ]},
-      { key: 'p3_integrations', label: 'חיבורים וייבוא', icon: Link2, items: [
-        { name: "חיבור Monday", href: createPageUrl("MondayIntegration"), icon: Link2 },
+      { key: 'p3_integrations', label: 'כלים וייבוא', icon: Link2, items: [
         { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Import },
         { name: "מוכנות מערכת", href: createPageUrl("SystemReadiness"), icon: Shield },
       ]},
@@ -157,6 +156,7 @@ const getSidebarSections = () => ({
     icon: BookHeart,
     tabColor: 'border-[#008291]',
     items: [
+      { name: "הפוקוס שלי", href: createPageUrl("MyFocus"), icon: Target },
       { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
       { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
       { name: "הגדרות אישיות", href: createPageUrl("LifeSettings"), icon: Settings },

@@ -141,7 +141,7 @@ export default function ExecutionPeriodSettings() {
                       <Input
                         type="number"
                         min="1"
-                        max="30"
+                        max="31"
                         value={p.buffer_days ?? ''}
                         onChange={(e) => handleChange(category, 'buffer_days', e.target.value)}
                         placeholder="—"

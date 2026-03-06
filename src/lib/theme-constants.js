@@ -94,6 +94,33 @@ export const BOARD_CATEGORIES = [
   },
 ];
 
+// ─── Functional Load Colors (Iron Rule — cognitive load visualization) ──────
+// Used by Dashboard Feed, KPI Bar, and MindMap branch coloring
+export const LOAD_COLORS = {
+  3: { color: '#800000', label: 'מורכב',  bg: 'bg-[#800000]', border: 'border-l-4 border-l-[#800000]', textClass: 'text-[#800000]' },  // בורדו
+  2: { color: '#4682B4', label: 'בינוני', bg: 'bg-[#4682B4]', border: 'border-l-4 border-l-[#4682B4]', textClass: 'text-[#4682B4]' },  // טורקיז
+  1: { color: '#ADD8E6', label: 'פשוט',  bg: 'bg-[#ADD8E6]', border: 'border-l-4 border-l-[#ADD8E6]', textClass: 'text-[#5B99A8]' },  // תכלת
+  0: { color: '#8FBC8F', label: 'ננו',   bg: 'bg-[#8FBC8F]', border: 'border-l-4 border-l-[#8FBC8F]', textClass: 'text-[#5A8A5A]' },  // ירוק מרווה
+};
+
+// ─── Production Flow Status Colors (progressive branch coloring) ──────
+export const PRODUCTION_FLOW_COLORS = {
+  waiting_for_materials: { color: '#FF8F00', progress: 0,    label: 'ממתין לחומרים' },
+  not_started:           { color: '#1565C0', progress: 0.1,  label: 'לבצע' },
+  in_production:         { color: '#00838F', progress: 0.5,  label: 'בייצור' },
+  sent_for_review:       { color: '#AB47BC', progress: 0.75, label: 'הועבר לעיון' },
+  needs_corrections:     { color: '#F97316', progress: 0.6,  label: 'לבצע תיקונים' },
+  production_completed:  { color: '#2E7D32', progress: 1.0,  label: 'הושלם ייצור' },
+};
+
+// ─── P-Branch Path Colors (hierarchical — from root to leaves) ──────
+export const BRANCH_PATH_COLORS = {
+  'P1 חשבות שכר':      { color: '#0277BD', light: '#B3E5FC', label: 'P1' },
+  'P2 הנהלת חשבונות':   { color: '#00838F', light: '#B2DFDB', label: 'P2' },
+  'P3 ניהול משרד':      { color: '#546E7A', light: '#CFD8DC', label: 'P3' },
+  'P4 בית':             { color: '#6D4C41', light: '#D7CCC8', label: 'P4' },
+};
+
 // Complexity tiers - Enterprise (tier 3) is 3x the size of Nano (tier 0)
 export const COMPLEXITY_TIERS = {
   0: { label: 'ננו', icon: '⚡', maxEmployees: 5, maxMinutes: 15, bubbleScale: 0.55 },

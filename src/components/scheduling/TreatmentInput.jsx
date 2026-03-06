@@ -18,7 +18,7 @@ import { WeeklySchedule, Task, Dashboard } from '@/api/entities'; // Added Dashb
 import { format, addDays, startOfWeek, parse, getDay, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { createWeeklyPlan } from '@/api/functions';
-import { mondayBoardApi } from '@/api/functions';
+// mondayBoardApi removed (Kill Monday directive)
 import { Therapist } from '@/api/entities'; // Added Therapist entity import
 
 const daysOfWeek = [

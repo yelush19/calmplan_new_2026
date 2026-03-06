@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star, Trash2, Check, RefreshCw } from 'lucide-react';
+import { Cloud, Inbox, GripVertical, X, Sparkles, Plus, Calendar, CheckCircle, Edit3, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut, Move, Pencil, ChevronDown, GitBranchPlus, SlidersHorizontal, Star, Trash2, Check, RefreshCw, Eye, EyeOff, Search as SearchIcon } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Task, Client } from '@/api/entities';
 // dedupTasksForMonth, wipeAllTasksForMonth, generateProcessTasks removed — v15 uses deleteAll()
@@ -17,6 +17,73 @@ import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { computeComplexityTier, getBubbleRadius, getTierInfo } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 import { buildCollisionNodes, resolveCollisions } from '@/engines/mapCollisionEngine';
+import { LOAD_COLORS, BRANCH_PATH_COLORS, PRODUCTION_FLOW_COLORS } from '@/lib/theme-constants';
+import { getServiceWeight } from '@/config/serviceWeights';
+
+// ─── AYOA Shape Definitions (Shape UI Engine) ──────────────────────────────
+const BUBBLE_SHAPES = {
+  cloud:     { label: 'ענן', icon: '☁️', css: 'rounded-[40%]', svg: 'ellipse' },
+  rectangle: { label: 'מלבן', icon: '▬', css: 'rounded-lg', svg: 'rect' },
+  rounded:   { label: 'מעוגל', icon: '●', css: 'rounded-full', svg: 'circle' },
+  bubble:    { label: 'בועה', icon: '💬', css: 'rounded-2xl', svg: 'pill' },
+  diamond:   { label: 'יהלום', icon: '◆', css: 'rotate-45 rounded-lg', svg: 'diamond' },
+};
+
+// ─── Tapered Cubic Bezier Path Generator (AYOA organic branches) ────────
+function createTaperedBranch(sx, sy, ex, ey, startWidth, endWidth, branchColor, opacity = 0.85) {
+  const dx = ex - sx, dy = ey - sy;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const nx = -dy / len, ny = dx / len; // perpendicular normal
+
+  // Cubic Bezier control points — organic S-curve
+  const cp1x = sx + dx * 0.3 + nx * len * 0.08;
+  const cp1y = sy + dy * 0.3 + ny * len * 0.08;
+  const cp2x = sx + dx * 0.7 - nx * len * 0.05;
+  const cp2y = sy + dy * 0.7 - ny * len * 0.05;
+
+  // Outer edge (wider at start)
+  const sw = startWidth / 2, ew = endWidth / 2;
+  const outerStart = { x: sx + nx * sw, y: sy + ny * sw };
+  const outerCP1 = { x: cp1x + nx * sw * 0.8, y: cp1y + ny * sw * 0.8 };
+  const outerCP2 = { x: cp2x + nx * ew * 0.5, y: cp2y + ny * ew * 0.5 };
+  const outerEnd = { x: ex + nx * ew, y: ey + ny * ew };
+
+  // Inner edge (mirror)
+  const innerStart = { x: sx - nx * sw, y: sy - ny * sw };
+  const innerCP1 = { x: cp1x - nx * sw * 0.8, y: cp1y - ny * sw * 0.8 };
+  const innerCP2 = { x: cp2x - nx * ew * 0.5, y: cp2y - ny * ew * 0.5 };
+  const innerEnd = { x: ex - nx * ew, y: ey - ny * ew };
+
+  const d = [
+    `M ${outerStart.x} ${outerStart.y}`,
+    `C ${outerCP1.x} ${outerCP1.y} ${outerCP2.x} ${outerCP2.y} ${outerEnd.x} ${outerEnd.y}`,
+    `L ${innerEnd.x} ${innerEnd.y}`,
+    `C ${innerCP2.x} ${innerCP2.y} ${innerCP1.x} ${innerCP1.y} ${innerStart.x} ${innerStart.y}`,
+    'Z'
+  ].join(' ');
+
+  return { d, fill: branchColor, opacity };
+}
+
+// ─── Get branch color for a meta-folder ──────────────────────────────────
+function getBranchColor(metaFolderName) {
+  return BRANCH_PATH_COLORS[metaFolderName]?.color || '#546E7A';
+}
+
+// ─── Get production flow progress for a client (0..1) ────────────────────
+function getProductionProgress(clientTasks) {
+  if (!clientTasks || clientTasks.length === 0) return 0;
+  const total = clientTasks.length;
+  const completed = clientTasks.filter(t => t.status === 'production_completed').length;
+  return completed / total;
+}
+
+// ─── Check if client balance is unhealthy → burgundy override ────────────
+function isClientBalanceUnhealthy(client) {
+  if (!client) return false;
+  // Flag: if client has overdue reconciliations or negative balance markers
+  return client.balance_status === 'unhealthy' || client.has_overdue_balance === true;
+}
 
 // ─── Zero-Panic Palette (Cyan/Teal — NO RED, NO GRAY) ───────────────────
 const ZERO_PANIC = {
@@ -550,7 +617,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── PERSISTENCE HYDRATION GUARD (mount-only) ──
   // Force-clear old positions when layout version changes (magnetic clustering update)
-  const LAYOUT_VERSION = 'v18-functional-branching'; // bump this to force reset
+  const LAYOUT_VERSION = 'v19-ayoa-organic-branches'; // bump this to force reset
   useEffect(() => {
     try {
       const storedVersion = localStorage.getItem('mindmap-layout-version');
@@ -589,9 +656,62 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // Level 1 (meta-folders): collapsed by default → click to reveal Level 2/3
   // Level 3 (departments): collapsed by default → click to reveal Level 4 clients
   const MAX_VISIBLE_CHILDREN = 999; // Show ALL clients — no pagination at all
-  const [expandedMetaFolders, setExpandedMetaFolders] = useState(new Set());
+  // ── P3 QUIET: P1+P2 expanded by default, P3+P4 collapsed (Iron Rule) ──
+  const [expandedMetaFolders, setExpandedMetaFolders] = useState(
+    new Set(['P1 חשבות שכר', 'P2 הנהלת חשבונות'])
+  );
   const [expandedBranches, setExpandedBranches] = useState(new Set());
   const [expandedFuncBubbles, setExpandedFuncBubbles] = useState(new Set());
+
+  // ── FOCUS MODE: zoom into specific branch/client ──
+  const [focusBranch, setFocusBranch] = useState(null); // meta-folder name or null
+  const [focusClient, setFocusClient] = useState(null);  // client name or null
+  const handleFocusZoom = useCallback((metaName, clientName = null) => {
+    if (focusBranch === metaName && !clientName) {
+      // Toggle off
+      setFocusBranch(null);
+      setFocusClient(null);
+    } else {
+      setFocusBranch(metaName);
+      setFocusClient(clientName);
+      // Auto-expand the focused branch
+      setExpandedMetaFolders(prev => new Set([...prev, metaName]));
+    }
+  }, [focusBranch]);
+  const clearFocus = useCallback(() => {
+    setFocusBranch(null);
+    setFocusClient(null);
+    setRadialTarget(null);
+  }, []);
+
+  // ── RADIAL ZOOM MODE: click a bubble → it becomes center, children arrange radially ──
+  const [radialTarget, setRadialTarget] = useState(null); // { type: 'meta'|'client', name, x, y }
+  const handleRadialZoom = useCallback((type, name, x, y) => {
+    if (radialTarget?.name === name) {
+      setRadialTarget(null); // toggle off
+    } else {
+      setRadialTarget({ type, name, x, y });
+      // Auto zoom in on the target
+      setZoom(prev => Math.max(prev, 1.2));
+    }
+  }, [radialTarget]);
+
+  // ── SHAPE PICKER state ──
+  const [showShapePicker, setShowShapePicker] = useState(false);
+  const [selectedShape, setSelectedShape] = useState('bubble'); // default shape
+  const [nodeShapes, setNodeShapes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('calmplan-node-shapes');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  const setNodeShape = useCallback((nodeKey, shape) => {
+    setNodeShapes(prev => {
+      const next = { ...prev, [nodeKey]: shape };
+      try { localStorage.setItem('calmplan-node-shapes', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
   const toggleFuncBubbleExpand = useCallback((fbKey) => {
     setExpandedFuncBubbles(prev => {
       const next = new Set(prev);
@@ -1142,6 +1262,58 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     return { cx, cy, centerR, branchPositions, metaFolderPositions, metaSubFolderPositions: [], virtualW: w, virtualH: h, isWide };
   }, [branches, metaFolders, dimensions, spacingFactor, manualPositions, expandedMetaFolders]);
 
+  // ── RADIAL LAYOUT: compute radial positions for children when a node is zoomed in ──
+  const radialLayout = useMemo(() => {
+    if (!radialTarget) return null;
+    const centerX = radialTarget.x;
+    const centerY = radialTarget.y;
+    const RADIAL_RADIUS = 180;
+
+    let children = [];
+    if (radialTarget.type === 'meta') {
+      const metaConfig = META_FOLDERS[radialTarget.name];
+      if (metaConfig) {
+        children = metaConfig.departments.map(dept => ({
+          key: dept,
+          label: BRANCH_CONFIG[dept]?.label || dept,
+          icon: BRANCH_CONFIG[dept]?.icon || '📁',
+          color: BRANCH_CONFIG[dept]?.color || '#546E7A',
+        }));
+      }
+    } else if (radialTarget.type === 'department') {
+      const branch = layout?.branchPositions?.find(b => b.category === radialTarget.name);
+      if (branch) {
+        children = (branch.clientPositions || []).slice(0, 12).map(c => ({
+          key: c.name,
+          label: c.displayName || c.name,
+          icon: '',
+          color: c.statusColor || '#00838F',
+          tasks: c.tasks,
+        }));
+      }
+    }
+
+    if (children.length === 0) return null;
+
+    const angleStep = (2 * Math.PI) / children.length;
+    const startAngle = -Math.PI / 2;
+
+    return {
+      center: { x: centerX, y: centerY },
+      targetName: radialTarget.name,
+      targetType: radialTarget.type,
+      children: children.map((child, i) => {
+        const angle = startAngle + i * angleStep;
+        return {
+          ...child,
+          x: centerX + Math.cos(angle) * RADIAL_RADIUS,
+          y: centerY + Math.sin(angle) * RADIAL_RADIUS,
+          angle,
+        };
+      }),
+    };
+  }, [radialTarget, layout]);
+
   // ── Draggable center: effective position respects manual drag override ──
   const centerPos = useMemo(() => {
     const manual = manualPositions['center-node'];
@@ -1555,10 +1727,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // Determine which branches are spotlighted in focus mode
   const isSpotlit = useCallback((category) => {
+    // Focus Zoom: when focusBranch is set, only that branch is spotlit
+    if (focusBranch) {
+      const metaConfig = Object.entries(META_FOLDERS).find(([, mf]) => mf.departments.includes(category));
+      const metaName = metaConfig?.[0];
+      return metaName === focusBranch;
+    }
     if (!focusMode) return true;
     if (!selectedBranch) return true;
     return category === selectedBranch;
-  }, [focusMode, selectedBranch]);
+  }, [focusMode, selectedBranch, focusBranch]);
 
   // ── Error State: Reconnect Screen ──
   if (fetchError) {
@@ -1680,40 +1858,36 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           </defs>
 
           {/* ── EDGE LEVEL 1: "היום שלי" → P1 | P2 | P3 | P4 ──
-               Always visible. 4 discrete edges from center hub.
-               Thick line with arrow, slight bezier curve. ── */}
+               AYOA Organic Branches: Cubic Bezier, Tapered, Branch-colored.
+               Thick at base (8px), thin at tip (2px). ── */}
           {layout.metaFolderPositions?.map((mf) => {
             const x1 = centerPos.x, y1 = centerPos.y;
             const x2 = mf.x, y2 = mf.y;
             const dx = x2 - x1, dy = y2 - y1;
             const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            // Shorten line: start 50px from hub center, end 45px before meta-folder center
             const startFrac = 50 / len;
             const endFrac = 45 / len;
             const sx = x1 + dx * startFrac, sy = y1 + dy * startFrac;
             const ex = x2 - dx * endFrac, ey = y2 - dy * endFrac;
-            // Slight curve: perpendicular offset = 6% of line length
-            const mx = (sx + ex) / 2, my = (sy + ey) / 2;
-            const curveAmt = len * 0.06;
-            const cpx = mx + (-dy / len) * curveAmt;
-            const cpy = my + (dx / len) * curveAmt;
+            const branchColor = getBranchColor(mf.name);
+            const isFocusDimmed = focusBranch && focusBranch !== mf.name;
+            const tapered = createTaperedBranch(sx, sy, ex, ey, 8, 3, branchColor, isFocusDimmed ? 0.15 : 0.85);
             return (
               <path key={`edge-hub-meta-${mf.name}`}
-                d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
-                fill="none"
-                stroke="#000000"
-                strokeWidth={2}
-                strokeLinecap="round"
-                markerEnd="url(#edge-arrow)"
-                opacity={0.85} />
+                d={tapered.d}
+                fill={tapered.fill}
+                opacity={tapered.opacity}
+                style={{ transition: 'opacity 0.4s ease' }} />
             );
           })}
 
           {/* ── EDGE LEVEL 2.5: Department → Tier Diamond ──
-               Visible when P-branch is expanded. Directional arrows from dept to tier diamonds. */}
+               AYOA Tapered branches with inherited branch color. */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!branch.subFolderPositions || branch.subFolderPositions.length === 0) return null;
+            const branchColor = getBranchColor(branch.metaFolder);
+            const isFocusDimmed = focusBranch && focusBranch !== branch.metaFolder;
             return branch.subFolderPositions.map((sub) => {
               const dx = sub.x - branch.x, dy = sub.y - branch.y;
               const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -1722,26 +1896,19 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const sy = branch.y + (dy / len) * 28;
               const ex = sub.x - (dx / len) * 32;
               const ey = sub.y - (dy / len) * 32;
-              const mx = (sx + ex) / 2, my = (sy + ey) / 2;
-              const curveAmt = len * 0.04;
-              const cpx = mx + (-dy / len) * curveAmt;
-              const cpy = my + (dx / len) * curveAmt;
+              const tapered = createTaperedBranch(sx, sy, ex, ey, 5, 2, branchColor, isFocusDimmed ? 0.1 : 0.7);
               return (
                 <path key={`edge-dept-tier-${branch.category}-${sub.key}`}
-                  d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
-                  fill="none"
-                  stroke="#000000"
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  markerEnd="url(#edge-arrow)"
-                  opacity={0.8} />
+                  d={tapered.d}
+                  fill={tapered.fill}
+                  opacity={tapered.opacity}
+                  style={{ transition: 'opacity 0.4s ease' }} />
               );
             });
           })}
 
           {/* ── EDGE LEVEL 2: P-branch → Department folders ──
-               Visible only when the parent P-branch is expanded.
-               Directional arrows from meta-folder to department. ── */}
+               AYOA Tapered branches: thick at meta-folder, thin at department. */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             const mfPos = layout.metaFolderPositions?.find(m => m.name === branch.metaFolder);
@@ -1752,28 +1919,26 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             if (len < 10) return null;
             const sx = px + (dx / len) * 42, sy = py + (dy / len) * 42;
             const ex = branch.x - (dx / len) * 28, ey = branch.y - (dy / len) * 28;
-            const mx = (sx + ex) / 2, my = (sy + ey) / 2;
-            const curveAmt = len * 0.04;
-            const cpx = mx + (-dy / len) * curveAmt;
-            const cpy = my + (dx / len) * curveAmt;
+            const branchColor = getBranchColor(branch.metaFolder);
+            const isFocusDimmed = focusBranch && focusBranch !== branch.metaFolder;
+            const tapered = createTaperedBranch(sx, sy, ex, ey, 6, 2.5, branchColor, isFocusDimmed ? 0.1 : 0.75);
             return (
               <path key={`edge-meta-dept-${branch.category}`}
-                d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
-                fill="none"
-                stroke="#000000"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                markerEnd="url(#edge-arrow)"
-                opacity={0.8} />
+                d={tapered.d}
+                fill={tapered.fill}
+                opacity={tapered.opacity}
+                style={{ transition: 'opacity 0.4s ease' }} />
             );
           })}
 
           {/* ── EDGE LEVEL 3: Tier Diamond → Function Bubbles ──
-               Visible when P-branch + department expanded. Arrows from diamond to function bubbles. */}
+               AYOA Tapered sub-branches with inherited color. */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!expandedBranches.has(branch.category)) return null;
             if (!branch.functionBubblePositions) return null;
+            const branchColor = getBranchColor(branch.metaFolder);
+            const isFocusDimmed = focusBranch && focusBranch !== branch.metaFolder;
             return (
               <g key={`edges-tier-func-${branch.category}`}>
                 {branch.functionBubblePositions.map((fb) => {
@@ -1784,17 +1949,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   const sy = fb.tierY + (dy / len) * 34;
                   const ex = fb.x - (dx / len) * 22;
                   const ey = fb.y - (dy / len) * 22;
-                  const lmx = (sx + ex) / 2, lmy = (sy + ey) / 2;
-                  const lca = len * 0.04;
-                  const lcpx = lmx + (-dy / len) * lca;
-                  const lcpy = lmy + (dx / len) * lca;
+                  const tapered = createTaperedBranch(sx, sy, ex, ey, 4, 1.5, branchColor, isFocusDimmed ? 0.08 : 0.65);
                   return (
                     <path key={`edge-tier-func-${fb.key}`}
-                      d={`M ${sx} ${sy} Q ${lcpx} ${lcpy} ${ex} ${ey}`}
-                      fill="none"
-                      stroke="#000000" strokeWidth={1.3} strokeLinecap="round"
-                      markerEnd="url(#edge-arrow-sm)"
-                      opacity={0.75} />
+                      d={tapered.d}
+                      fill={tapered.fill}
+                      opacity={tapered.opacity}
+                      style={{ transition: 'opacity 0.4s ease' }} />
                   );
                 })}
               </g>
@@ -1802,11 +1963,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           })}
 
           {/* ── EDGE LEVEL 4: Function Bubble → Client pills ──
-               Each arrow goes from function bubble to its client satellites.
-               Only visible when function bubble is expanded. */}
+               AYOA organic tendrils: thin tapered branches to client nodes.
+               Color shifts based on production progress (status flow). */}
           {layout.branchPositions.map((branch) => {
             if (!expandedMetaFolders.has(branch.metaFolder)) return null;
             if (!expandedBranches.has(branch.category)) return null;
+            const branchColor = getBranchColor(branch.metaFolder);
+            const isFocusDimmed = focusBranch && focusBranch !== branch.metaFolder;
             const visibleClients = branch.clientPositions.slice(0, MAX_VISIBLE_CHILDREN).filter(c => expandedFuncBubbles.has(c.funcBubbleKey));
             return (
               <g key={`edges-func-clients-${branch.category}`}>
@@ -1822,23 +1985,114 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   const sy = srcY + (dy / len) * startPx;
                   const ex = client.x - (dx / len) * endPx;
                   const ey = client.y - (dy / len) * endPx;
-                  const cmx = (sx + ex) / 2, cmy = (sy + ey) / 2;
-                  const cca = len * 0.03;
-                  const ccpx = cmx + (-dy / len) * cca;
-                  const ccpy = cmy + (dx / len) * cca;
+                  // Production flow: color shifts toward green as progress increases
+                  const progress = getProductionProgress(client.tasks);
+                  const edgeColor = progress >= 1.0 ? '#2E7D32' : progress > 0.5 ? '#00838F' : branchColor;
+                  // Unhealthy balance → burgundy override
+                  const finalColor = isClientBalanceUnhealthy(client) ? '#800000' : edgeColor;
+                  const dimmedClient = focusClient && focusClient !== client.name;
+                  const tapered = createTaperedBranch(sx, sy, ex, ey, 3, 1, finalColor,
+                    isFocusDimmed ? 0.06 : dimmedClient ? 0.25 : 0.6);
                   return (
                     <path key={`edge-func-to-${branch.category}-${client.name}`}
-                      d={`M ${sx} ${sy} Q ${ccpx} ${ccpy} ${ex} ${ey}`}
-                      fill="none"
-                      stroke="#000000" strokeWidth={1.1} strokeLinecap="round"
-                      markerEnd="url(#edge-arrow-sm)"
-                      opacity={0.7} />
+                      d={tapered.d}
+                      fill={tapered.fill}
+                      opacity={tapered.opacity}
+                      style={{ transition: 'opacity 0.4s ease, fill 0.4s ease' }} />
                   );
                 })}
               </g>
             );
           })}
         </svg>
+
+        {/* ── RADIAL ZOOM OVERLAY ── */}
+        {radialLayout && (
+          <>
+            {/* Radial background dim */}
+            <div
+              className="absolute inset-0 pointer-events-none transition-opacity duration-500"
+              style={{ backgroundColor: 'rgba(0,0,0,0.15)', zIndex: 30 }}
+            />
+            {/* Radial SVG connections */}
+            <svg
+              width={layout.virtualW}
+              height={layout.virtualH}
+              className="absolute inset-0 pointer-events-none"
+              style={{ overflow: 'visible', zIndex: 31 }}
+            >
+              {radialLayout.children.map(child => {
+                const tapered = createTaperedBranch(
+                  radialLayout.center.x, radialLayout.center.y,
+                  child.x, child.y, 6, 2,
+                  child.color, 0.7
+                );
+                return (
+                  <path key={`radial-edge-${child.key}`}
+                    d={tapered.d} fill={tapered.fill} opacity={tapered.opacity}
+                    style={{ transition: 'all 0.4s ease' }} />
+                );
+              })}
+            </svg>
+            {/* Radial center label */}
+            <motion.div
+              className="absolute flex items-center justify-center rounded-full bg-white border-4 shadow-2xl text-sm font-bold"
+              style={{
+                left: radialLayout.center.x - 45,
+                top: radialLayout.center.y - 45,
+                width: 90, height: 90,
+                borderColor: getBranchColor(radialLayout.targetName) || '#00838F',
+                zIndex: 33,
+              }}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+            >
+              <span className="text-center text-xs px-1 leading-tight">
+                {radialLayout.targetName}
+              </span>
+            </motion.div>
+            {/* Radial children nodes */}
+            {radialLayout.children.map((child, idx) => (
+              <motion.div
+                key={`radial-node-${child.key}`}
+                className="absolute flex flex-col items-center justify-center rounded-2xl bg-white border-2 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+                style={{
+                  left: child.x - 50,
+                  top: child.y - 30,
+                  width: 100, height: 60,
+                  borderColor: child.color,
+                  zIndex: 33,
+                }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', delay: idx * 0.05, stiffness: 180, damping: 14 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (radialLayout.targetType === 'meta') {
+                    handleRadialZoom('department', child.key, child.x, child.y);
+                  }
+                }}
+              >
+                {child.icon && <span className="text-base">{child.icon}</span>}
+                <span className="text-[10px] font-semibold text-center px-1 truncate max-w-full" style={{ color: child.color }}>
+                  {child.label}
+                </span>
+                {child.tasks && (
+                  <span className="text-[8px] text-gray-400">{child.tasks.length} משימות</span>
+                )}
+              </motion.div>
+            ))}
+            {/* Exit radial button */}
+            <button
+              className="absolute flex items-center gap-1 px-3 py-1.5 rounded-full bg-white shadow-lg border-2 border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              style={{ left: radialLayout.center.x - 40, top: radialLayout.center.y + 55, zIndex: 34 }}
+              onClick={(e) => { e.stopPropagation(); setRadialTarget(null); }}
+            >
+              <Eye className="w-3 h-3" /> יציאה
+            </button>
+          </>
+        )}
 
         {/* ── Center Node: "היום שלי" — draggable, today-only ── */}
         <motion.div
@@ -1875,18 +2129,24 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           <span className="text-[11px]">{centerLabel}</span>
         </motion.div>
 
-        {/* ── LAW 3: Level 1 — SOFT-SQUARE Category Containers (Deep Teal, 24px corners, outer glow) ── */}
+        {/* ── LAW 3: Level 1 — SOFT-SQUARE Category Containers (with Focus Mode + Branch Colors) ── */}
         {layout.metaFolderPositions?.map((mf, mi) => {
           const isMetaExpanded = expandedMetaFolders.has(mf.name);
           const W = 160, H = 80, CR = 24;
+          const branchColor = getBranchColor(mf.name);
+          const isFocusDimmed = focusBranch && focusBranch !== mf.name;
           return (
           <motion.div
             key={`meta-${mf.name}`}
             data-node-draggable
             className="absolute z-10 select-none touch-none"
+            onDoubleClick={(e) => { e.stopPropagation(); handleRadialZoom('meta', mf.name, mf.x, mf.y); handleFocusZoom(mf.name); }}
             style={{
               left: mf.x,
-              filter: 'drop-shadow(0 4px 6px #0000001A)',
+              opacity: isFocusDimmed ? 0.2 : 1,
+              transition: 'opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease',
+              filter: isFocusDimmed ? 'blur(2px) drop-shadow(0 2px 4px #00000010)' : 'drop-shadow(0 4px 6px #0000001A)',
+              transform: !isFocusDimmed && focusBranch ? 'translate(-50%, -50%) scale(1.05)' : 'translate(-50%, -50%)',
               top: mf.y,
               transform: 'translate(-50%, -50%)',
               cursor: 'pointer',
@@ -1901,7 +2161,10 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               draggingNode.current = null;
               nodeHasDragged.current = false;
               if (wasDragging) { setManualPositions(prev => { savePositionsToStorage(prev); return prev; }); }
-              else { toggleMetaExpand(mf.name); }
+              else {
+                toggleMetaExpand(mf.name);
+                // Double-click enters focus mode (magnifier zoom)
+              }
             }}
           >
             <svg width={W + 20} height={H + 20} viewBox={`-10 -10 ${W + 20} ${H + 20}`} style={{ overflow: 'visible' }}>
@@ -1909,12 +2172,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <rect x={-4} y={-4} width={W + 8} height={H + 8}
                 rx={CR + 4} ry={CR + 4}
                 fill="none" stroke={isMetaExpanded ? '#00897B' : '#B0BEC5'} strokeWidth="1.5" />
-              {/* Main body — Deep Teal solid (Zero Gray: no gradient opacity) */}
+              {/* Main body — Branch-colored (hierarchical path color) */}
               <rect x={0} y={0} width={W} height={H}
                 rx={CR} ry={CR}
-                fill="#004D40"
-                stroke={isMetaExpanded ? '#FFFFFF' : '#80CBC4'}
-                strokeWidth={isMetaExpanded ? 2.5 : 1.5} />
+                fill={branchColor}
+                stroke={isMetaExpanded ? '#FFFFFF' : branchColor}
+                strokeWidth={isMetaExpanded ? 2.5 : 1.5}
+                style={{ transition: 'fill 0.3s ease' }} />
               {/* +/- Expand indicator */}
               <circle cx={W - 14} cy={14} r={10} fill={isMetaExpanded ? '#00897B' : '#37474F'} stroke="#FFFFFF" strokeWidth={1.5} />
               <text x={W - 14} y={18} textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="700" style={{ pointerEvents: 'none' }}>
@@ -2005,7 +2269,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 top: branch.y,
                 transform: 'translate(-50%, -50%)',
                 opacity: isSpotlit(branch.category) ? 1 : 0.15,
-                transition: 'opacity 0.4s ease-in-out',
+                filter: isSpotlit(branch.category) ? 'none' : 'blur(1.5px)',
+                transition: 'opacity 0.4s ease-in-out, filter 0.4s ease',
                 cursor: draggingNode.current?.key === `folder-${branch.category}` ? 'grabbing' : 'pointer',
               }}
               initial={{ opacity: 0, scale: 0 }}
@@ -2048,7 +2313,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   top: sub.y,
                   transform: 'translate(-50%, -50%)',
                   opacity: isSpotlit(branch.category) ? 0.9 : 0.12,
-                  transition: 'opacity 0.4s ease-in-out, box-shadow 0.3s ease',
+                  filter: isSpotlit(branch.category) ? 'none' : 'blur(1.5px)',
+                  transition: 'opacity 0.4s ease-in-out, box-shadow 0.3s ease, filter 0.4s ease',
                 }}
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: isSpotlit(branch.category) ? 0.9 : 0.12, scale: 1 }}
@@ -2159,7 +2425,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 }}
               >
                 <div
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 shadow-md"
+                  className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl border-2 shadow-md"
                   style={{
                     backgroundColor: '#FFFFFF',
                     borderColor: fb.color,
@@ -2167,14 +2433,26 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     cursor: 'pointer',
                   }}
                 >
-                  <span className="text-sm">{fb.icon}</span>
-                  <span className="text-xs font-bold" style={{ color: fb.color }}>{fb.label}</span>
-                  <span className="text-[9px] font-medium px-1.5 rounded-full" style={{ backgroundColor: fb.color + '20', color: fb.color }}>{fb.clientCount}</span>
-                  {/* +/- collapse indicator */}
-                  <span className="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
-                    style={{ backgroundColor: expandedFuncBubbles.has(fb.key) ? '#00897B' : '#37474F', minWidth: 16, minHeight: 16 }}>
-                    {expandedFuncBubbles.has(fb.key) ? '−' : '+'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">{fb.icon}</span>
+                    <span className="text-xs font-bold" style={{ color: fb.color }}>{fb.label}</span>
+                    <span className="text-[9px] font-medium px-1.5 rounded-full" style={{ backgroundColor: fb.color + '20', color: fb.color }}>{fb.clientCount}</span>
+                    {/* +/- collapse indicator */}
+                    <span className="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
+                      style={{ backgroundColor: expandedFuncBubbles.has(fb.key) ? '#00897B' : '#37474F', minWidth: 16, minHeight: 16 }}>
+                      {expandedFuncBubbles.has(fb.key) ? '−' : '+'}
+                    </span>
+                  </div>
+                  {/* Production Flowchart indicator for P2 branches */}
+                  {branch.metaFolder === 'P2 הנהלת חשבונות' && expandedFuncBubbles.has(fb.key) && (
+                    <div className="flex items-center gap-0.5 mt-0.5">
+                      <span className="text-[7px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">איסוף</span>
+                      <span className="text-[8px] text-gray-400">→</span>
+                      <span className="text-[7px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">עיבוד</span>
+                      <span className="text-[8px] text-gray-400">→</span>
+                      <span className="text-[7px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">שידור</span>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -2249,9 +2527,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     color: statusColor,
                     boxShadow: isHovered ? hoverGlow : isFocused ? focusGlow : normalShadow,
                     opacity: isSpotlit(branch.category) ? (isFrozen ? 0.5 : isAllDone ? 0.6 : 1) : 0.15,
-                    filter: isFrozen ? 'saturate(0.3)' : 'none',
+                    filter: !isSpotlit(branch.category) ? 'blur(2px)' : isFrozen ? 'saturate(0.3)' : 'none',
                     cursor: isDragging ? 'grabbing' : 'grab',
-                    transition: 'opacity 0.3s ease, box-shadow 0.3s ease, border-color 0.2s ease',
+                    transition: 'opacity 0.3s ease, box-shadow 0.3s ease, border-color 0.2s ease, filter 0.4s ease',
                   }}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{
@@ -2511,6 +2789,63 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         >
           ⚡
         </button>
+
+        {/* ── Focus Mode Toggle ── */}
+        {focusBranch && (
+          <button
+            onClick={(e) => { e.stopPropagation(); clearFocus(); }}
+            className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-blue-600 text-white shadow-lg border-2 border-blue-700 hover:bg-blue-700 transition-all"
+            title="יציאה ממצב פוקוס"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* ── Radial Zoom Toggle ── */}
+        {radialTarget && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setRadialTarget(null); }}
+            className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-indigo-600 text-white shadow-lg border-2 border-indigo-700 hover:bg-indigo-700 transition-all"
+            title="יציאה ממצב רדיאלי"
+          >
+            <SearchIcon className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* ── Shape Picker Toggle ── */}
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowShapePicker(prev => !prev); }}
+            className={`flex items-center justify-center w-9 h-9 rounded-[32px] shadow-lg border-2 transition-all ${
+              showShapePicker
+                ? 'bg-purple-500 text-white border-purple-600'
+                : 'bg-white text-[#37474F] border-[#B0BEC5] hover:bg-purple-50 hover:text-purple-700'
+            }`}
+            title="בחירת צורת בועה"
+          >
+            ☁️
+          </button>
+          {showShapePicker && (
+            <div className="absolute right-full mr-2 top-0 bg-white rounded-2xl shadow-2xl border-2 border-[#E0E0E0] p-3 grid grid-cols-3 gap-2 w-48 z-50"
+              onClick={(e) => e.stopPropagation()}>
+              <div className="col-span-3 text-xs font-bold text-[#37474F] text-center mb-1">בחירת צורה</div>
+              {Object.entries(BUBBLE_SHAPES).map(([key, shape]) => (
+                <button
+                  key={key}
+                  onClick={() => { setSelectedShape(key); setShowShapePicker(false); }}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all text-xs ${
+                    selectedShape === key
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-[#455A64]'
+                  }`}
+                >
+                  <span className="text-lg">{shape.icon}</span>
+                  <span>{shape.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Reset manual positions button */}
         {Object.keys(manualPositions).length > 0 && (
