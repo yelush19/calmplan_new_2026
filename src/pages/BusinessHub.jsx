@@ -277,12 +277,12 @@ export default function BusinessHubPage() {
     setTaskGenerationResult(null);
     
     try {
-      const response = await generateProcessTasks({ taskType: 'mondayReports' });
-      
+      const response = await generateProcessTasks({ taskType: 'monthlyReports' });
+
       if (response.data.success) {
         setTaskGenerationResult({
           type: 'success',
-          message: `נוצרו ${response.data.results.summary.mondayTasksCreated} משימות דיווח חודשיות ב-Monday.com`,
+          message: `נוצרו ${response.data.results.summary.tasksCreated || 0} משימות דיווח חודשיות`,
           details: response.data.results
         });
       } else {
@@ -321,15 +321,7 @@ export default function BusinessHubPage() {
       stats: businessData.stats.pendingRecons,
       urgent: businessData.reconciliations.filter(r => r.due_date && new Date(r.due_date) <= new Date(Date.now() + 7*24*60*60*1000)).length
     },
-    {
-      title: "Monday.com",
-      icon: Monitor,
-      color: "accent",
-      description: "אינטגרציה וסנכרון עם לוחות Monday",
-      link: createPageUrl("MondayIntegration"),
-      stats: businessData.dashboards?.length || 0,
-      urgent: 0
-    },
+    /* Monday.com integration removed — CalmPlan DNA is the source of truth */
     {
       title: "מעקב מאזנים שנתיים",
       icon: Scaling,
@@ -411,7 +403,7 @@ export default function BusinessHubPage() {
             {taskGenerationResult.details && taskGenerationResult.type === 'success' && (
               <div className="text-sm">
                 <p>משימות CalmPlan: {taskGenerationResult.details.summary.tasksCreated}</p>
-                <p>משימות Monday.com: {taskGenerationResult.details.summary.mondayTasksCreated}</p>
+                {/* Monday tasks counter removed — CalmPlan DNA only */}
                 <p>חשבונות סונכרנו: {taskGenerationResult.details.summary.syncedAccounts}</p>
               </div>
             )}
@@ -459,7 +451,7 @@ export default function BusinessHubPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-blue-900">דיווחים חודשיים</h3>
-                  <p className="text-sm text-blue-700">יוצר משימות דיווח ב-Monday.com</p>
+                  <p className="text-sm text-blue-700">יוצר משימות דיווח חודשיות</p>
                 </div>
               </div>
               <Button

@@ -212,39 +212,83 @@ export default function MyFocus() {
         {viewMode === 'radial' ? (
           <Card className="h-full">
             <CardContent className="h-full p-0 relative">
-              {/* Radial Mind Map */}
+              {/* Radial Mind Map — AYOA Style with Tapered Bezier Branches */}
               <svg viewBox="0 0 500 500" className="w-full h-full" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-                {/* Radial connections */}
-                {radialNodes.map(node => (
-                  <line key={`line-${node.id}`}
-                    x1={250} y1={250} x2={node.x} y2={node.y}
-                    stroke={node.loadColor.color} strokeWidth={2} opacity={0.3}
-                    strokeDasharray="4 2" />
-                ))}
+                <defs>
+                  {radialNodes.map(node => (
+                    <radialGradient key={`grad-${node.id}`} id={`node-grad-${node.id}`}>
+                      <stop offset="0%" stopColor={node.loadColor.color} stopOpacity="0.15" />
+                      <stop offset="100%" stopColor={node.loadColor.color} stopOpacity="0.05" />
+                    </radialGradient>
+                  ))}
+                </defs>
 
-                {/* Center hub */}
+                {/* Tapered Bezier branches (AYOA organic roots) */}
+                {radialNodes.map(node => {
+                  const sx = 250, sy = 250, ex = node.x, ey = node.y;
+                  const dx = ex - sx, dy = ey - sy;
+                  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                  const nx = -dy / len, ny = dx / len;
+                  const startW = 4, endW = 1.5;
+                  const cp1x = sx + dx * 0.3 + nx * len * 0.08;
+                  const cp1y = sy + dy * 0.3 + ny * len * 0.08;
+                  const cp2x = sx + dx * 0.7 - nx * len * 0.05;
+                  const cp2y = sy + dy * 0.7 - ny * len * 0.05;
+                  const sw2 = startW / 2, ew2 = endW / 2;
+                  const d = [
+                    `M ${sx + nx * sw2} ${sy + ny * sw2}`,
+                    `C ${cp1x + nx * sw2 * 0.8} ${cp1y + ny * sw2 * 0.8} ${cp2x + nx * ew2 * 0.5} ${cp2y + ny * ew2 * 0.5} ${ex + nx * ew2} ${ey + ny * ew2}`,
+                    `L ${ex - nx * ew2} ${ey - ny * ew2}`,
+                    `C ${cp2x - nx * ew2 * 0.5} ${cp2y - ny * ew2 * 0.5} ${cp1x - nx * sw2 * 0.8} ${cp1y - ny * sw2 * 0.8} ${sx - nx * sw2} ${sy - ny * sw2}`,
+                    'Z'
+                  ].join(' ');
+                  return (
+                    <path key={`branch-${node.id}`} d={d}
+                      fill={node.loadColor.color} opacity={0.55}
+                      style={{ transition: 'all 0.4s ease' }} />
+                  );
+                })}
+
+                {/* Center hub — gradient circle */}
+                <circle cx={250} cy={250} r={48} fill="url(#center-glow)" />
                 <circle cx={250} cy={250} r={45} fill="#1E3A5F" />
-                <text x={250} y={245} textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">היום שלי</text>
-                <text x={250} y={260} textAnchor="middle" fill="#B0BEC5" fontSize="9">
+                <defs>
+                  <radialGradient id="center-glow">
+                    <stop offset="0%" stopColor="#1E3A5F" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#1E3A5F" stopOpacity="0" />
+                  </radialGradient>
+                </defs>
+                <text x={250} y={243} textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">היום שלי</text>
+                <text x={250} y={257} textAnchor="middle" fill="#B0BEC5" fontSize="9">
                   {todayTasks.length} משימות
                 </text>
+                <text x={250} y={269} textAnchor="middle" fill="#546E7A" fontSize="8">
+                  {energy.label}
+                </text>
 
-                {/* Task nodes */}
+                {/* Task nodes — organic bubbles with load-colored borders */}
                 {radialNodes.map((node, idx) => {
-                  const r = node._load >= 2 ? 32 : 26;
+                  const r = node._load >= 3 ? 36 : node._load >= 2 ? 32 : node._load >= 1 ? 28 : 24;
                   return (
-                    <g key={node.id}>
+                    <g key={node.id} style={{ cursor: 'pointer' }}>
+                      {/* Glow halo for high-load tasks */}
+                      {node._load >= 2 && (
+                        <circle cx={node.x} cy={node.y} r={r + 4}
+                          fill="none" stroke={node.loadColor.color} strokeWidth={1} opacity={0.25} />
+                      )}
                       <circle cx={node.x} cy={node.y} r={r}
-                        fill="white" stroke={node.loadColor.color} strokeWidth={2.5} />
-                      <text x={node.x} y={node.y - 4} textAnchor="middle" fontSize="8" fontWeight="600" fill="#263238">
-                        {(node.title || '').substring(0, 12)}
+                        fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2.5} />
+                      <circle cx={node.x} cy={node.y} r={r - 1}
+                        fill="white" opacity={0.85} />
+                      <text x={node.x} y={node.y - 5} textAnchor="middle" fontSize="8" fontWeight="600" fill="#263238">
+                        {(node.title || '').substring(0, 14)}
                       </text>
-                      <text x={node.x} y={node.y + 8} textAnchor="middle" fontSize="7" fill={node.loadColor.color}>
+                      <text x={node.x} y={node.y + 7} textAnchor="middle" fontSize="7" fill={node.loadColor.color}>
                         {node.loadColor.label} • {node._duration}דק׳
                       </text>
                       {node.client_name && (
-                        <text x={node.x} y={node.y + 18} textAnchor="middle" fontSize="6" fill="#90A4AE">
-                          {node.client_name.substring(0, 10)}
+                        <text x={node.x} y={node.y + 17} textAnchor="middle" fontSize="6" fill="#90A4AE">
+                          {node.client_name.substring(0, 12)}
                         </text>
                       )}
                     </g>

@@ -225,7 +225,7 @@ export default function DataImportTool() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">ייבוא נתונים מ-Monday</h1>
+        <h1 className="text-2xl font-bold text-gray-800">ייבוא נתונים</h1>
         <p className="text-gray-500 mt-1">ייבוא לקוחות, חשבונות בנק, ומחיקת משימות ישנות</p>
       </div>
 
@@ -250,7 +250,7 @@ export default function DataImportTool() {
           <CardContent className="p-4 text-center">
             <Trash2 className="w-8 h-8 mx-auto mb-2 text-amber-500" />
             <p className="text-3xl font-black text-amber-600">{zombieTasks.length}</p>
-            <p className="text-sm text-gray-500">משימות Monday</p>
+            <p className="text-sm text-gray-500">משימות ישנות</p>
             <p className="text-xs text-gray-400 mt-1">{existingTasks.length} סה"כ</p>
           </CardContent>
         </Card>
@@ -324,7 +324,7 @@ export default function DataImportTool() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Trash2 className="w-5 h-5 text-amber-600" />
-              מחיקת משימות Monday
+              מחיקת משימות ישנות
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -362,7 +362,7 @@ export default function DataImportTool() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-500 mb-3">
-              מוחק את כל {existingTasks.length} המשימות. מומלץ רק אם כל המשימות הן Monday ישנות.
+              מוחק את כל {existingTasks.length} המשימות. מומלץ רק אם כל המשימות ישנות ולא רלוונטיות.
             </p>
             <Button
               onClick={deleteAllTasks}
@@ -398,7 +398,7 @@ export default function DataImportTool() {
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-sm text-gray-500">
-              תצוגה מקדימה - משימות Monday ({zombieTasks.length})
+              תצוגה מקדימה - משימות ישנות ({zombieTasks.length})
             </CardTitle>
           </CardHeader>
           <CardContent>

@@ -447,7 +447,7 @@ export default function SystemOverviewPage() {
         <Database className="w-8 h-8 text-primary" />
         <div>
           <h1 className="text-3xl font-bold">מצב המערכת</h1>
-          <p className="text-gray-600">בדיקה מפורטת של כל הסנכרונים עם Monday.com</p>
+          <p className="text-gray-600">בדיקה מפורטת של מצב הנתונים במערכת</p>
         </div>
         <Button onClick={loadData} variant="outline">
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -481,7 +481,7 @@ export default function SystemOverviewPage() {
                  key === 'reconciliations' ? 'התאמות' :
                  key === 'clientAccounts' ? 'חשבונות בנק' :
                  key === 'therapists' ? 'מטפלים' : // Added Therapist display name
-                 key === 'dashboards' ? 'לוחות Monday' : key}
+                 key === 'dashboards' ? 'לוחות מערכת' : key}
               </CardTitle>
             </CardHeader>
             <CardContent>

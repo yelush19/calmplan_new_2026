@@ -9,17 +9,18 @@ import { motion } from 'framer-motion';
 import {
   Calculator, Loader, RefreshCw, ChevronLeft, ChevronRight,
   ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus,
-  Zap, Flame, ChevronDown
+  Zap, Flame, ChevronDown, Network, Target, TrendingUp, Clock
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
 import { getServiceWeight } from '@/config/serviceWeights';
+import { LOAD_COLORS } from '@/lib/theme-constants';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
-import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
+import GanttView from '@/components/views/GanttView';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -55,7 +56,7 @@ export default function TaxReportsDashboardPage() {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
-  const [viewMode, setViewMode] = useState('kanban');
+  const [viewMode, setViewMode] = useState('timeline');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
@@ -372,14 +373,14 @@ export default function TaxReportsDashboardPage() {
             </Button>
           </div>
           <div className="flex items-center gap-0.5 bg-white rounded-lg border border-[#E0E0E0] p-0.5">
-            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')}>
+            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="גאנט">
+              <GanttChart className="w-4 h-4" />
+            </Button>
+            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')} title="טבלה">
               <List className="w-4 h-4" />
             </Button>
-            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')}>
+            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')} title="קנבן">
               <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="תצוגת פרויקט">
-              <GanttChart className="w-4 h-4" />
             </Button>
           </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
@@ -408,30 +409,65 @@ export default function TaxReportsDashboardPage() {
         </div>
       </div>
 
-      {/* Summary */}
+      {/* KPI Bar — Professional 4-card strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-[#F5F5F5] to-white border-[#E0E0E0] shadow-sm">
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-slate-700">{stats.total}</div>
-            <div className="text-xs text-slate-500">סה"כ דיווחים</div>
+        <Card className="bg-white border-[#E0E0E0] shadow-sm overflow-hidden">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+              <Target className="w-5 h-5 text-slate-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-slate-700">{stats.total}</div>
+              <div className="text-[10px] text-slate-400 font-medium">סה"כ דיווחים</div>
+            </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-sm">
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-emerald-600">{stats.completed}</div>
-            <div className="text-xs text-slate-500">הושלמו</div>
+        <Card className="bg-white border-emerald-200 shadow-sm overflow-hidden">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-emerald-600">{stats.pct}%</div>
+              <div className="text-[10px] text-slate-400 font-medium">{stats.completed}/{stats.total} הושלמו</div>
+            </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-emerald-50/50 to-white border-emerald-200 shadow-sm">
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-emerald-700">{stats.pct}%</div>
-            <div className="text-xs text-slate-500">דיווחים שהושלמו</div>
+        <Card className="bg-white border-sky-200 shadow-sm overflow-hidden">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-sky-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-sky-700">{stats.stepsPct}%</div>
+              <div className="text-[10px] text-slate-400 font-medium">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
+            </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-sky-50 to-white border-sky-200 shadow-sm">
-          <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-sky-700">{stats.stepsPct}%</div>
-            <div className="text-xs text-slate-500">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
+        <Card className="bg-white border-[#E0E0E0] shadow-sm overflow-hidden">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              {[3, 2, 1, 0].map(tier => {
+                const taskCount = filteredTasks.filter(t => {
+                  const w = getServiceWeight(t.category);
+                  return (w.cognitiveLoad ?? 0) === tier;
+                }).length;
+                if (!taskCount) return null;
+                const lc = LOAD_COLORS[tier];
+                return (
+                  <div key={tier} className="flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: lc.color }}>
+                      {taskCount}
+                    </div>
+                    <span className="text-[8px] mt-0.5" style={{ color: lc.color }}>{lc.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-600">עומס קוגניטיבי</div>
+              <div className="text-[10px] text-slate-400">DNA Mix</div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -529,6 +565,47 @@ export default function TaxReportsDashboardPage() {
         <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
       )}
 
+      {/* P2 Production Flow: Collect → Process → Broadcast */}
+      {!isLoading && filteredTasks.length > 0 && (
+        <Card className="bg-white border-[#E0E0E0] shadow-sm overflow-hidden">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-bold text-slate-600">זרימת ייצור P2</span>
+            </div>
+            <div className="flex items-center gap-0">
+              {[
+                { key: 'collect', label: 'קליטה', statuses: ['waiting_for_materials'], color: '#FF8F00', icon: '📥' },
+                { key: 'process', label: 'עיבוד', statuses: ['not_started', 'needs_corrections'], color: '#1565C0', icon: '⚙️' },
+                { key: 'review', label: 'עיון', statuses: ['sent_for_review'], color: '#AB47BC', icon: '👁️' },
+                { key: 'broadcast', label: 'שידור', statuses: ['production_completed'], color: '#2E7D32', icon: '📡' },
+              ].map((phase, idx) => {
+                const count = filteredTasks.filter(t => phase.statuses.includes(t.status)).length;
+                const pct = filteredTasks.length > 0 ? Math.round((count / filteredTasks.length) * 100) : 0;
+                return (
+                  <React.Fragment key={phase.key}>
+                    {idx > 0 && (
+                      <div className="text-gray-300 text-lg px-1">→</div>
+                    )}
+                    <div className="flex-1 rounded-lg border px-3 py-2 text-center transition-all"
+                      style={{
+                        borderColor: count > 0 ? phase.color + '60' : '#E0E0E0',
+                        backgroundColor: count > 0 ? phase.color + '08' : 'transparent',
+                      }}>
+                      <div className="text-base">{phase.icon}</div>
+                      <div className="text-[10px] font-bold" style={{ color: phase.color }}>{phase.label}</div>
+                      <div className="text-lg font-black" style={{ color: count > 0 ? phase.color : '#B0BEC5' }}>{count}</div>
+                      <div className="w-full h-1 rounded-full bg-gray-100 mt-1">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: phase.color }} />
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Content */}
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
@@ -538,7 +615,7 @@ export default function TaxReportsDashboardPage() {
         viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (
-          <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
+          <GanttView tasks={filteredTasks} clients={clients} currentMonth={addMonths(selectedMonth, 1)} onEditTask={setEditingTask} />
         ) : (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {

@@ -377,16 +377,10 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
             ) : null}
 
             {/* הצגת פרטי אינטגרציה */}
-            {(client.integration_info?.monday_board_id || client.integration_info?.calmplan_id) && (
+            {client.integration_info?.calmplan_id && (
               <div className="border-t border-gray-100 pt-2 mt-2">
-                <h5 className="text-xs font-medium text-gray-600 mb-1">פרטי אינטגרציה</h5>
+                <h5 className="text-xs font-medium text-gray-600 mb-1">פרטי מערכת</h5>
                 <div className="space-y-1 text-xs text-gray-500">
-                  {client.integration_info?.monday_board_id && (
-                    <div>לוח Monday: {client.integration_info.monday_board_id}</div>
-                  )}
-                  {client.integration_info?.monday_group_id && (
-                    <div>קבוצה: {client.integration_info.monday_group_id}</div>
-                  )}
                   {client.integration_info?.calmplan_id && (
                     <div>CalmPlan ID: {client.integration_info.calmplan_id}</div>
                   )}
