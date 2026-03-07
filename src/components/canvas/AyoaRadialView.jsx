@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { renderNodeShape, buildTaperedBranch } from './AyoaNode';
+import { renderNodeShape, buildTaperedBranch, getDynamicCategoryColor } from './AyoaNode';
 import FloatingToolbar from './FloatingToolbar';
 
 const VB = 1000;
@@ -27,22 +27,8 @@ const RINGS = {
   ring3: 440,   // ייצור / Production status (completed tasks)
 };
 
-// DNA Palette
-const DNA = {
-  P1: '#00A3E0',
-  P2: '#B2AC88',
-  P3: '#E91E63',
-  P4: '#FFC107',
-};
-
-function getCategoryColor(category) {
-  if (!category) return DNA.P3;
-  const cat = (category || '').toLowerCase();
-  if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return DNA.P1;
-  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות') || cat.includes('מאזנ')) return DNA.P2;
-  if (cat.includes('admin') || cat.includes('אדמיני') || cat.includes('ייעוץ') || cat.includes('פגישה') || cat.includes('שיווק')) return DNA.P3;
-  return DNA.P4;
-}
+// Use getDynamicCategoryColor from AyoaNode — respects service dashboard overrides
+const getCategoryColor = getDynamicCategoryColor;
 
 const STATUS_GLOW = {
   waiting_for_materials: '#FF8F00',

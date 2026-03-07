@@ -165,3 +165,95 @@ export function buildTaperedBranch(sx, sy, ex, ey, startW = 5, endW = 1.5) {
     'Z'
   ].join(' ');
 }
+
+// ── DNA Palette for P-branches ──
+const DNA_COLORS = {
+  P1: '#00A3E0',
+  P2: '#B2AC88',
+  P3: '#E91E63',
+  P4: '#FFC107',
+};
+
+const DASHBOARD_TO_BRANCH = {
+  payroll: 'P1',
+  tax: 'P2',
+  admin: 'P3',
+  additional: 'P3',
+};
+
+/**
+ * Dynamic category color resolver.
+ * Checks service dashboard overrides FIRST (from SettingsMindMap),
+ * then falls back to keyword matching.
+ * This ensures that when a service is moved from P1→P2,
+ * all its nodes instantly adopt the new branch color.
+ */
+let _cachedOverrideMap = null;
+let _cachedOverrideRaw = null;
+
+function buildOverrideMap() {
+  // Check localStorage for service overrides (set by SettingsMindMap)
+  let raw = null;
+  try { raw = localStorage.getItem('calmplan_service_overrides'); } catch { /* */ }
+  // Cache: only rebuild if localStorage changed
+  if (raw === _cachedOverrideRaw && _cachedOverrideMap) return _cachedOverrideMap;
+  _cachedOverrideRaw = raw;
+
+  const map = {}; // category string → DNA color
+  if (!raw) { _cachedOverrideMap = map; return map; }
+
+  try {
+    const overrides = JSON.parse(raw);
+    // Also need ALL_SERVICES to know each service's taskCategories
+    // Import would be circular, so we inline-require the service registry
+    const ALL_SERVICES = _getAllServices();
+    for (const [serviceKey, ov] of Object.entries(overrides)) {
+      if (!ov.dashboard) continue;
+      const branch = DASHBOARD_TO_BRANCH[ov.dashboard];
+      if (!branch || !DNA_COLORS[branch]) continue;
+      const color = DNA_COLORS[branch];
+      // Map all taskCategories AND the service label to this color
+      const svc = ALL_SERVICES[serviceKey];
+      if (svc?.taskCategories) {
+        svc.taskCategories.forEach(cat => { map[cat] = color; });
+      }
+      if (svc?.label) map[svc.label] = color;
+      if (svc?.createCategory) map[svc.createCategory] = color;
+    }
+  } catch { /* corrupt JSON, ignore */ }
+  _cachedOverrideMap = map;
+  return map;
+}
+
+// Lazy service registry loader (avoids circular import)
+let _allServicesCache = null;
+function _getAllServices() {
+  if (_allServicesCache) return _allServicesCache;
+  try {
+    // Dynamic import not possible in sync context, use the config directly
+    const mod = require('@/config/processTemplates');
+    _allServicesCache = mod.ALL_SERVICES || {};
+  } catch {
+    _allServicesCache = {};
+  }
+  return _allServicesCache;
+}
+
+/**
+ * Get the DNA color for a category, respecting service dashboard overrides.
+ * Use this instead of hardcoded getCategoryColor().
+ */
+export function getDynamicCategoryColor(category) {
+  if (!category) return DNA_COLORS.P3;
+
+  // 1. Check override map first (service moved to a different board)
+  const overrideMap = buildOverrideMap();
+  if (overrideMap[category]) return overrideMap[category];
+
+  // 2. Fallback: keyword matching (original logic)
+  const cat = category.toLowerCase();
+  if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return DNA_COLORS.P1;
+  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות') || cat.includes('מאזנ')) return DNA_COLORS.P2;
+  if (cat.includes('admin') || cat.includes('אדמיני') || cat.includes('ייעוץ') || cat.includes('פגישה') || cat.includes('שיווק')) return DNA_COLORS.P3;
+  return DNA_COLORS.P4;
+}
