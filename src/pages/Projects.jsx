@@ -338,7 +338,7 @@ export default function Projects() {
       )}
 
       {/* Projects Grid - Grouped by Status */}
-      <UnifiedAyoaLayout tasks={pseudoTasks} centerLabel="פרויקטים" centerSub="P3" accentColor="#E91E63">
+      <UnifiedAyoaLayout tasks={pseudoTasks} isLoading={isLoading} centerLabel="פרויקטים" centerSub="P3" accentColor="#E91E63">
       {projects.length === 0 && !isCreating ? (
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">

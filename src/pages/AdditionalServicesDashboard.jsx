@@ -113,7 +113,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       const end = endOfMonth(deadlineMonth);
       const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
-        Task.list('-due_date', 5000),
+        Task.list('-due_date', 5000).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
       // Post-filter: only show tasks belonging to the selected reporting month
@@ -415,8 +415,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         </Card>
       </div>
 
-      {console.log('[AdditionalServices.jsx] RENDER — tasks:', tasks?.length, 'filteredTasks:', filteredTasks?.length)}
-      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} centerLabel="שירותים נוספים" centerSub="P1" accentColor="#00A3E0" onEditTask={setEditingTask}>
+      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} isLoading={isLoading} centerLabel="שירותים נוספים" centerSub="P1" accentColor="#00A3E0" onEditTask={setEditingTask}>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />

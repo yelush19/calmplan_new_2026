@@ -77,7 +77,7 @@ export default function FinancialResultsDashboard() {
     try {
       const [clientsData, tasksData] = await Promise.all([
         Client.list(null, 500).catch(() => []),
-        Task.filter({ context: 'work' }).catch(() => []),
+        Task.list('-due_date', 5000).catch(() => []),
       ]);
       setClients(clientsData || []);
       setTasks(tasksData || []);
@@ -301,7 +301,7 @@ export default function FinancialResultsDashboard() {
       </div>
       </div>
 
-      <UnifiedAyoaLayout tasks={pnlMapTasks} clients={clients} centerLabel="רווח והפסד" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth}>
+      <UnifiedAyoaLayout tasks={pnlMapTasks} clients={clients} isLoading={isLoading} centerLabel="רווח והפסד" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth}>
       {/* Table */}
       <Card>
         <CardContent className="p-0">

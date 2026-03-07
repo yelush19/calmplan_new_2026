@@ -95,9 +95,8 @@ export default function TaxReportsDashboardPage() {
       const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
         Task.filter({
-          context: 'work',
           due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
-        }),
+        }).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
       // Post-filter: only show tasks belonging to the selected reporting month
@@ -650,8 +649,7 @@ export default function TaxReportsDashboardPage() {
       })()}
 
       {/* Content */}
-      {console.log('[TaxReports.jsx] RENDER — tasks:', tasks?.length, 'filteredTasks:', filteredTasks?.length, 'isLoading:', isLoading)}
-      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} centerLabel="דיווחי מס" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth} onEditTask={setEditingTask}>
+      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} isLoading={isLoading} centerLabel="דיווחי מס" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth} onEditTask={setEditingTask}>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />

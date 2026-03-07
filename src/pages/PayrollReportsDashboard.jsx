@@ -69,7 +69,7 @@ export default function PayrollReportsDashboardPage() {
       const end = endOfMonth(deadlineMonth);
       const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
-        Task.list('-due_date', 5000),
+        Task.list('-due_date', 5000).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
       const allRaw = Array.isArray(tasksData) ? tasksData : [];
@@ -385,7 +385,7 @@ export default function PayrollReportsDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : (
-        <UnifiedAyoaLayout tasks={(console.log('[PayrollReports.jsx] RENDER — tasks:', tasks?.length, 'filteredTasks:', filteredTasks?.length), filteredTasks)} clients={clients} centerLabel="דיווחי שכר" centerSub="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
+        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="דיווחי שכר" centerSub="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
         {sortedServiceKeys.length > 0 ? (
         viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />

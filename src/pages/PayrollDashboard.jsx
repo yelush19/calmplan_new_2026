@@ -86,15 +86,16 @@ export default function PayrollDashboardPage() {
       const end = endOfMonth(deadlineMonth);
       const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
-        Task.list('-due_date', 5000),
+        Task.list('-due_date', 5000).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
-      // Post-filter: only show tasks belonging to the selected reporting month
+      // Post-filter: only show payroll tasks belonging to the selected reporting month
       const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
       const allRaw = Array.isArray(tasksData) ? tasksData : [];
       const filtered = allRaw.filter(t => {
         if (!allPayrollCategories.includes(t.category)) return false;
-        return getTaskReportingMonth(t) === selectedMonthStr;
+        const rm = getTaskReportingMonth(t);
+        return rm === selectedMonthStr;
       });
       // DATA SURVIVAL: if month filter kills everything, show all payroll tasks
       if (filtered.length === 0 && allRaw.length > 0) {
@@ -441,7 +442,7 @@ export default function PayrollDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : (
-        <UnifiedAyoaLayout tasks={(console.log('[PayrollDash.jsx] RENDER — tasks:', tasks?.length, 'filteredTasks:', filteredTasks?.length), filteredTasks)} clients={clients} centerLabel="שכר" centerSub="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
+        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="שכר" centerSub="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
         {sortedServiceKeys.length > 0 ? (
           <div className="space-y-4">
             {sortedServiceKeys.map(serviceKey => {

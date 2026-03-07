@@ -82,7 +82,7 @@ export default function AdminTasksDashboardPage() {
         // Admin-category task
         if (t.category && adminCategories.includes(t.category)) return true;
         // Uncategorized work task (no category or not in any other dashboard)
-        if (t.context === 'work' && (!t.category || !otherDashboardCategories.has(t.category))) {
+        if ((t.context === 'work' || !t.context) && (!t.category || !otherDashboardCategories.has(t.category))) {
           // Only show recent (last 60 days) or future tasks
           if (t.due_date) {
             const d = parseISO(t.due_date);
@@ -369,7 +369,7 @@ export default function AdminTasksDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : (
-        <UnifiedAyoaLayout tasks={(console.log('[AdminTasks.jsx] RENDER — tasks:', tasks?.length, 'filteredTasks:', filteredTasks?.length), filteredTasks)} clients={clients} centerLabel="ניהול" centerSub="P3" accentColor="#E91E63" onEditTask={setEditingTask}>
+        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="ניהול" centerSub="P3" accentColor="#E91E63" onEditTask={setEditingTask}>
         {Object.keys(serviceData).length > 0 ? (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {

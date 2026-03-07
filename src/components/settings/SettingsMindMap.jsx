@@ -523,7 +523,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           weight,
           cogLoad: weight?.cognitiveLoad || 0,
           r: Math.max(22, 30 - depth * 3), // slightly smaller at deeper levels
-          nextStepId: svc.nextStepId || null,
+          nextStepIds: svc.nextStepIds || (svc.nextStepId ? [svc.nextStepId] : []),
           isParallel: svc.isParallel || false,
           _isCustom: !!customServices[svc.key],
           _depth: depth,
@@ -920,11 +920,13 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const flowEdges = useMemo(() => {
     const result = [];
     allNodes.forEach(node => {
-      if (node.nextStepId) {
-        const target = allNodes.find(n => n.id === node.nextStepId);
-        if (target) {
-          result.push({ from: node, to: target, color: '#1565C0' });
-        }
+      if (node.nextStepIds?.length > 0) {
+        node.nextStepIds.forEach(targetId => {
+          const target = allNodes.find(n => n.id === targetId);
+          if (target) {
+            result.push({ from: node, to: target, color: '#1565C0' });
+          }
+        });
       }
     });
     return result;

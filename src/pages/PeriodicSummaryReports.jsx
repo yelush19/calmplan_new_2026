@@ -722,7 +722,7 @@ export default function PeriodicSummaryReports() {
         )}
       </div>
 
-      <UnifiedAyoaLayout tasks={[]} clients={clients} centerLabel="דיווחים תקופתיים" centerSub="P1" accentColor="#00A3E0">
+      <UnifiedAyoaLayout tasks={[]} clients={clients} isLoading={isLoading} centerLabel="דיווחים תקופתיים" centerSub="P1" accentColor="#00A3E0">
       {/* Table */}
       <Card>
         <CardContent className="p-0">

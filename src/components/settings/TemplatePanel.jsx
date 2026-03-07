@@ -88,7 +88,11 @@ export default function TemplatePanel({ service, onClose }) {
   });
   const [newStepLabel, setNewStepLabel] = useState('');
   const [newCategory, setNewCategory] = useState('');
-  const [editNextStepId, setEditNextStepId] = useState(service?.nextStepId || '');
+  const [editNextStepIds, setEditNextStepIds] = useState(() => {
+    if (service?.nextStepIds?.length) return service.nextStepIds;
+    if (service?.nextStepId) return [service.nextStepId];
+    return [];
+  });
   const [editIsParallel, setEditIsParallel] = useState(service?.isParallel || false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -106,7 +110,7 @@ export default function TemplatePanel({ service, onClose }) {
       dashboard: editDashboard,
       steps: editSteps,
       taskCategories: editCategories,
-      nextStepId: editNextStepId || null,
+      nextStepIds: editNextStepIds.length > 0 ? editNextStepIds : [],
       isParallel: editIsParallel,
     });
     setHasChanges(false);
@@ -380,7 +384,7 @@ export default function TemplatePanel({ service, onClose }) {
           );
         })()}
 
-        {/* ══ FLOW & DEPENDENCIES: Next Step + Parallel Toggle ══ */}
+        {/* ══ FLOW & DEPENDENCIES: Next Steps (Multi) + Parallel Toggle ══ */}
         {(() => {
           const allNodes = service?._allNodes || [];
           const crudRef = service?._crud;
@@ -406,9 +410,21 @@ export default function TemplatePanel({ service, onClose }) {
             return segs.join(' \u2192 ');
           };
 
-          // Current next step label
-          const nextNode = allNodes.find(n => n.id === editNextStepId);
-          const nextLabel = nextNode ? (nextNode.label || nextNode.id) : null;
+          const toggleNextStep = (nodeId) => {
+            const isSelected = editNextStepIds.includes(nodeId);
+            const updated = isSelected
+              ? editNextStepIds.filter(id => id !== nodeId)
+              : [...editNextStepIds, nodeId];
+            setEditNextStepIds(updated);
+            if (crudRef) {
+              crudRef.updateService(currentKey, { nextStepIds: updated });
+              console.log('STATE MUTATED:', {
+                action: 'set_next_steps',
+                key: currentKey,
+                nextStepIds: updated,
+              });
+            }
+          };
 
           return (
             <div className="px-4 py-3 border-b" style={{ backgroundColor: '#F0F8FF' }}>
@@ -417,38 +433,45 @@ export default function TemplatePanel({ service, onClose }) {
                 <span className="text-xs font-bold text-gray-700">זרימה ותלויות</span>
               </div>
 
-              {/* Next Step Dropdown */}
+              {/* Next Steps Multi-Select */}
               <div className="mb-3">
-                <label className="text-[10px] font-bold text-gray-500 mb-1 block">שלב הבא (Sequential)</label>
-                {nextLabel && (
-                  <div className="flex items-center gap-1 mb-1.5 text-[10px] text-blue-600">
-                    <ArrowRight className="w-3 h-3" />
-                    <span>{nextLabel}</span>
+                <label className="text-[10px] font-bold text-gray-500 mb-1 block">שלבים הבאים (בחר מרובה)</label>
+                {editNextStepIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1.5">
+                    {editNextStepIds.map(id => {
+                      const n = allNodes.find(x => x.id === id);
+                      return n ? (
+                        <span key={id} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                          <ArrowRight className="w-2.5 h-2.5" />
+                          {n.label || n.id}
+                          <button onClick={() => toggleNextStep(id)} className="hover:text-red-500">
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </span>
+                      ) : null;
+                    })}
                   </div>
                 )}
-                <select
-                  value={editNextStepId}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEditNextStepId(val);
-                    if (crudRef) {
-                      crudRef.updateService(currentKey, { nextStepId: val || null });
-                      console.log('STATE MUTATED:', {
-                        action: 'set_next_step',
-                        key: currentKey,
-                        nextStepId: val || null,
-                      });
-                    }
-                  }}
-                  style={{ width: '100%', padding: '6px 10px', fontSize: '11px', border: '1.5px solid #90CAF9', borderRadius: '8px', backgroundColor: 'white', direction: 'rtl' }}
-                >
-                  <option value="">-- ללא (סוף תהליך) --</option>
-                  {flowCandidates.map(n => (
-                    <option key={n.id} value={n.id}>
-                      {n.label || n.id} ({buildPath(n.id)})
-                    </option>
-                  ))}
-                </select>
+                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1.5px solid #90CAF9', borderRadius: '8px', backgroundColor: 'white' }}>
+                  {flowCandidates.length === 0 && (
+                    <div className="text-[10px] text-gray-400 p-2 text-center">אין צמתים זמינים</div>
+                  )}
+                  {flowCandidates.map(n => {
+                    const isChecked = editNextStepIds.includes(n.id);
+                    return (
+                      <label key={n.id}
+                        className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-blue-50 cursor-pointer text-[11px]"
+                        style={{ direction: 'rtl', borderBottom: '1px solid #f0f0f0' }}>
+                        <input type="checkbox" checked={isChecked} onChange={() => toggleNextStep(n.id)}
+                          style={{ accentColor: '#1565C0' }} />
+                        <span className={isChecked ? 'font-bold text-blue-700' : 'text-gray-600'}>
+                          {n.label || n.id}
+                        </span>
+                        <span className="text-[9px] text-gray-400 mr-auto">{buildPath(n.id)}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Parallel Toggle */}

@@ -74,12 +74,13 @@ export default function MyFocus() {
   const energy = getEnergyProfile();
   const EnergyIcon = energy.icon;
 
-  // Split tasks into today's active tasks
+  // Active tasks for focus view: overdue + due today + upcoming this month
   const todayTasks = useMemo(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const now = new Date();
+    const monthEnd = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd');
     return tasks.filter(t =>
       t.status !== 'production_completed' &&
-      t.due_date && t.due_date <= todayStr
+      t.due_date && t.due_date <= monthEnd
     );
   }, [tasks]);
 
@@ -195,7 +196,7 @@ export default function MyFocus() {
             </CardContent>
           </Card>
         ) : (
-          <UnifiedAyoaLayout tasks={(console.log('[MyFocus.jsx] RENDER — tasks:', tasks?.length, 'todayTasks:', todayTasks?.length), todayTasks)} clients={clients} centerLabel="פוקוס יומי" centerSub="P4" accentColor="#FFC107">
+          <UnifiedAyoaLayout tasks={todayTasks} clients={clients} isLoading={isLoading} centerLabel="פוקוס יומי" centerSub="P4" accentColor="#FFC107">
             <Card className="h-full overflow-auto">
               <CardContent className="p-2">
                 <GanttView tasks={todayTasks} clients={clients} />

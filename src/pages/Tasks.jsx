@@ -276,17 +276,14 @@ export default function TasksPage() {
       const validTasks = Array.isArray(rawTasks) ? rawTasks : [];
 
       // Unified tree filter: only P1-P4 tasks in active period
-      const treeTasks = getActiveTreeTasks(validTasks);
-
-      // ══ DATA SURVIVAL BYPASS ══
-      // If the tree filter killed everything but raw data exists, show raw.
-      // NEVER show an empty screen when the database has tasks.
-      const displayTasks = treeTasks.length > 0 ? treeTasks : validTasks;
+      // ══ DATA SURVIVAL: if filter returns empty but raw exists, use raw ══
+      let treeTasks = getActiveTreeTasks(validTasks);
       if (treeTasks.length === 0 && validTasks.length > 0) {
         console.warn('DATA SURVIVAL: getActiveTreeTasks returned 0 from', validTasks.length, 'raw tasks. Bypassing filter.');
+        treeTasks = validTasks;
       }
 
-      const processed = displayTasks.map(task => {
+      const processed = treeTasks.map(task => {
         let normalizedStatus = task.status;
         if (task.status && mondayStatusMapping[task.status]) {
           normalizedStatus = mondayStatusMapping[task.status];
@@ -743,9 +740,8 @@ export default function TasksPage() {
       )}
 
       {/* Content */}
-      {console.log('[Tasks.jsx] RENDER — tasks:', tasks.length, 'filteredTasks:', filteredTasks?.length, 'view:', view, 'isLoading:', isLoading)}
       <ViewErrorBoundary>
-      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} centerLabel="משימות" centerSub="P3" accentColor="#E91E63" onEditTask={handleEditTask}>
+      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} isLoading={isLoading} centerLabel="משימות" centerSub="P3" accentColor="#E91E63" onEditTask={handleEditTask}>
       {view === 'list' ? (
         sortedTasks.length === 0 ? (
           <Card className="border-0 shadow-sm">
