@@ -71,6 +71,8 @@ export default function TemplatePanel({ service, onClose }) {
       dashboard: editDashboard,
       steps: editSteps,
       taskCategories: editCategories,
+      _cognitiveLoad: editCogLoad,
+      _duration: editDuration,
     });
     setHasChanges(false);
   };
@@ -219,10 +221,20 @@ export default function TemplatePanel({ service, onClose }) {
           <div className="space-y-1.5">
             {editSteps.map((step, i) => (
               <div key={`${step.key}-${i}`}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50 group">
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50 group">
                 <div className="w-5 h-5 rounded-full text-[9px] font-bold text-white shrink-0 flex items-center justify-center"
                   style={{ backgroundColor: pColor }}>{i + 1}</div>
-                <span className="text-xs font-medium text-gray-700 flex-1">{step.label}</span>
+                <Input
+                  value={step.label}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditSteps(prev => prev.map((s, idx) =>
+                      idx === i ? { ...s, label: val } : s
+                    ));
+                    markChanged();
+                  }}
+                  className="h-7 text-xs font-medium text-gray-700 flex-1 border-0 bg-transparent focus:bg-white focus:ring-1 px-1"
+                />
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => moveStep(i, -1)} disabled={i === 0}
                     className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronRight className="w-3 h-3 rotate-90" /></button>
