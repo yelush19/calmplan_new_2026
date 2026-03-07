@@ -465,100 +465,109 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       });
     });
 
-    // Service nodes — respect explicit parentId for cross-node parenting
-    // First pass: group by branch for layout, but allow parentId override
+    // ── RECURSIVE SERVICE LAYOUT (Infinite Hierarchy) ──
+    // Topological sort: process nodes whose parents are already laid out,
+    // then their children, etc. Handles N-level deep trees.
     const allSvcs = Object.values(liveServices);
-    const groups = { P1: [], P2: [], P3: [], P4: [] };
+    const nodeMap = {}; // id → node ref (for fast parent lookup)
+    nodes.forEach(n => { nodeMap[n.id] = n; }); // pre-populate with root nodes
+
+    // Build adjacency: parentId → [child services]
+    const childrenOf = {}; // parentId → [svc, svc, ...]
     allSvcs.forEach(svc => {
       const branch = getDashboardBranch(svc.dashboard);
-      groups[branch].push(svc);
+      const resolvedParent = svc.parentId || branch;
+      if (!childrenOf[resolvedParent]) childrenOf[resolvedParent] = [];
+      childrenOf[resolvedParent].push(svc);
     });
 
-    // Build all service nodes
-    Object.entries(groups).forEach(([branch, services]) => {
-      const rootNode = nodes.find(n => n.id === branch);
-      if (!rootNode) return;
-      const serviceDist = 130;
-      const spreadAngle = Math.PI * 0.7;
-      const count = services.length || 1;
+    // Recursive layout: place children around their parent
+    const layoutChildren = (parentId, depth) => {
+      const children = childrenOf[parentId];
+      if (!children || children.length === 0) return;
 
-      services.forEach((svc, si) => {
-        const baseAngle = rootAngles[branch] - spreadAngle / 2;
-        const sAngle = count === 1 ? rootAngles[branch] : baseAngle + (spreadAngle * si) / Math.max(1, count - 1);
+      const parentNode = nodeMap[parentId];
+      if (!parentNode) return;
+
+      // Distance shrinks at deeper levels, spread stays wide
+      const dist = Math.max(70, 130 - depth * 20);
+      const spreadAngle = Math.PI * 0.7;
+      const count = children.length;
+      // Base angle: point away from parent's parent (or use default)
+      const grandParent = nodeMap[parentNode.parentId];
+      const baseDirection = grandParent
+        ? Math.atan2(parentNode.y - grandParent.y, parentNode.x - grandParent.x)
+        : (rootAngles[parentId] ?? Math.atan2(parentNode.y - CY, parentNode.x - CX));
+
+      children.forEach((svc, si) => {
+        const angleStart = baseDirection - spreadAngle / 2;
+        const angle = count === 1 ? baseDirection : angleStart + (spreadAngle * si) / Math.max(1, count - 1);
         const saved = savedPositions[svc.key];
         const weight = getServiceWeight(svc.createCategory || svc.taskCategories?.[0]);
 
-        // Determine real parent: explicit parentId if set, else the branch root
-        const explicitParent = svc.parentId;
-        const resolvedParentId = explicitParent || branch;
+        // Color: inherit from branch root
+        const branch = getDashboardBranch(svc.dashboard);
 
-        // Position: if parent is another service, position relative to it
-        let defaultX = rootNode.x + Math.cos(sAngle) * serviceDist;
-        let defaultY = rootNode.y + Math.sin(sAngle) * serviceDist;
-        if (explicitParent && explicitParent !== branch) {
-          // Find parent node (may not exist yet in this pass, use saved position or root as fallback)
-          const parentSaved = savedPositions[explicitParent];
-          const parentNode = nodes.find(n => n.id === explicitParent);
-          const px = parentNode?.x ?? parentSaved?.x ?? rootNode.x;
-          const py = parentNode?.y ?? parentSaved?.y ?? rootNode.y;
-          const childDist = 100;
-          const childAngle = sAngle; // spread around parent
-          defaultX = px + Math.cos(childAngle) * childDist;
-          defaultY = py + Math.sin(childAngle) * childDist;
-        }
-
-        // Inherit color from actual parent's branch
-        const colorBranch = explicitParent && DNA[explicitParent] ? explicitParent : branch;
-
-        nodes.push({
+        const node = {
           id: svc.key,
           type: 'service',
           label: svc.label || svc.key,
           shape: 'bubble',
-          color: DNA[colorBranch]?.color || DNA[branch].color,
-          bg: DNA[colorBranch]?.bg || DNA[branch].bg,
-          x: saved?.x ?? defaultX,
-          y: saved?.y ?? defaultY,
-          parentId: resolvedParentId,
+          color: DNA[branch]?.color || '#999',
+          bg: DNA[branch]?.bg || '#f5f5f5',
+          x: saved?.x ?? parentNode.x + Math.cos(angle) * dist,
+          y: saved?.y ?? parentNode.y + Math.sin(angle) * dist,
+          parentId: svc.parentId || branch,
           dashboard: svc.dashboard,
           steps: svc.steps || [],
           weight,
           cogLoad: weight?.cognitiveLoad || 0,
-          r: 30,
+          r: Math.max(22, 30 - depth * 3), // slightly smaller at deeper levels
           _isCustom: !!customServices[svc.key],
+          _depth: depth,
           ...nodePositionOverrides[svc.key],
-        });
+        };
 
-        // Step nodes (only if service is selected)
+        nodes.push(node);
+        nodeMap[svc.key] = node;
+
+        // Step nodes (only if this service is selected)
         if (selectedNodeId === svc.key && svc.steps) {
           const stepDist = 75;
           const stepSpread = Math.PI * 0.5;
           const stCount = svc.steps.length;
           svc.steps.forEach((step, sti) => {
-            const stBase = sAngle - stepSpread / 2;
-            const stAngle = stCount === 1 ? sAngle : stBase + (stepSpread * sti) / Math.max(1, stCount - 1);
-            const svcNode = nodes.find(n => n.id === svc.key);
-            const px = svcNode?.x ?? rootNode.x + Math.cos(sAngle) * serviceDist;
-            const py = svcNode?.y ?? rootNode.y + Math.sin(sAngle) * serviceDist;
+            const stBase = angle - stepSpread / 2;
+            const stAngle = stCount === 1 ? angle : stBase + (stepSpread * sti) / Math.max(1, stCount - 1);
             const saved = savedPositions[`${svc.key}_step_${sti}`];
 
-            nodes.push({
+            const stepNode = {
               id: `${svc.key}_step_${sti}`,
               type: 'step',
               label: step.label || step.key,
               shape: 'pill',
-              color: DNA[branch].color,
-              bg: DNA[branch].bg,
-              x: saved?.x ?? px + Math.cos(stAngle) * stepDist,
-              y: saved?.y ?? py + Math.sin(stAngle) * stepDist,
+              color: DNA[branch]?.color || '#999',
+              bg: DNA[branch]?.bg || '#f5f5f5',
+              x: saved?.x ?? node.x + Math.cos(stAngle) * stepDist,
+              y: saved?.y ?? node.y + Math.sin(stAngle) * stepDist,
               parentId: svc.key,
               r: 20,
               stepIndex: sti,
               ...nodePositionOverrides[`${svc.key}_step_${sti}`],
-            });
+            };
+            nodes.push(stepNode);
+            nodeMap[stepNode.id] = stepNode;
           });
         }
+
+        // RECURSE: layout this node's children (infinite depth)
+        layoutChildren(svc.key, depth + 1);
       });
+    };
+
+    // Start recursion from each root (P1, P2, P3, P4)
+    Object.keys(DNA).forEach(rootKey => {
+      layoutChildren(rootKey, 1);
     });
 
     // Apply force repulsion (directive #11)

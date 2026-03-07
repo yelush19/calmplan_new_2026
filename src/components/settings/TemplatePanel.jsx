@@ -136,14 +136,24 @@ export default function TemplatePanel({ service, onClose }) {
 
   const addCategory = () => {
     if (!newCategory.trim()) return;
-    setEditCategories(prev => [...prev, newCategory.trim()]);
+    const updated = [...editCategories, newCategory.trim()];
+    setEditCategories(updated);
     setNewCategory('');
-    markChanged();
+    // Immediately persist — no "Save" button needed
+    if (crud) {
+      crud.updateService(service.key, { taskCategories: updated });
+      console.log('STATE MUTATED:', { action: 'add_category', key: service.key, category: newCategory.trim(), all: updated });
+    }
   };
 
   const removeCategory = (index) => {
-    setEditCategories(prev => prev.filter((_, i) => i !== index));
-    markChanged();
+    const updated = editCategories.filter((_, i) => i !== index);
+    setEditCategories(updated);
+    // Immediately persist
+    if (crud) {
+      crud.updateService(service.key, { taskCategories: updated });
+      console.log('STATE MUTATED:', { action: 'remove_category', key: service.key, removedIndex: index, all: updated });
+    }
   };
 
   const handleDelete = () => {
@@ -211,10 +221,10 @@ export default function TemplatePanel({ service, onClose }) {
           />
         </div>
 
-        {/* ══ RED BOX: Cross-Node Parenting — ANY node can be parent ══ */}
+        {/* ══ RED BOX: Cross-Node Parenting + Manual Board Override ══ */}
         {(() => {
           const allNodes = service?._allNodes || [];
-          const crud = service?._crud;
+          const crudRef = service?._crud;
           const currentKey = service?.key;
           const currentParentId = service?.parentId;
 
@@ -267,13 +277,23 @@ export default function TemplatePanel({ service, onClose }) {
           // Current parent breadcrumb
           const currentPath = currentParentId ? buildPath(currentParentId) : '(שורש)';
 
+          // Board options for manual override
+          const boardChoices = [
+            { key: 'payroll', label: 'שכר (P1)', color: '#00A3E0' },
+            { key: 'tax', label: 'הנה"ח (P2)', color: '#B2AC88' },
+            { key: 'admin', label: 'ניהול (P3)', color: '#E91E63' },
+            { key: 'additional', label: 'נוספים', color: '#9C27B0' },
+            { key: 'home', label: 'בית (P4)', color: '#FFC107' },
+          ];
+
           return (
             <div style={{ border: '3px solid red', borderRadius: '12px', margin: '8px', padding: '12px', backgroundColor: '#FFF0F0' }}>
+              {/* ── Section 1: Parent Node (Hierarchy) ── */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                 <GitBranch style={{ width: '14px', height: '14px', color: 'red' }} />
-                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>שיוך לענף אב</span>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>שיוך לענף אב (היררכיה)</span>
               </div>
-              <div style={{ fontSize: '10px', color: '#666', marginBottom: '8px', padding: '4px 8px', background: '#fff', borderRadius: '6px', border: '1px dashed #ccc' }} dir="rtl">
+              <div style={{ fontSize: '10px', color: '#666', marginBottom: '6px', padding: '4px 8px', background: '#fff', borderRadius: '6px', border: '1px dashed #ccc' }} dir="rtl">
                 נוכחי: <strong>{currentPath}</strong>
               </div>
 
@@ -281,20 +301,10 @@ export default function TemplatePanel({ service, onClose }) {
                 value={currentParentId || ''}
                 onChange={(e) => {
                   const newParentId = e.target.value;
-                  if (!newParentId || !crud) return;
-                  const target = allNodes.find(n => n.id === newParentId);
-                  if (!target) return;
+                  if (!newParentId || !crudRef) return;
 
-                  // Update parentId in the service state (TRUE reparenting)
-                  crud.updateService(currentKey, { parentId: newParentId });
-
-                  // Also update dashboard if the new parent is under a different branch
-                  const newDash = target.type === 'root'
-                    ? (DNA[target.id]?.dashboard || 'admin')
-                    : (target.dashboard || 'admin');
-                  if (newDash !== editDashboard) {
-                    handleBoardChange(newDash);
-                  }
+                  // TRUE reparenting — ONLY updates parentId, NEVER touches dashboard
+                  crudRef.updateService(currentKey, { parentId: newParentId });
 
                   console.log('STATE MUTATED:', {
                     action: 'reparent_node',
@@ -302,7 +312,6 @@ export default function TemplatePanel({ service, onClose }) {
                     oldParent: currentParentId,
                     newParent: newParentId,
                     newParentPath: buildPath(newParentId),
-                    newDashboard: newDash,
                   });
                 }}
                 style={{ width: '100%', padding: '8px 12px', fontSize: '12px', border: '2px solid red', borderRadius: '8px', backgroundColor: 'white', direction: 'rtl' }}
@@ -320,8 +329,48 @@ export default function TemplatePanel({ service, onClose }) {
                 })}
               </select>
 
-              <div style={{ fontSize: '9px', color: 'red', marginTop: '6px' }}>
-                DEBUG: nodes={allNodes.length} | candidates={sorted.length} | parentId={currentParentId || 'none'} | dash={editDashboard}
+              {/* ── Section 2: Manual Board Override (DECOUPLED from hierarchy) ── */}
+              <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #e88' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                  <Layers style={{ width: '14px', height: '14px', color: '#E91E63' }} />
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>שינוי לוח ראשי</span>
+                  <span style={{ fontSize: '9px', color: '#999' }}>(לא תלוי בהיררכיה)</span>
+                </div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {boardChoices.map(b => {
+                    const isActive = editDashboard === b.key;
+                    return (
+                      <button
+                        key={b.key}
+                        onClick={() => {
+                          if (!crudRef) return;
+                          // Immediately persist board change — decoupled from parent
+                          handleBoardChange(b.key);
+                          crudRef.updateService(currentKey, { dashboard: b.key });
+                          console.log('STATE MUTATED:', {
+                            action: 'manual_board_override',
+                            key: currentKey,
+                            oldDash: editDashboard,
+                            newDash: b.key,
+                          });
+                        }}
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: '10px',
+                          fontWeight: isActive ? 'bold' : 'normal',
+                          borderRadius: '16px',
+                          border: `2px solid ${b.color}`,
+                          backgroundColor: isActive ? b.color : 'white',
+                          color: isActive ? 'white' : b.color,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {b.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           );
@@ -422,7 +471,6 @@ export default function TemplatePanel({ service, onClose }) {
         <div className="px-4 py-3 border-b bg-gray-50/50">
           <div className="text-[9px] text-gray-400 space-y-0.5">
             <div>מפתח: <span className="font-mono">{service.key}</span></div>
-            <div>לוח: <span className="font-mono">{editDashboard}</span></div>
             {service.taskType && <div>סוג: <span className="font-mono">{service.taskType}</span></div>}
             {service.sequentialSteps && <div className="text-amber-600">סדרתי — כל שלב דורש השלמת הקודם</div>}
             {service.supportsComplexity && <div className="text-purple-600">תומך במורכבות</div>}
