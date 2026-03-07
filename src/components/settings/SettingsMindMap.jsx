@@ -265,6 +265,9 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
             <stop offset="0%" stopColor="#2C3E50" />
             <stop offset="100%" stopColor="#1a252f" />
           </radialGradient>
+          <marker id="flow-arrow" viewBox="0 0 10 6" refX="9" refY="3" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 3 L 0 6 z" fill="#4682B4" />
+          </marker>
         </defs>
 
         {/* Branches: center → P-roots */}
@@ -294,6 +297,49 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               ))}
             </React.Fragment>
           ));
+        })}
+
+        {/* Multi-Flow Dashed Arrows: step → nextStepIds */}
+        {layout.map(root => {
+          if (expandedRoot !== root.key) return null;
+          return root.serviceNodes.map(svc => {
+            if (selectedServiceKey !== svc.key) return null;
+            // Only draw flow arrows if at least one step has explicit nextStepIds (non-linear flow)
+            const hasExplicitFlow = svc.stepNodes.some(s => Array.isArray(s.nextStepIds));
+            if (!hasExplicitFlow) return null;
+            const stepMap = {};
+            svc.stepNodes.forEach(s => { stepMap[s.key] = s; });
+            return svc.stepNodes.map((step, si) => {
+              // Use step's own nextStepIds; for linear implicit, show single arrow only if service has branching
+              const nextIds = step.nextStepIds || (si < svc.stepNodes.length - 1 ? [svc.stepNodes[si + 1].key] : []);
+              return nextIds.map(nid => {
+                const target = stepMap[nid];
+                if (!target) return null;
+                // Offset start/end by node radius (18px) along the direction vector
+                const dx = target.x - step.x;
+                const dy = target.y - step.y;
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const nx = dx / len, ny = dy / len;
+                const sx = step.x + nx * 20, sy = step.y + ny * 20;
+                const ex = target.x - nx * 20, ey = target.y - ny * 20;
+                // Curved path: slight arc via control point perpendicular to midpoint
+                const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+                const cpx = mx + (-ny) * 15, cpy = my + nx * 15;
+                return (
+                  <path
+                    key={`flow-${step.key}-${nid}`}
+                    d={`M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`}
+                    fill="none"
+                    stroke="#4682B4"
+                    strokeWidth={1.5}
+                    strokeDasharray="5 3"
+                    opacity={0.7}
+                    markerEnd="url(#flow-arrow)"
+                  />
+                );
+              });
+            });
+          });
         })}
 
         {/* Center Hub */}

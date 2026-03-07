@@ -208,8 +208,10 @@ export const ADDITIONAL_SERVICES = {
     taskCategories: ['הנחיות מס"ב ממתפעל', 'סוציאליות', 'work_social_benefits'],
     createCategory: 'הנחיות מס"ב ממתפעל',
     steps: [
-      { key: 'receive_instructions', label: 'קבלת הנחיות',  icon: 'inbox' },
-      { key: 'execution',            label: 'ביצוע',         icon: 'check-circle' },
+      { key: 'receive_instructions', label: 'קבלת הנחיות',  icon: 'inbox',         nextStepIds: ['execution', 'notify_client'] },
+      { key: 'execution',            label: 'ביצוע',         icon: 'check-circle',  nextStepIds: ['confirmation'] },
+      { key: 'notify_client',        label: 'עדכון לקוח',    icon: 'phone',         nextStepIds: ['confirmation'] },
+      { key: 'confirmation',         label: 'אישור סיום',    icon: 'check-circle',  nextStepIds: [] },
     ],
   },
 
@@ -681,4 +683,44 @@ export const STATUS_MIGRATION_MAP = {
 export function migrateStatus(status) {
   if (STATUS_CONFIG[status]) return status;
   return STATUS_MIGRATION_MAP[status] || 'not_started';
+}
+
+// ============================================================
+// MULTI-FLOW: nextStepIds support
+// ============================================================
+
+/**
+ * Get the next step IDs for a given step within a service.
+ * If the step has explicit nextStepIds, returns that array.
+ * Otherwise falls back to the implicit next step (index + 1) for linear flows.
+ * Returns empty array if it's the last step.
+ */
+export function getNextStepIds(serviceKey, stepKey) {
+  const service = ALL_SERVICES[serviceKey];
+  if (!service?.steps) return [];
+  const step = service.steps.find(s => s.key === stepKey);
+  if (step?.nextStepIds) return step.nextStepIds;
+  // Fallback: implicit linear ordering
+  const idx = service.steps.findIndex(s => s.key === stepKey);
+  if (idx < 0 || idx >= service.steps.length - 1) return [];
+  return [service.steps[idx + 1].key];
+}
+
+/**
+ * Build a full flow graph (adjacency list) for a service.
+ * Returns { [stepKey]: string[] } — each key maps to its nextStepIds.
+ */
+export function getServiceFlowGraph(serviceKey) {
+  const service = ALL_SERVICES[serviceKey];
+  if (!service?.steps) return {};
+  const graph = {};
+  service.steps.forEach((step, idx) => {
+    if (step.nextStepIds) {
+      graph[step.key] = step.nextStepIds;
+    } else {
+      // Linear fallback
+      graph[step.key] = idx < service.steps.length - 1 ? [service.steps[idx + 1].key] : [];
+    }
+  });
+  return graph;
 }

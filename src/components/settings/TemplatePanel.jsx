@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   X, Plus, Link2, Layers, ChevronRight, Save,
-  CheckCircle, FileText, Trash2, AlertTriangle, Zap,
+  CheckCircle, FileText, Trash2, AlertTriangle, Zap, GitBranch,
 } from 'lucide-react';
 import { getServiceWeight } from '@/config/serviceWeights';
 
@@ -57,6 +57,7 @@ export default function TemplatePanel({ service, onClose }) {
   const [newCategory, setNewCategory] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [expandedStepIdx, setExpandedStepIdx] = useState(null);
 
   if (!service) return null;
 
@@ -102,6 +103,18 @@ export default function TemplatePanel({ service, onClose }) {
     [next[index], next[target]] = [next[target], next[index]];
     setEditSteps(next);
     if (crud) crud.updateService(service.key, { steps: next });
+  };
+
+  const toggleNextStep = (stepIndex, targetKey) => {
+    if (!crud) return;
+    const updated = editSteps.map((s, i) => {
+      if (i !== stepIndex) return s;
+      const current = s.nextStepIds || [];
+      const has = current.includes(targetKey);
+      return { ...s, nextStepIds: has ? current.filter(k => k !== targetKey) : [...current, targetKey] };
+    });
+    setEditSteps(updated);
+    crud.updateService(service.key, { steps: updated });
   };
 
   const addCategory = () => {
@@ -225,32 +238,84 @@ export default function TemplatePanel({ service, onClose }) {
           </div>
 
           <div className="space-y-1.5">
-            {editSteps.map((step, i) => (
-              <div key={`${step.key}-${i}`}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50 group">
-                <div className="w-5 h-5 rounded-full text-[9px] font-bold text-white shrink-0 flex items-center justify-center"
-                  style={{ backgroundColor: pColor }}>{i + 1}</div>
-                <Input
-                  value={step.label}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEditSteps(prev => prev.map((s, idx) =>
-                      idx === i ? { ...s, label: val } : s
-                    ));
-                    markChanged();
-                  }}
-                  className="h-7 text-xs font-medium text-gray-700 flex-1 border-0 bg-transparent focus:bg-white focus:ring-1 px-1"
-                />
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => moveStep(i, -1)} disabled={i === 0}
-                    className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronRight className="w-3 h-3 rotate-90" /></button>
-                  <button onClick={() => moveStep(i, 1)} disabled={i === editSteps.length - 1}
-                    className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronRight className="w-3 h-3 -rotate-90" /></button>
-                  <button onClick={() => removeStep(i)}
-                    className="p-0.5 rounded hover:bg-red-100 text-red-400"><Trash2 className="w-3 h-3" /></button>
+            {editSteps.map((step, i) => {
+              const isExpanded = expandedStepIdx === i;
+              const nextIds = step.nextStepIds || [];
+              const otherSteps = editSteps.filter((_, j) => j !== i);
+              return (
+                <div key={`${step.key}-${i}`} className="space-y-0">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50 group">
+                    <div className="w-5 h-5 rounded-full text-[9px] font-bold text-white shrink-0 flex items-center justify-center"
+                      style={{ backgroundColor: pColor }}>{i + 1}</div>
+                    <Input
+                      value={step.label}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditSteps(prev => prev.map((s, idx) =>
+                          idx === i ? { ...s, label: val } : s
+                        ));
+                        markChanged();
+                      }}
+                      className="h-7 text-xs font-medium text-gray-700 flex-1 border-0 bg-transparent focus:bg-white focus:ring-1 px-1"
+                    />
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => setExpandedStepIdx(isExpanded ? null : i)}
+                        title="שלב הבא (multi-flow)"
+                        className={`p-0.5 rounded ${isExpanded ? 'bg-blue-100 text-blue-600' : 'hover:bg-blue-50 text-gray-400'}`}>
+                        <GitBranch className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => moveStep(i, -1)} disabled={i === 0}
+                        className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronRight className="w-3 h-3 rotate-90" /></button>
+                      <button onClick={() => moveStep(i, 1)} disabled={i === editSteps.length - 1}
+                        className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronRight className="w-3 h-3 -rotate-90" /></button>
+                      <button onClick={() => removeStep(i)}
+                        className="p-0.5 rounded hover:bg-red-100 text-red-400"><Trash2 className="w-3 h-3" /></button>
+                    </div>
+                  </div>
+                  {/* Multi-select next steps picker */}
+                  {isExpanded && (
+                    <div className="mr-7 mt-1 mb-1 px-3 py-2 rounded-lg border border-blue-100 bg-blue-50/30">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <GitBranch className="w-3 h-3 text-blue-500" />
+                        <span className="text-[10px] font-bold text-blue-700">שלבים הבאים</span>
+                        {nextIds.length > 0 && (
+                          <Badge variant="outline" className="text-[8px] h-3 px-1 border-blue-300 text-blue-600">{nextIds.length}</Badge>
+                        )}
+                      </div>
+                      {/* Current selections as pills */}
+                      {nextIds.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-1.5">
+                          {nextIds.map(nid => {
+                            const target = editSteps.find(s => s.key === nid);
+                            return (
+                              <Badge key={nid} className="text-[9px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 gap-1 cursor-default">
+                                {target?.label || nid}
+                                <button onClick={() => toggleNextStep(i, nid)} className="hover:text-red-500">
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {/* Available steps to add */}
+                      <div className="flex flex-wrap gap-1">
+                        {otherSteps.filter(s => !nextIds.includes(s.key)).map(s => (
+                          <button key={s.key}
+                            onClick={() => toggleNextStep(i, s.key)}
+                            className="text-[9px] px-2 py-0.5 rounded-full border border-gray-200 bg-white text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                            + {s.label}
+                          </button>
+                        ))}
+                      </div>
+                      {otherSteps.length === 0 && (
+                        <p className="text-[9px] text-gray-400">אין שלבים נוספים</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="flex items-center gap-1.5 mt-2">
             <Input value={newStepLabel} onChange={(e) => setNewStepLabel(e.target.value)}

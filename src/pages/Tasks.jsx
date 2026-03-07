@@ -28,6 +28,7 @@ import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import ResizableTable from '@/components/ui/ResizableTable';
 import useTaskCascade from '@/hooks/useTaskCascade';
 import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+import QuickStats from '@/components/tasks/QuickStats';
 
 import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/processTemplates';
 
@@ -192,6 +193,8 @@ export default function TasksPage() {
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [listSubTaskParent, setListSubTaskParent] = useState(null);
   const [collapsedParents, setCollapsedParents] = useState({});
+  const [loadError, setLoadError] = useState(null);
+  const [quickStatFilter, setQuickStatFilter] = useState(null);
 
   // ── Cascade Engine Hook — ensures status changes trigger Phase B/C task creation ──
   const { updateTaskWithCascade, updateStepWithCascade } = useTaskCascade(tasks, setTasks, clientsList);
@@ -271,9 +274,14 @@ export default function TasksPage() {
 
   const loadTasks = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       // NO FILTERS — raw data, no getActiveTreeTasks, no date filtering
-      const rawTasks = await Task.list(null, 5000).catch(() => []);
+      const rawTasks = await Task.list(null, 5000).catch((err) => {
+        console.error('Task.list failed, trying emergency fallback:', err);
+        setLoadError('שגיאה בטעינת משימות — מציג נתונים גולמיים');
+        return [];
+      });
       const validTasks = Array.isArray(rawTasks) ? rawTasks : [];
       console.log('DEBUG Tasks: Task.list returned', validTasks.length, 'tasks');
       // Normalize status only — no filtering at all
@@ -286,9 +294,30 @@ export default function TasksPage() {
         }
         return { ...task, status: normalizedStatus };
       });
+      // EMERGENCY FALLBACK: If processed is empty but localStorage has data, recover it
+      if (processed.length === 0) {
+        try {
+          const fallbackRaw = localStorage.getItem('calmplan_tasks_backup');
+          if (fallbackRaw) {
+            const fallbackTasks = JSON.parse(fallbackRaw);
+            if (Array.isArray(fallbackTasks) && fallbackTasks.length > 0) {
+              console.warn('EMERGENCY FALLBACK: Using backup tasks from localStorage');
+              setLoadError('שגיאה בטעינה — מציג גיבוי מקומי');
+              setTasks(fallbackTasks);
+              setIsLoading(false);
+              return;
+            }
+          }
+        } catch (e) { /* fallback failed silently */ }
+      }
+      // Backup successful load for emergency recovery
+      if (processed.length > 0) {
+        try { localStorage.setItem('calmplan_tasks_backup', JSON.stringify(processed)); } catch {}
+      }
       setTasks(processed);
     } catch (error) {
       console.error("Error loading tasks:", error);
+      setLoadError('שגיאה קריטית בטעינת משימות');
       setTasks([]);
     }
     setIsLoading(false);
@@ -574,6 +603,37 @@ export default function TasksPage() {
   return (
     <div className="space-y-4 w-full">
       {ConfirmDialogComponent}
+
+      {/* Emergency error banner */}
+      {loadError && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <span className="text-sm font-medium flex-1">{loadError}</span>
+          <span className="text-xs text-amber-600">{tasks.length} משימות נטענו</span>
+          <Button size="sm" variant="outline" onClick={loadTasks} className="h-7 text-xs gap-1 border-amber-300">
+            <RefreshCw className="w-3 h-3" /> נסה שוב
+          </Button>
+        </div>
+      )}
+
+      {/* QuickStats Banner */}
+      <QuickStats
+        tasks={filteredTasks}
+        isLoading={isLoading}
+        activeFilter={quickStatFilter}
+        onFilterSelect={(key) => {
+          setQuickStatFilter(prev => prev === key ? null : key);
+          // Sync with status filter
+          if (key === 'completed') {
+            setStatusFilter(prev => prev.includes('production_completed') ? [] : ['production_completed']);
+          } else if (key === 'all') {
+            setStatusFilter([]);
+          } else {
+            setQuickStatFilter(prev => prev === key ? null : key);
+          }
+        }}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
