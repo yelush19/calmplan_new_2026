@@ -147,10 +147,10 @@ function ParentBranchDropdown({ service, editDashboard, onBoardChange, pColor })
   }, [allNodes, service?.key, currentParentId, onBoardChange]);
 
   return (
-    <div className="px-4 py-3 border-b">
+    <div className="px-4 py-3 border-b" style={{ border: '3px solid red', borderRadius: '12px', margin: '8px', backgroundColor: '#FFF0F0' }}>
       <div className="flex items-center gap-2 mb-2">
         <GitBranch className="w-3.5 h-3.5" style={{ color: pColor }} />
-        <span className="text-xs font-bold text-gray-700">שיוך לענף אב</span>
+        <span className="text-xs font-bold text-gray-700">שיוך לענף אב (Breadcrumb Parent)</span>
       </div>
 
       {/* Current path breadcrumb display */}
@@ -158,7 +158,7 @@ function ParentBranchDropdown({ service, editDashboard, onBoardChange, pColor })
         style={{ borderColor: pColor + '40', backgroundColor: pColor + '08' }}>
         <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: pColor }} />
         <span className="text-[11px] font-medium text-gray-700 truncate" dir="rtl" title={currentPath}>
-          {currentPath}
+          נוכחי: {currentPath}
         </span>
       </div>
 
@@ -166,8 +166,8 @@ function ParentBranchDropdown({ service, editDashboard, onBoardChange, pColor })
       <select
         value={currentParentId || `__board_${editDashboard}`}
         onChange={handleSelect}
-        className="w-full px-3 py-2 text-xs border rounded-xl focus:ring-2 focus:outline-none bg-white transition-all"
-        style={{ borderColor: pColor + '40', focusRingColor: pColor }}
+        className="w-full px-3 py-2 text-xs border-2 rounded-xl focus:ring-2 focus:outline-none bg-white"
+        style={{ borderColor: 'red' }}
         dir="rtl"
       >
         <option value="" disabled>-- בחר ענף אב --</option>
@@ -183,7 +183,7 @@ function ParentBranchDropdown({ service, editDashboard, onBoardChange, pColor })
         ))}
       </select>
 
-      {/* Visual board indicator (compact) */}
+      {/* Compact board shortcut buttons */}
       <div className="flex gap-1 mt-2">
         {BOARD_OPTIONS.map(board => {
           const isMapped = editDashboard === board.key;
@@ -206,6 +206,11 @@ function ParentBranchDropdown({ service, editDashboard, onBoardChange, pColor })
             </button>
           );
         })}
+      </div>
+
+      {/* Debug: allNodes count */}
+      <div className="text-[8px] text-red-400 mt-1">
+        DEBUG: allNodes={allNodes.length} | parentId={currentParentId || 'none'} | dashboard={editDashboard}
       </div>
     </div>
   );
