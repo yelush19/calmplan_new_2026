@@ -24,7 +24,7 @@ export default function PrintPage() {
   const loadEvents = async () => {
     setIsLoading(true);
     try {
-      const fetchedEvents = await Event.list("-start_date");
+      const fetchedEvents = await Event.list(null, 5000);
       setEvents(fetchedEvents);
     } catch (error) {
       console.error("שגיאה בטעינת אירועים:", error);

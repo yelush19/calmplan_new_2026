@@ -92,7 +92,7 @@ export default function NewEventPage() {
       setDayOffReason("");
 
       try {
-        const schedules = await DaySchedule.list("-created_date", 1);
+        const schedules = await DaySchedule.list(null, 1);
         if (schedules && schedules.length > 0) {
           const latestSchedule = schedules[0];
           const dayOffEvent = latestSchedule.temporary_events?.find(

@@ -26,7 +26,7 @@ export default function CollectionsPage() {
         setIsLoading(true);
         try {
             const [invoiceList, clientList] = await Promise.all([
-                Invoice.list('-created_date', 500).catch(() => []),
+                Invoice.list(null, 500).catch(() => []),
                 Client.list(null, 500).catch(() => []),
             ]);
             setInvoices(invoiceList || []);

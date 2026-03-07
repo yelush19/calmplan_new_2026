@@ -167,7 +167,7 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
 
   const loadNotes = async () => {
     try {
-      const allNotes = await StickyNote.list('created_date', 500);
+      const allNotes = await StickyNote.list(null, 500);
       // Sort: pinned first, then by created_date desc
       const sorted = (allNotes || []).sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;

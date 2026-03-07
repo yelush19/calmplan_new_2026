@@ -71,7 +71,7 @@ export default function AdminTasksDashboardPage() {
     setIsLoading(true);
     try {
       const [tasksData, clientsData] = await Promise.all([
-        Task.list('-due_date', 5000).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
 

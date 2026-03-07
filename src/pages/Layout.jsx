@@ -324,7 +324,7 @@ function LayoutInner({ children }) {
   useEffect(() => {
     const loadEmergency = async () => {
       try {
-        const allTasks = await Task.list("-due_date", 5000).catch(() => []);
+        const allTasks = await Task.list(null, 5000).catch(() => []);
         const tasks = Array.isArray(allTasks) ? allTasks : [];
         const now = new Date();
         const emergency = tasks
@@ -353,7 +353,7 @@ function LayoutInner({ children }) {
   useEffect(() => {
     const loadRecent = async () => {
       try {
-        const clients = await Client.list('-updated_date', 5).catch(() => []);
+        const clients = await Client.list(null, 5).catch(() => []);
         const pinnedIds = new Set(pinnedClients.map(c => c.id));
         const notPinned = (clients || []).filter(c => !pinnedIds.has(c.id)).slice(0, 5 - pinnedClients.length);
         setRecentClients(notPinned);
@@ -379,7 +379,7 @@ function LayoutInner({ children }) {
   useEffect(() => {
     const loadDailyFocus = async () => {
       try {
-        const allTasks = await Task.list("-due_date", 5000).catch(() => []);
+        const allTasks = await Task.list(null, 5000).catch(() => []);
         const tasks = Array.isArray(allTasks) ? allTasks : [];
         const today = new Date().toISOString().split('T')[0];
         const todayTasks = tasks

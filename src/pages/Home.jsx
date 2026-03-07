@@ -207,14 +207,15 @@ export default function HomePage() {
       } catch { setUserName('לנה'); }
 
       const [tasksData, eventsData, clientsData] = await Promise.all([
-        Task.list("-due_date", 5000).catch(() => []),
-        Event.list("-start_date", 500).catch(() => []),
-        Client.list("name", 1000).catch(() => []),
+        Task.list(null, 5000).catch((err) => { console.error('Home Task.list FAILED:', err); return []; }),
+        Event.list(null, 500).catch(() => []),
+        Client.list(null, 1000).catch(() => []),
       ]);
 
       setClients(Array.isArray(clientsData) ? clientsData : []);
 
       const rawTasks = Array.isArray(tasksData) ? tasksData : [];
+      console.log('RAW_DATA_CHECK [Home]:', rawTasks.length, 'tasks from Task.list()');
       const nowMs = Date.now();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -281,6 +282,23 @@ export default function HomePage() {
         eventDate.setHours(0, 0, 0, 0);
         return eventDate.getTime() === today.getTime();
       });
+
+      // ══ DEBUG INJECTION: if nothing arrived, inject test task to prove UI works ══
+      if (allTasks.length === 0) {
+        console.error('HOME BLACKOUT: 0 tasks after all processing. rawTasks had', rawTasks.length);
+        const debugTask = {
+          id: 'DEBUG_HOME_001',
+          title: 'TEST TASK - IF YOU SEE THIS, THE UI WORKS (DB returned 0)',
+          client_name: 'DEBUG',
+          category: 'שכר',
+          status: 'not_started',
+          priority: 'urgent',
+          due_date: new Date().toISOString().split('T')[0],
+          context: 'work',
+        };
+        allTasks.push(debugTask);
+        activeTasks.push(debugTask);
+      }
 
       const workCount = activeTasks.filter(t => getTaskContext(t) === 'work').length;
       const homeCount = activeTasks.filter(t => getTaskContext(t) === 'home').length;

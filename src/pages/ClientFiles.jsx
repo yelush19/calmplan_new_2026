@@ -50,7 +50,7 @@ export default function ClientFiles() {
   const loadAllFiles = async () => {
     setIsSearching(true);
     try {
-      const files = await FileMetadata.list('-created_date', 5000);
+      const files = await FileMetadata.list(null, 5000);
       setAllFiles(files || []);
     } catch (err) {
       console.error('Error loading all files:', err);

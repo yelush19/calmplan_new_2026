@@ -51,11 +51,11 @@ export default function RoadmapPage() {
     const loadRoadmapItems = async () => {
         setIsLoading(true);
         try {
-            const roadmapItems = await RoadmapItem.list('order');
+            const roadmapItems = await RoadmapItem.list(null, 5000);
             // If the list is empty, populate it for the first time
             if (!roadmapItems || roadmapItems.length === 0) {
                  await RoadmapItem.bulkCreate(roadmapTasks);
-                 const newItems = await RoadmapItem.list('order');
+                 const newItems = await RoadmapItem.list(null, 5000);
                  setItems(newItems || []);
             } else {
                 setItems(roadmapItems || []);

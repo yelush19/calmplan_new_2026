@@ -45,8 +45,8 @@ export default function AnalyticsPage() {
     setIsLoading(true);
     try {
       const [tasksData, sessionsData] = await Promise.all([
-        Task.list("-created_date"),
-        TaskSession.list("-start_time")
+        Task.list(null, 5000),
+        TaskSession.list(null, 5000)
       ]);
       setTasks(tasksData || []);
       setSessions(sessionsData || []);

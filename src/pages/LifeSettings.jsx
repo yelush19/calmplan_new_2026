@@ -78,7 +78,7 @@ export default function LifeSettingsPage() {
   const loadSchedule = async () => {
     setIsLoading(true);
     try {
-      const schedules = await DaySchedule.list('-created_date', 1);
+      const schedules = await DaySchedule.list(null, 1);
       if (schedules && schedules.length > 0) {
         const existingSchedule = schedules[0];
         setSchedule({
@@ -101,7 +101,7 @@ export default function LifeSettingsPage() {
         date: format(new Date(), 'yyyy-MM-dd')
       };
       
-      const existingSchedules = await DaySchedule.list('-created_date', 1);
+      const existingSchedules = await DaySchedule.list(null, 1);
       if (existingSchedules && existingSchedules.length > 0) {
         await DaySchedule.update(existingSchedules[0].id, scheduleData);
       } else {

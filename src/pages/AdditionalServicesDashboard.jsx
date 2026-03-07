@@ -113,7 +113,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       const end = endOfMonth(deadlineMonth);
       const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
-        Task.list('-due_date', 5000).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
       // Post-filter: only show tasks belonging to the selected reporting month
