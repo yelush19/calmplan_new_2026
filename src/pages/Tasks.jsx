@@ -272,15 +272,12 @@ export default function TasksPage() {
   const loadTasks = async () => {
     setIsLoading(true);
     try {
-      const rawTasks = await Task.list("-due_date", 5000).catch(() => []);
+      // NO FILTERS — raw data, no getActiveTreeTasks, no date filtering
+      const rawTasks = await Task.list(null, 5000).catch(() => []);
       const validTasks = Array.isArray(rawTasks) ? rawTasks : [];
-      // Unified tree filter: only P1-P4 tasks in active period
-      // Safety: if filter returns empty but raw data exists, use raw data
-      let treeTasks = getActiveTreeTasks(validTasks);
-      if (treeTasks.length === 0 && validTasks.length > 0) {
-        treeTasks = validTasks;
-      }
-      const processed = treeTasks.map(task => {
+      console.log('DEBUG Tasks: Task.list returned', validTasks.length, 'tasks');
+      // Normalize status only — no filtering at all
+      const processed = validTasks.map(task => {
         let normalizedStatus = task.status;
         if (task.status && mondayStatusMapping[task.status]) {
           normalizedStatus = mondayStatusMapping[task.status];
@@ -304,24 +301,11 @@ export default function TasksPage() {
   }, [tasks]);
 
   // Time-based filtering
+  // NO TIME FILTERING — show everything regardless of timeTab
   const timeFilteredTasks = useMemo(() => {
-    return tasks.filter(task => {
-      const dueDate = task.due_date ? parseISO(task.due_date) : null;
-      switch (timeTab) {
-        case 'prev_month':
-          return dueDate && dueDate >= prevMonthStart && dueDate <= prevMonthEnd;
-        case 'curr_month':
-          return dueDate && dueDate >= currMonthStart && dueDate <= currMonthEnd;
-        case 'active':
-          return task.status !== 'production_completed';
-        case 'completed':
-          return task.status === 'production_completed';
-        case 'all':
-        default:
-          return true;
-      }
-    });
-  }, [tasks, timeTab]);
+    console.log('DEBUG Tasks timeFilteredTasks: returning ALL', tasks.length, 'tasks (no time filter)');
+    return tasks;
+  }, [tasks]);
 
   // Search + status + priority + category + context filtering
   const filteredTasks = useMemo(() => {
@@ -584,6 +568,8 @@ export default function TasksPage() {
       </div>
     );
   }
+
+  console.log('DEBUG Tasks: Rendered with', tasks.length, 'tasks, filtered:', filteredTasks.length);
 
   return (
     <div className="space-y-4 w-full">

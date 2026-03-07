@@ -59,9 +59,10 @@ export default function MyFocus() {
         Task.list('-due_date', 5000).catch(() => []),
         Client.list('name', 1000).catch(() => []),
       ]);
+      // NO FILTERS — raw data straight into state
       const raw = Array.isArray(tasksData) ? tasksData : [];
-      const active = getActiveTreeTasks(raw);
-      setTasks(active.length > 0 ? active : raw);
+      console.log('DEBUG MyFocus: Task.list returned', raw.length, 'tasks');
+      setTasks(raw);
       setClients(Array.isArray(clientsData) ? clientsData : []);
     } catch (err) {
       console.error('MyFocus load error:', err);
@@ -73,14 +74,10 @@ export default function MyFocus() {
   const energy = getEnergyProfile();
   const EnergyIcon = energy.icon;
 
-  // Active tasks for focus view: overdue + due today + upcoming this month
+  // NO FILTERS — show all tasks, no date/status/context filtering
   const todayTasks = useMemo(() => {
-    const now = new Date();
-    const monthEnd = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd');
-    return tasks.filter(t =>
-      t.status !== 'production_completed' &&
-      t.due_date && t.due_date <= monthEnd
-    );
+    console.log('DEBUG MyFocus todayTasks: using ALL', tasks.length, 'tasks (no filter)');
+    return tasks;
   }, [tasks]);
 
   // Energy-matched suggestions from DNA
@@ -113,6 +110,8 @@ export default function MyFocus() {
 
   return (
     <div className="h-full flex flex-col gap-3 p-3" dir="rtl">
+      {/* DEBUG: Raw task count */}
+      {console.log('DEBUG MyFocus: Rendered with', tasks.length, 'tasks, todayTasks:', todayTasks.length)}
       {/* ── Header: Energy DNA Bar ── */}
       <div className="flex items-center gap-4 bg-white rounded-xl border px-4 py-2">
         <div className="flex items-center gap-2">

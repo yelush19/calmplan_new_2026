@@ -80,27 +80,15 @@ export default function PayrollDashboardPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Due dates are in the DEADLINE month (month after reporting period)
-      const deadlineMonth = addMonths(selectedMonth, 1);
-      const start = startOfMonth(deadlineMonth);
-      const end = endOfMonth(deadlineMonth);
-      const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
-        Task.filter({
-          due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
-        }).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
-      // Post-filter: only show payroll tasks belonging to the selected reporting month
-      const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
-      const filtered = (tasksData || []).filter(t => {
-        if (!allPayrollCategories.includes(t.category)) return false;
-        const rm = getTaskReportingMonth(t);
-        return rm === selectedMonthStr;
-      });
-      setTasks(filtered);
+      // NO FILTERS — raw data straight into state
+      const raw = Array.isArray(tasksData) ? tasksData : [];
+      console.log('DEBUG PayrollDashboard: Task.list returned', raw.length, 'tasks');
+      setTasks(raw);
       setClients(clientsData || []);
-      syncCompletedTaskSteps(filtered);
     } catch (error) {
       console.error("Error loading payroll tasks:", error);
     }
@@ -154,8 +142,11 @@ export default function PayrollDashboardPage() {
 
   const serviceData = useMemo(() => {
     const result = {};
+    // First: group tasks into their proper service buckets
+    const categorized = new Set();
     Object.values(payrollDashboardServices).forEach(service => {
       const serviceTasks = filteredTasks.filter(t => service.taskCategories.includes(t.category));
+      serviceTasks.forEach(t => categorized.add(t.id));
       if (serviceTasks.length > 0) {
         result[service.key] = {
           service,
@@ -169,6 +160,21 @@ export default function PayrollDashboardPage() {
         };
       }
     });
+    // DEBUG: Show ALL uncategorized tasks in an "other" bucket so nothing is hidden
+    const uncategorized = filteredTasks.filter(t => !categorized.has(t.id));
+    if (uncategorized.length > 0) {
+      result['_all_other'] = {
+        service: { key: '_all_other', label: 'כל השאר (ללא קטגוריה)', steps: [] },
+        clientRows: uncategorized
+          .map(task => ({
+            clientName: task.client_name || 'ללא לקוח',
+            task,
+            client: clientByName[task.client_name] || null,
+          }))
+          .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
+      };
+    }
+    console.log('DEBUG PayrollDashboard serviceData:', Object.keys(result).length, 'services, categorized:', categorized.size, 'uncategorized:', uncategorized.length);
     return result;
   }, [filteredTasks, clientByName]);
 
@@ -330,6 +336,8 @@ export default function PayrollDashboardPage() {
   const handleMonthChange = (dir) => {
     setSelectedMonth(c => dir === 'prev' ? subMonths(c, 1) : addMonths(c, 1));
   };
+
+  console.log('DEBUG PayrollDashboard: Rendered with', tasks.length, 'tasks');
 
   return (
     <div className="p-4 md:p-6 space-y-5 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
