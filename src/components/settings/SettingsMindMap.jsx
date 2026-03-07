@@ -131,6 +131,101 @@ function applyForceRepulsion(nodes, iterations = 15) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// getNodePath — Breadcrumb path builder for precise re-parenting
+// Traverses parent chain: "P1 שכר → שירותים → ייצור"
+// ══════════════════════════════════════════════════════════════════════
+
+function getNodePath(nodeId, allNodes, maxDepth = 10) {
+  const segments = [];
+  let currentId = nodeId;
+  let depth = 0;
+
+  while (currentId && currentId !== 'hub' && depth < maxDepth) {
+    const node = allNodes.find(n => n.id === currentId);
+    if (!node) break;
+    segments.unshift(node.label || node.id);
+    currentId = node.parentId;
+    depth++;
+  }
+
+  return segments.join(' → ');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ParentDropdown — Breadcrumb-path parent selector for re-parenting
+// Shows full hierarchy path to disambiguate duplicate names
+// ══════════════════════════════════════════════════════════════════════
+
+function ParentDropdown({ selectedNodeId, allNodes, moveService, currentParentId, currentDashboard }) {
+  // Build list of valid parent targets (roots + other services, not self, not steps)
+  const parentOptions = useMemo(() => {
+    return allNodes
+      .filter(n => n.type === 'root' || (n.type === 'service' && n.id !== selectedNodeId))
+      .map(n => ({
+        id: n.id,
+        path: getNodePath(n.id, allNodes),
+        color: n.color,
+        dashboard: n.dashboard || DNA[n.id]?.dashboard,
+        type: n.type,
+        branch: n.type === 'root' ? n.id : getDashboardBranch(n.dashboard),
+      }))
+      .sort((a, b) => {
+        // Sort roots first, then by branch, then by path
+        if (a.type !== b.type) return a.type === 'root' ? -1 : 1;
+        if (a.branch !== b.branch) return a.branch.localeCompare(b.branch);
+        return a.path.localeCompare(b.path);
+      });
+  }, [allNodes, selectedNodeId]);
+
+  const handleChange = useCallback((e) => {
+    const targetId = e.target.value;
+    const target = allNodes.find(n => n.id === targetId);
+    if (!target) return;
+
+    // Determine the dashboard from the target
+    const newDashboard = target.type === 'root'
+      ? DNA[target.id]?.dashboard
+      : target.dashboard;
+
+    if (newDashboard && newDashboard !== currentDashboard) {
+      moveService(selectedNodeId, newDashboard);
+      console.log('STATE MUTATED:', {
+        action: 'reparent',
+        key: selectedNodeId,
+        fromParent: currentParentId,
+        toParent: targetId,
+        toPath: getNodePath(targetId, allNodes),
+        newDashboard,
+      });
+    }
+  }, [allNodes, selectedNodeId, currentParentId, currentDashboard, moveService]);
+
+  // Current parent path display
+  const currentPath = getNodePath(currentParentId, allNodes);
+
+  return (
+    <div>
+      <label className="text-[9px] font-bold text-gray-400 block mb-0.5">שיוך להורה (נתיב מלא)</label>
+      <div className="text-[8px] text-gray-300 mb-0.5 truncate" title={currentPath}>
+        נוכחי: {currentPath}
+      </div>
+      <select
+        value={currentParentId || ''}
+        onChange={handleChange}
+        className="w-full px-2 py-1 text-[10px] border rounded-lg focus:ring-1 focus:ring-blue-300 focus:outline-none bg-white"
+        dir="rtl"
+      >
+        {parentOptions.map(opt => (
+          <option key={opt.id} value={opt.id}>
+            {opt.type === 'root' ? `● ${opt.path}` : `  └─ ${opt.path}`}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // SortableStepsManager — Drag-to-reorder, editable, add/delete steps
 // ══════════════════════════════════════════════════════════════════════
 
@@ -1048,20 +1143,14 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                 />
               </div>
 
-              {/* Board assignment */}
-              <div>
-                <label className="text-[9px] font-bold text-gray-400 block mb-0.5">לוח</label>
-                <select
-                  value={selectedNode.dashboard || 'admin'}
-                  onChange={(e) => moveService(selectedNodeId, e.target.value)}
-                  className="w-full px-2 py-1 text-xs border rounded-lg focus:ring-1 focus:ring-blue-300 focus:outline-none bg-white"
-                  dir="rtl"
-                >
-                  {BOARD_OPTIONS.map(b => (
-                    <option key={b.key} value={b.key}>{b.label}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Parent node assignment (breadcrumb path dropdown) */}
+              <ParentDropdown
+                selectedNodeId={selectedNodeId}
+                allNodes={allNodes}
+                moveService={moveService}
+                currentParentId={selectedNode.parentId}
+                currentDashboard={selectedNode.dashboard}
+              />
 
               {/* Cognitive weight */}
               <div>
