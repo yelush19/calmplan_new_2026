@@ -275,7 +275,11 @@ export default function TasksPage() {
       const rawTasks = await Task.list("-due_date", 5000).catch(() => []);
       const validTasks = Array.isArray(rawTasks) ? rawTasks : [];
       // Unified tree filter: only P1-P4 tasks in active period
-      const treeTasks = getActiveTreeTasks(validTasks);
+      // Safety: if filter returns empty but raw data exists, use raw data
+      let treeTasks = getActiveTreeTasks(validTasks);
+      if (treeTasks.length === 0 && validTasks.length > 0) {
+        treeTasks = validTasks;
+      }
       const processed = treeTasks.map(task => {
         let normalizedStatus = task.status;
         if (task.status && mondayStatusMapping[task.status]) {

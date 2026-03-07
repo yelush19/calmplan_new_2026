@@ -82,7 +82,7 @@ export default function AdminTasksDashboardPage() {
         // Admin-category task
         if (t.category && adminCategories.includes(t.category)) return true;
         // Uncategorized work task (no category or not in any other dashboard)
-        if (t.context === 'work' && (!t.category || !otherDashboardCategories.has(t.category))) {
+        if ((t.context === 'work' || !t.context) && (!t.category || !otherDashboardCategories.has(t.category))) {
           // Only show recent (last 60 days) or future tasks
           if (t.due_date) {
             const d = parseISO(t.due_date);
