@@ -277,16 +277,10 @@ export default function TasksPage() {
         return [];
       });
       const validTasks = Array.isArray(rawTasks) ? rawTasks : [];
-      console.log('RAW_DATA_CHECK:', validTasks.length, 'tasks from Task.list()');
+      console.log('RAW_DATA_CHECK [Tasks]:', validTasks.length, 'tasks — NO FILTERING');
 
-      // ══ DATA SURVIVAL: if filter returns empty but raw exists, use raw ══
-      let treeTasks = getActiveTreeTasks(validTasks);
-      if (treeTasks.length === 0 && validTasks.length > 0) {
-        console.warn('DATA SURVIVAL: getActiveTreeTasks returned 0 from', validTasks.length, 'raw tasks. Bypassing filter.');
-        treeTasks = validTasks;
-      }
-
-      const processed = treeTasks.map(task => {
+      // ══ NO FILTERING WALL — show every task from DB ══
+      const processed = validTasks.map(task => {
         let normalizedStatus = task.status;
         if (task.status && mondayStatusMapping[task.status]) {
           normalizedStatus = mondayStatusMapping[task.status];

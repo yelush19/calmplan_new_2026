@@ -89,23 +89,10 @@ export default function PayrollDashboardPage() {
         Task.list(null, 5000).catch((err) => { console.error('PayrollDashboard Task.list FAILED:', err); return []; }),
         Client.list(null, 500).catch(() => []),
       ]);
-      // Post-filter: only show payroll tasks belonging to the selected reporting month
-      const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
+      // ══ NO CATEGORY WALL — show ALL tasks, let UI group them ══
       const allRaw = Array.isArray(tasksData) ? tasksData : [];
-      console.log('RAW_DATA_CHECK [Payroll]:', allRaw.length, 'tasks from Task.list()');
-      const filtered = allRaw.filter(t => {
-        if (!allPayrollCategories.includes(t.category)) return false;
-        const rm = getTaskReportingMonth(t);
-        return rm === selectedMonthStr;
-      });
-      // DATA SURVIVAL: if month filter kills everything, show all payroll tasks
-      if (filtered.length === 0 && allRaw.length > 0) {
-        const allPayroll = allRaw.filter(t => allPayrollCategories.includes(t.category));
-        console.warn('[DATA SURVIVAL] PayrollDashboard: month filter returned 0. Showing all', allPayroll.length, 'payroll tasks.');
-        setTasks(allPayroll.length > 0 ? allPayroll : allRaw);
-      } else {
-        setTasks(filtered);
-      }
+      console.log('RAW_DATA_CHECK [Payroll]:', allRaw.length, 'tasks — showing ALL');
+      setTasks(allRaw);
       setClients(clientsData || []);
       syncCompletedTaskSteps(filtered);
     } catch (error) {
