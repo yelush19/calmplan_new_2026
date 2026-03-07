@@ -8,17 +8,17 @@ import { getServiceWeight } from '@/config/serviceWeights';
  * Shows stacked bars by complexity tier, and clicking a bar filters the task list.
  *
  * Colors (Zero Gray Policy):
- *   - בורדו (#7B1FA2) = מורכב (cognitiveLoad 3)
- *   - טורקיז (#00838F) = בינוני (cognitiveLoad 2)
- *   - תכלת (#0288D1) = פשוט (cognitiveLoad 1)
- *   - ירוק (#2E7D32) = ננו (cognitiveLoad 0)
+ *   - בורדו (#800000) = מורכב (cognitiveLoad 3)
+ *   - כחול פלדה (#4682B4) = בינוני (cognitiveLoad 2)
+ *   - תכלת (#ADD8E6) = פשוט (cognitiveLoad 1)
+ *   - ירוק מרווה (#8FBC8F) = ננו (cognitiveLoad 0)
  */
 
 const TIER_CONFIG = {
-  3: { label: 'מורכב', color: '#7B1FA2', bg: 'bg-purple-100', text: 'text-purple-800', icon: '🧗' },
-  2: { label: 'בינוני', color: '#00838F', bg: 'bg-teal-100', text: 'text-teal-800', icon: '📦' },
-  1: { label: 'פשוט', color: '#0288D1', bg: 'bg-sky-100', text: 'text-sky-800', icon: '🟢' },
-  0: { label: 'ננו', color: '#2E7D32', bg: 'bg-emerald-100', text: 'text-emerald-800', icon: '⚡' },
+  3: { label: 'מורכב', color: '#800000', bg: 'bg-[#800000]/10', text: 'text-[#800000]', icon: '🧗' },
+  2: { label: 'בינוני', color: '#4682B4', bg: 'bg-[#4682B4]/10', text: 'text-[#4682B4]', icon: '📦' },
+  1: { label: 'פשוט', color: '#ADD8E6', bg: 'bg-[#ADD8E6]/10', text: 'text-[#5B99A8]', icon: '🟢' },
+  0: { label: 'ננו', color: '#8FBC8F', bg: 'bg-[#8FBC8F]/10', text: 'text-[#5A8A5A]', icon: '⚡' },
 };
 
 export default function CognitiveCapacityHeader({ tasks = [], onFilterTier }) {
@@ -43,7 +43,7 @@ export default function CognitiveCapacityHeader({ tasks = [], onFilterTier }) {
       count: tierTasks.length,
       totalMinutes: tierTasks.reduce((sum, t) => {
         const w = getServiceWeight(t.category);
-        return sum + (t.estimated_duration || w.duration || 15);
+        return sum + w.duration;
       }, 0),
       pct: Math.round((tierTasks.length / maxCount) * 100),
     })).sort((a, b) => b.tier - a.tier); // מורכב first
@@ -102,13 +102,14 @@ export default function CognitiveCapacityHeader({ tasks = [], onFilterTier }) {
                 {count > 0 ? count : ''}
               </span>
 
-              {/* The bar */}
+              {/* The bar — AYOA-style soft rounded capsule with glow */}
               <div
-                className="w-full rounded-t-md transition-all duration-300"
+                className="w-full rounded-full transition-all duration-300"
                 style={{
                   height: `${barHeight}px`,
                   backgroundColor: count > 0 ? cfg.color : '#E0E0E0',
                   minWidth: '40px',
+                  boxShadow: count > 0 ? `0 2px 12px 0 ${cfg.color}55, 0 0 20px 0 ${cfg.color}30` : 'none',
                 }}
               />
 

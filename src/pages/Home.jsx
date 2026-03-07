@@ -513,7 +513,7 @@ export default function HomePage() {
             <div className="flex flex-col">
               <span className="text-[10px] text-gray-500 font-medium">קיבולת יומית</span>
               <div className="flex items-baseline gap-1">
-                <span className="text-xl font-bold text-[#00838F]">
+                <span className="text-xl font-bold text-[#4682B4]">
                   {(capacityKPIs.totalMinutes / 60).toFixed(1)}
                 </span>
                 <span className="text-xs text-gray-400">/ {(capacityKPIs.dailyCapacityMinutes / 60)}h</span>
@@ -521,8 +521,8 @@ export default function HomePage() {
             </div>
             <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold"
               style={{
-                background: `conic-gradient(#00838F ${capacityKPIs.utilizationPercent * 3.6}deg, #E0E0E0 0deg)`,
-                color: capacityKPIs.utilizationPercent > 100 ? '#800000' : '#00838F',
+                background: `conic-gradient(#4682B4 ${capacityKPIs.utilizationPercent * 3.6}deg, #E0E0E0 0deg)`,
+                color: capacityKPIs.utilizationPercent > 100 ? '#800000' : '#4682B4',
               }}>
               <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[8px]">
                 {capacityKPIs.utilizationPercent}%
@@ -577,7 +577,7 @@ export default function HomePage() {
                 {Object.entries(capacityKPIs.loadByPriority).map(([p, mins]) => (
                   mins > 0 && <div key={p} className="flex items-center gap-0.5">
                     <span className="text-[10px] font-bold text-gray-600">{p}</span>
-                    <span className="text-xs font-semibold text-[#00838F]">{Math.round(mins / 60 * 10) / 10}h</span>
+                    <span className="text-xs font-semibold text-[#4682B4]">{Math.round(mins / 60 * 10) / 10}h</span>
                   </div>
                 ))}
               </div>
@@ -599,7 +599,7 @@ export default function HomePage() {
                 onClick={() => setFocusView(v.key)}
                 className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
                   focusView === v.key
-                    ? 'bg-white shadow text-[#00838F] font-bold'
+                    ? 'bg-white shadow text-[#4682B4] font-bold'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >

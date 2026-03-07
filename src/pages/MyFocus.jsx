@@ -41,6 +41,7 @@ export default function MyFocus() {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState('radial'); // radial | gantt | feed
+  const [focusedNode, setFocusedNode] = useState(null); // Focus Blur: clicked node id
 
   useEffect(() => { loadData(); }, []);
   useRealtimeRefresh(() => { loadData(); }, ['tasks', 'clients']);
@@ -116,7 +117,7 @@ export default function MyFocus() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
-          <Brain className="w-8 h-8 text-[#00838F] animate-pulse" />
+          <Brain className="w-8 h-8 text-[#4682B4] animate-pulse" />
           <span className="text-sm text-gray-500">טוען את המרחב האישי...</span>
         </div>
       </div>
@@ -142,7 +143,7 @@ export default function MyFocus() {
         {/* KPI Summary */}
         <div className="flex items-center gap-3">
           <div className="text-center">
-            <div className="text-lg font-bold text-[#00838F]">{todayTasks.length}</div>
+            <div className="text-lg font-bold text-[#4682B4]">{todayTasks.length}</div>
             <div className="text-[9px] text-gray-400">משימות</div>
           </div>
           <div className="text-center">
@@ -179,7 +180,7 @@ export default function MyFocus() {
               key={v.key}
               onClick={() => setViewMode(v.key)}
               className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
-                viewMode === v.key ? 'bg-white shadow text-[#00838F] font-bold' : 'text-gray-500 hover:text-gray-700'
+                viewMode === v.key ? 'bg-white shadow text-[#4682B4] font-bold' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               {v.icon} {v.label}
@@ -216,10 +217,16 @@ export default function MyFocus() {
               <svg viewBox="0 0 500 500" className="w-full h-full" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                 <defs>
                   {radialNodes.map(node => (
-                    <radialGradient key={`grad-${node.id}`} id={`node-grad-${node.id}`}>
-                      <stop offset="0%" stopColor={node.loadColor.color} stopOpacity="0.15" />
-                      <stop offset="100%" stopColor={node.loadColor.color} stopOpacity="0.05" />
-                    </radialGradient>
+                    <React.Fragment key={`defs-${node.id}`}>
+                      <radialGradient id={`node-grad-${node.id}`}>
+                        <stop offset="0%" stopColor={node.loadColor.color} stopOpacity="0.15" />
+                        <stop offset="100%" stopColor={node.loadColor.color} stopOpacity="0.05" />
+                      </radialGradient>
+                      {/* Soft glow filter per node color */}
+                      <filter id={`glow-${node.id}`} x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={node.loadColor.color} floodOpacity="0.45" />
+                      </filter>
+                    </React.Fragment>
                   ))}
                 </defs>
 
@@ -244,18 +251,18 @@ export default function MyFocus() {
                   ].join(' ');
                   return (
                     <path key={`branch-${node.id}`} d={d}
-                      fill={node.loadColor.color} opacity={0.55}
+                      fill={node.loadColor.color} opacity={0.65}
                       style={{ transition: 'all 0.4s ease' }} />
                   );
                 })}
 
                 {/* Center hub — gradient circle */}
                 <circle cx={250} cy={250} r={48} fill="url(#center-glow)" />
-                <circle cx={250} cy={250} r={45} fill="#1E3A5F" />
+                <circle cx={250} cy={250} r={45} fill="#2C3E50" />
                 <defs>
                   <radialGradient id="center-glow">
-                    <stop offset="0%" stopColor="#1E3A5F" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#1E3A5F" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#2C3E50" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#2C3E50" stopOpacity="0" />
                   </radialGradient>
                 </defs>
                 <text x={250} y={243} textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">היום שלי</text>
@@ -266,20 +273,84 @@ export default function MyFocus() {
                   {energy.label}
                 </text>
 
-                {/* Task nodes — organic bubbles with load-colored borders */}
+                {/* Task nodes — AYOA Shape Gallery with Focus Blur */}
                 {radialNodes.map((node, idx) => {
                   const r = node._load >= 3 ? 36 : node._load >= 2 ? 32 : node._load >= 1 ? 28 : 24;
+                  const isFocused = focusedNode === node.id;
+                  const isBlurred = focusedNode !== null && !isFocused;
+                  const nodeStyle = {
+                    cursor: 'pointer',
+                    transition: 'all 0.4s ease',
+                    transform: isFocused ? `scale(1.15)` : 'scale(1)',
+                    transformOrigin: `${node.x}px ${node.y}px`,
+                    filter: isBlurred ? 'blur(5px)' : 'none',
+                    opacity: isBlurred ? 0.3 : 1,
+                  };
+
+                  // Shape rendering based on cognitive load
+                  const renderShape = () => {
+                    if (node._load >= 3) {
+                      // Cloud shape (irregular rounded blob) for complex tasks
+                      const cx = node.x, cy = node.y;
+                      const cloudPath = `M ${cx - 20} ${cy + 8} ` +
+                        `C ${cx - 32} ${cy + 8} ${cx - 36} ${cy - 4} ${cx - 28} ${cy - 14} ` +
+                        `C ${cx - 28} ${cy - 26} ${cx - 14} ${cy - 32} ${cx - 4} ${cy - 24} ` +
+                        `C ${cx + 2} ${cy - 34} ${cx + 18} ${cy - 32} ${cx + 22} ${cy - 22} ` +
+                        `C ${cx + 34} ${cy - 20} ${cx + 36} ${cy - 4} ${cx + 28} ${cy + 4} ` +
+                        `C ${cx + 32} ${cy + 14} ${cx + 22} ${cy + 20} ${cx + 10} ${cy + 18} ` +
+                        `C ${cx + 4} ${cy + 24} ${cx - 10} ${cy + 22} ${cx - 20} ${cy + 8} Z`;
+                      return (
+                        <>
+                          <path d={cloudPath}
+                            fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2.5}
+                            filter={`url(#glow-${node.id})`} />
+                          <path d={cloudPath}
+                            fill="white" opacity={0.85} transform={`translate(0,0) scale(0.92)`}
+                            style={{ transformOrigin: `${cx}px ${cy}px` }} />
+                        </>
+                      );
+                    } else if (node._load >= 2) {
+                      // Rounded rectangle for medium tasks
+                      return (
+                        <>
+                          <rect x={node.x - r} y={node.y - r * 0.75} width={r * 2} height={r * 1.5}
+                            rx={12} ry={12}
+                            fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2.5}
+                            filter={`url(#glow-${node.id})`} />
+                          <rect x={node.x - r + 1} y={node.y - r * 0.75 + 1} width={r * 2 - 2} height={r * 1.5 - 2}
+                            rx={11} ry={11}
+                            fill="white" opacity={0.85} />
+                        </>
+                      );
+                    } else if (node._load >= 1) {
+                      // Circle for simple tasks (original)
+                      return (
+                        <>
+                          <circle cx={node.x} cy={node.y} r={r}
+                            fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2.5}
+                            filter={`url(#glow-${node.id})`} />
+                          <circle cx={node.x} cy={node.y} r={r - 1}
+                            fill="white" opacity={0.85} />
+                        </>
+                      );
+                    } else {
+                      // Small pill/oval for nano tasks
+                      return (
+                        <>
+                          <ellipse cx={node.x} cy={node.y} rx={r} ry={r * 0.6}
+                            fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2}
+                            filter={`url(#glow-${node.id})`} />
+                          <ellipse cx={node.x} cy={node.y} rx={r - 1} ry={r * 0.6 - 1}
+                            fill="white" opacity={0.85} />
+                        </>
+                      );
+                    }
+                  };
+
                   return (
-                    <g key={node.id} style={{ cursor: 'pointer' }}>
-                      {/* Glow halo for high-load tasks */}
-                      {node._load >= 2 && (
-                        <circle cx={node.x} cy={node.y} r={r + 4}
-                          fill="none" stroke={node.loadColor.color} strokeWidth={1} opacity={0.25} />
-                      )}
-                      <circle cx={node.x} cy={node.y} r={r}
-                        fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2.5} />
-                      <circle cx={node.x} cy={node.y} r={r - 1}
-                        fill="white" opacity={0.85} />
+                    <g key={node.id} style={nodeStyle}
+                      onClick={() => setFocusedNode(prev => prev === node.id ? null : node.id)}>
+                      {renderShape()}
                       <text x={node.x} y={node.y - 5} textAnchor="middle" fontSize="8" fontWeight="600" fill="#263238">
                         {(node.title || '').substring(0, 14)}
                       </text>
@@ -295,6 +366,15 @@ export default function MyFocus() {
                   );
                 })}
               </svg>
+              {/* Focus Blur clear button */}
+              {focusedNode !== null && (
+                <button
+                  onClick={() => setFocusedNode(null)}
+                  className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-white shadow-lg border text-xs font-medium text-[#4682B4] hover:bg-gray-50 transition-all"
+                >
+                  ✕ נקה מיקוד
+                </button>
+              )}
             </CardContent>
           </Card>
         ) : viewMode === 'gantt' ? (

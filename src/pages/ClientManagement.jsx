@@ -105,7 +105,7 @@ export default function ClientManagementPage() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [showMondayImport, setShowMondayImport] = useState(false);
+  // Monday import removed — CalmPlan DNA is source of truth
 
   // Bulk selection state
   const [selectedClientIds, setSelectedClientIds] = useState(new Set());

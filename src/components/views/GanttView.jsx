@@ -12,7 +12,7 @@ import { getServiceWeight } from '@/config/serviceWeights';
 import { LOAD_COLORS } from '@/lib/theme-constants';
 import { ChevronLeft, ChevronRight, CalendarDays, ArrowRight } from 'lucide-react';
 
-// Full Status Colors — DNA functional colors (no gray)
+// Full Status Colors — DNA functional colors (no gray, NO TURQUOISE)
 const STATUS_COLORS = {
   not_started:           { bg: '#1565C0', border: '#0D47A1', text: '#fff' },
   in_progress:           { bg: '#F57C00', border: '#E65100', text: '#fff' },
@@ -21,6 +21,17 @@ const STATUS_COLORS = {
   needs_corrections:     { bg: '#E65100', border: '#BF360C', text: '#fff' },
   production_completed:  { bg: '#2E7D32', border: '#1B5E20', text: '#fff' },
   completed:             { bg: '#1B5E20', border: '#004D40', text: '#fff' },
+};
+
+// Status labels (Hebrew)
+const STATUS_LABELS = {
+  not_started: 'לבצע',
+  in_progress: 'בעבודה',
+  waiting_for_materials: 'ממתין לחומרים',
+  sent_for_review: 'הועבר לעיון',
+  needs_corrections: 'לתיקון',
+  production_completed: 'הושלם',
+  completed: 'הושלם',
 };
 
 // DNA-driven: duration in minutes → calendar days (1 day = 480 min = 8h)
@@ -37,14 +48,20 @@ function getTaskLoadColor(task) {
   return LOAD_COLORS[Math.min(3, Math.max(0, load))] || LOAD_COLORS[0];
 }
 
+// Check if client balance is unhealthy → burgundy glow
+function isClientBalanceUnhealthy(client) {
+  if (!client) return false;
+  return client.balance_status === 'unhealthy' || client.has_overdue_balance === true;
+}
+
 // Estimated work-hours → calendar days mapping (legacy fallback)
 const TIER_DURATION_DAYS = {
   nano: 1, small: 2, mid: 3, enterprise: 5,
   quick_win: 1, standard: 1, climb: 3,
 };
 
-const LANE_HEIGHT = 24; // px per lane
-const LANE_GAP = 2;    // px between lanes
+const LANE_HEIGHT = 40; // px per lane — taller for capsules
+const LANE_GAP = 8;     // px between lanes — more breathing room
 
 /**
  * Allocate vertical lanes for overlapping task bars within a client row.
@@ -79,6 +96,25 @@ function allocateLanes(clientTasks, getTaskPosition) {
   }
 
   return { assignment, laneCount: Math.max(1, lanes.length) };
+}
+
+/**
+ * Generate a soft shadow matching the DNA load color for capsule glow
+ */
+function capsuleShadow(loadColor, isHovered = false) {
+  const base = `0 2px 8px ${loadColor}40, 0 1px 3px rgba(0,0,0,0.08)`;
+  if (isHovered) return `0 6px 20px ${loadColor}50, 0 2px 6px rgba(0,0,0,0.12)`;
+  return base;
+}
+
+/**
+ * Generate cubic bezier SVG path between two points (curved dependency arrow)
+ */
+function curvedPath(x1Pct, y1, x2Pct, y2) {
+  // We use percentage-based coordinates; SVG will interpret them via viewBox
+  // Calculate control points for a smooth S-curve
+  const midXPct = (x1Pct + x2Pct) / 2;
+  return `M ${x1Pct} ${y1} C ${midXPct} ${y1}, ${midXPct} ${y2}, ${x2Pct} ${y2}`;
 }
 
 export default function GanttView({ tasks, clients, currentMonth, onEditTask }) {
@@ -280,44 +316,47 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     return tasks.filter(t => t.due_date && parseISO(t.due_date) >= ns && parseISO(t.due_date) <= ne).length;
   }, [tasks, viewMonth]);
 
+  // Today marker position
+  const todayFraction = isCurrentMonth ? differenceInDays(new Date(), monthStart) / daysInMonth : -1;
+
   return (
-    <div className="bg-white rounded-2xl border overflow-x-auto">
+    <div className="bg-white rounded-2xl overflow-x-auto" style={{ border: '1px solid #E8E8E8' }}>
       {/* ── Month navigation header ── */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-white">
-        <div className="flex items-center gap-2">
-          <button onClick={goToPrevMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-[#E0E0E0] transition-colors text-[#263238] text-xs">
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #F0F0F0', background: '#FAFAFA' }}>
+        <div className="flex items-center gap-3">
+          <button onClick={goToPrevMonth} className="flex items-center gap-0.5 px-2.5 py-1.5 rounded-full hover:bg-white transition-all text-[#555] text-xs" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
             <ChevronRight className="w-4 h-4" />
-            {prevMonthCount > 0 && <span className="text-[#000000]">({prevMonthCount})</span>}
+            {prevMonthCount > 0 && <span className="text-[#333] font-medium">({prevMonthCount})</span>}
           </button>
-          <div className="flex items-center gap-1.5">
-            <CalendarDays className="w-4 h-4 text-blue-500" />
-            <span className="text-sm font-bold text-[#000000]">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4" style={{ color: '#4682B4' }} />
+            <span className="text-sm font-bold text-[#222]">
               {format(monthStart, 'MMMM yyyy', { locale: he })}
             </span>
-            <span className="text-xs text-[#000000]">
+            <span className="text-xs text-[#888] font-medium">
               ({monthTasks.length} משימות)
             </span>
           </div>
-          <button onClick={goToNextMonth} className="flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-[#E0E0E0] transition-colors text-[#263238] text-xs">
+          <button onClick={goToNextMonth} className="flex items-center gap-0.5 px-2.5 py-1.5 rounded-full hover:bg-white transition-all text-[#555] text-xs" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
             <ChevronLeft className="w-4 h-4" />
-            {nextMonthCount > 0 && <span className="text-[#000000]">({nextMonthCount})</span>}
+            {nextMonthCount > 0 && <span className="text-[#333] font-medium">({nextMonthCount})</span>}
           </button>
         </div>
-        <div className="flex items-center gap-3">
-          {/* DNA Load Legend */}
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-4">
+          {/* DNA Load Legend — capsule pills */}
+          <div className="flex items-center gap-2">
             {[3, 2, 1, 0].map(tier => {
               const lc = LOAD_COLORS[tier];
               return (
-                <div key={tier} className="flex items-center gap-0.5">
-                  <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: lc.color }} />
-                  <span className="text-[9px] text-gray-500">{lc.label}</span>
+                <div key={tier} className="flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: `${lc.color}15`, border: `1px solid ${lc.color}30` }}>
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: lc.color, boxShadow: `0 0 4px ${lc.color}60` }} />
+                  <span className="text-[10px] font-medium" style={{ color: lc.color }}>{lc.label}</span>
                 </div>
               );
             })}
           </div>
           {!isCurrentMonth && (
-            <button onClick={goToCurrentMonth} className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium transition-colors">
+            <button onClick={goToCurrentMonth} className="px-3 py-1.5 rounded-full text-xs font-medium transition-all" style={{ background: '#4682B415', color: '#4682B4', border: '1px solid #4682B430' }}>
               חזור להיום
             </button>
           )}
@@ -325,17 +364,17 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       </div>
 
       {monthTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-[#000000] gap-2">
-          <CalendarDays className="w-8 h-8 text-[#546E7A]" />
-          <p className="text-sm">אין משימות בחודש {format(monthStart, 'MMMM', { locale: he })}</p>
+        <div className="flex flex-col items-center justify-center py-16 text-[#888] gap-3">
+          <CalendarDays className="w-10 h-10 text-[#CCC]" />
+          <p className="text-sm font-medium">אין משימות בחודש {format(monthStart, 'MMMM', { locale: he })}</p>
           <div className="flex gap-2 mt-2">
             {prevMonthCount > 0 && (
-              <button onClick={goToPrevMonth} className="px-3 py-1 rounded-lg bg-[#E0E0E0] hover:bg-[#E0E0E0] text-[#263238] text-xs transition-colors">
+              <button onClick={goToPrevMonth} className="px-4 py-1.5 rounded-full text-xs transition-all font-medium" style={{ background: '#F5F5F5', color: '#555', border: '1px solid #E0E0E0' }}>
                 ← {format(subMonths(monthStart, 1), 'MMMM', { locale: he })} ({prevMonthCount})
               </button>
             )}
             {nextMonthCount > 0 && (
-              <button onClick={goToNextMonth} className="px-3 py-1 rounded-lg bg-[#E0E0E0] hover:bg-[#E0E0E0] text-[#263238] text-xs transition-colors">
+              <button onClick={goToNextMonth} className="px-4 py-1.5 rounded-full text-xs transition-all font-medium" style={{ background: '#F5F5F5', color: '#555', border: '1px solid #E0E0E0' }}>
                 {format(addMonths(monthStart, 1), 'MMMM', { locale: he })} ({nextMonthCount}) →
               </button>
             )}
@@ -344,17 +383,23 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       ) : (
       <>
 
-      {/* Header - days of month */}
-      <div className="flex border-b bg-white sticky top-0 z-10">
-        <div className="w-40 shrink-0 p-2 text-sm font-bold text-[#000000] border-l">משימה / לקוח</div>
+      {/* ── Day columns header — minimal grid ── */}
+      <div className="flex sticky top-0 z-10" style={{ borderBottom: '1px solid #F0F0F0', background: '#FAFAFA' }}>
+        <div className="w-44 shrink-0 py-2 px-3 text-xs font-semibold text-[#888]" style={{ borderLeft: '1px solid #F0F0F0' }}>לקוח</div>
         <div className="flex-1 flex">
           {days.map(day => {
             const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+            const isSaturday = day.getDay() === 6;
             return (
               <div key={day.toISOString()}
-                className={`flex-1 text-center text-[10px] p-1 border-l border-[#000000]/20
-                  ${day.getDay() === 6 ? 'bg-violet-50' : ''}
-                  ${isToday ? 'bg-blue-100 font-bold text-blue-700' : ''}`}>
+                className="flex-1 text-center py-2"
+                style={{
+                  fontSize: '10px',
+                  fontWeight: isToday ? 700 : 500,
+                  color: isToday ? '#4682B4' : isSaturday ? '#B0B0B0' : '#999',
+                  borderLeft: '1px solid #F8F8F8',
+                  background: isToday ? '#4682B408' : 'transparent',
+                }}>
                 {format(day, 'd')}
               </div>
             );
@@ -362,17 +407,28 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
         </div>
       </div>
 
-      {/* Rows - clients */}
+      {/* ── Client rows with floating capsules ── */}
       {grouped.map(([clientName, clientTasks]) => {
         const { assignment, laneCount } = laneData[clientName] || { assignment: new Map(), laneCount: 1 };
-        const rowHeight = laneCount * (LANE_HEIGHT + LANE_GAP) + LANE_GAP;
-        // Build dependency map: tasks sorted by due_date form sequential chain
+        const rowHeight = laneCount * (LANE_HEIGHT + LANE_GAP) + LANE_GAP * 2;
+        const client = clientByName[clientName];
+        const balanceUnhealthy = isClientBalanceUnhealthy(client);
+        // Build dependency chain: tasks sorted by due_date
         const sortedTasks = [...clientTasks].filter(t => t.due_date).sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+
         return (
-          <div key={clientName} className="flex border-b hover:bg-white transition-colors">
-            <div className="w-40 shrink-0 p-2 text-sm text-[#000000] border-l flex items-center">
-              <span className="font-medium truncate">{clientName}</span>
+          <div key={clientName} className="flex transition-colors" style={{ borderBottom: '1px solid #F5F5F5' }}>
+            {/* Client name label */}
+            <div className="w-44 shrink-0 py-2 px-3 flex items-center" style={{ borderLeft: '1px solid #F0F0F0' }}>
+              <span className="text-sm font-medium text-[#333] truncate">
+                {clientName}
+              </span>
+              {balanceUnhealthy && (
+                <span className="mr-1.5 w-2 h-2 rounded-full inline-block flex-shrink-0" style={{ background: '#800000', boxShadow: '0 0 6px #80000080' }} title="מאזן לא בריא" />
+              )}
             </div>
+
+            {/* Timeline area */}
             <div
               data-timeline
               className="flex-1 relative"
@@ -380,12 +436,38 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
             >
-              {/* ── Dependency arrows between sequential tasks ── */}
-              <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ zIndex: 5 }}>
+              {/* ── Subtle vertical day guides ── */}
+              {days.map((day, i) => (
+                <div
+                  key={i}
+                  className="absolute top-0 bottom-0"
+                  style={{
+                    left: `${(i / daysInMonth) * 100}%`,
+                    width: '1px',
+                    background: day.getDay() === 6 ? '#F0F0F0' : '#F8F8F8',
+                  }}
+                />
+              ))}
+
+              {/* ── Today line (soft) ── */}
+              {isCurrentMonth && todayFraction >= 0 && todayFraction <= 1 && (
+                <div
+                  className="absolute top-0 bottom-0 z-10 pointer-events-none"
+                  style={{
+                    left: `${todayFraction * 100}%`,
+                    width: '2px',
+                    background: 'linear-gradient(180deg, #4682B4 0%, #4682B440 100%)',
+                    borderRadius: '1px',
+                  }}
+                />
+              )}
+
+              {/* ── Curved dependency arrows (Cubic Bezier) ── */}
+              <svg className="absolute inset-0 pointer-events-none overflow-visible" width="100%" height="100%" preserveAspectRatio="none" style={{ zIndex: 5 }}>
                 <defs>
-                  <marker id="dep-arrow" viewBox="0 0 8 6" refX="7" refY="3"
-                    markerWidth="6" markerHeight="5" orient="auto">
-                    <path d="M 0 0 L 8 3 L 0 6 z" fill="#546E7A" />
+                  <marker id="dep-arrow-capsule" viewBox="0 0 8 6" refX="7" refY="3"
+                    markerWidth="5" markerHeight="4" orient="auto">
+                    <path d="M 0 0 L 8 3 L 0 6 z" fill="#B0B0B0" />
                   </marker>
                 </defs>
                 {sortedTasks.map((task, idx) => {
@@ -401,16 +483,27 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                   if (curStartPct <= prevEndPct) return null; // overlapping, no arrow
                   const prevTopPx = LANE_GAP + prevLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
                   const curTopPx = LANE_GAP + curLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
+
+                  // Curved Bezier path
+                  const midPct = (prevEndPct + curStartPct) / 2;
+                  const pathD = `M ${prevEndPct}% ${prevTopPx} C ${midPct}% ${prevTopPx}, ${midPct}% ${curTopPx}, ${curStartPct}% ${curTopPx}`;
+
                   return (
-                    <line key={`dep-${prevTask.id}-${task.id}`}
-                      x1={`${prevEndPct}%`} y1={prevTopPx}
-                      x2={`${curStartPct}%`} y2={curTopPx}
-                      stroke="#546E7A" strokeWidth="1.5" strokeDasharray="4 2"
-                      markerEnd="url(#dep-arrow)" opacity="0.5" />
+                    <path key={`dep-${prevTask.id}-${task.id}`}
+                      d={pathD}
+                      fill="none"
+                      stroke="#C0C0C0"
+                      strokeWidth="1.5"
+                      strokeDasharray="6 4"
+                      markerEnd="url(#dep-arrow-capsule)"
+                      opacity="0.6"
+                      strokeLinecap="round"
+                    />
                   );
                 })}
               </svg>
 
+              {/* ── Floating capsule bars ── */}
               {sortedTasks.map(task => {
                 const pos = getTaskPosition(task);
                 const lane = assignment.get(task.id) || 0;
@@ -422,54 +515,125 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                   : pos.left;
                 const statusColor = STATUS_COLORS[task.status] || STATUS_COLORS.not_started;
                 const loadColor = pos.loadColor;
+                const sw = getServiceWeight(task.category);
+                const dnaMinutes = (task.estimated_time && task.estimated_time > 0) ? task.estimated_time : sw.duration;
+                const clientObj = clientByName[task.client_name];
+                const showBalanceGlow = isClientBalanceUnhealthy(clientObj);
 
                 return (
                   <Tooltip key={task.id}>
                     <TooltipTrigger asChild>
                       <motion.div
                         onPointerDown={(e) => handlePointerDown(e, task, pos)}
-                        className={`absolute rounded-md touch-none overflow-hidden
+                        className={`absolute touch-none overflow-hidden
                           ${task.status === 'completed' ? 'cursor-pointer' : 'cursor-pointer active:cursor-grabbing'}
-                          ${isOverdue ? 'ring-2 ring-purple-500 animate-pulse' : ''}
-                          ${isDragging ? 'opacity-80 z-20 ring-2 ring-blue-400 shadow-lg' : ''}`}
+                          ${isDragging ? 'z-20' : 'z-10'}`}
                         style={{
-                          left: offsetPct, width: pos.width, top: `${topPx}px`, height: `${LANE_HEIGHT}px`,
-                          backgroundColor: statusColor.bg,
-                          borderLeft: `3px solid ${loadColor.color}`,
-                          borderTop: `1px solid ${statusColor.border}`,
-                          borderBottom: `1px solid ${statusColor.border}`,
-                          borderRight: `1px solid ${statusColor.border}`,
+                          left: offsetPct,
+                          width: pos.width,
+                          top: `${topPx}px`,
+                          height: `${LANE_HEIGHT}px`,
+                          borderRadius: '20px',
+                          background: `linear-gradient(135deg, ${statusColor.bg}E8, ${statusColor.bg})`,
+                          borderLeft: `4px solid ${loadColor.color}`,
+                          boxShadow: showBalanceGlow
+                            ? `0 2px 12px ${loadColor.color}35, 0 0 12px #80000060, 0 1px 3px rgba(0,0,0,0.08)`
+                            : isDragging
+                              ? `0 8px 24px ${loadColor.color}40, 0 2px 8px rgba(0,0,0,0.15)`
+                              : capsuleShadow(loadColor.color),
+                          opacity: isDragging ? 0.9 : 1,
+                          ...(isOverdue ? {
+                            outline: '2px solid #7B1FA2',
+                            outlineOffset: '1px',
+                          } : {}),
                         }}
-                        initial={{ scaleX: 0, originX: 0 }}
-                        animate={{ scaleX: 1 }}
-                        transition={{ duration: 0.3 }}
-                        whileHover={!isDragging ? { y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' } : undefined}
+                        initial={{ scaleX: 0, originX: 0, opacity: 0 }}
+                        animate={{ scaleX: 1, opacity: 1 }}
+                        transition={{ duration: 0.4, ease: 'easeOut' }}
+                        whileHover={!isDragging ? {
+                          y: -3,
+                          boxShadow: showBalanceGlow
+                            ? `0 8px 24px ${loadColor.color}45, 0 0 16px #80000070, 0 2px 8px rgba(0,0,0,0.12)`
+                            : capsuleShadow(loadColor.color, true),
+                          transition: { duration: 0.2 },
+                        } : undefined}
                       >
-                        {/* Task title inside bar (visible on wider bars) */}
-                        {pos.durationDays >= 2 && (
-                          <span className="absolute inset-0 flex items-center px-1.5 text-[9px] font-medium text-white truncate pointer-events-none">
-                            {task.title}
-                          </span>
-                        )}
+                        {/* Capsule inner content */}
+                        <div className="absolute inset-0 flex items-center px-2.5 gap-1.5 pointer-events-none" style={{ minWidth: 0 }}>
+                          {/* DNA load indicator dot */}
+                          <div className="flex-shrink-0 w-2 h-2 rounded-full" style={{
+                            backgroundColor: loadColor.color,
+                            boxShadow: `0 0 4px ${loadColor.color}80`,
+                          }} />
+
+                          {/* Task title */}
+                          {pos.durationDays >= 2 && (
+                            <span className="text-[10px] font-semibold text-white truncate leading-tight" style={{
+                              textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                              letterSpacing: '0.01em',
+                            }}>
+                              {task.title}
+                            </span>
+                          )}
+
+                          {/* Duration badge (DNA minutes) — only on wider capsules */}
+                          {pos.durationDays >= 3 && (
+                            <span className="flex-shrink-0 text-[8px] font-medium rounded-full px-1.5 py-0.5 mr-auto" style={{
+                              background: 'rgba(255,255,255,0.25)',
+                              color: 'rgba(255,255,255,0.95)',
+                              backdropFilter: 'blur(4px)',
+                            }}>
+                              {dnaMinutes}′
+                            </span>
+                          )}
+
+                          {/* Balance unhealthy indicator — burgundy glow dot */}
+                          {showBalanceGlow && (
+                            <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full" style={{
+                              background: '#800000',
+                              boxShadow: '0 0 6px #800000, 0 0 10px #80000080',
+                            }} />
+                          )}
+                        </div>
+
+                        {/* Subtle glass shine overlay */}
+                        <div className="absolute inset-0 pointer-events-none" style={{
+                          borderRadius: '20px',
+                          background: 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%)',
+                        }} />
                       </motion.div>
                     </TooltipTrigger>
-                    <TooltipContent className="!bg-gray-900 !border-gray-700 !text-white">
-                      <p className="font-medium !text-white">{task.title}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: loadColor.color }} />
+                    <TooltipContent
+                      className="!border-0 !text-white"
+                      style={{
+                        background: '#1E1E2E',
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                        padding: '10px 14px',
+                      }}
+                    >
+                      <p className="font-semibold !text-white text-sm">{task.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: loadColor.color, boxShadow: `0 0 4px ${loadColor.color}80` }} />
                         <span className="text-xs !text-[#B0BEC5]">{loadColor.label}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: `${statusColor.bg}30`, color: statusColor.bg }}>
+                          {STATUS_LABELS[task.status] || task.status}
+                        </span>
                       </div>
-                      <p className="text-xs !text-[#B0BEC5]">
+                      <p className="text-xs !text-[#90A4AE] mt-1">
                         {task.category} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}
-                        {` \u2022 ${getServiceWeight(task.category).duration} דק׳ (DNA)`}
+                        {` \u2022 ${dnaMinutes} דק׳ (DNA)`}
                       </p>
                       {pos.durationDays > 1 && (
-                        <p className="text-[10px] !text-[#B0BEC5]">{pos.durationDays} ימי עבודה</p>
+                        <p className="text-[10px] !text-[#78909C]">{pos.durationDays} ימי עבודה</p>
+                      )}
+                      {showBalanceGlow && (
+                        <p className="text-[10px] mt-0.5" style={{ color: '#800000' }}>מאזן לקוח לא בריא</p>
                       )}
                       {(task.reschedule_count || 0) > 0 && (
-                        <p className="text-[10px] text-amber-400">נדחה {task.reschedule_count} פעמים {task.reschedule_count > 3 ? '🐌' : ''}</p>
+                        <p className="text-[10px] text-amber-400">נדחה {task.reschedule_count} פעמים</p>
                       )}
-                      <p className="text-[10px] text-[#B0BEC5] mt-0.5">לחץ לעריכה | גרור לשינוי תאריך</p>
+                      <p className="text-[10px] text-[#607D8B] mt-1 opacity-70">לחץ לעריכה | גרור לשינוי תאריך</p>
                     </TooltipContent>
                   </Tooltip>
                 );
@@ -479,20 +643,13 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
         );
       })}
 
-      {/* Today line */}
-      {isCurrentMonth && (() => {
-        const todayFraction = differenceInDays(new Date(), monthStart) / daysInMonth;
-        return (
-          <div
-            className="absolute top-0 bottom-0 w-1 bg-blue-600 z-10 pointer-events-none"
-            style={{ left: `calc(${todayFraction * 100}% + ${160 * (1 - todayFraction)}px)` }}
-          />
-        );
-      })()}
-
-      {/* Drag preview indicator */}
+      {/* Drag preview indicator — floating capsule style */}
       {draggingTask && dragPreviewDay !== null && dragPreviewDay !== 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white text-xs px-3 py-1.5 rounded-full shadow-lg pointer-events-none">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 text-white text-xs px-4 py-2 pointer-events-none" style={{
+          borderRadius: '20px',
+          background: 'linear-gradient(135deg, #4682B4, #4682B4DD)',
+          boxShadow: '0 4px 16px rgba(70,130,180,0.4)',
+        }}>
           {draggingTask.title}: {dragPreviewDay > 0 ? `+${dragPreviewDay}` : dragPreviewDay} ימים → {format(addDays(parseISO(draggingTask.due_date), dragPreviewDay), 'dd/MM')}
         </div>
       )}

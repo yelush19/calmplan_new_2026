@@ -95,7 +95,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="חפש..."
-                className="w-full h-7 text-xs pr-7 pl-2 border border-[#B0BEC5] rounded-[16px] bg-[#F5F5F5]  focus:outline-none focus:ring-1 focus:ring-[#00acc1] focus:bg-white"
+                className="w-full h-7 text-xs pr-7 pl-2 border border-[#B0BEC5] rounded-[16px] bg-[#F5F5F5]  focus:outline-none focus:ring-1 focus:ring-[#4682B4] focus:bg-white"
               />
             </div>
           </div>
