@@ -23,6 +23,7 @@ import {
 import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
 import { getServiceWeight } from '@/config/serviceWeights';
 import GanttView from '@/components/views/GanttView';
+import DesignCanvas from '@/components/canvas/DesignCanvas';
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import useRealtimeRefresh from '@/hooks/useRealtimeRefresh';
 
@@ -40,7 +41,7 @@ export default function MyFocus() {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('radial'); // radial | gantt | feed
+  const [viewMode, setViewMode] = useState('canvas'); // canvas | radial | gantt | feed
   const [focusedNode, setFocusedNode] = useState(null); // Focus Blur: clicked node id
 
   useEffect(() => { loadData(); }, []);
@@ -172,6 +173,7 @@ export default function MyFocus() {
         {/* View Switcher */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
           {[
+            { key: 'canvas', label: 'קנבס', icon: '🎨' },
             { key: 'radial', label: 'רדיאלי', icon: '🎯' },
             { key: 'feed', label: 'זרימה', icon: '📋' },
             { key: 'gantt', label: 'גאנט', icon: '📊' },
@@ -210,7 +212,13 @@ export default function MyFocus() {
 
       {/* ── Main View ── */}
       <div className="flex-1 min-h-0">
-        {viewMode === 'radial' ? (
+        {viewMode === 'canvas' ? (
+          <Card className="h-full">
+            <CardContent className="h-full p-0">
+              <DesignCanvas tasks={todayTasks} clients={clients} />
+            </CardContent>
+          </Card>
+        ) : viewMode === 'radial' ? (
           <Card className="h-full">
             <CardContent className="h-full p-0 relative">
               {/* Radial Mind Map — AYOA Style with Tapered Bezier Branches */}
