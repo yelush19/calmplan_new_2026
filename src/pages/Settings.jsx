@@ -11,40 +11,44 @@ import {
   Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle,
   Plus, X, Download, Upload, Database, Cloud, AlertTriangle, RefreshCw,
   Settings, Trash2, Server, Pencil, Briefcase, Heart,
-  Monitor, FileText, CalendarClock, BarChart3, Users, Tag
+  Monitor, FileText, CalendarClock, BarChart3, Users, Tag, Network
 } from 'lucide-react';
 import { exportAllData, importAllData } from '@/api/base44Client';
 import { isSupabaseConfigured } from '@/api/supabaseClient';
 import { loadPlatformConfig, savePlatformConfig, DEFAULT_PLATFORMS } from '@/config/platformConfig';
 import ExecutionPeriodSettings from '@/components/settings/ExecutionPeriodSettings';
+import SettingsMindMap from '@/components/settings/SettingsMindMap';
+import TemplatePanel from '@/components/settings/TemplatePanel';
 
 // =====================================================
-// MAIN SETTINGS PAGE - Tabbed UI
+// MAIN SETTINGS PAGE - Tabbed UI + Process Architect
 // =====================================================
 
 const TABS = [
-  { key: 'litay', label: 'LitayHub - עבודה', icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200', activeBg: 'bg-blue-600 text-white' },
+  { key: 'architect', label: 'Process Architect', icon: Network, color: 'text-[#E91E63]', bg: 'bg-gradient-to-r from-[#E91E6310] to-[#FFC10710] border-[#E91E6330]', activeBg: 'bg-gradient-to-r from-[#E91E63] to-[#FFC107] text-white' },
+  { key: 'litay', label: 'LitayHub - עבודה', icon: Briefcase, color: 'text-[#00A3E0]', bg: 'bg-[#00A3E008] border-[#00A3E030]', activeBg: 'bg-[#00A3E0] text-white' },
   { key: 'lena', label: 'LENA - אישי', icon: Heart, color: 'text-pink-600', bg: 'bg-pink-50 border-pink-200', activeBg: 'bg-pink-600 text-white' },
-  { key: 'system', label: 'מערכת', icon: Monitor, color: 'text-gray-600', bg: 'bg-gray-50 border-gray-200', activeBg: 'bg-gray-700 text-white' },
+  { key: 'system', label: 'מערכת', icon: Monitor, color: 'text-[#4682B4]', bg: 'bg-[#4682B408] border-[#4682B430]', activeBg: 'bg-[#4682B4] text-white' },
 ];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('litay');
+  const [activeTab, setActiveTab] = useState('architect');
+  const [selectedService, setSelectedService] = useState(null);
 
   return (
     <div className="space-y-6" dir="rtl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-3 bg-purple-100 rounded-full">
-          <Settings className="w-8 h-8 text-purple-700" />
+        <div className="p-3 rounded-full" style={{ background: 'linear-gradient(135deg, #E91E6320, #FFC10720)' }}>
+          <Network className="w-8 h-8 text-[#E91E63]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">הגדרות ופרמטרים</h1>
-          <p className="text-sm text-gray-500">הגדרות עבודה, אישיות ומערכת - מחולקות לפי פרופיל</p>
+          <p className="text-sm text-gray-500">אדריכל תהליכים • הגדרות עבודה • אישי • מערכת</p>
         </div>
       </div>
 
-      {/* Tab selector */}
+      {/* Tab selector — organic pills */}
       <div className="flex gap-2 flex-wrap">
         {TABS.map(tab => {
           const Icon = tab.icon;
@@ -66,6 +70,14 @@ export default function SettingsPage() {
 
       {/* Tab content */}
       <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+        {activeTab === 'architect' && (
+          <div className="relative">
+            <SettingsMindMap onSelectService={setSelectedService} />
+            {selectedService && (
+              <TemplatePanel service={selectedService} onClose={() => setSelectedService(null)} />
+            )}
+          </div>
+        )}
         {activeTab === 'litay' && <LitaySettings />}
         {activeTab === 'lena' && <LenaSettings />}
         {activeTab === 'system' && <SystemSettings />}
