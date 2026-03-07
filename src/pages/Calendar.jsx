@@ -393,7 +393,7 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
           {/* Day headers */}
           <div className="grid grid-cols-7 border-b border-[#E0E0E0] shrink-0">
             {DAYS_HE.map((d, i) => (
-              <div key={i} className="p-2 text-center text-xs font-semibold text-[#008291] bg-[#F5F5F5]">
+              <div key={i} className="p-2 text-center text-xs font-semibold text-[#4682B4] bg-[#F5F5F5]">
                 {d}
               </div>
             ))}
@@ -479,7 +479,7 @@ function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, ge
           {/* Day headers */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }} className="border-b border-[#E0E0E0] shrink-0">
             {DAYS_HE.map((d, i) => (
-              <div key={i} className="p-2 text-center text-xs font-semibold text-[#008291] bg-[#F5F5F5]">
+              <div key={i} className="p-2 text-center text-xs font-semibold text-[#4682B4] bg-[#F5F5F5]">
                 {d}
               </div>
             ))}
@@ -615,7 +615,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
       {allDayItems.length > 0 && (
         <Card className="shadow-sm bg-white border-[#E0E0E0] rounded-[24px]">
           <CardContent className="p-3">
-            <p className="text-xs font-bold text-[#008291] mb-2">כל היום</p>
+            <p className="text-xs font-bold text-[#4682B4] mb-2">כל היום</p>
             <div className="space-y-1.5">
               {allDayItems.map(item => {
                 const ctx = getItemContext(item);
@@ -651,7 +651,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
                 className="flex border-b border-[#E0E0E0]"
                 style={{ height: HOUR_HEIGHT }}
               >
-                <div className="w-14 shrink-0 text-[10px] font-semibold text-[#008291] text-center pt-1 border-l border-[#E0E0E0]">
+                <div className="w-14 shrink-0 text-[10px] font-semibold text-[#4682B4] text-center pt-1 border-l border-[#E0E0E0]">
                   {String(h).padStart(2, '0')}:00
                 </div>
                 <div className="flex-1 relative">

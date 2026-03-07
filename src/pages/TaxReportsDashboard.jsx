@@ -329,7 +329,7 @@ export default function TaxReportsDashboardPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
+    <div className="space-y-6 p-4 md:p-6 bg-white border border-[#E0E0E0] shadow-sm rounded-2xl">
       {/* Nav */}
       <div className="flex items-center gap-2 flex-wrap">
         <Link to={createPageUrl('ClientsDashboard')}>
@@ -338,7 +338,7 @@ export default function TaxReportsDashboardPage() {
           </Button>
         </Link>
         {clientFilter && (
-          <Badge className="bg-[#008291] text-white text-sm px-3 py-1.5 gap-2">
+          <Badge className="bg-[#4682B4] text-white text-sm px-3 py-1.5 gap-2">
             <Users className="w-3.5 h-3.5" />{clientFilter}
             <button onClick={clearClientFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
           </Badge>
@@ -349,7 +349,7 @@ export default function TaxReportsDashboardPage() {
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#008291] to-[#006d7a] flex items-center justify-center shadow-md">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#1E3A5F] to-[#2C3E50] flex items-center justify-center shadow-md">
             <Calculator className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -373,13 +373,16 @@ export default function TaxReportsDashboardPage() {
             </Button>
           </div>
           <div className="flex items-center gap-0.5 bg-white rounded-lg border border-[#E0E0E0] p-0.5">
-            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="גאנט">
+            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="גאנט"
+              style={viewMode === 'timeline' ? { backgroundColor: '#4682B4', color: '#fff' } : {}}>
               <GanttChart className="w-4 h-4" />
             </Button>
-            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')} title="טבלה">
+            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')} title="טבלה"
+              style={viewMode === 'table' ? { backgroundColor: '#4682B4', color: '#fff' } : {}}>
               <List className="w-4 h-4" />
             </Button>
-            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')} title="קנבן">
+            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')} title="קנבן"
+              style={viewMode === 'kanban' ? { backgroundColor: '#4682B4', color: '#fff' } : {}}>
               <LayoutGrid className="w-4 h-4" />
             </Button>
           </div>
@@ -409,67 +412,70 @@ export default function TaxReportsDashboardPage() {
         </div>
       </div>
 
-      {/* KPI Bar — Professional 4-card strip */}
+      {/* KPI Bar — AYOA organic capsules */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-white border-[#E0E0E0] shadow-sm overflow-hidden">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
-              <Target className="w-5 h-5 text-slate-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-slate-700">{stats.total}</div>
-              <div className="text-[10px] text-slate-400 font-medium">סה"כ דיווחים</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-emerald-200 shadow-sm overflow-hidden">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-emerald-600">{stats.pct}%</div>
-              <div className="text-[10px] text-slate-400 font-medium">{stats.completed}/{stats.total} הושלמו</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-sky-200 shadow-sm overflow-hidden">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-sky-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-sky-700">{stats.stepsPct}%</div>
-              <div className="text-[10px] text-slate-400 font-medium">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-[#E0E0E0] shadow-sm overflow-hidden">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              {[3, 2, 1, 0].map(tier => {
-                const taskCount = filteredTasks.filter(t => {
-                  const w = getServiceWeight(t.category);
-                  return (w.cognitiveLoad ?? 0) === tier;
-                }).length;
-                if (!taskCount) return null;
-                const lc = LOAD_COLORS[tier];
-                return (
-                  <div key={tier} className="flex flex-col items-center">
-                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: lc.color }}>
-                      {taskCount}
-                    </div>
-                    <span className="text-[8px] mt-0.5" style={{ color: lc.color }}>{lc.label}</span>
+        {/* Total Reports */}
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
+          style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', boxShadow: '0 2px 12px rgba(70,130,180,0.08)' }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ boxShadow: '0 0 12px rgba(70,130,180,0.2)', background: 'rgba(70,130,180,0.08)' }}>
+            <Target className="w-5 h-5" style={{ color: '#4682B4' }} />
+          </div>
+          <div>
+            <div className="text-2xl font-black text-slate-700">{stats.total}</div>
+            <div className="text-[10px] text-slate-400 font-medium tracking-wide">סה"כ דיווחים</div>
+          </div>
+        </div>
+        {/* Completion Rate */}
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
+          style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)', boxShadow: '0 2px 12px rgba(46,125,50,0.08)' }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ boxShadow: '0 0 12px rgba(46,125,50,0.2)', background: 'rgba(46,125,50,0.08)' }}>
+            <TrendingUp className="w-5 h-5" style={{ color: '#2E7D32' }} />
+          </div>
+          <div>
+            <div className="text-2xl font-black" style={{ color: '#2E7D32' }}>{stats.pct}%</div>
+            <div className="text-[10px] text-slate-400 font-medium tracking-wide">{stats.completed}/{stats.total} הושלמו</div>
+          </div>
+        </div>
+        {/* Steps Progress */}
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
+          style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)', boxShadow: '0 2px 12px rgba(21,101,192,0.08)' }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ boxShadow: '0 0 12px rgba(21,101,192,0.2)', background: 'rgba(21,101,192,0.08)' }}>
+            <Clock className="w-5 h-5" style={{ color: '#1565C0' }} />
+          </div>
+          <div>
+            <div className="text-2xl font-black" style={{ color: '#1565C0' }}>{stats.stepsPct}%</div>
+            <div className="text-[10px] text-slate-400 font-medium tracking-wide">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
+          </div>
+        </div>
+        {/* Cognitive Load DNA */}
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
+          style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%)', boxShadow: '0 2px 12px rgba(128,0,0,0.06)' }}>
+          <div className="flex items-center gap-1">
+            {[3, 2, 1, 0].map(tier => {
+              const taskCount = filteredTasks.filter(t => {
+                const w = getServiceWeight(t.category);
+                return (w.cognitiveLoad ?? 0) === tier;
+              }).length;
+              if (!taskCount) return null;
+              const lc = LOAD_COLORS[tier];
+              return (
+                <div key={tier} className="flex flex-col items-center">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: lc.color, boxShadow: `0 0 8px ${lc.color}40` }}>
+                    {taskCount}
                   </div>
-                );
-              })}
-            </div>
-            <div>
-              <div className="text-xs font-bold text-slate-600">עומס קוגניטיבי</div>
-              <div className="text-[10px] text-slate-400">DNA Mix</div>
-            </div>
-          </CardContent>
-        </Card>
+                  <span className="text-[8px] mt-0.5" style={{ color: lc.color }}>{lc.label}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-600">עומס קוגניטיבי</div>
+            <div className="text-[10px] text-slate-400">DNA Mix</div>
+          </div>
+        </div>
       </div>
 
       {/* Filing Sprint Banner */}
@@ -565,46 +571,90 @@ export default function TaxReportsDashboardPage() {
         <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
       )}
 
-      {/* P2 Production Flow: Collect → Process → Broadcast */}
-      {!isLoading && filteredTasks.length > 0 && (
-        <Card className="bg-white border-[#E0E0E0] shadow-sm overflow-hidden">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 mb-2">
+      {/* P2 Production Flow: Collect → Process → Review → Broadcast — Organic Pipeline */}
+      {!isLoading && filteredTasks.length > 0 && (() => {
+        const phases = [
+          { key: 'collect', label: 'קליטה', statuses: ['waiting_for_materials'], color: '#FF8F00', icon: '📥' },
+          { key: 'process', label: 'עיבוד', statuses: ['not_started', 'needs_corrections'], color: '#4682B4', icon: '⚙️' },
+          { key: 'review', label: 'עיון', statuses: ['sent_for_review'], color: '#7B1FA2', icon: '👁️' },
+          { key: 'broadcast', label: 'שידור', statuses: ['production_completed'], color: '#2E7D32', icon: '📡' },
+        ];
+        const phaseCounts = phases.map(p => filteredTasks.filter(t => p.statuses.includes(t.status)).length);
+        const maxCount = Math.max(...phaseCounts, 1);
+        return (
+          <div className="rounded-2xl border-0 overflow-hidden px-4 py-4"
+            style={{ background: 'linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Network className="w-4 h-4 text-slate-400" />
               <span className="text-xs font-bold text-slate-600">זרימת ייצור P2</span>
             </div>
-            <div className="flex items-center gap-0">
-              {[
-                { key: 'collect', label: 'קליטה', statuses: ['waiting_for_materials'], color: '#FF8F00', icon: '📥' },
-                { key: 'process', label: 'עיבוד', statuses: ['not_started', 'needs_corrections'], color: '#1565C0', icon: '⚙️' },
-                { key: 'review', label: 'עיון', statuses: ['sent_for_review'], color: '#AB47BC', icon: '👁️' },
-                { key: 'broadcast', label: 'שידור', statuses: ['production_completed'], color: '#2E7D32', icon: '📡' },
-              ].map((phase, idx) => {
-                const count = filteredTasks.filter(t => phase.statuses.includes(t.status)).length;
+            <div className="relative flex items-center">
+              {/* SVG Bezier connectors layer */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }} preserveAspectRatio="none">
+                {[0, 1, 2].map(i => {
+                  const x1 = `${(i * 25) + 20}%`;
+                  const x2 = `${((i + 1) * 25) + 5}%`;
+                  const cp1x = `${(i * 25) + 23}%`;
+                  const cp2x = `${((i + 1) * 25) + 2}%`;
+                  return (
+                    <path key={i}
+                      d={`M ${x1} 50% C ${cp1x} 30%, ${cp2x} 70%, ${x2} 50%`}
+                      fill="none"
+                      stroke={phaseCounts[i] > 0 ? phases[i].color + '40' : '#E0E0E040'}
+                      strokeWidth="2"
+                      strokeDasharray={phaseCounts[i] > 0 ? 'none' : '6 4'}
+                    />
+                  );
+                })}
+              </svg>
+              {/* Phase capsules */}
+              {phases.map((phase, idx) => {
+                const count = phaseCounts[idx];
                 const pct = filteredTasks.length > 0 ? Math.round((count / filteredTasks.length) * 100) : 0;
+                const isActive = count > 0;
                 return (
-                  <React.Fragment key={phase.key}>
-                    {idx > 0 && (
-                      <div className="text-gray-300 text-lg px-1">→</div>
-                    )}
-                    <div className="flex-1 rounded-lg border px-3 py-2 text-center transition-all"
+                  <div key={phase.key} className="flex-1 relative" style={{ zIndex: 1 }}>
+                    <motion.div
+                      className="mx-1 rounded-[20px] px-3 py-3 text-center transition-all relative overflow-hidden"
                       style={{
-                        borderColor: count > 0 ? phase.color + '60' : '#E0E0E0',
-                        backgroundColor: count > 0 ? phase.color + '08' : 'transparent',
-                      }}>
-                      <div className="text-base">{phase.icon}</div>
-                      <div className="text-[10px] font-bold" style={{ color: phase.color }}>{phase.label}</div>
-                      <div className="text-lg font-black" style={{ color: count > 0 ? phase.color : '#B0BEC5' }}>{count}</div>
-                      <div className="w-full h-1 rounded-full bg-gray-100 mt-1">
-                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: phase.color }} />
+                        background: isActive
+                          ? `linear-gradient(135deg, ${phase.color}08 0%, ${phase.color}14 100%)`
+                          : 'rgba(255,255,255,0.6)',
+                        boxShadow: isActive
+                          ? `0 0 20px ${phase.color}18, 0 2px 8px ${phase.color}10`
+                          : '0 1px 4px rgba(0,0,0,0.04)',
+                      }}
+                      animate={isActive ? {
+                        boxShadow: [
+                          `0 0 20px ${phase.color}18, 0 2px 8px ${phase.color}10`,
+                          `0 0 28px ${phase.color}28, 0 2px 12px ${phase.color}18`,
+                          `0 0 20px ${phase.color}18, 0 2px 8px ${phase.color}10`,
+                        ]
+                      } : {}}
+                      transition={isActive ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' } : {}}
+                    >
+                      {/* Progress fill bar at bottom */}
+                      <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-[20px] overflow-hidden bg-gray-100/50">
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: phase.color }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                        />
                       </div>
-                    </div>
-                  </React.Fragment>
+                      <div className="text-base mb-0.5">{phase.icon}</div>
+                      <div className="text-[10px] font-bold tracking-wide" style={{ color: phase.color }}>{phase.label}</div>
+                      <div className="text-xl font-black mt-0.5" style={{ color: isActive ? phase.color : '#B0BEC5' }}>{count}</div>
+                      <div className="text-[9px] mt-0.5" style={{ color: isActive ? phase.color + 'AA' : '#ccc' }}>{pct}%</div>
+                    </motion.div>
+                  </div>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        );
+      })()}
 
       {/* Content */}
       {isLoading ? (

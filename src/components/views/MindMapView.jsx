@@ -85,16 +85,16 @@ function isClientBalanceUnhealthy(client) {
   return client.balance_status === 'unhealthy' || client.has_overdue_balance === true;
 }
 
-// ─── Zero-Panic Palette (Cyan/Teal — NO RED, NO GRAY) ───────────────────
+// ─── Zero-Panic Palette (Warm + Blue — NO TURQUOISE, NO RED, NO GRAY) ───
 const ZERO_PANIC = {
-  orange:  '#00acc1',  // Cyan for focus (Due Today / Critical)
-  purple:  '#008291',  // Teal for importance (Overdue / Late)
+  orange:  '#F57C00',  // Warm orange for focus (Due Today / Critical)
+  purple:  '#7B1FA2',  // Purple for importance (Overdue / Late)
   green:   '#2E7D32',  // Done
-  blue:    '#008291',  // Teal — Active / In Progress
+  blue:    '#1565C0',  // Vivid blue — Active / In Progress
   gray:    '#455A64',  // Zero Gray Policy: dark slate instead of light gray
   amber:   '#FF8F00',  // Waiting / Issue
-  teal:    '#008291',  // Primary teal
-  cyan:    '#00acc1',  // Secondary cyan
+  teal:    '#4682B4',  // Steel blue (replaces turquoise)
+  cyan:    '#ADD8E6',  // Light blue (replaces cyan)
   indigo:  '#3949AB',  // Ready for Reporting
 };
 
@@ -141,7 +141,7 @@ const NODE_COLOR_MAP = {
   emerald: '#2E7D32',
   blue:    '#1565C0',
   amber:   '#FF8F00',
-  teal:    '#00897B',
+  teal:    '#4682B4',
   sky:     '#0288D1',
   slate:   '#455A64',
 };
@@ -157,7 +157,7 @@ const META_FOLDERS = {
     complexitySubFolders: true,
   },
   'P2 הנהלת חשבונות': {
-    icon: '📊', color: '#00838F', label: 'P2 | הנהלת חשבונות',
+    icon: '📊', color: '#4682B4', label: 'P2 | הנהלת חשבונות',
     departments: ['מע"מ', 'מקדמות', 'התאמות'],
     complexitySubFolders: true,
   },
@@ -176,19 +176,19 @@ const META_FOLDERS = {
 // Department folder nodes — only real departments (no ghost SS/Deductions branches)
 const BRANCH_CONFIG = {
   'שכר':              { color: '#0277BD', icon: '👥', label: 'שכר' },
-  'מע"מ':             { color: '#00838F', icon: '📊', label: 'מע"מ' },
-  'מקדמות':           { color: '#00838F', icon: '💰', label: 'מקדמות מס' },
-  'התאמות':           { color: '#00695C', icon: '🔄', label: 'התאמות חשבונות' },
+  'מע"מ':             { color: '#4682B4', icon: '📊', label: 'מע"מ' },
+  'מקדמות':           { color: '#4682B4', icon: '💰', label: 'מקדמות מס' },
+  'התאמות':           { color: '#2E5E4F', icon: '🔄', label: 'התאמות חשבונות' },
   'אדמיניסטרציה':     { color: '#546E7A', icon: '📁', label: 'אדמיניסטרציה' },
   'בית':              { color: '#6D4C41', icon: '🏠', label: 'בית' },
   'אחר/טיוטות':       { color: '#78909C', icon: '📝', label: 'אחר/טיוטות' },
 };
 
 // Diamond Standard: 3 tiers with fixed vivid colors (Zero Gray Policy)
-// ננו = תכלת (Light Cyan), בינוני = טורקיז חי (Teal), גדול = כחול עמוק (Deep Blue)
+// ננו = תכלת (Light Blue), בינוני = כחול פלדה (Steel Blue), גדול = כחול עמוק (Deep Blue)
 const DIAMOND_COLORS = {
-  0: '#00acc1',  // ננו — תכלת
-  1: '#00838F',  // בינוני — טורקיז חי (Teal)
+  0: '#ADD8E6',  // ננו — תכלת (light blue)
+  1: '#4682B4',  // בינוני — כחול פלדה (steel blue)
   2: '#01579B',  // גדול — כחול עמוק
 };
 const COMPLEXITY_SUB_LABELS = {
@@ -200,7 +200,7 @@ const COMPLEXITY_SUB_LABELS = {
 // ── FUNCTION BUCKETS: 3 functional sub-categories under each tier diamond ──
 const FUNCTION_BUCKETS = {
   production: { key: 'production', label: 'ייצור', icon: '⚙️', color: '#1565C0' },
-  reports:    { key: 'reports',    label: 'דיווחים', icon: '📋', color: '#00838F' },
+  reports:    { key: 'reports',    label: 'דיווחים', icon: '📋', color: '#4682B4' },
   services:   { key: 'services',   label: 'שירותים', icon: '🔧', color: '#6D4C41' },
 };
 const FUNCTION_BUCKET_ORDER = ['production', 'reports', 'services'];
@@ -1287,7 +1287,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           key: c.name,
           label: c.displayName || c.name,
           icon: '',
-          color: c.statusColor || '#00838F',
+          color: c.statusColor || '#4682B4',
           tasks: c.tasks,
         }));
       }
@@ -1750,7 +1750,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           <p className="text-sm text-[#37474F] text-center">{fetchError}</p>
           <button
             onClick={() => { setFetchError(null); window.location.reload(); }}
-            className="px-6 py-2.5 rounded-full bg-[#008291] hover:bg-[#006d7a] text-white font-medium text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+            className="px-6 py-2.5 rounded-full bg-[#4682B4] hover:bg-[#3A6D96] text-white font-medium text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
             התחבר מחדש
@@ -1987,7 +1987,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   const ey = client.y - (dy / len) * endPx;
                   // Production flow: color shifts toward green as progress increases
                   const progress = getProductionProgress(client.tasks);
-                  const edgeColor = progress >= 1.0 ? '#2E7D32' : progress > 0.5 ? '#00838F' : branchColor;
+                  const edgeColor = progress >= 1.0 ? '#2E7D32' : progress > 0.5 ? '#4682B4' : branchColor;
                   // Unhealthy balance → burgundy override
                   const finalColor = isClientBalanceUnhealthy(client) ? '#800000' : edgeColor;
                   const dimmedClient = focusClient && focusClient !== client.name;
@@ -2041,7 +2041,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 left: radialLayout.center.x - 45,
                 top: radialLayout.center.y - 45,
                 width: 90, height: 90,
-                borderColor: getBranchColor(radialLayout.targetName) || '#00838F',
+                borderColor: getBranchColor(radialLayout.targetName) || '#4682B4',
                 zIndex: 33,
               }}
               initial={{ scale: 0 }}
@@ -2170,7 +2170,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               {/* Outer border ring */}
               <rect x={-4} y={-4} width={W + 8} height={H + 8}
                 rx={CR + 4} ry={CR + 4}
-                fill="none" stroke={isMetaExpanded ? '#00897B' : '#B0BEC5'} strokeWidth="1.5" />
+                fill="none" stroke={isMetaExpanded ? '#1565C0' : '#B0BEC5'} strokeWidth="1.5" />
               {/* Main body — Branch-colored (hierarchical path color) */}
               <rect x={0} y={0} width={W} height={H}
                 rx={CR} ry={CR}
@@ -2179,7 +2179,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 strokeWidth={isMetaExpanded ? 2.5 : 1.5}
                 style={{ transition: 'fill 0.3s ease' }} />
               {/* +/- Expand indicator */}
-              <circle cx={W - 14} cy={14} r={10} fill={isMetaExpanded ? '#00897B' : '#37474F'} stroke="#FFFFFF" strokeWidth={1.5} />
+              <circle cx={W - 14} cy={14} r={10} fill={isMetaExpanded ? '#1565C0' : '#37474F'} stroke="#FFFFFF" strokeWidth={1.5} />
               <text x={W - 14} y={18} textAnchor="middle" fill="#FFFFFF" fontSize="14" fontWeight="700" style={{ pointerEvents: 'none' }}>
                 {isMetaExpanded ? '−' : '+'}
               </text>
@@ -2189,7 +2189,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 {mf.config?.icon || '📂'} {mf.name}
               </text>
               {/* Stats */}
-              <text x={W / 2 + 4} y={H / 2 + 12} textAnchor="middle" fill="#B2DFDB" fontSize="10" style={{ pointerEvents: 'none' }}>
+              <text x={W / 2 + 4} y={H / 2 + 12} textAnchor="middle" fill="#B3D4FC" fontSize="10" style={{ pointerEvents: 'none' }}>
                 {mf.totalTasks} משימות · {mf.totalClients} לקוחות
               </text>
               {/* P1→P2 Sync indicator: shows on P2 meta-folder */}
@@ -2211,6 +2211,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         {/* ── LAW 3: Level 2 — Glass-Morphism Rectangle Sub-Folders ── */}
         {layout.metaSubFolderPositions?.filter(sf => expandedMetaFolders.has(sf.metaFolderName)).map((sf, si) => {
           const SW = 110, SH = 50, SCR = 16;
+          const isSfDimmed = focusBranch && focusBranch !== sf.metaFolderName;
           return (
           <motion.div
             key={`metasub-${sf.metaFolderName}-${sf.key}`}
@@ -2219,9 +2220,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             style={{
               left: sf.x,
               top: sf.y,
-              filter: 'drop-shadow(0 4px 6px #0000001A)',
+              filter: isSfDimmed ? 'blur(5px) drop-shadow(0 2px 4px #00000010)' : 'drop-shadow(0 4px 6px #0000001A)',
+              opacity: isSfDimmed ? 0.3 : 1,
               transform: 'translate(-50%, -50%)',
               cursor: 'grab',
+              transition: 'filter 0.4s ease, opacity 0.4s ease',
             }}
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -2240,9 +2243,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               <rect x={0} y={0} width={SW} height={SH}
                 rx={SCR} ry={SCR}
                 fill="#FFFFFF"
-                stroke="#00838F"
+                stroke="#4682B4"
                 strokeWidth={1.5} />
-              <text x={SW / 2} y={SH / 2 - 3} textAnchor="middle" fill="#006064" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
+              <text x={SW / 2} y={SH / 2 - 3} textAnchor="middle" fill="#1A3A5C" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>
                 {sf.icon} {sf.key}
               </text>
               <text x={SW / 2} y={SH / 2 + 12} textAnchor="middle" fill="#37474F" fontSize="9" style={{ pointerEvents: 'none' }}>
@@ -2267,13 +2270,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 left: branch.x,
                 top: branch.y,
                 transform: 'translate(-50%, -50%)',
-                opacity: isSpotlit(branch.category) ? 1 : 0.15,
-                filter: isSpotlit(branch.category) ? 'none' : 'blur(1.5px)',
-                transition: 'opacity 0.4s ease-in-out, filter 0.4s ease',
+                opacity: isSpotlit(branch.category) ? 1 : 0.3,
+                filter: isSpotlit(branch.category) ? 'none' : 'blur(5px)',
+                transition: 'filter 0.4s ease, opacity 0.4s ease',
                 cursor: draggingNode.current?.key === `folder-${branch.category}` ? 'grabbing' : 'pointer',
               }}
               initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: isSpotlit(branch.category) ? 1 : 0.15, scale: 1 }}
+              animate={{ opacity: isSpotlit(branch.category) ? 1 : 0.3, scale: 1 }}
               transition={{ delay: i * 0.08, type: 'spring', stiffness: 200 }}
               whileHover={{ scale: 1.06 }}
               onPointerDown={(e) => handleFolderPointerDown(e, `folder-${branch.category}`, branch.x, branch.y)}
@@ -2284,7 +2287,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 <rect x={0} y={0} width={FW} height={FH}
                   rx={FCR} ry={FCR}
                   fill="#FFFFFF"
-                  stroke={isBranchExpanded ? '#00838F' : '#90CAF9'}
+                  stroke={isBranchExpanded ? '#4682B4' : '#90CAF9'}
                   strokeWidth={isBranchExpanded ? 2 : 1.5} />
                 {/* Expand/collapse indicator */}
                 <text x="14" y={FH / 2 + 1} textAnchor="middle" fill="#37474F" fontSize="9" fontWeight="bold" style={{ pointerEvents: 'none' }}>
@@ -2311,16 +2314,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   left: sub.x,
                   top: sub.y,
                   transform: 'translate(-50%, -50%)',
-                  opacity: isSpotlit(branch.category) ? 0.9 : 0.12,
-                  filter: isSpotlit(branch.category) ? 'none' : 'blur(1.5px)',
-                  transition: 'opacity 0.4s ease-in-out, box-shadow 0.3s ease, filter 0.4s ease',
+                  opacity: isSpotlit(branch.category) ? 0.9 : 0.3,
+                  filter: isSpotlit(branch.category) ? 'none' : 'blur(5px)',
+                  transition: 'filter 0.4s ease, opacity 0.4s ease',
                 }}
                 initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: isSpotlit(branch.category) ? 0.9 : 0.12, scale: 1 }}
+                animate={{ opacity: isSpotlit(branch.category) ? 0.9 : 0.3, scale: 1 }}
                 transition={{ delay: i * 0.08 + si * 0.05 + 0.1, type: 'spring', stiffness: 200 }}
                 whileHover={{
                   scale: 1.15,
-                  boxShadow: '0 0 25px #00ACC1CC, 0 0 50px #00ACC166',
+                  boxShadow: '0 0 25px #1565C0CC, 0 0 50px #1565C066',
                   filter: 'brightness(1.2)',
                 }}
                 data-node-draggable
@@ -2362,7 +2365,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 <svg width="64" height="64" viewBox="0 0 64 64" style={{ overflow: 'visible' }}>
                   <polygon
                     points="32,2 62,32 32,62 2,32"
-                    fill={sub.color || '#00acc1'}
+                    fill={sub.color || '#ADD8E6'}
                     stroke="#fff"
                     strokeWidth={2.5}
                   />
@@ -2373,7 +2376,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     {sub.label || sub.key}
                   </text>
                   {/* +/- collapse button */}
-                  <circle cx="54" cy="8" r="8" fill={expandedBranches.has(branch.category) ? '#00897B' : '#37474F'} stroke="#fff" strokeWidth={1.2} />
+                  <circle cx="54" cy="8" r="8" fill={expandedBranches.has(branch.category) ? '#1565C0' : '#37474F'} stroke="#fff" strokeWidth={1.2} />
                   <text x="54" y="12" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="700" style={{ pointerEvents: 'none' }}>
                     {expandedBranches.has(branch.category) ? '−' : '+'}
                   </text>
@@ -2390,11 +2393,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   left: fb.x,
                   top: fb.y,
                   transform: 'translate(-50%, -50%)',
-                  opacity: isSpotlit(branch.category) ? 0.95 : 0.15,
-                  transition: 'opacity 0.4s ease-in-out',
+                  opacity: isSpotlit(branch.category) ? 0.95 : 0.3,
+                  filter: isSpotlit(branch.category) ? 'none' : 'blur(5px)',
+                  transition: 'filter 0.4s ease, opacity 0.4s ease',
                 }}
                 initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: isSpotlit(branch.category) ? 0.95 : 0.15, scale: 1 }}
+                animate={{ opacity: isSpotlit(branch.category) ? 0.95 : 0.3, scale: 1 }}
                 transition={{ delay: i * 0.08 + fi * 0.04 + 0.15, type: 'spring', stiffness: 200 }}
                 whileHover={{ scale: 1.1 }}
                 data-node-draggable
@@ -2438,7 +2442,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <span className="text-[9px] font-medium px-1.5 rounded-full" style={{ backgroundColor: fb.color + '20', color: fb.color }}>{fb.clientCount}</span>
                     {/* +/- collapse indicator */}
                     <span className="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
-                      style={{ backgroundColor: expandedFuncBubbles.has(fb.key) ? '#00897B' : '#37474F', minWidth: 16, minHeight: 16 }}>
+                      style={{ backgroundColor: expandedFuncBubbles.has(fb.key) ? '#1565C0' : '#37474F', minWidth: 16, minHeight: 16 }}>
                       {expandedFuncBubbles.has(fb.key) ? '−' : '+'}
                     </span>
                   </div>
@@ -2482,7 +2486,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
               // ── ZERO GRAY POLICY: Black text, white bg, vivid borders ──
               // Diamond Standard: client border inherits tier diamond color
-              const diamondColor = client._diamondColor || '#00acc1';
+              const diamondColor = client._diamondColor || '#ADD8E6';
               const statusColor = '#000000'; // Zero Gray: always black text
               const statusBg = isAllDone ? '#E8F5E9' : '#FFFFFF'; // White or light green
               const normalShadow = `0 2px 8px ${diamondColor}33`;
@@ -2498,7 +2502,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
               // Diamond Standard: client border = parent tier diamond color
               // Override for special states (focus, frozen, etc.)
-              const borderColor = isFrozen ? '#455A64' : isFocused ? '#06B6D4' : isAllDone ? '#2E7D32' : diamondColor;
+              const borderColor = isFrozen ? '#455A64' : isFocused ? '#1565C0' : isAllDone ? '#2E7D32' : diamondColor;
               const borderStyle = isFrozen ? 'dashed' : 'solid';
               const borderWidth = isFocused ? 3.5 : 2.5;
 
@@ -2525,14 +2529,14 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     // Zero Gray Policy: black text always
                     color: statusColor,
                     boxShadow: isHovered ? hoverGlow : isFocused ? focusGlow : normalShadow,
-                    opacity: isSpotlit(branch.category) ? (isFrozen ? 0.5 : isAllDone ? 0.6 : 1) : 0.15,
-                    filter: !isSpotlit(branch.category) ? 'blur(2px)' : isFrozen ? 'saturate(0.3)' : 'none',
+                    opacity: isSpotlit(branch.category) ? (isFrozen ? 0.5 : isAllDone ? 0.6 : 1) : 0.3,
+                    filter: !isSpotlit(branch.category) ? 'blur(5px)' : isFrozen ? 'saturate(0.3)' : 'none',
                     cursor: isDragging ? 'grabbing' : 'grab',
-                    transition: 'opacity 0.3s ease, box-shadow 0.3s ease, border-color 0.2s ease, filter 0.4s ease',
+                    transition: 'filter 0.4s ease, opacity 0.4s ease, box-shadow 0.3s ease, border-color 0.2s ease',
                   }}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{
-                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.6 : 1) : 0.15,
+                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.6 : 1) : 0.3,
                     scale: 1,
                   }}
                   transition={{
@@ -2666,7 +2670,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     style={{
                       width: 20,
                       height: 20,
-                      backgroundColor: isFocused ? '#06B6D4' : '#FFFFFF',
+                      backgroundColor: isFocused ? '#1565C0' : '#FFFFFF',
                       boxShadow: '0 1px 3px #00000033',
                       border: isFocused ? '1.5px solid #0891B2' : '1.5px solid #B0BEC5',
                     }}
@@ -2901,7 +2905,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               {tooltip.nickname && tooltip.nickname !== tooltip.name && (
                 <span className="text-[10px] text-[#455A64]">({tooltip.name})</span>
               )}
-              <span className="text-[10px] bg-[#E0F2F1] text-[#008291] px-1.5 rounded-full">{tooltip.tierIcon} {tooltip.tierLabel}</span>
+              <span className="text-[10px] bg-[#E3F2FD] text-[#1565C0] px-1.5 rounded-full">{tooltip.tierIcon} {tooltip.tierLabel}</span>
               {tooltip.isFilingReady && (
                 <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded font-semibold">מוכן לדיווח</span>
               )}
@@ -3008,7 +3012,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               return (
                 <React.Fragment key={task.id}>
                   <div
-                    className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-[24px] shadow-sm mb-2 mx-2 border border-[#E0E0E0] hover:shadow-md transition-all cursor-pointer group ${isHighlighted ? 'ring-2 ring-cyan-500 bg-cyan-50' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-[24px] shadow-sm mb-2 mx-2 border border-[#E0E0E0] hover:shadow-md transition-all cursor-pointer group ${isHighlighted ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
                     style={{ paddingRight: `${16 + depth * 20}px` }}
                     onClick={() => {
                       // Modal Law: click opens QuickAdd in edit mode
@@ -3082,12 +3086,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: drawerClient.color }} />
                       <SheetTitle className="text-base">{drawerClient.displayName || drawerClient.name}</SheetTitle>
                       {drawerDepartment && (
-                        <span className="text-[10px] bg-[#E0F2F1] text-[#004D40] px-1.5 rounded-full border border-[#80CBC4]">{drawerDepartment}</span>
+                        <span className="text-[10px] bg-[#E3F2FD] text-[#004D40] px-1.5 rounded-full border border-[#80CBC4]">{drawerDepartment}</span>
                       )}
-                      <span className="text-[10px] bg-[#E0F2F1] text-[#008291] px-1.5 rounded-full">{drawerClient.tierIcon} {drawerClient.tierLabel}</span>
+                      <span className="text-[10px] bg-[#E3F2FD] text-[#1565C0] px-1.5 rounded-full">{drawerClient.tierIcon} {drawerClient.tierLabel}</span>
                       <button
                         onClick={() => toggleClientFocus(drawerClient.name)}
-                        className={`p-1 rounded-full transition-colors ${focusedClients.has(drawerClient.name) ? 'bg-cyan-100 text-cyan-600' : 'bg-[#E0F2F1] text-[#455A64] hover:text-cyan-500'}`}
+                        className={`p-1 rounded-full transition-colors ${focusedClients.has(drawerClient.name) ? 'bg-blue-100 text-blue-600' : 'bg-[#E3F2FD] text-[#455A64] hover:text-blue-500'}`}
                         title={focusedClients.has(drawerClient.name) ? 'הסר מפוקוס' : 'סמן כפוקוס'}
                       >
                         <Star className="w-3.5 h-3.5" style={{ fill: focusedClients.has(drawerClient.name) ? 'currentColor' : 'none' }} />
@@ -3128,7 +3132,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   ) : zoneGroups ? (
                     zoneGroups.map(group => (
                       <div key={group.zone}>
-                        <div className="px-4 py-1.5 text-[10px] font-bold text-[#008291] bg-[#E0F2F1] sticky top-0 border-b border-[#B0BEC5]">
+                        <div className="px-4 py-1.5 text-[10px] font-bold text-[#1565C0] bg-[#E3F2FD] sticky top-0 border-b border-[#B0BEC5]">
                           📍 {group.zone}
                         </div>
                         {group.tasks.map(task => renderTask(task, 0))}
@@ -3143,7 +3147,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     <div className="border-t mt-2">
                       <button
                         onClick={() => setShowDrawerCompleted(!showDrawerCompleted)}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-[#37474F] hover:bg-[#E0F2F1] transition-colors rounded-[32px] mx-2"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-[#37474F] hover:bg-[#E3F2FD] transition-colors rounded-[32px] mx-2"
                       >
                         <ChevronDown className={`w-3 h-3 transition-transform ${showDrawerCompleted ? '' : 'rotate-[-90deg]'}`} />
                         <CheckCircle className="w-3 h-3 text-green-500" />

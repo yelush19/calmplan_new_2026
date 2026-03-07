@@ -290,7 +290,7 @@ export default function AdminTasksDashboardPage() {
           </Button>
         </Link>
         {clientFilter && (
-          <Badge className="bg-[#008291] text-white text-sm px-3 py-1.5 gap-2">
+          <Badge className="bg-[#1E3A5F] text-white text-sm px-3 py-1.5 gap-2">
             <Users className="w-3.5 h-3.5" />{clientFilter}
             <button onClick={clearClientFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
           </Badge>

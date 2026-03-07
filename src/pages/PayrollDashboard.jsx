@@ -336,7 +336,7 @@ export default function PayrollDashboardPage() {
           </Button>
         </Link>
         {clientFilter && (
-          <Badge className="bg-[#008291] text-white text-sm px-3 py-1.5 gap-2">
+          <Badge className="bg-[#1E3A5F] text-white text-sm px-3 py-1.5 gap-2">
             <Users className="w-3.5 h-3.5" />{clientFilter}
             <button onClick={clearClientFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
           </Badge>
@@ -346,7 +346,7 @@ export default function PayrollDashboardPage() {
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#008291] to-[#006d7a] flex items-center justify-center shadow-md">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#1E3A5F] to-[#2C3E50] flex items-center justify-center shadow-md">
             <Briefcase className="w-6 h-6 text-white" />
           </div>
           <div>

@@ -3,12 +3,12 @@
 
 export const CATEGORY_GRADIENTS = {
   payroll: { from: '#a855f7', to: '#ec4899', label: 'שכר' },
-  vat_tax: { from: '#06b6d4', to: '#1e3a8a', label: 'מע"מ ומס' },
+  vat_tax: { from: '#4682B4', to: '#1e3a8a', label: 'מע"מ ומס' },
   annual_reports: { from: '#10b981', to: '#059669', label: 'מאזנים' },
-  balance_sheets: { from: '#14b8a6', to: '#0d9488', label: 'דוחות כספיים' },
+  balance_sheets: { from: '#6D8B74', to: '#4A6741', label: 'דוחות כספיים' },
   reconciliation: { from: '#f97316', to: '#f59e0b', label: 'התאמות' },
   bookkeeping: { from: '#8b5cf6', to: '#6366f1', label: 'הנה"ח' },
-  additional_services: { from: '#3b82f6', to: '#0ea5e9', label: 'שירותים נוספים' },
+  additional_services: { from: '#4682B4', to: '#3B5998', label: 'שירותים נוספים' },
   consulting: { from: '#64748b', to: '#475569', label: 'ייעוץ' },
 };
 
@@ -107,7 +107,7 @@ export const LOAD_COLORS = {
 export const PRODUCTION_FLOW_COLORS = {
   waiting_for_materials: { color: '#FF8F00', progress: 0,    label: 'ממתין לחומרים' },
   not_started:           { color: '#1565C0', progress: 0.1,  label: 'לבצע' },
-  in_production:         { color: '#00838F', progress: 0.5,  label: 'בייצור' },
+  in_production:         { color: '#4682B4', progress: 0.5,  label: 'בייצור' },
   sent_for_review:       { color: '#AB47BC', progress: 0.75, label: 'הועבר לעיון' },
   needs_corrections:     { color: '#F97316', progress: 0.6,  label: 'לבצע תיקונים' },
   production_completed:  { color: '#2E7D32', progress: 1.0,  label: 'הושלם ייצור' },
@@ -116,7 +116,7 @@ export const PRODUCTION_FLOW_COLORS = {
 // ─── P-Branch Path Colors (hierarchical — from root to leaves) ──────
 export const BRANCH_PATH_COLORS = {
   'P1 חשבות שכר':      { color: '#0277BD', light: '#B3E5FC', label: 'P1' },
-  'P2 הנהלת חשבונות':   { color: '#00838F', light: '#B2DFDB', label: 'P2' },
+  'P2 הנהלת חשבונות':   { color: '#4682B4', light: '#B2C8DF', label: 'P2' },
   'P3 ניהול משרד':      { color: '#546E7A', light: '#CFD8DC', label: 'P3' },
   'P4 בית':             { color: '#6D4C41', light: '#D7CCC8', label: 'P4' },
 };

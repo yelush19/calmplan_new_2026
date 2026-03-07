@@ -67,8 +67,8 @@ const SCOPE_CONFIG = {
   p2: {
     title: 'P2 | שירותים נוספים',
     subtitle: 'מס"ב ספקים, דיווח מתפעל/טמל, ייעוץ, הנהלת חשבונות',
-    gradientFrom: 'from-[#00838F]',
-    gradientTo: 'to-[#006064]',
+    gradientFrom: 'from-[#1E3A5F]',
+    gradientTo: 'to-[#2C3E50]',
     backHref: 'ClientsDashboard',
     backLabel: 'חזור להנה"ח',
     emptyTitle: 'אין שירותי הנה"ח נוספים לחודש הנבחר',
@@ -324,7 +324,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           </Button>
         </Link>
         {clientFilter && (
-          <Badge className="bg-[#008291] text-white text-sm px-3 py-1.5 gap-2">
+          <Badge className="bg-[#1E3A5F] text-white text-sm px-3 py-1.5 gap-2">
             <Users className="w-3.5 h-3.5" />{clientFilter}
             <button onClick={clearClientFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
           </Badge>

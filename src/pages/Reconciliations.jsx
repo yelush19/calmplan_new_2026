@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 const statusConfig = {
   not_started:            { label: 'לא התחיל',       pill: 'bg-white text-slate-700 border border-[#E0E0E0] ', icon: Clock },
   waiting_for_materials:  { label: 'ממתין לחומרים',   pill: 'bg-amber-100 text-amber-800 border border-amber-200',            icon: AlertCircle },
-  in_progress:            { label: 'בתהליך',          pill: 'bg-[#00acc1] text-[#00acc1] border border-[#00acc1]',         icon: Clock },
+  in_progress:            { label: 'בתהליך',          pill: 'bg-[#4682B4]/10 text-[#4682B4] border border-[#4682B4]',         icon: Clock },
   completed:              { label: 'הושלם',           pill: 'bg-teal-100 text-teal-800 border border-teal-200',               icon: CheckCircle },
   issues:                 { label: 'בעיות',           pill: 'bg-rose-100 text-rose-800 border border-rose-200',               icon: AlertCircle },
 };
@@ -97,7 +97,7 @@ function SortableHeader({ label, sortKey, currentSort, onSort }) {
   return (
     <th
       className="p-3 font-bold text-white cursor-pointer select-none hover:brightness-110 transition-all"
-      style={{ backgroundColor: '#008291' }}
+      style={{ backgroundColor: '#4682B4' }}
       onClick={() => onSort(sortKey)}
     >
       <div className="flex items-center justify-center gap-1.5">
@@ -124,7 +124,7 @@ function ClientDrawer({ client, tasks, open, onClose }) {
       <SheetContent side="right" className="w-[400px] bg-white border-l border-[#E0E0E0] rounded-l-[32px]">
         <SheetHeader className="text-right">
           <SheetTitle className="text-lg flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#008291]" />
+            <div className="w-3 h-3 rounded-full bg-[#4682B4]" />
             {client.nickname || client.name}
           </SheetTitle>
           <SheetDescription className="text-right text-sm text-slate-500">
@@ -214,7 +214,7 @@ function BulkActionDialog({ open, onClose, selectedCount, onApply }) {
           <Button variant="ghost" onClick={onClose} className="rounded-[12px]">ביטול</Button>
           <Button
             onClick={handleApply}
-            className="bg-[#008291] hover:bg-[#006d7a] text-white rounded-[12px]"
+            className="bg-[#4682B4] hover:bg-[#2C3E50] text-white rounded-[12px]"
             disabled={!bulkDate && !bulkStatus}
           >
             עדכן {selectedCount} חשבונות
@@ -331,7 +331,7 @@ function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSa
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} className="rounded-[12px]">ביטול</Button>
-          <Button onClick={handleSubmit} className="bg-[#008291] hover:bg-[#006d7a] text-white rounded-[12px]">שמור</Button>
+          <Button onClick={handleSubmit} className="bg-[#4682B4] hover:bg-[#2C3E50] text-white rounded-[12px]">שמור</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -362,23 +362,23 @@ function ClientGroupHeader({
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onSelectClient(clientName)}
-            className="border-[#008291]/50"
+            className="border-[#4682B4]/50"
           />
         </div>
         <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className="w-4 h-4 text-[#008291]" />
+          <ChevronDown className="w-4 h-4 text-[#4682B4]" />
         </motion.div>
         <button
-          className="font-bold text-slate-800 text-sm hover:text-[#008291] transition-colors text-right"
+          className="font-bold text-slate-800 text-sm hover:text-[#4682B4] transition-colors text-right"
           onClick={(e) => { e.stopPropagation(); onOpenDrawer(client); }}
         >
           {clientName}
         </button>
         <div className="flex items-center gap-2">
-          <Badge className="text-[10px] rounded-full bg-[#008291]/10 text-[#008291] border border-[#008291]/20 px-2">
+          <Badge className="text-[10px] rounded-full bg-[#4682B4]/10 text-[#4682B4] border border-[#4682B4]/20 px-2">
             {totalAccounts} חשבונות
           </Badge>
           {laggingCount > 0 && (
@@ -662,7 +662,7 @@ export default function ReconciliationsPage() {
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-full" style={{ backgroundColor: '#E0F7FA' }}>
-            <BookCheck className="w-8 h-8 text-[#008291]" />
+            <BookCheck className="w-8 h-8 text-[#4682B4]" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-slate-800">התאמות חשבונות</h1>
@@ -672,7 +672,7 @@ export default function ReconciliationsPage() {
         <div className="flex items-center gap-2">
           {selectedAccounts.size > 0 && (
             <Button
-              className="bg-[#00acc1] hover:bg-[#0097a7] text-white rounded-[16px] gap-1.5"
+              className="bg-[#4682B4] hover:bg-[#3A6F9A] text-white rounded-[16px] gap-1.5"
               onClick={() => setShowBulkDialog(true)}
             >
               <RefreshCw className="w-4 h-4" />
@@ -680,7 +680,7 @@ export default function ReconciliationsPage() {
             </Button>
           )}
           <Button
-            className="bg-[#008291] hover:bg-[#006d7a] text-white rounded-[16px]"
+            className="bg-[#4682B4] hover:bg-[#2C3E50] text-white rounded-[16px]"
             onClick={() => { setEditingRec(null); setShowEditDialog(true); }}
           >
             <Plus className="w-4 h-4 ml-2" />
@@ -692,19 +692,19 @@ export default function ReconciliationsPage() {
       {/* ── Summary Cards — glass style ─────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="p-4 rounded-[20px]  bg-white border border-[#E0E0E0] shadow-sm">
-          <div className="text-2xl font-bold text-[#008291]">{totalClients}</div>
+          <div className="text-2xl font-bold text-[#4682B4]">{totalClients}</div>
           <div className="text-xs text-slate-500">לקוחות פעילים</div>
         </div>
         <div className="p-4 rounded-[20px]  bg-white border border-[#E0E0E0] shadow-sm">
-          <div className="text-2xl font-bold text-[#008291]">{rows.length}</div>
+          <div className="text-2xl font-bold text-[#4682B4]">{rows.length}</div>
           <div className="text-xs text-slate-500">חשבונות פעילים</div>
         </div>
         <div className={`p-4 rounded-[20px]  border shadow-sm ${overdueCount > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-[#E0E0E0]'}`}>
-          <div className={`text-2xl font-bold ${overdueCount > 0 ? 'text-amber-600' : 'text-[#008291]'}`}>{overdueCount}</div>
+          <div className={`text-2xl font-bold ${overdueCount > 0 ? 'text-amber-600' : 'text-[#4682B4]'}`}>{overdueCount}</div>
           <div className="text-xs text-slate-500">בפיגור</div>
         </div>
         <div className="p-4 rounded-[20px]  bg-white border border-[#E0E0E0] shadow-sm">
-          <div className="text-2xl font-bold text-[#00acc1]">{pendingCount}</div>
+          <div className="text-2xl font-bold text-[#6B8EB5]">{pendingCount}</div>
           <div className="text-xs text-slate-500">פתוחות</div>
         </div>
         <div className="p-4 rounded-[20px]  bg-white border border-[#E0E0E0] shadow-sm">
@@ -726,7 +726,7 @@ export default function ReconciliationsPage() {
         <div className="flex flex-col md:flex-row items-center gap-4">
           {/* Lag Filter */}
           <div className="flex items-center gap-2 flex-wrap">
-            <Filter className="w-4 h-4 text-[#008291]" />
+            <Filter className="w-4 h-4 text-[#4682B4]" />
             <span className="text-xs font-medium text-slate-600 ml-1">סינון פיגור:</span>
             {LAG_FILTER_OPTIONS.map(opt => (
               <button
@@ -734,7 +734,7 @@ export default function ReconciliationsPage() {
                 onClick={() => { setLagFilter(opt.key); setCustomLagDays(''); }}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   lagFilter === opt.key
-                    ? 'bg-[#008291] text-white shadow-md'
+                    ? 'bg-[#4682B4] text-white shadow-md'
                     : 'bg-white text-slate-600 border border-[#E0E0E0] hover:bg-white'
                 }`}
               >
@@ -746,7 +746,7 @@ export default function ReconciliationsPage() {
                 onClick={() => setLagFilter('custom')}
                 className={`px-3 py-1.5 rounded-r-full text-xs font-medium transition-all ${
                   lagFilter === 'custom'
-                    ? 'bg-[#008291] text-white shadow-md'
+                    ? 'bg-[#4682B4] text-white shadow-md'
                     : 'bg-white text-slate-600 border border-[#E0E0E0] hover:bg-white'
                 }`}
               >
@@ -784,7 +784,7 @@ export default function ReconciliationsPage() {
           <Checkbox
             checked={selectedAccounts.size === rows.length && rows.length > 0}
             onCheckedChange={toggleSelectAll}
-            className="border-[#008291]/50"
+            className="border-[#4682B4]/50"
           />
           <span className="text-xs text-slate-500">
             {selectedAccounts.size > 0
@@ -795,14 +795,14 @@ export default function ReconciliationsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={expandAll}
-            className="text-xs text-[#008291] hover:underline"
+            className="text-xs text-[#4682B4] hover:underline"
           >
             פרוס הכל
           </button>
           <span className="text-slate-300">|</span>
           <button
             onClick={collapseAll}
-            className="text-xs text-[#008291] hover:underline"
+            className="text-xs text-[#4682B4] hover:underline"
           >
             כווץ הכל
           </button>
@@ -812,7 +812,7 @@ export default function ReconciliationsPage() {
       {/* ── Client-Grouped Accordion Table ───────────────────── */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <Loader className="w-8 h-8 animate-spin text-[#008291]" />
+          <Loader className="w-8 h-8 animate-spin text-[#4682B4]" />
           <span className="mr-3 text-slate-500">טוען נתונים...</span>
         </div>
       ) : clientGroups.length === 0 ? (
@@ -857,7 +857,7 @@ export default function ReconciliationsPage() {
                         <table className="w-full text-sm border-collapse">
                           <thead>
                             <tr>
-                              <th className="p-2 w-10" style={{ backgroundColor: '#008291' }}></th>
+                              <th className="p-2 w-10" style={{ backgroundColor: '#4682B4' }}></th>
                               <SortableHeader label="חשבון" sortKey="accountName" currentSort={sort} onSort={handleSort} />
                               <SortableHeader label="סוג" sortKey="accountType" currentSort={sort} onSort={handleSort} />
                               <SortableHeader label="תדירות" sortKey="frequency" currentSort={sort} onSort={handleSort} />
@@ -865,7 +865,7 @@ export default function ReconciliationsPage() {
                               <SortableHeader label="התאמה הבאה" sortKey="nextDate" currentSort={sort} onSort={handleSort} />
                               <SortableHeader label="פיגור (ימים)" sortKey="daysOverdue" currentSort={sort} onSort={handleSort} />
                               <SortableHeader label="סטטוס" sortKey="latestStatus" currentSort={sort} onSort={handleSort} />
-                              <th className="p-3 font-bold text-white text-center" style={{ backgroundColor: '#008291' }}>פעולה</th>
+                              <th className="p-3 font-bold text-white text-center" style={{ backgroundColor: '#4682B4' }}>פעולה</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -883,7 +883,7 @@ export default function ReconciliationsPage() {
                                   transition={{ delay: idx * 0.03 }}
                                   className={`border-b border-[#E0E0E0] transition-colors ${
                                     isChecked
-                                      ? 'bg-[#008291]/5'
+                                      ? 'bg-[#4682B4]/5'
                                       : row.daysOverdue > 30
                                         ? 'bg-rose-50 hover:bg-rose-50'
                                         : row.daysOverdue > 0
@@ -896,14 +896,14 @@ export default function ReconciliationsPage() {
                                     <Checkbox
                                       checked={isChecked}
                                       onCheckedChange={() => toggleAccountSelection(row.id)}
-                                      className="border-[#008291]/50"
+                                      className="border-[#4682B4]/50"
                                     />
                                   </td>
                                   {/* Account Name + Lag Heatmap Dot */}
                                   <td className="p-3">
                                     <div className="flex items-center gap-2">
                                       <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${severity.dot} ${severity.glow}`} />
-                                      <AccIcon className="w-4 h-4 text-[#008291]" />
+                                      <AccIcon className="w-4 h-4 text-[#4682B4]" />
                                       <span className="text-slate-700">{row.accountName}</span>
                                     </div>
                                   </td>
@@ -980,7 +980,7 @@ export default function ReconciliationsPage() {
                                     <div className="flex items-center justify-center gap-1.5">
                                       <Button
                                         size="sm"
-                                        className="text-[10px] gap-1 rounded-full  bg-white hover:bg-[#008291] text-[#008291] hover:text-white border border-[#008291]/30 hover:border-transparent shadow-sm hover:shadow-lg transition-all"
+                                        className="text-[10px] gap-1 rounded-full  bg-white hover:bg-[#4682B4] text-[#4682B4] hover:text-white border border-[#4682B4]/30 hover:border-transparent shadow-sm hover:shadow-lg transition-all"
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           try {

@@ -243,13 +243,13 @@ button:focus-visible {
     border-color: #000000;
   }
 
-  /* Cyan glow — thin teal border only */
+  /* DNA glow — steel blue border only */
   .calm-glow {
-    border: 2px solid #00ACC1;
+    border: 2px solid #4682B4;
     box-shadow: none;
   }
   .calm-glow-active {
-    border: 2px solid #008291;
+    border: 2px solid #1E3A5F;
     box-shadow: none;
   }
 

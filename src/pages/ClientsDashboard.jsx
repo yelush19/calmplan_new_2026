@@ -29,8 +29,8 @@ const COLUMN_GROUPS = [
   {
     key: 'taxes',
     label: 'מיסים',
-    bgColor: 'bg-[#008291]/5',
-    headerBg: 'bg-[#008291]',
+    bgColor: 'bg-[#4682B4]/5',
+    headerBg: 'bg-[#4682B4]',
     headerText: 'text-white',
     drillDownPage: 'TaxReportsDashboard',
     icon: Calculator,
@@ -945,7 +945,7 @@ export default function ClientsDashboardPage() {
         <Link to={createPageUrl('ClientManagement')}>
           <Card className="border-[#E0E0E0] hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#008291] shadow-sm">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#4682B4] shadow-sm">
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
