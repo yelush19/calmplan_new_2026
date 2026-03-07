@@ -31,7 +31,10 @@ export default function DashboardsPage() {
         const [rawTasks, events] = await Promise.all([Task.list(), Event.list()]);
 
         // Unified filter: only P1-P4 tree tasks in active period
-        const tasks = getActiveTreeTasks(rawTasks);
+        const rawArr = Array.isArray(rawTasks) ? rawTasks : [];
+        const treeTasks = getActiveTreeTasks(rawArr);
+        // DATA SURVIVAL: never show empty dashboard if raw has data
+        const tasks = treeTasks.length > 0 ? treeTasks : rawArr;
 
         // Task Status
         const taskStatus = tasks.reduce((acc, task) => {

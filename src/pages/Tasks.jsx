@@ -274,12 +274,15 @@ export default function TasksPage() {
     try {
       const rawTasks = await Task.list("-due_date", 5000).catch(() => []);
       const validTasks = Array.isArray(rawTasks) ? rawTasks : [];
+
       // Unified tree filter: only P1-P4 tasks in active period
-      // Safety: if filter returns empty but raw data exists, use raw data
+      // ══ DATA SURVIVAL: if filter returns empty but raw exists, use raw ══
       let treeTasks = getActiveTreeTasks(validTasks);
       if (treeTasks.length === 0 && validTasks.length > 0) {
+        console.warn('DATA SURVIVAL: getActiveTreeTasks returned 0 from', validTasks.length, 'raw tasks. Bypassing filter.');
         treeTasks = validTasks;
       }
+
       const processed = treeTasks.map(task => {
         let normalizedStatus = task.status;
         if (task.status && mondayStatusMapping[task.status]) {

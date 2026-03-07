@@ -224,7 +224,14 @@ export default function HomePage() {
       in3Days.setDate(in3Days.getDate() + 3);
 
       // Unified tree filter: only P1-P4 tasks in active period
-      const allTasks = getActiveTreeTasks(rawTasks).filter(task => {
+      const treeTasks = getActiveTreeTasks(rawTasks);
+      // ══ DATA SURVIVAL BYPASS ══
+      // Never show empty dashboard when database has tasks.
+      const safeBase = treeTasks.length > 0 ? treeTasks : rawTasks;
+      if (treeTasks.length === 0 && rawTasks.length > 0) {
+        console.warn('DATA SURVIVAL [Home]: getActiveTreeTasks returned 0 from', rawTasks.length, 'raw tasks. Bypassing filter.');
+      }
+      const allTasks = safeBase.filter(task => {
         // Additional recency filter for completed tasks (show max 7 days)
         const taskDate = task.due_date || task.created_date;
         if (!taskDate) return true;

@@ -185,9 +185,7 @@ export default function ClientsDashboardPage() {
 
       const [clientsData, tasksData] = await Promise.all([
         Client.list(null, 500).catch(() => []),
-        Task.filter({
-          due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
-        }).catch(() => []),
+        Task.list('-due_date', 5000).catch(() => []),
       ]);
 
       setClients(
@@ -196,11 +194,13 @@ export default function ClientsDashboardPage() {
           .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
       );
       // Post-filter: only show tasks belonging to the selected reporting month
+      const allRaw = Array.isArray(tasksData) ? tasksData : [];
       const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
-      const filteredTasks = (tasksData || []).filter(t => {
+      const filteredTasks = allRaw.filter(t => {
         return getTaskReportingMonth(t) === selectedMonthStr;
       });
-      setTasks(filteredTasks);
+      // DATA SURVIVAL: if month filter kills everything, show all tasks
+      setTasks(filteredTasks.length > 0 ? filteredTasks : allRaw);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }
@@ -426,14 +426,13 @@ export default function ClientsDashboardPage() {
       // Refresh tasks without full reload
       const reportStart = startOfMonth(selectedMonth);
       const deadlineMonthEnd = endOfMonth(addMonths(selectedMonth, 1));
-      const tasksData = await Task.filter({
-        due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(deadlineMonthEnd, 'yyyy-MM-dd') },
-      }).catch(() => []);
+      const tasksData = await Task.list('-due_date', 5000).catch(() => []);
+      const allRaw = Array.isArray(tasksData) ? tasksData : [];
       const refreshMonthStr = format(selectedMonth, 'yyyy-MM');
-      const refreshFiltered = (tasksData || []).filter(t => {
+      const refreshFiltered = allRaw.filter(t => {
         return getTaskReportingMonth(t) === refreshMonthStr;
       });
-      setTasks(refreshFiltered);
+      setTasks(refreshFiltered.length > 0 ? refreshFiltered : allRaw);
     } catch (error) {
       console.error('Error updating task:', error);
     }

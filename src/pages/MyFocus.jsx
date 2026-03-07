@@ -60,8 +60,9 @@ export default function MyFocus() {
         Client.list('name', 1000).catch(() => []),
       ]);
       const raw = Array.isArray(tasksData) ? tasksData : [];
-      const active = getActiveTreeTasks(raw);
-      setTasks(active.length > 0 ? active : raw);
+      const treeTasks = getActiveTreeTasks(raw);
+      // DATA SURVIVAL: never show empty if raw has data
+      setTasks(treeTasks.length > 0 ? treeTasks : raw);
       setClients(Array.isArray(clientsData) ? clientsData : []);
     } catch (err) {
       console.error('MyFocus load error:', err);
