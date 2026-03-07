@@ -386,6 +386,20 @@ export default function HomePage() {
     } catch { /* ignore */ }
   }, []);
 
+  // ── KPI CAPACITY METRICS (from DNA) ──
+  // Must be above early return to respect Rules of Hooks
+  const capacityKPIs = useMemo(() => {
+    if (!data) return { efficiencyScore: 0, cognitiveLoadMix: {}, totalMinutes: 0, totalTasks: 0 };
+    const activeTasks = data.activeTasks || [];
+    return calculateCapacity(activeTasks);
+  }, [data]);
+
+  const taskFeed = useMemo(() => {
+    if (!data) return [];
+    const activeTasks = data.activeTasks || [];
+    return getTaskFeed(activeTasks.filter(t => t.status !== 'production_completed'));
+  }, [data]);
+
   if (isLoading || !data) {
     return (
       <div className="space-y-6 p-6">
@@ -483,17 +497,6 @@ export default function HomePage() {
   // Progress calculation for floating panel
   const todayTotal = data.today.length + (data.overdue?.length || 0);
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
-
-  // ── KPI CAPACITY METRICS (from DNA) ──
-  const capacityKPIs = useMemo(() => {
-    const activeTasks = data.activeTasks || allFocusTasks || [];
-    return calculateCapacity(activeTasks);
-  }, [data.activeTasks, allFocusTasks]);
-
-  const taskFeed = useMemo(() => {
-    const activeTasks = data.activeTasks || allFocusTasks || [];
-    return getTaskFeed(activeTasks.filter(t => t.status !== 'production_completed'));
-  }, [data.activeTasks, allFocusTasks]);
 
   return (
     <motion.div
