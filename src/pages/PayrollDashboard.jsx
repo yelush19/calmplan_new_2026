@@ -38,10 +38,7 @@ import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import { useAyoaView } from '@/contexts/AyoaViewContext';
-import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
-import AyoaRadialView from '@/components/canvas/AyoaRadialView';
-import AyoaMapView from '@/components/canvas/AyoaMapView';
-import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import GanttView from '@/components/views/GanttView';
 
 const payrollDashboardServices = {
@@ -376,20 +373,6 @@ export default function PayrollDashboardPage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
-          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-[#E0E0E0] p-0.5">
-            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')}>
-              <List className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')}>
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="תצוגת פרויקט">
-              <GanttChart className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'ayoa' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2 text-xs" onClick={() => setViewMode('ayoa')} title="תצוגת Ayoa">
-              Ayoa
-            </Button>
-          </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
             משימה מהירה
@@ -452,29 +435,9 @@ export default function PayrollDashboardPage() {
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
-      ) : sortedServiceKeys.length > 0 ? (
-        viewMode === 'ayoa' ? (
-          <div className="h-full">
-            <div className="flex items-center gap-2 mb-2">
-              <AyoaViewToggle value={ayoaView} onChange={setAyoaView} />
-            </div>
-            <div className="flex-1 min-h-[400px]">
-              {ayoaView === 'radial' ? (
-                <AyoaRadialView tasks={filteredTasks} centerLabel="שכר" centerSub="P1" />
-              ) : ayoaView === 'map' ? (
-                <AyoaMapView tasks={filteredTasks} centerLabel="שכר" centerSub="P1" />
-              ) : ayoaView === 'gantt' ? (
-                <GanttView tasks={filteredTasks} clients={clients} />
-              ) : (
-                <AyoaFeedView tasks={filteredTasks} onEditTask={(t) => setEditingTask(t)} />
-              )}
-            </div>
-          </div>
-        ) : viewMode === 'kanban' ? (
-          <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
-        ) : viewMode === 'timeline' ? (
-          <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
-        ) : (
+      ) : (
+        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} centerLabel="שכר" centerSub="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
+        {sortedServiceKeys.length > 0 ? (
           <div className="space-y-4">
             {sortedServiceKeys.map(serviceKey => {
               const { service, clientRows } = serviceData[serviceKey];
@@ -511,13 +474,14 @@ export default function PayrollDashboardPage() {
               );
             })}
           </div>
-        )
-      ) : (
-        <Card className="p-12 text-center border-[#E0E0E0]">
-          <Briefcase className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-xl font-semibold text-slate-600 mb-2">לא נמצאו תהליכי שכר לחודש הנבחר</h3>
-          <p className="text-slate-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
-        </Card>
+        ) : (
+          <Card className="p-12 text-center border-[#E0E0E0]">
+            <Briefcase className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <h3 className="text-xl font-semibold text-slate-600 mb-2">לא נמצאו תהליכי שכר לחודש הנבחר</h3>
+            <p className="text-slate-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
+          </Card>
+        )}
+        </UnifiedAyoaLayout>
       )}
 
       <QuickAddTaskDialog

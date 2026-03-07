@@ -60,6 +60,11 @@ export default function UnifiedAyoaLayout({
   // null means "show original content" (children). Only non-null triggers AYOA views.
   const activeAyoaView = localView; // radial | map | gantt | feed | null
 
+  // Debug: verify data is arriving
+  if (process.env.NODE_ENV === 'development' && tasks.length > 0) {
+    console.log(`[UnifiedAyoaLayout] "${centerLabel}" received ${tasks.length} tasks, view: ${activeAyoaView || 'original (children)'}`);
+  }
+
   const handleViewChange = useCallback((view) => {
     setLocalView(view);
   }, []);

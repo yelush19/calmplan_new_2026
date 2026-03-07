@@ -33,12 +33,7 @@ import {
 } from '@/config/processTemplates';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
-import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
-import { useAyoaView } from '@/contexts/AyoaViewContext';
-import AyoaRadialView from '@/components/canvas/AyoaRadialView';
-import AyoaMapView from '@/components/canvas/AyoaMapView';
-import AyoaFeedView from '@/components/canvas/AyoaFeedView';
-import GanttView from '@/components/views/GanttView';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 // Admin dashboard services (dashboard: 'admin')
 const adminDashboardServices = Object.fromEntries(
@@ -316,17 +311,6 @@ export default function AdminTasksDashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-[#E0E0E0] p-0.5">
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('list')}>
-              <List className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')}>
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'ayoa' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2 text-xs" onClick={() => setViewMode('ayoa')}>
-              Ayoa
-            </Button>
-          </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
             משימה מהירה
@@ -384,27 +368,9 @@ export default function AdminTasksDashboardPage() {
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
-      ) : Object.keys(serviceData).length > 0 ? (
-        viewMode === 'kanban' ? (
-          <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} />
-        ) : viewMode === 'ayoa' ? (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <AyoaViewToggle value={ayoaView} onChange={setAyoaView} />
-            </div>
-            <div className="min-h-[400px]">
-              {ayoaView === 'radial' ? (
-                <AyoaRadialView tasks={filteredTasks} centerLabel="ניהול" centerSub="P3" />
-              ) : ayoaView === 'map' ? (
-                <AyoaMapView tasks={filteredTasks} centerLabel="ניהול" centerSub="P3" />
-              ) : ayoaView === 'gantt' ? (
-                <GanttView tasks={filteredTasks} clients={clients} />
-              ) : (
-                <AyoaFeedView tasks={filteredTasks} onEditTask={(t) => setEditingTask(t)} />
-              )}
-            </div>
-          </div>
-        ) : (
+      ) : (
+        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} centerLabel="ניהול" centerSub="P3" accentColor="#E91E63" onEditTask={setEditingTask}>
+        {Object.keys(serviceData).length > 0 ? (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
               const isCollapsed = collapsedServices.has(serviceKey);
@@ -439,13 +405,14 @@ export default function AdminTasksDashboardPage() {
               );
             })}
           </div>
-        )
-      ) : (
-        <Card className="p-12 text-center border-[#E0E0E0]">
-          <ClipboardList className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-xl font-semibold text-slate-600 mb-2">אין משימות אדמיניסטרטיביות</h3>
-          <p className="text-slate-500">הוסף משימות כלליות כמו שיווק, מעקב לקוחות, פגישות ועוד</p>
-        </Card>
+        ) : (
+          <Card className="p-12 text-center border-[#E0E0E0]">
+            <ClipboardList className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <h3 className="text-xl font-semibold text-slate-600 mb-2">אין משימות אדמיניסטרטיביות</h3>
+            <p className="text-slate-500">הוסף משימות כלליות כמו שיווק, מעקב לקוחות, פגישות ועוד</p>
+          </Card>
+        )}
+        </UnifiedAyoaLayout>
       )}
 
       <QuickAddTaskDialog

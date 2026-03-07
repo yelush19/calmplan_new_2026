@@ -33,7 +33,7 @@ export default function AyoaViewToggle({ value, onChange, className = '', accent
           <button
             key={key}
             onClick={() => onChange(key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               isActive ? 'shadow-sm font-bold' : 'hover:bg-white/60'
             }`}
             style={isActive ? {
@@ -41,7 +41,7 @@ export default function AyoaViewToggle({ value, onChange, className = '', accent
               color: accent,
               boxShadow: `0 2px 8px ${accent}20, 0 1px 3px rgba(0,0,0,0.06)`,
             } : {
-              color: '#9E9E9E',
+              color: '#475569',
             }}
           >
             <Icon className="w-3.5 h-3.5" />

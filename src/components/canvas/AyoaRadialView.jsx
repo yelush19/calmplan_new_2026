@@ -330,17 +330,17 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         {/* ── Center hub (Ayoa-style warm gradient) ── */}
         <circle cx={CX} cy={CY} r={RINGS.center + 3} fill="none" stroke="#FFC10730" strokeWidth={2} />
         <circle cx={CX} cy={CY} r={RINGS.center} fill="url(#center-grad-radial)" filter="url(#radial-glow)" />
-        <text x={CX} y={CY - 10} textAnchor="middle" fill="white" fontSize="17" fontWeight="bold">
+        <text x={CX} y={CY - 10} textAnchor="middle" fill="white" fontSize="18" fontWeight="800">
           {centerLabel}
         </text>
-        <text x={CX} y={CY + 8} textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="12">
+        <text x={CX} y={CY + 10} textAnchor="middle" fill="white" fontSize="13" fontWeight="600">
           {centerSub || `${tasks.length} משימות`}
         </text>
 
         {/* ── Ring labels (hierarchy names) ── */}
-        <text x={CX + RINGS.ring1 + 8} y={CY - 6} fontSize="8" fill="#9E9E9E" fontWeight="500">דיווחין</text>
-        <text x={CX + RINGS.ring2 + 8} y={CY - 6} fontSize="8" fill="#BDBDBD" fontWeight="500">שירותים</text>
-        <text x={CX + RINGS.ring3 + 8} y={CY - 6} fontSize="7" fill="#E0E0E0" fontWeight="500">ייצור</text>
+        <text x={CX + RINGS.ring1 + 8} y={CY - 6} fontSize="9" fill="#64748B" fontWeight="600">דיווחין</text>
+        <text x={CX + RINGS.ring2 + 8} y={CY - 6} fontSize="9" fill="#64748B" fontWeight="600">שירותים</text>
+        <text x={CX + RINGS.ring3 + 8} y={CY - 6} fontSize="8" fill="#94A3B8" fontWeight="600">ייצור</text>
 
         {/* ── Category nodes (Ring 1) ── */}
         {nodes.filter(n => n.type === 'category').map(node => {
@@ -370,11 +370,11 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
               {renderShape('bubble', node.x, node.y, node.r + 2, 'none', node.color + '20')}
               {renderShape('bubble', node.x, node.y, node.r, node.bg, node.color, 2)}
               {renderShape('bubble', node.x, node.y, node.r - 2, 'white', 'none', 0)}
-              <text x={node.x} y={node.y - 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#263238"
+              <text x={node.x} y={node.y - 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#0F172A"
                 style={{ pointerEvents: 'none' }}>
                 {node.label}
               </text>
-              <text x={node.x} y={node.y + 10} textAnchor="middle" fontSize="9" fill={node.color}
+              <text x={node.x} y={node.y + 10} textAnchor="middle" fontSize="10" fontWeight="600" fill={node.color}
                 style={{ pointerEvents: 'none' }}>
                 {node.subLabel} משימות
               </text>
@@ -419,16 +419,16 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
                 {renderShape(node.shape, node.x, node.y, node.r - 2, 'white', 'none', 0)}
               </g>
               {/* Labels */}
-              <text x={node.x} y={node.y - 5} textAnchor="middle" fontSize="9" fontWeight="600" fill="#263238"
+              <text x={node.x} y={node.y - 5} textAnchor="middle" fontSize="10" fontWeight="700" fill="#0F172A"
                 style={{ pointerEvents: 'none' }}>
                 {node.label.substring(0, 14)}
               </text>
-              <text x={node.x} y={node.y + 7} textAnchor="middle" fontSize="8" fill={node.color}
+              <text x={node.x} y={node.y + 7} textAnchor="middle" fontSize="9" fontWeight="600" fill={node.color}
                 style={{ pointerEvents: 'none' }}>
                 {node.loadLabel} • {node.duration}דק׳
               </text>
               {node.subLabel && (
-                <text x={node.x} y={node.y + 18} textAnchor="middle" fontSize="7" fill="#90A4AE"
+                <text x={node.x} y={node.y + 18} textAnchor="middle" fontSize="8" fontWeight="500" fill="#334155"
                   style={{ pointerEvents: 'none' }}>
                   {node.subLabel.substring(0, 12)}
                 </text>
@@ -450,7 +450,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
       )}
 
       {/* DNA Legend */}
-      <div className="absolute bottom-3 right-3 flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-sm border border-gray-100">
+      <div className="absolute bottom-3 right-3 flex items-center gap-2 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-gray-200">
         {[
           { label: 'P1 שכר', color: DNA.P1 },
           { label: 'P2 הנה"ח', color: DNA.P2 },
@@ -459,7 +459,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         ].map(item => (
           <div key={item.label} className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-[9px] font-medium" style={{ color: item.color }}>{item.label}</span>
+            <span className="text-[10px] font-bold" style={{ color: item.color }}>{item.label}</span>
           </div>
         ))}
       </div>

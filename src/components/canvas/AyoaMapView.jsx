@@ -226,8 +226,8 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
 
         {/* ── Center hub ── */}
         <circle cx={CX} cy={CY} r={50} fill="url(#map-center-grad)" filter="url(#map-glow)" />
-        <text x={CX} y={CY - 8} textAnchor="middle" fill="white" fontSize="16" fontWeight="bold">{centerLabel}</text>
-        <text x={CX} y={CY + 10} textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="11">
+        <text x={CX} y={CY - 8} textAnchor="middle" fill="white" fontSize="18" fontWeight="800">{centerLabel}</text>
+        <text x={CX} y={CY + 10} textAnchor="middle" fill="white" fontSize="12" fontWeight="600">
           {centerSub || `${tasks.length} משימות`}
         </text>
 
@@ -260,11 +260,11 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
                 {renderShape(node.shape, node.x, node.y, node.r, node.bg, node.color, 2.5)}
                 {renderShape(node.shape, node.x, node.y, node.r - 2, 'white', 'none', 0)}
               </g>
-              <text x={node.x} y={node.y - 5} textAnchor="middle" fontSize="11" fontWeight="700" fill="#263238"
+              <text x={node.x} y={node.y - 5} textAnchor="middle" fontSize="12" fontWeight="800" fill="#0F172A"
                 style={{ pointerEvents: 'none' }}>
                 {node.label}
               </text>
-              <text x={node.x} y={node.y + 10} textAnchor="middle" fontSize="9" fill={node.color}
+              <text x={node.x} y={node.y + 10} textAnchor="middle" fontSize="10" fontWeight="600" fill={node.color}
                 style={{ pointerEvents: 'none' }}>
                 {node.subLabel}
               </text>
@@ -301,16 +301,16 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
                 {renderShape(node.shape, node.x, node.y, node.r, node.bg, node.color, 2)}
                 {renderShape(node.shape, node.x, node.y, node.r - 2, 'white', 'none', 0)}
               </g>
-              <text x={node.x} y={node.y - 4} textAnchor="middle" fontSize="9" fontWeight="600" fill="#263238"
+              <text x={node.x} y={node.y - 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#0F172A"
                 style={{ pointerEvents: 'none' }}>
                 {node.label.substring(0, 14)}
               </text>
-              <text x={node.x} y={node.y + 8} textAnchor="middle" fontSize="8" fill={node.color}
+              <text x={node.x} y={node.y + 8} textAnchor="middle" fontSize="9" fontWeight="600" fill={node.color}
                 style={{ pointerEvents: 'none' }}>
                 {node.loadLabel} • {node.duration}דק׳
               </text>
               {node.subLabel && (
-                <text x={node.x} y={node.y + 20} textAnchor="middle" fontSize="7" fill="#90A4AE"
+                <text x={node.x} y={node.y + 20} textAnchor="middle" fontSize="8" fontWeight="500" fill="#334155"
                   style={{ pointerEvents: 'none' }}>
                   {node.subLabel.substring(0, 12)}
                 </text>
