@@ -787,8 +787,8 @@ export default function ReconciliationsPage() {
         </div>
       </div>
 
-      {/* ── UnifiedAyoaLayout Wrapper ─────────────── */}
-      <UnifiedAyoaLayout tasks={reconciliationTasks} clients={clients || []} centerLabel="התאמת חשבונות" centerSub="P2" accentColor="#B2AC88">
+      {/* ── UnifiedAyoaLayout Wrapper (Directive #3: data pipe) ─────────────── */}
+      <UnifiedAyoaLayout data={reconciliationTasks} clients={clients || []} centerLabel="התאמת חשבונות" centerSub="P2" branch="P2">
 
       {/* ── Expand/Collapse + Select All controls ─────────────── */}
       <div className="flex items-center justify-between">
