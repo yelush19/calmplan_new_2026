@@ -38,7 +38,7 @@ export default function SystemReadiness() {
     setIsLoading(true);
     try {
       const [clientsData, tasksData] = await Promise.all([
-        Client.list('name', 1000).catch(() => []),
+        Client.list(null, 1000).catch(() => []),
         Task.filter({ context: 'work' }).catch(() => []),
       ]);
       setClients(Array.isArray(clientsData) ? clientsData : []);

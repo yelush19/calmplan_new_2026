@@ -69,8 +69,8 @@ export default function CalendarPage() {
     setIsLoading(true);
     try {
       const [tasksData, eventsData] = await Promise.all([
-        Task.list("-created_date", 5000).catch(() => []),
-        Event.list("-start_date", 1000).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
+        Event.list(null, 1000).catch(() => []),
       ]);
 
       const allTasks = (tasksData || []).filter(t => {

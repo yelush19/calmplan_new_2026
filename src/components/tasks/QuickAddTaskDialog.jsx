@@ -193,7 +193,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
     let cancelled = false;
     (async () => {
       try {
-        const allTasks = await Task.list('-due_date', 5000).catch(() => []);
+        const allTasks = await Task.list(null, 5000).catch(() => []);
         if (cancelled) return;
         const threshold = parseInt(localStorage.getItem('calmplan_daily_capacity') || '240', 10);
         const sameDayTasks = (allTasks || []).filter(
@@ -232,7 +232,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
           id: `board_${g.key}`, key: g.key, name: g.label, source: 'builtin',
         })));
       });
-      Task.list('-created_date', 200).then(list => {
+      Task.list(null, 200).then(list => {
         setParentTasks((list || []).filter(t => t.status !== 'completed' && t.status !== 'not_relevant'));
       }).catch(() => setParentTasks([]));
       if (taskToEdit) {

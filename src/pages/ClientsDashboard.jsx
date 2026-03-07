@@ -185,7 +185,7 @@ export default function ClientsDashboardPage() {
 
       const [clientsData, tasksData] = await Promise.all([
         Client.list(null, 500).catch(() => []),
-        Task.list('-due_date', 5000).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
       ]);
 
       setClients(
@@ -426,7 +426,7 @@ export default function ClientsDashboardPage() {
       // Refresh tasks without full reload
       const reportStart = startOfMonth(selectedMonth);
       const deadlineMonthEnd = endOfMonth(addMonths(selectedMonth, 1));
-      const tasksData = await Task.list('-due_date', 5000).catch(() => []);
+      const tasksData = await Task.list(null, 5000).catch(() => []);
       const allRaw = Array.isArray(tasksData) ? tasksData : [];
       const refreshMonthStr = format(selectedMonth, 'yyyy-MM');
       const refreshFiltered = allRaw.filter(t => {

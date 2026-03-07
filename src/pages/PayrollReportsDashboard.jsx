@@ -69,7 +69,7 @@ export default function PayrollReportsDashboardPage() {
       const end = endOfMonth(deadlineMonth);
       const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
-        Task.list('-due_date', 5000).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
       const allRaw = Array.isArray(tasksData) ? tasksData : [];

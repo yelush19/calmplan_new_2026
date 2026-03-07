@@ -77,7 +77,7 @@ export default function FinancialResultsDashboard() {
     try {
       const [clientsData, tasksData] = await Promise.all([
         Client.list(null, 500).catch(() => []),
-        Task.list('-due_date', 5000).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
       ]);
       setClients(clientsData || []);
       setTasks(tasksData || []);

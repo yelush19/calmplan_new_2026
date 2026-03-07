@@ -56,8 +56,8 @@ export default function MyFocus() {
     setIsLoading(true);
     try {
       const [tasksData, clientsData] = await Promise.all([
-        Task.list('-due_date', 5000).catch(() => []),
-        Client.list('name', 1000).catch(() => []),
+        Task.list(null, 5000).catch(() => []),
+        Client.list(null, 1000).catch(() => []),
       ]);
       const raw = Array.isArray(tasksData) ? tasksData : [];
       const treeTasks = getActiveTreeTasks(raw);

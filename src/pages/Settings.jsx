@@ -292,7 +292,7 @@ function LenaSettings() {
         if (scheduleData.break_reminders) setBreakReminders(scheduleData.break_reminders);
       }
       setSchedule(scheduleData);
-      const recommendations = await WeeklyRecommendation.list('-week_start_date', 1);
+      const recommendations = await WeeklyRecommendation.list(null, 1);
       if (recommendations.length > 0) setRecommendation(recommendations[0]);
     } catch (error) {
       console.error("Error fetching settings:", error);
