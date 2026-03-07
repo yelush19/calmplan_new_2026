@@ -733,9 +733,8 @@ export default function TasksPage() {
       )}
 
       {/* Content */}
-      {console.log('[Tasks.jsx] RENDER — tasks:', tasks.length, 'filteredTasks:', filteredTasks?.length, 'view:', view, 'isLoading:', isLoading)}
       <ViewErrorBoundary>
-      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} centerLabel="משימות" centerSub="P3" accentColor="#E91E63" onEditTask={handleEditTask}>
+      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} isLoading={isLoading} centerLabel="משימות" centerSub="P3" accentColor="#E91E63" onEditTask={handleEditTask}>
       {view === 'list' ? (
         sortedTasks.length === 0 ? (
           <Card className="border-0 shadow-sm">

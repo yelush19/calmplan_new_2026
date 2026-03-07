@@ -193,7 +193,7 @@ export default function MyFocus() {
             </CardContent>
           </Card>
         ) : (
-          <UnifiedAyoaLayout tasks={(console.log('[MyFocus.jsx] RENDER — tasks:', tasks?.length, 'todayTasks:', todayTasks?.length), todayTasks)} clients={clients} centerLabel="פוקוס יומי" centerSub="P4" accentColor="#FFC107">
+          <UnifiedAyoaLayout tasks={todayTasks} clients={clients} isLoading={isLoading} centerLabel="פוקוס יומי" centerSub="P4" accentColor="#FFC107">
             <Card className="h-full overflow-auto">
               <CardContent className="p-2">
                 <GanttView tasks={todayTasks} clients={clients} />

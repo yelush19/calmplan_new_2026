@@ -596,7 +596,7 @@ export default function BalanceSheetsPage() {
       )}
 
       {/* Balance Sheets - Collapsible by Stage */}
-      <UnifiedAyoaLayout tasks={pseudoTasks} clients={clients} centerLabel="מאזנים שנתיים" centerSub="P2" accentColor="#B2AC88">
+      <UnifiedAyoaLayout tasks={pseudoTasks} clients={clients} isLoading={isLoading} centerLabel="מאזנים שנתיים" centerSub="P2" accentColor="#B2AC88">
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array(6).fill(0).map((_, i) => (
