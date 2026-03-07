@@ -80,39 +80,45 @@ export default function TemplatePanel({ service, onClose }) {
   const markChanged = () => setHasChanges(true);
 
   const addStep = () => {
-    if (!newStepLabel.trim()) return;
+    if (!newStepLabel.trim() || !crud) return;
     const key = newStepLabel.trim().toLowerCase().replace(/\s+/g, '_');
-    setEditSteps(prev => [...prev, { key, label: newStepLabel.trim(), icon: 'check-circle' }]);
+    const updated = [...editSteps, { key, label: newStepLabel.trim(), icon: 'check-circle' }];
+    setEditSteps(updated);
     setNewStepLabel('');
-    markChanged();
+    crud.updateService(service.key, { steps: updated });
   };
 
   const removeStep = (index) => {
-    setEditSteps(prev => prev.filter((_, i) => i !== index));
-    markChanged();
+    if (!crud) return;
+    const updated = editSteps.filter((_, i) => i !== index);
+    setEditSteps(updated);
+    crud.updateService(service.key, { steps: updated });
   };
 
   const moveStep = (index, direction) => {
-    setEditSteps(prev => {
-      const next = [...prev];
-      const target = index + direction;
-      if (target < 0 || target >= next.length) return prev;
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-    markChanged();
+    const next = [...editSteps];
+    const target = index + direction;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    setEditSteps(next);
+    if (crud) crud.updateService(service.key, { steps: next });
   };
 
   const addCategory = () => {
-    if (!newCategory.trim()) return;
-    setEditCategories(prev => [...prev, newCategory.trim()]);
+    if (!newCategory.trim() || !crud) return;
+    const updated = [...editCategories, newCategory.trim()];
+    setEditCategories(updated);
     setNewCategory('');
-    markChanged();
+    // Auto-persist immediately — no "שמור" needed
+    crud.updateService(service.key, { taskCategories: updated });
   };
 
   const removeCategory = (index) => {
-    setEditCategories(prev => prev.filter((_, i) => i !== index));
-    markChanged();
+    if (!crud) return;
+    const updated = editCategories.filter((_, i) => i !== index);
+    setEditCategories(updated);
+    // Auto-persist immediately
+    crud.updateService(service.key, { taskCategories: updated });
   };
 
   const handleDelete = () => {
