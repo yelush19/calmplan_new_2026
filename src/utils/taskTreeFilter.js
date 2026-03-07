@@ -121,16 +121,13 @@ export function filterActivePeriodTasks(tasks) {
 export function getActiveTreeTasks(tasks) {
   if (!tasks || tasks.length === 0) return [];
 
-  const activePeriod = filterActivePeriodTasks(tasks);
-  const treeTasks = activePeriod.filter(t => getTaskPBranch(t) !== null);
-
-  // DATA SURVIVAL: if tree filter killed everything, return raw tasks
-  if (treeTasks.length === 0 && tasks.length > 0) {
-    console.warn('[DATA SURVIVAL] getActiveTreeTasks filtered', tasks.length, '→ 0. Returning all tasks.');
-    return tasks;
-  }
-
-  return treeTasks;
+  // ══ WALL TORN DOWN ══
+  // No date filtering, no P-branch filtering.
+  // Every task that exists in the DB gets shown.
+  // Tasks without a category get assigned P3 by getTaskPBranch fallback.
+  // Sorting/grouping happens downstream in each page.
+  console.log('[getActiveTreeTasks] PASSTHROUGH:', tasks.length, 'tasks (no filtering)');
+  return tasks;
 }
 
 export { CATEGORY_TO_P_BRANCH, P_BRANCH_LABELS };
