@@ -70,152 +70,6 @@ const COGNITIVE_TIERS = [
   { value: 3, label: 'מורכב', color: '#800000', desc: '45+ דקות' },
 ];
 
-// ══════════════════════════════════════════════════════════════════════
-// ParentBranchDropdown — Full breadcrumb-path parent selector
-// Shows "P1 שכר → שירותים → ייצור" so user knows EXACTLY which parent
-// ══════════════════════════════════════════════════════════════════════
-
-function ParentBranchDropdown({ service, editDashboard, onBoardChange, pColor }) {
-  const allNodes = service?._allNodes || [];
-  const currentParentId = service?.parentId;
-
-  // Build all valid parent targets with full breadcrumb paths
-  const parentOptions = useMemo(() => {
-    if (!allNodes.length) {
-      // Fallback: if no allNodes available, show flat board options
-      return BOARD_OPTIONS.map(b => ({
-        id: `__board_${b.key}`,
-        path: b.label,
-        dashboard: b.key,
-        color: b.color,
-        type: 'board',
-        branch: b.key,
-      }));
-    }
-
-    return allNodes
-      .filter(n => n.type === 'root' || (n.type === 'service' && n.id !== service?.key))
-      .map(n => ({
-        id: n.id,
-        path: getNodePath(n.id, allNodes),
-        dashboard: getDashboardFromNode(n),
-        color: n.color,
-        type: n.type,
-        branch: n.type === 'root' ? n.id : null,
-      }))
-      .sort((a, b) => {
-        if (a.type !== b.type) return a.type === 'root' ? -1 : 1;
-        return a.path.localeCompare(b.path);
-      });
-  }, [allNodes, service?.key]);
-
-  // Current parent breadcrumb path
-  const currentPath = useMemo(() => {
-    if (!currentParentId || !allNodes.length) {
-      const board = BOARD_OPTIONS.find(b => b.key === editDashboard);
-      return board?.label || editDashboard;
-    }
-    return getNodePath(currentParentId, allNodes);
-  }, [currentParentId, allNodes, editDashboard]);
-
-  const handleSelect = useCallback((e) => {
-    const targetId = e.target.value;
-
-    // Handle fallback board selection
-    if (targetId.startsWith('__board_')) {
-      const boardKey = targetId.replace('__board_', '');
-      onBoardChange(boardKey);
-      console.log('STATE MUTATED:', { action: 'reparent_board', key: service?.key, newDashboard: boardKey });
-      return;
-    }
-
-    const target = allNodes.find(n => n.id === targetId);
-    if (!target) return;
-
-    const newDashboard = getDashboardFromNode(target);
-    if (newDashboard) {
-      onBoardChange(newDashboard);
-      console.log('STATE MUTATED:', {
-        action: 'reparent',
-        key: service?.key,
-        fromParent: currentParentId,
-        toParent: targetId,
-        toPath: getNodePath(targetId, allNodes),
-        newDashboard,
-      });
-    }
-  }, [allNodes, service?.key, currentParentId, onBoardChange]);
-
-  return (
-    <div className="px-4 py-3 border-b" style={{ border: '3px solid red', borderRadius: '12px', margin: '8px', backgroundColor: '#FFF0F0' }}>
-      <div className="flex items-center gap-2 mb-2">
-        <GitBranch className="w-3.5 h-3.5" style={{ color: pColor }} />
-        <span className="text-xs font-bold text-gray-700">שיוך לענף אב (Breadcrumb Parent)</span>
-      </div>
-
-      {/* Current path breadcrumb display */}
-      <div className="flex items-center gap-1.5 mb-2 px-3 py-2 rounded-xl border border-dashed"
-        style={{ borderColor: pColor + '40', backgroundColor: pColor + '08' }}>
-        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: pColor }} />
-        <span className="text-[11px] font-medium text-gray-700 truncate" dir="rtl" title={currentPath}>
-          נוכחי: {currentPath}
-        </span>
-      </div>
-
-      {/* Breadcrumb path <select> dropdown */}
-      <select
-        value={currentParentId || `__board_${editDashboard}`}
-        onChange={handleSelect}
-        className="w-full px-3 py-2 text-xs border-2 rounded-xl focus:ring-2 focus:outline-none bg-white"
-        style={{ borderColor: 'red' }}
-        dir="rtl"
-      >
-        <option value="" disabled>-- בחר ענף אב --</option>
-        {parentOptions.map(opt => (
-          <option key={opt.id} value={opt.id}>
-            {opt.type === 'root'
-              ? `● ${opt.path}`
-              : opt.type === 'board'
-                ? opt.path
-                : `  └─ ${opt.path}`
-            }
-          </option>
-        ))}
-      </select>
-
-      {/* Compact board shortcut buttons */}
-      <div className="flex gap-1 mt-2">
-        {BOARD_OPTIONS.map(board => {
-          const isMapped = editDashboard === board.key;
-          return (
-            <button
-              key={board.key}
-              onClick={() => {
-                onBoardChange(board.key);
-                console.log('STATE MUTATED:', { action: 'reparent_board', key: service?.key, newDashboard: board.key });
-              }}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-medium transition-all border ${
-                isMapped ? 'text-white shadow-sm border-transparent' : 'border-gray-100 text-gray-400 hover:border-gray-200'
-              }`}
-              style={isMapped ? { backgroundColor: board.color } : {}}
-              title={board.label}
-            >
-              <div className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: isMapped ? 'white' : '#D0D0D0' }} />
-              {board.label.split(' ')[0]}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Debug: allNodes count */}
-      <div className="text-[8px] text-red-400 mt-1">
-        DEBUG: allNodes={allNodes.length} | parentId={currentParentId || 'none'} | dashboard={editDashboard}
-      </div>
-    </div>
-  );
-}
-
 export default function TemplatePanel({ service, onClose }) {
   const crud = service?._crud;
   const isCustom = service?._isCustom;
@@ -357,13 +211,66 @@ export default function TemplatePanel({ service, onClose }) {
           />
         </div>
 
-        {/* ══ Parent Branch Assignment (Breadcrumb Dropdown) ══ */}
-        <ParentBranchDropdown
-          service={service}
-          editDashboard={editDashboard}
-          onBoardChange={handleBoardChange}
-          pColor={pColor}
-        />
+        {/* ══ RED BOX: Parent Branch Assignment — INLINE, NO COMPONENT ══ */}
+        <div style={{ border: '3px solid red', borderRadius: '12px', margin: '8px', padding: '12px', backgroundColor: '#FFF0F0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <GitBranch style={{ width: '14px', height: '14px', color: 'red' }} />
+            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>שיוך לענף אב</span>
+          </div>
+
+          <select
+            value={service?.parentId || `__board_${editDashboard}`}
+            onChange={(e) => {
+              const val = e.target.value;
+              const allNodes = service?._allNodes || [];
+              const target = allNodes.find(n => n.id === val);
+              if (target) {
+                const nd = target.type === 'root'
+                  ? (DNA[target.id]?.dashboard || 'admin')
+                  : (target.dashboard || 'admin');
+                handleBoardChange(nd);
+                console.log('STATE MUTATED:', { action: 'reparent', key: service?.key, toParent: val, newDashboard: nd });
+              } else if (val.startsWith('__board_')) {
+                handleBoardChange(val.replace('__board_', ''));
+              }
+            }}
+            style={{ width: '100%', padding: '8px', fontSize: '13px', border: '2px solid red', borderRadius: '8px', backgroundColor: 'white', direction: 'rtl' }}
+          >
+            <option value="" disabled>-- ללא שיוך (שורש) --</option>
+            {(service?._allNodes || []).length > 0
+              ? (service._allNodes)
+                  .filter(n => n.type === 'root' || (n.type === 'service' && n.id !== service?.key))
+                  .sort((a, b) => (a.type === 'root' ? -1 : 1) - (b.type === 'root' ? -1 : 1) || (a.label || '').localeCompare(b.label || ''))
+                  .map(n => {
+                    // Build breadcrumb path by walking parentId chain
+                    const segs = [];
+                    let cur = n.id;
+                    let depth = 0;
+                    const nodes = service._allNodes;
+                    while (cur && cur !== 'hub' && depth < 10) {
+                      const found = nodes.find(x => x.id === cur);
+                      if (!found) break;
+                      segs.unshift(found.label || found.id);
+                      cur = found.parentId;
+                      depth++;
+                    }
+                    const path = segs.join(' \u2192 ');
+                    return (
+                      <option key={n.id} value={n.id}>
+                        {n.type === 'root' ? `● ${path}` : `  └─ ${path}`}
+                      </option>
+                    );
+                  })
+              : BOARD_OPTIONS.map(b => (
+                  <option key={b.key} value={`__board_${b.key}`}>{b.label}</option>
+                ))
+            }
+          </select>
+
+          <div style={{ fontSize: '9px', color: 'red', marginTop: '6px' }}>
+            DEBUG: _allNodes={(service?._allNodes || []).length} | parentId={service?.parentId || 'none'} | dashboard={editDashboard}
+          </div>
+        </div>
 
         {/* Process Steps (CRUD) */}
         <div className="px-4 py-3 border-b">
