@@ -34,7 +34,7 @@ import {
 import { SERVICE_WEIGHTS, getServiceWeight } from '@/config/serviceWeights';
 import {
   Trash2, Plus, GripVertical, Cloud, Circle, Diamond, Star,
-  MessageCircle, X, ChevronRight, Move, Zap, Minus,
+  MessageCircle, X, ChevronRight, Move, Zap, Minus, ListOrdered,
 } from 'lucide-react';
 
 // ── DNA Colors (P-branch identity) ──
@@ -128,6 +128,193 @@ function applyForceRepulsion(nodes, iterations = 15) {
     n.y = Math.max(60, Math.min(VB_H - 60, n.y));
   }
   return result;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SortableStepsManager — Drag-to-reorder, editable, add/delete steps
+// ══════════════════════════════════════════════════════════════════════
+
+function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
+  const [stepDrag, setStepDrag] = useState(null); // { fromIndex, currentIndex }
+  const [dropPreview, setDropPreview] = useState(null); // index where item would land
+  const dragYRef = useRef(0);
+  const listRef = useRef(null);
+  const itemRefs = useRef([]);
+
+  // ── Commit steps array to state (persists immediately) ──
+  const commitSteps = useCallback((newSteps) => {
+    console.log('STATE MUTATED:', { action: 'steps_update', key: serviceKey, steps: newSteps });
+    updateService(serviceKey, { steps: newSteps });
+  }, [serviceKey, updateService]);
+
+  // ── Edit a step's label in-place ──
+  const handleStepLabelChange = useCallback((index, newLabel) => {
+    const updated = steps.map((s, i) => i === index ? { ...s, label: newLabel } : s);
+    commitSteps(updated);
+  }, [steps, commitSteps]);
+
+  // ── Add new step at end ──
+  const handleAddStep = useCallback(() => {
+    const newStep = {
+      key: `step_${Date.now()}`,
+      label: '',
+      icon: 'check-circle',
+    };
+    commitSteps([...steps, newStep]);
+    // Focus the new input after render
+    requestAnimationFrame(() => {
+      const lastInput = listRef.current?.querySelector(`[data-step-index="${steps.length}"] input`);
+      lastInput?.focus();
+    });
+  }, [steps, commitSteps]);
+
+  // ── Delete step by index ──
+  const handleDeleteStep = useCallback((index) => {
+    if (steps.length <= 1) return; // prevent empty template
+    commitSteps(steps.filter((_, i) => i !== index));
+  }, [steps, commitSteps]);
+
+  // ── Drag-to-reorder: mousedown on handle ──
+  const handleDragStart = useCallback((index, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragYRef.current = e.clientY;
+    setStepDrag({ fromIndex: index, currentIndex: index });
+    setDropPreview(index);
+
+    const handleMove = (moveE) => {
+      const deltaY = moveE.clientY - dragYRef.current;
+      const itemHeight = 36; // approx row height in px
+      const indexShift = Math.round(deltaY / itemHeight);
+      const newIndex = Math.max(0, Math.min(steps.length - 1, index + indexShift));
+      setStepDrag(prev => prev ? { ...prev, currentIndex: newIndex } : null);
+      setDropPreview(newIndex);
+    };
+
+    const handleUp = () => {
+      setStepDrag(prev => {
+        if (prev && prev.fromIndex !== prev.currentIndex) {
+          const reordered = [...steps];
+          const [moved] = reordered.splice(prev.fromIndex, 1);
+          reordered.splice(prev.currentIndex, 0, moved);
+          commitSteps(reordered);
+          console.log('STATE MUTATED:', {
+            action: 'steps_reorder',
+            key: serviceKey,
+            from: prev.fromIndex,
+            to: prev.currentIndex,
+            newOrder: reordered.map(s => s.label || s.key),
+          });
+        }
+        return null;
+      });
+      setDropPreview(null);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+  }, [steps, commitSteps, serviceKey]);
+
+  // Build display order: if dragging, show the preview reorder
+  const displaySteps = useMemo(() => {
+    if (!stepDrag || stepDrag.fromIndex === stepDrag.currentIndex) return steps;
+    const preview = [...steps];
+    const [moved] = preview.splice(stepDrag.fromIndex, 1);
+    preview.splice(stepDrag.currentIndex, 0, moved);
+    return preview;
+  }, [steps, stepDrag]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-[9px] font-bold text-gray-400 flex items-center gap-1">
+          <ListOrdered className="w-3 h-3" />
+          שלבי תהליך ({steps.length})
+        </label>
+      </div>
+
+      <div ref={listRef} className="space-y-0.5">
+        {displaySteps.map((step, i) => {
+          const isBeingDragged = stepDrag && (
+            stepDrag.fromIndex === stepDrag.currentIndex
+              ? i === stepDrag.fromIndex
+              : i === stepDrag.currentIndex
+          );
+          const isDropTarget = dropPreview === i && stepDrag && stepDrag.fromIndex !== i;
+
+          return (
+            <div
+              key={`${step.key || i}-${i}`}
+              data-step-index={i}
+              className={`flex items-center gap-1 rounded-lg transition-all ${
+                isBeingDragged
+                  ? 'bg-blue-50 shadow-sm ring-1 ring-blue-200 scale-[1.02]'
+                  : isDropTarget
+                    ? 'bg-green-50 ring-1 ring-green-200'
+                    : 'bg-gray-50 hover:bg-gray-100'
+              }`}
+              style={{
+                padding: '4px 6px',
+                minHeight: '32px',
+              }}
+            >
+              {/* ⋮⋮ Drag handle */}
+              <button
+                className="flex-shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-gray-200 text-gray-300 hover:text-gray-500 transition-colors"
+                onMouseDown={(e) => handleDragStart(i, e)}
+                title="גרור לשינוי סדר"
+              >
+                <GripVertical className="w-3 h-3" />
+              </button>
+
+              {/* Auto-index badge */}
+              <span
+                className="flex-shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-bold"
+                style={{ backgroundColor: bg, color }}
+              >
+                {i + 1}
+              </span>
+
+              {/* Editable step label */}
+              <input
+                type="text"
+                value={step.label || ''}
+                onChange={(e) => handleStepLabelChange(i, e.target.value)}
+                placeholder="שם שלב..."
+                className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] bg-transparent border-0 border-b border-transparent focus:border-gray-300 focus:outline-none text-gray-700 placeholder-gray-300 transition-colors"
+                dir="rtl"
+              />
+
+              {/* Delete step */}
+              <button
+                onClick={() => handleDeleteStep(i)}
+                className={`flex-shrink-0 p-0.5 rounded transition-all ${
+                  steps.length <= 1
+                    ? 'text-gray-200 cursor-not-allowed'
+                    : 'text-gray-300 hover:text-red-500 hover:bg-red-50'
+                }`}
+                disabled={steps.length <= 1}
+                title="מחק שלב"
+              >
+                <Trash2 className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* + Add step button */}
+      <button
+        onClick={handleAddStep}
+        className="w-full mt-1.5 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-dashed border-gray-200 text-[9px] font-medium text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all"
+      >
+        <Plus className="w-3 h-3" />
+        הוסף שלב
+      </button>
+    </div>
+  );
 }
 
 export default function SettingsMindMap({ onSelectService, onConfigChange }) {
@@ -896,23 +1083,14 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                 </div>
               </div>
 
-              {/* Steps list */}
-              <div>
-                <label className="text-[9px] font-bold text-gray-400 block mb-0.5">
-                  שלבים ({(selectedNode.steps || []).length})
-                </label>
-                <div className="space-y-0.5">
-                  {(selectedNode.steps || []).map((step, i) => (
-                    <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded bg-gray-50 text-[10px]">
-                      <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold"
-                        style={{ backgroundColor: selectedNode.bg, color: selectedNode.color }}>
-                        {i + 1}
-                      </span>
-                      <span className="text-gray-700">{step.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* ══ Sortable Steps Manager ══ */}
+              <SortableStepsManager
+                steps={selectedNode.steps || []}
+                serviceKey={selectedNodeId}
+                updateService={updateService}
+                color={selectedNode.color}
+                bg={selectedNode.bg}
+              />
 
               {/* Duration & weight info */}
               <div className="flex items-center gap-3 text-[9px] text-gray-400 pt-1 border-t border-gray-50">
