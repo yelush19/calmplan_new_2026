@@ -158,7 +158,6 @@ const getSidebarSections = () => ({
     icon: BookHeart,
     tabColor: 'border-[#4682B4]',
     items: [
-      { name: "הפוקוס שלי", href: createPageUrl("MyFocus"), icon: Target },
       { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
       { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
       { name: "הגדרות אישיות", href: createPageUrl("LifeSettings"), icon: Settings },
@@ -428,22 +427,29 @@ function LayoutInner({ children }) {
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
       <div className="h-screen flex flex-col">
         {/* === TOP HEADER BAR === */}
-        <header className="border-b border-[#B0BEC5] px-3 py-1 flex items-center justify-between sticky top-0 z-50 shadow-xl" style={{ backgroundColor: '#FFFFFF' }}>
+        <header className="border-b border-gray-200/60 px-4 py-1.5 flex items-center justify-between sticky top-0 z-50"
+          style={{ background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFF 50%, #FFF8F0 100%)', boxShadow: '0 2px 20px rgba(0,163,224,0.06), 0 1px 4px rgba(0,0,0,0.04)' }}>
           {/* Right: Logo + Mobile menu */}
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="md:hidden h-7 w-7" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
               {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </Button>
-            <Link to={createPageUrl("Home")} className="flex items-center gap-1.5">
-              <div className="w-7 h-7 rounded-md flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #4682B4, #6B8EB5)' }}>
-                <Brain className="w-4 h-4 text-white" />
+            <Link to={createPageUrl("Home")} className="flex items-center gap-2.5 group">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md transition-transform group-hover:scale-105"
+                style={{ background: 'linear-gradient(135deg, #00A3E0, #E91E63)' }}>
+                <Brain className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-sm font-bold hidden md:block" style={{ color: '#4682B4' }}>CalmPlan</h1>
+              <div className="hidden md:block">
+                <h1 className="text-base font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#00A3E0] to-[#E91E63]">
+                  CalmPlan
+                </h1>
+                <p className="text-[9px] font-medium text-gray-400 -mt-0.5">Ayoa-Powered OS</p>
+              </div>
             </Link>
           </div>
 
-          {/* Center: Global Search */}
-          <div className="flex-1 max-w-md mx-4 hidden md:block">
+          {/* Center: Global Search — sleek pill design */}
+          <div className="flex-1 max-w-lg mx-6 hidden md:block">
             <GlobalSearch />
           </div>
 
@@ -610,7 +616,7 @@ function LayoutInner({ children }) {
                                 if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
                               }}
                               className={`flex items-center gap-2 px-6 py-1.5 rounded-xl text-sm transition-colors
-                                ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#4682B4] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                                ${isActive(item.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#37474F] hover:bg-white/70 hover:shadow-sm'}`}>
                               <item.icon className="w-3.5 h-3.5" />
                               {item.name}
                             </Link>
@@ -641,7 +647,7 @@ function LayoutInner({ children }) {
                                       if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
                                     }}
                                     className={`flex items-center gap-2 px-8 py-1 rounded-xl text-sm transition-colors
-                                      ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#4682B4] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                                      ${isActive(item.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#37474F] hover:bg-white/70 hover:shadow-sm'}`}>
                                     <item.icon className="w-3 h-3" />
                                     {item.name}
                                   </Link>
@@ -672,7 +678,7 @@ function LayoutInner({ children }) {
                 className="hidden md:flex"
                 style={{ overflow: 'hidden' }}
               >
-                <aside className="flex flex-col border-l border-[#B0BEC5] shadow-xl h-full w-full" style={{ backgroundColor: '#FFFFFF' }}>
+                <aside className="flex flex-col border-l border-gray-200/60 h-full w-full" style={{ background: 'linear-gradient(180deg, #FAFBFE 0%, #F5F7FC 50%, #F0F4FA 100%)' }}>
 
                   {/* Toggle button */}
                   <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -719,19 +725,29 @@ function LayoutInner({ children }) {
                     /* Expanded: full sidebar */
                     <div className="flex flex-col flex-1 overflow-y-auto">
                       {/* Mantra — very top of sidebar */}
-                      <div className="px-3 pt-3 pb-1 text-center">
-                        <p className="block font-black text-2xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#4682B4] to-[#6B8EB5]">✨ עשוי טוב יותר ממושלם</p>
+                      <div className="px-3 pt-4 pb-2 text-center">
+                        <p className="block font-black text-xl py-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#E91E63] via-[#00A3E0] to-[#FFC107]">
+                          עשוי טוב יותר ממושלם
+                        </p>
                       </div>
 
                       {/* Work Mode Selector */}
-                      <div className="px-3 py-2 border-b border-[#B0BEC5]">
-                        <div className="flex gap-1">
+                      <div className="px-3 py-2 border-b border-gray-200/40">
+                        <div className="flex gap-1.5 p-1 rounded-2xl" style={{ background: 'linear-gradient(135deg, #F0F4FA, #FFF8F0)' }}>
                           {WORK_MODES.map(mode => (
                             <button
                               key={mode.key}
                               onClick={() => setWorkMode(mode.key)}
-                              className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-[32px] text-xs font-medium transition-all
-                                ${workMode === mode.key ? mode.color + ' shadow-md scale-105' : 'bg-[#F5F5F5] text-[#37474F] hover:bg-[#E8F5F7]'}`}
+                              className={`flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl text-xs font-bold transition-all
+                                ${workMode === mode.key ? 'text-white shadow-lg scale-105' : 'text-gray-500 hover:bg-white/60 hover:shadow-sm'}`}
+                              style={workMode === mode.key ? {
+                                background: mode.key === 'doing' ? 'linear-gradient(135deg, #00A3E0, #00BCD4)'
+                                  : mode.key === 'planning' ? 'linear-gradient(135deg, #7C4DFF, #9C27B0)'
+                                  : 'linear-gradient(135deg, #E91E63, #FF6B9D)',
+                                boxShadow: mode.key === 'doing' ? '0 4px 15px #00A3E040'
+                                  : mode.key === 'planning' ? '0 4px 15px #7C4DFF40'
+                                  : '0 4px 15px #E91E6340',
+                              } : {}}
                             >
                               <mode.icon className="w-4 h-4" />
                               {mode.label}
@@ -807,13 +823,32 @@ function LayoutInner({ children }) {
                         {/* Daily Focus — single entry point (no duplication) */}
                         <Link to={createPageUrl("Home")}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors mb-2
-                            ${isActive(createPageUrl("Home")) ? 'bg-[#E8F5F7] text-[#4682B4]' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
-                          <Eye className="w-4 h-4" />
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl text-sm font-bold transition-all mb-1
+                            ${isActive(createPageUrl("Home"))
+                              ? 'text-white shadow-lg'
+                              : 'text-[#37474F] hover:bg-gradient-to-l hover:from-sky-50 hover:to-transparent'}`}
+                          style={isActive(createPageUrl("Home")) ? {
+                            background: 'linear-gradient(135deg, #00A3E0, #00BCD4)',
+                            boxShadow: '0 4px 15px #00A3E040',
+                          } : {}}>
+                          <Eye className="w-4 h-4" style={{ color: isActive(createPageUrl("Home")) ? 'white' : '#00A3E0' }} />
                           פוקוס יומי
                           {dailyFocusTasks.length > 0 && (
                             <Badge className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0">{dailyFocusTasks.length}</Badge>
                           )}
+                        </Link>
+                        <Link to={createPageUrl("MyFocus")}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl text-sm font-bold transition-all mb-2
+                            ${isActive(createPageUrl("MyFocus"))
+                              ? 'text-white shadow-lg'
+                              : 'text-[#37474F] hover:bg-gradient-to-l hover:from-amber-50 hover:to-transparent'}`}
+                          style={isActive(createPageUrl("MyFocus")) ? {
+                            background: 'linear-gradient(135deg, #FFC107, #FF9800)',
+                            boxShadow: '0 4px 15px #FFC10740',
+                          } : {}}>
+                          <Target className="w-4 h-4" style={{ color: isActive(createPageUrl("MyFocus")) ? 'white' : '#FFC107' }} />
+                          הפוקוס שלי
                         </Link>
 
                         {Object.entries(sidebarSections)
@@ -831,7 +866,19 @@ function LayoutInner({ children }) {
                                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-[#000000] hover:bg-[#F5F5F5] transition-colors border-r-3 ${section.tabColor || ''}`}
                                 >
                                   <div className="flex items-center gap-2">
-                                    <section.icon className="w-4 h-4 text-[#4682B4]" />
+                                    <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{
+                                      background: key === 'p1_payroll' ? 'linear-gradient(135deg, #00A3E020, #00BCD420)'
+                                        : key === 'p2_bookkeeping' ? 'linear-gradient(135deg, #B2AC8820, #8BC34A20)'
+                                        : key === 'life' ? 'linear-gradient(135deg, #FFC10720, #FF980020)'
+                                        : 'linear-gradient(135deg, #E91E6320, #9C27B020)',
+                                    }}>
+                                      <section.icon className="w-3.5 h-3.5" style={{
+                                        color: key === 'p1_payroll' ? '#00A3E0'
+                                          : key === 'p2_bookkeeping' ? '#B2AC88'
+                                          : key === 'life' ? '#FFC107'
+                                          : '#E91E63',
+                                      }} />
+                                    </div>
                                     <span>{section.title}</span>
                                   </div>
                                   <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${isOpen ? '' : '-rotate-90'}`} />
@@ -849,7 +896,7 @@ function LayoutInner({ children }) {
                                             }
                                           }}
                                           className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors
-                                            ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#4682B4] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                                            ${isActive(item.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#37474F] hover:bg-white/70 hover:shadow-sm'}`}>
                                           <item.icon className="w-3.5 h-3.5" />
                                           {item.name}
                                         </Link>
@@ -892,7 +939,7 @@ function LayoutInner({ children }) {
                                                       if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
                                                     }}
                                                     className={`flex-1 flex items-center gap-2 px-3 py-1 rounded-xl text-sm transition-colors
-                                                      ${isActive(item.href) ? 'bg-[#E8F5F7] text-[#4682B4] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
+                                                      ${isActive(item.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#37474F] hover:bg-white/70 hover:shadow-sm'}`}>
                                                     <item.icon className="w-3 h-3" />
                                                     {item.name}
                                                   </Link>

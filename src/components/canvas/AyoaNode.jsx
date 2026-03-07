@@ -17,16 +17,28 @@
 
 import React from 'react';
 
-// ── AYOA Hex Bible ──
+// ── AYOA Hex Bible — Full Vibrant Spectrum ──
 export const AYOA_PALETTE = {
+  // Core DNA
   magenta:  '#E91E63',
   mustard:  '#FFC107',
   skyBlue:  '#00A3E0',
   sage:     '#B2AC88',
-  burgundy: '#800000',
-  steel:    '#4682B4',
+  // Vibrant spectrum
+  neonPink: '#FF6B9D',
+  lime:     '#8BC34A',
+  turquoise:'#00BCD4',
+  orange:   '#FF9800',
   purple:   '#9C27B0',
-  lightBlue:'#ADD8E6',
+  indigo:   '#7C4DFF',
+  // Soft pastels
+  lightBlue:'#81D4FA',
+  softPink: '#F8BBD0',
+  softGreen:'#C5E1A5',
+  softGold: '#FFE082',
+  // Deep accents
+  liveRed:  '#FF5252',
+  steel:    '#4682B4',
 };
 
 // Shape path builders — all return SVG element(s)

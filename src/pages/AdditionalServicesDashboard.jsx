@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight, ChevronDown,
-  ArrowRight, Users, X, Settings2, List, LayoutGrid, Search, GanttChart, Plus
+  ArrowRight, Users, X, Settings2, List, LayoutGrid, Search, GanttChart, Plus, Network
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -33,6 +33,7 @@ import {
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 // P1 Payroll extras: masav, payslips, pensions
 const P1_PAYROLL_EXTRAS = [
@@ -367,6 +368,9 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
             <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="תצוגת פרויקט">
               <GanttChart className="w-4 h-4" />
             </Button>
+            <Button variant={viewMode === 'ayoa' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('ayoa')} title="AYOA">
+              <Network className="w-4 h-4" />
+            </Button>
           </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
@@ -421,6 +425,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         </Card>
       </div>
 
+      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} centerLabel="שירותים נוספים" centerSub="P1" accentColor="#00A3E0" onEditTask={setEditingTask}>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
@@ -430,7 +435,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} />
         ) : viewMode === 'timeline' ? (
           <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
-        ) : (
+        ) : viewMode === 'table' ? (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
               const isCollapsed = collapsedServices.has(serviceKey);
@@ -465,7 +470,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
               );
             })}
           </div>
-        )
+        ) : null
       ) : (
         <Card className="p-12 text-center border-[#E0E0E0]">
           <Settings2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
@@ -479,6 +484,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           </Link>
         </Card>
       )}
+      </UnifiedAyoaLayout>
 
       <QuickAddTaskDialog
         open={showQuickAdd}

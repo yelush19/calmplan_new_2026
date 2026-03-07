@@ -226,7 +226,8 @@ export default function GlobalSearch() {
       {/* Search trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground bg-white hover:bg-[#EEEEEE] rounded-[32px] border border-[#E0E0E0] transition-all"
+        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground rounded-2xl border border-gray-200/60 transition-all hover:shadow-md hover:border-sky-200"
+        style={{ background: 'linear-gradient(135deg, #F8FAFF, #FFFFFF)', boxShadow: '0 1px 4px rgba(0,163,224,0.06)' }}
       >
         <Search className="w-4 h-4" />
         <span className="flex-1 text-right">חיפוש או ביצוע פעולה...</span>

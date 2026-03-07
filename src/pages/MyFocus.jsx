@@ -28,6 +28,7 @@ import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import { useAyoaView } from '@/contexts/AyoaViewContext';
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import useRealtimeRefresh from '@/hooks/useRealtimeRefresh';
@@ -191,31 +192,15 @@ export default function MyFocus() {
               <DesignCanvas tasks={todayTasks} clients={clients} />
             </CardContent>
           </Card>
-        ) : viewMode === 'radial' ? (
-          <Card className="h-full">
-            <CardContent className="h-full p-0">
-              <AyoaRadialView tasks={todayTasks} centerLabel="היום שלי" centerSub={`${energy.label} • ${todayTasks.length} משימות`} />
-            </CardContent>
-          </Card>
-        ) : viewMode === 'map' ? (
-          <Card className="h-full">
-            <CardContent className="h-full p-0">
-              <AyoaMapView tasks={todayTasks} centerLabel="היום שלי" centerSub={`${energy.label}`} />
-            </CardContent>
-          </Card>
-        ) : viewMode === 'gantt' ? (
-          <Card className="h-full overflow-auto">
-            <CardContent className="p-2">
-              <GanttView tasks={todayTasks} clients={clients} />
-            </CardContent>
-          </Card>
-        ) : viewMode === 'feed' ? (
-          <Card className="h-full overflow-auto">
-            <CardContent className="p-2">
-              <AyoaFeedView tasks={todayTasks} />
-            </CardContent>
-          </Card>
-        ) : null}
+        ) : (
+          <UnifiedAyoaLayout tasks={todayTasks} clients={clients} centerLabel="פוקוס יומי" centerSub="P4" accentColor="#FFC107" defaultView="radial">
+            <Card className="h-full overflow-auto">
+              <CardContent className="p-2">
+                <GanttView tasks={todayTasks} clients={clients} />
+              </CardContent>
+            </Card>
+          </UnifiedAyoaLayout>
+        )}
       </div>
     </div>
   );
