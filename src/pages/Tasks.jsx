@@ -748,7 +748,7 @@ export default function TasksPage() {
 
       {/* Content */}
       <ViewErrorBoundary>
-      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} centerLabel="משימות" centerSub="P3" accentColor="#E91E63" onEditTask={handleEditTask} defaultView="radial">
+      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} centerLabel="משימות" centerSub="P3" accentColor="#E91E63" onEditTask={handleEditTask}>
       {view === 'list' ? (
         sortedTasks.length === 0 ? (
           <Card className="border-0 shadow-sm">

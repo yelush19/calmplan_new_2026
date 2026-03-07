@@ -3,6 +3,10 @@
  * Wraps ANY dashboard page with the 4-view switcher (Map, Radial, Gantt, Feed).
  * Provides FloatingToolbar and DNA-colored views automatically.
  *
+ * CRITICAL RULE: Children (original page content) are ALWAYS the primary view.
+ * AYOA visualizations (radial, map, gantt) are SECONDARY opt-in views.
+ * The "feed" view falls back to children (original tables/data grids).
+ *
  * Usage:
  *   <UnifiedAyoaLayout
  *     tasks={tasks}
@@ -12,8 +16,6 @@
  *     accentColor="#00A3E0"
  *     currentMonth={selectedMonth}
  *     onEditTask={handleEdit}
- *     defaultView="radial"        // optional — override default
- *     tableView={<YourTableJSX />} // optional — custom table/kanban to show when not in AYOA mode
  *   >
  *     Your existing page content (shown in "original" mode)
  *   </UnifiedAyoaLayout>
@@ -24,13 +26,12 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAyoaView } from '@/contexts/AyoaViewContext';
 import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
 import GanttView from '@/components/views/GanttView';
-import { Network, Target, BarChart3, List, Table } from 'lucide-react';
+import { Table } from 'lucide-react';
 
 // DNA Colors
 const DNA_ACCENTS = {
@@ -53,41 +54,41 @@ export default function UnifiedAyoaLayout({
   tableView,
   children,
 }) {
-  const { ayoaView, setAyoaView } = useAyoaView();
-  const [showOriginal, setShowOriginal] = useState(false);
+  // LOCAL state — each page instance manages its own view, no global context leaking
+  const [localView, setLocalView] = useState(null); // null = show children (original content)
 
-  // If defaultView is set and we haven't manually changed, use it
-  const activeView = ayoaView || defaultView || 'radial';
+  // null means "show original content" (children). Only non-null triggers AYOA views.
+  const activeAyoaView = localView; // radial | map | gantt | feed | null
 
   const handleViewChange = useCallback((view) => {
-    setShowOriginal(false);
-    setAyoaView(view);
-  }, [setAyoaView]);
+    setLocalView(view);
+  }, []);
 
-  const toggleOriginal = useCallback(() => {
-    setShowOriginal(prev => !prev);
+  const showOriginal = useCallback(() => {
+    setLocalView(null);
   }, []);
 
   const accent = accentColor || DNA_ACCENTS.P1;
+  const isOriginalActive = activeAyoaView === null;
 
   return (
     <div className="space-y-3">
       {/* ── Sticky View Switcher Bar ── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <AyoaViewToggle
-          value={showOriginal ? null : activeView}
+          value={activeAyoaView}
           onChange={handleViewChange}
           accentColor={accent}
         />
         {showOriginalToggle && children && (
           <button
-            onClick={toggleOriginal}
+            onClick={showOriginal}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium transition-all ${
-              showOriginal
+              isOriginalActive
                 ? 'bg-white shadow-sm font-bold'
                 : 'hover:bg-white/60'
             }`}
-            style={showOriginal ? {
+            style={isOriginalActive ? {
               color: accent,
               boxShadow: `0 2px 8px ${accent}20`,
             } : {
@@ -103,7 +104,8 @@ export default function UnifiedAyoaLayout({
 
       {/* ── View Content ── */}
       <AnimatePresence mode="wait">
-        {showOriginal ? (
+        {isOriginalActive ? (
+          /* DEFAULT: Always show original page content (children) */
           <motion.div
             key="original"
             initial={{ opacity: 0, y: 8 }}
@@ -115,13 +117,13 @@ export default function UnifiedAyoaLayout({
           </motion.div>
         ) : (
           <motion.div
-            key={activeView}
+            key={activeAyoaView}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            {activeView === 'radial' && (
+            {activeAyoaView === 'radial' && (
               <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white"
                 style={{ minHeight: '450px' }}>
                 <AyoaRadialView
@@ -132,7 +134,7 @@ export default function UnifiedAyoaLayout({
               </div>
             )}
 
-            {activeView === 'map' && (
+            {activeAyoaView === 'map' && (
               <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white"
                 style={{ minHeight: '450px' }}>
                 <AyoaMapView
@@ -143,7 +145,7 @@ export default function UnifiedAyoaLayout({
               </div>
             )}
 
-            {activeView === 'gantt' && (
+            {activeAyoaView === 'gantt' && (
               <GanttView
                 tasks={tasks}
                 clients={clients}
@@ -152,7 +154,7 @@ export default function UnifiedAyoaLayout({
               />
             )}
 
-            {activeView === 'feed' && (
+            {activeAyoaView === 'feed' && (
               <div className="rounded-2xl border border-gray-100 bg-white"
                 style={{ minHeight: '200px' }}>
                 <AyoaFeedView

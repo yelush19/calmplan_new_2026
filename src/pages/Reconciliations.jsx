@@ -513,6 +513,14 @@ export default function ReconciliationsPage() {
     return preset ? preset.minDays : 0;
   }, [lagFilter, customLagDays]);
 
+  // ── CONTEXTUAL FILTER: Only reconciliation-related tasks for the AYOA map ──
+  const RECONCILIATION_CATEGORIES = ['התאמות', 'work_reconciliation', 'הנהלת חשבונות', 'work_bookkeeping'];
+  const reconciliationTasks = useMemo(() => {
+    return (allTasks || []).filter(t =>
+      RECONCILIATION_CATEGORIES.includes(t.category)
+    );
+  }, [allTasks]);
+
   // Build enriched rows
   const rows = useMemo(() => {
     return allAccounts
@@ -780,7 +788,7 @@ export default function ReconciliationsPage() {
       </div>
 
       {/* ── UnifiedAyoaLayout Wrapper ─────────────── */}
-      <UnifiedAyoaLayout tasks={allTasks || []} clients={clients || []} centerLabel="התאמת חשבונות" centerSub="P2" accentColor="#B2AC88">
+      <UnifiedAyoaLayout tasks={reconciliationTasks} clients={clients || []} centerLabel="התאמת חשבונות" centerSub="P2" accentColor="#B2AC88">
 
       {/* ── Expand/Collapse + Select All controls ─────────────── */}
       <div className="flex items-center justify-between">

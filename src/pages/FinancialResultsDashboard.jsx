@@ -104,6 +104,13 @@ export default function FinancialResultsDashboard() {
     [tasks, monthStr]
   );
 
+  // ── CONTEXTUAL FILTER: Only PNL + bookkeeping tasks for AYOA map ──
+  const PNL_MAP_CATEGORIES = ['רווח והפסד', 'work_pnl', 'pnl_reports', 'הנהלת חשבונות', 'work_bookkeeping'];
+  const pnlMapTasks = useMemo(() =>
+    monthTasks.filter(t => PNL_MAP_CATEGORIES.includes(t.category)),
+    [monthTasks]
+  );
+
   // Build rows — one per pnl_reports client
   const rows = useMemo(() => {
     return pnlClients.map(client => {
@@ -294,7 +301,7 @@ export default function FinancialResultsDashboard() {
       </div>
       </div>
 
-      <UnifiedAyoaLayout tasks={tasks} clients={clients} centerLabel="רווח והפסד" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth}>
+      <UnifiedAyoaLayout tasks={pnlMapTasks} clients={clients} centerLabel="רווח והפסד" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth}>
       {/* Table */}
       <Card>
         <CardContent className="p-0">
