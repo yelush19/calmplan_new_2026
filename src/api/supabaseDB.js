@@ -2,75 +2,19 @@
  * SupabaseDB - Drop-in replacement for LocalDB
  * Same API: Entity.list(), Entity.create(), Entity.update(), Entity.delete(), Entity.filter()
  * Uses a single generic table (app_data) with JSONB data column.
+ *
+ * ══ RLS-AWARE ══
+ * After detecting RLS blocks reads, this module sets rlsBlocked=true.
+ * The hybrid layer in base44Client reads this flag and routes to localStorage.
+ * Supabase queries are SKIPPED once rlsBlocked is set — no more console spam.
  */
 
-import { supabase, isSupabaseAvailable, supabaseRawUrl, supabaseRawKey } from './supabaseClient';
+import { supabase, isSupabaseAvailable } from './supabaseClient';
 import { toast } from 'sonner';
 
-// ══ RLS BYPASS: Direct REST API fetch ══
-// When Supabase JS client is blocked by RLS, we fetch directly via REST API
-// using the anon key as apikey header (no auth.uid() — bypasses user-based RLS)
-let rlsBypassAttempted = false;
-let authFixAttempted = false;
-
-async function ensureAuth() {
-  if (authFixAttempted || !supabase) return;
-  authFixAttempted = true;
-  try {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session?.session) {
-      console.log('[Supabase] No active session. Attempting anonymous sign-in to satisfy RLS...');
-      const { error } = await supabase.auth.signInAnonymously();
-      if (error) {
-        console.warn('[Supabase] Anonymous sign-in failed:', error.message, '— will try REST API bypass');
-      } else {
-        console.log('[Supabase] Anonymous sign-in successful — RLS should now allow reads');
-      }
-    } else {
-      console.log('[Supabase] Active session found:', session.session.user?.id?.substring(0, 8) + '...');
-    }
-  } catch (e) {
-    console.warn('[Supabase] Auth check failed:', e.message);
-  }
-}
-
-async function directRestFetch(collectionName, limit = 5000) {
-  if (!supabaseRawUrl || !supabaseRawKey) return null;
-  try {
-    const url = `${supabaseRawUrl}/rest/v1/app_data?select=*&collection=eq.${encodeURIComponent(collectionName)}&limit=${limit}`;
-    console.log(`[REST] Direct fetch: ${collectionName}`);
-    const resp = await fetch(url, {
-      headers: {
-        'apikey': supabaseRawKey,
-        'Authorization': `Bearer ${supabaseRawKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
-      },
-    });
-    if (!resp.ok) {
-      console.error(`[REST] HTTP ${resp.status}: ${resp.statusText}`);
-      // Try without collection filter
-      const urlAll = `${supabaseRawUrl}/rest/v1/app_data?select=*&limit=${limit}`;
-      const resp2 = await fetch(urlAll, {
-        headers: {
-          'apikey': supabaseRawKey,
-          'Authorization': `Bearer ${supabaseRawKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!resp2.ok) return null;
-      const allRows = await resp2.json();
-      console.log(`[REST] Unfiltered got ${allRows?.length} rows`);
-      return (allRows || []).filter(r => r.collection === collectionName);
-    }
-    const rows = await resp.json();
-    console.log(`[REST] Direct fetch got ${rows?.length} rows for ${collectionName}`);
-    return rows;
-  } catch (e) {
-    console.error('[REST] Direct fetch failed:', e.message);
-    return null;
-  }
-}
+// ── RLS state (exported so base44Client can read it) ──
+export let rlsBlocked = false;
+let rlsChecked = false;
 
 function mapRows(rows) {
   return (rows || []).map(row => ({
@@ -85,35 +29,60 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
-// Throttled error toast — avoid spamming the user with repeated errors
 let lastErrorToastTime = 0;
-const ERROR_TOAST_COOLDOWN = 5000; // 5 seconds
 function showErrorToast(title, description) {
   const now = Date.now();
-  if (now - lastErrorToastTime > ERROR_TOAST_COOLDOWN) {
+  if (now - lastErrorToastTime > 5000) {
     lastErrorToastTime = now;
     toast.error(title, { description, duration: 5000 });
   }
 }
 
 function guardSupabase(operation) {
-  if (!isSupabaseAvailable()) {
-    console.error(`[CalmPlan] Supabase not available for ${operation}. Returning empty result.`);
-    showErrorToast('המערכת לא מחוברת לענן', 'הנתונים לא נטענו. בדוק את החיבור.');
-    return false;
-  }
+  if (!isSupabaseAvailable()) return false;
   return true;
+}
+
+/**
+ * One-time RLS probe: check if we can actually read rows.
+ * Sets rlsBlocked=true if the table has data but SELECT returns 0.
+ * Logs ONE warning, then goes silent.
+ */
+async function probeRls() {
+  if (rlsChecked || !supabase) return;
+  rlsChecked = true;
+  try {
+    const { count } = await supabase
+      .from('app_data')
+      .select('id', { count: 'exact', head: true });
+    if (!count || count === 0) return; // Table empty — not RLS
+
+    const { data } = await supabase
+      .from('app_data')
+      .select('id')
+      .limit(1);
+    if (!data || data.length === 0) {
+      rlsBlocked = true;
+      console.warn(
+        `[Supabase] RLS is blocking reads (${count} rows exist, 0 returned). ` +
+        'All reads routed to localStorage. Fix: run fix-rls.sql in Supabase SQL Editor.'
+      );
+    }
+  } catch { /* ignore */ }
+}
+
+// Kick off probe immediately (non-blocking)
+if (isSupabaseAvailable()) {
+  probeRls();
 }
 
 function createEntity(collectionName) {
   return {
     async list(sortField = null, limit = 1000) {
       if (!guardSupabase(`list(${collectionName})`)) return [];
+      // If RLS is known-blocked, don't waste time — return [] so hybrid falls back
+      if (rlsBlocked) return [];
 
-      // Step 0: Ensure we have an auth session (fixes RLS "no user" blocking)
-      await ensureAuth();
-
-      // Step 1: Try normal Supabase JS client query
       const { data, error } = await supabase
         .from('app_data')
         .select('*')
@@ -121,7 +90,6 @@ function createEntity(collectionName) {
         .limit(limit);
 
       if (!error && data && data.length > 0) {
-        console.log(`[Supabase] ${collectionName}: ${data.length} rows ✓`);
         let results = mapRows(data);
         if (sortField) {
           const desc = sortField.startsWith('-');
@@ -136,38 +104,19 @@ function createEntity(collectionName) {
         return results;
       }
 
-      // Step 2: JS client returned 0 or error — try direct REST API (bypasses JS client RLS issues)
-      if (error) {
-        console.warn(`[Supabase] JS client error (${collectionName}):`, error.message);
-      } else {
-        console.warn(`[Supabase] ${collectionName}: JS client returned 0 rows`);
+      // Got 0 rows — mark RLS blocked (probe may not have finished yet)
+      if (!rlsBlocked && !error) {
+        await probeRls();
       }
-
-      console.log(`[Supabase] Attempting REST API bypass for ${collectionName}...`);
-      const restRows = await directRestFetch(collectionName, limit);
-      if (restRows && restRows.length > 0) {
-        console.log(`[Supabase] REST API got ${restRows.length} rows for ${collectionName} ✓`);
-        return mapRows(restRows);
-      }
-
-      // Step 3: Even REST failed — log RLS alert for diagnostics
-      const { count } = await supabase
-        .from('app_data')
-        .select('id', { count: 'exact', head: true });
-      if (count > 0) {
-        console.error(`[Supabase] RLS TOTAL BLOCK: ${count} rows exist but BOTH JS client and REST API returned 0 for ${collectionName}`);
-        console.error(`[Supabase] FIX REQUIRED: Disable RLS on app_data table or add a permissive SELECT policy`);
-      }
-
       return [];
     },
 
     async create(itemData) {
       if (!guardSupabase(`create(${collectionName})`)) throw new Error('Supabase not available');
+      if (rlsBlocked) throw new Error('RLS blocked');
 
       const id = generateId();
       const now = new Date().toISOString();
-      // Strip id from data to avoid duplication
       const { id: _id, created_date: _cd, updated_date: _ud, ...cleanData } = itemData;
 
       const { data, error } = await supabase
@@ -192,11 +141,10 @@ function createEntity(collectionName) {
 
     async update(id, updateData) {
       if (!guardSupabase(`update(${collectionName})`)) throw new Error('Supabase not available');
+      if (rlsBlocked) throw new Error('RLS blocked');
 
-      // Strip metadata fields from update data
       const { id: _id, created_date: _cd, updated_date: _ud, ...cleanUpdate } = updateData;
 
-      // First get current data
       const { data: current, error: fetchError } = await supabase
         .from('app_data')
         .select('data')
@@ -205,7 +153,6 @@ function createEntity(collectionName) {
         .single();
 
       if (fetchError) {
-        console.error(`Supabase fetch for update error (${collectionName}):`, fetchError);
         throw new Error(`Item ${id} not found in ${collectionName}`);
       }
 
@@ -219,16 +166,14 @@ function createEntity(collectionName) {
         .select()
         .single();
 
-      if (error) {
-        console.error(`Supabase update error (${collectionName}):`, error);
-        throw error;
-      }
+      if (error) throw error;
 
       return { ...data.data, id: data.id, created_date: data.created_date, updated_date: data.updated_date };
     },
 
     async delete(id) {
       if (!guardSupabase(`delete(${collectionName})`)) throw new Error('Supabase not available');
+      if (rlsBlocked) throw new Error('RLS blocked');
 
       const { error } = await supabase
         .from('app_data')
@@ -236,33 +181,24 @@ function createEntity(collectionName) {
         .eq('collection', collectionName)
         .eq('id', id);
 
-      if (error) {
-        console.error(`Supabase delete error (${collectionName}):`, error);
-        throw error;
-      }
-
+      if (error) throw error;
       return { success: true };
     },
 
     async deleteAll() {
       if (!guardSupabase(`deleteAll(${collectionName})`)) throw new Error('Supabase not available');
+      if (rlsBlocked) throw new Error('RLS blocked');
 
       const { error } = await supabase
         .from('app_data')
         .delete()
         .eq('collection', collectionName);
 
-      if (error) {
-        console.error(`Supabase deleteAll error (${collectionName}):`, error);
-        throw error;
-      }
-
+      if (error) throw error;
       return { success: true };
     },
 
     async filter(filters = {}, sortField = null, limit = 1000) {
-      // Supabase JSONB filtering is limited, so we fetch all and filter in JS
-      // This is fine for the data volumes in this app
       let allItems = await this.list(sortField, 10000);
 
       allItems = allItems.filter(item => {
@@ -344,13 +280,9 @@ export const entities = {
 
 export { auth };
 
-/**
- * Migrate all data from localStorage to Supabase
- * Call this once after setting up Supabase to move existing data
- */
 export async function migrateFromLocalStorage() {
   if (!guardSupabase('migrateFromLocalStorage')) {
-    throw new Error('Supabase not available for migration');
+    throw new Error('Supabase not available');
   }
 
   const DB_PREFIX = 'calmplan_';
@@ -364,7 +296,6 @@ export async function migrateFromLocalStorage() {
       const items = JSON.parse(localStorage.getItem(key));
       if (!Array.isArray(items) || items.length === 0) continue;
 
-      // Check if collection already has data in Supabase
       const { count } = await supabase
         .from('app_data')
         .select('id', { count: 'exact', head: true })
@@ -376,7 +307,6 @@ export async function migrateFromLocalStorage() {
         continue;
       }
 
-      // Bulk insert
       const rows = items.map(item => {
         const { id, created_date, updated_date, ...data } = item;
         return {
@@ -405,9 +335,6 @@ export async function migrateFromLocalStorage() {
   return results;
 }
 
-/**
- * Export all Supabase data as JSON (backup)
- */
 export async function exportAllData() {
   if (!guardSupabase('exportAllData')) throw new Error('Supabase not available');
 
@@ -415,13 +342,12 @@ export async function exportAllData() {
     .from('app_data')
     .select('*')
     .neq('collection', 'backup_snapshots')
-    .order('collection')
     .limit(50000);
 
   if (error) throw error;
 
   const grouped = {};
-  for (const row of data) {
+  for (const row of (data || [])) {
     if (!grouped[row.collection]) grouped[row.collection] = [];
     grouped[row.collection].push({
       ...row.data,
@@ -433,17 +359,11 @@ export async function exportAllData() {
   return grouped;
 }
 
-/**
- * Save a daily backup snapshot to Supabase (backup_snapshots collection).
- * Keeps last 7 snapshots, auto-deletes older ones.
- * Returns { saved: boolean, date: string } or throws on error.
- */
 export async function saveDailyBackupToSupabase() {
   if (!guardSupabase('saveDailyBackupToSupabase')) throw new Error('Supabase not available');
 
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
 
-  // Check if today's backup already exists
   const { data: existing } = await supabase
     .from('app_data')
     .select('id')
@@ -455,14 +375,12 @@ export async function saveDailyBackupToSupabase() {
     return { saved: false, date: today, reason: 'already_exists' };
   }
 
-  // Export all data
   const allData = await exportAllData();
   const summary = {};
   for (const [collection, items] of Object.entries(allData)) {
     summary[collection] = items.length;
   }
 
-  // Save snapshot
   const { error } = await supabase.from('app_data').upsert({
     id: `backup_${today}`,
     collection: 'backup_snapshots',
@@ -473,7 +391,6 @@ export async function saveDailyBackupToSupabase() {
 
   if (error) throw error;
 
-  // Cleanup: keep only last 7 backups
   const { data: allBackups } = await supabase
     .from('app_data')
     .select('id, created_date')
@@ -492,9 +409,6 @@ export async function saveDailyBackupToSupabase() {
   return { saved: true, date: today, summary };
 }
 
-/**
- * List available backup snapshots
- */
 export async function listBackupSnapshots() {
   if (!guardSupabase('listBackupSnapshots')) return [];
 
@@ -515,9 +429,6 @@ export async function listBackupSnapshots() {
   }));
 }
 
-/**
- * Restore from a specific backup snapshot
- */
 export async function restoreFromBackupSnapshot(backupId) {
   if (!guardSupabase('restoreFromBackupSnapshot')) throw new Error('Supabase not available');
 
@@ -535,9 +446,6 @@ export async function restoreFromBackupSnapshot(backupId) {
   return { restored: true, date: data.data.date };
 }
 
-/**
- * Delete all data from Supabase (except backup_snapshots)
- */
 export async function clearAllData() {
   if (!guardSupabase('clearAllData')) throw new Error('Supabase not available');
 
@@ -548,44 +456,22 @@ export async function clearAllData() {
   if (error) throw error;
 }
 
-/**
- * Clean zombie keys from data objects.
- * Removes numeric string keys ("0", "1", "2", ...) that appear from
- * corrupted array-to-object serialization in backups.
- * Also removes undefined/null-only entries.
- */
 function cleanZombieFields(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
   const cleaned = {};
   for (const [key, value] of Object.entries(obj)) {
-    // Skip numeric string keys (zombie fields from array corruption)
     if (/^\d+$/.test(key)) continue;
-    // Keep everything else (including nested objects/arrays)
     cleaned[key] = value;
   }
   return cleaned;
 }
 
-/**
- * Normalize collection name:
- * - Strips "calmplan_" prefix if present (localStorage format → Supabase format)
- * - Skips internal/user keys
- */
 function normalizeCollectionName(key) {
-  // Skip internal keys
   if (key === 'calmplan__user' || key === '_user') return null;
-  // Strip calmplan_ prefix if present
   if (key.startsWith('calmplan_')) return key.replace('calmplan_', '');
   return key;
 }
 
-/**
- * Import data from JSON backup to Supabase.
- * Handles both formats:
- *  - Supabase export: { "clients": [...], "tasks": [...] }
- *  - localStorage export: { "calmplan_clients": [...], "calmplan_tasks": [...] }
- * Cleans zombie numeric keys from all records.
- */
 export async function importAllData(allData) {
   if (!guardSupabase('importAllData')) throw new Error('Supabase not available');
 
@@ -593,7 +479,6 @@ export async function importAllData(allData) {
   for (const [rawKey, items] of Object.entries(allData)) {
     const collection = normalizeCollectionName(rawKey);
     if (!collection) continue;
-    // Skip backup_snapshots to avoid importing old backups
     if (collection === 'backup_snapshots') continue;
     if (!Array.isArray(items)) continue;
 
@@ -614,7 +499,6 @@ export async function importAllData(allData) {
     throw new Error('No valid data found in backup file');
   }
 
-  // Upsert in batches of 500
   const errors = [];
   for (let i = 0; i < rows.length; i += 500) {
     const batch = rows.slice(i, i + 500);
