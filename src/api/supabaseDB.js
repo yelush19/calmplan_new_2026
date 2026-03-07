@@ -36,20 +36,56 @@ function createEntity(collectionName) {
     async list(sortField = null, limit = 1000) {
       if (!guardSupabase(`list(${collectionName})`)) return [];
 
-      // ALWAYS fetch without JSONB sort (it can fail silently on Supabase).
-      // Sort in JS after fetching — this is safe for our data volumes.
-      let query = supabase
+      // Primary query: fetch by collection name
+      const { data, error } = await supabase
         .from('app_data')
         .select('*')
         .eq('collection', collectionName)
-        .order('created_date', { ascending: true })
         .limit(limit);
 
-      const { data, error } = await query;
       if (error) {
-        console.error(`Supabase list error (${collectionName}):`, error);
-        showErrorToast('שגיאה בטעינת נתונים', `לא ניתן לטעון ${collectionName}. נסה לרענן.`);
-        return [];
+        console.error(`[Supabase] list error (${collectionName}):`, error.message);
+        // Fallback: try fetching ALL data without collection filter (RLS bypass test)
+        console.warn(`[Supabase] Trying fallback: fetch ALL rows without collection filter...`);
+        const { data: allData, error: allError } = await supabase
+          .from('app_data')
+          .select('*')
+          .limit(5000);
+        if (allError) {
+          console.error(`[Supabase] Fallback also failed:`, allError.message);
+          console.error(`[Supabase] THIS IS LIKELY AN RLS ISSUE. Check Row Level Security policies on app_data table.`);
+          showErrorToast('שגיאה בטעינת נתונים', 'בדוק הרשאות RLS בסופאבייס');
+          return [];
+        }
+        // Filter in JS
+        const filtered = (allData || []).filter(r => r.collection === collectionName);
+        console.log(`[Supabase] Fallback got ${allData?.length} total rows, ${filtered.length} for ${collectionName}`);
+        return filtered.map(row => ({ ...row.data, id: row.id, created_date: row.created_date, updated_date: row.updated_date }));
+      }
+
+      console.log(`[Supabase] ${collectionName}: got ${data?.length || 0} rows`);
+
+      // RLS CHECK: if we got 0 rows, test if ANY data exists in the table
+      if ((!data || data.length === 0) && collectionName === 'tasks') {
+        const { count, error: countErr } = await supabase
+          .from('app_data')
+          .select('id', { count: 'exact', head: true });
+        if (!countErr && count > 0) {
+          console.error(`[Supabase] RLS ALERT: app_data has ${count} total rows but ${collectionName} query returned 0.`);
+          console.error(`[Supabase] This means RLS is blocking access. Trying unfiltered fetch...`);
+          // Try without collection filter
+          const { data: rawAll } = await supabase
+            .from('app_data')
+            .select('*')
+            .limit(5000);
+          if (rawAll && rawAll.length > 0) {
+            const match = rawAll.filter(r => r.collection === collectionName);
+            console.log(`[Supabase] Unfiltered: ${rawAll.length} total, ${match.length} for ${collectionName}`);
+            if (match.length > 0) {
+              return match.map(row => ({ ...row.data, id: row.id, created_date: row.created_date, updated_date: row.updated_date }));
+            }
+          }
+        }
       }
 
       let results = (data || []).map(row => ({
@@ -59,7 +95,7 @@ function createEntity(collectionName) {
         updated_date: row.updated_date,
       }));
 
-      // Sort in JS if requested (safe — no Supabase JSONB arrow errors)
+      // Sort in JS if requested
       if (sortField) {
         const desc = sortField.startsWith('-');
         const field = desc ? sortField.slice(1) : sortField;
