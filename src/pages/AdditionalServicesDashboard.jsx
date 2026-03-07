@@ -411,7 +411,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         </Card>
       </div>
 
-      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} centerLabel="שירותים נוספים" centerSub="P1" accentColor="#00A3E0" onEditTask={setEditingTask}>
+      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} isLoading={isLoading} centerLabel="שירותים נוספים" centerSub="P1" accentColor="#00A3E0" onEditTask={setEditingTask}>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />

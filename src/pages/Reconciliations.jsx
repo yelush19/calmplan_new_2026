@@ -790,7 +790,7 @@ export default function ReconciliationsPage() {
       </div>
 
       {/* ── UnifiedAyoaLayout Wrapper ─────────────── */}
-      <UnifiedAyoaLayout data={reconciliationTasks} clients={clients || []} centerLabel="התאמת חשבונות" centerSub="P2" branch="P2">
+      <UnifiedAyoaLayout data={reconciliationTasks} clients={clients || []} isLoading={isLoading} centerLabel="התאמת חשבונות" centerSub="P2" branch="P2">
 
       {/* ── Expand/Collapse + Select All controls ─────────────── */}
       <div className="flex items-center justify-between">

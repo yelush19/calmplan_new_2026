@@ -19,7 +19,7 @@ import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
 import GanttView from '@/components/views/GanttView';
-import { Table } from 'lucide-react';
+import { Table, Loader2 } from 'lucide-react';
 
 const DNA_ACCENTS = {
   P1: '#00A3E0',
@@ -38,6 +38,7 @@ export default function UnifiedAyoaLayout({
   branch,
   currentMonth,
   onEditTask,
+  isLoading = false,
   children,
 }) {
   const tasks = data || tasksProp || [];
@@ -91,6 +92,12 @@ export default function UnifiedAyoaLayout({
       {isOriginalActive ? (
         // DEFAULT: Show original page content (children) — untouched, no wrapper
         <>{children}</>
+      ) : isLoading ? (
+        // Loading state — show spinner while data is fetching
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: accent }} />
+          <span className="text-sm font-bold text-slate-600">טוען נתונים...</span>
+        </div>
       ) : (
         // AYOA view selected — show visualization
         <>
