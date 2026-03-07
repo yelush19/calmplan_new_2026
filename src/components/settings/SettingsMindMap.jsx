@@ -523,6 +523,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           weight,
           cogLoad: weight?.cognitiveLoad || 0,
           r: Math.max(22, 30 - depth * 3), // slightly smaller at deeper levels
+          nextStepId: svc.nextStepId || null,
+          isParallel: svc.isParallel || false,
           _isCustom: !!customServices[svc.key],
           _depth: depth,
           ...nodePositionOverrides[svc.key],
@@ -897,7 +899,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     }
   }, [selectedNodeId, selectedNode?.type, selectedNode?.parentId, allNodes.length, liveServices]);
 
-  // ── Build edges for rendering ──
+  // ── Build hierarchy edges (solid tapered branches) ──
   const edges = useMemo(() => {
     const result = [];
     allNodes.forEach(node => {
@@ -908,6 +910,20 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         if (parent) {
           const thick = node.type === 'step' ? [2.5, 0.8] : [4, 1.5];
           result.push({ from: parent, to: node, color: node.color, thickness: thick });
+        }
+      }
+    });
+    return result;
+  }, [allNodes]);
+
+  // ── Build FLOW edges (dashed directional arrows for nextStepId) ──
+  const flowEdges = useMemo(() => {
+    const result = [];
+    allNodes.forEach(node => {
+      if (node.nextStepId) {
+        const target = allNodes.find(n => n.id === node.nextStepId);
+        if (target) {
+          result.push({ from: node, to: target, color: '#1565C0' });
         }
       }
     });
@@ -950,6 +966,15 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           <pattern id="dot-grid" width="30" height="30" patternUnits="userSpaceOnUse">
             <circle cx="15" cy="15" r="0.6" fill="#E0E0E0" />
           </pattern>
+          {/* Arrowhead marker for flow arrows */}
+          <marker id="flow-arrow" viewBox="0 0 10 7" refX="9" refY="3.5"
+            markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,3.5 L0,7 Z" fill="#1565C0" />
+          </marker>
+          <marker id="flow-arrow-green" viewBox="0 0 10 7" refX="9" refY="3.5"
+            markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,3.5 L0,7 Z" fill="#4CAF50" />
+          </marker>
         </defs>
 
         {/* Background grid */}
@@ -965,6 +990,39 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
             style={{ transition: 'opacity 0.2s' }}
           />
         ))}
+
+        {/* ── Flow Arrows (dashed directional — nextStepId links) ── */}
+        {flowEdges.map((fe, i) => {
+          // Compute curved path from fe.from to fe.to with offset to avoid overlapping hierarchy lines
+          const dx = fe.to.x - fe.from.x;
+          const dy = fe.to.y - fe.from.y;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          // Shorten line by node radii so arrow touches edge not center
+          const fromR = fe.from.r || 30;
+          const toR = fe.to.r || 30;
+          const nx = dx / len;
+          const ny = dy / len;
+          const x1 = fe.from.x + nx * fromR;
+          const y1 = fe.from.y + ny * fromR;
+          const x2 = fe.to.x - nx * (toR + 8); // extra gap for arrowhead
+          const y2 = fe.to.y - ny * (toR + 8);
+          // Curved control point perpendicular to line
+          const cpx = (x1 + x2) / 2 - ny * 25;
+          const cpy = (y1 + y2) / 2 + nx * 25;
+          return (
+            <path
+              key={`flow-${i}`}
+              d={`M${x1},${y1} Q${cpx},${cpy} ${x2},${y2}`}
+              fill="none"
+              stroke={fe.color}
+              strokeWidth={2.5}
+              strokeDasharray="8 4"
+              markerEnd="url(#flow-arrow)"
+              opacity={0.7}
+              style={{ transition: 'opacity 0.2s' }}
+            />
+          );
+        })}
 
         {/* ── Magnetic snap preview line (directive #6) ── */}
         {(paletteDrag || dragState) && magnetTarget && (() => {

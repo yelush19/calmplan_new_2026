@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import {
   X, Plus, Link2, Layers, ChevronRight, Save,
   CheckCircle, FileText, Trash2, AlertTriangle, Zap,
-  GitBranch,
+  GitBranch, ArrowRight, GitMerge,
 } from 'lucide-react';
 import { getServiceWeight } from '@/config/serviceWeights';
 
@@ -88,6 +88,8 @@ export default function TemplatePanel({ service, onClose }) {
   });
   const [newStepLabel, setNewStepLabel] = useState('');
   const [newCategory, setNewCategory] = useState('');
+  const [editNextStepId, setEditNextStepId] = useState(service?.nextStepId || '');
+  const [editIsParallel, setEditIsParallel] = useState(service?.isParallel || false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -104,6 +106,8 @@ export default function TemplatePanel({ service, onClose }) {
       dashboard: editDashboard,
       steps: editSteps,
       taskCategories: editCategories,
+      nextStepId: editNextStepId || null,
+      isParallel: editIsParallel,
     });
     setHasChanges(false);
   };
@@ -372,6 +376,119 @@ export default function TemplatePanel({ service, onClose }) {
                   })}
                 </div>
               </div>
+            </div>
+          );
+        })()}
+
+        {/* ══ FLOW & DEPENDENCIES: Next Step + Parallel Toggle ══ */}
+        {(() => {
+          const allNodes = service?._allNodes || [];
+          const crudRef = service?._crud;
+          const currentKey = service?.key;
+
+          // Candidates for "next step": all service nodes except self
+          const flowCandidates = allNodes.filter(n =>
+            n.id !== currentKey && n.type === 'service'
+          );
+
+          // Build breadcrumb for display
+          const buildPath = (nodeId) => {
+            const segs = [];
+            let cur = nodeId;
+            let depth = 0;
+            while (cur && cur !== 'hub' && depth < 10) {
+              const found = allNodes.find(x => x.id === cur);
+              if (!found) break;
+              segs.unshift(found.label || found.id);
+              cur = found.parentId;
+              depth++;
+            }
+            return segs.join(' \u2192 ');
+          };
+
+          // Current next step label
+          const nextNode = allNodes.find(n => n.id === editNextStepId);
+          const nextLabel = nextNode ? (nextNode.label || nextNode.id) : null;
+
+          return (
+            <div className="px-4 py-3 border-b" style={{ backgroundColor: '#F0F8FF' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <ArrowRight className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-bold text-gray-700">זרימה ותלויות</span>
+              </div>
+
+              {/* Next Step Dropdown */}
+              <div className="mb-3">
+                <label className="text-[10px] font-bold text-gray-500 mb-1 block">שלב הבא (Sequential)</label>
+                {nextLabel && (
+                  <div className="flex items-center gap-1 mb-1.5 text-[10px] text-blue-600">
+                    <ArrowRight className="w-3 h-3" />
+                    <span>{nextLabel}</span>
+                  </div>
+                )}
+                <select
+                  value={editNextStepId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditNextStepId(val);
+                    if (crudRef) {
+                      crudRef.updateService(currentKey, { nextStepId: val || null });
+                      console.log('STATE MUTATED:', {
+                        action: 'set_next_step',
+                        key: currentKey,
+                        nextStepId: val || null,
+                      });
+                    }
+                  }}
+                  style={{ width: '100%', padding: '6px 10px', fontSize: '11px', border: '1.5px solid #90CAF9', borderRadius: '8px', backgroundColor: 'white', direction: 'rtl' }}
+                >
+                  <option value="">-- ללא (סוף תהליך) --</option>
+                  {flowCandidates.map(n => (
+                    <option key={n.id} value={n.id}>
+                      {n.label || n.id} ({buildPath(n.id)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Parallel Toggle */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const next = !editIsParallel;
+                    setEditIsParallel(next);
+                    if (crudRef) {
+                      crudRef.updateService(currentKey, { isParallel: next });
+                      console.log('STATE MUTATED:', {
+                        action: 'toggle_parallel',
+                        key: currentKey,
+                        isParallel: next,
+                      });
+                    }
+                  }}
+                  style={{
+                    width: '36px', height: '20px', borderRadius: '10px', border: 'none',
+                    backgroundColor: editIsParallel ? '#4CAF50' : '#ccc',
+                    position: 'relative', cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{
+                    width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'white',
+                    position: 'absolute', top: '2px',
+                    left: editIsParallel ? '18px' : '2px',
+                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }} />
+                </button>
+                <GitMerge className="w-3.5 h-3.5" style={{ color: editIsParallel ? '#4CAF50' : '#999' }} />
+                <span className="text-[10px] font-medium" style={{ color: editIsParallel ? '#4CAF50' : '#999' }}>
+                  בצע במקביל (Parallel)
+                </span>
+              </div>
+              {editIsParallel && (
+                <div className="mt-1.5 text-[9px] text-green-600 bg-green-50 px-2 py-1 rounded-md">
+                  צומת זה יתבצע במקביל לצמתים אחים באותו ענף אב
+                </div>
+              )}
             </div>
           );
         })()}
