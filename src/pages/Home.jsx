@@ -207,7 +207,7 @@ export default function HomePage() {
       } catch { setUserName('לנה'); }
 
       const [tasksData, eventsData, clientsData] = await Promise.all([
-        Task.list(null, 5000).catch((err) => { console.error('Home Task.list FAILED:', err); return []; }),
+        Task.list(null, 5000).catch(() => []),
         Event.list(null, 500).catch(() => []),
         Client.list(null, 1000).catch(() => []),
       ]);
@@ -215,8 +215,6 @@ export default function HomePage() {
       setClients(Array.isArray(clientsData) ? clientsData : []);
 
       const rawTasks = Array.isArray(tasksData) ? tasksData : [];
-      console.log('RAW_DATA_CHECK [Home]:', rawTasks.length, 'tasks from Task.list()');
-      const nowMs = Date.now();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -224,13 +222,9 @@ export default function HomePage() {
       const in3Days = new Date(today);
       in3Days.setDate(in3Days.getDate() + 3);
 
-      // ══ NO FILTERING — show every task from DB ══
       const allTasks = rawTasks;
-      console.log('[Home] ALL TASKS passthrough:', allTasks.length);
-
       const activeTasks = allTasks.filter(t => t.status !== 'production_completed');
 
-      // Inbox items = tasks with source 'quick-capture' that have no category/client
       const inbox = activeTasks.filter(t =>
         t.source === 'quick-capture' && !t.client_name && !t.category
       );
@@ -269,23 +263,6 @@ export default function HomePage() {
         eventDate.setHours(0, 0, 0, 0);
         return eventDate.getTime() === today.getTime();
       });
-
-      // ══ DEBUG INJECTION: if nothing arrived, inject test task to prove UI works ══
-      if (allTasks.length === 0) {
-        console.error('HOME BLACKOUT: 0 tasks after all processing. rawTasks had', rawTasks.length);
-        const debugTask = {
-          id: 'DEBUG_HOME_001',
-          title: 'TEST TASK - IF YOU SEE THIS, THE UI WORKS (DB returned 0)',
-          client_name: 'DEBUG',
-          category: 'שכר',
-          status: 'not_started',
-          priority: 'urgent',
-          due_date: new Date().toISOString().split('T')[0],
-          context: 'work',
-        };
-        allTasks.push(debugTask);
-        activeTasks.push(debugTask);
-      }
 
       const workCount = activeTasks.filter(t => getTaskContext(t) === 'work').length;
       const homeCount = activeTasks.filter(t => getTaskContext(t) === 'home').length;

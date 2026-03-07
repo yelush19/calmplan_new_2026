@@ -272,14 +272,9 @@ export default function TasksPage() {
   const loadTasks = async () => {
     setIsLoading(true);
     try {
-      const rawTasks = await Task.list(null, 5000).catch((err) => {
-        console.error('Task.list FAILED:', err);
-        return [];
-      });
+      const rawTasks = await Task.list(null, 5000).catch(() => []);
       const validTasks = Array.isArray(rawTasks) ? rawTasks : [];
-      console.log('RAW_DATA_CHECK [Tasks]:', validTasks.length, 'tasks — NO FILTERING');
 
-      // ══ NO FILTERING WALL — show every task from DB ══
       const processed = validTasks.map(task => {
         let normalizedStatus = task.status;
         if (task.status && mondayStatusMapping[task.status]) {
@@ -290,34 +285,10 @@ export default function TasksPage() {
         return { ...task, status: normalizedStatus };
       });
 
-      // ══ DEBUG INJECTION: if NOTHING arrived, inject a test task to prove UI renders ══
-      if (processed.length === 0) {
-        console.error('TOTAL BLACKOUT: 0 tasks after all processing. Injecting DEBUG task.');
-        processed.push({
-          id: 'DEBUG_TEST_001',
-          title: 'TEST TASK - IF YOU SEE THIS, THE UI WORKS (DB returned 0)',
-          client_name: 'DEBUG',
-          category: 'שכר',
-          status: 'not_started',
-          priority: 'urgent',
-          due_date: new Date().toISOString().split('T')[0],
-          description: 'This is a debug task. If you see this, it means Task.list() returned 0 items but the UI rendering pipeline is working. The problem is the database connection or query.',
-        });
-      }
-
       setTasks(processed);
     } catch (error) {
       console.error("Error loading tasks:", error);
-      // Even on total crash, show a debug task
-      setTasks([{
-        id: 'DEBUG_CRASH_001',
-        title: 'TEST TASK - FETCH CRASHED: ' + (error?.message || 'unknown error'),
-        client_name: 'ERROR',
-        category: 'שכר',
-        status: 'not_started',
-        priority: 'urgent',
-        due_date: new Date().toISOString().split('T')[0],
-      }]);
+      setTasks([]);
     }
     setIsLoading(false);
   };

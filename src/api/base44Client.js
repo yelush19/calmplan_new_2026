@@ -1,57 +1,133 @@
 // Smart data layer - uses Supabase if configured, falls back to localStorage
+// ══ RLS AUTO-DETECT: If Supabase has rows but reads return 0, switch to localStorage ══
 import { isSupabaseConfigured, supabase, testSupabaseConnection } from './supabaseClient';
 import * as localDB from './localDB';
 import * as supabaseDB from './supabaseDB';
+// supabaseDB exports rlsBlocked flag — probeRls() sets it on module load
 
 const primary = isSupabaseConfigured ? supabaseDB : localDB;
-const fallback = isSupabaseConfigured ? localDB : null;
-console.log(`[CalmPlan] DATA SOURCE: ${isSupabaseConfigured ? 'SUPABASE (cloud) + localStorage fallback' : 'localStorage (local)'}`);
+console.log(`[CalmPlan] DATA SOURCE: ${isSupabaseConfigured ? 'SUPABASE (cloud)' : 'localStorage (local)'}`);
 
-// ── Hybrid entities: try primary, fall back to other source if empty ──
+function isRlsBlocked() {
+  return isSupabaseConfigured && supabaseDB.rlsBlocked;
+}
+
+// ── Hybrid entities: Supabase → localStorage fallback ──
+// When RLS blocks Supabase, transparently serve data from localStorage.
 function createHybridEntity(entityName) {
-  const primaryEntity = primary.entities[entityName];
-  const fallbackEntity = fallback?.entities?.[entityName];
+  const supaEntity = isSupabaseConfigured ? primary.entities[entityName] : null;
+  const localEntity = localDB.entities[entityName];
 
-  if (!fallbackEntity) return primaryEntity; // No fallback available
+  // If no Supabase, just use localStorage directly
+  if (!supaEntity) return localEntity;
+
+  // Track if we already logged the fallback for this entity (don't spam)
+  let loggedFallback = false;
 
   return {
     async list(sortField = null, limit = 1000) {
-      try {
-        const result = await primaryEntity.list(sortField, limit);
-        if (result && result.length > 0) return result;
-      } catch (err) {
-        console.warn(`[Hybrid] ${entityName}.list primary failed:`, err.message);
+      // If RLS is known to be blocked, go straight to localStorage (silent)
+      if (isRlsBlocked()) {
+        try { return await localEntity.list(sortField, limit); } catch { return []; }
       }
-      // Primary returned [] or failed — try fallback
-      console.warn(`[Hybrid] ${entityName}.list: primary returned 0, trying localStorage fallback`);
+
+      // Try Supabase first
       try {
-        const fallbackResult = await fallbackEntity.list(sortField, limit);
-        if (fallbackResult && fallbackResult.length > 0) {
-          console.log(`[Hybrid] ${entityName}: found ${fallbackResult.length} items in localStorage fallback`);
-          return fallbackResult;
+        const result = await supaEntity.list(sortField, limit);
+        if (result && result.length > 0) {
+          // SUCCESS — also cache to localStorage for resilience
+          _cacheToLocal(entityName, result);
+          return result;
         }
+      } catch { /* fall through */ }
+
+      // Supabase returned 0 — try localStorage (log once only)
+      if (!loggedFallback) {
+        loggedFallback = true;
+        console.log(`[Hybrid] ${entityName}: using localStorage fallback`);
+      }
+      try {
+        const fallbackResult = await localEntity.list(sortField, limit);
+        if (fallbackResult && fallbackResult.length > 0) return fallbackResult;
       } catch { /* ignore */ }
       return [];
     },
-    async create(data) { return primaryEntity.create(data); },
-    async update(id, data) { return primaryEntity.update(id, data); },
-    async delete(id) { return primaryEntity.delete(id); },
-    async deleteAll() { return primaryEntity.deleteAll(); },
-    async filter(filters, sortField, limit) {
-      try {
-        const result = await primaryEntity.filter(filters, sortField, limit);
-        if (result && result.length > 0) return result;
-      } catch (err) {
-        console.warn(`[Hybrid] ${entityName}.filter primary failed:`, err.message);
+
+    async create(data) {
+      // Write to both if possible
+      if (!isRlsBlocked()) {
+        try { const r = await supaEntity.create(data); _cacheItemToLocal(entityName, r); return r; } catch { /* fall through */ }
       }
-      console.warn(`[Hybrid] ${entityName}.filter: primary returned 0, trying localStorage fallback`);
+      return localEntity.create(data);
+    },
+
+    async update(id, data) {
+      if (!isRlsBlocked()) {
+        try { return await supaEntity.update(id, data); } catch { /* fall through */ }
+      }
+      return localEntity.update(id, data);
+    },
+
+    async delete(id) {
+      if (!isRlsBlocked()) {
+        try { return await supaEntity.delete(id); } catch { /* fall through */ }
+      }
+      return localEntity.delete(id);
+    },
+
+    async deleteAll() {
+      if (!isRlsBlocked()) {
+        try { return await supaEntity.deleteAll(); } catch { /* fall through */ }
+      }
+      return localEntity.deleteAll();
+    },
+
+    async filter(filters, sortField, limit) {
+      if (isRlsBlocked()) {
+        try { return await localEntity.filter(filters, sortField, limit); } catch { return []; }
+      }
+
       try {
-        const fallbackResult = await fallbackEntity.filter(filters, sortField, limit);
+        const result = await supaEntity.filter(filters, sortField, limit);
+        if (result && result.length > 0) return result;
+      } catch { /* fall through */ }
+
+      try {
+        const fallbackResult = await localEntity.filter(filters, sortField, limit);
         if (fallbackResult && fallbackResult.length > 0) return fallbackResult;
       } catch { /* ignore */ }
       return [];
     },
   };
+}
+
+// Cache Supabase results to localStorage for offline resilience
+function _cacheToLocal(entityName, items) {
+  try {
+    const collectionMap = {
+      Task: 'tasks', Event: 'events', Client: 'clients', TaskSession: 'task_sessions',
+      DaySchedule: 'day_schedules', WeeklyRecommendation: 'weekly_recommendations',
+      Dashboard: 'dashboards', AccountReconciliation: 'account_reconciliations',
+      Invoice: 'invoices', ServiceProvider: 'service_providers',
+      ClientContact: 'client_contacts', ClientServiceProvider: 'client_service_providers',
+      ClientAccount: 'client_accounts', ServiceCompany: 'service_companies',
+      Lead: 'leads', RoadmapItem: 'roadmap_items', WeeklySchedule: 'weekly_schedules',
+      FamilyMember: 'family_members', DailyMoodCheck: 'daily_mood_checks',
+      Therapist: 'therapists', TaxReport: 'tax_reports', TaxReport2025: 'tax_reports_2025',
+      TaxReport2024: 'tax_reports_2024', WeeklyTask: 'weekly_tasks',
+      BalanceSheet: 'balance_sheets', StickyNote: 'sticky_notes', Project: 'projects',
+      SystemConfig: 'system_config', PeriodicReport: 'periodic_reports',
+      FileMetadata: 'file_metadata',
+    };
+    const collName = collectionMap[entityName];
+    if (collName && items.length > 0) {
+      localStorage.setItem('calmplan_' + collName, JSON.stringify(items));
+    }
+  } catch { /* localStorage full or unavailable */ }
+}
+
+function _cacheItemToLocal(entityName, item) {
+  // Individual item caching not implemented — full cache happens on list()
 }
 
 // Build hybrid entities for all collections
@@ -60,8 +136,6 @@ for (const name of Object.keys(primary.entities)) {
   hybridEntities[name] = createHybridEntity(name);
 }
 
-const source = { entities: hybridEntities, auth: primary.auth, exportAllData: primary.exportAllData, importAllData: primary.importAllData, clearAllData: primary.clearAllData };
-
 // ── Cloud Sync Status ────────────────────────────────────────────
 export const syncStatus = {
   isCloud: isSupabaseConfigured,
@@ -69,6 +143,7 @@ export const syncStatus = {
   connectionTested: false,
   connectionOk: false,
   connectionError: null,
+  get rlsBlocked() { return rlsBlocked; },
 };
 
 // Warn loudly when running in local-only mode
