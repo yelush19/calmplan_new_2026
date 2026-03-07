@@ -211,66 +211,121 @@ export default function TemplatePanel({ service, onClose }) {
           />
         </div>
 
-        {/* ══ RED BOX: Parent Branch Assignment — INLINE, NO COMPONENT ══ */}
-        <div style={{ border: '3px solid red', borderRadius: '12px', margin: '8px', padding: '12px', backgroundColor: '#FFF0F0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-            <GitBranch style={{ width: '14px', height: '14px', color: 'red' }} />
-            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>שיוך לענף אב</span>
-          </div>
+        {/* ══ RED BOX: Cross-Node Parenting — ANY node can be parent ══ */}
+        {(() => {
+          const allNodes = service?._allNodes || [];
+          const crud = service?._crud;
+          const currentKey = service?.key;
+          const currentParentId = service?.parentId;
 
-          <select
-            value={service?.parentId || `__board_${editDashboard}`}
-            onChange={(e) => {
-              const val = e.target.value;
-              const allNodes = service?._allNodes || [];
-              const target = allNodes.find(n => n.id === val);
-              if (target) {
-                const nd = target.type === 'root'
-                  ? (DNA[target.id]?.dashboard || 'admin')
-                  : (target.dashboard || 'admin');
-                handleBoardChange(nd);
-                console.log('STATE MUTATED:', { action: 'reparent', key: service?.key, toParent: val, newDashboard: nd });
-              } else if (val.startsWith('__board_')) {
-                handleBoardChange(val.replace('__board_', ''));
+          // Collect descendants of current node to prevent circular loops
+          const getDescendants = (nodeId) => {
+            const desc = new Set();
+            const stack = [nodeId];
+            while (stack.length) {
+              const id = stack.pop();
+              for (const n of allNodes) {
+                if (n.parentId === id && !desc.has(n.id)) {
+                  desc.add(n.id);
+                  stack.push(n.id);
+                }
               }
-            }}
-            style={{ width: '100%', padding: '8px', fontSize: '13px', border: '2px solid red', borderRadius: '8px', backgroundColor: 'white', direction: 'rtl' }}
-          >
-            <option value="" disabled>-- ללא שיוך (שורש) --</option>
-            {(service?._allNodes || []).length > 0
-              ? (service._allNodes)
-                  .filter(n => n.type === 'root' || (n.type === 'service' && n.id !== service?.key))
-                  .sort((a, b) => (a.type === 'root' ? -1 : 1) - (b.type === 'root' ? -1 : 1) || (a.label || '').localeCompare(b.label || ''))
-                  .map(n => {
-                    // Build breadcrumb path by walking parentId chain
-                    const segs = [];
-                    let cur = n.id;
-                    let depth = 0;
-                    const nodes = service._allNodes;
-                    while (cur && cur !== 'hub' && depth < 10) {
-                      const found = nodes.find(x => x.id === cur);
-                      if (!found) break;
-                      segs.unshift(found.label || found.id);
-                      cur = found.parentId;
-                      depth++;
-                    }
-                    const path = segs.join(' \u2192 ');
-                    return (
-                      <option key={n.id} value={n.id}>
-                        {n.type === 'root' ? `● ${path}` : `  └─ ${path}`}
-                      </option>
-                    );
-                  })
-              : BOARD_OPTIONS.map(b => (
-                  <option key={b.key} value={`__board_${b.key}`}>{b.label}</option>
-                ))
             }
-          </select>
+            return desc;
+          };
+          const descendants = getDescendants(currentKey);
 
-          <div style={{ fontSize: '9px', color: 'red', marginTop: '6px' }}>
-            DEBUG: _allNodes={(service?._allNodes || []).length} | parentId={service?.parentId || 'none'} | dashboard={editDashboard}
-          </div>
-        </div>
+          // ALL nodes except: self, own descendants, step-type nodes
+          const candidates = allNodes.filter(n =>
+            n.id !== currentKey &&
+            !descendants.has(n.id) &&
+            n.type !== 'step'
+          );
+
+          // Build breadcrumb path for a node
+          const buildPath = (nodeId) => {
+            const segs = [];
+            let cur = nodeId;
+            let depth = 0;
+            while (cur && cur !== 'hub' && depth < 10) {
+              const found = allNodes.find(x => x.id === cur);
+              if (!found) break;
+              segs.unshift(found.label || found.id);
+              cur = found.parentId;
+              depth++;
+            }
+            return segs.join(' \u2192 ');
+          };
+
+          // Sort: roots first, then by path
+          const sorted = [...candidates].sort((a, b) => {
+            if (a.type === 'root' && b.type !== 'root') return -1;
+            if (a.type !== 'root' && b.type === 'root') return 1;
+            return buildPath(a.id).localeCompare(buildPath(b.id));
+          });
+
+          // Current parent breadcrumb
+          const currentPath = currentParentId ? buildPath(currentParentId) : '(שורש)';
+
+          return (
+            <div style={{ border: '3px solid red', borderRadius: '12px', margin: '8px', padding: '12px', backgroundColor: '#FFF0F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                <GitBranch style={{ width: '14px', height: '14px', color: 'red' }} />
+                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>שיוך לענף אב</span>
+              </div>
+              <div style={{ fontSize: '10px', color: '#666', marginBottom: '8px', padding: '4px 8px', background: '#fff', borderRadius: '6px', border: '1px dashed #ccc' }} dir="rtl">
+                נוכחי: <strong>{currentPath}</strong>
+              </div>
+
+              <select
+                value={currentParentId || ''}
+                onChange={(e) => {
+                  const newParentId = e.target.value;
+                  if (!newParentId || !crud) return;
+                  const target = allNodes.find(n => n.id === newParentId);
+                  if (!target) return;
+
+                  // Update parentId in the service state (TRUE reparenting)
+                  crud.updateService(currentKey, { parentId: newParentId });
+
+                  // Also update dashboard if the new parent is under a different branch
+                  const newDash = target.type === 'root'
+                    ? (DNA[target.id]?.dashboard || 'admin')
+                    : (target.dashboard || 'admin');
+                  if (newDash !== editDashboard) {
+                    handleBoardChange(newDash);
+                  }
+
+                  console.log('STATE MUTATED:', {
+                    action: 'reparent_node',
+                    key: currentKey,
+                    oldParent: currentParentId,
+                    newParent: newParentId,
+                    newParentPath: buildPath(newParentId),
+                    newDashboard: newDash,
+                  });
+                }}
+                style={{ width: '100%', padding: '8px 12px', fontSize: '12px', border: '2px solid red', borderRadius: '8px', backgroundColor: 'white', direction: 'rtl' }}
+              >
+                <option value="" disabled>-- בחר ענף אב --</option>
+                {sorted.map(n => {
+                  const path = buildPath(n.id);
+                  const prefix = n.type === 'root' ? '●' : '└─';
+                  const indent = n.type === 'root' ? '' : '   ';
+                  return (
+                    <option key={n.id} value={n.id}>
+                      {indent}{prefix} {path}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <div style={{ fontSize: '9px', color: 'red', marginTop: '6px' }}>
+                DEBUG: nodes={allNodes.length} | candidates={sorted.length} | parentId={currentParentId || 'none'} | dash={editDashboard}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Process Steps (CRUD) */}
         <div className="px-4 py-3 border-b">
