@@ -86,12 +86,13 @@ export default function PayrollDashboardPage() {
       const end = endOfMonth(deadlineMonth);
       const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
-        Task.list('-due_date', 5000).catch(() => []),
+        Task.list(null, 5000).catch((err) => { console.error('PayrollDashboard Task.list FAILED:', err); return []; }),
         Client.list(null, 500).catch(() => []),
       ]);
       // Post-filter: only show payroll tasks belonging to the selected reporting month
       const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
       const allRaw = Array.isArray(tasksData) ? tasksData : [];
+      console.log('RAW_DATA_CHECK [Payroll]:', allRaw.length, 'tasks from Task.list()');
       const filtered = allRaw.filter(t => {
         if (!allPayrollCategories.includes(t.category)) return false;
         const rm = getTaskReportingMonth(t);

@@ -36,20 +36,14 @@ function createEntity(collectionName) {
     async list(sortField = null, limit = 1000) {
       if (!guardSupabase(`list(${collectionName})`)) return [];
 
+      // ALWAYS fetch without JSONB sort (it can fail silently on Supabase).
+      // Sort in JS after fetching — this is safe for our data volumes.
       let query = supabase
         .from('app_data')
         .select('*')
         .eq('collection', collectionName)
+        .order('created_date', { ascending: true })
         .limit(limit);
-
-      if (sortField) {
-        const desc = sortField.startsWith('-');
-        const field = desc ? sortField.slice(1) : sortField;
-        // For JSONB fields, we sort on the data column's field
-        query = query.order('data->' + field, { ascending: !desc, nullsFirst: false });
-      } else {
-        query = query.order('created_date', { ascending: true });
-      }
 
       const { data, error } = await query;
       if (error) {
@@ -58,12 +52,26 @@ function createEntity(collectionName) {
         return [];
       }
 
-      return (data || []).map(row => ({
+      let results = (data || []).map(row => ({
         ...row.data,
         id: row.id,
         created_date: row.created_date,
         updated_date: row.updated_date,
       }));
+
+      // Sort in JS if requested (safe — no Supabase JSONB arrow errors)
+      if (sortField) {
+        const desc = sortField.startsWith('-');
+        const field = desc ? sortField.slice(1) : sortField;
+        results.sort((a, b) => {
+          const va = a[field] || '';
+          const vb = b[field] || '';
+          if (desc) return va > vb ? -1 : va < vb ? 1 : 0;
+          return va < vb ? -1 : va > vb ? 1 : 0;
+        });
+      }
+
+      return results;
     },
 
     async create(itemData) {
