@@ -465,13 +465,16 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       });
     });
 
-    // Service nodes grouped by branch
+    // Service nodes — respect explicit parentId for cross-node parenting
+    // First pass: group by branch for layout, but allow parentId override
+    const allSvcs = Object.values(liveServices);
     const groups = { P1: [], P2: [], P3: [], P4: [] };
-    Object.values(liveServices).forEach(svc => {
+    allSvcs.forEach(svc => {
       const branch = getDashboardBranch(svc.dashboard);
       groups[branch].push(svc);
     });
 
+    // Build all service nodes
     Object.entries(groups).forEach(([branch, services]) => {
       const rootNode = nodes.find(n => n.id === branch);
       if (!rootNode) return;
@@ -485,16 +488,38 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         const saved = savedPositions[svc.key];
         const weight = getServiceWeight(svc.createCategory || svc.taskCategories?.[0]);
 
+        // Determine real parent: explicit parentId if set, else the branch root
+        const explicitParent = svc.parentId;
+        const resolvedParentId = explicitParent || branch;
+
+        // Position: if parent is another service, position relative to it
+        let defaultX = rootNode.x + Math.cos(sAngle) * serviceDist;
+        let defaultY = rootNode.y + Math.sin(sAngle) * serviceDist;
+        if (explicitParent && explicitParent !== branch) {
+          // Find parent node (may not exist yet in this pass, use saved position or root as fallback)
+          const parentSaved = savedPositions[explicitParent];
+          const parentNode = nodes.find(n => n.id === explicitParent);
+          const px = parentNode?.x ?? parentSaved?.x ?? rootNode.x;
+          const py = parentNode?.y ?? parentSaved?.y ?? rootNode.y;
+          const childDist = 100;
+          const childAngle = sAngle; // spread around parent
+          defaultX = px + Math.cos(childAngle) * childDist;
+          defaultY = py + Math.sin(childAngle) * childDist;
+        }
+
+        // Inherit color from actual parent's branch
+        const colorBranch = explicitParent && DNA[explicitParent] ? explicitParent : branch;
+
         nodes.push({
           id: svc.key,
           type: 'service',
           label: svc.label || svc.key,
           shape: 'bubble',
-          color: DNA[branch].color,
-          bg: DNA[branch].bg,
-          x: saved?.x ?? rootNode.x + Math.cos(sAngle) * serviceDist,
-          y: saved?.y ?? rootNode.y + Math.sin(sAngle) * serviceDist,
-          parentId: branch,
+          color: DNA[colorBranch]?.color || DNA[branch].color,
+          bg: DNA[colorBranch]?.bg || DNA[branch].bg,
+          x: saved?.x ?? defaultX,
+          y: saved?.y ?? defaultY,
+          parentId: resolvedParentId,
           dashboard: svc.dashboard,
           steps: svc.steps || [],
           weight,
@@ -861,7 +886,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     } else {
       onSelectService?.(null);
     }
-  }, [selectedNodeId, selectedNode?.type]);
+  }, [selectedNodeId, selectedNode?.type, selectedNode?.parentId, allNodes.length, liveServices]);
 
   // ── Build edges for rendering ──
   const edges = useMemo(() => {
