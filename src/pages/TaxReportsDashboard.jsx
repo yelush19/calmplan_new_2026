@@ -379,24 +379,6 @@ export default function TaxReportsDashboardPage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
-          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-[#E0E0E0] p-0.5">
-            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="גאנט"
-              style={viewMode === 'timeline' ? { backgroundColor: '#4682B4', color: '#fff' } : {}}>
-              <GanttChart className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')} title="טבלה"
-              style={viewMode === 'table' ? { backgroundColor: '#4682B4', color: '#fff' } : {}}>
-              <List className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')} title="קנבן"
-              style={viewMode === 'kanban' ? { backgroundColor: '#4682B4', color: '#fff' } : {}}>
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'ayoa' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('ayoa')} title="AYOA"
-              style={viewMode === 'ayoa' ? { backgroundColor: '#4682B4', color: '#fff' } : {}}>
-              <Network className="w-4 h-4" />
-            </Button>
-          </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
             משימה מהירה

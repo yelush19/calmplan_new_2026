@@ -599,25 +599,11 @@ export default function TasksPage() {
               </Badge>
             )}
           </div>
-          <p className="text-base text-gray-500 mt-1">
+          <p className="text-base text-slate-600 font-medium mt-1">
             {stats.total} משימות | {stats.completed} הושלמו | {stats.inProgress} בעבודה
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex bg-white rounded-xl p-1 shadow-sm border">
-            <Button variant={view === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('list')} title="תצוגת רשימה">
-              <List className="w-5 h-5" />
-            </Button>
-            <Button variant={view === 'kanban' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('kanban')} title="תצוגת קנבן">
-              <LayoutGrid className="w-5 h-5" />
-            </Button>
-            <Button variant={view === 'mindmap' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('mindmap')} title="מפת חשיבה">
-              <Network className="w-5 h-5" />
-            </Button>
-            <Button variant={view === 'gantt' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('gantt')} title="ציר זמן">
-              <BarChart3 className="w-5 h-5" />
-            </Button>
-          </div>
           <Button size="sm" onClick={() => setShowQuickAdd(true)} className="gap-1 rounded-xl">
             <Plus className="w-4 h-4" />
             משימה מהירה
@@ -754,7 +740,7 @@ export default function TasksPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="p-12 text-center">
               <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-400 text-lg">אין משימות</p>
+              <p className="text-slate-500 text-lg font-medium">אין משימות להצגה</p>
             </CardContent>
           </Card>
         ) : (

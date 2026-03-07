@@ -74,7 +74,7 @@ export default function FloatingToolbar({
           {/* Header bar */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-gray-50"
             style={{ background: `linear-gradient(135deg, ${nodeColor || '#4682B4'}08, transparent)` }}>
-            <span className="text-[10px] font-bold text-gray-500">סגנון ענף</span>
+            <span className="text-[11px] font-bold text-slate-700">סגנון ענף</span>
             <div className="flex items-center gap-1">
               {/* Add Branch button */}
               {onAddBranch && (
@@ -102,7 +102,7 @@ export default function FloatingToolbar({
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
                 activeSection === 'color'
                   ? 'bg-gray-100 text-gray-800'
-                  : 'text-gray-400 hover:text-gray-600'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               <Palette className="w-3 h-3" />
@@ -113,7 +113,7 @@ export default function FloatingToolbar({
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
                 activeSection === 'shape'
                   ? 'bg-gray-100 text-gray-800'
-                  : 'text-gray-400 hover:text-gray-600'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               <Shapes className="w-3 h-3" />
@@ -170,7 +170,7 @@ export default function FloatingToolbar({
                       title={s.label}
                     >
                       <Icon className="w-5 h-5" style={{ color: nodeColor || '#4682B4' }} />
-                      <span className="text-[8px] text-gray-500">{s.label}</span>
+                      <span className="text-[9px] font-medium text-slate-600">{s.label}</span>
                     </button>
                   );
                 })}

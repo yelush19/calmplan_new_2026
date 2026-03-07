@@ -12,9 +12,9 @@ import { CheckCircle } from 'lucide-react';
 export default function AyoaFeedView({ tasks = [], onEditTask }) {
   if (tasks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+      <div className="flex flex-col items-center justify-center py-16 text-slate-500">
         <CheckCircle className="w-8 h-8 mb-2" />
-        <p className="text-sm">אין משימות להצגה</p>
+        <p className="text-sm font-medium">אין משימות להצגה</p>
       </div>
     );
   }
@@ -42,18 +42,18 @@ export default function AyoaFeedView({ tasks = [], onEditTask }) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold truncate">{task.title}</span>
+                <span className="text-sm font-bold text-[#0F172A] truncate">{task.title}</span>
                 {task.client_name && (
-                  <span className="text-[10px] text-gray-400 truncate">• {task.client_name}</span>
+                  <span className="text-xs font-medium truncate" style={{ color: lc.color }}>• {task.client_name}</span>
                 )}
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <Badge variant="outline" className="text-[9px] px-1.5 h-4 rounded-full" style={{ borderColor: lc.color, color: lc.color }}>
+                <Badge variant="outline" className="text-[10px] px-1.5 h-4 rounded-full font-bold" style={{ borderColor: lc.color, color: lc.color }}>
                   {lc.label}
                 </Badge>
-                <span className="text-[10px] text-gray-400">{sw.duration} דק׳</span>
+                <span className="text-[11px] font-medium text-slate-600">{sw.duration} דק׳</span>
                 {task.due_date && (
-                  <span className="text-[10px] text-gray-400">{task.due_date}</span>
+                  <span className="text-[11px] font-medium text-slate-600">{task.due_date}</span>
                 )}
               </div>
             </div>

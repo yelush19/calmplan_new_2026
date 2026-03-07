@@ -358,20 +358,6 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
-          <div className="flex items-center gap-0.5 bg-white rounded-lg border border-[#E0E0E0] p-0.5">
-            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')}>
-              <List className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')}>
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="תצוגת פרויקט">
-              <GanttChart className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'ayoa' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('ayoa')} title="AYOA">
-              <Network className="w-4 h-4" />
-            </Button>
-          </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
             משימה מהירה
