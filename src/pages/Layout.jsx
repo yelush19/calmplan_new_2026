@@ -34,6 +34,8 @@ import { AppProvider, useApp } from "@/contexts/AppContext";
 import RealityCheck from "@/components/tasks/RealityCheck";
 import CompletionFeedback from "@/components/tasks/CompletionFeedback";
 import DesktopBridge from "@/components/desktop/DesktopBridge";
+import { AyoaViewProvider, useAyoaView } from "@/contexts/AyoaViewContext";
+import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
 
 // Work Modes — aligned to P1-P4 process tree
 const WORK_MODES = [
@@ -245,6 +247,31 @@ function DraggableFab({ storageKey, children, className = '' }) {
     >
       {typeof children === 'function' ? children({ guardClick }) : children}
     </motion.div>
+  );
+}
+
+// ── Global AYOA View Bar — appears on all pages ──
+function GlobalAyoaBar() {
+  const { ayoaView, setAyoaView } = useAyoaView();
+  const location = useLocation();
+  // Only show on task/dashboard pages, not on settings/admin pages
+  const taskPages = ['/', '/payroll', '/tax-reports', '/admin-tasks', '/additional-services', '/my-focus', '/tasks', '/reconciliations', '/clients'];
+  const showBar = taskPages.some(p => location.pathname === p || location.pathname.startsWith(p + '/'));
+  if (!showBar) return null;
+  return (
+    <div className="flex items-center gap-2 mb-1.5 px-1">
+      <AyoaViewToggle value={ayoaView} onChange={setAyoaView} />
+      <div className="flex items-center gap-1 mr-auto">
+        {[
+          { color: '#E91E63', label: 'אישי' },
+          { color: '#FFC107', label: 'משימות' },
+          { color: '#00A3E0', label: 'תיקיות' },
+          { color: '#800000', label: 'דחוף' },
+        ].map(c => (
+          <div key={c.color} className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} title={c.label} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -943,6 +970,9 @@ function LayoutInner({ children }) {
 
                   {/* Backup import moved to BackupManager page exclusively */}
 
+                  {/* ── Global AYOA View Switcher ── */}
+                  <GlobalAyoaBar />
+
                   <div className="flex-1 min-h-0">
                     {children}
                   </div>
@@ -1038,7 +1068,9 @@ function LayoutInner({ children }) {
 export default function Layout({ children, currentPageName }) {
   return (
     <AppProvider>
-      <LayoutInner>{children}</LayoutInner>
+      <AyoaViewProvider>
+        <LayoutInner>{children}</LayoutInner>
+      </AyoaViewProvider>
     </AppProvider>
   );
 }

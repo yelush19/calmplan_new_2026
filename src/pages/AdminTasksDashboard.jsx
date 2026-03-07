@@ -33,6 +33,12 @@ import {
 } from '@/config/processTemplates';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
+import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
+import { useAyoaView } from '@/contexts/AyoaViewContext';
+import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import AyoaMapView from '@/components/canvas/AyoaMapView';
+import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import GanttView from '@/components/views/GanttView';
 
 // Admin dashboard services (dashboard: 'admin')
 const adminDashboardServices = Object.fromEntries(
@@ -61,6 +67,7 @@ export default function AdminTasksDashboardPage() {
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [collapsedServices, setCollapsedServices] = useState(new Set());
+  const { ayoaView, setAyoaView } = useAyoaView();
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
@@ -316,6 +323,9 @@ export default function AdminTasksDashboardPage() {
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('kanban')}>
               <LayoutGrid className="w-4 h-4" />
             </Button>
+            <Button variant={viewMode === 'ayoa' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2 text-xs" onClick={() => setViewMode('ayoa')}>
+              Ayoa
+            </Button>
           </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
@@ -377,6 +387,23 @@ export default function AdminTasksDashboardPage() {
       ) : Object.keys(serviceData).length > 0 ? (
         viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} />
+        ) : viewMode === 'ayoa' ? (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <AyoaViewToggle value={ayoaView} onChange={setAyoaView} />
+            </div>
+            <div className="min-h-[400px]">
+              {ayoaView === 'radial' ? (
+                <AyoaRadialView tasks={filteredTasks} centerLabel="ניהול" centerSub="P3" />
+              ) : ayoaView === 'map' ? (
+                <AyoaMapView tasks={filteredTasks} centerLabel="ניהול" centerSub="P3" />
+              ) : ayoaView === 'gantt' ? (
+                <GanttView tasks={filteredTasks} clients={clients} />
+              ) : (
+                <AyoaFeedView tasks={filteredTasks} onEditTask={(t) => setEditingTask(t)} />
+              )}
+            </div>
+          </div>
         ) : (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {

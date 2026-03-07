@@ -37,6 +37,12 @@ import { processTaskCascade } from '@/engines/taskCascadeEngine';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
+import { useAyoaView } from '@/contexts/AyoaViewContext';
+import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
+import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import AyoaMapView from '@/components/canvas/AyoaMapView';
+import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import GanttView from '@/components/views/GanttView';
 
 const payrollDashboardServices = {
   ...PAYROLL_SERVICES,
@@ -56,6 +62,7 @@ export default function PayrollDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
   const [viewMode, setViewMode] = useState('kanban');
+  const { ayoaView, setAyoaView } = useAyoaView();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
@@ -379,6 +386,9 @@ export default function PayrollDashboardPage() {
             <Button variant={viewMode === 'timeline' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('timeline')} title="תצוגת פרויקט">
               <GanttChart className="w-4 h-4" />
             </Button>
+            <Button variant={viewMode === 'ayoa' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2 text-xs" onClick={() => setViewMode('ayoa')} title="תצוגת Ayoa">
+              Ayoa
+            </Button>
           </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
@@ -443,7 +453,24 @@ export default function PayrollDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : sortedServiceKeys.length > 0 ? (
-        viewMode === 'kanban' ? (
+        viewMode === 'ayoa' ? (
+          <div className="h-full">
+            <div className="flex items-center gap-2 mb-2">
+              <AyoaViewToggle value={ayoaView} onChange={setAyoaView} />
+            </div>
+            <div className="flex-1 min-h-[400px]">
+              {ayoaView === 'radial' ? (
+                <AyoaRadialView tasks={filteredTasks} centerLabel="שכר" centerSub="P1" />
+              ) : ayoaView === 'map' ? (
+                <AyoaMapView tasks={filteredTasks} centerLabel="שכר" centerSub="P1" />
+              ) : ayoaView === 'gantt' ? (
+                <GanttView tasks={filteredTasks} clients={clients} />
+              ) : (
+                <AyoaFeedView tasks={filteredTasks} onEditTask={(t) => setEditingTask(t)} />
+              )}
+            </div>
+          </div>
+        ) : viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (
           <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />

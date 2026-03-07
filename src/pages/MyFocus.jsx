@@ -24,6 +24,11 @@ import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityE
 import { getServiceWeight } from '@/config/serviceWeights';
 import GanttView from '@/components/views/GanttView';
 import DesignCanvas from '@/components/canvas/DesignCanvas';
+import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
+import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import AyoaMapView from '@/components/canvas/AyoaMapView';
+import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import { useAyoaView } from '@/contexts/AyoaViewContext';
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import useRealtimeRefresh from '@/hooks/useRealtimeRefresh';
 
@@ -41,8 +46,7 @@ export default function MyFocus() {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('canvas'); // canvas | radial | gantt | feed
-  const [focusedNode, setFocusedNode] = useState(null); // Focus Blur: clicked node id
+  const { ayoaView: viewMode, setAyoaView: setViewMode } = useAyoaView();
 
   useEffect(() => { loadData(); }, []);
   useRealtimeRefresh(() => { loadData(); }, ['tasks', 'clients']);
@@ -91,28 +95,7 @@ export default function MyFocus() {
 
   // KPI metrics
   const kpis = useMemo(() => calculateCapacity(todayTasks), [todayTasks]);
-  const feed = useMemo(() => getTaskFeed(todayTasks), [todayTasks]);
 
-  // Radial layout for today's tasks
-  const radialNodes = useMemo(() => {
-    const top = todayTasks.slice(0, 12);
-    const angleStep = (2 * Math.PI) / Math.max(top.length, 1);
-    const RADIUS = 160;
-    return top.map((task, i) => {
-      const angle = -Math.PI / 2 + i * angleStep;
-      const sw = getServiceWeight(task.category);
-      const load = typeof task.cognitive_load === 'number' ? task.cognitive_load : sw.cognitiveLoad;
-      const lc = LOAD_COLORS[Math.min(3, Math.max(0, load))] || LOAD_COLORS[0];
-      return {
-        ...task,
-        x: 250 + Math.cos(angle) * RADIUS,
-        y: 250 + Math.sin(angle) * RADIUS,
-        loadColor: lc,
-        _load: load,
-        _duration: sw.duration,
-      };
-    });
-  }, [todayTasks]);
 
   if (isLoading) {
     return (
@@ -170,25 +153,15 @@ export default function MyFocus() {
 
         <div className="flex-1" />
 
-        {/* View Switcher */}
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
-          {[
-            { key: 'canvas', label: 'קנבס', icon: '🎨' },
-            { key: 'radial', label: 'רדיאלי', icon: '🎯' },
-            { key: 'feed', label: 'זרימה', icon: '📋' },
-            { key: 'gantt', label: 'גאנט', icon: '📊' },
-          ].map(v => (
-            <button
-              key={v.key}
-              onClick={() => setViewMode(v.key)}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
-                viewMode === v.key ? 'bg-white shadow text-[#4682B4] font-bold' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {v.icon} {v.label}
-            </button>
-          ))}
-        </div>
+        {/* Canvas toggle (bonus view, global toggle handles Map/Radial/Gantt/Feed) */}
+        <button
+          onClick={() => setViewMode(viewMode === 'canvas' ? 'radial' : 'canvas')}
+          className={`px-2 py-1 rounded-lg text-[11px] font-medium transition-all ${
+            viewMode === 'canvas' ? 'bg-[#E91E63]/10 text-[#E91E63] font-bold' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          🎨 קנבס
+        </button>
       </div>
 
       {/* ── Energy Suggestions Strip ── */}
@@ -220,169 +193,14 @@ export default function MyFocus() {
           </Card>
         ) : viewMode === 'radial' ? (
           <Card className="h-full">
-            <CardContent className="h-full p-0 relative">
-              {/* Radial Mind Map — AYOA Style with Tapered Bezier Branches */}
-              <svg viewBox="0 0 500 500" className="w-full h-full" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-                <defs>
-                  {radialNodes.map(node => (
-                    <React.Fragment key={`defs-${node.id}`}>
-                      <radialGradient id={`node-grad-${node.id}`}>
-                        <stop offset="0%" stopColor={node.loadColor.color} stopOpacity="0.15" />
-                        <stop offset="100%" stopColor={node.loadColor.color} stopOpacity="0.05" />
-                      </radialGradient>
-                      {/* Soft glow filter per node color */}
-                      <filter id={`glow-${node.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                        <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={node.loadColor.color} floodOpacity="0.45" />
-                      </filter>
-                    </React.Fragment>
-                  ))}
-                </defs>
-
-                {/* Tapered Bezier branches (AYOA organic roots) */}
-                {radialNodes.map(node => {
-                  const sx = 250, sy = 250, ex = node.x, ey = node.y;
-                  const dx = ex - sx, dy = ey - sy;
-                  const len = Math.sqrt(dx * dx + dy * dy) || 1;
-                  const nx = -dy / len, ny = dx / len;
-                  const startW = 4, endW = 1.5;
-                  const cp1x = sx + dx * 0.3 + nx * len * 0.08;
-                  const cp1y = sy + dy * 0.3 + ny * len * 0.08;
-                  const cp2x = sx + dx * 0.7 - nx * len * 0.05;
-                  const cp2y = sy + dy * 0.7 - ny * len * 0.05;
-                  const sw2 = startW / 2, ew2 = endW / 2;
-                  const d = [
-                    `M ${sx + nx * sw2} ${sy + ny * sw2}`,
-                    `C ${cp1x + nx * sw2 * 0.8} ${cp1y + ny * sw2 * 0.8} ${cp2x + nx * ew2 * 0.5} ${cp2y + ny * ew2 * 0.5} ${ex + nx * ew2} ${ey + ny * ew2}`,
-                    `L ${ex - nx * ew2} ${ey - ny * ew2}`,
-                    `C ${cp2x - nx * ew2 * 0.5} ${cp2y - ny * ew2 * 0.5} ${cp1x - nx * sw2 * 0.8} ${cp1y - ny * sw2 * 0.8} ${sx - nx * sw2} ${sy - ny * sw2}`,
-                    'Z'
-                  ].join(' ');
-                  return (
-                    <path key={`branch-${node.id}`} d={d}
-                      fill={node.loadColor.color} opacity={0.65}
-                      style={{ transition: 'all 0.4s ease' }} />
-                  );
-                })}
-
-                {/* Center hub — gradient circle */}
-                <circle cx={250} cy={250} r={48} fill="url(#center-glow)" />
-                <circle cx={250} cy={250} r={45} fill="#2C3E50" />
-                <defs>
-                  <radialGradient id="center-glow">
-                    <stop offset="0%" stopColor="#2C3E50" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#2C3E50" stopOpacity="0" />
-                  </radialGradient>
-                </defs>
-                <text x={250} y={243} textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">היום שלי</text>
-                <text x={250} y={257} textAnchor="middle" fill="#B0BEC5" fontSize="9">
-                  {todayTasks.length} משימות
-                </text>
-                <text x={250} y={269} textAnchor="middle" fill="#546E7A" fontSize="8">
-                  {energy.label}
-                </text>
-
-                {/* Task nodes — AYOA Shape Gallery with Focus Blur */}
-                {radialNodes.map((node, idx) => {
-                  const r = node._load >= 3 ? 36 : node._load >= 2 ? 32 : node._load >= 1 ? 28 : 24;
-                  const isFocused = focusedNode === node.id;
-                  const isBlurred = focusedNode !== null && !isFocused;
-                  const nodeStyle = {
-                    cursor: 'pointer',
-                    transition: 'all 0.4s ease',
-                    transform: isFocused ? `scale(1.15)` : 'scale(1)',
-                    transformOrigin: `${node.x}px ${node.y}px`,
-                    filter: isBlurred ? 'blur(5px)' : 'none',
-                    opacity: isBlurred ? 0.3 : 1,
-                  };
-
-                  // Shape rendering based on cognitive load
-                  const renderShape = () => {
-                    if (node._load >= 3) {
-                      // Cloud shape (irregular rounded blob) for complex tasks
-                      const cx = node.x, cy = node.y;
-                      const cloudPath = `M ${cx - 20} ${cy + 8} ` +
-                        `C ${cx - 32} ${cy + 8} ${cx - 36} ${cy - 4} ${cx - 28} ${cy - 14} ` +
-                        `C ${cx - 28} ${cy - 26} ${cx - 14} ${cy - 32} ${cx - 4} ${cy - 24} ` +
-                        `C ${cx + 2} ${cy - 34} ${cx + 18} ${cy - 32} ${cx + 22} ${cy - 22} ` +
-                        `C ${cx + 34} ${cy - 20} ${cx + 36} ${cy - 4} ${cx + 28} ${cy + 4} ` +
-                        `C ${cx + 32} ${cy + 14} ${cx + 22} ${cy + 20} ${cx + 10} ${cy + 18} ` +
-                        `C ${cx + 4} ${cy + 24} ${cx - 10} ${cy + 22} ${cx - 20} ${cy + 8} Z`;
-                      return (
-                        <>
-                          <path d={cloudPath}
-                            fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2.5}
-                            filter={`url(#glow-${node.id})`} />
-                          <path d={cloudPath}
-                            fill="white" opacity={0.85} transform={`translate(0,0) scale(0.92)`}
-                            style={{ transformOrigin: `${cx}px ${cy}px` }} />
-                        </>
-                      );
-                    } else if (node._load >= 2) {
-                      // Rounded rectangle for medium tasks
-                      return (
-                        <>
-                          <rect x={node.x - r} y={node.y - r * 0.75} width={r * 2} height={r * 1.5}
-                            rx={12} ry={12}
-                            fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2.5}
-                            filter={`url(#glow-${node.id})`} />
-                          <rect x={node.x - r + 1} y={node.y - r * 0.75 + 1} width={r * 2 - 2} height={r * 1.5 - 2}
-                            rx={11} ry={11}
-                            fill="white" opacity={0.85} />
-                        </>
-                      );
-                    } else if (node._load >= 1) {
-                      // Circle for simple tasks (original)
-                      return (
-                        <>
-                          <circle cx={node.x} cy={node.y} r={r}
-                            fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2.5}
-                            filter={`url(#glow-${node.id})`} />
-                          <circle cx={node.x} cy={node.y} r={r - 1}
-                            fill="white" opacity={0.85} />
-                        </>
-                      );
-                    } else {
-                      // Small pill/oval for nano tasks
-                      return (
-                        <>
-                          <ellipse cx={node.x} cy={node.y} rx={r} ry={r * 0.6}
-                            fill={`url(#node-grad-${node.id})`} stroke={node.loadColor.color} strokeWidth={2}
-                            filter={`url(#glow-${node.id})`} />
-                          <ellipse cx={node.x} cy={node.y} rx={r - 1} ry={r * 0.6 - 1}
-                            fill="white" opacity={0.85} />
-                        </>
-                      );
-                    }
-                  };
-
-                  return (
-                    <g key={node.id} style={nodeStyle}
-                      onClick={() => setFocusedNode(prev => prev === node.id ? null : node.id)}>
-                      {renderShape()}
-                      <text x={node.x} y={node.y - 5} textAnchor="middle" fontSize="8" fontWeight="600" fill="#263238">
-                        {(node.title || '').substring(0, 14)}
-                      </text>
-                      <text x={node.x} y={node.y + 7} textAnchor="middle" fontSize="7" fill={node.loadColor.color}>
-                        {node.loadColor.label} • {node._duration}דק׳
-                      </text>
-                      {node.client_name && (
-                        <text x={node.x} y={node.y + 17} textAnchor="middle" fontSize="6" fill="#90A4AE">
-                          {node.client_name.substring(0, 12)}
-                        </text>
-                      )}
-                    </g>
-                  );
-                })}
-              </svg>
-              {/* Focus Blur clear button */}
-              {focusedNode !== null && (
-                <button
-                  onClick={() => setFocusedNode(null)}
-                  className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-white shadow-lg border text-xs font-medium text-[#4682B4] hover:bg-gray-50 transition-all"
-                >
-                  ✕ נקה מיקוד
-                </button>
-              )}
+            <CardContent className="h-full p-0">
+              <AyoaRadialView tasks={todayTasks} centerLabel="היום שלי" centerSub={`${energy.label} • ${todayTasks.length} משימות`} />
+            </CardContent>
+          </Card>
+        ) : viewMode === 'map' ? (
+          <Card className="h-full">
+            <CardContent className="h-full p-0">
+              <AyoaMapView tasks={todayTasks} centerLabel="היום שלי" centerSub={`${energy.label}`} />
             </CardContent>
           </Card>
         ) : viewMode === 'gantt' ? (
@@ -391,48 +209,13 @@ export default function MyFocus() {
               <GanttView tasks={todayTasks} clients={clients} />
             </CardContent>
           </Card>
-        ) : (
+        ) : viewMode === 'feed' ? (
           <Card className="h-full overflow-auto">
-            <CardContent className="p-2 space-y-1">
-              {feed.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                  <CheckCircle className="w-8 h-8 mb-2" />
-                  <p className="text-sm">כל המשימות הושלמו!</p>
-                </div>
-              ) : (
-                feed.map((task, idx) => {
-                  const lc = task._loadColor || LOAD_COLORS[0];
-                  return (
-                    <motion.div
-                      key={task.id || idx}
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.03 }}
-                      className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100 hover:shadow-md cursor-pointer bg-white"
-                      style={{ borderRight: `4px solid ${lc.color}` }}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold truncate">{task.title}</span>
-                          {task.client_name && (
-                            <span className="text-[10px] text-gray-400">• {task.client_name}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="outline" className="text-[9px] px-1 h-4" style={{ borderColor: lc.color, color: lc.color }}>
-                            {lc.label}
-                          </Badge>
-                          <span className="text-[10px] text-gray-400">{task._duration} דק׳</span>
-                          <span className="text-[10px] font-medium" style={{ color: lc.color }}>{task._priority}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })
-              )}
+            <CardContent className="p-2">
+              <AyoaFeedView tasks={todayTasks} />
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
     </div>
   );
