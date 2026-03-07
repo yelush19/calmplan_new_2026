@@ -89,12 +89,10 @@ export default function PayrollDashboardPage() {
         Task.list(null, 5000).catch((err) => { console.error('PayrollDashboard Task.list FAILED:', err); return []; }),
         Client.list(null, 500).catch(() => []),
       ]);
-      // ══ NO CATEGORY WALL — show ALL tasks, let UI group them ══
       const allRaw = Array.isArray(tasksData) ? tasksData : [];
-      console.log('RAW_DATA_CHECK [Payroll]:', allRaw.length, 'tasks — showing ALL');
       setTasks(allRaw);
       setClients(clientsData || []);
-      syncCompletedTaskSteps(filtered);
+      syncCompletedTaskSteps(allRaw);
     } catch (error) {
       console.error("Error loading payroll tasks:", error);
     }
