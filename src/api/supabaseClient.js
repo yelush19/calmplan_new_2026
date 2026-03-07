@@ -59,6 +59,10 @@ if (isSupabaseConfigured) {
 }
 export const supabase = _supabase;
 
+// Export raw credentials for direct REST API bypass (when RLS blocks the JS client)
+export const supabaseRawUrl = supabaseUrl;
+export const supabaseRawKey = supabaseAnonKey;
+
 /**
  * Runtime check: is Supabase client available and configured?
  * Use this in async code paths that need to guard against null client.
