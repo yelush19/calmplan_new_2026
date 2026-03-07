@@ -819,6 +819,21 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         const worstStatus = getWorstClientStatus(clientTasks);
         const worstStatusLabel = STATUS_LABELS[worstStatus] || 'לבצע';
         const worstStatusColor = STATUS_TO_COLOR[worstStatus] || ZERO_PANIC.gray;
+        // ── Category breakdown: group tasks by category for multi-arrow display ──
+        const catGroups = {};
+        clientTasks.forEach(t => {
+          const cat = t.category || 'כללי';
+          if (!catGroups[cat]) catGroups[cat] = { total: 0, done: 0 };
+          catGroups[cat].total++;
+          if (t.status === 'production_completed') catGroups[cat].done++;
+        });
+        const categoryBreakdown = Object.entries(catGroups).map(([cat, counts]) => ({
+          category: cat,
+          total: counts.total,
+          done: counts.done,
+          allDone: counts.done === counts.total,
+        }));
+
         return {
           name,
           displayName,
@@ -827,6 +842,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           tier,
           tierLabel: tierInfo.label,
           tierIcon: tierInfo.icon,
+          categoryBreakdown,
           ...getClientAggregateState(clientTasks),
           worstStatus,
           worstStatusLabel,
@@ -2613,6 +2629,31 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   >
                     {client.worstStatusLabel}
                   </span>
+
+                  {/* Category split badges — shows each service as a colored dot */}
+                  {client.categoryBreakdown && client.categoryBreakdown.length > 1 && (
+                    <div className="flex gap-0.5 items-center justify-center" style={{ marginTop: '1px' }}>
+                      {client.categoryBreakdown.map((cb, idx) => {
+                        const CATEGORY_DOT_COLORS = {
+                          'שכר': '#0288D1', 'מע"מ': '#7B1FA2', 'מקדמות מס': '#00695C',
+                          'ביטוח לאומי': '#C62828', 'ניכויים': '#E65100', 'התאמות': '#1565C0',
+                        };
+                        const dotColor = CATEGORY_DOT_COLORS[cb.category] || '#78909C';
+                        return (
+                          <span
+                            key={idx}
+                            title={`${cb.category}: ${cb.done}/${cb.total}`}
+                            style={{
+                              width: 6, height: 6, borderRadius: '50%',
+                              backgroundColor: cb.allDone ? '#66BB6A' : dotColor,
+                              opacity: cb.allDone ? 0.5 : 1,
+                              display: 'inline-block',
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Top task title — Zero Gray: dark text, no fading */}
                   {truncatedTask && (

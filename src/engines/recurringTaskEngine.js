@@ -63,6 +63,15 @@ export const SERVICE_GROUPS = {
         branch: 'P1',
         frequencyField: 'payroll_frequency',
       },
+      {
+        key: 'social_security',
+        label: 'סוציאליות',
+        serviceKey: 'payroll',             // Tied to payroll subscription — if client has payroll, they get social security
+        templateKey: 'social_security',    // Uses social_security template from processTemplates (3 steps: הכנה, דיווח, תשלום)
+        category: 'ביטוח לאומי',
+        branch: 'P1',
+        frequencyField: 'payroll_frequency',
+      },
     ],
   },
   P2: {
@@ -134,6 +143,7 @@ export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, 
 
     // Temporal
     date: dueDate,
+    due_date: dueDate,
     report_month: reportMonth,
     report_year: reportYear,
     report_period: `${reportYear}-${String(reportMonth).padStart(2, '0')}`,
