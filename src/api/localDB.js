@@ -32,6 +32,7 @@ function createEntity(collectionName) {
      */
     async list(sortField = null, limit = 1000) {
       let items = getCollection(collectionName);
+      console.log(`[LocalDB] ${collectionName}: ${items.length} items in localStorage`);
 
       if (sortField) {
         const desc = sortField.startsWith('-');

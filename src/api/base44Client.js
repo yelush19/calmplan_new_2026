@@ -4,6 +4,7 @@ import * as localDB from './localDB';
 import * as supabaseDB from './supabaseDB';
 
 const source = isSupabaseConfigured ? supabaseDB : localDB;
+console.log(`[CalmPlan] DATA SOURCE: ${isSupabaseConfigured ? 'SUPABASE (cloud)' : 'localStorage (local)'}`);
 
 // ── Cloud Sync Status ────────────────────────────────────────────
 export const syncStatus = {
