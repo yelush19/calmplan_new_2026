@@ -17,6 +17,7 @@ import {
   AlertTriangle, Check, CheckSquare, Square, Trash2, UserPlus
 } from 'lucide-react';
 import ResizableTable from '@/components/ui/ResizableTable';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 // ============================================================
 // Report definitions
@@ -721,6 +722,7 @@ export default function PeriodicSummaryReports() {
         )}
       </div>
 
+      <UnifiedAyoaLayout tasks={[]} clients={clients} centerLabel="דיווחים תקופתיים" centerSub="P1" accentColor="#00A3E0">
       {/* Table */}
       <Card>
         <CardContent className="p-0">
@@ -832,6 +834,7 @@ export default function PeriodicSummaryReports() {
           <span className="text-gray-600">שלבי התאמה (ירוק = בוצע)</span>
         </div>
       </div>
+      </UnifiedAyoaLayout>
 
       {/* Edit Dialog */}
       <EditReportDialog

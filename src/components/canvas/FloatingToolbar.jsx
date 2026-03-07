@@ -7,25 +7,40 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Cloud, Circle, Diamond, Plus, Palette, Shapes } from 'lucide-react';
+import { X, Cloud, Circle, Diamond, Plus, Palette, Shapes, MessageCircle, Hexagon, Star } from 'lucide-react';
 
-// DNA Colors — the 4 core + accents
+// ── Vibrant AYOA Palette — Full Spectrum, Happy & Alive ──
 const TOOLBAR_COLORS = [
-  { color: '#00A3E0', label: 'P1 כחול שמיים' },
-  { color: '#B2AC88', label: 'P2 מרווה' },
-  { color: '#E91E63', label: 'P3 מג\'נטה' },
-  { color: '#FFC107', label: 'P4 שקיעה' },
-  { color: '#800000', label: 'בורדו' },
-  { color: '#4682B4', label: 'פלדה' },
+  // Row 1: Core DNA
+  { color: '#00A3E0', label: 'שמיים' },
+  { color: '#E91E63', label: 'מג\'נטה' },
+  { color: '#FFC107', label: 'שקיעה' },
+  { color: '#8BC34A', label: 'ליים' },
+  // Row 2: Vibrant spectrum
+  { color: '#FF6B9D', label: 'ורוד ניאון' },
+  { color: '#00BCD4', label: 'טורקיז' },
+  { color: '#FF9800', label: 'כתום' },
   { color: '#9C27B0', label: 'סגול' },
-  { color: '#ADD8E6', label: 'תכלת' },
+  // Row 3: Soft pastels
+  { color: '#81D4FA', label: 'תכלת' },
+  { color: '#F8BBD0', label: 'ורוד רך' },
+  { color: '#C5E1A5', label: 'ירוק רך' },
+  { color: '#FFE082', label: 'זהב רך' },
+  // Row 4: Deep accents
+  { color: '#7C4DFF', label: 'אינדיגו' },
+  { color: '#FF5252', label: 'אדום חי' },
+  { color: '#B2AC88', label: 'מרווה' },
+  { color: '#4682B4', label: 'פלדה' },
 ];
 
-// Organic shapes only
+// Organic shapes — matching Ayoa's rich shape library
 const TOOLBAR_SHAPES = [
   { key: 'cloud', label: 'ענן', icon: Cloud },
   { key: 'bubble', label: 'בועה', icon: Circle },
+  { key: 'speech', label: 'דיבור', icon: MessageCircle },
   { key: 'diamond', label: 'מעוין', icon: Diamond },
+  { key: 'pill', label: 'כמוסה', icon: Hexagon },
+  { key: 'star', label: 'כוכב', icon: Star },
 ];
 
 export default function FloatingToolbar({

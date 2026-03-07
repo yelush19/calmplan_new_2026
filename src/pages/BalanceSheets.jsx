@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { generateProcessTasks } from '@/api/functions';
 import { loadBalanceSheetTemplates, saveBalanceSheetTemplates, DEFAULT_STAGE_TEMPLATES } from '@/config/balanceSheetTemplates';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 // שלבי תהליך מאזן
 const WORKFLOW_STAGES = [
@@ -416,6 +417,15 @@ export default function BalanceSheetsPage() {
     b.target_date && new Date(b.target_date) < new Date() && b.current_stage !== 'signed'
   ).length;
 
+  const pseudoTasks = useMemo(() =>
+    (filteredBalances || balanceSheets || []).map(bs => ({
+      id: bs.id,
+      title: bs.client_name || 'מאזן',
+      category: bs.stage || 'balance_sheet',
+      status: bs.stage === 'completed' ? 'production_completed' : bs.stage === 'in_review' ? 'sent_for_review' : 'not_started',
+      due_date: bs.deadline,
+    })), [filteredBalances, balanceSheets]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -586,6 +596,7 @@ export default function BalanceSheetsPage() {
       )}
 
       {/* Balance Sheets - Collapsible by Stage */}
+      <UnifiedAyoaLayout tasks={pseudoTasks} clients={clients} centerLabel="מאזנים שנתיים" centerSub="P2" accentColor="#B2AC88">
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array(6).fill(0).map((_, i) => (
@@ -640,6 +651,7 @@ export default function BalanceSheetsPage() {
           })}
         </div>
       )}
+      </UnifiedAyoaLayout>
 
       {/* Generate from template confirmation dialog */}
       <Dialog open={!!showGenerateDialog} onOpenChange={(open) => !open && setShowGenerateDialog(null)}>

@@ -25,6 +25,7 @@ import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -667,6 +668,7 @@ export default function TaxReportsDashboardPage() {
       })()}
 
       {/* Content */}
+      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} centerLabel="דיווחי מס" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth} onEditTask={setEditingTask}>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
@@ -676,24 +678,7 @@ export default function TaxReportsDashboardPage() {
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (
           <GanttView tasks={filteredTasks} clients={clients} currentMonth={addMonths(selectedMonth, 1)} onEditTask={setEditingTask} />
-        ) : viewMode === 'ayoa' ? (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <AyoaViewToggle value={ayoaView} onChange={setAyoaView} />
-            </div>
-            <div className="min-h-[400px]">
-              {ayoaView === 'radial' ? (
-                <AyoaRadialView tasks={filteredTasks} centerLabel="מע״מ" centerSub="P2" />
-              ) : ayoaView === 'map' ? (
-                <AyoaMapView tasks={filteredTasks} centerLabel="מע״מ" centerSub="P2" />
-              ) : ayoaView === 'gantt' ? (
-                <GanttView tasks={filteredTasks} clients={clients} />
-              ) : (
-                <AyoaFeedView tasks={filteredTasks} onEditTask={(t) => setEditingTask(t)} />
-              )}
-            </div>
-          </div>
-        ) : (
+        ) : viewMode === 'table' ? (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
               const isCollapsed = collapsedServices.has(serviceKey);
@@ -729,7 +714,7 @@ export default function TaxReportsDashboardPage() {
               );
             })}
           </div>
-        )
+        ) : null
       ) : (
         <Card className="p-12 text-center border-[#E0E0E0]">
           <Calculator className="w-16 h-16 mx-auto text-gray-300 mb-4" />
@@ -737,6 +722,7 @@ export default function TaxReportsDashboardPage() {
           <p className="text-slate-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
         </Card>
       )}
+      </UnifiedAyoaLayout>
 
       <QuickAddTaskDialog
         open={showQuickAdd}

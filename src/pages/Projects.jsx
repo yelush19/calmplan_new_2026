@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Project } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import {
   ChevronDown, ChevronUp
 } from 'lucide-react';
 import { loadPlatformConfig } from '@/config/platformConfig';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 const statusOptions = [
   { value: 'planning', label: 'תכנון', color: 'bg-gray-200 text-gray-800' },
@@ -175,6 +176,15 @@ export default function Projects() {
   const getPlatformForProject = (project) =>
     platforms.find(p => p.id === project.platform) || null;
 
+  const pseudoTasks = useMemo(() =>
+    projects.map(p => ({
+      id: p.id,
+      title: p.name || p.title || 'פרויקט',
+      category: p.type || p.status || 'project',
+      status: p.status === 'active' ? 'not_started' : p.status === 'completed' ? 'production_completed' : 'not_started',
+      due_date: p.deadline || p.due_date,
+    })), [projects]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -328,6 +338,7 @@ export default function Projects() {
       )}
 
       {/* Projects Grid - Grouped by Status */}
+      <UnifiedAyoaLayout tasks={pseudoTasks} centerLabel="פרויקטים" centerSub="P3" accentColor="#E91E63">
       {projects.length === 0 && !isCreating ? (
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
@@ -484,6 +495,7 @@ export default function Projects() {
           </div>
         </>
       )}
+      </UnifiedAyoaLayout>
     </div>
   );
 }

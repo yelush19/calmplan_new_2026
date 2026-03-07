@@ -27,6 +27,7 @@ import KanbanView from "../components/tasks/KanbanView";
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import ResizableTable from '@/components/ui/ResizableTable';
 import useTaskCascade from '@/hooks/useTaskCascade';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/processTemplates';
 
@@ -747,6 +748,7 @@ export default function TasksPage() {
 
       {/* Content */}
       <ViewErrorBoundary>
+      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} centerLabel="משימות" centerSub="P3" accentColor="#E91E63" onEditTask={handleEditTask} defaultView="radial">
       {view === 'list' ? (
         sortedTasks.length === 0 ? (
           <Card className="border-0 shadow-sm">
@@ -1011,6 +1013,7 @@ export default function TasksPage() {
           onTaskCreated={loadTasks}
         />
       )}
+      </UnifiedAyoaLayout>
       </ViewErrorBoundary>
 
       <QuickAddTaskDialog

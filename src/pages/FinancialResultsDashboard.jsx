@@ -24,6 +24,7 @@ import { format, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import ResizableTable from '@/components/ui/ResizableTable';
 import { getTaskReportingMonth } from '@/config/automationRules';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 // ============================================================
 // Hebrew labels
@@ -293,6 +294,7 @@ export default function FinancialResultsDashboard() {
       </div>
       </div>
 
+      <UnifiedAyoaLayout tasks={tasks} clients={clients} centerLabel="רווח והפסד" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth}>
       {/* Table */}
       <Card>
         <CardContent className="p-0">
@@ -392,6 +394,7 @@ export default function FinancialResultsDashboard() {
           </div>
         ))}
       </div>
+      </UnifiedAyoaLayout>
     </div>
   );
 }
