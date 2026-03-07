@@ -60,7 +60,8 @@ export default function MyFocus() {
         Client.list('name', 1000).catch(() => []),
       ]);
       const raw = Array.isArray(tasksData) ? tasksData : [];
-      setTasks(getActiveTreeTasks(raw));
+      const active = getActiveTreeTasks(raw);
+      setTasks(active.length > 0 ? active : raw);
       setClients(Array.isArray(clientsData) ? clientsData : []);
     } catch (err) {
       console.error('MyFocus load error:', err);
@@ -72,12 +73,13 @@ export default function MyFocus() {
   const energy = getEnergyProfile();
   const EnergyIcon = energy.icon;
 
-  // Split tasks into today's active tasks
+  // Active tasks for focus view: overdue + due today + upcoming this month
   const todayTasks = useMemo(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const now = new Date();
+    const monthEnd = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd');
     return tasks.filter(t =>
       t.status !== 'production_completed' &&
-      t.due_date && t.due_date <= todayStr
+      t.due_date && t.due_date <= monthEnd
     );
   }, [tasks]);
 

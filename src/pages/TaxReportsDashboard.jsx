@@ -95,9 +95,8 @@ export default function TaxReportsDashboardPage() {
       const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
         Task.filter({
-          context: 'work',
           due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
-        }),
+        }).catch(() => []),
         Client.list(null, 500).catch(() => []),
       ]);
       // Post-filter: only show tasks belonging to the selected reporting month
