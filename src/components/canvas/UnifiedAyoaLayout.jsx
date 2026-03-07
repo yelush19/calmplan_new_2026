@@ -1,39 +1,18 @@
 /**
- * ── UnifiedAyoaLayout: Global View Engine Wrapper ──
- * Wraps ANY dashboard page with the 4-view switcher (Map, Radial, Gantt, Feed).
- * Provides FloatingToolbar and DNA-colored views automatically.
+ * ── UnifiedAyoaLayout: The One Wrapper ──
  *
- * CRITICAL RULE: Children (original page content) are ALWAYS the primary view.
- * AYOA visualizations (radial, map, gantt) are SECONDARY opt-in views.
- * The "feed" view falls back to children (original tables/data grids).
- *
- * Usage:
- *   <UnifiedAyoaLayout
- *     tasks={tasks}
- *     clients={clients}
- *     centerLabel="שכר"
- *     centerSub="P1"
- *     accentColor="#00A3E0"
- *     currentMonth={selectedMonth}
- *     onEditTask={handleEdit}
- *   >
- *     Your existing page content (shown in "original" mode)
- *   </UnifiedAyoaLayout>
- *
- * The wrapper reads from AyoaViewContext for global state.
- * If no tasks are passed, the AYOA views gracefully show an empty state.
+ * FIXED: Removed AnimatePresence mode="wait" that was blocking children render.
+ * FIXED: Feed view now ALWAYS renders children first, no conditions.
+ * ADDED: Debug dump when items array is empty so you always see what arrived.
  */
 
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
 import GanttView from '@/components/views/GanttView';
-import { Table } from 'lucide-react';
 
-// DNA Colors
 const DNA_ACCENTS = {
   P1: '#00A3E0',
   P2: '#B2AC88',
@@ -42,135 +21,95 @@ const DNA_ACCENTS = {
 };
 
 export default function UnifiedAyoaLayout({
-  tasks = [],
+  data,
+  tasks: tasksProp,
   clients = [],
   centerLabel = 'מרכז',
   centerSub = '',
   accentColor,
+  branch,
   currentMonth,
   onEditTask,
-  defaultView,
-  showOriginalToggle = true,
-  tableView,
   children,
 }) {
-  // LOCAL state — each page instance manages its own view, no global context leaking
-  const [localView, setLocalView] = useState(null); // null = show children (original content)
+  const items = data || tasksProp || [];
+  const [activeView, setActiveView] = useState('feed');
+  const accent = accentColor || (branch && DNA_ACCENTS[branch]) || DNA_ACCENTS.P2;
+  const resolvedSub = centerSub || `${items.length} פריטים`;
 
-  // null means "show original content" (children). Only non-null triggers AYOA views.
-  const activeAyoaView = localView; // radial | map | gantt | feed | null
-
-  // Debug: verify data is arriving
-  if (process.env.NODE_ENV === 'development' && tasks.length > 0) {
-    console.log(`[UnifiedAyoaLayout] "${centerLabel}" received ${tasks.length} tasks, view: ${activeAyoaView || 'original (children)'}`);
-  }
+  // ── EMERGENCY DEBUG: Log everything ──
+  console.log(`[UnifiedAyoaLayout] "${centerLabel}" | items: ${items.length} | activeView: ${activeView} | hasChildren: ${!!children} | childrenType: ${typeof children}`);
 
   const handleViewChange = useCallback((view) => {
-    setLocalView(view);
+    setActiveView(view);
   }, []);
 
-  const showOriginal = useCallback(() => {
-    setLocalView(null);
-  }, []);
+  // ── FEED VIEW: Render children DIRECTLY — no animation wrapper ──
+  if (activeView === 'feed') {
+    return (
+      <div className="space-y-3">
+        {/* View Switcher */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <AyoaViewToggle value={activeView} onChange={handleViewChange} accentColor={accent} />
+          {/* Debug pill — shows data count */}
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+            data: {items.length} | children: {children ? 'YES' : 'NO'}
+          </span>
+        </div>
 
-  const accent = accentColor || DNA_ACCENTS.P1;
-  const isOriginalActive = activeAyoaView === null;
+        {/* CHILDREN FIRST — this is your original page content */}
+        {children}
 
-  return (
-    <div className="space-y-3">
-      {/* ── Sticky View Switcher Bar ── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <AyoaViewToggle
-          value={activeAyoaView}
-          onChange={handleViewChange}
-          accentColor={accent}
-        />
-        {showOriginalToggle && children && (
-          <button
-            onClick={showOriginal}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium transition-all ${
-              isOriginalActive
-                ? 'bg-white shadow-sm font-bold'
-                : 'hover:bg-white/60'
-            }`}
-            style={isOriginalActive ? {
-              color: accent,
-              boxShadow: `0 2px 8px ${accent}20`,
-            } : {
-              color: '#9E9E9E',
-              background: 'linear-gradient(135deg, #F8F9FA, #F0F2F5)',
-            }}
-          >
-            <Table className="w-3.5 h-3.5" />
-            טבלה
-          </button>
+        {/* Fallback only if no children passed */}
+        {!children && items.length > 0 && (
+          <AyoaFeedView tasks={items} onEditTask={onEditTask} />
+        )}
+
+        {/* Empty state — only when both children AND items are empty */}
+        {!children && items.length === 0 && (
+          <div className="p-6 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50 text-center">
+            <p className="text-lg font-bold text-amber-900">DEBUG: הצינור ריק</p>
+            <p className="text-sm text-amber-700 mt-1">
+              data/tasks prop: {items.length} items | children prop: {String(!!children)}
+            </p>
+            <p className="text-xs text-amber-600 mt-2">
+              בדוק שהדף שולח data או children ל-UnifiedAyoaLayout
+            </p>
+          </div>
         )}
       </div>
+    );
+  }
 
-      {/* ── View Content ── */}
-      <AnimatePresence mode="wait">
-        {isOriginalActive ? (
-          /* DEFAULT: Always show original page content (children) */
-          <motion.div
-            key="original"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            {tableView || children}
-          </motion.div>
-        ) : (
-          <motion.div
-            key={activeAyoaView}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            {activeAyoaView === 'radial' && (
-              <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white"
-                style={{ minHeight: '450px' }}>
-                <AyoaRadialView
-                  tasks={tasks}
-                  centerLabel={centerLabel}
-                  centerSub={centerSub || `${tasks.length} משימות`}
-                />
-              </div>
-            )}
+  // ── NON-FEED VIEWS (Map, Radial, Gantt) ──
+  return (
+    <div className="space-y-3">
+      {/* View Switcher */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <AyoaViewToggle value={activeView} onChange={handleViewChange} accentColor={accent} />
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+          data: {items.length}
+        </span>
+      </div>
 
-            {activeAyoaView === 'map' && (
-              <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white"
-                style={{ minHeight: '450px' }}>
-                <AyoaMapView
-                  tasks={tasks}
-                  centerLabel={centerLabel}
-                  centerSub={centerSub || `${tasks.length} משימות`}
-                />
-              </div>
-            )}
+      {/* Map view */}
+      {activeView === 'map' && (
+        <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+          <AyoaMapView tasks={items} centerLabel={centerLabel} centerSub={resolvedSub} />
+        </div>
+      )}
 
-            {activeAyoaView === 'gantt' && (
-              <GanttView
-                tasks={tasks}
-                clients={clients}
-                currentMonth={currentMonth || new Date()}
-                onEditTask={onEditTask}
-              />
-            )}
+      {/* Radial view */}
+      {activeView === 'radial' && (
+        <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+          <AyoaRadialView tasks={items} centerLabel={centerLabel} centerSub={resolvedSub} />
+        </div>
+      )}
 
-            {activeAyoaView === 'feed' && (
-              <div className="rounded-2xl border border-gray-100 bg-white"
-                style={{ minHeight: '200px' }}>
-                <AyoaFeedView
-                  tasks={tasks}
-                  onEditTask={onEditTask}
-                />
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Gantt view */}
+      {activeView === 'gantt' && (
+        <GanttView tasks={items} clients={clients} currentMonth={currentMonth || new Date()} onEditTask={onEditTask} />
+      )}
     </div>
   );
 }

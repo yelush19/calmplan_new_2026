@@ -1,47 +1,46 @@
 /**
  * ── AyoaNode: Reusable AYOA-style SVG node shapes ──
- * Renders organic shapes (cloud, bubble, diamond, pill, circle, rect)
- * with soft glow halos and DNA-driven colors.
+ * 6 Organic Shapes: Cloud, Bubble, Speech, Diamond, Pill, Star
+ * Soft glow halos, DNA-driven colors, absolute SVG coords.
  *
  * Props:
  *   cx, cy     — center coordinates (SVG viewBox units)
  *   size       — radius/half-width
- *   shape      — 'cloud' | 'bubble' | 'diamond' | 'pill' | 'circle' | 'roundedRect'
+ *   shape      — 'cloud' | 'bubble' | 'speech' | 'diamond' | 'pill' | 'star'
  *   fill       — background fill color
  *   stroke     — border stroke color
  *   strokeWidth — border width (default 2)
  *   glow       — enable soft glow halo (default true)
  *   glowColor  — glow color (defaults to stroke)
- *   children   — optional inner SVG content
  */
 
 import React from 'react';
 
 // ── AYOA Hex Bible — Full Vibrant Spectrum ──
 export const AYOA_PALETTE = {
-  // Core DNA
   magenta:  '#E91E63',
   mustard:  '#FFC107',
   skyBlue:  '#00A3E0',
   sage:     '#B2AC88',
-  // Vibrant spectrum
   neonPink: '#FF6B9D',
   lime:     '#8BC34A',
   turquoise:'#00BCD4',
   orange:   '#FF9800',
   purple:   '#9C27B0',
   indigo:   '#7C4DFF',
-  // Soft pastels
   lightBlue:'#81D4FA',
   softPink: '#F8BBD0',
   softGreen:'#C5E1A5',
   softGold: '#FFE082',
-  // Deep accents
   liveRed:  '#FF5252',
   steel:    '#4682B4',
+  fuchsia:  '#E040FB',
+  neonGreen:'#00E676',
+  coral:    '#FF6E40',
+  mint:     '#1DE9B6',
 };
 
-// Shape path builders — all return SVG element(s)
+// ── Shape path builders — all return SVG element(s), absolute coords only ──
 const SHAPE_RENDERERS = {
   cloud: (cx, cy, r, fill, stroke, sw) => {
     const d = `M ${cx - r * 0.55} ${cy + r * 0.22} ` +
@@ -55,8 +54,25 @@ const SHAPE_RENDERERS = {
   },
 
   bubble: (cx, cy, r, fill, stroke, sw) => (
-    <ellipse cx={cx} cy={cy} rx={r} ry={r * 0.85} fill={fill} stroke={stroke} strokeWidth={sw} />
+    <ellipse cx={cx} cy={cy} rx={r} ry={r * 0.82} fill={fill} stroke={stroke} strokeWidth={sw} />
   ),
+
+  speech: (cx, cy, r, fill, stroke, sw) => {
+    // Speech bubble with a small tail at bottom-left
+    const d = `M ${cx - r * 0.8} ${cy - r * 0.5}` +
+      ` Q ${cx - r * 0.8} ${cy - r * 0.85} ${cx - r * 0.2} ${cy - r * 0.85}` +
+      ` L ${cx + r * 0.2} ${cy - r * 0.85}` +
+      ` Q ${cx + r * 0.8} ${cy - r * 0.85} ${cx + r * 0.8} ${cy - r * 0.5}` +
+      ` L ${cx + r * 0.8} ${cy + r * 0.2}` +
+      ` Q ${cx + r * 0.8} ${cy + r * 0.55} ${cx + r * 0.2} ${cy + r * 0.55}` +
+      ` L ${cx - r * 0.15} ${cy + r * 0.55}` +
+      ` L ${cx - r * 0.45} ${cy + r * 0.88}` +
+      ` L ${cx - r * 0.3} ${cy + r * 0.55}` +
+      ` L ${cx - r * 0.5} ${cy + r * 0.55}` +
+      ` Q ${cx - r * 0.8} ${cy + r * 0.55} ${cx - r * 0.8} ${cy + r * 0.2}` +
+      ` Z`;
+    return <path d={d} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />;
+  },
 
   diamond: (cx, cy, r, fill, stroke, sw) => {
     const pts = `${cx},${cy - r} ${cx + r * 0.7},${cy} ${cx},${cy + r} ${cx - r * 0.7},${cy}`;
@@ -68,6 +84,18 @@ const SHAPE_RENDERERS = {
       rx={r * 0.45} fill={fill} stroke={stroke} strokeWidth={sw} />
   ),
 
+  star: (cx, cy, r, fill, stroke, sw) => {
+    // 5-pointed star
+    const points = [];
+    for (let i = 0; i < 5; i++) {
+      const outerAngle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+      const innerAngle = outerAngle + Math.PI / 5;
+      points.push(`${cx + r * Math.cos(outerAngle)},${cy + r * Math.sin(outerAngle)}`);
+      points.push(`${cx + r * 0.4 * Math.cos(innerAngle)},${cy + r * 0.4 * Math.sin(innerAngle)}`);
+    }
+    return <polygon points={points.join(' ')} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />;
+  },
+
   circle: (cx, cy, r, fill, stroke, sw) => (
     <circle cx={cx} cy={cy} r={r} fill={fill} stroke={stroke} strokeWidth={sw} />
   ),
@@ -78,7 +106,7 @@ const SHAPE_RENDERERS = {
   ),
 };
 
-export const SHAPE_KEYS = Object.keys(SHAPE_RENDERERS);
+export const SHAPE_KEYS = ['cloud', 'bubble', 'speech', 'diamond', 'pill', 'star'];
 
 export default function AyoaNode({
   cx, cy, size = 30,
@@ -88,7 +116,6 @@ export default function AyoaNode({
   strokeWidth = 2,
   glow = true,
   glowColor,
-  filterId,
   onClick,
   style,
   children,
@@ -99,9 +126,8 @@ export default function AyoaNode({
   return (
     <g onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', ...style }}>
       {glow && (
-        <g opacity={0.25}>
-          {renderer(cx, cy, size + 4, 'none', gc, 0)}
-          {/* Invisible larger shape for glow effect via filter */}
+        <g opacity={0.2}>
+          {renderer(cx, cy, size + 5, 'none', gc, 0)}
         </g>
       )}
       {renderer(cx, cy, size, fill, stroke, strokeWidth)}
@@ -111,8 +137,16 @@ export default function AyoaNode({
 }
 
 /**
+ * Render a shape at the given position (standalone function for views).
+ */
+export function renderNodeShape(shape, x, y, r, fill, stroke, sw = 2.5) {
+  const renderer = SHAPE_RENDERERS[shape] || SHAPE_RENDERERS.bubble;
+  return renderer(x, y, r, fill, stroke, sw);
+}
+
+/**
  * Tapered Bezier branch path — thick at base, thin at tip.
- * Returns SVG path d-string.
+ * Returns SVG path d-string. Absolute coords only.
  */
 export function buildTaperedBranch(sx, sy, ex, ey, startW = 5, endW = 1.5) {
   const dx = ex - sx, dy = ey - sy;

@@ -1,7 +1,8 @@
 /**
- * ── AyoaViewToggle: Unified 4-view mode selector ──
- * Drop into any dashboard to get Map / Radial / Gantt / Feed views.
- * DNA-colored active indicator, organic pill design.
+ * ── AyoaViewToggle: The 4 Lenses (Directive #5) ──
+ * Permanent top-bar switcher: Map | Radial | Gantt | Feed
+ * DNA-colored active indicator. Organic pill design.
+ * No legacy view-toggle buttons (Directive #8).
  */
 
 import React from 'react';
@@ -16,10 +17,10 @@ export const VIEW_MODES = {
 
 // DNA accent per view mode
 const VIEW_ACCENTS = {
-  map:    '#E91E63', // Magenta
-  radial: '#00A3E0', // Sky Blue
-  gantt:  '#B2AC88', // Sage Green
-  feed:   '#FFC107', // Sunset Yellow
+  map:    '#E91E63',
+  radial: '#00A3E0',
+  gantt:  '#B2AC88',
+  feed:   '#FFC107',
 };
 
 export default function AyoaViewToggle({ value, onChange, className = '', accentColor }) {
@@ -41,7 +42,7 @@ export default function AyoaViewToggle({ value, onChange, className = '', accent
               color: accent,
               boxShadow: `0 2px 8px ${accent}20, 0 1px 3px rgba(0,0,0,0.06)`,
             } : {
-              color: '#475569',
+              color: '#1E293B',
             }}
           >
             <Icon className="w-3.5 h-3.5" />
