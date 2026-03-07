@@ -513,13 +513,12 @@ export default function ReconciliationsPage() {
     return preset ? preset.minDays : 0;
   }, [lagFilter, customLagDays]);
 
-  // ── CONTEXTUAL FILTER: Only reconciliation-related tasks for the AYOA map ──
-  const RECONCILIATION_CATEGORIES = ['התאמות', 'work_reconciliation', 'הנהלת חשבונות', 'work_bookkeeping'];
-  const reconciliationTasks = useMemo(() => {
-    return (allTasks || []).filter(t =>
-      RECONCILIATION_CATEGORIES.includes(t.category)
-    );
-  }, [allTasks]);
+  // ── DEBUG: Pass ALL tasks unfiltered to prove the pipe works ──
+  // Filter REMOVED — was returning empty [] because category strings didn't match DB.
+  // Once we see data flowing, we'll add smart filtering back.
+  const reconciliationTasks = allTasks || [];
+  console.log('1. RECONCILIATIONS PAGE — allTasks:', allTasks?.length, 'sample:', allTasks?.[0]);
+  console.log('2. RECONCILIATIONS PAGE — reconciliationTasks (unfiltered):', reconciliationTasks.length);
 
   // Build enriched rows
   const rows = useMemo(() => {
@@ -787,7 +786,8 @@ export default function ReconciliationsPage() {
         </div>
       </div>
 
-      {/* ── UnifiedAyoaLayout Wrapper (Directive #3: data pipe) ─────────────── */}
+      {/* ── UnifiedAyoaLayout Wrapper ─────────────── */}
+      {console.log('3. RECONCILIATIONS RENDER — passing to wrapper:', reconciliationTasks.length, 'items, children=table below')}
       <UnifiedAyoaLayout data={reconciliationTasks} clients={clients || []} centerLabel="התאמת חשבונות" centerSub="P2" branch="P2">
 
       {/* ── Expand/Collapse + Select All controls ─────────────── */}
