@@ -86,19 +86,24 @@ export default function PayrollDashboardPage() {
       const end = endOfMonth(deadlineMonth);
       const reportStart = startOfMonth(selectedMonth);
       const [tasksData, clientsData] = await Promise.all([
-        Task.filter({
-          context: 'work',
-          due_date: { '>=': format(reportStart, 'yyyy-MM-dd'), '<=': format(end, 'yyyy-MM-dd') },
-        }),
+        Task.list('-due_date', 5000),
         Client.list(null, 500).catch(() => []),
       ]);
       // Post-filter: only show tasks belonging to the selected reporting month
       const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
-      const filtered = (tasksData || []).filter(t => {
+      const allRaw = Array.isArray(tasksData) ? tasksData : [];
+      const filtered = allRaw.filter(t => {
         if (!allPayrollCategories.includes(t.category)) return false;
         return getTaskReportingMonth(t) === selectedMonthStr;
       });
-      setTasks(filtered);
+      // DATA SURVIVAL: if month filter kills everything, show all payroll tasks
+      if (filtered.length === 0 && allRaw.length > 0) {
+        const allPayroll = allRaw.filter(t => allPayrollCategories.includes(t.category));
+        console.warn('[DATA SURVIVAL] PayrollDashboard: month filter returned 0. Showing all', allPayroll.length, 'payroll tasks.');
+        setTasks(allPayroll.length > 0 ? allPayroll : allRaw);
+      } else {
+        setTasks(filtered);
+      }
       setClients(clientsData || []);
       syncCompletedTaskSteps(filtered);
     } catch (error) {

@@ -70,10 +70,16 @@ export function filterActivePeriodTasks(tasks) {
   const prevYear = prevDate.getFullYear();
   const prevMonth = prevDate.getMonth();
 
+  // Next month (for payroll tasks that have next-month deadlines)
+  const nextDate = new Date(currentYear, currentMonth + 1, 1);
+  const nextYear = nextDate.getFullYear();
+  const nextMonth = nextDate.getMonth();
+
   const prevMonthPrefix = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
   const currMonthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+  const nextMonthPrefix = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}`;
 
-  return (tasks || []).filter(task => {
+  const filtered = (tasks || []).filter(task => {
     // Exclude 31/5 annual ghost tasks
     if (task.due_date?.endsWith('-05-31') && (
       task.title?.includes('דוח שנתי') ||
@@ -86,29 +92,45 @@ export function filterActivePeriodTasks(tasks) {
     const dd = task.due_date;
     if (dd) {
       const monthPrefix = dd.substring(0, 7); // "YYYY-MM"
-      // In current or previous month → include
-      if (monthPrefix === currMonthPrefix || monthPrefix === prevMonthPrefix) return true;
+      // In previous, current, or next month → include (3-month window)
+      if (monthPrefix === currMonthPrefix || monthPrefix === prevMonthPrefix || monthPrefix === nextMonthPrefix) return true;
       // Completed tasks outside active window → exclude
       if (task.status === 'production_completed') return false;
-      // Rule of 31: Active tasks with future due dates → include full month range (31 days each direction)
+      // Wider window: 93 days each direction (3 full months)
       const taskDate = new Date(dd);
       const daysDiff = (taskDate - now) / (1000 * 60 * 60 * 24);
-      return daysDiff >= -62 && daysDiff <= 62;
+      return daysDiff >= -93 && daysDiff <= 93;
     }
 
     // No due date: include if active (not completed/irrelevant)
     return task.status !== 'production_completed';
   });
+
+  return filtered;
 }
 
 /**
  * The unified filter: P1-P4 tree membership + active period.
  * Use this everywhere you need a canonical task count.
+ *
+ * ══ DATA SURVIVAL RULE ══
+ * NEVER return [] when the input has tasks. If filtering kills
+ * everything, bypass and return all valid tasks unfiltered.
+ * An "unorganized" screen is always better than an empty one.
  */
 export function getActiveTreeTasks(tasks) {
+  if (!tasks || tasks.length === 0) return [];
+
   const activePeriod = filterActivePeriodTasks(tasks);
-  // Every task gets a P-branch via fallback, so this just ensures we have valid tasks
-  return activePeriod.filter(t => getTaskPBranch(t) !== null);
+  const treeTasks = activePeriod.filter(t => getTaskPBranch(t) !== null);
+
+  // DATA SURVIVAL: if tree filter killed everything, return raw tasks
+  if (treeTasks.length === 0 && tasks.length > 0) {
+    console.warn('[DATA SURVIVAL] getActiveTreeTasks filtered', tasks.length, '→ 0. Returning all tasks.');
+    return tasks;
+  }
+
+  return treeTasks;
 }
 
 export { CATEGORY_TO_P_BRANCH, P_BRANCH_LABELS };

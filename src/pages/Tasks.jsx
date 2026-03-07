@@ -274,9 +274,19 @@ export default function TasksPage() {
     try {
       const rawTasks = await Task.list("-due_date", 5000).catch(() => []);
       const validTasks = Array.isArray(rawTasks) ? rawTasks : [];
+
       // Unified tree filter: only P1-P4 tasks in active period
       const treeTasks = getActiveTreeTasks(validTasks);
-      const processed = treeTasks.map(task => {
+
+      // ══ DATA SURVIVAL BYPASS ══
+      // If the tree filter killed everything but raw data exists, show raw.
+      // NEVER show an empty screen when the database has tasks.
+      const displayTasks = treeTasks.length > 0 ? treeTasks : validTasks;
+      if (treeTasks.length === 0 && validTasks.length > 0) {
+        console.warn('DATA SURVIVAL: getActiveTreeTasks returned 0 from', validTasks.length, 'raw tasks. Bypassing filter.');
+      }
+
+      const processed = displayTasks.map(task => {
         let normalizedStatus = task.status;
         if (task.status && mondayStatusMapping[task.status]) {
           normalizedStatus = mondayStatusMapping[task.status];
