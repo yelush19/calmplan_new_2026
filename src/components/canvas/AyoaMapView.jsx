@@ -78,8 +78,9 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
 
     // Distribute categories radially around center
     const angleStep = (2 * Math.PI) / catCount;
-    const catRadius = 240; // Level 1: דיווחין
-    const taskRadiusBase = 180; // Level 2-3: שירותים/ייצור distance from category
+    // Dynamic radius based on category count to prevent crowding
+    const catRadius = catCount <= 4 ? 280 : catCount <= 8 ? 320 : 360;
+    const taskRadiusBase = catCount <= 4 ? 200 : 160; // distance from category node
 
     const catNodes = [];
     const tNodes = [];
@@ -102,8 +103,9 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
         angle,
       });
 
-      // Distribute tasks around this category node
-      const tCount = Math.min(catTasks.length, 10);
+      // Distribute tasks around this category node (cap to prevent crowding)
+      const maxPerCat = catCount <= 3 ? 10 : catCount <= 6 ? 6 : 4;
+      const tCount = Math.min(catTasks.length, maxPerCat);
       const tAngleSpread = Math.min(Math.PI * 0.7, angleStep * 0.85);
       const tAngleStart = angle - tAngleSpread / 2;
 
@@ -121,7 +123,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
         const tRadius = taskRadiusBase + rVariation;
 
         const baseShape = load >= 3 ? 'cloud' : load >= 2 ? 'bubble' : 'bubble';
-        const r = load >= 3 ? 32 : load >= 2 ? 27 : load >= 1 ? 23 : 19;
+        const r = load >= 3 ? 28 : load >= 2 ? 23 : load >= 1 ? 20 : 17;
         const ov = overrides[task.id] || {};
 
         tNodes.push({

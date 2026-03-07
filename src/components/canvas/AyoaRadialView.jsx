@@ -19,12 +19,12 @@ import FloatingToolbar from './FloatingToolbar';
 const VB = 1000;
 const CX = VB / 2, CY = VB / 2;
 
-// Ring radii — concentric hierarchy
+// Ring radii — concentric hierarchy (spread out to prevent overlap)
 const RINGS = {
   center: 55,
-  ring1: 155,   // דיווחין / Reports
-  ring2: 275,   // שירותים / Services
-  ring3: 390,   // ייצור / Production status
+  ring1: 170,   // דיווחין / Reports
+  ring2: 310,   // שירותים / Services
+  ring3: 440,   // ייצור / Production status
 };
 
 // DNA Palette
@@ -174,8 +174,9 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         stroke: dnaColor + '08',
       });
 
-      // Individual task nodes spread across rings 2-3
-      const taskCount = Math.min(catTasks.length, 8);
+      // Individual task nodes spread across rings 2-3 (cap per category to prevent crowding)
+      const maxPerCat = catCount <= 3 ? 8 : catCount <= 6 ? 5 : 3;
+      const taskCount = Math.min(catTasks.length, maxPerCat);
       catTasks.slice(0, taskCount).forEach((task, ti) => {
         const sw = getServiceWeight(task.category);
         const load = typeof task.cognitive_load === 'number' ? task.cognitive_load : sw.cognitiveLoad;
@@ -188,9 +189,9 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
 
         const status = task.status || 'not_started';
         const isCompleted = status === 'production_completed';
-        const taskRing = isCompleted ? RINGS.ring3 : RINGS.ring2 + (ti % 2) * 35;
+        const taskRing = isCompleted ? RINGS.ring3 : RINGS.ring2 + (ti % 2) * 45;
 
-        const r = load >= 3 ? 30 : load >= 2 ? 25 : load >= 1 ? 22 : 18;
+        const r = load >= 3 ? 26 : load >= 2 ? 22 : load >= 1 ? 19 : 16;
         const ov = overrides[task.id] || {};
 
         allNodes.push({
