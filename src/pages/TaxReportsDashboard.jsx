@@ -650,6 +650,7 @@ export default function TaxReportsDashboardPage() {
       })()}
 
       {/* Content */}
+      {console.log('[TaxReports.jsx] RENDER — tasks:', tasks?.length, 'filteredTasks:', filteredTasks?.length, 'isLoading:', isLoading)}
       <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} centerLabel="דיווחי מס" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth} onEditTask={setEditingTask}>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">

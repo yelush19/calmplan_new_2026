@@ -436,7 +436,7 @@ export default function PayrollDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : (
-        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} centerLabel="שכר" centerSub="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
+        <UnifiedAyoaLayout tasks={(console.log('[PayrollDash.jsx] RENDER — tasks:', tasks?.length, 'filteredTasks:', filteredTasks?.length), filteredTasks)} clients={clients} centerLabel="שכר" centerSub="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
         {sortedServiceKeys.length > 0 ? (
           <div className="space-y-4">
             {sortedServiceKeys.map(serviceKey => {
