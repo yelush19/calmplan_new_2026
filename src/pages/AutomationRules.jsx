@@ -410,16 +410,16 @@ export default function AutomationRules() {
   };
 
   const handleDueDateChange = (catKey, value, variant = null) => {
-    // Accept raw numeric input; clamp to 1-31 on save
-    const day = value === '' ? null : parseInt(value, 10);
-    const validDay = (day != null && !isNaN(day)) ? Math.max(1, Math.min(31, day)) : null;
+    // Accept raw numeric input; clamp to 1-31 range
+    const raw = value === '' ? '' : parseInt(value, 10);
+    const validDay = (raw !== '' && !isNaN(raw)) ? Math.max(1, Math.min(31, raw)) : null;
     setServiceDueDates(prev => {
       const existing = prev[catKey] || {};
       if (variant) {
-        // digital or check variant
         return { ...prev, [catKey]: { ...existing, [variant]: validDay } };
       }
-      return { ...prev, [catKey]: { due_day: validDay } };
+      // Preserve existing variant fields (digital/check) if present
+      return { ...prev, [catKey]: { ...existing, due_day: validDay } };
     });
   };
 

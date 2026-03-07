@@ -462,46 +462,52 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                 />
               )}
 
-              {/* ── Curved dependency arrows (Cubic Bezier) ── */}
-              <svg className="absolute inset-0 pointer-events-none overflow-visible" width="100%" height="100%" preserveAspectRatio="none" style={{ zIndex: 5 }}>
-                <defs>
-                  <marker id="dep-arrow-capsule" viewBox="0 0 8 6" refX="7" refY="3"
-                    markerWidth="5" markerHeight="4" orient="auto">
-                    <path d="M 0 0 L 8 3 L 0 6 z" fill="#B0B0B0" />
-                  </marker>
-                </defs>
-                {sortedTasks.map((task, idx) => {
-                  if (idx === 0) return null;
-                  const prevTask = sortedTasks[idx - 1];
-                  const prevPos = getTaskPosition(prevTask);
-                  const curPos = getTaskPosition(task);
-                  const prevLane = assignment.get(prevTask.id) || 0;
-                  const curLane = assignment.get(task.id) || 0;
-                  // Calculate pixel positions from percentages
-                  const prevEndPct = parseFloat(prevPos.left) + parseFloat(prevPos.width);
-                  const curStartPct = parseFloat(curPos.left);
-                  if (curStartPct <= prevEndPct) return null; // overlapping, no arrow
-                  const prevTopPx = LANE_GAP + prevLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
-                  const curTopPx = LANE_GAP + curLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
+              {/* ── Curved dependency arrows (Cubic Bezier) — viewBox coords, no percentages ── */}
+              {(() => {
+                const svgW = 1000;
+                const totalH = Math.max(100, laneCount * (LANE_HEIGHT + LANE_GAP) + LANE_GAP);
+                return (
+                  <svg className="absolute inset-0 pointer-events-none overflow-visible" width="100%" height="100%" viewBox={`0 0 ${svgW} ${totalH}`} preserveAspectRatio="none" style={{ zIndex: 5 }}>
+                    <defs>
+                      <marker id="dep-arrow-capsule" viewBox="0 0 8 6" refX="7" refY="3"
+                        markerWidth="5" markerHeight="4" orient="auto">
+                        <path d="M 0 0 L 8 3 L 0 6 z" fill="#B0B0B0" />
+                      </marker>
+                    </defs>
+                    {sortedTasks.map((task, idx) => {
+                      if (idx === 0) return null;
+                      const prevTask = sortedTasks[idx - 1];
+                      const prevPos = getTaskPosition(prevTask);
+                      const curPos = getTaskPosition(task);
+                      const prevLane = assignment.get(prevTask.id) || 0;
+                      const curLane = assignment.get(task.id) || 0;
+                      // Convert CSS % to viewBox absolute coordinates
+                      const prevEndX = (parseFloat(prevPos.left) + parseFloat(prevPos.width)) * svgW / 100;
+                      const curStartX = parseFloat(curPos.left) * svgW / 100;
+                      if (curStartX <= prevEndX) return null; // overlapping, no arrow
+                      const prevTopY = LANE_GAP + prevLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
+                      const curTopY = LANE_GAP + curLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
 
-                  // Curved Bezier path
-                  const midPct = (prevEndPct + curStartPct) / 2;
-                  const pathD = `M ${prevEndPct}% ${prevTopPx} C ${midPct}% ${prevTopPx}, ${midPct}% ${curTopPx}, ${curStartPct}% ${curTopPx}`;
+                      // Curved Bezier path — pure numbers
+                      const midX = (prevEndX + curStartX) / 2;
+                      const pathD = `M ${prevEndX} ${prevTopY} C ${midX} ${prevTopY}, ${midX} ${curTopY}, ${curStartX} ${curTopY}`;
 
-                  return (
-                    <path key={`dep-${prevTask.id}-${task.id}`}
-                      d={pathD}
-                      fill="none"
-                      stroke="#C0C0C0"
-                      strokeWidth="1.5"
-                      strokeDasharray="6 4"
-                      markerEnd="url(#dep-arrow-capsule)"
-                      opacity="0.6"
-                      strokeLinecap="round"
-                    />
-                  );
-                })}
-              </svg>
+                      return (
+                        <path key={`dep-${prevTask.id}-${task.id}`}
+                          d={pathD}
+                          fill="none"
+                          stroke="#C0C0C0"
+                          strokeWidth="1.5"
+                          strokeDasharray="6 4"
+                          markerEnd="url(#dep-arrow-capsule)"
+                          opacity="0.6"
+                          strokeLinecap="round"
+                        />
+                      );
+                    })}
+                  </svg>
+                );
+              })()}
 
               {/* ── Floating capsule bars ── */}
               {sortedTasks.map(task => {

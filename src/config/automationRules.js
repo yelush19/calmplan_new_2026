@@ -403,10 +403,10 @@ export const DEFAULT_SERVICE_DUE_DATES = {
   'מס"ב ספקים': { due_day: 10 },
   'תשלום רשויות': { due_day: 15 },
   'משלוח תלושים': { due_day: 10 },
-  'דיווח למתפעל': { due_day: null },
-  'דיווח לטמל': { due_day: null },
-  'מילואים': { due_day: null },
-  'הנחיות מס"ב ממתפעל': { due_day: null },
+  'דיווח למתפעל': { due_day: 5 },
+  'דיווח לטמל': { due_day: 5 },
+  'מילואים': { due_day: 5 },
+  'הנחיות מס"ב ממתפעל': { due_day: 1 },
 };
 
 // Categories that vary by payment method (digital vs check/המחאה)
@@ -417,7 +417,14 @@ export async function loadServiceDueDates() {
     const configs = await SystemConfig.list(null, 50);
     const config = configs.find(c => c.config_key === DUE_DATES_CONFIG_KEY);
     if (config && config.data?.dueDates) {
-      return { dueDates: config.data.dueDates, configId: config.id };
+      // Merge saved data with defaults so all categories have values (1-31)
+      const merged = { ...DEFAULT_SERVICE_DUE_DATES };
+      for (const [key, val] of Object.entries(config.data.dueDates)) {
+        if (val && typeof val === 'object') {
+          merged[key] = { ...(merged[key] || {}), ...val };
+        }
+      }
+      return { dueDates: merged, configId: config.id };
     }
     const newConfig = await SystemConfig.create({
       config_key: DUE_DATES_CONFIG_KEY,

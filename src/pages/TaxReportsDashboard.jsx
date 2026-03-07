@@ -21,9 +21,14 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
 import GanttView from '@/components/views/GanttView';
+import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
+import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import AyoaMapView from '@/components/canvas/AyoaMapView';
+import AyoaFeedView from '@/components/canvas/AyoaFeedView';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { useAyoaView } from '@/contexts/AyoaViewContext';
 import {
   TAX_SERVICES,
   ADDITIONAL_SERVICES,
@@ -57,6 +62,7 @@ export default function TaxReportsDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
   const [viewMode, setViewMode] = useState('timeline');
+  const { ayoaView, setAyoaView } = useAyoaView();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
@@ -385,6 +391,10 @@ export default function TaxReportsDashboardPage() {
               style={viewMode === 'kanban' ? { backgroundColor: '#4682B4', color: '#fff' } : {}}>
               <LayoutGrid className="w-4 h-4" />
             </Button>
+            <Button variant={viewMode === 'ayoa' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('ayoa')} title="AYOA"
+              style={viewMode === 'ayoa' ? { backgroundColor: '#4682B4', color: '#fff' } : {}}>
+              <Network className="w-4 h-4" />
+            </Button>
           </div>
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
@@ -589,16 +599,16 @@ export default function TaxReportsDashboardPage() {
               <span className="text-xs font-bold text-slate-600">זרימת ייצור P2</span>
             </div>
             <div className="relative flex items-center">
-              {/* SVG Bezier connectors layer */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }} preserveAspectRatio="none">
+              {/* SVG Bezier connectors layer — viewBox coordinates, no percentages */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 100" preserveAspectRatio="none" style={{ zIndex: 0 }}>
                 {[0, 1, 2].map(i => {
-                  const x1 = `${(i * 25) + 20}%`;
-                  const x2 = `${((i + 1) * 25) + 5}%`;
-                  const cp1x = `${(i * 25) + 23}%`;
-                  const cp2x = `${((i + 1) * 25) + 2}%`;
+                  const x1 = (i * 250) + 200;
+                  const x2 = ((i + 1) * 250) + 50;
+                  const cp1x = (i * 250) + 230;
+                  const cp2x = ((i + 1) * 250) + 20;
                   return (
                     <path key={i}
-                      d={`M ${x1} 50% C ${cp1x} 30%, ${cp2x} 70%, ${x2} 50%`}
+                      d={`M ${x1} 50 C ${cp1x} 30, ${cp2x} 70, ${x2} 50`}
                       fill="none"
                       stroke={phaseCounts[i] > 0 ? phases[i].color + '40' : '#E0E0E040'}
                       strokeWidth="2"
@@ -666,6 +676,23 @@ export default function TaxReportsDashboardPage() {
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (
           <GanttView tasks={filteredTasks} clients={clients} currentMonth={addMonths(selectedMonth, 1)} onEditTask={setEditingTask} />
+        ) : viewMode === 'ayoa' ? (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <AyoaViewToggle value={ayoaView} onChange={setAyoaView} />
+            </div>
+            <div className="min-h-[400px]">
+              {ayoaView === 'radial' ? (
+                <AyoaRadialView tasks={filteredTasks} centerLabel="מע״מ" centerSub="P2" />
+              ) : ayoaView === 'map' ? (
+                <AyoaMapView tasks={filteredTasks} centerLabel="מע״מ" centerSub="P2" />
+              ) : ayoaView === 'gantt' ? (
+                <GanttView tasks={filteredTasks} clients={clients} />
+              ) : (
+                <AyoaFeedView tasks={filteredTasks} onEditTask={(t) => setEditingTask(t)} />
+              )}
+            </div>
+          </div>
         ) : (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
