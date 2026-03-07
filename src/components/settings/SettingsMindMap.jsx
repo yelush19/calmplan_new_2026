@@ -855,6 +855,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         ...selectedNode,
         _crud: { updateService, deleteService, moveService, createService },
         _liveServices: liveServices,
+        _allNodes: allNodes,
         _isCustom: !!customServices[selectedNodeId],
       });
     } else {

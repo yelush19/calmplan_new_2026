@@ -5,7 +5,7 @@
  * Changes sync immediately to the map state (localStorage persisted).
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import {
   X, Plus, Link2, Layers, ChevronRight, Save,
   CheckCircle, FileText, Trash2, AlertTriangle, Zap,
+  GitBranch,
 } from 'lucide-react';
 import { getServiceWeight } from '@/config/serviceWeights';
 
@@ -23,6 +24,13 @@ const DNA_COLORS = {
   P4: '#FFC107',
 };
 
+const DNA = {
+  P1: { color: '#00A3E0', dashboard: 'payroll' },
+  P2: { color: '#B2AC88', dashboard: 'tax' },
+  P3: { color: '#E91E63', dashboard: 'admin' },
+  P4: { color: '#FFC107', dashboard: 'home' },
+};
+
 const BOARD_OPTIONS = [
   { key: 'payroll', label: 'שכר (P1)', color: DNA_COLORS.P1 },
   { key: 'tax', label: 'הנה"ח (P2)', color: DNA_COLORS.P2 },
@@ -30,12 +38,178 @@ const BOARD_OPTIONS = [
   { key: 'additional', label: 'נוספים (P3)', color: DNA_COLORS.P3 },
 ];
 
+// ══════════════════════════════════════════════════════════════════════
+// getNodePath — Breadcrumb path builder for precise re-parenting
+// Traverses parent chain: "P1 שכר → שירותים → ייצור"
+// ══════════════════════════════════════════════════════════════════════
+function getNodePath(nodeId, allNodes, maxDepth = 10) {
+  const segments = [];
+  let currentId = nodeId;
+  let depth = 0;
+
+  while (currentId && currentId !== 'hub' && depth < maxDepth) {
+    const node = allNodes.find(n => n.id === currentId);
+    if (!node) break;
+    segments.unshift(node.label || node.id);
+    currentId = node.parentId;
+    depth++;
+  }
+
+  return segments.join(' \u2192 ');
+}
+
+function getDashboardFromNode(node) {
+  if (node.type === 'root') return DNA[node.id]?.dashboard;
+  return node.dashboard;
+}
+
 const COGNITIVE_TIERS = [
   { value: 0, label: 'ננו', color: '#8FBC8F', desc: '5 דקות' },
   { value: 1, label: 'פשוט', color: '#ADD8E6', desc: '15 דקות' },
   { value: 2, label: 'בינוני', color: '#4682B4', desc: '30 דקות' },
   { value: 3, label: 'מורכב', color: '#800000', desc: '45+ דקות' },
 ];
+
+// ══════════════════════════════════════════════════════════════════════
+// ParentBranchDropdown — Full breadcrumb-path parent selector
+// Shows "P1 שכר → שירותים → ייצור" so user knows EXACTLY which parent
+// ══════════════════════════════════════════════════════════════════════
+
+function ParentBranchDropdown({ service, editDashboard, onBoardChange, pColor }) {
+  const allNodes = service?._allNodes || [];
+  const currentParentId = service?.parentId;
+
+  // Build all valid parent targets with full breadcrumb paths
+  const parentOptions = useMemo(() => {
+    if (!allNodes.length) {
+      // Fallback: if no allNodes available, show flat board options
+      return BOARD_OPTIONS.map(b => ({
+        id: `__board_${b.key}`,
+        path: b.label,
+        dashboard: b.key,
+        color: b.color,
+        type: 'board',
+        branch: b.key,
+      }));
+    }
+
+    return allNodes
+      .filter(n => n.type === 'root' || (n.type === 'service' && n.id !== service?.key))
+      .map(n => ({
+        id: n.id,
+        path: getNodePath(n.id, allNodes),
+        dashboard: getDashboardFromNode(n),
+        color: n.color,
+        type: n.type,
+        branch: n.type === 'root' ? n.id : null,
+      }))
+      .sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'root' ? -1 : 1;
+        return a.path.localeCompare(b.path);
+      });
+  }, [allNodes, service?.key]);
+
+  // Current parent breadcrumb path
+  const currentPath = useMemo(() => {
+    if (!currentParentId || !allNodes.length) {
+      const board = BOARD_OPTIONS.find(b => b.key === editDashboard);
+      return board?.label || editDashboard;
+    }
+    return getNodePath(currentParentId, allNodes);
+  }, [currentParentId, allNodes, editDashboard]);
+
+  const handleSelect = useCallback((e) => {
+    const targetId = e.target.value;
+
+    // Handle fallback board selection
+    if (targetId.startsWith('__board_')) {
+      const boardKey = targetId.replace('__board_', '');
+      onBoardChange(boardKey);
+      console.log('STATE MUTATED:', { action: 'reparent_board', key: service?.key, newDashboard: boardKey });
+      return;
+    }
+
+    const target = allNodes.find(n => n.id === targetId);
+    if (!target) return;
+
+    const newDashboard = getDashboardFromNode(target);
+    if (newDashboard) {
+      onBoardChange(newDashboard);
+      console.log('STATE MUTATED:', {
+        action: 'reparent',
+        key: service?.key,
+        fromParent: currentParentId,
+        toParent: targetId,
+        toPath: getNodePath(targetId, allNodes),
+        newDashboard,
+      });
+    }
+  }, [allNodes, service?.key, currentParentId, onBoardChange]);
+
+  return (
+    <div className="px-4 py-3 border-b">
+      <div className="flex items-center gap-2 mb-2">
+        <GitBranch className="w-3.5 h-3.5" style={{ color: pColor }} />
+        <span className="text-xs font-bold text-gray-700">שיוך לענף אב</span>
+      </div>
+
+      {/* Current path breadcrumb display */}
+      <div className="flex items-center gap-1.5 mb-2 px-3 py-2 rounded-xl border border-dashed"
+        style={{ borderColor: pColor + '40', backgroundColor: pColor + '08' }}>
+        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: pColor }} />
+        <span className="text-[11px] font-medium text-gray-700 truncate" dir="rtl" title={currentPath}>
+          {currentPath}
+        </span>
+      </div>
+
+      {/* Breadcrumb path <select> dropdown */}
+      <select
+        value={currentParentId || `__board_${editDashboard}`}
+        onChange={handleSelect}
+        className="w-full px-3 py-2 text-xs border rounded-xl focus:ring-2 focus:outline-none bg-white transition-all"
+        style={{ borderColor: pColor + '40', focusRingColor: pColor }}
+        dir="rtl"
+      >
+        <option value="" disabled>-- בחר ענף אב --</option>
+        {parentOptions.map(opt => (
+          <option key={opt.id} value={opt.id}>
+            {opt.type === 'root'
+              ? `● ${opt.path}`
+              : opt.type === 'board'
+                ? opt.path
+                : `  └─ ${opt.path}`
+            }
+          </option>
+        ))}
+      </select>
+
+      {/* Visual board indicator (compact) */}
+      <div className="flex gap-1 mt-2">
+        {BOARD_OPTIONS.map(board => {
+          const isMapped = editDashboard === board.key;
+          return (
+            <button
+              key={board.key}
+              onClick={() => {
+                onBoardChange(board.key);
+                console.log('STATE MUTATED:', { action: 'reparent_board', key: service?.key, newDashboard: board.key });
+              }}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-medium transition-all border ${
+                isMapped ? 'text-white shadow-sm border-transparent' : 'border-gray-100 text-gray-400 hover:border-gray-200'
+              }`}
+              style={isMapped ? { backgroundColor: board.color } : {}}
+              title={board.label}
+            >
+              <div className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: isMapped ? 'white' : '#D0D0D0' }} />
+              {board.label.split(' ')[0]}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function TemplatePanel({ service, onClose }) {
   const crud = service?._crud;
@@ -178,33 +352,13 @@ export default function TemplatePanel({ service, onClose }) {
           />
         </div>
 
-        {/* Board Assignment */}
-        <div className="px-4 py-3 border-b">
-          <div className="flex items-center gap-2 mb-2">
-            <Link2 className="w-3.5 h-3.5" style={{ color: pColor }} />
-            <span className="text-xs font-bold text-gray-700">שיוך ללוח</span>
-          </div>
-          <div className="space-y-1.5">
-            {BOARD_OPTIONS.map(board => {
-              const isMapped = editDashboard === board.key;
-              return (
-                <button
-                  key={board.key}
-                  onClick={() => handleBoardChange(board.key)}
-                  className={`flex items-center gap-2 w-full px-3 py-2 rounded-xl border transition-all text-right ${
-                    isMapped ? 'border-transparent shadow-sm' : 'border-gray-100 hover:border-gray-200'
-                  }`}
-                  style={isMapped ? { backgroundColor: board.color + '10', borderColor: board.color + '30' } : {}}
-                >
-                  <div className="w-3 h-3 rounded-full shrink-0"
-                    style={{ backgroundColor: isMapped ? board.color : '#E0E0E0' }} />
-                  <span className={`text-xs font-medium ${isMapped ? 'text-gray-800' : 'text-gray-500'}`}>{board.label}</span>
-                  {isMapped && <CheckCircle className="w-3 h-3 mr-auto" style={{ color: board.color }} />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {/* ══ Parent Branch Assignment (Breadcrumb Dropdown) ══ */}
+        <ParentBranchDropdown
+          service={service}
+          editDashboard={editDashboard}
+          onBoardChange={handleBoardChange}
+          pColor={pColor}
+        />
 
         {/* Process Steps (CRUD) */}
         <div className="px-4 py-3 border-b">
