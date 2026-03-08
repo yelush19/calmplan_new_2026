@@ -196,7 +196,7 @@ export default function MyFocus() {
             </CardContent>
           </Card>
         ) : (
-          <UnifiedAyoaLayout tasks={todayTasks} clients={clients} isLoading={isLoading} centerLabel="פוקוס יומי" centerSub="P4" accentColor="#FFC107">
+          <UnifiedAyoaLayout tasks={todayTasks} allTasks={tasks} clients={clients} isLoading={isLoading} centerLabel="הפוקוס שלי" centerSub="P4" accentColor="#FF9800">
             <Card className="h-full overflow-auto">
               <CardContent className="p-2">
                 <GanttView tasks={todayTasks} clients={clients} />

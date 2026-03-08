@@ -18,6 +18,7 @@ import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import FocusMapView from '@/components/canvas/FocusMapView';
 import GanttView from '@/components/views/GanttView';
 import { Table, Loader2 } from 'lucide-react';
 
@@ -31,6 +32,7 @@ const DNA_ACCENTS = {
 export default function UnifiedAyoaLayout({
   data,
   tasks: tasksProp,
+  allTasks: allTasksProp,
   clients = [],
   centerLabel = 'מרכז',
   centerSub = '',
@@ -42,6 +44,7 @@ export default function UnifiedAyoaLayout({
   children,
 }) {
   const tasks = data || tasksProp || [];
+  const allTasks = allTasksProp || tasks;
 
   // null = show children (original content). AYOA views are opt-in only.
   const [localView, setLocalView] = useState(null);
@@ -101,6 +104,18 @@ export default function UnifiedAyoaLayout({
       ) : (
         // AYOA view selected — show visualization
         <>
+          {localView === 'focus' && (
+            <div className="rounded-2xl overflow-hidden border border-amber-100"
+              style={{ minHeight: '450px', background: 'linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%)' }}>
+              <FocusMapView
+                tasks={tasks}
+                allTasks={allTasks}
+                centerLabel={centerLabel}
+                centerSub={centerSub || `${tasks.length} משימות`}
+              />
+            </div>
+          )}
+
           {localView === 'map' && (
             <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white"
               style={{ minHeight: '450px' }}>
