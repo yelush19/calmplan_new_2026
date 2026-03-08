@@ -36,7 +36,9 @@ import CompletionFeedback from "@/components/tasks/CompletionFeedback";
 import DesktopBridge from "@/components/desktop/DesktopBridge";
 import { AyoaViewProvider, useAyoaView } from "@/contexts/AyoaViewContext";
 import { DesignProvider } from "@/contexts/DesignContext";
+import { BiologicalClockProvider } from "@/contexts/BiologicalClockContext";
 import DesignFloatingTab from "@/components/canvas/DesignFloatingTab";
+import BiologicalClockIndicator from "@/components/canvas/BiologicalClockIndicator";
 import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
 import { runAllAutomations } from "@/engines/automationEngine";
 
@@ -478,6 +480,11 @@ function LayoutInner({ children }) {
 
           {/* Left: Header actions */}
           <div className="flex items-center gap-2">
+            {/* Biological Clock Indicator */}
+            <div className="hidden md:block">
+              <BiologicalClockIndicator />
+            </div>
+
             {/* Deadline Countdown */}
             <Badge variant={daysLeft <= 3 ? "destructive" : "secondary"} className="text-xs hidden md:inline-flex">
               עוד {daysLeft} ימים ל{deadlineLabel}
@@ -1147,7 +1154,9 @@ export default function Layout({ children, currentPageName }) {
     <AppProvider>
       <DesignProvider>
         <AyoaViewProvider>
-          <LayoutInner>{children}</LayoutInner>
+          <BiologicalClockProvider>
+            <LayoutInner>{children}</LayoutInner>
+          </BiologicalClockProvider>
         </AyoaViewProvider>
       </DesignProvider>
     </AppProvider>
