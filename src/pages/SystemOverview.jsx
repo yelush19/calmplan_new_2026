@@ -470,6 +470,23 @@ export default function SystemOverviewPage() {
         </Alert>
       )}
 
+      {/* ── Client Audit Tool: PRIMARY VIEW — flags Exempt Dealers, Missing IDs ── */}
+      <Card className="border-2 border-indigo-200 bg-indigo-50/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <AlertCircle className="w-5 h-5 text-indigo-500" />
+            ביקורת מיפוי לקוח-מערכת
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ClientAuditTool
+            clients={liveClients}
+            tasks={liveTasks}
+            onRefresh={loadData}
+          />
+        </CardContent>
+      </Card>
+
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Object.entries(systemStatus).filter(([key]) => 
           ['tasks', 'clients', 'reconciliations', 'clientAccounts', 'therapists', 'dashboards'].includes(key)
@@ -621,24 +638,7 @@ export default function SystemOverviewPage() {
         )}
       </div>
 
-      {/* ── Client Audit Tool: System-to-Customer Mapping ── */}
-      {liveClients.length > 0 && (
-        <Card className="border-2 border-indigo-200 bg-indigo-50/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <AlertCircle className="w-5 h-5 text-indigo-500" />
-              ביקורת מיפוי לקוח-מערכת
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ClientAuditTool
-              clients={liveClients}
-              tasks={liveTasks}
-              onRefresh={loadData}
-            />
-          </CardContent>
-        </Card>
-      )}
+      {/* ClientAuditTool moved to top of page */}
 
       {/* Summary Alert */}
       <Alert>
