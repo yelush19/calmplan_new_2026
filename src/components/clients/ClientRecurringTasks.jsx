@@ -10,7 +10,7 @@ import {
 import {
   RefreshCw, CheckCircle, AlertTriangle, Calendar, Plus,
   Clock, FileText, Calculator, Building, Trash2,
-  ChevronDown, ChevronRight, Sparkles, Eye, EyeOff
+  ChevronDown, ChevronRight, Sparkles, Eye, EyeOff, Zap, XCircle
 } from 'lucide-react';
 import { Client, Task } from '@/api/entities';
 import { format, addMonths, setDate, startOfMonth } from 'date-fns';
@@ -247,6 +247,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const currentMonth = new Date().getMonth() + 1;
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonths, setSelectedMonths] = useState(new Set([currentMonth]));
+  const [forceInject, setForceInject] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -285,6 +287,36 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setSelectedMonths(new Set([currentMonth]));
   };
 
+  // Clear existing recurring tasks for the selected months so re-injection works
+  const clearMonthCache = async () => {
+    const monthsArray = Array.from(selectedMonths).sort((a, b) => a - b);
+    if (monthsArray.length === 0) return;
+    setIsClearingCache(true);
+    try {
+      let deleted = 0;
+      for (const task of existingTasks) {
+        if (task.source !== 'recurring_tasks' && !task.is_recurring) continue;
+        if (!task.due_date) continue;
+        const taskDate = new Date(task.due_date);
+        const taskMonth = taskDate.getMonth() + 1;
+        const taskYear = taskDate.getFullYear();
+        if (taskYear === selectedYear && monthsArray.includes(taskMonth)) {
+          try {
+            await Task.delete(task.id);
+            deleted++;
+          } catch (e) {
+            console.error('Error deleting task:', task.id, e);
+          }
+        }
+      }
+      setResults({ cleared: deleted, message: `נמחקו ${deleted} משימות חוזרות לחודשים שנבחרו` });
+      await loadData();
+    } catch (error) {
+      console.error('Error clearing month cache:', error);
+    }
+    setIsClearingCache(false);
+  };
+
   const generateTasksPreview = (overrideMonths) => {
     const monthsArray = overrideMonths
       ? Array.from(overrideMonths).sort((a, b) => a - b)
@@ -303,7 +335,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           const taskTitle = `${client.name} - ${description}`;
           const dueDateStr = format(date, 'yyyy-MM-dd');
           // Check for existing tasks (by exact title OR by client+category+date)
-          const alreadyExists = existingTasks.some(t =>
+          // Force Inject mode: skip duplicate check entirely
+          const alreadyExists = !forceInject && existingTasks.some(t =>
             t.title === taskTitle ||
             (t.client_name === client.name && t.category === categoryKey && t.due_date === dueDateStr)
           );
@@ -631,6 +664,47 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             </div>
           </div>
 
+          {/* ── Force Inject Mode + Clear Cache ── */}
+          <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-50 border-2 border-amber-200">
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setForceInject(!forceInject)}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                    forceInject ? 'bg-amber-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
+                    forceInject ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+                <div>
+                  <span className="text-base font-bold text-gray-800">הזרקה בכוח</span>
+                  <p className="text-sm text-gray-500">
+                    {forceInject
+                      ? 'מצב פעיל — עוקף בדיקת כפילויות, יוצר משימות גם אם כבר קיימות'
+                      : 'כבוי — משימות שכבר קיימות ידולגו'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearMonthCache}
+              disabled={isClearingCache || selectedMonths.size === 0}
+              className="rounded-xl border-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 font-bold gap-1 whitespace-nowrap disabled:opacity-40"
+            >
+              {isClearingCache ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <XCircle className="w-4 h-4" />
+              )}
+              נקה מטמון {selectedMonths.size > 0 ? `(${selectedMonths.size} חודשים)` : ''}
+            </Button>
+          </div>
+
           {/* Quick inject: one-click current month generation */}
           <Button
             onClick={() => {
@@ -663,18 +737,24 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="p-6 rounded-2xl bg-emerald-50 border-2 border-emerald-200"
+              className={`p-6 rounded-2xl border-2 ${results.cleared != null ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${results.cleared != null ? 'bg-amber-500' : 'bg-emerald-500'}`}>
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-emerald-800">
-                    נוצרו {results.created} משימות
-                  </p>
-                  {results.errors > 0 && (
-                    <p className="text-sm text-amber-600">{results.errors} שגיאות</p>
+                  {results.cleared != null ? (
+                    <p className="text-lg font-bold text-amber-800">{results.message}</p>
+                  ) : (
+                    <>
+                      <p className="text-lg font-bold text-emerald-800">
+                        נוצרו {results.created} משימות
+                      </p>
+                      {results.errors > 0 && (
+                        <p className="text-sm text-amber-600">{results.errors} שגיאות</p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -699,11 +779,21 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
               </DialogTitle>
               <DialogDescription className="text-base text-gray-600 mt-1">
                 {previewTasks.length > 0
-                  ? 'עברי על הרשימה, בטלי מה שלא צריך, ואשרי יצירה.'
+                  ? (forceInject
+                      ? 'מצב הזרקה בכוח — משימות ייווצרו גם אם קיימות כפילויות. עברי על הרשימה ואשרי.'
+                      : 'עברי על הרשימה, בטלי מה שלא צריך, ואשרי יצירה.')
                   : 'כל המשימות לחודשים שנבחרו כבר קיימות.'
                 }
               </DialogDescription>
             </DialogHeader>
+
+            {/* Force inject indicator */}
+            {forceInject && previewTasks.length > 0 && (
+              <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl bg-amber-100 border border-amber-300">
+                <Zap className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-bold text-amber-700">הזרקה בכוח — כפילויות לא נחסמות</span>
+              </div>
+            )}
 
             {/* Selected months summary */}
             {previewTasks.length > 0 && (
