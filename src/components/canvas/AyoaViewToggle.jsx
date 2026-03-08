@@ -6,9 +6,10 @@
  */
 
 import React from 'react';
-import { Network, Target, BarChart3, List } from 'lucide-react';
+import { Network, Target, BarChart3, List, Flame } from 'lucide-react';
 
 export const VIEW_MODES = {
+  focus:  { label: 'פוקוס',   icon: Flame,    key: 'focus' },
   map:    { label: 'מפה',     icon: Network,  key: 'map' },
   radial: { label: 'רדיאלי', icon: Target,   key: 'radial' },
   gantt:  { label: 'גאנט',   icon: BarChart3, key: 'gantt' },
@@ -17,6 +18,7 @@ export const VIEW_MODES = {
 
 // DNA accent per view mode
 const VIEW_ACCENTS = {
+  focus:  '#FF9800',
   map:    '#E91E63',
   radial: '#00A3E0',
   gantt:  '#B2AC88',

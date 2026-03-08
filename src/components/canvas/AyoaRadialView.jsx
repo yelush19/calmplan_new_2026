@@ -393,19 +393,25 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         </button>
       )}
 
-      {/* DNA Legend */}
-      <div className="absolute bottom-3 right-3 flex items-center gap-2 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-gray-200">
-        {[
-          { label: 'P1 שכר', color: DNA.P1 },
-          { label: 'P2 הנה"ח', color: DNA.P2 },
-          { label: 'P3 ביצוע', color: DNA.P3 },
-          { label: 'P4 בית', color: DNA.P4 },
-        ].map(item => (
-          <div key={item.label} className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-[10px] font-bold" style={{ color: item.color }}>{item.label}</span>
-          </div>
-        ))}
+      {/* DNA Legend — Architect Map identity (cool tones, full database) */}
+      <div className="absolute bottom-3 right-3 flex flex-col gap-1 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-sky-100">
+        <div className="flex items-center gap-1.5 text-[10px] font-bold text-sky-800">
+          <div className="w-3 h-3 rounded-full" style={{ background: 'linear-gradient(135deg, #00A3E0, #0077B6)' }} />
+          מפת ארכיטקט (מסד נתונים מלא)
+        </div>
+        <div className="flex items-center gap-2">
+          {[
+            { label: 'P1 שכר', color: DNA.P1 },
+            { label: 'P2 הנה"ח', color: DNA.P2 },
+            { label: 'P3 ביצוע', color: DNA.P3 },
+            { label: 'P4 בית', color: DNA.P4 },
+          ].map(item => (
+            <div key={item.label} className="flex items-center gap-1">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+              <span className="text-[10px] font-bold" style={{ color: item.color }}>{item.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* FloatingToolbar (Directive #6) */}

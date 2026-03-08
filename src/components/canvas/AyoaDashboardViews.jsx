@@ -18,11 +18,13 @@ import React from 'react';
 import AyoaRadialView from './AyoaRadialView';
 import AyoaMapView from './AyoaMapView';
 import AyoaFeedView from './AyoaFeedView';
+import FocusMapView from './FocusMapView';
 import GanttView from '@/components/views/GanttView';
 
 export default function AyoaDashboardViews({
   viewMode = 'radial',
   tasks = [],
+  allTasks,
   clients = [],
   centerLabel = 'מרכז',
   centerSub = '',
@@ -31,6 +33,18 @@ export default function AyoaDashboardViews({
   accentColor,
 }) {
   switch (viewMode) {
+    case 'focus':
+      return (
+        <div className="rounded-2xl overflow-hidden border border-amber-100" style={{ minHeight: '400px', background: 'linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%)' }}>
+          <FocusMapView
+            tasks={tasks}
+            allTasks={allTasks}
+            centerLabel={centerLabel}
+            centerSub={centerSub}
+          />
+        </div>
+      );
+
     case 'radial':
       return (
         <div className="rounded-2xl overflow-hidden border border-gray-100" style={{ minHeight: '400px' }}>
