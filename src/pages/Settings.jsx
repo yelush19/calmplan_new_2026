@@ -519,81 +519,59 @@ function DataCleanupSection() {
     let localDeleted = 0;
     let supaError = null;
 
-    // ── LAYER 1: Direct Supabase DELETE on app_data table ──
+    // Collect ALL task IDs from the scan (already filtered client-side)
+    const idsToDelete = scanResult.oldTasks.map(t => t.id);
+    log.push(`IDs to delete: ${idsToDelete.length} (from scan)`);
+
+    // ── LAYER 1: Supabase — batch DELETE by ID (not JSONB filter) ──
     try {
-      const { supabase } = await import('@/api/supabaseClient');
-      const { isSupabaseConfigured } = await import('@/api/supabaseClient');
+      const mod = await import('@/api/supabaseClient');
+      const supabase = mod.supabase;
+      const isConfigured = mod.isSupabaseConfigured;
 
-      if (isSupabaseConfigured && supabase) {
-        // DELETE FROM app_data WHERE collection = 'tasks' AND data->>'due_date' < '2026-03-01'
-        const { data: deletedRows, error } = await supabase
-          .from('app_data')
-          .delete()
-          .eq('collection', 'tasks')
-          .lt('data->>due_date', CUTOFF_DATE)
-          .select('id');
+      if (isConfigured && supabase) {
+        // Delete in batches of 50 by primary key — guaranteed to work
+        for (let i = 0; i < idsToDelete.length; i += 50) {
+          const batchIds = idsToDelete.slice(i, i + 50);
+          const { data: deleted, error } = await supabase
+            .from('app_data')
+            .delete()
+            .eq('collection', 'tasks')
+            .in('id', batchIds)
+            .select('id');
 
-        if (error) {
-          supaError = error.message;
-          log.push(`Supabase DELETE error: ${error.message}`);
-          // Fallback: delete row-by-row using task IDs from scan
-          let fallbackOk = 0;
-          for (let i = 0; i < scanResult.oldTasks.length; i += 20) {
-            const chunk = scanResult.oldTasks.slice(i, i + 20);
-            const ids = chunk.map(t => t.id);
-            const { error: batchErr } = await supabase
-              .from('app_data')
-              .delete()
-              .eq('collection', 'tasks')
-              .in('id', ids);
-            if (!batchErr) fallbackOk += ids.length;
+          if (error) {
+            log.push(`Supabase batch ${Math.floor(i/50)+1} error: ${error.message}`);
+            if (!supaError) supaError = error.message;
+          } else {
+            const count = deleted?.length || 0;
+            supaDeleted += count;
+            log.push(`Supabase batch ${Math.floor(i/50)+1}: deleted ${count}/${batchIds.length}`);
           }
-          supaDeleted = fallbackOk;
-          log.push(`Supabase fallback: deleted ${fallbackOk} rows by ID`);
-        } else {
-          supaDeleted = deletedRows?.length || 0;
-          log.push(`Supabase: deleted ${supaDeleted} rows directly`);
         }
-
-        // Also delete tasks with NO due_date that have report_period before March
-        // (catches engine-generated tasks that only have date but not due_date)
-        const { data: noDateRows } = await supabase
-          .from('app_data')
-          .delete()
-          .eq('collection', 'tasks')
-          .lt('data->>date', CUTOFF_DATE)
-          .is('data->>due_date', null)
-          .select('id');
-        if (noDateRows?.length) {
-          supaDeleted += noDateRows.length;
-          log.push(`Supabase: deleted ${noDateRows.length} additional rows with date < cutoff and no due_date`);
-        }
+        log.push(`Supabase total: ${supaDeleted} rows deleted`);
       } else {
         log.push('Supabase not configured — skipping cloud delete');
       }
     } catch (e) {
       supaError = e.message;
-      log.push(`Supabase import/connection error: ${e.message}`);
+      log.push(`Supabase error: ${e.message}`);
     }
 
-    // ── LAYER 2: Clean localStorage directly ──
+    // ── LAYER 2: Clean localStorage by removing matching IDs ──
     try {
+      const idSet = new Set(idsToDelete);
       const raw = localStorage.getItem('calmplan_tasks');
       if (raw) {
         const tasks = JSON.parse(raw);
         const before = tasks.length;
-        const cleaned = tasks.filter(t => {
-          // Keep if no due_date AND no date before cutoff
-          if (t.due_date) return t.due_date >= CUTOFF_DATE;
-          if (t.date) return t.date >= CUTOFF_DATE;
-          return true; // keep tasks with neither date
-        });
+        const cleaned = tasks.filter(t => !idSet.has(t.id));
         localStorage.setItem('calmplan_tasks', JSON.stringify(cleaned));
         localDeleted = before - cleaned.length;
-        log.push(`localStorage: removed ${localDeleted} of ${before} tasks, ${cleaned.length} remain`);
+        log.push(`localStorage: removed ${localDeleted} of ${before}, ${cleaned.length} remain`);
       }
     } catch (e) {
-      log.push(`localStorage cleanup error: ${e.message}`);
+      log.push(`localStorage error: ${e.message}`);
     }
 
     console.log('[DataCleanup] Log:', log.join('\n'));
