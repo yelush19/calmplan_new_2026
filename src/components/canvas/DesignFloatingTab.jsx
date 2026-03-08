@@ -20,10 +20,30 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Paintbrush, X, ChevronDown, ChevronUp, Type, Palette,
   Cloud, Circle, Diamond, Star, MessageCircle, Hexagon, RectangleHorizontal,
-  Minus, MoreHorizontal, Sparkles, Eye, EyeOff, Sun, Moon, Monitor,
+  Minus, MoreHorizontal, Sparkles, Eye, EyeOff, Sun, Moon, Monitor, Sticker,
 } from 'lucide-react';
 import { useDesign, MAP_TEMPLATES } from '@/contexts/DesignContext';
 import { LINE_STYLE_OPTIONS, SHAPE_OPTIONS } from '@/engines/lineStyleEngine';
+
+// ── Sticker/Emoji library for AYOA-style decoration ──
+const STICKER_CATEGORIES = [
+  {
+    label: 'דגלים',
+    stickers: ['🏁', '🚩', '🎯', '⭐', '🔥', '💎', '🏆', '🎖️'],
+  },
+  {
+    label: 'סטטוס',
+    stickers: ['✅', '⏳', '🔒', '⚠️', '❌', '💡', '📌', '🔔'],
+  },
+  {
+    label: 'עבודה',
+    stickers: ['📊', '💰', '📝', '🗂️', '📋', '🧮', '📅', '📎'],
+  },
+  {
+    label: 'רגשות',
+    stickers: ['😊', '💪', '🎉', '🤔', '😴', '🚀', '❤️', '👍'],
+  },
+];
 
 // ── Tiny shape preview icons for the grid ──
 const ShapeIcon = ({ shape, size = 24, color = 'currentColor' }) => {
@@ -137,17 +157,29 @@ const THEMES = [
 export default function DesignFloatingTab() {
   const design = useDesign();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('colors'); // colors | theme | shapes | lines | templates
+  const [activeTab, setActiveTab] = useState('colors');
+  const [stickerTarget, setStickerTarget] = useState(''); // task ID to apply sticker to
 
   const tabs = useMemo(() => [
     { key: 'colors', label: 'צבעים', icon: Palette },
     { key: 'theme', label: 'ערכת נושא', icon: Sun },
     { key: 'shapes', label: 'צורות', icon: Hexagon },
     { key: 'lines', label: 'קווים', icon: Minus },
+    { key: 'stickers', label: 'סטיקרים', icon: Sticker },
     { key: 'templates', label: 'תבניות', icon: Sparkles },
   ], []);
 
   const handleToggle = useCallback(() => setIsOpen(p => !p), []);
+
+  // Listen for node selection events from canvas views
+  React.useEffect(() => {
+    const handler = (e) => {
+      const nodeId = e.detail?.nodeId;
+      if (nodeId) setStickerTarget(nodeId);
+    };
+    window.addEventListener('calmplan:node-selected', handler);
+    return () => window.removeEventListener('calmplan:node-selected', handler);
+  }, []);
 
   return (
     <>
@@ -401,6 +433,60 @@ export default function DesignFloatingTab() {
                     })}
                   </div>
                 </Section>
+              )}
+
+              {/* ══ STICKERS TAB ══ */}
+              {activeTab === 'stickers' && (
+                <>
+                  <Section label="סטיקר לבועה נבחרת">
+                    <div className="mb-2">
+                      <input
+                        type="text"
+                        value={stickerTarget}
+                        onChange={(e) => setStickerTarget(e.target.value)}
+                        placeholder="הזן מזהה משימה (Task ID) או בחר בועה במפה"
+                        className="w-full px-2.5 py-1.5 rounded-xl border text-[10px]"
+                        style={{ borderColor: 'var(--cp-border)', color: 'var(--cp-text)' }}
+                      />
+                      <p className="text-[9px] mt-1" style={{ color: 'var(--cp-text-secondary)' }}>
+                        לחץ על בועה במפה → המזהה יופיע כאן → בחר סטיקר
+                      </p>
+                    </div>
+                    {STICKER_CATEGORIES.map(cat => (
+                      <div key={cat.label} className="mb-2">
+                        <div className="text-[9px] font-bold mb-1" style={{ color: 'var(--cp-text-secondary)' }}>
+                          {cat.label}
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {cat.stickers.map(emoji => {
+                            const isActive = stickerTarget && design.stickerMap?.[stickerTarget] === emoji;
+                            return (
+                              <button key={emoji}
+                                onClick={() => {
+                                  if (stickerTarget) {
+                                    design.setSticker(stickerTarget, isActive ? null : emoji);
+                                  }
+                                }}
+                                className={`w-8 h-8 flex items-center justify-center rounded-lg text-base transition-all hover:scale-125 ${
+                                  isActive ? 'ring-2 ring-[#E91E63] bg-[#E91E63]/10 scale-110' : 'hover:bg-gray-50'
+                                }`}
+                                title={stickerTarget ? `הצמד ${emoji}` : 'בחר בועה קודם'}>
+                                {emoji}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </Section>
+                  {stickerTarget && design.stickerMap?.[stickerTarget] && (
+                    <button onClick={() => design.setSticker(stickerTarget, null)}
+                      className="w-full mt-2 px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all hover:bg-gray-50"
+                      style={{ borderColor: 'var(--cp-border)', color: '#EF4444' }}>
+                      הסר סטיקר מהבועה הנבחרת
+                    </button>
+                  )}
+                </>
               )}
 
               {/* ══ TEMPLATES TAB ══ */}

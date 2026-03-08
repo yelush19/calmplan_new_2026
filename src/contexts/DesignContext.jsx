@@ -27,6 +27,7 @@ const DEFAULTS = {
   softShadows: true,
   mapTemplate: 'ayoa-organic', // ayoa-organic | mindmap-classic | minimalist
   stickerMap: {},            // nodeId → emoji/icon key
+  nodeOverrides: {},         // nodeId → { shape, color } — per-node style overrides (cross-page)
   // ── Branch Color Engine: P1-P5 customizable colors ──
   branchColors: {
     P1: '#00A3E0',   // שכר — Sky Blue
@@ -179,6 +180,21 @@ export function DesignProvider({ children }) {
     }));
   }, []);
 
+  // Per-node style override (shape, color) — persisted to localStorage, syncs across all views
+  const setNodeOverride = useCallback((nodeId, overrideProps) => {
+    setPrefs(prev => ({
+      ...prev,
+      nodeOverrides: {
+        ...prev.nodeOverrides,
+        [nodeId]: { ...(prev.nodeOverrides?.[nodeId] || {}), ...overrideProps },
+      },
+    }));
+  }, []);
+
+  const getNodeOverride = useCallback((nodeId) => {
+    return prefs.nodeOverrides?.[nodeId] || null;
+  }, [prefs.nodeOverrides]);
+
   const resetToDefaults = useCallback(() => {
     setPrefs({ ...DEFAULTS });
   }, []);
@@ -202,6 +218,8 @@ export function DesignProvider({ children }) {
       updatePref,
       applyTemplate,
       setSticker,
+      setNodeOverride,
+      getNodeOverride,
       resetToDefaults,
       getBranchColor,
       setBranchColor,

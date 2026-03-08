@@ -67,7 +67,11 @@ export async function processSequenceUnlock(completedTask, allTasks, paused = fa
   // Find tasks that reference this task as a dependency/prerequisite
   const dependents = allTasks.filter(t => {
     if (t.status === 'production_completed') return false;
-    // Check triggered_by, master_task_id, or dependency_ids
+    // MSB collectors: only unlock via dependency_ids (multi-parent check)
+    if (t.is_collector) {
+      return Array.isArray(t.dependency_ids) && t.dependency_ids.includes(completedTask.id);
+    }
+    // Regular tasks: check triggered_by, master_task_id, or dependency_ids
     if (t.master_task_id === completedTask.id) return true;
     if (t.triggered_by === completedTask.id) return true;
     if (Array.isArray(t.dependency_ids) && t.dependency_ids.includes(completedTask.id)) return true;

@@ -40,7 +40,6 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
   const [focusedNode, setFocusedNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
-  const [overrides, setOverrides] = useState({});
 
   // Design engine — global shape & line preferences
   let design = null;
@@ -53,7 +52,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
   // Status Sync: detect which categories have active sub-tasks
   const activeBranches = useMemo(() => getActiveBranches(tasks), [tasks]);
 
-  const { categoryNodes, taskNodes } = useMemo(() => {
+  const { categoryNodes, taskNodes, collectorNodes } = useMemo(() => {
     const catMap = {};
     tasks.forEach(task => {
       const cat = task.category || task.title || 'כללי';
@@ -101,7 +100,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
         const rVariation = (ti % 3) * 35;
         const tRadius = taskRadiusBase + rVariation;
         const r = 22;
-        const ov = overrides[task.id] || {};
+        const ov = design?.getNodeOverride?.(task.id) || {};
 
         tNodes.push({
           id: task.id,
@@ -117,14 +116,40 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
           parentY: cy,
           parentColor: dnaColor,
           parentAngle: angle,
+          sticker: design?.stickerMap?.[task.id] || null,
         });
       });
     });
 
-    return { categoryNodes: catNodes, taskNodes: tNodes };
-  }, [tasks, overrides, globalShape, branchColors]);
+    // MSB Collector nodes — special shared nodes positioned below center
+    const collectors = [];
+    tasks.forEach((task, ti) => {
+      if (!task.is_collector) return;
+      const ov = design?.getNodeOverride?.(task.id) || {};
+      const collectorColor = ov.color || branchColors.P1 || '#00A3E0';
+      collectors.push({
+        id: task.id,
+        x: CX + (ti % 2 === 0 ? -90 : 90),
+        y: CY + 220 + (ti * 50),
+        r: 28,
+        shape: ov.shape || 'hexagon',
+        color: collectorColor,
+        bg: collectorColor + '15',
+        label: task.title || 'מס"ב',
+        subLabel: task.status === 'waiting_for_materials' ? '🔒 ממתין' : task.status === 'not_started' ? 'מוכן' : '',
+        isLocked: task.status === 'waiting_for_materials',
+        dependency_ids: task.dependency_ids || [],
+        sticker: design?.stickerMap?.[task.id] || null,
+      });
+      // Remove from regular task nodes to avoid duplication
+      const idx = tNodes.findIndex(n => n.id === task.id);
+      if (idx !== -1) tNodes.splice(idx, 1);
+    });
 
-  const allNodes = [...categoryNodes, ...taskNodes];
+    return { categoryNodes: catNodes, taskNodes: tNodes, collectorNodes: collectors };
+  }, [tasks, design?.nodeOverrides, globalShape, branchColors]);
+
+  const allNodes = [...categoryNodes, ...taskNodes, ...collectorNodes];
 
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
@@ -143,24 +168,32 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
     } else {
       setSelectedNode(nodeId);
       setToolbarPos({ x: screenX, y: screenY });
+      // Notify Design Engine of selection
+      window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId } }));
     }
     setFocusedNode(prev => prev === nodeId ? null : nodeId);
   }, [allNodes, selectedNode]);
 
+  const handleColorChange = useCallback((color) => {
+    if (!selectedNode || !design?.setNodeOverride) return;
+    design.setNodeOverride(selectedNode, { color });
+  }, [selectedNode, design]);
+
+  const handleShapeChange = useCallback((shape) => {
+    if (!selectedNode || !design?.setNodeOverride) return;
+    design.setNodeOverride(selectedNode, { shape });
+  }, [selectedNode, design]);
+
   const handleApplyToChildren = useCallback(() => {
-    if (!selectedNode) return;
+    if (!selectedNode || !design?.setNodeOverride) return;
     const parentNode = allNodes.find(n => n.id === selectedNode);
     if (!parentNode || !parentNode.id?.startsWith?.('cat-')) return;
-    const parentOv = overrides[selectedNode] || {};
+    const parentOv = design?.getNodeOverride?.(selectedNode) || {};
     const childNodes = taskNodes.filter(n => Math.abs(n.parentAngle - parentNode.angle) < 0.01);
-    setOverrides(prev => {
-      const next = { ...prev };
-      childNodes.forEach(child => {
-        next[child.id] = { ...next[child.id], ...parentOv };
-      });
-      return next;
+    childNodes.forEach(child => {
+      design.setNodeOverride(child.id, parentOv);
     });
-  }, [selectedNode, allNodes, taskNodes, overrides]);
+  }, [selectedNode, allNodes, taskNodes, design]);
 
   const selectedNodeData = allNodes.find(n => n.id === selectedNode);
 
@@ -304,6 +337,69 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
                 style={{ pointerEvents: 'none' }}>
                 {node.subLabel ? node.subLabel.substring(0, 14) : ''}
               </text>
+              {node.sticker && (
+                <text x={node.x + node.r - 3} y={node.y + node.r - 3} textAnchor="middle"
+                  fontSize="12" style={{ pointerEvents: 'none' }}>
+                  {node.sticker}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* ── MSB Collector nodes — shared multi-parent with converging dashed lines ── */}
+        {collectorNodes.map(cNode => {
+          const isSelected = selectedNode === cNode.id;
+          return (
+            <g key={`collector-${cNode.id}`}>
+              {/* Converging dependency lines from prerequisite tasks */}
+              {cNode.dependency_ids.map(depId => {
+                const depNode = taskNodes.find(n => n.id === depId);
+                if (!depNode) return null;
+                return (
+                  <path key={`dep-${depId}-${cNode.id}`}
+                    d={`M ${depNode.x} ${depNode.y} C ${depNode.x} ${depNode.y + 50} ${cNode.x} ${cNode.y - 50} ${cNode.x} ${cNode.y}`}
+                    fill="none" stroke={cNode.color} strokeWidth={1.5}
+                    strokeDasharray="6 4" opacity={0.4}
+                    markerEnd="none" />
+                );
+              })}
+              {/* Selection ring */}
+              {isSelected && (
+                <circle cx={cNode.x} cy={cNode.y} r={cNode.r + 8}
+                  fill="none" stroke={cNode.color} strokeWidth={1.5} strokeDasharray="5 3" opacity={0.5}>
+                  <animateTransform attributeName="transform" type="rotate"
+                    from={`0 ${cNode.x} ${cNode.y}`} to={`360 ${cNode.x} ${cNode.y}`}
+                    dur="8s" repeatCount="indefinite" />
+                </circle>
+              )}
+              {/* Lock pulse for locked collectors */}
+              {cNode.isLocked && (
+                <circle cx={cNode.x} cy={cNode.y} r={cNode.r + 5}
+                  fill="none" stroke="#FF8F00" strokeWidth={1.5} strokeDasharray="3 3" opacity={0.4}>
+                  <animate attributeName="opacity" values="0.4;0.15;0.4" dur="3s" repeatCount="indefinite" />
+                </circle>
+              )}
+              {/* Collector node body */}
+              <g filter="url(#map-node-shadow)" onClick={(e) => handleNodeClick(e, cNode.id)}
+                style={{ cursor: 'pointer' }}>
+                {renderNodeShape(cNode.shape, cNode.x, cNode.y, cNode.r, cNode.bg, cNode.color, 2.5)}
+                {renderNodeShape(cNode.shape, cNode.x, cNode.y, cNode.r - 3, 'white', 'none', 0)}
+              </g>
+              <text x={cNode.x} y={cNode.y - 5} textAnchor="middle" fontSize="9.5" fontWeight="800" fill="#0F172A"
+                style={{ pointerEvents: 'none' }}>
+                {cNode.label.substring(0, 16)}
+              </text>
+              <text x={cNode.x} y={cNode.y + 8} textAnchor="middle" fontSize="8" fontWeight="700" fill={cNode.color}
+                style={{ pointerEvents: 'none' }}>
+                {cNode.subLabel}
+              </text>
+              {cNode.sticker && (
+                <text x={cNode.x + cNode.r - 3} y={cNode.y + cNode.r - 3} textAnchor="middle"
+                  fontSize="12" style={{ pointerEvents: 'none' }}>
+                  {cNode.sticker}
+                </text>
+              )}
             </g>
           );
         })}
@@ -323,14 +419,8 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
         y={toolbarPos.y}
         nodeColor={selectedNodeData?.color}
         nodeShape={selectedNodeData?.shape}
-        onColorChange={(color) => {
-          if (!selectedNode) return;
-          setOverrides(prev => ({ ...prev, [selectedNode]: { ...prev[selectedNode], color } }));
-        }}
-        onShapeChange={(shape) => {
-          if (!selectedNode) return;
-          setOverrides(prev => ({ ...prev, [selectedNode]: { ...prev[selectedNode], shape } }));
-        }}
+        onColorChange={handleColorChange}
+        onShapeChange={handleShapeChange}
         onApplyToChildren={selectedNodeData?.id?.startsWith?.('cat-') ? handleApplyToChildren : undefined}
         onClose={() => setSelectedNode(null)}
       />
