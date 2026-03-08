@@ -2,15 +2,22 @@
 // Centralizes all category gradients, status colors, board definitions, and complexity tiers
 
 export const CATEGORY_GRADIENTS = {
-  payroll: { from: '#a855f7', to: '#ec4899', label: 'שכר' },
-  vat_tax: { from: '#4682B4', to: '#1e3a8a', label: 'מע"מ ומס' },
-  annual_reports: { from: '#2E7D32', to: '#1B5E20', label: 'דוחות שנתיים' },
-  capital_statement: { from: '#388E3C', to: '#2E7D32', label: 'הצהרות הון' },
-  balance_sheets: { from: '#6D8B74', to: '#4A6741', label: 'דוחות כספיים' },
-  reconciliation: { from: '#f97316', to: '#f59e0b', label: 'התאמות' },
-  bookkeeping: { from: '#8b5cf6', to: '#6366f1', label: 'הנה"ח' },
-  additional_services: { from: '#4682B4', to: '#3B5998', label: 'שירותים נוספים' },
-  consulting: { from: '#64748b', to: '#475569', label: 'ייעוץ' },
+  // P1 — Payroll
+  payroll: { from: '#00A3E0', to: '#0077B6', label: 'שכר', branch: 'P1' },
+  // P2 — Bookkeeping
+  vat_tax: { from: '#4682B4', to: '#1e3a8a', label: 'מע"מ ומס', branch: 'P2' },
+  reconciliation: { from: '#f97316', to: '#f59e0b', label: 'התאמות', branch: 'P2' },
+  bookkeeping: { from: '#8b5cf6', to: '#6366f1', label: 'הנה"ח', branch: 'P2' },
+  additional_services: { from: '#4682B4', to: '#3B5998', label: 'שירותים נוספים', branch: 'P2' },
+  consulting: { from: '#64748b', to: '#475569', label: 'ייעוץ', branch: 'P2' },
+  // P4 — Home/Personal
+  home_personal: { from: '#FFC107', to: '#FF9800', label: 'בית / אישי', branch: 'P4' },
+  meals: { from: '#FFB74D', to: '#FFA726', label: 'ארוחות', branch: 'P4' },
+  routines: { from: '#FFD54F', to: '#FFCA28', label: 'שגרות', branch: 'P4' },
+  // P5 — Annual Reports
+  annual_reports: { from: '#2E7D32', to: '#1B5E20', label: 'דוחות שנתיים', branch: 'P5' },
+  capital_statement: { from: '#388E3C', to: '#2E7D32', label: 'הצהרות הון', branch: 'P5' },
+  balance_sheets: { from: '#6D8B74', to: '#4A6741', label: 'דוחות כספיים', branch: 'P5' },
 };
 
 // 5 Golden Status visual treatments
@@ -32,41 +39,31 @@ export const STATUS_PRIORITY = {
 };
 
 // Board category definitions for MindMap ring-1 nodes
+// Organized by 5-Pillar hierarchy (Law 1)
 // alwaysVisible: true means the branch shows even if no client subscribes
 export const BOARD_CATEGORIES = [
+  // ── P1 | שכר (Payroll) ──
   {
     id: 'payroll',
     label: 'שכר',
+    branch: 'P1',
     serviceTypes: ['payroll'],
     taskCategories: ['work_payroll', 'work_deductions', 'work_social_security'],
     gradient: CATEGORY_GRADIENTS.payroll,
   },
+  // ── P2 | הנהלת חשבונות (Bookkeeping) ──
   {
     id: 'vat_tax',
     label: 'מע"מ ומס',
+    branch: 'P2',
     serviceTypes: ['vat_reporting', 'tax_advances'],
     taskCategories: ['work_vat_reporting', 'work_tax_advances'],
     gradient: CATEGORY_GRADIENTS.vat_tax,
   },
   {
-    id: 'annual_reports',
-    label: 'דוחות שנתיים',
-    serviceTypes: ['annual_reports'],
-    taskCategories: ['work_annual_reports', 'work_capital_statement'],
-    branch: 'P5',
-    gradient: CATEGORY_GRADIENTS.annual_reports,
-  },
-  {
-    id: 'balance_sheets',
-    label: 'דוחות כספיים',
-    serviceTypes: ['balance_sheets', 'financial_reports'],
-    taskCategories: ['work_balance_sheets', 'work_financial_reports'],
-    alwaysVisible: true,
-    gradient: CATEGORY_GRADIENTS.balance_sheets,
-  },
-  {
     id: 'reconciliation',
     label: 'התאמות',
+    branch: 'P2',
     serviceTypes: ['reconciliation'],
     taskCategories: [],
     usesReconciliationEntity: true,
@@ -75,6 +72,7 @@ export const BOARD_CATEGORIES = [
   {
     id: 'bookkeeping',
     label: 'הנה"ח',
+    branch: 'P2',
     serviceTypes: ['bookkeeping'],
     taskCategories: ['work_bookkeeping'],
     gradient: CATEGORY_GRADIENTS.bookkeeping,
@@ -82,6 +80,7 @@ export const BOARD_CATEGORIES = [
   {
     id: 'additional_services',
     label: 'שירותים נוספים',
+    branch: 'P2',
     serviceTypes: ['additional_services', 'extra_services', 'other'],
     taskCategories: ['work_additional', 'work_extra', 'work_other'],
     alwaysVisible: true,
@@ -90,9 +89,38 @@ export const BOARD_CATEGORIES = [
   {
     id: 'consulting',
     label: 'ייעוץ',
+    branch: 'P2',
     serviceTypes: ['consulting'],
     taskCategories: [],
     gradient: CATEGORY_GRADIENTS.consulting,
+  },
+  // ── P4 | בית / אישי (Home/Personal) ──
+  {
+    id: 'home_personal',
+    label: 'בית / אישי',
+    branch: 'P4',
+    serviceTypes: ['meals', 'routines', 'morning_routine', 'evening_routine', 'personal'],
+    taskCategories: ['personal', 'home', 'meals', 'routines'],
+    alwaysVisible: true,
+    gradient: CATEGORY_GRADIENTS.home_personal,
+  },
+  // ── P5 | דוחות שנתיים (Annual Reports) ──
+  {
+    id: 'annual_reports',
+    label: 'דוחות שנתיים',
+    branch: 'P5',
+    serviceTypes: ['annual_reports'],
+    taskCategories: ['work_annual_reports', 'work_capital_statement'],
+    gradient: CATEGORY_GRADIENTS.annual_reports,
+  },
+  {
+    id: 'balance_sheets',
+    label: 'דוחות כספיים',
+    branch: 'P5',
+    serviceTypes: ['balance_sheets', 'financial_reports'],
+    taskCategories: ['work_balance_sheets', 'work_financial_reports'],
+    alwaysVisible: true,
+    gradient: CATEGORY_GRADIENTS.balance_sheets,
   },
 ];
 
@@ -116,12 +144,21 @@ export const PRODUCTION_FLOW_COLORS = {
 };
 
 // ─── P-Branch Path Colors (hierarchical — from root to leaves) ──────
+// Keyed by both canonical and short forms for flexible lookup
 export const BRANCH_PATH_COLORS = {
-  'P1 חשבות שכר':      { color: '#0277BD', light: '#B3E5FC', label: 'P1' },
-  'P2 הנהלת חשבונות':   { color: '#4682B4', light: '#B2C8DF', label: 'P2' },
-  'P3 ניהול משרד':      { color: '#546E7A', light: '#CFD8DC', label: 'P3' },
-  'P4 בית':             { color: '#6D4C41', light: '#D7CCC8', label: 'P4' },
-  'P5 דוחות שנתיים':    { color: '#2E7D32', light: '#C8E6C9', label: 'P5' },
+  'P1':                  { color: '#00A3E0', light: '#B3E5FC', label: 'P1 שכר' },
+  'P1 שכר':             { color: '#00A3E0', light: '#B3E5FC', label: 'P1 שכר' },
+  'P1 חשבות שכר':       { color: '#00A3E0', light: '#B3E5FC', label: 'P1 שכר' },
+  'P2':                  { color: '#4682B4', light: '#B2C8DF', label: 'P2 הנה"ח' },
+  'P2 הנהלת חשבונות':   { color: '#4682B4', light: '#B2C8DF', label: 'P2 הנה"ח' },
+  'P3':                  { color: '#E91E63', light: '#F8BBD0', label: 'P3 ניהול' },
+  'P3 ניהול ותכנון':    { color: '#E91E63', light: '#F8BBD0', label: 'P3 ניהול' },
+  'P3 ניהול משרד':      { color: '#E91E63', light: '#F8BBD0', label: 'P3 ניהול' },
+  'P4':                  { color: '#FFC107', light: '#FFF9C4', label: 'P4 בית' },
+  'P4 בית':             { color: '#FFC107', light: '#FFF9C4', label: 'P4 בית' },
+  'P4 בית / אישי':     { color: '#FFC107', light: '#FFF9C4', label: 'P4 בית' },
+  'P5':                  { color: '#2E7D32', light: '#C8E6C9', label: 'P5 דוחות' },
+  'P5 דוחות שנתיים':    { color: '#2E7D32', light: '#C8E6C9', label: 'P5 דוחות' },
 };
 
 // Complexity tiers - Enterprise (tier 3) is 3x the size of Nano (tier 0)

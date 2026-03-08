@@ -37,7 +37,7 @@ import DesktopBridge from "@/components/desktop/DesktopBridge";
 import { AyoaViewProvider, useAyoaView } from "@/contexts/AyoaViewContext";
 import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
 
-// Work Modes — aligned to P1-P4 process tree
+// Work Modes — aligned to P1-P5 pillar tree
 const WORK_MODES = [
   {
     key: 'doing',
@@ -45,15 +45,15 @@ const WORK_MODES = [
     icon: Zap,
     color: 'bg-emerald-600 text-white',
     description: 'משימות יומיות + דיווחים שוטפים',
-    visibleSections: ['p1_payroll', 'p2_bookkeeping', 'p3_doing']
+    visibleSections: ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual']
   },
   {
     key: 'planning',
     label: 'תכנון',
     icon: Brain,
     color: 'bg-blue-600 text-white',
-    description: 'אוטומציות, הגדרות חוזרות, אפיון עומס',
-    visibleSections: ['p3_planning']
+    description: 'תכנון שבועי, עומס קוגניטיבי, אוטומציות',
+    visibleSections: ['p3_hub', 'p4_home', 'p5_annual']
   },
   {
     key: 'admin',
@@ -61,30 +61,34 @@ const WORK_MODES = [
     icon: Settings,
     color: 'bg-purple-700 text-white',
     description: 'לקוחות + ספקים + ניתוח עסקי',
-    visibleSections: ['p3_admin']
+    visibleSections: ['p3_hub', 'p4_home', 'p5_annual']
   },
 ];
 
 // ============================================================
-// Sidebar sections — P1-P4 Process Tree Hierarchy
-// Split P3 into doing/planning/admin for clear separation
+// Sidebar sections — 5-Pillar Hierarchy (Law 1)
+// P1: Payroll (Production → Reporting → Payment)
+// P2: Bookkeeping (VAT, Advances, Collection)
+// P3: Management & Planning (VIEWER/HUB — pulls from P1,P2,P4,P5)
+// P4: Home/Personal (Meals, Routines, Inspiration)
+// P5: Annual Reports (Income Tax, Capital Statements)
 // ============================================================
 const getSidebarSections = () => ({
-  // ── P1 | חשבות שכר ──
+  // ── P1 | שכר — Production → Reporting → Payment ──
   p1_payroll: {
-    title: "P1 | חשבות שכר",
+    title: "P1 | שכר",
     icon: Calculator,
     tabColor: 'border-[#00A3E0]',
     items: [
       { name: "שלב ייצור ואישור", href: createPageUrl("PayrollDashboard"), icon: Zap },
       { name: "דיווחים שוטפים (102)", href: createPageUrl("PayrollReportsDashboard"), icon: FileBarChart },
       { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
-      { name: "שכר - שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
+      { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
     ]
   },
-  // ── P2 | הנהלת חשבונות ──
+  // ── P2 | הנהלת חשבונות — VAT, Advances, Collection ──
   p2_bookkeeping: {
-    title: "P2 | הנה\"ח ומיסים",
+    title: "P2 | הנהלת חשבונות",
     icon: FileBarChart,
     tabColor: 'border-[#B2AC88]',
     items: [
@@ -92,66 +96,37 @@ const getSidebarSections = () => ({
       { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: FileBarChart },
       { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
       { name: "תוצרים (רוה\"ס)", href: createPageUrl("FinancialResultsDashboard"), icon: TrendingUp },
-      { name: "שירותים נוספים", href: createPageUrl("BookkeepingExtrasDashboard"), icon: LayoutGrid },
     ]
   },
-  // ── P3 | ניהול ותכנון — Gateway to Planning + Cognitive Load ──
-  p3_doing: {
-    title: "P3 | ביצוע",
-    icon: Target,
-    tabColor: 'border-[#E91E63]',
-    items: [
-      { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
-      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
-      { name: "אדמיניסטרציה", href: createPageUrl("AdminTasksDashboard"), icon: FolderKanban },
-      { name: "פרויקטים", href: createPageUrl("Projects"), icon: FolderKanban },
-    ]
-  },
-  p3_planning: {
-    title: "P3 | תכנון ועומס קוגניטיבי",
+  // ── P3 | ניהול ותכנון — VIEWER/HUB (Law 1: no own service steps) ──
+  p3_hub: {
+    title: "P3 | ניהול ותכנון",
     icon: Brain,
     tabColor: 'border-[#E91E63]',
     items: [
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
-      { name: "משימות חוזרות", href: createPageUrl("RecurringTasks"), icon: Repeat },
+      { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
+      { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
     ],
     subGroups: [
-      { key: 'p3_automation', label: 'אוטומציה והגדרות', icon: Workflow, items: [
-        { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
+      { key: 'p3_admin', label: 'ניהול עסקי', icon: Building2, items: [
+        { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
+        { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
+        { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
+        { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
+      ]},
+      { key: 'p3_system', label: 'מערכת והגדרות', icon: Settings, items: [
         { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
+        { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
         { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
       ]},
-      { key: 'p3_integrations', label: 'כלים וייבוא', icon: Link2, items: [
-        { name: "ייבוא נתונים", href: createPageUrl("DataImportTool"), icon: Import },
-        { name: "מוכנות מערכת", href: createPageUrl("SystemReadiness"), icon: Shield },
-      ]},
     ]
   },
-  p3_admin: {
-    title: "P3 | ניהול עסקי",
-    icon: Building2,
-    tabColor: 'border-[#E91E63]',
-    items: [
-      { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
-      { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
-      { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
-    ],
-    subGroups: [
-      { key: 'p3_finance', label: 'כספים וחוזים', icon: Receipt, items: [
-        { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
-        { name: "חוזי לקוחות", href: createPageUrl("ClientContracts"), icon: FileSignature },
-      ]},
-      { key: 'p3_resources', label: 'משאבים וניתוח', icon: Briefcase, items: [
-        { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
-        { name: "קבצי לקוחות", href: createPageUrl("ClientFiles"), icon: FolderOpen },
-        { name: "ניתוח נתונים", href: createPageUrl("Analytics"), icon: BarChart3 },
-      ]},
-    ]
-  },
-  // ── P4 | בית ──
+  // ── P4 | בית/אישי — Meals, Morning/Evening routines ──
   p4_home: {
-    title: "P4 | בית",
+    title: "P4 | בית / אישי",
     icon: BookHeart,
     tabColor: 'border-[#FFC107]',
     items: [
@@ -160,7 +135,7 @@ const getSidebarSections = () => ({
       { name: "הגדרות אישיות", href: createPageUrl("LifeSettings"), icon: Settings },
     ]
   },
-  // ── P5 | דוחות שנתיים והצהרות ──
+  // ── P5 | דוחות שנתיים — Income Tax, Capital Statements ──
   p5_annual: {
     title: "P5 | דוחות שנתיים",
     icon: FileBarChart,
@@ -176,18 +151,14 @@ const getSidebarSections = () => ({
 const SECTION_TO_MODE = {
   p1_payroll: 'doing',
   p2_bookkeeping: 'doing',
-  p3_doing: 'doing',
-  p3_planning: 'planning',
-  p3_admin: 'admin',
-  p4_home: null, // visible in all modes
-  p5_annual: 'doing',
+  p3_hub: null,    // P3 is a HUB — visible in all modes
+  p4_home: null,   // visible in all modes
+  p5_annual: null,  // visible in all modes
 };
 
 const getVisibleSections = (mode) => {
-  if (mode === 'doing') return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p5_annual', 'p4_home'];
-  if (mode === 'planning') return ['p3_planning', 'p5_annual', 'p4_home'];
-  if (mode === 'admin') return ['p3_admin', 'p4_home'];
-  return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_planning', 'p3_admin', 'p5_annual', 'p4_home'];
+  // All 5 pillars always visible — P3 is a HUB layer (Law 1)
+  return ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual'];
 };
 
 // Deadline countdown
@@ -291,7 +262,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['personal_tools', 'p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_planning', 'p3_admin', 'p4_home', 'p3_automation', 'p3_integrations', 'p3_finance', 'p3_resources']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['personal_tools', 'p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p3_admin', 'p3_system']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
@@ -877,14 +848,18 @@ function LayoutInner({ children }) {
                                     <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{
                                       background: key === 'p1_payroll' ? 'linear-gradient(135deg, #00A3E020, #00BCD420)'
                                         : key === 'p2_bookkeeping' ? 'linear-gradient(135deg, #B2AC8820, #8BC34A20)'
+                                        : key === 'p3_hub' ? 'linear-gradient(135deg, #E91E6320, #9C27B020)'
                                         : key === 'p4_home' ? 'linear-gradient(135deg, #FFC10720, #FF980020)'
-                                        : 'linear-gradient(135deg, #E91E6320, #9C27B020)',
+                                        : key === 'p5_annual' ? 'linear-gradient(135deg, #2E7D3220, #1B5E2020)'
+                                        : 'linear-gradient(135deg, #54647A20, #37474F20)',
                                     }}>
                                       <section.icon className="w-3.5 h-3.5" style={{
                                         color: key === 'p1_payroll' ? '#00A3E0'
                                           : key === 'p2_bookkeeping' ? '#B2AC88'
+                                          : key === 'p3_hub' ? '#E91E63'
                                           : key === 'p4_home' ? '#FFC107'
-                                          : '#E91E63',
+                                          : key === 'p5_annual' ? '#2E7D32'
+                                          : '#546E7A',
                                       }} />
                                     </div>
                                     <span>{section.title}</span>
