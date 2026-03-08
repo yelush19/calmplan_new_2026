@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { DaySchedule, WeeklyRecommendation, SystemConfig } from '@/api/entities';
+import { DaySchedule, WeeklyRecommendation, SystemConfig, Task } from '@/api/entities';
 import {
   Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle,
   Plus, X, Download, Upload, Database, Cloud, AlertTriangle, RefreshCw,
@@ -474,6 +474,169 @@ function LenaSettings() {
 // SYSTEM TAB - Platforms & Backup
 // =====================================================
 
+// =====================================================
+// DATA CLEANUP — Delete old tasks before a cutoff date
+// =====================================================
+
+function DataCleanupSection() {
+  const [isScanning, setIsScanning] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [deleteResult, setDeleteResult] = useState(null);
+  const CUTOFF_DATE = '2026-03-01';
+
+  const scanOldTasks = async () => {
+    setIsScanning(true);
+    setScanResult(null);
+    setDeleteResult(null);
+    try {
+      const allTasks = await Task.list(null, 5000);
+      const oldTasks = allTasks.filter(t => {
+        if (!t.due_date) return false;
+        return t.due_date < CUTOFF_DATE;
+      });
+      const noDateTasks = allTasks.filter(t => !t.due_date);
+      setScanResult({
+        total: allTasks.length,
+        oldCount: oldTasks.length,
+        noDateCount: noDateTasks.length,
+        keepCount: allTasks.length - oldTasks.length,
+        oldTasks,
+      });
+    } catch (e) {
+      setScanResult({ error: e.message });
+    }
+    setIsScanning(false);
+  };
+
+  const deleteOldTasks = async () => {
+    if (!scanResult?.oldTasks?.length) return;
+    if (!window.confirm(`למחוק ${scanResult.oldCount} משימות עם due_date לפני ${CUTOFF_DATE}?\n\nפעולה זו בלתי הפיכה.`)) return;
+    setIsDeleting(true);
+    setDeleteResult(null);
+    let deleted = 0;
+    let errors = 0;
+    const batch = scanResult.oldTasks;
+
+    // Delete in parallel batches of 20
+    for (let i = 0; i < batch.length; i += 20) {
+      const chunk = batch.slice(i, i + 20);
+      const results = await Promise.allSettled(
+        chunk.map(t => Task.delete(t.id))
+      );
+      results.forEach(r => { if (r.status === 'fulfilled') deleted++; else errors++; });
+    }
+
+    // Also clean localStorage directly as safety net
+    try {
+      const raw = localStorage.getItem('calmplan_tasks');
+      if (raw) {
+        const tasks = JSON.parse(raw);
+        const cleaned = tasks.filter(t => !t.due_date || t.due_date >= CUTOFF_DATE);
+        localStorage.setItem('calmplan_tasks', JSON.stringify(cleaned));
+      }
+    } catch { /* localStorage cleanup failed, entity deletes already handled it */ }
+
+    setDeleteResult({ deleted, errors });
+    setScanResult(null);
+    setIsDeleting(false);
+  };
+
+  return (
+    <Card className="border-2 border-red-200 bg-red-50">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Trash2 className="w-4 h-4 text-red-600" />
+          ניקוי נתונים ישנים
+          <Badge className="bg-red-100 text-red-700 text-[10px]">לפני מרץ 2026</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-gray-600">
+          מוחק את כל המשימות עם תאריך יעד (due_date) לפני 01/03/2026 — מ-LocalStorage ומ-Database.
+          <br />דף חלק למרץ.
+        </p>
+
+        {/* Step 1: Scan */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={scanOldTasks}
+          disabled={isScanning || isDeleting}
+          className="gap-2 text-xs border-red-300 text-red-700 hover:bg-red-100"
+        >
+          {isScanning ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Database className="w-3 h-3" />}
+          שלב 1: סרוק משימות ישנות
+        </Button>
+
+        {/* Scan results */}
+        {scanResult && !scanResult.error && (
+          <div className="p-3 bg-white border border-red-200 rounded-lg space-y-2">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-500">סה"כ משימות:</span>
+                <span className="font-bold">{scanResult.total}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-red-600">למחיקה (לפני מרץ):</span>
+                <span className="font-bold text-red-700">{scanResult.oldCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">ללא תאריך:</span>
+                <span className="font-bold text-orange-600">{scanResult.noDateCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-600">נשארות (מרץ+):</span>
+                <span className="font-bold text-green-700">{scanResult.keepCount}</span>
+              </div>
+            </div>
+
+            {scanResult.oldCount > 0 && (
+              <Button
+                size="sm"
+                onClick={deleteOldTasks}
+                disabled={isDeleting}
+                className="w-full gap-2 text-xs bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeleting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                {isDeleting
+                  ? 'מוחק...'
+                  : `שלב 2: מחק ${scanResult.oldCount} משימות ישנות`
+                }
+              </Button>
+            )}
+            {scanResult.oldCount === 0 && (
+              <div className="flex items-center gap-2 text-xs text-green-700">
+                <CheckCircle className="w-4 h-4" />
+                אין משימות ישנות — הכל נקי!
+              </div>
+            )}
+          </div>
+        )}
+
+        {scanResult?.error && (
+          <div className="p-2 bg-red-100 border border-red-300 rounded text-xs text-red-700">
+            שגיאה: {scanResult.error}
+          </div>
+        )}
+
+        {/* Delete results */}
+        {deleteResult && (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="text-xs">
+              <p className="font-bold text-green-800">נמחקו {deleteResult.deleted} משימות בהצלחה!</p>
+              {deleteResult.errors > 0 && (
+                <p className="text-orange-600">{deleteResult.errors} שגיאות</p>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function SystemSettings() {
   return (
     <div className="space-y-4">
@@ -482,6 +645,7 @@ function SystemSettings() {
         <h2 className="text-lg font-bold text-gray-800">הגדרות מערכת</h2>
       </div>
       <div className="grid grid-cols-1 gap-4">
+        <DataCleanupSection />
         <CloudSyncSection />
         <PlatformManagementSection />
         <DataBackupSection />
