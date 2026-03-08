@@ -122,6 +122,7 @@ const getSidebarSections = () => ({
         { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
       ]},
       { key: 'p3_system', label: 'הגדרות מערכת', icon: Settings, items: [
+        { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Eye },
         { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
         { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
         { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },

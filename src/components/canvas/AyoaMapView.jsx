@@ -132,7 +132,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
       const branch = e.detail?.branch;
       if (!branch) return;
       // Find the category node matching this branch and center on it
-      const branchLabel = branch === 'P4' ? 'בית' : branch === 'P1' ? 'שכר' : branch === 'P2' ? 'הנה"ח' : branch === 'P3' ? 'ניהול' : branch === 'P5' ? 'דוחות';
+      const branchLabel = branch === 'P4' ? 'בית' : branch === 'P1' ? 'שכר' : branch === 'P2' ? 'הנה"ח' : branch === 'P3' ? 'ניהול' : branch === 'P5' ? 'דוחות' : branch;
       const targetCat = baseCatNodes.find(n =>
         (n.fullLabel || n.label || '').includes(branchLabel) || (n.fullLabel || n.label || '').toLowerCase().includes(branch.toLowerCase())
       );
