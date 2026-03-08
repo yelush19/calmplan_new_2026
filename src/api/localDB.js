@@ -213,6 +213,7 @@ export const entities = {
   SystemConfig: createEntity('system_config'),
   PeriodicReport: createEntity('periodic_reports'),
   FileMetadata: createEntity('file_metadata'),
+  ServiceCatalog: createEntity('service_catalog'),
 };
 
 export { auth };

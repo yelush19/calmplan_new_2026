@@ -61,5 +61,7 @@ export const PeriodicReport = base44.entities.PeriodicReport;
 
 export const FileMetadata = base44.entities.FileMetadata;
 
+export const ServiceCatalog = base44.entities.ServiceCatalog;
+
 // auth sdk:
 export const User = base44.auth;
