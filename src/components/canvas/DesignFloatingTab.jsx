@@ -107,6 +107,27 @@ const FONTS = [
   { key: 'Rubik', label: 'Rubik' },
 ];
 
+// ── Branch Color Engine: P1-P5 definitions ──
+const BRANCH_DEFS = [
+  { key: 'P1', label: 'P1 שכר' },
+  { key: 'P2', label: 'P2 הנה"ח' },
+  { key: 'P3', label: 'P3 ניהול' },
+  { key: 'P4', label: 'P4 בית / אישי' },
+  { key: 'P5', label: 'P5 דוחות שנתיים' },
+];
+
+const DEFAULTS_BRANCH_COLORS = {
+  P1: '#00A3E0', P2: '#4682B4', P3: '#E91E63', P4: '#FFC107', P5: '#2E7D32',
+};
+
+const BRANCH_PALETTE = [
+  '#00A3E0', '#0277BD', '#4682B4', '#1E3A5F',
+  '#E91E63', '#AD1457', '#FF6B9D', '#F8BBD0',
+  '#FFC107', '#FF9800', '#F57F17', '#FFE082',
+  '#8BC34A', '#2E7D32', '#00BCD4', '#1DE9B6',
+  '#9C27B0', '#7C4DFF', '#FF5252', '#6D4C41',
+];
+
 const THEMES = [
   { key: 'light', label: 'בהיר', icon: Sun, color: '#FFC107' },
   { key: 'soft-gray', label: 'אפור רך', icon: Monitor, color: '#94A3B8' },
@@ -116,10 +137,11 @@ const THEMES = [
 export default function DesignFloatingTab() {
   const design = useDesign();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('theme'); // theme | shapes | lines | templates
+  const [activeTab, setActiveTab] = useState('colors'); // colors | theme | shapes | lines | templates
 
   const tabs = useMemo(() => [
-    { key: 'theme', label: 'ערכת נושא', icon: Palette },
+    { key: 'colors', label: 'צבעים', icon: Palette },
+    { key: 'theme', label: 'ערכת נושא', icon: Sun },
     { key: 'shapes', label: 'צורות', icon: Hexagon },
     { key: 'lines', label: 'קווים', icon: Minus },
     { key: 'templates', label: 'תבניות', icon: Sparkles },
@@ -210,6 +232,53 @@ export default function DesignFloatingTab() {
             {/* Content area — scrollable */}
             <div className="overflow-y-auto p-3 space-y-3"
               style={{ maxHeight: 'calc(100vh - 260px)' }}>
+
+              {/* ══ COLORS TAB (Branch Color Engine) ══ */}
+              {activeTab === 'colors' && (
+                <>
+                  <Section label="צבעי ענפים P1-P5">
+                    <div className="space-y-2">
+                      {BRANCH_DEFS.map(b => {
+                        const currentColor = design.getBranchColor(b.key);
+                        return (
+                          <div key={b.key} className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl border-2 shadow-sm shrink-0 flex items-center justify-center"
+                              style={{ borderColor: currentColor, backgroundColor: currentColor + '15' }}>
+                              <span className="text-[9px] font-black" style={{ color: currentColor }}>{b.key}</span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-[10px] font-bold mb-1" style={{ color: 'var(--cp-text)' }}>
+                                {b.label}
+                              </div>
+                              <div className="flex gap-1 flex-wrap">
+                                {BRANCH_PALETTE.map(c => (
+                                  <button key={c} onClick={() => design.setBranchColor(b.key, c)}
+                                    className={`w-5 h-5 rounded-full border-2 transition-all hover:scale-125 ${
+                                      currentColor === c ? 'ring-2 ring-offset-1 scale-110' : ''
+                                    }`}
+                                    style={{
+                                      backgroundColor: c,
+                                      borderColor: currentColor === c ? c : 'transparent',
+                                      ringColor: c,
+                                    }}
+                                    title={c} />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Section>
+                  <button onClick={() => {
+                    design.updatePref('branchColors', { ...DEFAULTS_BRANCH_COLORS });
+                  }}
+                    className="w-full mt-2 px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all hover:bg-gray-50"
+                    style={{ borderColor: 'var(--cp-border)', color: 'var(--cp-text-secondary)' }}>
+                    איפוס צבעי ברירת מחדל
+                  </button>
+                </>
+              )}
 
               {/* ══ THEME TAB ══ */}
               {activeTab === 'theme' && (

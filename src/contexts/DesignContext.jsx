@@ -27,6 +27,17 @@ const DEFAULTS = {
   softShadows: true,
   mapTemplate: 'ayoa-organic', // ayoa-organic | mindmap-classic | minimalist
   stickerMap: {},            // nodeId → emoji/icon key
+  // ── Branch Color Engine: P1-P5 customizable colors ──
+  branchColors: {
+    P1: '#00A3E0',   // שכר — Sky Blue
+    P2: '#4682B4',   // הנה"ח — Steel Blue
+    P3: '#E91E63',   // ניהול — Magenta
+    P4: '#FFC107',   // בית/אישי — Warm Amber (hard default)
+    P5: '#2E7D32',   // דוחות — Forest Green
+  },
+  // ── Automation control ──
+  automationsPaused: false,
+  cognitiveLoadLimit: 480,   // minutes — daily focus threshold
 };
 
 // Theme CSS variable maps
@@ -108,12 +119,19 @@ export function DesignProvider({ children }) {
     return { ...DEFAULTS };
   });
 
-  // Apply CSS variables whenever theme or font changes
+  // Apply CSS variables whenever theme, font, or branch colors change
   useEffect(() => {
     const root = document.documentElement;
     const vars = THEME_VARS[prefs.theme] || THEME_VARS.light;
     Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v));
     root.style.setProperty('--cp-font', prefs.fontFamily);
+
+    // Branch color CSS variables — available everywhere
+    if (prefs.branchColors) {
+      Object.entries(prefs.branchColors).forEach(([branch, color]) => {
+        root.style.setProperty(`--cp-${branch.toLowerCase()}`, color);
+      });
+    }
 
     // Apply glassmorphism class
     if (prefs.glassmorphism) {
@@ -128,7 +146,7 @@ export function DesignProvider({ children }) {
     } else {
       root.classList.remove('cp-dark');
     }
-  }, [prefs.theme, prefs.fontFamily, prefs.glassmorphism]);
+  }, [prefs.theme, prefs.fontFamily, prefs.glassmorphism, prefs.branchColors]);
 
   // Persist to localStorage on every change
   useEffect(() => {
@@ -165,6 +183,19 @@ export function DesignProvider({ children }) {
     setPrefs({ ...DEFAULTS });
   }, []);
 
+  // Get branch color by P-key (P1, P2, etc.)
+  const getBranchColor = useCallback((branch) => {
+    return prefs.branchColors?.[branch] || DEFAULTS.branchColors[branch] || '#64748B';
+  }, [prefs.branchColors]);
+
+  // Set a single branch color
+  const setBranchColor = useCallback((branch, color) => {
+    setPrefs(prev => ({
+      ...prev,
+      branchColors: { ...prev.branchColors, [branch]: color },
+    }));
+  }, []);
+
   return (
     <DesignContext.Provider value={{
       ...prefs,
@@ -172,6 +203,8 @@ export function DesignProvider({ children }) {
       applyTemplate,
       setSticker,
       resetToDefaults,
+      getBranchColor,
+      setBranchColor,
     }}>
       {children}
     </DesignContext.Provider>

@@ -16,6 +16,7 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { renderNodeShape, buildTaperedBranch } from './AyoaNode';
 import { getConnectionProps } from '@/engines/lineStyleEngine';
 import { useDesign } from '@/contexts/DesignContext';
+import { getActiveBranches } from '@/engines/automationEngine';
 import FloatingToolbar from './FloatingToolbar';
 
 const VB = 1000;
@@ -29,21 +30,21 @@ const RINGS = {
   ring3: 440,   // ייצור / Production status (completed tasks)
 };
 
-// DNA Palette
-const DNA = {
-  P1: '#00A3E0',
-  P2: '#B2AC88',
-  P3: '#E91E63',
-  P4: '#FFC107',
+// Default DNA — overridden by Design Engine branchColors
+const DNA_DEFAULTS = {
+  P1: '#00A3E0', P2: '#4682B4', P3: '#E91E63', P4: '#FFC107', P5: '#2E7D32',
 };
 
-function getCategoryColor(category) {
-  if (!category) return DNA.P3;
+function getCategoryColor(category, branchColors) {
+  const c = branchColors || DNA_DEFAULTS;
+  if (!category) return c.P3;
   const cat = (category || '').toLowerCase();
-  if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return DNA.P1;
-  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות') || cat.includes('מאזנ')) return DNA.P2;
-  if (cat.includes('admin') || cat.includes('אדמיני') || cat.includes('ייעוץ') || cat.includes('פגישה') || cat.includes('שיווק')) return DNA.P3;
-  return DNA.P4;
+  if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return c.P1;
+  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות') || cat.includes('מאזנ')) return c.P2;
+  if (cat.includes('בית') || cat.includes('אישי') || cat.includes('home') || cat.includes('ארוחות')) return c.P4;
+  if (cat.includes('דוח שנתי') || cat.includes('הצהרת הון')) return c.P5;
+  if (cat.includes('admin') || cat.includes('אדמיני') || cat.includes('ייעוץ') || cat.includes('פגישה') || cat.includes('שיווק')) return c.P3;
+  return c.P4;
 }
 
 const STATUS_GLOW = {
@@ -83,6 +84,10 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
   try { design = useDesign(); } catch { /* not mounted */ }
   const globalShape = design?.shape || 'bubble';
   const globalLineStyle = design?.lineStyle || 'tapered';
+  const branchColors = design?.branchColors || DNA_DEFAULTS;
+
+  // Status Sync: detect which categories have active sub-tasks
+  const activeBranches = useMemo(() => getActiveBranches(tasks), [tasks]);
 
   const { nodes, ringSegments } = useMemo(() => {
     const catMap = {};
@@ -104,7 +109,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
       const startAngle = -Math.PI / 2 + ci * angleStep + gap / 2;
       const endAngle = startAngle + angleStep - gap;
       const midAngle = (startAngle + endAngle) / 2;
-      const dnaColor = getCategoryColor(cat);
+      const dnaColor = getCategoryColor(cat, branchColors);
 
       // Ring 1 wedge (דיווחין)
       segments.push({
@@ -322,6 +327,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           const isFocused = focusedNode === node.id;
           const isBlurred = focusedNode !== null && !isFocused;
           const isSelected = selectedNode === node.id;
+          const isActive = activeBranches.has(node.label) || activeBranches.has(node.branch);
           return (
             <g key={node.id}
               onClick={(e) => handleNodeClick(e, node.id)}
@@ -331,6 +337,15 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
                 filter: isBlurred ? 'url(#radial-blur)' : 'none',
                 opacity: isBlurred ? 0.25 : 1,
               }}>
+              {/* Status Sync: pulsing ring when branch has active sub-tasks */}
+              {isActive && !isBlurred && (
+                <circle cx={node.x} cy={node.y} r={node.r + 10}
+                  fill="none" stroke={node.color} strokeWidth={2} strokeDasharray="8 4">
+                  <animate attributeName="opacity" values="0.7;0.2;0.7" dur="2s" repeatCount="indefinite" />
+                  <animate attributeName="r" values={`${node.r + 10};${node.r + 13};${node.r + 10}`}
+                    dur="2s" repeatCount="indefinite" />
+                </circle>
+              )}
               {isSelected && (
                 <circle cx={node.x} cy={node.y} r={node.r + 7}
                   fill="none" stroke={node.color} strokeWidth={1.5} strokeDasharray="5 3" opacity={0.5}>

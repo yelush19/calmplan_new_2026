@@ -25,17 +25,14 @@ import { useDesign } from '@/contexts/DesignContext';
 import { getServiceWeight } from '@/config/serviceWeights';
 import { COMPLEXITY_TIERS, LOAD_COLORS } from '@/lib/theme-constants';
 import { areDependenciesMet } from '@/engines/taskCascadeEngine';
+import { computeCognitiveLoad } from '@/engines/automationEngine';
 
 const VB = 1000;
 const CX = VB / 2, CY = VB / 2;
 
-// Focus Map uses WARM tones (distinct from Architect's cool blues)
-const FOCUS_DNA = {
-  P1: '#0288D1',  // Deep sky
-  P2: '#7B6B43',  // Warm taupe
-  P3: '#AD1457',  // Deep rose
-  P4: '#F57F17',  // Amber gold
-  P5: '#2E7D32',  // Forest green
+// Default Focus DNA — overridden by Design Engine branchColors
+const FOCUS_DNA_DEFAULTS = {
+  P1: '#0288D1', P2: '#7B6B43', P3: '#AD1457', P4: '#F57F17', P5: '#2E7D32',
 };
 
 // Ring radii — tighter than Architect for "actionable focus"
@@ -54,14 +51,15 @@ function getCognitiveRadius(task, baseR = 18) {
   return { r: Math.round(baseR * scale), load, duration: sw.duration, tierLabel: COMPLEXITY_TIERS[tier]?.label || '' };
 }
 
-function getCategoryColor(category) {
-  if (!category) return FOCUS_DNA.P3;
+function getCategoryColor(category, branchColors) {
+  const c = branchColors || FOCUS_DNA_DEFAULTS;
+  if (!category) return c.P3;
   const cat = (category || '').toLowerCase();
-  if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return FOCUS_DNA.P1;
-  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות')) return FOCUS_DNA.P2;
-  if (cat.includes('מאזנ') || cat.includes('דוח שנתי') || cat.includes('הצהרת הון')) return FOCUS_DNA.P5;
-  if (cat.includes('home') || cat.includes('ארוחות') || cat.includes('אישי')) return FOCUS_DNA.P4;
-  return FOCUS_DNA.P3;
+  if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return c.P1;
+  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות')) return c.P2;
+  if (cat.includes('מאזנ') || cat.includes('דוח שנתי') || cat.includes('הצהרת הון')) return c.P5;
+  if (cat.includes('home') || cat.includes('ארוחות') || cat.includes('אישי') || cat.includes('בית')) return c.P4;
+  return c.P3;
 }
 
 const STATUS_COLORS = {
@@ -86,9 +84,14 @@ export default function FocusMapView({
   try { design = useDesign(); } catch { /* not mounted */ }
   const globalShape = design?.shape || 'bubble';
   const globalLineStyle = design?.lineStyle || 'tapered';
+  const branchColors = design?.branchColors || FOCUS_DNA_DEFAULTS;
 
   // All sibling tasks for dependency checking — use allTasks if provided, else tasks
   const siblingPool = allTasks || tasks;
+
+  // Cognitive load alert
+  const cogLoadThreshold = design?.cognitiveLoadLimit || 480;
+  const cogLoad = useMemo(() => computeCognitiveLoad(tasks, cogLoadThreshold), [tasks, cogLoadThreshold]);
 
   const { unlockedNodes, lockedNodes, categoryNodes, stats } = useMemo(() => {
     const unlocked = [];
@@ -104,7 +107,7 @@ export default function FocusMapView({
 
       const depsOk = areDependenciesMet(task, siblingPool);
       const { r, load, duration, tierLabel } = getCognitiveRadius(task);
-      const color = getCategoryColor(task.category);
+      const color = getCategoryColor(task.category, branchColors);
       const cat = task.category || 'כללי';
 
       if (!catMap[cat]) catMap[cat] = { unlocked: 0, locked: 0, color };
@@ -207,7 +210,17 @@ export default function FocusMapView({
   }, []);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full" style={{
+      border: cogLoad.overloaded ? '3px solid #EF4444' : cogLoad.percentage >= 80 ? '2px solid #F59E0B' : 'none',
+      borderRadius: cogLoad.percentage >= 80 ? '16px' : undefined,
+      transition: 'border 0.4s ease',
+    }}>
+      {cogLoad.overloaded && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 rounded-full bg-red-50 border border-red-300 text-red-700 text-xs font-bold shadow-md"
+          style={{ animation: 'pulse 2s ease-in-out infinite' }}>
+          עומס קוגניטיבי: {cogLoad.total} דק׳ / {cogLoad.threshold} דק׳ ({cogLoad.percentage}%)
+        </div>
+      )}
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VB} ${VB}`}
