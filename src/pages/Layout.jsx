@@ -38,6 +38,7 @@ import { AyoaViewProvider, useAyoaView } from "@/contexts/AyoaViewContext";
 import { DesignProvider } from "@/contexts/DesignContext";
 import DesignFloatingTab from "@/components/canvas/DesignFloatingTab";
 import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
+import { runAllAutomations } from "@/engines/automationEngine";
 
 // Work Modes — aligned to P1-P5 pillar tree
 const WORK_MODES = [
@@ -388,6 +389,29 @@ function LayoutInner({ children }) {
       } catch { setDailyFocusTasks([]); }
     };
     loadDailyFocus();
+  }, []);
+
+  // Background automation runner: auto-archive, sequence unlock
+  useEffect(() => {
+    let paused = false;
+    try {
+      const prefs = JSON.parse(localStorage.getItem('calmplan_design_prefs') || '{}');
+      paused = prefs.automationsPaused || false;
+    } catch { /* ignore */ }
+
+    const runAutomations = async () => {
+      try {
+        const allTasks = await Task.list(null, 5000).catch(() => []);
+        if (Array.isArray(allTasks) && allTasks.length > 0) {
+          await runAllAutomations(allTasks, paused);
+        }
+      } catch { /* silent */ }
+    };
+
+    // Run once on mount, then every 10 minutes
+    const timer = setTimeout(runAutomations, 5000);
+    const interval = setInterval(runAutomations, 10 * 60 * 1000);
+    return () => { clearTimeout(timer); clearInterval(interval); };
   }, []);
 
   const toggleMyMenu = useCallback((href) => {

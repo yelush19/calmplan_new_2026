@@ -11,11 +11,12 @@ import {
   Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle,
   Plus, X, Download, Upload, Database, Cloud, AlertTriangle, RefreshCw,
   Settings, Trash2, Server, Pencil, Briefcase, Heart,
-  Monitor, FileText, CalendarClock, BarChart3, Users, Tag, Network
+  Monitor, FileText, CalendarClock, BarChart3, Users, Tag, Network, Zap
 } from 'lucide-react';
 import { exportAllData, importAllData } from '@/api/base44Client';
 import { isSupabaseConfigured } from '@/api/supabaseClient';
 import { loadPlatformConfig, savePlatformConfig, DEFAULT_PLATFORMS } from '@/config/platformConfig';
+import { getAutomationLog, clearAutomationLog } from '@/engines/automationEngine';
 import ExecutionPeriodSettings from '@/components/settings/ExecutionPeriodSettings';
 import SettingsMindMap from '@/components/settings/SettingsMindMap';
 import TemplatePanel from '@/components/settings/TemplatePanel';
@@ -28,6 +29,7 @@ import ServiceCatalogSection from '@/components/settings/ServiceCatalogSection';
 
 const TABS = [
   { key: 'architect', label: 'Process Architect', icon: Network, color: 'text-[#E91E63]', bg: 'bg-gradient-to-r from-[#E91E6310] to-[#FFC10710] border-[#E91E6330]', activeBg: 'bg-gradient-to-r from-[#E91E63] to-[#FFC107] text-white' },
+  { key: 'automations', label: 'אוטומציות', icon: Zap, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-200', activeBg: 'bg-purple-600 text-white' },
   { key: 'system', label: 'מערכת', icon: Monitor, color: 'text-[#4682B4]', bg: 'bg-[#4682B408] border-[#4682B430]', activeBg: 'bg-[#4682B4] text-white' },
 ];
 
@@ -130,6 +132,7 @@ export default function SettingsPage() {
             {showServiceCatalog && <ServiceCatalog />}
           </div>
         )}
+        {activeTab === 'automations' && <AutomationSettings />}
         {activeTab === 'system' && <SystemSettings />}
       </motion.div>
     </div>
@@ -525,6 +528,170 @@ function LenaSettings() {
 // =====================================================
 // SYSTEM TAB - Platforms & Backup
 // =====================================================
+
+// =====================================================
+// =====================================================
+// AUTOMATION SETTINGS — Log, Pause Toggle, Cognitive Load Limit
+// =====================================================
+
+function AutomationSettings() {
+  const [log, setLog] = useState(() => getAutomationLog());
+  const [paused, setPaused] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('calmplan_design_prefs') || '{}').automationsPaused || false; }
+    catch { return false; }
+  });
+  const [cogLimit, setCogLimit] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('calmplan_design_prefs') || '{}').cognitiveLoadLimit || 480; }
+    catch { return 480; }
+  });
+
+  const togglePause = () => {
+    const next = !paused;
+    setPaused(next);
+    try {
+      const prefs = JSON.parse(localStorage.getItem('calmplan_design_prefs') || '{}');
+      prefs.automationsPaused = next;
+      localStorage.setItem('calmplan_design_prefs', JSON.stringify(prefs));
+    } catch { /* ignore */ }
+  };
+
+  const updateCogLimit = (val) => {
+    const num = parseInt(val, 10);
+    if (isNaN(num) || num < 0) return;
+    setCogLimit(num);
+    try {
+      const prefs = JSON.parse(localStorage.getItem('calmplan_design_prefs') || '{}');
+      prefs.cognitiveLoadLimit = num;
+      localStorage.setItem('calmplan_design_prefs', JSON.stringify(prefs));
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Zap className="w-5 h-5 text-purple-600" />
+        <h2 className="text-lg font-bold text-gray-800">אוטומציות ובקרה</h2>
+      </div>
+
+      {/* Global Pause Toggle */}
+      <Card className={`border-2 ${paused ? 'border-orange-300 bg-orange-50' : 'border-green-200 bg-green-50'}`}>
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paused ? 'bg-orange-100' : 'bg-green-100'}`}>
+                <Zap className={`w-5 h-5 ${paused ? 'text-orange-600' : 'text-green-600'}`} />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-gray-800">
+                  {paused ? 'אוטומציות מושהות' : 'אוטומציות פעילות'}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {paused ? 'כל הפעולות האוטומטיות מושהות — עבודה ידנית בלבד' : 'ארכיון אוטומטי, נעילת תלויות, והתראות עומס פעילים'}
+                </div>
+              </div>
+            </div>
+            <Switch checked={!paused} onCheckedChange={togglePause} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cognitive Load Threshold */}
+      <Card className="border">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-purple-600" />
+            סף עומס קוגניטיבי יומי
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-xs text-gray-500">
+            כשסך הדקות של משימות פעילות היום חורג מהסף — מסגרת הפוקוס היומי תהפוך לאדום/כתום.
+          </p>
+          <div className="flex items-center gap-3">
+            <Input type="number" value={cogLimit} onChange={e => updateCogLimit(e.target.value)}
+              className="w-24 text-center font-bold" min={60} max={960} step={30} />
+            <span className="text-xs text-gray-500">דקות ({Math.round(cogLimit / 60)} שעות)</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Automations List */}
+      <Card className="border">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">אוטומציות פעילות</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {[
+            { name: 'ארכיון אוטומטי', desc: 'משימות שהושלמו עוברות לארכיון אחרי 24 שעות', active: !paused },
+            { name: 'זרימה מותנית', desc: 'משימת המשך "נפתחת" כשהתנאי הקודם הושלם', active: !paused },
+            { name: 'סנכרון סטטוס', desc: 'ענף אב פועם כשמשימת-בת בביצוע', active: !paused },
+            { name: 'התראת עומס', desc: 'מסגרת אדומה כשעומס יומי חורג מהסף', active: true },
+          ].map((a, i) => (
+            <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50">
+              <div className={`w-2 h-2 rounded-full ${a.active ? 'bg-green-500' : 'bg-gray-300'}`} />
+              <div className="flex-1">
+                <div className="text-xs font-bold text-gray-700">{a.name}</div>
+                <div className="text-[10px] text-gray-400">{a.desc}</div>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Automation Log */}
+      <Card className="border">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <FileText className="w-4 h-4 text-gray-500" />
+              לוג אוטומציות
+              <Badge className="bg-gray-100 text-gray-600 text-[10px]">{log.length}</Badge>
+            </CardTitle>
+            {log.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => { clearAutomationLog(); setLog([]); }}
+                className="text-[10px] text-gray-400 h-6 px-2">
+                <Trash2 className="w-3 h-3 mr-1" /> נקה
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {log.length === 0 ? (
+            <div className="text-xs text-gray-400 text-center py-4">
+              אין פעולות אוטומטיות עדיין
+            </div>
+          ) : (
+            <div className="max-h-64 overflow-y-auto space-y-1.5">
+              {log.slice(0, 50).map(entry => (
+                <div key={entry.id} className="flex items-start gap-2 px-2 py-1.5 rounded-lg bg-gray-50 text-[10px]">
+                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                    entry.action === 'task_unlocked' ? 'bg-green-500' :
+                    entry.action === 'task_archived' ? 'bg-blue-500' : 'bg-gray-400'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-bold text-gray-700">
+                      {entry.action === 'task_unlocked' ? 'נפתחה' :
+                       entry.action === 'task_archived' ? 'הועברה לארכיון' : entry.action}
+                    </span>
+                    {entry.taskTitle && (
+                      <span className="text-gray-500"> — {entry.taskTitle}</span>
+                    )}
+                    {entry.unlockedBy && (
+                      <span className="text-green-600"> (אחרי: {entry.unlockedBy})</span>
+                    )}
+                  </div>
+                  <span className="text-gray-300 shrink-0 whitespace-nowrap">
+                    {new Date(entry.timestamp).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 // =====================================================
 // DATA CLEANUP — Delete old tasks before a cutoff date

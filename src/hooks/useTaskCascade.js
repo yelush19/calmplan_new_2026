@@ -31,6 +31,7 @@ import {
   P2_PHASE_B_SERVICES,
   P2_PHASE_C_SERVICES,
 } from '@/engines/taskCascadeEngine';
+import { processSequenceUnlock } from '@/engines/automationEngine';
 
 /**
  * Notify other components/pages that data has changed.
@@ -185,6 +186,18 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
         }
       }
 
+      // Sequence Engine: if task reached production_completed, unlock dependents
+      if (finalUpdates.status === 'production_completed') {
+        const completedTask = { ...task, ...finalUpdates };
+        const unlocked = await processSequenceUnlock(completedTask, tasks);
+        if (unlocked.length > 0) {
+          setTasks(prev => prev.map(t => {
+            const u = unlocked.find(ul => ul.id === t.id);
+            return u ? { ...t, status: 'not_started' } : t;
+          }));
+        }
+      }
+
       notifyChange('tasks');
     } catch (err) {
       console.error('Cascade update failed:', err);
@@ -249,6 +262,18 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
           if (created) {
             setTasks(prev => [...prev, created]);
           }
+        }
+      }
+
+      // Sequence Engine: if task reached production_completed, unlock dependents
+      if (updates.status === 'production_completed') {
+        const completedTask = { ...task, ...updates };
+        const unlocked = await processSequenceUnlock(completedTask, tasks);
+        if (unlocked.length > 0) {
+          setTasks(prev => prev.map(t => {
+            const u = unlocked.find(ul => ul.id === t.id);
+            return u ? { ...t, status: 'not_started' } : t;
+          }));
         }
       }
 

@@ -12,25 +12,27 @@ import React, { useState, useMemo, useRef, useCallback, useContext, createContex
 import { renderNodeShape, buildTaperedBranch } from './AyoaNode';
 import { getConnectionProps } from '@/engines/lineStyleEngine';
 import { useDesign } from '@/contexts/DesignContext';
+import { getActiveBranches } from '@/engines/automationEngine';
 import FloatingToolbar from './FloatingToolbar';
 
 const VB_W = 1400, VB_H = 900;
 const CX = VB_W / 2, CY = VB_H / 2;
 
-const DNA = {
-  P1: '#00A3E0',
-  P2: '#B2AC88',
-  P3: '#E91E63',
-  P4: '#FFC107',
+// Default DNA — overridden by Design Engine branchColors at runtime
+const DNA_DEFAULTS = {
+  P1: '#00A3E0', P2: '#4682B4', P3: '#E91E63', P4: '#FFC107', P5: '#2E7D32',
 };
 
-function getCategoryColor(category) {
-  if (!category) return DNA.P3;
+function getCategoryColor(category, branchColors) {
+  const c = branchColors || DNA_DEFAULTS;
+  if (!category) return c.P3;
   const cat = (category || '').toLowerCase();
-  if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return DNA.P1;
-  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות') || cat.includes('מאזנ')) return DNA.P2;
-  if (cat.includes('admin') || cat.includes('אדמיני') || cat.includes('ייעוץ') || cat.includes('פגישה') || cat.includes('שיווק')) return DNA.P3;
-  return DNA.P4;
+  if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return c.P1;
+  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות') || cat.includes('מאזנ')) return c.P2;
+  if (cat.includes('בית') || cat.includes('אישי') || cat.includes('home') || cat.includes('ארוחות')) return c.P4;
+  if (cat.includes('דוח שנתי') || cat.includes('הצהרת הון') || cat.includes('מאזנ')) return c.P5;
+  if (cat.includes('admin') || cat.includes('אדמיני') || cat.includes('ייעוץ') || cat.includes('פגישה') || cat.includes('שיווק')) return c.P3;
+  return c.P4;
 }
 
 export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', centerSub = '' }) {
@@ -46,6 +48,10 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
   const globalShape = design?.shape || 'bubble';
   const globalLineStyle = design?.lineStyle || 'tapered';
   const softShadows = design?.softShadows !== false;
+  const branchColors = design?.branchColors || DNA_DEFAULTS;
+
+  // Status Sync: detect which categories have active sub-tasks
+  const activeBranches = useMemo(() => getActiveBranches(tasks), [tasks]);
 
   const { categoryNodes, taskNodes } = useMemo(() => {
     const catMap = {};
@@ -66,7 +72,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
 
     catEntries.forEach(([cat, catTasks], ci) => {
       const angle = -Math.PI / 2 + ci * angleStep;
-      const dnaColor = getCategoryColor(cat);
+      const dnaColor = getCategoryColor(cat, branchColors);
       const cx = CX + Math.cos(angle) * catRadius;
       const cy = CY + Math.sin(angle) * catRadius;
 
@@ -116,7 +122,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
     });
 
     return { categoryNodes: catNodes, taskNodes: tNodes };
-  }, [tasks, overrides, globalShape]);
+  }, [tasks, overrides, globalShape, branchColors]);
 
   const allNodes = [...categoryNodes, ...taskNodes];
 
@@ -221,6 +227,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
           const isFocused = focusedNode === node.id;
           const isBlurred = focusedNode !== null && !isFocused;
           const isSelected = selectedNode === node.id;
+          const isActive = activeBranches.has(node.label);
           return (
             <g key={node.id}
               onClick={(e) => handleNodeClick(e, node.id)}
@@ -230,6 +237,15 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
                 filter: isBlurred ? 'url(#map-blur)' : 'none',
                 opacity: isBlurred ? 0.25 : 1,
               }}>
+              {/* Status Sync: pulsing ring when branch has active sub-tasks */}
+              {isActive && !isBlurred && (
+                <circle cx={node.x} cy={node.y} r={node.r + 12}
+                  fill="none" stroke={node.color} strokeWidth={2} strokeDasharray="8 4">
+                  <animate attributeName="opacity" values="0.7;0.2;0.7" dur="2s" repeatCount="indefinite" />
+                  <animate attributeName="r" values={`${node.r + 12};${node.r + 15};${node.r + 12}`}
+                    dur="2s" repeatCount="indefinite" />
+                </circle>
+              )}
               {isSelected && (
                 <circle cx={node.x} cy={node.y} r={node.r + 8}
                   fill="none" stroke={node.color} strokeWidth={1.5} strokeDasharray="6 4" opacity={0.6}>
