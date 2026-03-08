@@ -14,7 +14,7 @@
  * to every mounted component — no refresh needed.
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 const LS_KEY = 'calmplan_design_prefs';
 
@@ -195,6 +195,54 @@ export function DesignProvider({ children }) {
     return prefs.nodeOverrides?.[nodeId] || null;
   }, [prefs.nodeOverrides]);
 
+  // ── Global Active Task Selection ──
+  // Tracks which node is currently selected across ALL views.
+  const [activeTaskId, setActiveTaskId] = useState(null);
+
+  // Listen for node-selected events from any canvas view
+  useEffect(() => {
+    const handler = (e) => {
+      const nodeId = e.detail?.nodeId;
+      if (nodeId) setActiveTaskId(nodeId);
+    };
+    window.addEventListener('calmplan:node-selected', handler);
+    return () => window.removeEventListener('calmplan:node-selected', handler);
+  }, []);
+
+  /**
+   * updateTaskStyle — the single function Design Panel buttons call.
+   * Applies shape/color/sticker to the currently selected activeTaskId.
+   * Works across ALL views because nodeOverrides and stickerMap are global.
+   */
+  const updateTaskStyle = useCallback((overrides) => {
+    const targetId = overrides?.targetId || activeTaskId;
+    if (!targetId) return;
+    const { shape, color, sticker, ...rest } = overrides || {};
+    if (shape || color) {
+      setPrefs(prev => ({
+        ...prev,
+        nodeOverrides: {
+          ...prev.nodeOverrides,
+          [targetId]: {
+            ...(prev.nodeOverrides?.[targetId] || {}),
+            ...(shape ? { shape } : {}),
+            ...(color ? { color } : {}),
+          },
+        },
+      }));
+    }
+    if (sticker !== undefined) {
+      setPrefs(prev => ({
+        ...prev,
+        stickerMap: { ...prev.stickerMap, [targetId]: sticker },
+      }));
+    }
+  }, [activeTaskId]);
+
+  const clearSelection = useCallback(() => {
+    setActiveTaskId(null);
+  }, []);
+
   const resetToDefaults = useCallback(() => {
     setPrefs({ ...DEFAULTS });
   }, []);
@@ -223,6 +271,10 @@ export function DesignProvider({ children }) {
       resetToDefaults,
       getBranchColor,
       setBranchColor,
+      activeTaskId,
+      setActiveTaskId,
+      updateTaskStyle,
+      clearSelection,
     }}>
       {children}
     </DesignContext.Provider>

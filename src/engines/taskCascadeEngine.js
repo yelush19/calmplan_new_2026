@@ -707,6 +707,50 @@ export const SERVICE_DEPENDENCIES = {
   pnl_reports:    ['vat_reporting', 'reconciliation'],
 };
 
+// ── Reverse Next-Step AND Logic ──
+// Reads service "nextStepIds" from ALL_SERVICES + localStorage overrides/customServices.
+// If multiple services point to the same target via nextStepIds, that target requires
+// ALL of them to complete (AND condition) — no separate "Prerequisites" field needed.
+
+const LS_OVERRIDES_KEY = 'calmplan_service_overrides';
+const LS_CUSTOM_KEY = 'calmplan_custom_services';
+
+/**
+ * Build a reverse prerequisite map from nextStepIds.
+ * Returns { targetServiceKey → [sourceServiceKey1, sourceServiceKey2, ...] }
+ * If a target has multiple sources, it means AND: all must complete to unlock.
+ */
+export function computeReversePrerequisites() {
+  let overrides = {};
+  let customServices = {};
+  try { overrides = JSON.parse(localStorage.getItem(LS_OVERRIDES_KEY) || '{}'); } catch { /* ignore */ }
+  try { customServices = JSON.parse(localStorage.getItem(LS_CUSTOM_KEY) || '{}'); } catch { /* ignore */ }
+
+  // Merge: ALL_SERVICES + overrides + custom
+  const merged = {};
+  for (const [key, svc] of Object.entries(ALL_SERVICES)) {
+    if (overrides[key]?._hidden) continue;
+    merged[key] = { ...svc, ...(overrides[key] || {}) };
+  }
+  for (const [key, svc] of Object.entries(customServices)) {
+    if (!ALL_SERVICES[key]) merged[key] = { ...svc };
+  }
+
+  // Build reverse map: target → [sources that point to it]
+  const reverseMap = {};
+  for (const [key, svc] of Object.entries(merged)) {
+    const nextIds = svc.nextStepIds || (svc.nextStepId ? [svc.nextStepId] : []);
+    for (const targetId of nextIds) {
+      if (!reverseMap[targetId]) reverseMap[targetId] = [];
+      if (!reverseMap[targetId].includes(key)) {
+        reverseMap[targetId].push(key);
+      }
+    }
+  }
+
+  return reverseMap;
+}
+
 /**
  * Check if a task's dependencies are satisfied.
  * Returns true if all prerequisite tasks for the same client+month are done.
@@ -731,20 +775,42 @@ export function areDependenciesMet(task, siblingTasks = []) {
   if (!serviceKey) return true;
 
   const deps = SERVICE_DEPENDENCIES[serviceKey];
-  if (!deps || deps.length === 0) return true;
 
-  // Check each dependency: find matching sibling task and verify it's done
-  for (const depKey of deps) {
-    const depTask = siblingTasks.find(t => {
-      const s = getServiceForTask(t);
-      const tKey = s?.key || t.serviceKey;
-      return tKey === depKey && t.client_name === task.client_name;
-    });
-    // If dependency task doesn't exist or isn't completed, deps not met
-    if (!depTask || depTask.status !== 'production_completed') {
-      return false;
+  // Path 2a: explicit SERVICE_DEPENDENCIES
+  if (deps && deps.length > 0) {
+    for (const depKey of deps) {
+      const depTask = siblingTasks.find(t => {
+        const s = getServiceForTask(t);
+        const tKey = s?.key || t.serviceKey;
+        return tKey === depKey && t.client_name === task.client_name;
+      });
+      if (!depTask || depTask.status !== 'production_completed') {
+        return false;
+      }
     }
+    return true;
   }
+
+  // Path 3: Reverse next-step AND logic — if multiple services point to this
+  // service via nextStepIds, ALL of them must be production_completed
+  try {
+    const reverseMap = computeReversePrerequisites();
+    const reversePrereqs = reverseMap[serviceKey];
+    if (reversePrereqs && reversePrereqs.length > 1) {
+      // AND condition: all source services must be done
+      for (const prereqKey of reversePrereqs) {
+        const prereqTask = siblingTasks.find(t => {
+          const s = getServiceForTask(t);
+          const tKey = s?.key || t.serviceKey;
+          return tKey === prereqKey && t.client_name === task.client_name;
+        });
+        if (!prereqTask || prereqTask.status !== 'production_completed') {
+          return false;
+        }
+      }
+    }
+  } catch { /* localStorage not available, skip */ }
+
   return true;
 }
 
@@ -769,8 +835,20 @@ export function getDependencyStatus(task, siblingTasks = []) {
   const serviceKey = service?.key || task.serviceKey;
   if (!serviceKey) return null;
 
+  // Check SERVICE_DEPENDENCIES or reverse next-step AND logic
   const deps = SERVICE_DEPENDENCIES[serviceKey];
-  if (!deps || deps.length === 0) return null;
+  let hasPrereqs = deps && deps.length > 0;
+
+  // Also check reverse map for multi-source AND
+  if (!hasPrereqs) {
+    try {
+      const reverseMap = computeReversePrerequisites();
+      const reversePrereqs = reverseMap[serviceKey];
+      if (reversePrereqs && reversePrereqs.length > 1) hasPrereqs = true;
+    } catch { /* ignore */ }
+  }
+
+  if (!hasPrereqs) return null;
 
   if (!areDependenciesMet(task, siblingTasks)) {
     return 'waiting_for_materials';

@@ -158,7 +158,9 @@ export default function DesignFloatingTab() {
   const design = useDesign();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('colors');
-  const [stickerTarget, setStickerTarget] = useState(''); // task ID to apply sticker to
+
+  // Use global activeTaskId from DesignContext as the sticker/style target
+  const stickerTarget = design.activeTaskId || '';
 
   const tabs = useMemo(() => [
     { key: 'colors', label: 'צבעים', icon: Palette },
@@ -170,16 +172,6 @@ export default function DesignFloatingTab() {
   ], []);
 
   const handleToggle = useCallback(() => setIsOpen(p => !p), []);
-
-  // Listen for node selection events from canvas views
-  React.useEffect(() => {
-    const handler = (e) => {
-      const nodeId = e.detail?.nodeId;
-      if (nodeId) setStickerTarget(nodeId);
-    };
-    window.addEventListener('calmplan:node-selected', handler);
-    return () => window.removeEventListener('calmplan:node-selected', handler);
-  }, []);
 
   return (
     <>
@@ -376,12 +368,28 @@ export default function DesignFloatingTab() {
 
               {/* ══ SHAPES TAB ══ */}
               {activeTab === 'shapes' && (
-                <Section label="צורת בועה">
+                <Section label={stickerTarget ? `צורה לבועה: ${stickerTarget.substring(0, 12)}...` : 'צורת בועה (גלובלי)'}>
+                  {stickerTarget && (
+                    <div className="mb-2 px-2 py-1.5 rounded-xl bg-[#E91E63]/5 border border-[#E91E63]/20">
+                      <p className="text-[9px] font-bold text-[#E91E63]">
+                        משנה צורה לבועה הנבחרת בלבד
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 gap-2">
                     {SHAPE_OPTIONS.map(s => {
-                      const isActive = design.shape === s.key;
+                      const nodeOv = stickerTarget ? design.getNodeOverride?.(stickerTarget) : null;
+                      const isActive = stickerTarget
+                        ? (nodeOv?.shape || design.shape) === s.key
+                        : design.shape === s.key;
                       return (
-                        <button key={s.key} onClick={() => design.updatePref('shape', s.key)}
+                        <button key={s.key} onClick={() => {
+                          if (stickerTarget) {
+                            design.updateTaskStyle({ shape: s.key, targetId: stickerTarget });
+                          } else {
+                            design.updatePref('shape', s.key);
+                          }
+                        }}
                           className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
                             isActive ? 'shadow-md' : 'border-transparent hover:bg-gray-50'
                           }`}
@@ -440,14 +448,14 @@ export default function DesignFloatingTab() {
                 <>
                   <Section label="סטיקר לבועה נבחרת">
                     <div className="mb-2">
-                      <input
-                        type="text"
-                        value={stickerTarget}
-                        onChange={(e) => setStickerTarget(e.target.value)}
-                        placeholder="הזן מזהה משימה (Task ID) או בחר בועה במפה"
-                        className="w-full px-2.5 py-1.5 rounded-xl border text-[10px]"
-                        style={{ borderColor: 'var(--cp-border)', color: 'var(--cp-text)' }}
-                      />
+                      <div className="w-full px-2.5 py-1.5 rounded-xl border text-[10px] min-h-[28px]"
+                        style={{ borderColor: 'var(--cp-border)', color: 'var(--cp-text)', background: stickerTarget ? '#E91E6308' : undefined }}>
+                        {stickerTarget ? (
+                          <span className="font-bold">{stickerTarget.substring(0, 24)}{stickerTarget.length > 24 ? '...' : ''}</span>
+                        ) : (
+                          <span style={{ color: 'var(--cp-text-secondary)' }}>לחץ על בועה במפה לבחירה</span>
+                        )}
+                      </div>
                       <p className="text-[9px] mt-1" style={{ color: 'var(--cp-text-secondary)' }}>
                         לחץ על בועה במפה → המזהה יופיע כאן → בחר סטיקר
                       </p>
