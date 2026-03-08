@@ -610,6 +610,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [syncTimestamp, setSyncTimestamp] = useState(null);
 
   // ── Build LIVE service registry (directive #1, #2, #3) ──
+  // DEDUP GUARD: template services always win. Custom services only add NEW keys.
+  // This prevents ghost bubbles from localStorage duplicating template services.
   const liveServices = useMemo(() => {
     const merged = {};
     for (const [key, svc] of Object.entries(ALL_SERVICES)) {
@@ -617,6 +619,11 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       merged[key] = { ...svc, ...(overrides[key] || {}) };
     }
     for (const [key, svc] of Object.entries(customServices)) {
+      // Only add truly custom services — skip if template already defines this key
+      if (ALL_SERVICES[key]) {
+        console.log(`[MindMap] Skipping custom service "${key}" — already in templates`);
+        continue;
+      }
       merged[key] = { ...svc };
     }
     return merged;

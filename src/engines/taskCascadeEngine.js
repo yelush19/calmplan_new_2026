@@ -611,7 +611,9 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
  * Maps dependent service → required dependency service keys.
  */
 export const SERVICE_DEPENDENCIES = {
-  vat_reporting:  ['income_collection', 'expense_collection'],
+  // VAT blocked until both income + expense collection are production_completed
+  vat:            ['income_collection', 'expense_collection'],
+  // Tax advances blocked until income collection is production_completed
   tax_advances:   ['income_collection'],
 };
 

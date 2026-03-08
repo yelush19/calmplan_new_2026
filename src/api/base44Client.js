@@ -118,6 +118,7 @@ function _cacheToLocal(entityName, items) {
       BalanceSheet: 'balance_sheets', StickyNote: 'sticky_notes', Project: 'projects',
       SystemConfig: 'system_config', PeriodicReport: 'periodic_reports',
       FileMetadata: 'file_metadata',
+      ServiceCatalog: 'service_catalog',
     };
     const collName = collectionMap[entityName];
     if (collName && items.length > 0) {

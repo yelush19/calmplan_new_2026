@@ -185,18 +185,28 @@ export const ADDITIONAL_SERVICES = {
     key: 'income_collection',
     label: 'קליטת הכנסות',
     dashboard: 'tax',
+    branch: 'P2',
     taskCategories: ['קליטת הכנסות', 'work_income_collection'],
     createCategory: 'קליטת הכנסות',
-    steps: [],
+    steps: [
+      { key: 'receive_data',   label: 'קבלת חומרים',      icon: 'download' },
+      { key: 'income_input',   label: 'הזנת הכנסות',      icon: 'file-text' },
+      { key: 'check_entries',  label: 'בדיקת רשומות',     icon: 'check-circle' },
+    ],
   },
 
   expense_collection: {
     key: 'expense_collection',
     label: 'קליטת הוצאות',
     dashboard: 'tax',
+    branch: 'P2',
     taskCategories: ['קליטת הוצאות', 'work_expense_collection'],
     createCategory: 'קליטת הוצאות',
-    steps: [],
+    steps: [
+      { key: 'receive_data',   label: 'קבלת חומרים',      icon: 'download' },
+      { key: 'expense_input',  label: 'הזנת הוצאות',      icon: 'file-text' },
+      { key: 'check_entries',  label: 'בדיקת רשומות',     icon: 'check-circle' },
+    ],
   },
 
   authorities_payment: {
