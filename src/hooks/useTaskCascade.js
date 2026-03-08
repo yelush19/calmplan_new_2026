@@ -31,6 +31,7 @@ import {
   MSB_COLLECTOR_SERVICES,
   P2_PHASE_B_SERVICES,
   P2_PHASE_C_SERVICES,
+  P2_COLLECTOR_SERVICES,
 } from '@/engines/taskCascadeEngine';
 import { processSequenceUnlock } from '@/engines/automationEngine';
 
@@ -167,9 +168,18 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
               process_steps: templateSteps,
             };
           };
+          const p2PnlCollectors = P2_COLLECTOR_SERVICES
+            .filter(s => !existingCategories.has(s.createCategory))
+            .map(s => ({
+              ...buildChild(s, 'pnl_collector'),
+              status: 'waiting_for_materials',
+              is_collector: true,
+              dependency_ids: [],
+            }));
           tasksToCreate = [
             ...P2_PHASE_B_SERVICES.filter(s => !existingCategories.has(s.createCategory)).map(s => buildChild(s, 'phase_b')),
             ...P2_PHASE_C_SERVICES.filter(s => !existingCategories.has(s.createCategory)).map(s => buildChild(s, 'phase_c')),
+            ...p2PnlCollectors,
           ];
         }
         // Service Filtering: apply חוק בל יעבור to manually built tasks too
@@ -181,44 +191,59 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
       if (tasksToCreate.length > 0) {
         const existingTitles = new Set(tasks.map(t => t.title));
 
-        // Separate MSB collectors from regular child tasks
+        // Separate collectors from regular child tasks
         const regularTasks = tasksToCreate.filter(t => !t.is_collector);
-        const msbCollectors = tasksToCreate.filter(t => t.is_collector);
-        const createdPhaseB = [];
+        const collectors = tasksToCreate.filter(t => t.is_collector);
+        const createdRegular = [];
 
-        // Create regular tasks first (Phase B reporting tasks)
+        // Create regular tasks first
         for (const newTask of regularTasks) {
           if (existingTitles.has(newTask.title)) continue;
           const created = await Task.create(newTask);
           if (created) {
             setTasks(prev => [...prev, created]);
-            // Track Phase B tasks for MSB dependency wiring
-            if (created.workflow_phase === 'phase_b') {
-              createdPhaseB.push(created);
-            }
+            createdRegular.push(created);
           }
         }
 
-        // Now create MSB collectors with dependency_ids pointing to Phase B tasks
-        // Also include sibling reporting tasks from previous months
-        const siblingReportIds = tasks
-          .filter(t =>
-            t.client_name === task.client_name &&
-            t.branch === 'P1' &&
-            t.workflow_phase === 'phase_b' &&
-            t.report_month === task.report_month &&
-            t.status !== 'production_completed'
-          )
-          .map(t => t.id);
-
-        const allDepIds = [
-          ...createdPhaseB.map(t => t.id),
-          ...siblingReportIds,
-        ];
-
-        for (const collector of msbCollectors) {
+        // Wire and create collectors with dependency_ids
+        for (const collector of collectors) {
           if (existingTitles.has(collector.title)) continue;
-          collector.dependency_ids = allDepIds;
+
+          if (collector.workflow_phase === 'msb_collector') {
+            // P1 MSB: depends on all Phase B reporting tasks
+            const siblingPhaseB = tasks
+              .filter(t =>
+                t.client_name === task.client_name &&
+                t.branch === 'P1' &&
+                t.workflow_phase === 'phase_b' &&
+                t.report_month === task.report_month &&
+                t.status !== 'production_completed'
+              )
+              .map(t => t.id);
+            const createdPhaseB = createdRegular
+              .filter(t => t.workflow_phase === 'phase_b' && t.branch === 'P1')
+              .map(t => t.id);
+            collector.dependency_ids = [...createdPhaseB, ...siblingPhaseB];
+
+          } else if (collector.workflow_phase === 'pnl_collector') {
+            // P2 P&L: depends on VAT (מע"מ) + Reconciliation (התאמות) for same client+month
+            const vatAndAdjIds = [
+              ...createdRegular.filter(t =>
+                (t.serviceKey === 'vat_reporting' || t.serviceKey === 'reconciliation') &&
+                t.client_name === task.client_name
+              ).map(t => t.id),
+              ...tasks.filter(t =>
+                t.client_name === task.client_name &&
+                t.report_month === task.report_month &&
+                (t.serviceKey === 'vat_reporting' || t.serviceKey === 'reconciliation' ||
+                 t.category === 'מע"מ' || t.category === 'התאמות') &&
+                t.status !== 'production_completed'
+              ).map(t => t.id),
+            ];
+            collector.dependency_ids = vatAndAdjIds;
+          }
+
           const created = await Task.create(collector);
           if (created) {
             setTasks(prev => [...prev, created]);

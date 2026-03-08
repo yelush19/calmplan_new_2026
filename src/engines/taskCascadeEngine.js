@@ -207,7 +207,13 @@ export const P2_PHASE_B_SERVICES = [
 ];
 
 export const P2_PHASE_C_SERVICES = [
-  { serviceKey: 'pnl_reports',     title: 'דוח רווח והפסד',   createCategory: 'רווח והפסד' },
+  // P&L moved to P2_COLLECTOR_SERVICES — it's a multi-parent convergence node
+];
+
+// P2 Collector Services — multi-parent convergence nodes
+// P&L requires BOTH מע"מ (VAT) AND התאמות (Reconciliation) to be Done
+export const P2_COLLECTOR_SERVICES = [
+  { serviceKey: 'pnl_reports', title: 'דוח רווח והפסד', createCategory: 'רווח והפסד' },
 ];
 
 // ============================================================
@@ -629,10 +635,46 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
       !existingCategories.has(svc.createCategory)
     );
 
-    result.autoCreateTasks = [
+    const regularTasks = [
       ...buildP2Children(phaseB, 'phase_b', 'שלב ב\' | דיווחי מיסים'),
       ...buildP2Children(phaseC, 'phase_c', 'שלב ג\' | תוצרים'),
     ];
+
+    // P&L Collector — convergence node with AND dependencies on VAT + Reconciliation
+    const p2Collectors = P2_COLLECTOR_SERVICES.filter(svc =>
+      !existingCategories.has(svc.createCategory)
+    ).map(svc => {
+      const templateSteps = getStepsForService(svc.serviceKey);
+      const processSteps = {};
+      templateSteps.forEach(step => {
+        processSteps[step.key] = { done: false, date: null, notes: '' };
+      });
+      return {
+        serviceKey: svc.serviceKey,
+        title: `${svc.title} - ${task.client_name}`,
+        client_name: task.client_name,
+        client_id: task.client_id,
+        category: svc.createCategory || svc.title,
+        status: 'waiting_for_materials',       // LOCKED until VAT + Adjustments done
+        branch: 'P2',
+        due_date: subDueDate,
+        report_month: task.report_month,
+        report_year: task.report_year,
+        report_period: task.report_period,
+        context: 'work',
+        is_recurring: true,
+        workflow_phase: 'pnl_collector',
+        workflow_phase_label: 'דו"ח רוה"ס — ממתין למע"מ + התאמות',
+        dependency_ids: [],                     // Populated by useTaskCascade after sibling creation
+        is_collector: true,
+        master_task_id: task.id,
+        triggered_by: task.id,
+        source: 'bookkeeping_cascade',
+        process_steps: processSteps,
+      };
+    });
+
+    result.autoCreateTasks = [...regularTasks, ...p2Collectors];
 
     return result;
   }
@@ -661,6 +703,8 @@ export const SERVICE_DEPENDENCIES = {
   vat:            ['income_collection', 'expense_collection'],
   // Tax advances blocked until income collection is production_completed
   tax_advances:   ['income_collection'],
+  // P&L convergence: requires BOTH מע"מ (VAT) AND התאמות (Reconciliation) to be Done
+  pnl_reports:    ['vat_reporting', 'reconciliation'],
 };
 
 /**
@@ -672,17 +716,29 @@ export const SERVICE_DEPENDENCIES = {
  * @returns {boolean}
  */
 export function areDependenciesMet(task, siblingTasks = []) {
-  const service = getServiceForTask(task);
-  if (!service) return true;
+  // Path 1: Collector nodes with explicit dependency_ids array (AND logic)
+  if (task.is_collector && Array.isArray(task.dependency_ids) && task.dependency_ids.length > 0) {
+    return task.dependency_ids.every(depId => {
+      const depTask = siblingTasks.find(t => t.id === depId);
+      return depTask && depTask.status === 'production_completed';
+    });
+  }
 
-  const deps = SERVICE_DEPENDENCIES[service.key];
+  // Path 2: Service-based dependency lookup via SERVICE_DEPENDENCIES
+  const service = getServiceForTask(task);
+  // Also check by serviceKey field directly (for cascade-created tasks)
+  const serviceKey = service?.key || task.serviceKey;
+  if (!serviceKey) return true;
+
+  const deps = SERVICE_DEPENDENCIES[serviceKey];
   if (!deps || deps.length === 0) return true;
 
   // Check each dependency: find matching sibling task and verify it's done
   for (const depKey of deps) {
     const depTask = siblingTasks.find(t => {
       const s = getServiceForTask(t);
-      return s?.key === depKey && t.client_name === task.client_name;
+      const tKey = s?.key || t.serviceKey;
+      return tKey === depKey && t.client_name === task.client_name;
     });
     // If dependency task doesn't exist or isn't completed, deps not met
     if (!depTask || depTask.status !== 'production_completed') {
@@ -701,14 +757,20 @@ export function areDependenciesMet(task, siblingTasks = []) {
  * @returns {string|null} Override status or null if no override needed
  */
 export function getDependencyStatus(task, siblingTasks = []) {
-  const service = getServiceForTask(task);
-  if (!service) return null;
-
-  const deps = SERVICE_DEPENDENCIES[service.key];
-  if (!deps || deps.length === 0) return null;
-
   // If task is already completed, don't override
   if (task.status === 'production_completed') return null;
+
+  // Collectors always use areDependenciesMet
+  if (task.is_collector) {
+    return areDependenciesMet(task, siblingTasks) ? null : 'waiting_for_materials';
+  }
+
+  const service = getServiceForTask(task);
+  const serviceKey = service?.key || task.serviceKey;
+  if (!serviceKey) return null;
+
+  const deps = SERVICE_DEPENDENCIES[serviceKey];
+  if (!deps || deps.length === 0) return null;
 
   if (!areDependenciesMet(task, siblingTasks)) {
     return 'waiting_for_materials';
