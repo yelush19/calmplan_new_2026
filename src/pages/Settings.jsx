@@ -745,6 +745,135 @@ function DataCleanupSection() {
   );
 }
 
+function PurgeAllSection() {
+  const [isPurging, setIsPurging] = useState(false);
+  const [purgeResult, setPurgeResult] = useState(null);
+
+  const handlePurgeLocalStorage = async () => {
+    if (!window.confirm('⚠️ פעולה זו תמחק את כל ה-LocalStorage (נתוני מטמון, הגדרות עיצוב, תפריט אישי, גיבויים מקומיים).\n\nנתוני Supabase לא ייפגעו.\n\nלהמשיך?')) return;
+    setIsPurging(true);
+    setPurgeResult(null);
+    const log = [];
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('calmplan')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => {
+        localStorage.removeItem(k);
+        log.push(`Removed: ${k}`);
+      });
+      log.push(`Total purged: ${keysToRemove.length} keys`);
+      setPurgeResult({ success: true, count: keysToRemove.length, log });
+    } catch (e) {
+      setPurgeResult({ success: false, error: e.message, log });
+    }
+    setIsPurging(false);
+  };
+
+  const handlePurgeMockData = async () => {
+    if (!window.confirm('⚠️ פעולה זו תמחק את כל הנתונים הדמו/מוק מהמערכת (Supabase + localStorage).\n\nנתונים אמיתיים (לא דמו) לא ייפגעו.\n\nלהמשיך?')) return;
+    setIsPurging(true);
+    setPurgeResult(null);
+    const log = [];
+    try {
+      // Delete demo tasks from Task entity
+      const allTasks = await Task.list(null, 5000).catch(() => []);
+      const demoTasks = (allTasks || []).filter(t => t.isDemo || t.source === 'demo' || t.source === 'seed');
+      let deleted = 0;
+      for (const t of demoTasks) {
+        try { await Task.delete(t.id); deleted++; } catch { /* skip */ }
+      }
+      log.push(`Demo tasks deleted: ${deleted} of ${demoTasks.length}`);
+
+      // Clean localStorage demo markers
+      const raw = localStorage.getItem('calmplan_tasks');
+      if (raw) {
+        const tasks = JSON.parse(raw);
+        const cleaned = tasks.filter(t => !t.isDemo && t.source !== 'demo' && t.source !== 'seed');
+        localStorage.setItem('calmplan_tasks', JSON.stringify(cleaned));
+        log.push(`localStorage cleaned: ${tasks.length - cleaned.length} demo tasks removed`);
+      }
+
+      setPurgeResult({ success: true, count: deleted, log });
+    } catch (e) {
+      setPurgeResult({ success: false, error: e.message, log });
+    }
+    setIsPurging(false);
+  };
+
+  const handleNuclearPurge = async () => {
+    if (!window.confirm('☢️ NUCLEAR PURGE — מוחק הכל!\n\nכל ה-LocalStorage + כל הנתונים ב-DB.\nפעולה בלתי הפיכה.\n\nלהמשיך?')) return;
+    if (!window.confirm('בטוחה? לא ניתן לשחזר נתונים שנמחקו.')) return;
+    setIsPurging(true);
+    try {
+      const { clearAllData } = await import('@/api/base44Client');
+      clearAllData();
+      // Clear ALL localStorage (not just calmplan_ prefix)
+      localStorage.clear();
+      setPurgeResult({ success: true, count: -1, log: ['NUCLEAR: All data cleared. Reloading...'] });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e) {
+      setPurgeResult({ success: false, error: e.message, log: [] });
+      setIsPurging(false);
+    }
+  };
+
+  return (
+    <Card className="border-2 border-purple-200 bg-purple-50">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Trash2 className="w-4 h-4 text-purple-600" />
+          ניקוי כללי ומחיקת נתוני דמו
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <Button variant="outline" size="sm" onClick={handlePurgeLocalStorage} disabled={isPurging}
+            className="gap-2 text-xs border-purple-300 text-purple-700 hover:bg-purple-100">
+            <Database className="w-3 h-3" />
+            נקה LocalStorage
+          </Button>
+          <Button variant="outline" size="sm" onClick={handlePurgeMockData} disabled={isPurging}
+            className="gap-2 text-xs border-orange-300 text-orange-700 hover:bg-orange-100">
+            <Trash2 className="w-3 h-3" />
+            מחק נתוני דמו
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleNuclearPurge} disabled={isPurging}
+            className="gap-2 text-xs border-red-400 text-red-700 hover:bg-red-100 font-bold">
+            <AlertTriangle className="w-3 h-3" />
+            מחיקה מוחלטת
+          </Button>
+        </div>
+
+        {purgeResult && (
+          <div className={`p-3 rounded-lg text-xs ${purgeResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {purgeResult.success ? (
+              <div className="flex items-center gap-2 text-green-700">
+                <CheckCircle className="w-4 h-4" />
+                {purgeResult.count === -1 ? 'מחיקה מוחלטת — טוען מחדש...' : `נוקו ${purgeResult.count} פריטים בהצלחה`}
+              </div>
+            ) : (
+              <div className="text-red-700">שגיאה: {purgeResult.error}</div>
+            )}
+            {purgeResult.log?.length > 0 && (
+              <details className="mt-2 text-[10px] text-gray-500">
+                <summary className="cursor-pointer hover:text-gray-700">לוג</summary>
+                <pre className="mt-1 p-2 bg-gray-100 rounded whitespace-pre-wrap max-h-24 overflow-y-auto">
+                  {purgeResult.log.join('\n')}
+                </pre>
+              </details>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function SystemSettings() {
   return (
     <div className="space-y-4">
@@ -754,6 +883,7 @@ function SystemSettings() {
       </div>
       <ServiceCatalogSection />
       <div className="grid grid-cols-1 gap-4">
+        <PurgeAllSection />
         <DataCleanupSection />
         <CloudSyncSection />
         <PlatformManagementSection />
