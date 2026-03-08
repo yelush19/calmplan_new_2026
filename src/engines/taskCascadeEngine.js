@@ -60,6 +60,12 @@ const CATEGORY_TO_BRANCH = {
   'consulting': 'P3', 'ייעוץ': 'P3', 'work_consulting': 'P3',
   'reconciliation': 'P3', 'התאמות': 'P3',
   'מילואים': 'P3', 'work_reserve_claims': 'P3',
+  // P4 — Home
+  'home': 'P4', 'בית': 'P4',
+  // P5 — Annual Reports & Capital Statements
+  'work_annual_reports': 'P5', 'annual_reports': 'P5', 'דוח שנתי': 'P5',
+  'work_capital_statement': 'P5', 'הצהרת הון': 'P5',
+  'work_balance_sheets': 'P5', 'balance_sheets': 'P5', 'מאזנים': 'P5',
 };
 
 /**
@@ -594,6 +600,75 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
 }
 
 // ============================================================
+// 2b-2. DEPENDENCY ENGINE: Collection → Tax/Advances activation
+// ============================================================
+// Pre-requisite logic: VAT and Tax Advances tasks only become
+// 'Active' (not_started) once their dependency tasks (קליטת הכנסות
+// and קליטת הוצאות) are marked as 'Done' (production_completed).
+
+/**
+ * Service keys that act as dependencies (pre-requisites).
+ * Maps dependent service → required dependency service keys.
+ */
+export const SERVICE_DEPENDENCIES = {
+  vat_reporting:  ['income_collection', 'expense_collection'],
+  tax_advances:   ['income_collection'],
+};
+
+/**
+ * Check if a task's dependencies are satisfied.
+ * Returns true if all prerequisite tasks for the same client+month are done.
+ *
+ * @param {Object} task - The dependent task (e.g., VAT)
+ * @param {Object[]} siblingTasks - All tasks for same client + reporting month
+ * @returns {boolean}
+ */
+export function areDependenciesMet(task, siblingTasks = []) {
+  const service = getServiceForTask(task);
+  if (!service) return true;
+
+  const deps = SERVICE_DEPENDENCIES[service.key];
+  if (!deps || deps.length === 0) return true;
+
+  // Check each dependency: find matching sibling task and verify it's done
+  for (const depKey of deps) {
+    const depTask = siblingTasks.find(t => {
+      const s = getServiceForTask(t);
+      return s?.key === depKey && t.client_name === task.client_name;
+    });
+    // If dependency task doesn't exist or isn't completed, deps not met
+    if (!depTask || depTask.status !== 'production_completed') {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Get the effective status for a task considering its dependencies.
+ * If dependencies aren't met, force status to 'waiting_for_materials'.
+ *
+ * @param {Object} task - The task to evaluate
+ * @param {Object[]} siblingTasks - All tasks for same client + reporting month
+ * @returns {string|null} Override status or null if no override needed
+ */
+export function getDependencyStatus(task, siblingTasks = []) {
+  const service = getServiceForTask(task);
+  if (!service) return null;
+
+  const deps = SERVICE_DEPENDENCIES[service.key];
+  if (!deps || deps.length === 0) return null;
+
+  // If task is already completed, don't override
+  if (task.status === 'production_completed') return null;
+
+  if (!areDependenciesMet(task, siblingTasks)) {
+    return 'waiting_for_materials';
+  }
+  return null;
+}
+
+// ============================================================
 // 2c. SOCIAL SECURITY CHAIN (מס"ב סוציאליות)
 // ============================================================
 // Dependency chain:
@@ -809,6 +884,12 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = [], option
     if (evaluation.autoCreateTasks) {
       result.tasksToCreate = evaluation.autoCreateTasks;
     }
+  }
+
+  // ── DEPENDENCY ENGINE: Override status if prerequisites not met ──
+  const depStatus = getDependencyStatus(task, siblingTasks);
+  if (depStatus && !result.statusUpdate) {
+    result.statusUpdate = { status: depStatus };
   }
 
   // ── SERVICE FILTERING (חוק בל יעבור) ──

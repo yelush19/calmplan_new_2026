@@ -22,6 +22,7 @@ const DNA_COLORS = {
   P2: '#B2AC88',
   P3: '#E91E63',
   P4: '#FFC107',
+  P5: '#2E7D32',
 };
 
 const DNA = {
@@ -29,13 +30,15 @@ const DNA = {
   P2: { color: '#B2AC88', dashboard: 'tax' },
   P3: { color: '#E91E63', dashboard: 'admin' },
   P4: { color: '#FFC107', dashboard: 'home' },
+  P5: { color: '#2E7D32', dashboard: 'annual_reports' },
 };
 
 const BOARD_OPTIONS = [
   { key: 'payroll', label: 'שכר (P1)', color: DNA_COLORS.P1 },
   { key: 'tax', label: 'הנה"ח (P2)', color: DNA_COLORS.P2 },
   { key: 'admin', label: 'ניהול (P3)', color: DNA_COLORS.P3 },
-  { key: 'additional', label: 'נוספים (P3)', color: DNA_COLORS.P3 },
+  { key: 'home', label: 'בית (P4)', color: DNA_COLORS.P4 },
+  { key: 'annual_reports', label: 'דוחות שנתיים (P5)', color: DNA_COLORS.P5 },
 ];
 
 // ══════════════════════════════════════════════════════════════════════
@@ -101,6 +104,8 @@ export default function TemplatePanel({ service, onClose }) {
 
   const pColor = editDashboard === 'payroll' ? DNA_COLORS.P1
     : editDashboard === 'tax' ? DNA_COLORS.P2
+    : editDashboard === 'home' ? DNA_COLORS.P4
+    : editDashboard === 'annual_reports' ? DNA_COLORS.P5
     : DNA_COLORS.P3;
 
   const handleSave = () => {
@@ -290,8 +295,8 @@ export default function TemplatePanel({ service, onClose }) {
             { key: 'payroll', label: 'שכר (P1)', color: '#00A3E0' },
             { key: 'tax', label: 'הנה"ח (P2)', color: '#B2AC88' },
             { key: 'admin', label: 'ניהול (P3)', color: '#E91E63' },
-            { key: 'additional', label: 'נוספים', color: '#9C27B0' },
             { key: 'home', label: 'בית (P4)', color: '#FFC107' },
+            { key: 'annual_reports', label: 'דוחות שנתיים (P5)', color: '#2E7D32' },
           ];
 
           return (

@@ -163,6 +163,16 @@ const getSidebarSections = () => ({
       { name: "הגדרות אישיות", href: createPageUrl("LifeSettings"), icon: Settings },
     ]
   },
+  // ── P5 | דוחות שנתיים והצהרות ──
+  p5_annual: {
+    title: "P5 | דוחות שנתיים",
+    icon: FileBarChart,
+    tabColor: 'border-green-700',
+    items: [
+      { name: "דוחות שנתיים / מאזנים", href: createPageUrl("BalanceSheets"), icon: Scaling },
+      { name: "הצהרות הון", href: createPageUrl("BalanceSheets"), icon: FileBarChart },
+    ]
+  },
 });
 
 // Map sidebar sections to their parent work mode for auto-switching
@@ -173,13 +183,14 @@ const SECTION_TO_MODE = {
   p3_planning: 'planning',
   p3_admin: 'admin',
   life: null, // visible in all modes
+  p5_annual: 'doing', // annual reports visible in doing mode
 };
 
 const getVisibleSections = (mode) => {
-  if (mode === 'doing') return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'life'];
-  if (mode === 'planning') return ['p3_planning', 'life'];
+  if (mode === 'doing') return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p5_annual', 'life'];
+  if (mode === 'planning') return ['p3_planning', 'p5_annual', 'life'];
   if (mode === 'admin') return ['p3_admin', 'life'];
-  return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_planning', 'p3_admin', 'life'];
+  return ['p1_payroll', 'p2_bookkeeping', 'p3_doing', 'p3_planning', 'p3_admin', 'p5_annual', 'life'];
 };
 
 // Deadline countdown

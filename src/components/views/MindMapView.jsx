@@ -152,17 +152,17 @@ const NODE_COLOR_MAP = {
 // Only 3 task-generating services: שכר, מע"מ, מקדמות מס
 const META_FOLDERS = {
   'P1 חשבות שכר': {
-    icon: '👥', color: '#0277BD', label: 'P1 | חשבות שכר',
+    icon: '👥', color: '#0277BD', label: 'P1 | שכר',
     departments: ['שכר'],
     complexitySubFolders: true,
   },
   'P2 הנהלת חשבונות': {
-    icon: '📊', color: '#4682B4', label: 'P2 | הנהלת חשבונות',
+    icon: '📊', color: '#4682B4', label: 'P2 | הנה"ח',
     departments: ['מע"מ', 'מקדמות', 'התאמות'],
     complexitySubFolders: true,
   },
   'P3 ניהול משרד': {
-    icon: '📁', color: '#546E7A', label: 'P3 | ניהול משרד',
+    icon: '📁', color: '#546E7A', label: 'P3 | ניהול ותכנון',
     departments: ['אדמיניסטרציה', 'אחר/טיוטות'],
     complexitySubFolders: true,
   },
@@ -170,6 +170,11 @@ const META_FOLDERS = {
     icon: '🏠', color: '#6D4C41', label: 'P4 | בית',
     departments: ['בית'],
     forceNano: true,
+  },
+  'P5 דוחות שנתיים': {
+    icon: '📋', color: '#2E7D32', label: 'P5 | דוחות שנתיים והצהרות',
+    departments: ['דוחות שנתיים', 'הצהרות הון'],
+    complexitySubFolders: true,
   },
 };
 
@@ -182,6 +187,8 @@ const BRANCH_CONFIG = {
   'אדמיניסטרציה':     { color: '#546E7A', icon: '📁', label: 'אדמיניסטרציה' },
   'בית':              { color: '#6D4C41', icon: '🏠', label: 'בית' },
   'אחר/טיוטות':       { color: '#78909C', icon: '📝', label: 'אחר/טיוטות' },
+  'דוחות שנתיים':      { color: '#2E7D32', icon: '📋', label: 'דוחות שנתיים' },
+  'הצהרות הון':       { color: '#2E7D32', icon: '📄', label: 'הצהרות הון' },
 };
 
 // Diamond Standard: 3 tiers with fixed vivid colors (Zero Gray Policy)
@@ -304,10 +311,12 @@ const CATEGORY_TO_DEPARTMENT = {
   'הנחש': 'התאמות',
   'הנהלת חשבונות': 'התאמות',
   'work_bookkeeping': 'התאמות',
-  'מאזנים': 'התאמות',             // annual — routes to reconciliation branch
-  'מאזן': 'התאמות',
-  'דוח שנתי': 'אדמיניסטרציה',     // annual tasks → admin (not monthly recurring)
-  'work_annual_reports': 'אדמיניסטרציה',
+  'מאזנים': 'דוחות שנתיים',       // annual — routes to P5
+  'מאזן': 'דוחות שנתיים',
+  'דוח שנתי': 'דוחות שנתיים',     // annual tasks → P5
+  'work_annual_reports': 'דוחות שנתיים',
+  'הצהרת הון': 'הצהרות הון',       // capital statements → P5
+  'work_capital_statement': 'הצהרות הון',
   'רווח והפסד': 'התאמות',
   'work_pnl': 'התאמות',
   'תשלום רשויות': 'מע"מ',         // authorities payment → VAT/bookkeeping branch

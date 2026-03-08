@@ -4,7 +4,8 @@
 export const CATEGORY_GRADIENTS = {
   payroll: { from: '#a855f7', to: '#ec4899', label: 'שכר' },
   vat_tax: { from: '#4682B4', to: '#1e3a8a', label: 'מע"מ ומס' },
-  annual_reports: { from: '#10b981', to: '#059669', label: 'מאזנים' },
+  annual_reports: { from: '#2E7D32', to: '#1B5E20', label: 'דוחות שנתיים' },
+  capital_statement: { from: '#388E3C', to: '#2E7D32', label: 'הצהרות הון' },
   balance_sheets: { from: '#6D8B74', to: '#4A6741', label: 'דוחות כספיים' },
   reconciliation: { from: '#f97316', to: '#f59e0b', label: 'התאמות' },
   bookkeeping: { from: '#8b5cf6', to: '#6366f1', label: 'הנה"ח' },
@@ -49,9 +50,10 @@ export const BOARD_CATEGORIES = [
   },
   {
     id: 'annual_reports',
-    label: 'מאזנים',
+    label: 'דוחות שנתיים',
     serviceTypes: ['annual_reports'],
-    taskCategories: ['work_annual_reports'],
+    taskCategories: ['work_annual_reports', 'work_capital_statement'],
+    branch: 'P5',
     gradient: CATEGORY_GRADIENTS.annual_reports,
   },
   {
@@ -119,6 +121,7 @@ export const BRANCH_PATH_COLORS = {
   'P2 הנהלת חשבונות':   { color: '#4682B4', light: '#B2C8DF', label: 'P2' },
   'P3 ניהול משרד':      { color: '#546E7A', light: '#CFD8DC', label: 'P3' },
   'P4 בית':             { color: '#6D4C41', light: '#D7CCC8', label: 'P4' },
+  'P5 דוחות שנתיים':    { color: '#2E7D32', light: '#C8E6C9', label: 'P5' },
 };
 
 // Complexity tiers - Enterprise (tier 3) is 3x the size of Nano (tier 0)

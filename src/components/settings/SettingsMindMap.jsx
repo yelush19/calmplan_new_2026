@@ -41,22 +41,26 @@ import {
 const DNA = {
   P1: { color: '#00A3E0', label: 'P1 שכר', bg: '#00A3E015', glow: '#00A3E040', dashboard: 'payroll' },
   P2: { color: '#B2AC88', label: 'P2 הנה"ח', bg: '#B2AC8815', glow: '#B2AC8840', dashboard: 'tax' },
-  P3: { color: '#E91E63', label: 'P3 ביצוע', bg: '#E91E6315', glow: '#E91E6340', dashboard: 'admin' },
+  P3: { color: '#E91E63', label: 'P3 ניהול', bg: '#E91E6315', glow: '#E91E6340', dashboard: 'admin' },
   P4: { color: '#FFC107', label: 'P4 בית', bg: '#FFC10715', glow: '#FFC10740', dashboard: 'home' },
+  P5: { color: '#2E7D32', label: 'P5 דוחות שנתיים', bg: '#2E7D3215', glow: '#2E7D3240', dashboard: 'annual_reports' },
 };
 
 function getDashboardBranch(dashboard) {
   if (dashboard === 'payroll') return 'P1';
   if (dashboard === 'tax') return 'P2';
   if (dashboard === 'admin' || dashboard === 'additional') return 'P3';
-  return 'P4';
+  if (dashboard === 'home') return 'P4';
+  if (dashboard === 'annual_reports') return 'P5';
+  return 'P3';
 }
 
 const BOARD_OPTIONS = [
   { key: 'payroll', label: 'שכר (P1)', branch: 'P1' },
   { key: 'tax', label: 'הנה"ח (P2)', branch: 'P2' },
   { key: 'admin', label: 'ניהול (P3)', branch: 'P3' },
-  { key: 'additional', label: 'נוספים (P3)', branch: 'P3' },
+  { key: 'home', label: 'בית (P4)', branch: 'P4' },
+  { key: 'annual_reports', label: 'דוחות שנתיים (P5)', branch: 'P5' },
 ];
 
 const COGNITIVE_LABELS = ['ננו', 'פשוט', 'בינוני', 'מורכב'];
@@ -78,22 +82,61 @@ const PALETTE_SHAPES = [
 const SNAP_DISTANCE = 65;
 const TRASH_ZONE = { x: VB_W - 70, y: VB_H - 70, r: 40 };
 
-// ── Persistence ──
+// ── Persistence (localStorage + Supabase sync) ──
+// Dynamically import SystemConfig for Supabase backup
+let _systemConfigEntity = null;
+async function getSystemConfig() {
+  if (!_systemConfigEntity) {
+    try {
+      const { SystemConfig } = await import('@/api/entities');
+      _systemConfigEntity = SystemConfig;
+    } catch { /* Supabase not available */ }
+  }
+  return _systemConfigEntity;
+}
+
+// Save to both localStorage AND Supabase for data integrity
+async function syncToSupabase(key, data) {
+  try {
+    const SC = await getSystemConfig();
+    if (!SC) return;
+    const existing = await SC.list();
+    const record = existing.find(r => r.config_key === key);
+    if (record) {
+      await SC.update(record.id, { config_key: key, config_value: data, updated_at: new Date().toISOString() });
+    } else {
+      await SC.create({ config_key: key, config_value: data, updated_at: new Date().toISOString() });
+    }
+    console.log(`[Supabase] Synced settings: ${key}`);
+  } catch (err) {
+    console.warn(`[Supabase] Failed to sync ${key}:`, err.message);
+  }
+}
+
 function loadOverrides() {
   try { return JSON.parse(localStorage.getItem('calmplan_service_overrides') || '{}'); }
   catch { return {}; }
 }
-function saveOverrides(o) { localStorage.setItem('calmplan_service_overrides', JSON.stringify(o)); }
+function saveOverrides(o) {
+  localStorage.setItem('calmplan_service_overrides', JSON.stringify(o));
+  syncToSupabase('service_overrides', o);
+}
 function loadCustomServices() {
   try { return JSON.parse(localStorage.getItem('calmplan_custom_services') || '{}'); }
   catch { return {}; }
 }
-function saveCustomServices(c) { localStorage.setItem('calmplan_custom_services', JSON.stringify(c)); }
+function saveCustomServices(c) {
+  localStorage.setItem('calmplan_custom_services', JSON.stringify(c));
+  syncToSupabase('custom_services', c);
+}
 function loadNodePositions() {
   try { return JSON.parse(localStorage.getItem('calmplan_node_positions') || '{}'); }
   catch { return {}; }
 }
-function saveNodePositions(p) { localStorage.setItem('calmplan_node_positions', JSON.stringify(p)); }
+function saveNodePositions(p) {
+  localStorage.setItem('calmplan_node_positions', JSON.stringify(p));
+  syncToSupabase('node_positions', p);
+}
 
 // ── Force-directed repulsion (directive #11) ──
 function applyForceRepulsion(nodes, iterations = 15) {
@@ -442,7 +485,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   // ── Build node tree: center → P-roots → services → steps ──
   const allNodes = useMemo(() => {
     const nodes = [];
-    const rootAngles = { P1: -Math.PI * 0.75, P2: -Math.PI * 0.25, P3: Math.PI * 0.25, P4: Math.PI * 0.75 };
+    const rootAngles = { P1: -Math.PI * 0.8, P2: -Math.PI * 0.4, P3: 0, P4: Math.PI * 0.4, P5: Math.PI * 0.8 };
     const rootDist = 220;
 
     // P-Root nodes
