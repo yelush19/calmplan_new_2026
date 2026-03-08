@@ -35,7 +35,7 @@ import { SERVICE_WEIGHTS, getServiceWeight } from '@/config/serviceWeights';
 import { useDesign } from '@/contexts/DesignContext';
 import {
   Trash2, Plus, GripVertical, Cloud, Circle, Diamond, Star,
-  MessageCircle, X, ChevronRight, Move, Zap, Minus, ListOrdered,
+  MessageCircle, X, ChevronRight, ChevronDown, Move, Zap, Minus, ListOrdered,
   CloudUpload, CheckCircle2, AlertCircle, Loader2, Shield,
 } from 'lucide-react';
 
@@ -338,6 +338,9 @@ function getNodePath(nodeId, allNodes, maxDepth = 10) {
 // ══════════════════════════════════════════════════════════════════════
 
 function ParentDropdown({ selectedNodeId, allNodes, moveService, currentParentId, currentDashboard }) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+
   // Build list of valid parent targets (roots + other services, not self, not steps)
   const parentOptions = useMemo(() => {
     return allNodes
@@ -351,57 +354,77 @@ function ParentDropdown({ selectedNodeId, allNodes, moveService, currentParentId
         branch: n.type === 'root' ? n.id : getDashboardBranch(n.dashboard),
       }))
       .sort((a, b) => {
-        // Sort roots first, then by branch, then by path
         if (a.type !== b.type) return a.type === 'root' ? -1 : 1;
         if (a.branch !== b.branch) return a.branch.localeCompare(b.branch);
         return a.path.localeCompare(b.path);
       });
   }, [allNodes, selectedNodeId]);
 
-  const handleChange = useCallback((e) => {
-    const targetId = e.target.value;
+  const filtered = useMemo(() => {
+    if (!search) return parentOptions;
+    const q = search.toLowerCase();
+    return parentOptions.filter(o => o.path.toLowerCase().includes(q));
+  }, [parentOptions, search]);
+
+  const handleSelect = useCallback((targetId) => {
     const target = allNodes.find(n => n.id === targetId);
     if (!target) return;
-
-    // Determine the dashboard from the target
     const newDashboard = target.type === 'root'
       ? DNA[target.id]?.dashboard
       : target.dashboard;
-
     if (newDashboard && newDashboard !== currentDashboard) {
       moveService(selectedNodeId, newDashboard);
-      console.log('STATE MUTATED:', {
-        action: 'reparent',
-        key: selectedNodeId,
-        fromParent: currentParentId,
-        toParent: targetId,
-        toPath: getNodePath(targetId, allNodes),
-        newDashboard,
-      });
     }
-  }, [allNodes, selectedNodeId, currentParentId, currentDashboard, moveService]);
+    setOpen(false);
+    setSearch('');
+  }, [allNodes, selectedNodeId, currentDashboard, moveService]);
 
-  // Current parent path display
   const currentPath = getNodePath(currentParentId, allNodes);
 
   return (
-    <div>
+    <div className="relative">
       <label className="text-[9px] font-bold text-gray-400 block mb-0.5">שיוך להורה (נתיב מלא)</label>
-      <div className="text-[8px] text-gray-300 mb-0.5 truncate" title={currentPath}>
-        נוכחי: {currentPath}
-      </div>
-      <select
-        value={currentParentId || ''}
-        onChange={handleChange}
-        className="w-full px-2 py-1 text-[10px] border rounded-lg focus:ring-1 focus:ring-blue-300 focus:outline-none bg-white"
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-2 py-1 text-[10px] border rounded-lg bg-white text-right truncate flex items-center justify-between gap-1"
         dir="rtl"
       >
-        {parentOptions.map(opt => (
-          <option key={opt.id} value={opt.id}>
-            {opt.type === 'root' ? `● ${opt.path}` : `  └─ ${opt.path}`}
-          </option>
-        ))}
-      </select>
+        <span className="truncate">{currentPath}</span>
+        <ChevronDown className="w-3 h-3 shrink-0 text-gray-400" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl z-50 max-h-48 overflow-hidden">
+          <div className="p-1.5 border-b">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="חפש הורה..."
+              className="w-full px-2 py-1 text-[10px] border rounded focus:ring-1 focus:ring-blue-300 focus:outline-none"
+              dir="rtl"
+              autoFocus
+            />
+          </div>
+          <div className="overflow-y-auto max-h-36">
+            {filtered.map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => handleSelect(opt.id)}
+                className={`w-full px-2 py-1 text-[10px] text-right hover:bg-blue-50 transition-colors flex items-center gap-1 ${
+                  opt.id === currentParentId ? 'bg-blue-50 font-bold' : ''
+                }`}
+                dir="rtl"
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: opt.color }} />
+                <span className="truncate">{opt.type === 'root' ? `● ${opt.path}` : `└─ ${opt.path}`}</span>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-2 py-2 text-[10px] text-gray-400 text-center">לא נמצאו תוצאות</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1079,7 +1102,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     const branch = parentNode.type === 'root' ? parentNode.id : getDashboardBranch(parentNode.dashboard);
     const dashboard = DNA[branch]?.dashboard || 'admin';
     const parentId = parentNode.type === 'root' ? parentNode.id : parentNode.id;
-    const key = createService({ dashboard, label: 'שירות חדש', parentId });
+    // Create a fresh blank service linked to parent
+    const key = createService({ dashboard, label: '', parentId, steps: [] });
 
     // Position near parent
     const angle = Math.random() * Math.PI * 2;
@@ -1089,7 +1113,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       saveNodePositions(next);
       return next;
     });
-    setSelectedNodeId(key);
+    // Defer selection so allNodes has time to include the new node
+    requestAnimationFrame(() => setSelectedNodeId(key));
   }, [createService]);
 
   // ── Palette drag start (HTML → SVG bridge, directive #5) ──
@@ -1495,6 +1520,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                   type="text"
                   value={selectedNode.label || ''}
                   onChange={(e) => updateService(selectedNodeId, { label: e.target.value })}
+                  placeholder="הקלד שם שירות חדש..."
+                  autoFocus={!selectedNode.label}
                   className="w-full px-2 py-1 text-xs border rounded-lg focus:ring-1 focus:ring-blue-300 focus:outline-none"
                   dir="rtl"
                 />

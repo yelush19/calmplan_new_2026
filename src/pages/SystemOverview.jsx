@@ -1,728 +1,358 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, AlertCircle, XCircle, RefreshCw, Database, Monitor, TriangleAlert } from 'lucide-react';
-import { Client, Task, AccountReconciliation, ClientAccount, Dashboard, WeeklySchedule, Therapist } from '@/api/entities';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  RefreshCw, Shield, AlertTriangle, Search, ChevronDown, ChevronUp,
+  Users, FileText, CheckCircle, XCircle, Filter
+} from 'lucide-react';
+import { Client } from '@/api/entities';
 
-const StatusIcon = ({ status }) => {
-  switch (status) {
-    case 'working': return <CheckCircle className="w-4 h-4 text-green-500" />;
-    case 'partial': return <AlertCircle className="w-4 h-4 text-yellow-500" />;
-    case 'broken': return <XCircle className="w-4 h-4 text-amber-500" />;
-    case 'empty': return <AlertCircle className="w-4 h-4 text-gray-400" />;
-    default: return <AlertCircle className="w-4 h-4 text-gray-400" />;
-  }
+// ═══════════════════════════════════════════════
+// CLIENT AUDIT TOOL — מצב המערכת
+// Scans all clients for data integrity issues:
+//   1. Exempt Dealers (עוסק פטור) with VAT reporting
+//   2. Missing Deductions ID (ניכויים)
+//   3. Missing Tax File Numbers
+//   4. Missing Social Security IDs
+// ═══════════════════════════════════════════════
+
+const AUDIT_RULES = [
+  {
+    key: 'exempt_with_vat',
+    title: 'עוסק פטור + דיווח מע"מ',
+    description: 'לקוחות מסוג עוסק פטור שמוגדר להם דיווח מע"מ — סתירה לוגית',
+    severity: 'critical',
+    icon: '⚠️',
+    check: (client) => {
+      const bType = (client.business_info?.business_type || '').toLowerCase();
+      const isExempt = bType === 'exempt' || bType === 'עוסק פטור' || bType === 'exempt_dealer' || bType === 'patur';
+      const hasVat = client.tax_info?.vat_file_number ||
+        (client.reporting_info?.vat_reporting_frequency && client.reporting_info.vat_reporting_frequency !== 'none' && client.reporting_info.vat_reporting_frequency !== 'not_applicable');
+      const hasVatService = Array.isArray(client.service_types) && client.service_types.includes('vat');
+      return isExempt && (hasVat || hasVatService);
+    },
+    columns: ['name', 'business_type', 'vat_file', 'vat_frequency'],
+  },
+  {
+    key: 'missing_deductions_id',
+    title: 'חסר מספר תיק ניכויים',
+    description: 'לקוחות עם שירות שכר/ניכויים שאין להם מספר תיק ניכויים',
+    severity: 'warning',
+    icon: '🔍',
+    check: (client) => {
+      const hasPayrollService = Array.isArray(client.service_types) &&
+        (client.service_types.includes('payroll') || client.service_types.includes('deductions'));
+      const hasDeductionsFreq = client.reporting_info?.deductions_frequency &&
+        client.reporting_info.deductions_frequency !== 'none' &&
+        client.reporting_info.deductions_frequency !== 'not_applicable';
+      const needsDeductions = hasPayrollService || hasDeductionsFreq;
+      const missingId = !client.tax_info?.annual_tax_ids?.deductions_id &&
+        !client.tax_info?.tax_deduction_file_number;
+      return needsDeductions && missingId;
+    },
+    columns: ['name', 'services', 'deductions_freq', 'deductions_id'],
+  },
+  {
+    key: 'missing_tax_id',
+    title: 'חסר מספר עוסק / ח.פ.',
+    description: 'לקוחות פעילים ללא מספר זיהוי מס',
+    severity: 'warning',
+    icon: '📋',
+    check: (client) => {
+      const isActive = client.status === 'active';
+      const missingTaxId = !client.tax_info?.tax_id && !client.entity_number;
+      return isActive && missingTaxId;
+    },
+    columns: ['name', 'status', 'entity_number'],
+  },
+  {
+    key: 'missing_ss_id',
+    title: 'חסר מספר תיק ביטוח לאומי',
+    description: 'לקוחות עם שכר שאין להם מספר ביטוח לאומי',
+    severity: 'info',
+    icon: '🏥',
+    check: (client) => {
+      const hasPayroll = Array.isArray(client.service_types) && client.service_types.includes('payroll');
+      const hasSsFreq = client.reporting_info?.social_security_frequency &&
+        client.reporting_info.social_security_frequency !== 'none' &&
+        client.reporting_info.social_security_frequency !== 'not_applicable';
+      const needsSs = hasPayroll || hasSsFreq;
+      const missingId = !client.tax_info?.annual_tax_ids?.social_security_id &&
+        !client.tax_info?.social_security_file_number;
+      return needsSs && missingId;
+    },
+    columns: ['name', 'services', 'ss_freq', 'ss_id'],
+  },
+];
+
+const SEVERITY_STYLES = {
+  critical: { bg: 'bg-red-50', border: 'border-red-200', badge: 'bg-red-100 text-red-800', headerBg: 'bg-red-100' },
+  warning: { bg: 'bg-amber-50', border: 'border-amber-200', badge: 'bg-amber-100 text-amber-800', headerBg: 'bg-amber-100' },
+  info: { bg: 'bg-blue-50', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-800', headerBg: 'bg-blue-100' },
 };
 
-// Define Monday board categories for configuration (used in loadData)
-const boardCategories = {
-  main: { type: 'main', label: 'ראשי' },
-  clients: { type: 'clients', label: 'לקוחות' },
-  tasks: { type: 'tasks', label: 'משימות' },
-  reconciliations: { type: 'reconciliations', label: 'התאמות' },
-  invoices: { type: 'invoices', label: 'חשבוניות' },
-  payments: { type: 'payments', label: 'תשלומים' },
-  therapists: { type: 'therapists', label: 'מטפלים' },
-  sessions: { type: 'sessions', label: 'פגישות' },
-  events: { type: 'events', label: 'אירועים' },
-  accounting: { type: 'accounting', label: 'הנהלת חשבונות' },
-  admin: { type: 'admin', label: 'אדמין' },
-};
+function AuditTable({ rule, flaggedClients }) {
+  const [expanded, setExpanded] = useState(true);
+  const [search, setSearch] = useState('');
+  const style = SEVERITY_STYLES[rule.severity] || SEVERITY_STYLES.info;
+
+  const filtered = useMemo(() => {
+    if (!search) return flaggedClients;
+    const q = search.toLowerCase();
+    return flaggedClients.filter(c => (c.name || '').toLowerCase().includes(q) || (c.nickname || '').toLowerCase().includes(q));
+  }, [flaggedClients, search]);
+
+  const getField = (client, col) => {
+    switch (col) {
+      case 'name': return client.name || client.nickname || '—';
+      case 'status': return client.status || '—';
+      case 'business_type': return client.business_info?.business_type || '—';
+      case 'vat_file': return client.tax_info?.vat_file_number || '—';
+      case 'vat_frequency': return client.reporting_info?.vat_reporting_frequency || '—';
+      case 'services': return (client.service_types || []).join(', ') || '—';
+      case 'deductions_freq': return client.reporting_info?.deductions_frequency || '—';
+      case 'deductions_id': return client.tax_info?.annual_tax_ids?.deductions_id || client.tax_info?.tax_deduction_file_number || '—';
+      case 'entity_number': return client.entity_number || client.tax_info?.tax_id || '—';
+      case 'ss_freq': return client.reporting_info?.social_security_frequency || '—';
+      case 'ss_id': return client.tax_info?.annual_tax_ids?.social_security_id || client.tax_info?.social_security_file_number || '—';
+      default: return '—';
+    }
+  };
+
+  const COL_LABELS = {
+    name: 'שם לקוח',
+    status: 'סטטוס',
+    business_type: 'סוג עסק',
+    vat_file: 'תיק מע"מ',
+    vat_frequency: 'תדירות מע"מ',
+    services: 'שירותים',
+    deductions_freq: 'תדירות ניכויים',
+    deductions_id: 'מס׳ תיק ניכויים',
+    entity_number: 'מס׳ עוסק / ח.פ.',
+    ss_freq: 'תדירות בט"ל',
+    ss_id: 'מס׳ תיק בט"ל',
+  };
+
+  return (
+    <Card className={`${style.border} border-2 overflow-hidden`}>
+      <CardHeader
+        className={`${style.headerBg} cursor-pointer py-3 px-4`}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <span>{rule.icon}</span>
+            {rule.title}
+            <Badge className={`${style.badge} text-xs font-bold`}>{flaggedClients.length}</Badge>
+          </CardTitle>
+          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </div>
+        <p className="text-xs text-gray-600 mt-1">{rule.description}</p>
+      </CardHeader>
+
+      {expanded && (
+        <CardContent className="p-0">
+          {flaggedClients.length === 0 ? (
+            <div className="flex items-center gap-2 p-4 text-green-700">
+              <CheckCircle className="w-4 h-4" />
+              <span className="text-sm font-medium">לא נמצאו בעיות — הכל תקין!</span>
+            </div>
+          ) : (
+            <>
+              {/* Search */}
+              <div className="px-3 py-2 border-b">
+                <div className="relative">
+                  <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="חפש לקוח..."
+                    className="w-full pr-8 pl-2 py-1.5 text-xs border rounded-lg focus:ring-1 focus:ring-blue-300 focus:outline-none"
+                    dir="rtl"
+                  />
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs" dir="rtl">
+                  <thead>
+                    <tr className="bg-gray-50 border-b">
+                      <th className="px-3 py-2 text-right font-bold text-gray-600">#</th>
+                      {rule.columns.map(col => (
+                        <th key={col} className="px-3 py-2 text-right font-bold text-gray-600">
+                          {COL_LABELS[col] || col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((client, i) => (
+                      <tr key={client.id} className={`border-b ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/50 transition-colors`}>
+                        <td className="px-3 py-2 text-gray-400 font-mono">{i + 1}</td>
+                        {rule.columns.map(col => (
+                          <td key={col} className="px-3 py-2">
+                            {col === 'name' ? (
+                              <span className="font-semibold text-gray-900">{getField(client, col)}</span>
+                            ) : getField(client, col) === '—' ? (
+                              <span className="text-red-500 font-bold">חסר</span>
+                            ) : (
+                              <span className="text-gray-700">{getField(client, col)}</span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
 
 export default function SystemOverviewPage() {
-  const [systemStatus, setSystemStatus] = useState({});
+  const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [boardConfigs, setBoardConfigs] = useState([]); // This state variable is not used after its initial declaration.
+  const [statusFilter, setStatusFilter] = useState('active');
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadClients = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [dashboardsData, clientsData, tasksData, recsData, clientAccountsData, therapistsData] = await Promise.all([
-        Dashboard.list().catch(() => []),
-        Client.filter({}, '-updated_date', 1000).catch(() => []),
-        Task.filter({}, '-updated_date', 2000).catch(() => []),
-        AccountReconciliation.filter({}, '-updated_date', 1000).catch(() => []),
-        ClientAccount.filter({}, '-updated_date', 1000).catch(() => []),
-        Therapist.list(null, 1000).catch(() => [])
-      ]);
-
-      // Function to analyze ID fields for any entity
-      const analyzeEntityIds = (entities, entityName) => {
-        const analysis = {
-          total: entities.length,
-          withCalmPlanId: entities.filter(e => e.id).length, // All should have this
-          withLegacyIds: 0, // Monday fields removed
-          withDNASource: entities.length, // all from DNA
-          withAllIds: entities.filter(e => e.id).length,
-          missingBoardId: [],
-          missingItemId: [],
-          missingBoth: []
-        };
-
-        // Show samples of problematic records
-        return analysis;
-      };
-
-      // Create board mapping for analysis
-      const boardMappings = {
-        'clients': 'לקוחות',
-        'reports_main': 'תהליכי דיווח',
-        'reports_126_856_2025': '126+856-2025',
-        'reports_126_856_2024': '126+856-2024',
-        'weekly_tasks': 'משימות שבועיות ופגישות',
-        'balance_sheets': 'מאזנים',
-        'reconciliations': 'התאמות בנק וסליקה',
-        'client_accounts': 'חשבונות בנק וסליקה',
-        'family_tasks': 'משימות משפחה',
-        'weekly_planning': 'לוח טיפולים', // FIXED: was weekly_planer
-        'wellbeing': 'מעקב רווחה',
-        'therapists': 'לוח מטפלים'
-      };
-
-      // Expected counts per your message
-      const expectedCounts = {
-        'clients': 30,
-        'reports_main': 94,
-        'reports_126_856_2025': 14,
-        'reports_126_856_2024': 16,
-        'weekly_tasks': 62, // Should be 62, not 50
-        'balance_sheets': 25,
-        'reconciliations': 8,
-        'client_accounts': 35, // Should be 35, not 34
-        'family_tasks': 2,
-        'weekly_planning': 10, // FIXED: was weekly_planer
-        'wellbeing': 1,
-        'therapists': 13
-      };
-
-      const configs = dashboardsData || [];
-      let totalExpected = 0;
-      let totalActual = 0;
-      const actualCountsByBoardType = {}; // To store actual counts for boardBreakdown
-
-      for (const config of configs) {
-        let count = 0;
-        let actualEntities = [];
-
-        const expected = expectedCounts[config.type] || 0;
-        totalExpected += expected;
-
-        if (config.monday_board_id) {
-            const boardIdStr = String(config.monday_board_id);
-
-            switch(config.type) {
-                case 'clients':
-                    actualEntities = (clientsData || []).filter(c => String(c.monday_board_id) === boardIdStr);
-                    break;
-
-                case 'reports_main':
-                case 'reports_126_856_2025':
-                case 'reports_126_856_2024':
-                case 'weekly_tasks':
-                case 'balance_sheets':
-                case 'family_tasks':
-                case 'wellbeing':
-                case 'weekly_planning': // FIXED: was weekly_planer
-                    actualEntities = (tasksData || []).filter(t => String(t.monday_board_id) === boardIdStr);
-                    break;
-
-                case 'reconciliations':
-                    actualEntities = (recsData || []).filter(r => String(r.monday_board_id) === boardIdStr);
-                    break;
-
-                case 'client_accounts':
-                    actualEntities = (clientAccountsData || []).filter(a => String(a.monday_board_id) === boardIdStr);
-                    break;
-
-                case 'therapists':
-                    actualEntities = (therapistsData || []).filter(t => String(t.monday_board_id) === boardIdStr);
-                    break;
-            }
-
-            count = actualEntities.length;
-            actualCountsByBoardType[config.type] = count; // Store for boardBreakdown
-            totalActual += count;
-
-        } else {
-            // No board ID set for this config type
-        }
-      }
-
-      // Continue with rest of analysis...
-      // Analyze each entity type using the existing analyzeEntityIds function
-      const analyses = {
-        tasks: analyzeEntityIds(tasksData, 'TASKS'),
-        clients: analyzeEntityIds(clientsData, 'CLIENTS'),
-        reconciliations: analyzeEntityIds(recsData, 'RECONCILIATIONS'),
-        clientAccounts: analyzeEntityIds(clientAccountsData, 'CLIENT_ACCOUNTS'),
-        therapists: analyzeEntityIds(therapistsData, 'THERAPISTS')
-      };
-
-      // Special analysis for tasks - check for demo/protected flags (existing logic)
-      const taskFlags = {
-        isDemo: tasksData.filter(t => t.isDemo === true).length,
-        isProtected: tasksData.filter(t => t.isProtected === true).length,
-        isFromMonday: tasksData.filter(t => t.isFromMonday === true).length,
-        noFlags: tasksData.filter(t => !t.isDemo && !t.isProtected && !t.isFromMonday).length
-      };
-      // Update system status with detailed analysis, incorporating new and existing data
-      const status = {
-        tasks: {
-          ...analyses.tasks, // Includes all ID analysis properties from analyzeEntityIds
-          details: `${analyses.tasks.withAllIds}/${analyses.tasks.total} עם 3 מזהים`,
-          status: analyses.tasks.withAllIds > 0 ? 'partial' : 'broken',
-          taskFlags: taskFlags // Includes the special flag analysis
-        },
-        clients: {
-          ...analyses.clients,
-          details: `${analyses.clients.withAllIds}/${analyses.clients.total} עם 3 מזהים`,
-          status: analyses.clients.withAllIds > 0 ? 'partial' : 'broken'
-        },
-        reconciliations: {
-          ...analyses.reconciliations,
-          details: `${analyses.reconciliations.withAllIds}/${analyses.reconciliations.total} עם 3 מזהים`,
-          status: analyses.reconciliations.withAllIds > 0 ? 'partial' : 'broken'
-        },
-        clientAccounts: {
-          ...analyses.clientAccounts,
-          details: `${analyses.clientAccounts.withAllIds}/${analyses.clientAccounts.total} עם 3 מזהים`,
-          status: analyses.clientAccounts.withAllIds > 0 ? 'partial' : 'broken'
-        },
-        therapists: { // Added therapists to systemStatus
-            ...analyses.therapists,
-            details: `${analyses.therapists.withAllIds}/${analyses.therapists.total} עם 3 מזהים`,
-            status: analyses.therapists.withAllIds > 0 ? 'partial' : 'broken'
-        },
-        dashboards: { // Existing dashboard structure, adjusted status check
-          totalDashboards: dashboardsData.length,
-          configured: dashboardsData.filter(d => d.monday_board_id).length,
-          details: `${dashboardsData.filter(d => d.monday_board_id).length}/${dashboardsData.length} מוגדרים`,
-          status: dashboardsData.length === Object.keys(boardMappings).length ? 'working' : 'broken' // Check against the number of defined board mappings
-        },
-        // New properties from the outline
-        expectedTotal: totalExpected,
-        actualTotal: totalActual,
-        boardBreakdown: configs.map(config => ({
-          type: config.type,
-          name: boardMappings[config.type],
-          expected: expectedCounts[config.type] || 0,
-          actual: actualCountsByBoardType[config.type] || 0
-        }))
-      };
-
-      setSystemStatus(status);
-    } catch (error) {
-      console.error("❌ Error loading data:", error);
-      setError("שגיאה בטעינת נתונים: " + error.message);
+      const allClients = await Client.list(null, 5000);
+      setClients(allClients || []);
+    } catch (err) {
+      console.error('Error loading clients:', err);
+      setError('שגיאה בטעינת לקוחות: ' + err.message);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // The analyzeEntitySync and analyzeBoards functions are no longer used as per outline and are removed.
+  useEffect(() => { loadClients(); }, []);
 
-  // Cleanup functions
-  const cleanupDashboardDuplicates = async () => {
-    if (!window.confirm('⚠️ זה ימחק רשומות Dashboard כפולות. המשך?')) return;
-    
-    setIsLoading(true);
-    try {
-      const allDashboards = await Dashboard.list();
-      
-      const typeGroups = {};
-      allDashboards.forEach(d => {
-        if (!typeGroups[d.type]) {
-          typeGroups[d.type] = [];
-        }
-        typeGroups[d.type].push(d);
-      });
-      
-      let deletedCount = 0;
-      for (const [type, dashboards] of Object.entries(typeGroups)) {
-        if (dashboards.length > 1 && boardCategories[type]) {
-          const toDelete = dashboards.slice(1);
-          
-          for (const dashboard of toDelete) {
-            await Dashboard.delete(dashboard.id);
-            deletedCount++;
-          }
-        } else if (!boardCategories[type] && dashboards.length > 0) {
-            console.warn(`Found unknown dashboard type "${type}". Deleting all ${dashboards.length} records.`);
-            for (const dashboard of dashboards) {
-                await Dashboard.delete(dashboard.id);
-                deletedCount++;
-            }
-        }
-      }
-      
-      alert(`✅ נמחקו ${deletedCount} רשומות Dashboard כפולות או לא מזוהות`);
-      
-      await loadData();
-      
-    } catch (error) {
-      console.error('❌ Error cleaning dashboards:', error);
-      alert(`❌ שגיאה בניקוי: ${error.message}`);
-    }
-    setIsLoading(false);
-  };
+  const filteredClients = useMemo(() => {
+    if (statusFilter === 'all') return clients;
+    return clients.filter(c => c.status === statusFilter);
+  }, [clients, statusFilter]);
 
-  const cleanupDemoTasks = async () => {
-    if (!window.confirm('⚠️ זה ימחק את כל משימות הדמו. המשך?')) return;
-    
-    setIsLoading(true);
-    try {
-      const demoTasks = await Task.filter({ isDemo: true });
-      
-      let deletedCount = 0;
-      for (const task of demoTasks) {
-        await Task.delete(task.id);
-        deletedCount++;
-      }
-      
-      alert(`✅ נמחקו ${deletedCount} משימות דמו`);
-      
-      await loadData();
-      
-    } catch (error) {
-      console.error('❌ Error cleaning demo tasks:', error);
-      alert(`❌ שגיאה בניקוי: ${error.message}`);
-    }
-    setIsLoading(false);
-  };
+  const auditResults = useMemo(() => {
+    return AUDIT_RULES.map(rule => ({
+      rule,
+      flagged: filteredClients.filter(rule.check),
+    }));
+  }, [filteredClients]);
 
-  const showOrphanedTasks = async () => {
-    const orphanedTasks = await Task.filter({
-      monday_board_id: null,
-      monday_item_id: null,
-      isDemo: { $ne: true }
-    }, '-updated_date', 100);
-    
-    alert(`נמצאו ${orphanedTasks.length} משימות מקומיות (לא מקושרות ל-Monday ולא נתוני דמו).`);
-  };
-
-  const showDuplicateTasks = () => {
-    // This now relies on the `duplicates` property that was calculated in the old loadData.
-    // The new loadData doesn't calculate `duplicates` directly within the systemStatus.
-    // If this functionality is to be preserved, `duplicates` calculation needs to be re-introduced
-    // into the new `loadData` structure and then passed to `systemStatus.tasks.duplicates`.
-    // For now, I'll adapt it based on the analysis output, or remove if not possible.
-    // The outline did not include calculation of `taskAnalysis.duplicates` in the new `loadData`'s `systemStatus`.
-    // I will remove the UI check for `systemStatus.tasks?.taskAnalysis?.duplicates?.length > 50` and the corresponding button,
-    // as the data is no longer available in `systemStatus` as per the outline.
-    // If needed, the old logic for `duplicates` in `loadData` could be re-added specifically.
-    
-    // As per the provided outline, `systemStatus.tasks.taskAnalysis.duplicates` is no longer populated.
-    // Instead, the new `tasks` analysis has `missingBoth`, `missingItemId` etc.
-    // The `duplicates` check was part of the old, more verbose task breakdown.
-    // To enable this function, `duplicates` would need to be added to the `analyses.tasks` object.
-    // Given the outline, this specific cleanup action is currently not supported by the new data structure.
-    console.warn("Function showDuplicateTasks is currently not supported by the current data structure in systemStatus.");
-    alert("פונקציית בדיקת כפילויות משימות אינה נתמכת כרגע במבנה הנתונים הנוכחי.");
-  };
-
-  const cleanupMondayDuplicates = async () => {
-    if (!window.confirm('⚠️ זה ימחק משימות מכפילות Monday (שיש להן דגל From Monday אבל חסר להן Board/Item ID). המשך?')) return;
-    
-    setIsLoading(true);
-    try {
-      const allTasks = await Task.list(null, 2000);
-      
-      const fromMondayTasks = allTasks.filter(t => t.isFromMonday === true);
-      const protectedTasks = allTasks.filter(t => t.isProtected === true);
-      const tasksWithBothIds = allTasks.filter(t => t.monday_board_id && t.monday_item_id);
-
-      // Find tasks that are either:
-      // 1. From Monday but missing IDs
-      // 2. Protected but missing IDs (since they seem to be the same)
-      const duplicateTasks = allTasks.filter(task => 
-        (task.isFromMonday === true || task.isProtected === true) &&
-        (!task.monday_board_id || !task.monday_item_id)
-      );
-      
-      if (duplicateTasks.length === 0) {
-        // Alternative: Look for any tasks missing Monday connection
-        const alternativeDuplicates = allTasks.filter(task => 
-          !task.monday_board_id && 
-          !task.monday_item_id && 
-          !task.isDemo &&
-          task.created_date
-        );
-        
-        if (alternativeDuplicates.length > 0) {
-          if (window.confirm(`❓ נמצאו ${alternativeDuplicates.length} משימות ללא חיבור Monday (כולל מוגנות). האם למחוק גם משימות מוגנות?`)) {
-            let deletedCount = 0;
-            for (const task of alternativeDuplicates) {
-              await Task.delete(task.id);
-              deletedCount++;
-            }
-            alert(`✅ נמחקו ${deletedCount} משימות לא מחוברות (כולל מוגנות)`);
-            await loadData();
-          }
-        } else {
-          alert('לא נמצאו משימות כפולות למחיקה');
-        }
-        return;
-      }
-      
-      const finalConfirm = window.confirm(`⚠️ נמצאו ${duplicateTasks.length} משימות כפולות. חלקן מסומנות כמוגנות. האם למחוק בכל זאת?`);
-      if (!finalConfirm) {
-        alert('פעולה בוטלה');
-        setIsLoading(false);
-        return;
-      }
-      
-      let deletedCount = 0;
-      for (const task of duplicateTasks) {
-        await Task.delete(task.id);
-        deletedCount++;
-      }
-      
-      alert(`✅ נמחקו ${deletedCount} משימות כפולות (כולל מוגנות)`);
-      
-      await loadData();
-      
-    } catch (error) {
-      console.error('❌ Error cleaning duplicates:', error);
-      alert(`❌ שגיאה בניקוי כפילויות: ${error.message}`);
-    }
-    setIsLoading(false);
-  };
-
-  const cleanupOrphanedTasks = async () => {
-    if (!window.confirm('⚠️ זה ימחק משימות יתומות (ללא דגלים מיוחדים וללא חיבור Monday). המשך?')) return;
-    
-    setIsLoading(true);
-    try {
-      // Find tasks without any Monday connection and no special flags
-      const orphanedTasks = await Task.filter({
-        monday_board_id: null,
-        monday_item_id: null,
-        isDemo: { $ne: true },
-        isProtected: { $ne: true },
-        isFromMonday: { $ne: true }
-      });
-      
-      if (orphanedTasks.length === 0) {
-        alert('לא נמצאו משימות יתומות למחיקה');
-        return;
-      }
-      
-      let deletedCount = 0;
-      for (const task of orphanedTasks) {
-        await Task.delete(task.id);
-        deletedCount++;
-      }
-      
-      alert(`✅ נמחקו ${deletedCount} משימות יתומות`);
-      
-      await loadData();
-      
-    } catch (error) {
-      console.error('❌ Error cleaning orphaned tasks:', error);
-      alert(`❌ שגיאה בניקוי משימות יתומות: ${error.message}`);
-    }
-    setIsLoading(false);
-  };
+  const totalIssues = auditResults.reduce((sum, r) => sum + r.flagged.length, 0);
+  const criticalCount = auditResults.filter(r => r.rule.severity === 'critical').reduce((sum, r) => sum + r.flagged.length, 0);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+        <span className="mr-3 text-gray-600">סורק לקוחות...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Database className="w-8 h-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">מצב המערכת</h1>
-          <p className="text-gray-600">בדיקה מפורטת של מצב הנתונים במערכת</p>
+    <div className="space-y-6" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+            <Shield className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">כלי ביקורת לקוחות</h1>
+            <p className="text-sm text-gray-500">סריקת תקינות נתונים — עוסק פטור, ניכויים, מזהי מס</p>
+          </div>
         </div>
-        <Button onClick={loadData} variant="outline">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          רענן
+        <Button onClick={loadClients} variant="outline" className="gap-2">
+          <RefreshCw className="w-4 h-4" />
+          סרוק מחדש
         </Button>
       </div>
 
       {error && (
         <Alert variant="destructive">
-          <TriangleAlert className="h-4 w-4" />
-          <AlertTitle>שגיאה!</AlertTitle>
+          <AlertTriangle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Object.entries(systemStatus).filter(([key]) => 
-          ['tasks', 'clients', 'reconciliations', 'clientAccounts', 'therapists', 'dashboards'].includes(key)
-        ).map(([key, data]) => (
-          <Card key={key} className={`border-2 ${
-            data.status === 'working' ? 'border-green-200 bg-green-50' :
-            data.status === 'partial' ? 'border-yellow-200 bg-yellow-50' :
-            data.status === 'empty' ? 'border-gray-200 bg-gray-50' :
-            'border-amber-200 bg-amber-50'
-          }`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <StatusIcon status={data.status} />
-                {key === 'clients' ? 'לקוחות' :
-                 key === 'tasks' ? 'משימות' :
-                 key === 'reconciliations' ? 'התאמות' :
-                 key === 'clientAccounts' ? 'חשבונות בנק' :
-                 key === 'therapists' ? 'מטפלים' : // Added Therapist display name
-                 key === 'dashboards' ? 'לוחות מערכת' : key}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600">{data.details}</p>
-                
-                {key !== 'dashboards' && (
-                  <div className="space-y-2">
-                    {/* ID Status Breakdown */}
-                    <div className="bg-white p-3 rounded border space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">סה"כ רשומות:</span>
-                        <Badge variant="outline" className="font-bold">{data.total || 0}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-green-700">עם 3 מזהים (מלא):</span>
-                        <Badge className="bg-green-100 text-green-800 font-bold">{data.withAllIds || 0}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-orange-700">חסר Monday Item ID:</span>
-                        <Badge className="bg-orange-100 text-orange-800 font-bold">{data.missingItemId?.length || 0}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-amber-700">חסר חיבור Monday:</span>
-                        <Badge className="bg-amber-100 text-amber-800 font-bold">{data.missingBoth?.length || 0}</Badge>
-                      </div>
-                    </div>
-                    
-                    {/* Special flags for tasks */}
-                    {key === 'tasks' && data.taskFlags && (
-                      <div className="bg-blue-50 p-3 rounded border space-y-1">
-                        <h5 className="text-sm font-medium text-blue-800">דגלים מיוחדים:</h5>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <span>Demo: {data.taskFlags.isDemo}</span>
-                          <span>Protected: {data.taskFlags.isProtected}</span>
-                          <span>From Monday: {data.taskFlags.isFromMonday}</span>
-                          <span>No flags: {data.taskFlags.noFlags}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {key === 'dashboards' && (
-                  <div className="space-y-2">
-                    <div className="bg-white p-3 rounded border space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">סה"כ רשומות Dashboard:</span>
-                        <Badge variant="outline" className="font-bold text-amber-600">{data.totalDashboards}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">לוחות מוגדרים:</span>
-                        <Badge className="bg-green-100 text-green-800 font-bold">{data.configured}</Badge>
-                      </div>
-                      {/* Duplicate types display removed as per outline */}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {/* New cards for total expected/actual and board breakdown */}
-        {systemStatus.expectedTotal !== undefined && (
-          <Card key="total-sync" className="border-2 border-purple-200 bg-purple-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Monitor className="w-4 h-4 text-purple-500" />
-                סיכום סנכרון כללי
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-white p-3 rounded border space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">סה"כ פריטים צפויים (מ-Monday):</span>
-                  <Badge variant="outline" className="font-bold">{systemStatus.expectedTotal}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">סה"כ פריטים בפועל (בבסיס נתונים):</span>
-                  <Badge className={`font-bold ${systemStatus.actualTotal === systemStatus.expectedTotal ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                    {systemStatus.actualTotal}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">הפרש (חיובי = עודף, שלילי = חסר):</span>
-                  <Badge className={`font-bold ${systemStatus.actualTotal - systemStatus.expectedTotal === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                    {systemStatus.actualTotal - systemStatus.expectedTotal}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        {systemStatus.boardBreakdown && systemStatus.boardBreakdown.length > 0 && (
-          <Card key="board-breakdown" className="md:col-span-2 lg:col-span-3 border-2 border-blue-200 bg-blue-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Database className="w-4 h-4 text-blue-500" />
-                פירוט סנכרון לוחות Monday
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {systemStatus.boardBreakdown.map(board => (
-                  <div key={board.type} className="bg-white p-3 rounded border">
-                    <h5 className="font-semibold text-sm mb-1">{board.name} ({board.type})</h5>
-                    <div className="text-xs space-y-1">
-                      <div className="flex justify-between">
-                        <span>צפוי:</span>
-                        <Badge variant="outline">{board.expected}</Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>בפועל:</span>
-                        <Badge className={`${board.actual === board.expected ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                          {board.actual}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>הפרש:</span>
-                        <Badge className={`${board.actual - board.expected === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                          {board.actual - board.expected}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Summary Alert */}
-      <Alert>
-        <Monitor className="h-4 w-4" />
-        <AlertDescription>
-          <strong>מצב כללי:</strong> בדוק את הכרטיסים למעלה כדי לראות מה עובד ומה צריך תיקון. 
-          ירוק = עובד מושלם (ללוחות Monday), צהוב = עובד חלקית (חלק מהרשומות מסונכרנות), אדום = לא עובד.
-        </AlertDescription>
-      </Alert>
-
-      {/* Cleanup Actions */}
-      <div className="mt-8 space-y-4">
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="text-orange-800">🧹 פעולות ניקוי נדרשות</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {systemStatus.tasks?.taskFlags && (systemStatus.tasks.taskFlags.isFromMonday - systemStatus.tasks.withAllIds > 0) && (
-              <div className="p-4 bg-white rounded border border-amber-300">
-                <h4 className="font-semibold text-amber-700 mb-2">🔄 כפילויות Monday - דחוף!</h4>
-                <p className="text-sm text-gray-600 mb-3">
-                  <strong>בעיה קריטית:</strong> יש {systemStatus.tasks.taskFlags.isFromMonday} משימות מסומנות "From Monday" 
-                  אבל רק {systemStatus.tasks.withAllIds} עם IDs מלאים. 
-                  <br/>
-                  <strong>כלומר: {systemStatus.tasks.taskFlags.isFromMonday - systemStatus.tasks.withAllIds} כפילויות שצריך למחוק!</strong>
-                </p>
-                <div className="bg-amber-50 p-3 rounded mb-3 text-sm">
-                  <strong>מה זה אומר:</strong> המערכת סנכרנה משימות מ-Monday פעמיים - פעם אחת עם IDs נכונים, 
-                  ופעם שנייה בלי IDs. הכפילויות מבלבלות את המערכת.
-                </div>
-                <Button 
-                  onClick={cleanupMondayDuplicates}
-                  variant="destructive" 
-                  size="lg"
-                  disabled={isLoading}
-                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold"
-                >
-                  🗑️ נקה כפילויות Monday ({systemStatus.tasks.taskFlags.isFromMonday - systemStatus.tasks.withAllIds} משימות)
-                </Button>
-              </div>
-            )}
-
-            {systemStatus.tasks?.missingBoth?.length > 50 && (
-              <div className="p-4 bg-white rounded border border-orange-300">
-                <h4 className="font-semibold text-orange-700 mb-2">👻 משימות יתומות</h4>
-                <p className="text-sm text-gray-600 mb-3">
-                  יש {systemStatus.tasks.missingBoth.length} משימות ללא חיבור Monday וללא דגלים מיוחדים.
-                  זה כנראה משימות ישנות או נתוני בדיקה.
-                </p>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={showOrphanedTasks}
-                    variant="outline" 
-                    size="sm"
-                  >
-                    🔍 בדוק משימות יתומות
-                  </Button>
-                  <Button 
-                    onClick={cleanupOrphanedTasks}
-                    variant="destructive" 
-                    size="sm"
-                    disabled={isLoading}
-                  >
-                    🗑️ נקה משימות יתומות
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {systemStatus.dashboards?.totalDashboards > 12 && (
-              <div className="p-4 bg-white rounded border">
-                <h4 className="font-semibold text-amber-700 mb-2">🚨 Dashboard כפילויות</h4>
-                <p className="text-sm text-gray-600 mb-3">
-                  יש {systemStatus.dashboards.totalDashboards} רשומות Dashboard במקום 12. יש לנקות כפילויות.
-                </p>
-                <Button 
-                  onClick={cleanupDashboardDuplicates}
-                  variant="destructive" 
-                  size="sm"
-                  disabled={isLoading}
-                >
-                  🗑️ נקה כפילויות Dashboard
-                </Button>
-              </div>
-            )}
-
-            {/* Emergency reset button */}
-            <div className="p-4 bg-amber-100 rounded border border-amber-300">
-              <h4 className="font-semibold text-amber-800 mb-2">⚠️ ניקוי כללי - אפשרות גרעין</h4>
-              <p className="text-sm text-gray-700 mb-3">
-                אם הכל מבולבל - אפשר למחוק את כל המשימות שלא מסונכרנות כמו שצריך ולהתחיל מחדש עם סנכרון נקי.
-              </p>
-              <Button 
-                onClick={() => {
-                  if (window.confirm('⚠️⚠️⚠️ זה ימחק את כל המשימות שלא מסונכרנות מושלם עם Monday (כולל יתומות וכפילויות). רק משימות מסונכרנות יישארו. האם אתה בטוח?')) {
-                    // Execute sequentially
-                    cleanupMondayDuplicates().then(() => cleanupOrphanedTasks());
-                  }
-                }}
-                variant="destructive" 
-                size="lg"
-                disabled={isLoading}
-                className="w-full bg-amber-800 hover:bg-amber-900"
-              >
-                🔥 ניקוי כללי - השאר רק משימות מסונכרנות
-              </Button>
-            </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border-2 border-blue-100">
+          <CardContent className="p-4 text-center">
+            <Users className="w-6 h-6 mx-auto text-blue-500 mb-1" />
+            <div className="text-2xl font-bold text-blue-700">{filteredClients.length}</div>
+            <div className="text-xs text-gray-500">לקוחות נסרקו</div>
+          </CardContent>
+        </Card>
+        <Card className={`border-2 ${totalIssues > 0 ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
+          <CardContent className="p-4 text-center">
+            {totalIssues > 0
+              ? <AlertTriangle className="w-6 h-6 mx-auto text-amber-500 mb-1" />
+              : <CheckCircle className="w-6 h-6 mx-auto text-green-500 mb-1" />
+            }
+            <div className={`text-2xl font-bold ${totalIssues > 0 ? 'text-amber-700' : 'text-green-700'}`}>{totalIssues}</div>
+            <div className="text-xs text-gray-500">ממצאים</div>
+          </CardContent>
+        </Card>
+        <Card className={`border-2 ${criticalCount > 0 ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
+          <CardContent className="p-4 text-center">
+            {criticalCount > 0
+              ? <XCircle className="w-6 h-6 mx-auto text-red-500 mb-1" />
+              : <CheckCircle className="w-6 h-6 mx-auto text-green-500 mb-1" />
+            }
+            <div className={`text-2xl font-bold ${criticalCount > 0 ? 'text-red-700' : 'text-green-700'}`}>{criticalCount}</div>
+            <div className="text-xs text-gray-500">קריטיים</div>
+          </CardContent>
+        </Card>
+        <Card className="border-2 border-gray-100">
+          <CardContent className="p-4 text-center">
+            <Filter className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full text-xs border rounded-lg px-2 py-1 mt-1"
+              dir="rtl"
+            >
+              <option value="all">כל הלקוחות</option>
+              <option value="active">פעילים בלבד</option>
+              <option value="inactive">לא פעילים</option>
+              <option value="potential">פוטנציאליים</option>
+            </select>
+            <div className="text-xs text-gray-500 mt-1">סינון סטטוס</div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Audit Results */}
+      <div className="space-y-4">
+        {auditResults.map(({ rule, flagged }) => (
+          <AuditTable key={rule.key} rule={rule} flaggedClients={flagged} />
+        ))}
+      </div>
+
+      {/* Footer note */}
+      <Alert>
+        <Shield className="h-4 w-4" />
+        <AlertDescription>
+          <strong>כלי ביקורת אוטומטי</strong> — סורק את כל הלקוחות ומזהה חוסרים ובעיות לוגיות בנתוני המס.
+          לחץ על כותרת כל קטגוריה כדי לפתוח/לסגור את הטבלה.
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }
