@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import {
   X, Plus, Link2, Layers, ChevronRight, Save, Search,
   CheckCircle, FileText, Trash2, AlertTriangle, Zap,
-  GitBranch, ArrowRight, GitMerge, Search,
+  GitBranch, ArrowRight, GitMerge,
 } from 'lucide-react';
 import { getServiceWeight } from '@/config/serviceWeights';
 
