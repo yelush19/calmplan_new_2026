@@ -81,9 +81,11 @@ function scanConditionalMissingFields(clients) {
     const isDirectTransmission = client.tax_info?.direct_transmission === true;
     const issues = [];
 
-    // ── Only check deductions_id if payroll OR deductions is ACTIVE ──
-    const hasPayrollOrDeductions = services.includes('payroll') || services.includes('deductions');
-    if (hasPayrollOrDeductions && !isDirectTransmission) {
+    // ── STRICT: Only check deductions_id if PAYROLL is active ──
+    // If client has orphan sub-services (deductions/social_security without payroll),
+    // that's caught by the Process Integrity tab — not here.
+    const hasPayroll = services.includes('payroll');
+    if (hasPayroll && !isDirectTransmission) {
       const deductionsId = client.tax_info?.annual_tax_ids?.deductions_id ||
                            client.tax_info?.tax_deduction_file_number || '';
       if (!deductionsId) {
@@ -91,14 +93,11 @@ function scanConditionalMissingFields(clients) {
           field: 'deductions_id',
           label: 'תיק ניכויים',
           path: 'tax_info.annual_tax_ids.deductions_id',
-          requiredBy: 'payroll / deductions',
+          requiredBy: 'שכר (payroll)',
         });
       }
-    }
 
-    // ── Only check social_security_id if payroll OR social_security is ACTIVE ──
-    const hasPayrollOrSS = services.includes('payroll') || services.includes('social_security');
-    if (hasPayrollOrSS && !isDirectTransmission) {
+      // ── Social security ID also gated on PAYROLL ──
       const socialSecurityId = client.tax_info?.annual_tax_ids?.social_security_id ||
                                client.tax_info?.social_security_file_number || '';
       if (!socialSecurityId) {
@@ -106,7 +105,7 @@ function scanConditionalMissingFields(clients) {
           field: 'social_security_id',
           label: 'תיק ביטוח לאומי',
           path: 'tax_info.annual_tax_ids.social_security_id',
-          requiredBy: 'payroll / social_security',
+          requiredBy: 'שכר (payroll)',
         });
       }
     }
