@@ -349,7 +349,21 @@ const CATEGORY_TO_DEPARTMENT = {
   'כללי': 'אדמיניסטרציה',
   'work_general': 'אדמיניסטרציה',
   // P4 — Home
+  'בית': 'בית',
+  'אישי': 'בית',
+  'בית/אישי': 'בית',
   'home': 'בית',
+  'home_cleaning': 'בית',
+  'home_laundry': 'בית',
+  'home_garden': 'בית',
+  'home_maintenance': 'בית',
+  'home_medical': 'בית',
+  'home_legal': 'בית',
+  'home_family': 'בית',
+  'home_personal': 'בית',
+  'home_shopping': 'בית',
+  'home_inventory': 'בית',
+  'home_food': 'בית',
 };
 
 // ─── Node Scaling by Complexity Tier (3:1 ratio from Enterprise to Nano) ──
@@ -807,8 +821,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const rawCat = task.category || 'אחר';
       let cat = CATEGORY_TO_DEPARTMENT[rawCat] || rawCat;
       const clientName = task.client_name || 'כללי';
-      // No-client tasks → Admin branch
-      if (!task.client_name) cat = 'אדמיניסטרציה';
+      // No-client tasks → Admin branch (except P4 home tasks)
+      if (!task.client_name && cat !== 'בית') cat = 'אדמיניסטרציה';
       // MATH AUDIT: If category doesn't map to ANY known department, route to catch-all
       if (!knownDepartments.has(cat) && cat !== 'אדמיניסטרציה') {
         cat = 'אחר/טיוטות';
