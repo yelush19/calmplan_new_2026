@@ -28,6 +28,7 @@ import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import ResizableTable from '@/components/ui/ResizableTable';
 import useTaskCascade from '@/hooks/useTaskCascade';
 import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 
 import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/processTemplates';
 
@@ -190,6 +191,7 @@ export default function TasksPage() {
   });
 
   const [collapsedCategories, setCollapsedCategories] = useState({});
+  const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const [listSubTaskParent, setListSubTaskParent] = useState(null);
   const [collapsedParents, setCollapsedParents] = useState({});
 
@@ -604,6 +606,14 @@ export default function TasksPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setShowInjectionPanel(prev => !prev)}
+            className={`gap-1 rounded-xl ${showInjectionPanel ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'}`}
+          >
+            <GitBranchPlus className="w-4 h-4" />
+            הזרקת משימות
+          </Button>
           <Button size="sm" onClick={() => setShowQuickAdd(true)} className="gap-1 rounded-xl">
             <Plus className="w-4 h-4" />
             משימה מהירה
@@ -613,6 +623,25 @@ export default function TasksPage() {
           </Button>
         </div>
       </div>
+
+      {/* ── Manual Task Injection Panel (collapsible) ── */}
+      <AnimatePresence>
+        {showInjectionPanel && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <Card className="border-orange-200 bg-orange-50/30 shadow-sm">
+              <CardContent className="p-4">
+                <ClientRecurringTasks onGenerateComplete={loadTasks} />
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Time Period Tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">

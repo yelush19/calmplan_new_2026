@@ -114,6 +114,7 @@ const getSidebarSections = () => ({
       { key: 'p3_strategy', label: 'אסטרטגיה ותכנון', icon: Brain, items: [
         { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
         { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+        { name: "משימות חוזרות (הזרקה)", href: createPageUrl("RecurringTasks"), icon: Repeat },
         { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       ]},
       { key: 'p3_clients', label: 'לקוחות וניהול עסקי', icon: Users, items: [
