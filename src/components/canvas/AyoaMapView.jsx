@@ -126,6 +126,26 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
   const globalLineStyle = design?.lineStyle || 'tapered';
   const branchColors = design?.branchColors || DNA_DEFAULTS;
 
+  // ── Focus Branch listener: scroll/pan to a specific P-branch (e.g. P4) ──
+  useEffect(() => {
+    const handler = (e) => {
+      const branch = e.detail?.branch;
+      if (!branch) return;
+      // Find the category node matching this branch and center on it
+      const branchLabel = branch === 'P4' ? 'בית' : branch === 'P1' ? 'שכר' : branch === 'P2' ? 'הנה"ח' : branch === 'P3' ? 'ניהול' : branch === 'P5' ? 'דוחות';
+      const targetCat = baseCatNodes.find(n =>
+        (n.fullLabel || n.label || '').includes(branchLabel) || (n.fullLabel || n.label || '').toLowerCase().includes(branch.toLowerCase())
+      );
+      if (targetCat) {
+        // Pan so that the target node is centered in the viewport
+        setPan({ x: -(targetCat.baseX - VB_W / 2) * zoom, y: -(targetCat.baseY - VB_H / 2) * zoom });
+        setFocusedNode(targetCat.id);
+      }
+    };
+    window.addEventListener('calmplan:focus-branch', handler);
+    return () => window.removeEventListener('calmplan:focus-branch', handler);
+  }, [baseCatNodes, zoom]);
+
   // Status Sync
   const activeBranches = useMemo(() => getActiveBranches(tasks), [tasks]);
 
