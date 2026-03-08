@@ -32,6 +32,7 @@ import {
   ADDITIONAL_SERVICES,
 } from '@/config/processTemplates';
 import { SERVICE_WEIGHTS, getServiceWeight } from '@/config/serviceWeights';
+import { useDesign } from '@/contexts/DesignContext';
 import {
   Trash2, Plus, GripVertical, Cloud, Circle, Diamond, Star,
   MessageCircle, X, ChevronRight, Move, Zap, Minus, ListOrdered,
@@ -594,6 +595,7 @@ function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
 
 export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const svgRef = useRef(null);
+  const design = useDesign();
   const [overrides, setOverrides] = useState(loadOverrides);
   const [customServices, setCustomServices] = useState(loadCustomServices);
   const [savedPositions, setSavedPositions] = useState(loadNodePositions);
@@ -610,6 +612,14 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [syncTimestamp, setSyncTimestamp] = useState(null);
   // Shapes palette hidden by default — logic preserved, toggle reveals it
   const [showShapePalette, setShowShapePalette] = useState(false);
+
+  // ── Sync node selection to global Design Engine ──
+  useEffect(() => {
+    if (selectedNodeId) {
+      design.setActiveTaskId(selectedNodeId);
+      window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId: selectedNodeId } }));
+    }
+  }, [selectedNodeId]);
 
   // ── Build LIVE service registry (directive #1, #2, #3) ──
   // DEDUP GUARD: template services always win. Custom services only add NEW keys.
@@ -700,13 +710,18 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         // Color: inherit from branch root
         const branch = getDashboardBranch(svc.dashboard);
 
+        // Read global design overrides for this node (shape/color from Design Engine)
+        const designOverride = design.getNodeOverride?.(svc.key) || {};
+        const nodeShape = designOverride.shape || design.shape || 'bubble';
+        const nodeColor = designOverride.color || DNA[branch]?.color || '#999';
+
         const node = {
           id: svc.key,
           type: 'service',
           label: svc.label || svc.key,
-          shape: 'bubble',
-          color: DNA[branch]?.color || '#999',
-          bg: DNA[branch]?.bg || '#f5f5f5',
+          shape: nodeShape,
+          color: nodeColor,
+          bg: designOverride.color ? (designOverride.color + '15') : (DNA[branch]?.bg || '#f5f5f5'),
           x: saved?.x ?? parentNode.x + Math.cos(angle) * dist,
           y: saved?.y ?? parentNode.y + Math.sin(angle) * dist,
           parentId: svc.parentId || branch,
@@ -1060,7 +1075,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     }
   }, [dragState, paletteDrag, allNodes, magnetTarget, svgPoint, createService, moveService, nodePositionOverrides]);
 
-  // ── Quick Spawn "+" (directive #7) ──
+  // ── Quick Spawn "+" (directive #7) — Creates a child task/service under the selected node ──
   const handleQuickSpawn = useCallback((parentNode, e) => {
     e.stopPropagation();
     const branch = parentNode.type === 'root' ? parentNode.id : getDashboardBranch(parentNode.dashboard);
@@ -1387,39 +1402,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         </g>
       </svg>
 
-      {/* ══════ Shape Palette (directive #5) — hidden by default, toggle to reveal ══════ */}
-      <div className="absolute top-3 left-3 z-10">
-        <button
-          onClick={() => setShowShapePalette(prev => !prev)}
-          className="bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-100 p-2 hover:bg-gray-50 transition-colors"
-          title={showShapePalette ? 'הסתר צורות' : 'הצג צורות'}
-        >
-          <Zap className="w-4 h-4 text-[#4682B4]" />
-        </button>
-        {showShapePalette && (
-          <div className="mt-1 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-2">
-            <div className="text-[9px] font-bold text-gray-400 mb-1.5 px-1 flex items-center gap-1">
-              <Zap className="w-3 h-3" /> צורות
-            </div>
-            <div className="flex flex-col gap-1">
-              {PALETTE_SHAPES.map(shape => {
-                const Icon = shape.icon;
-                return (
-                  <button
-                    key={shape.key}
-                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 transition-all cursor-grab active:cursor-grabbing group text-right"
-                    onMouseDown={(e) => handlePaletteDragStart(shape.key, e)}
-                    title={`גרור ${shape.label} לקנבס`}
-                  >
-                    <Icon className="w-4 h-4 text-[#4682B4] group-hover:text-[#E91E63] transition-colors" />
-                    <span className="text-[10px] text-gray-600 font-medium">{shape.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Legacy Shape Palette removed — DesignFloatingTab is the single styling tool */}
 
       {/* ══════ DNA Legend + Sync Button ══════ */}
       <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">

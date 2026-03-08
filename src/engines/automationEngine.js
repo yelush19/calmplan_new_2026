@@ -85,9 +85,12 @@ export async function processSequenceUnlock(completedTask, allTasks, paused = fa
   });
 
   for (const dep of dependents) {
-    // Check if ALL prerequisites for this task are now met
+    // AND RULE: Check if ALL prerequisites for this task are now met
     const allPrereqsMet = checkAllPrerequisitesMet(dep, allTasks);
-    if (allPrereqsMet && dep.status === 'waiting_for_materials') {
+    // Unlock tasks that are locked (waiting_for_materials OR not_started with deps)
+    const isLocked = dep.status === 'waiting_for_materials' ||
+      (dep.status === 'not_started' && Array.isArray(dep.dependency_ids) && dep.dependency_ids.length > 0);
+    if (allPrereqsMet && isLocked) {
       try {
         await Task.update(dep.id, { ...dep, status: 'not_started' });
         unlocked.push(dep);
@@ -95,6 +98,8 @@ export async function processSequenceUnlock(completedTask, allTasks, paused = fa
           taskId: dep.id,
           taskTitle: dep.title,
           unlockedBy: completedTask.title,
+          rule: 'AND_GATE',
+          prerequisiteCount: dep.dependency_ids?.length || 0,
         });
       } catch { /* skip */ }
     }
@@ -118,43 +123,81 @@ function checkAllPrerequisitesMet(task, allTasks) {
 }
 
 /**
- * Proactive AND Convergence Scanner:
- * Scans ALL locked/waiting tasks and unlocks any whose prerequisites are now ALL met.
- * This catches cases where multiple prerequisites complete across different sessions.
+ * isTaskLocked — UI helper: returns true if a task has unmet prerequisites.
+ * Use this to visually lock tasks on kanban/lists/maps.
  */
-export async function processConvergenceUnlock(allTasks, paused = false) {
-  if (paused) return [];
-  const unlocked = [];
+export function isTaskLocked(task, allTasks) {
+  if (!task.dependency_ids || task.dependency_ids.length === 0) return false;
+  return !checkAllPrerequisitesMet(task, allTasks);
+}
 
-  // Find all tasks that are locked/waiting and have dependency_ids
-  const lockedTasks = allTasks.filter(t =>
-    t.status === 'waiting_for_materials' &&
-    Array.isArray(t.dependency_ids) &&
-    t.dependency_ids.length > 0
-  );
+/**
+ * getPrerequisiteStatus — returns detailed AND gate state for a task.
+ * { locked, total, completed, pending: [{ id, title, status }] }
+ */
+export function getPrerequisiteStatus(task, allTasks) {
+  if (!task.dependency_ids || task.dependency_ids.length === 0) {
+    return { locked: false, total: 0, completed: 0, pending: [] };
+  }
+  const total = task.dependency_ids.length;
+  let completed = 0;
+  const pending = [];
+  for (const depId of task.dependency_ids) {
+    const dep = allTasks.find(t => t.id === depId);
+    if (dep && DONE_STATUSES.includes(dep.status)) {
+      completed++;
+    } else {
+      pending.push({
+        id: depId,
+        title: dep?.title || depId,
+        status: dep?.status || 'unknown',
+      });
+    }
+  }
+  return { locked: completed < total, total, completed, pending };
+}
 
-  for (const task of lockedTasks) {
-    if (checkAllPrerequisitesMet(task, allTasks)) {
+/**
+ * runConditionalFlowCheck — Scan all tasks and lock/unlock based on AND rule.
+ * Called on startup or after batch operations to ensure consistency.
+ */
+export async function runConditionalFlowCheck(allTasks, paused = false) {
+  if (paused) return { locked: 0, unlocked: 0 };
+  let locked = 0;
+  let unlocked = 0;
+
+  for (const task of allTasks) {
+    if (task.status === 'production_completed' || task.context === 'archived') continue;
+    if (!task.dependency_ids || task.dependency_ids.length === 0) continue;
+
+    const allMet = checkAllPrerequisitesMet(task, allTasks);
+
+    if (!allMet && task.status === 'not_started') {
+      // Lock: set to waiting_for_materials
+      try {
+        await Task.update(task.id, { ...task, status: 'waiting_for_materials' });
+        locked++;
+        logAutomation('task_locked_by_and_rule', {
+          taskId: task.id, taskTitle: task.title,
+          unmetCount: task.dependency_ids.length - task.dependency_ids.filter(id => {
+            const d = allTasks.find(t => t.id === id);
+            return d && DONE_STATUSES.includes(d.status);
+          }).length,
+        });
+      } catch { /* skip */ }
+    } else if (allMet && task.status === 'waiting_for_materials') {
+      // Unlock: all prerequisites met
       try {
         await Task.update(task.id, { ...task, status: 'not_started' });
-        unlocked.push(task);
-
-        // Log which prerequisites were satisfied
-        const prereqNames = task.dependency_ids
-          .map(id => allTasks.find(t => t.id === id)?.title || id)
-          .join(', ');
-
-        logAutomation('convergence_unlock', {
-          taskId: task.id,
-          taskTitle: task.title,
-          prerequisiteCount: task.dependency_ids.length,
-          prerequisites: prereqNames,
-          rule: 'AND — all prerequisites met',
+        unlocked++;
+        logAutomation('task_unlocked_by_and_rule', {
+          taskId: task.id, taskTitle: task.title,
         });
       } catch { /* skip */ }
     }
   }
-  return unlocked;
+
+  return { locked, unlocked };
 }
 
 // ═══════════════════════════════════════════════
@@ -264,12 +307,15 @@ export function computeCognitiveLoad(todayTasks, threshold = 480) {
  * @returns {{ archived: number, unlockedCount: number }}
  */
 export async function runAllAutomations(allTasks, paused = false) {
-  if (paused) return { archived: 0, unlockedCount: 0 };
+  if (paused) return { archived: 0, unlockedCount: 0, andRuleLocked: 0, andRuleUnlocked: 0 };
 
   const archived = await processAutoArchive(allTasks, paused);
+  const andResult = await runConditionalFlowCheck(allTasks, paused);
 
-  // AND Convergence: proactively scan locked tasks and unlock if all prereqs are done
-  const converged = await processConvergenceUnlock(allTasks, paused);
-
-  return { archived, unlockedCount: converged.length };
+  return {
+    archived,
+    unlockedCount: andResult.unlocked,
+    andRuleLocked: andResult.locked,
+    andRuleUnlocked: andResult.unlocked,
+  };
 }

@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import DesignPanel from '@/components/canvas/DesignPanel';
 import { computeComplexityTier, getBubbleRadius, getTierInfo } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 import { buildCollisionNodes, resolveCollisions } from '@/engines/mapCollisionEngine';
@@ -169,8 +170,9 @@ const META_FOLDERS = {
   },
   'P4 בית': {
     icon: '🏠', color: '#6D4C41', label: 'P4 | בית',
-    departments: ['בית'],
+    departments: ['בית-תחזוקה', 'בית-אישי', 'בית-מלאי'],
     forceNano: true,
+    isHome: true,
   },
   'P5 דוחות שנתיים': {
     icon: '📋', color: '#2E7D32', label: 'P5 | דוחות שנתיים והצהרות',
@@ -187,6 +189,9 @@ const BRANCH_CONFIG = {
   'התאמות':           { color: '#2E5E4F', icon: '🔄', label: 'התאמות חשבונות' },
   'אדמיניסטרציה':     { color: '#546E7A', icon: '📁', label: 'אדמיניסטרציה' },
   'בית':              { color: '#6D4C41', icon: '🏠', label: 'בית' },
+  'בית-תחזוקה':       { color: '#6D4C41', icon: '🔧', label: 'תחזוקה' },
+  'בית-אישי':         { color: '#7B1FA2', icon: '👤', label: 'אישי' },
+  'בית-מלאי':         { color: '#FF9800', icon: '📦', label: 'מלאי' },
   'אחר/טיוטות':       { color: '#78909C', icon: '📝', label: 'אחר/טיוטות' },
   'דוחות שנתיים':      { color: '#2E7D32', icon: '📋', label: 'דוחות שנתיים' },
   'הצהרות הון':       { color: '#2E7D32', icon: '📄', label: 'הצהרות הון' },
@@ -348,22 +353,22 @@ const CATEGORY_TO_DEPARTMENT = {
   'work_meeting': 'אדמיניסטרציה',
   'כללי': 'אדמיניסטרציה',
   'work_general': 'אדמיניסטרציה',
-  // P4 — Home
-  'בית': 'בית',
-  'אישי': 'בית',
-  'בית/אישי': 'בית',
-  'home': 'בית',
-  'home_cleaning': 'בית',
-  'home_laundry': 'בית',
-  'home_garden': 'בית',
-  'home_maintenance': 'בית',
-  'home_medical': 'בית',
-  'home_legal': 'בית',
-  'home_family': 'בית',
-  'home_personal': 'בית',
-  'home_shopping': 'בית',
-  'home_inventory': 'בית',
-  'home_food': 'בית',
+  // P4 — Home (enhanced with maintenance/personal/inventory sub-branches)
+  'בית': 'בית-תחזוקה',
+  'אישי': 'בית-אישי',
+  'בית/אישי': 'בית-תחזוקה',
+  'home': 'בית-תחזוקה',
+  'home_cleaning': 'בית-תחזוקה',
+  'home_laundry': 'בית-תחזוקה',
+  'home_garden': 'בית-תחזוקה',
+  'home_maintenance': 'בית-תחזוקה',
+  'home_medical': 'בית-אישי',
+  'home_legal': 'בית-אישי',
+  'home_family': 'בית-אישי',
+  'home_personal': 'בית-אישי',
+  'home_shopping': 'בית-מלאי',
+  'home_inventory': 'בית-מלאי',
+  'home_food': 'בית-מלאי',
 };
 
 // ─── Node Scaling by Complexity Tier (3:1 ratio from Enterprise to Nano) ──
@@ -681,10 +686,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // Level 3 (departments): collapsed by default → click to reveal Level 4 clients
   const MAX_VISIBLE_CHILDREN = 999; // Show ALL clients — no pagination at all
   // ── P3 QUIET: P1+P2 expanded by default, P3+P4 collapsed (Iron Rule) ──
+  // ── P4 ALWAYS EXPANDED: Home branch and its sub-departments are visible by default ──
   const [expandedMetaFolders, setExpandedMetaFolders] = useState(
-    new Set(['P1 חשבות שכר', 'P2 הנהלת חשבונות'])
+    new Set(['P1 חשבות שכר', 'P2 הנהלת חשבונות', 'P4 בית'])
   );
-  const [expandedBranches, setExpandedBranches] = useState(new Set());
+  const [expandedBranches, setExpandedBranches] = useState(
+    new Set(['בית-תחזוקה', 'בית-אישי', 'בית-מלאי'])
+  );
   const [expandedFuncBubbles, setExpandedFuncBubbles] = useState(new Set());
 
   // ── FOCUS MODE: zoom into specific branch/client ──
@@ -726,6 +734,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
   // ── SHAPE PICKER state — reads global default from DesignContext ──
   const [showShapePicker, setShowShapePicker] = useState(false);
+  const [showDesignPanel, setShowDesignPanel] = useState(false);
   const [selectedShape, setSelectedShape] = useState(design?.shape || 'bubble');
   const [nodeShapes, setNodeShapes] = useState(() => {
     try {
@@ -803,7 +812,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       if (!t.due_date || !t.due_date.startsWith(currentMonthPrefix)) return false;
       if (!crisisMode) return true;
       const dept = CATEGORY_TO_DEPARTMENT[t.category || 'אחר'] || t.category;
-      if (dept === 'בית') return t.priority === 'urgent' || t.priority === 'high';
+      if (dept.startsWith('בית')) return t.priority === 'urgent' || t.priority === 'high';
       return t.priority !== 'low';
     });
 
@@ -813,6 +822,51 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
     console.log(`[CalmPlan] MindMap rendering ${activeTasks.length} tasks for ${currentMonthPrefix}`);
 
+    // ══════════════════════════════════════════════════════════════
+    // P4 HOME FORCE-INJECTION: Always show P4 sub-branches on the map
+    // Even when no real tasks exist, inject placeholder nodes so that
+    // the תחזוקה / אישי / מלאי departments are VISIBLE.
+    // ══════════════════════════════════════════════════════════════
+    const P4_FORCED_NODES = [
+      // ── תחזוקה (Maintenance) ──
+      { id: '_p4_cleaning', title: '🧹 ניקיון', category: 'home', subcategory: 'maintenance_cleaning',
+        client_name: 'ניקיון', status: 'not_started', due_date: `${currentMonthPrefix}-01`,
+        priority: 'medium', tags: ['P4', 'home'], _isP4Placeholder: true },
+      { id: '_p4_laundry', title: '👕 כביסה', category: 'home', subcategory: 'maintenance_laundry',
+        client_name: 'כביסה', status: 'not_started', due_date: `${currentMonthPrefix}-01`,
+        priority: 'medium', tags: ['P4', 'home'], _isP4Placeholder: true },
+      { id: '_p4_garden', title: '🌿 גינה', category: 'home', subcategory: 'maintenance_garden',
+        client_name: 'גינה', status: 'not_started', due_date: `${currentMonthPrefix}-01`,
+        priority: 'low', tags: ['P4', 'home'], _isP4Placeholder: true },
+      { id: '_p4_supplies', title: '🧴 חומרי ניקיון', category: 'home', subcategory: 'maintenance_supplies',
+        client_name: 'חומרי ניקיון', status: 'not_started', due_date: `${currentMonthPrefix}-01`,
+        priority: 'medium', tags: ['P4', 'home'], _isP4Placeholder: true },
+      // ── אישי (Personal) ──
+      { id: '_p4_medical', title: '🏥 רפואי', category: 'home', subcategory: 'personal_medical',
+        client_name: 'רפואי', status: 'not_started', due_date: `${currentMonthPrefix}-01`,
+        priority: 'high', tags: ['P4', 'personal'], _isP4Placeholder: true },
+      { id: '_p4_legal', title: '⚖️ משפטי/ביטוח', category: 'home', subcategory: 'personal_legal',
+        client_name: 'ביטוח', status: 'not_started', due_date: `${currentMonthPrefix}-01`,
+        priority: 'medium', tags: ['P4', 'personal'], _isP4Placeholder: true },
+      { id: '_p4_family', title: '👨‍👩‍👧‍👦 משפחה', category: 'home', subcategory: 'personal_family',
+        client_name: 'משפחה', status: 'not_started', due_date: `${currentMonthPrefix}-01`,
+        priority: 'medium', tags: ['P4', 'personal'], _isP4Placeholder: true },
+      // ── מלאי (Inventory) ──
+      { id: '_p4_food', title: '🍎 מזון', category: 'home', subcategory: 'inventory_food',
+        client_name: 'מזון', status: 'not_started', due_date: `${currentMonthPrefix}-01`,
+        priority: 'medium', tags: ['P4', 'inventory'], _isP4Placeholder: true },
+      { id: '_p4_shopping', title: '🛒 קניות', category: 'home', subcategory: 'inventory_shopping',
+        client_name: 'קניות', status: 'not_started', due_date: `${currentMonthPrefix}-01`,
+        priority: 'medium', tags: ['P4', 'inventory'], _isP4Placeholder: true },
+    ];
+    // Merge forced P4 nodes — skip if real tasks already cover that subcategory
+    const existingP4Subs = new Set(activeTasks.filter(t => t.category === 'home').map(t => t.subcategory));
+    P4_FORCED_NODES.forEach(node => {
+      if (!existingP4Subs.has(node.subcategory)) {
+        activeTasks.push(node);
+      }
+    });
+
     // Collect ALL known department names for catch-all check
     const knownDepartments = new Set();
     Object.values(META_FOLDERS).forEach(mf => mf.departments.forEach(d => knownDepartments.add(d)));
@@ -821,8 +875,25 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       const rawCat = task.category || 'אחר';
       let cat = CATEGORY_TO_DEPARTMENT[rawCat] || rawCat;
       const clientName = task.client_name || 'כללי';
+      // P4 Home subcategory routing: use subcategory to determine sub-branch
+      if (rawCat === 'home' && task.subcategory) {
+        const subMap = {
+          'maintenance_cleaning': 'בית-תחזוקה',
+          'maintenance_laundry': 'בית-תחזוקה',
+          'maintenance_garden': 'בית-תחזוקה',
+          'maintenance_supplies': 'בית-תחזוקה',
+          'personal_medical': 'בית-אישי',
+          'personal_legal': 'בית-אישי',
+          'personal_family': 'בית-אישי',
+          'inventory_food': 'בית-מלאי',
+          'inventory_cleaning': 'בית-מלאי',
+          'inventory_shopping': 'בית-מלאי',
+          'inventory_check': 'בית-מלאי',
+        };
+        cat = subMap[task.subcategory] || 'בית-תחזוקה';
+      }
       // No-client tasks → Admin branch (except P4 home tasks)
-      if (!task.client_name && cat !== 'בית') cat = 'אדמיניסטרציה';
+      if (!task.client_name && cat !== 'בית-תחזוקה' && cat !== 'בית-אישי' && cat !== 'בית-מלאי') cat = 'אדמיניסטרציה';
       // MATH AUDIT: If category doesn't map to ANY known department, route to catch-all
       if (!knownDepartments.has(cat) && cat !== 'אדמיניסטרציה') {
         cat = 'אחר/טיוטות';
@@ -1085,6 +1156,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       'P2 הנהלת חשבונות':   Math.PI,
       'P3 ניהול משרד':      0,
       'P4 בית':             Math.PI / 2,
+      'P5 דוחות שנתיים':    Math.PI / 4,
     };
 
     // ─── ANTI-OVERLAP: Generous spacing + downward cascade ───
@@ -2923,6 +2995,41 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           )}
         </div>
 
+        {/* ── Home (P4) Navigation Button ── */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            // Focus on P4 Home branch — expand it and zoom in
+            const p4Key = 'P4 בית';
+            setExpandedMetaFolders(prev => new Set([...prev, p4Key]));
+            handleFocusZoom(p4Key);
+            // Pan to P4 position
+            const p4Node = layout.metaFolderPositions?.find(m => m.name === p4Key);
+            if (p4Node) {
+              const cx = dimensions.width / 2;
+              const cy = dimensions.height / 2;
+              setPan({ x: cx - p4Node.x * zoom, y: cy - p4Node.y * zoom });
+            }
+          }}
+          className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-amber-500 text-white shadow-lg border-2 border-amber-600 hover:bg-amber-600 transition-all"
+          title="נווט לבית (P4)"
+        >
+          🏠
+        </button>
+
+        {/* ── Design Engine Panel Toggle ── */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowDesignPanel(prev => !prev); }}
+          className={`flex items-center justify-center w-9 h-9 rounded-[32px] shadow-lg border-2 transition-all ${
+            showDesignPanel
+              ? 'bg-blue-600 text-white border-blue-700'
+              : 'bg-white text-[#37474F] border-[#B0BEC5] hover:bg-blue-50 hover:text-blue-700'
+          }`}
+          title="מנוע עיצוב"
+        >
+          🎨
+        </button>
+
         {/* Reset manual positions button */}
         {Object.keys(manualPositions).length > 0 && (
           <button
@@ -3306,6 +3413,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         allTasks={tasks}
         onTaskCreated={() => { onTaskCreated?.(); }}
       />
+
+      {/* ── Design Panel ── */}
+      <DesignPanel isOpen={showDesignPanel} onClose={() => setShowDesignPanel(false)} />
 
       {/* ── Focus Mode Indicator ── */}
       {focusMode && selectedBranch && (

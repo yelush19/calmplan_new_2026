@@ -36,7 +36,9 @@ import CompletionFeedback from "@/components/tasks/CompletionFeedback";
 import DesktopBridge from "@/components/desktop/DesktopBridge";
 import { AyoaViewProvider, useAyoaView } from "@/contexts/AyoaViewContext";
 import { DesignProvider } from "@/contexts/DesignContext";
+import { BiologicalClockProvider } from "@/contexts/BiologicalClockContext";
 import DesignFloatingTab from "@/components/canvas/DesignFloatingTab";
+import BiologicalClockIndicator from "@/components/canvas/BiologicalClockIndicator";
 import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
 import { runAllAutomations } from "@/engines/automationEngine";
 
@@ -122,7 +124,7 @@ const getSidebarSections = () => ({
         { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
       ]},
       { key: 'p3_system', label: 'הגדרות מערכת', icon: Settings, items: [
-        { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Activity },
+        { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Eye },
         { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
         { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
         { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
@@ -479,6 +481,11 @@ function LayoutInner({ children }) {
 
           {/* Left: Header actions */}
           <div className="flex items-center gap-2">
+            {/* Biological Clock Indicator */}
+            <div className="hidden md:block">
+              <BiologicalClockIndicator />
+            </div>
+
             {/* Deadline Countdown */}
             <Badge variant={daysLeft <= 3 ? "destructive" : "secondary"} className="text-xs hidden md:inline-flex">
               עוד {daysLeft} ימים ל{deadlineLabel}
@@ -1028,7 +1035,10 @@ function LayoutInner({ children }) {
                 <div className="hidden md:block p-4 border-b border-[#B0BEC5]" style={{ backgroundColor: '#FAFBFC' }}>
                   <div className="max-w-full mx-auto flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-foreground">{findPageTitle()}</h2>
-                    <Link to={createPageUrl("Home")}>
+                    <Link to={createPageUrl("Home")} onClick={() => {
+                      // Focus on P4 (Home branch) when navigating home
+                      window.dispatchEvent(new CustomEvent('calmplan:focus-branch', { detail: { branch: 'P4' } }));
+                    }}>
                       <Button variant="outline" className="flex items-center gap-2">
                         <ArrowRight className="w-4 h-4" />
                         חזור לדף הבית
@@ -1043,7 +1053,9 @@ function LayoutInner({ children }) {
                 <div className="md:hidden px-4 py-3 border-b border-[#B0BEC5]" style={{ backgroundColor: '#FAFBFC' }}>
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold text-foreground">{findPageTitle()}</h2>
-                    <Link to={createPageUrl("Home")}>
+                    <Link to={createPageUrl("Home")} onClick={() => {
+                      window.dispatchEvent(new CustomEvent('calmplan:focus-branch', { detail: { branch: 'P4' } }));
+                    }}>
                       <Button variant="outline" size="sm" className="flex items-center gap-2">
                         <ArrowRight className="w-4 h-4" />
                         חזור לבית
@@ -1162,7 +1174,9 @@ export default function Layout({ children, currentPageName }) {
     <AppProvider>
       <DesignProvider>
         <AyoaViewProvider>
-          <LayoutInner>{children}</LayoutInner>
+          <BiologicalClockProvider>
+            <LayoutInner>{children}</LayoutInner>
+          </BiologicalClockProvider>
         </AyoaViewProvider>
       </DesignProvider>
     </AppProvider>
