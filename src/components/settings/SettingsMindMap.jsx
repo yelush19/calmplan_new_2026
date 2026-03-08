@@ -610,6 +610,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [syncStatus, setSyncStatus] = useState(null); // null | 'syncing' | 'success' | 'error'
   const [syncResults, setSyncResults] = useState(null);
   const [syncTimestamp, setSyncTimestamp] = useState(null);
+  // Shapes palette hidden by default — logic preserved, toggle reveals it
+  const [showShapePalette, setShowShapePalette] = useState(false);
 
   // ── Sync node selection to global Design Engine ──
   useEffect(() => {
@@ -1078,6 +1080,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     e.stopPropagation();
     const branch = parentNode.type === 'root' ? parentNode.id : getDashboardBranch(parentNode.dashboard);
     const dashboard = DNA[branch]?.dashboard || 'admin';
+    // Connect child to parent via parentId — true hierarchy linking
     const parentId = parentNode.type === 'root' ? parentNode.id : parentNode.id;
     const key = createService({ dashboard, label: 'שירות חדש', parentId });
 

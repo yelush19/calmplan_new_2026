@@ -109,14 +109,16 @@ export async function processSequenceUnlock(completedTask, allTasks, paused = fa
 }
 
 /**
- * AND RULE: Check if ALL prerequisites (dependency_ids) are completed.
- * A task with N prerequisites remains LOCKED until every one is 'production_completed'.
+ * AND Convergence Rule: A locked task unlocks ONLY when ALL prerequisites are Done.
+ * Checks both 'production_completed' and 'completed' as "done" statuses.
  */
+const DONE_STATUSES = ['production_completed', 'completed'];
+
 function checkAllPrerequisitesMet(task, allTasks) {
   if (!task.dependency_ids || task.dependency_ids.length === 0) return true;
   return task.dependency_ids.every(depId => {
     const depTask = allTasks.find(t => t.id === depId);
-    return depTask && depTask.status === 'production_completed';
+    return depTask && DONE_STATUSES.includes(depTask.status);
   });
 }
 
@@ -142,7 +144,7 @@ export function getPrerequisiteStatus(task, allTasks) {
   const pending = [];
   for (const depId of task.dependency_ids) {
     const dep = allTasks.find(t => t.id === depId);
-    if (dep && dep.status === 'production_completed') {
+    if (dep && DONE_STATUSES.includes(dep.status)) {
       completed++;
     } else {
       pending.push({
@@ -179,7 +181,7 @@ export async function runConditionalFlowCheck(allTasks, paused = false) {
           taskId: task.id, taskTitle: task.title,
           unmetCount: task.dependency_ids.length - task.dependency_ids.filter(id => {
             const d = allTasks.find(t => t.id === id);
-            return d && d.status === 'production_completed';
+            return d && DONE_STATUSES.includes(d.status);
           }).length,
         });
       } catch { /* skip */ }

@@ -22,6 +22,10 @@ import SettingsMindMap from '@/components/settings/SettingsMindMap';
 import TemplatePanel from '@/components/settings/TemplatePanel';
 import ServiceCatalog from '@/components/settings/ServiceCatalog';
 import ServiceCatalogSection from '@/components/settings/ServiceCatalogSection';
+import { useDesign } from '@/contexts/DesignContext';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { ExternalLink } from 'lucide-react';
 
 // =====================================================
 // MAIN SETTINGS PAGE - Tabbed UI + Process Architect
@@ -536,34 +540,19 @@ function LenaSettings() {
 
 function AutomationSettings() {
   const [log, setLog] = useState(() => getAutomationLog());
-  const [paused, setPaused] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('calmplan_design_prefs') || '{}').automationsPaused || false; }
-    catch { return false; }
-  });
-  const [cogLimit, setCogLimit] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('calmplan_design_prefs') || '{}').cognitiveLoadLimit || 480; }
-    catch { return 480; }
-  });
+  // ── Consolidated: use DesignContext as single source of truth ──
+  const design = useDesign();
+  const paused = design.automationsPaused || false;
+  const cogLimit = design.cognitiveLoadLimit || 480;
 
   const togglePause = () => {
-    const next = !paused;
-    setPaused(next);
-    try {
-      const prefs = JSON.parse(localStorage.getItem('calmplan_design_prefs') || '{}');
-      prefs.automationsPaused = next;
-      localStorage.setItem('calmplan_design_prefs', JSON.stringify(prefs));
-    } catch { /* ignore */ }
+    design.updatePref('automationsPaused', !paused);
   };
 
   const updateCogLimit = (val) => {
     const num = parseInt(val, 10);
     if (isNaN(num) || num < 0) return;
-    setCogLimit(num);
-    try {
-      const prefs = JSON.parse(localStorage.getItem('calmplan_design_prefs') || '{}');
-      prefs.cognitiveLoadLimit = num;
-      localStorage.setItem('calmplan_design_prefs', JSON.stringify(prefs));
-    } catch { /* ignore */ }
+    design.updatePref('cognitiveLoadLimit', num);
   };
 
   return (
@@ -689,6 +678,13 @@ function AutomationSettings() {
           )}
         </CardContent>
       </Card>
+
+      {/* Link to full AutomationRules page (consolidated view) */}
+      <Link to={createPageUrl("AutomationRules")}
+        className="flex items-center gap-2 px-4 py-3 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors text-sm font-medium text-purple-700">
+        <ExternalLink className="w-4 h-4" />
+        פתח את מרכז כללי האוטומציה המלא
+      </Link>
     </div>
   );
 }

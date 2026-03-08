@@ -31,6 +31,7 @@ import { nuclearWipeTasks } from '@/api/functions';
 import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
 import useTaskCascade from "@/hooks/useTaskCascade";
 import { useApp } from "@/contexts/AppContext";
+import { useDesign } from "@/contexts/DesignContext";
 
 // ─── Draggable panel wrapper (localStorage persist) ─────────
 function DraggablePanel({ storageKey, children, className = '', style = {} }) {
@@ -153,6 +154,9 @@ export default function HomePage() {
   const [noteTask, setNoteTask] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { focusMode } = useApp();
+  // ── Global Design Engine: shape/color overrides from DesignContext ──
+  let design = null;
+  try { design = useDesign(); } catch { /* not mounted */ }
   // Cascade engine for proactive insights
   const allTasksForCascade = data?.allTasks || [];
   const setAllTasksForCascade = useCallback((updater) => {
@@ -1114,7 +1118,10 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
     : null;
 
   return (
-    <div className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-orange-50' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}>
+    <div
+      className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-orange-50' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}
+      style={design?.getNodeOverride?.(task.id)?.color ? { borderLeftColor: design.getNodeOverride(task.id).color, borderLeftWidth: '3px' } : {}}
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm text-gray-800 truncate">{task.title}</span>

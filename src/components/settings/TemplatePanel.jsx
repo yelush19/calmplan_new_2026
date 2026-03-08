@@ -99,6 +99,10 @@ export default function TemplatePanel({ service, onClose }) {
   const [editIsParallel, setEditIsParallel] = useState(service?.isParallel || false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // ── Search filters for dropdowns ──
+  const [parentSearch, setParentSearch] = useState('');
+  const [nextStepSearch, setNextStepSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
 
   if (!service) return null;
 
