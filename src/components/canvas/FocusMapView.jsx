@@ -78,6 +78,7 @@ export default function FocusMapView({
 }) {
   const svgRef = useRef(null);
   const [focusedNode, setFocusedNode] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   // Design engine — global preferences
   let design = null;
@@ -210,9 +211,14 @@ export default function FocusMapView({
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
     setFocusedNode(prev => prev === nodeId ? null : nodeId);
-    // Notify Design Engine of selection
-    window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId } }));
-  }, []);
+    if (selectedNode === nodeId) {
+      setSelectedNode(null);
+    } else {
+      setSelectedNode(nodeId);
+      // Notify Design Engine of selection (global activeTaskId)
+      window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId } }));
+    }
+  }, [selectedNode]);
 
   return (
     <div className="relative w-full h-full" style={{
@@ -231,7 +237,7 @@ export default function FocusMapView({
         viewBox={`0 0 ${VB} ${VB}`}
         className="w-full h-full"
         style={{ maxHeight: 'calc(100vh - 180px)' }}
-        onClick={() => setFocusedNode(null)}
+        onClick={() => { setFocusedNode(null); setSelectedNode(null); }}
       >
         <defs>
           {/* Warm center glow — distinct from Architect's cool glow */}
@@ -257,6 +263,9 @@ export default function FocusMapView({
           </filter>
           <filter id="focus-locked">
             <feGaussianBlur stdDeviation="1.5" />
+          </filter>
+          <filter id="focus-sel-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#E91E63" floodOpacity="0.35" />
           </filter>
           {/* Cognitive load tier gradients */}
           {[0, 1, 2, 3].map(tier => {
@@ -361,6 +370,7 @@ export default function FocusMapView({
         {unlockedNodes.map(node => {
           const isFocused = focusedNode === node.id;
           const isBlurred = focusedNode !== null && !isFocused;
+          const isSelected = selectedNode === node.id;
           const loadColor = LOAD_COLORS[node.load]?.color || '#546E7A';
           return (
             <g key={`u-${node.id}`}
@@ -372,6 +382,13 @@ export default function FocusMapView({
                 transform: isFocused ? 'scale(1.12)' : 'scale(1)',
                 transformOrigin: `${node.x}px ${node.y}px`,
               }}>
+              {/* Selection glow */}
+              {isSelected && (
+                <circle cx={node.x} cy={node.y} r={node.r + 8}
+                  fill="none" stroke="#E91E63" strokeWidth={2.5} opacity={0.7}>
+                  <animate attributeName="opacity" values="0.7;0.3;0.7" dur="1.5s" repeatCount="indefinite" />
+                </circle>
+              )}
               {/* Cognitive load tier ring */}
               <circle cx={node.x} cy={node.y} r={node.r + 5}
                 fill={`url(#tier-grad-${node.load})`} stroke={loadColor} strokeWidth={1} opacity={0.4} />
