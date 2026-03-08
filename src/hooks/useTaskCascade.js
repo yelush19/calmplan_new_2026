@@ -28,6 +28,7 @@ import {
 import {
   PHASE_B_SERVICES,
   PHASE_C_SERVICES,
+  MSB_COLLECTOR_SERVICES,
   P2_PHASE_B_SERVICES,
   P2_PHASE_C_SERVICES,
 } from '@/engines/taskCascadeEngine';
@@ -133,10 +134,15 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
               process_steps: templateSteps,
             };
           };
-          tasksToCreate = [
-            ...PHASE_B_SERVICES.map(s => buildChild(s, 'phase_b', 'שלב ב\'')),
-            ...PHASE_C_SERVICES.map(s => buildChild(s, 'phase_c', 'שלב ג\'')),
-          ];
+          const phaseBTasks = PHASE_B_SERVICES.map(s => buildChild(s, 'phase_b', 'שלב ב\''));
+          const phaseCTasks = PHASE_C_SERVICES.map(s => buildChild(s, 'phase_c', 'שלב ג\''));
+          const msbTasks = MSB_COLLECTOR_SERVICES.map(s => ({
+            ...buildChild(s, 'msb_collector', 'מס"ב רשויות'),
+            status: 'waiting_for_materials',
+            is_collector: true,
+            dependency_ids: [],
+          }));
+          tasksToCreate = [...phaseBTasks, ...phaseCTasks, ...msbTasks];
         } else if (service?.key === 'bookkeeping') {
           const existingCategories = new Set(siblings.map(t => t.category));
           const buildChild = (svc, phase) => {
@@ -175,11 +181,45 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
       if (tasksToCreate.length > 0) {
         const existingTitles = new Set(tasks.map(t => t.title));
 
-        for (const newTask of tasksToCreate) {
-          // Don't create duplicates
-          if (existingTitles.has(newTask.title)) continue;
+        // Separate MSB collectors from regular child tasks
+        const regularTasks = tasksToCreate.filter(t => !t.is_collector);
+        const msbCollectors = tasksToCreate.filter(t => t.is_collector);
+        const createdPhaseB = [];
 
+        // Create regular tasks first (Phase B reporting tasks)
+        for (const newTask of regularTasks) {
+          if (existingTitles.has(newTask.title)) continue;
           const created = await Task.create(newTask);
+          if (created) {
+            setTasks(prev => [...prev, created]);
+            // Track Phase B tasks for MSB dependency wiring
+            if (created.workflow_phase === 'phase_b') {
+              createdPhaseB.push(created);
+            }
+          }
+        }
+
+        // Now create MSB collectors with dependency_ids pointing to Phase B tasks
+        // Also include sibling reporting tasks from previous months
+        const siblingReportIds = tasks
+          .filter(t =>
+            t.client_name === task.client_name &&
+            t.branch === 'P1' &&
+            t.workflow_phase === 'phase_b' &&
+            t.report_month === task.report_month &&
+            t.status !== 'production_completed'
+          )
+          .map(t => t.id);
+
+        const allDepIds = [
+          ...createdPhaseB.map(t => t.id),
+          ...siblingReportIds,
+        ];
+
+        for (const collector of msbCollectors) {
+          if (existingTitles.has(collector.title)) continue;
+          collector.dependency_ids = allDepIds;
+          const created = await Task.create(collector);
           if (created) {
             setTasks(prev => [...prev, created]);
           }

@@ -77,7 +77,6 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
   const [focusedNode, setFocusedNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
-  const [overrides, setOverrides] = useState({});
 
   // Design engine
   let design = null;
@@ -166,7 +165,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
 
         const taskRing = isCompleted ? RINGS.ring3 : RINGS.ring2 + (ti % 3) * 35;
         const r = 20;
-        const ov = overrides[task.id] || {};
+        const ov = design?.getNodeOverride?.(task.id) || {};
 
         allNodes.push({
           id: task.id,
@@ -183,12 +182,13 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           parentAngle: midAngle,
           parentColor: dnaColor,
           statusGlow: STATUS_GLOW[status] || '#546E7A',
+          sticker: design?.stickerMap?.[task.id] || null,
         });
       });
     });
 
     return { nodes: allNodes, ringSegments: segments };
-  }, [tasks, overrides]);
+  }, [tasks, design?.nodeOverrides]);
 
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
@@ -207,34 +207,32 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
     } else {
       setSelectedNode(nodeId);
       setToolbarPos({ x: screenX, y: screenY });
+      // Notify Design Engine of selection
+      window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId } }));
     }
     setFocusedNode(prev => prev === nodeId ? null : nodeId);
   }, [nodes, selectedNode]);
 
   const handleColorChange = useCallback((color) => {
-    if (!selectedNode) return;
-    setOverrides(prev => ({ ...prev, [selectedNode]: { ...prev[selectedNode], color } }));
-  }, [selectedNode]);
+    if (!selectedNode || !design?.setNodeOverride) return;
+    design.setNodeOverride(selectedNode, { color });
+  }, [selectedNode, design]);
 
   const handleShapeChange = useCallback((shape) => {
-    if (!selectedNode) return;
-    setOverrides(prev => ({ ...prev, [selectedNode]: { ...prev[selectedNode], shape } }));
-  }, [selectedNode]);
+    if (!selectedNode || !design?.setNodeOverride) return;
+    design.setNodeOverride(selectedNode, { shape });
+  }, [selectedNode, design]);
 
   const handleApplyToChildren = useCallback(() => {
-    if (!selectedNode) return;
+    if (!selectedNode || !design?.setNodeOverride) return;
     const parentNode = nodes.find(n => n.id === selectedNode);
     if (!parentNode || parentNode.type !== 'category') return;
-    const parentOv = overrides[selectedNode] || {};
+    const parentOv = design?.getNodeOverride?.(selectedNode) || {};
     const childNodes = nodes.filter(n => n.type === 'task' && Math.abs(n.parentAngle - parentNode.angle) < 0.01);
-    setOverrides(prev => {
-      const next = { ...prev };
-      childNodes.forEach(child => {
-        next[child.id] = { ...next[child.id], ...parentOv };
-      });
-      return next;
+    childNodes.forEach(child => {
+      design.setNodeOverride(child.id, parentOv);
     });
-  }, [selectedNode, nodes, overrides]);
+  }, [selectedNode, nodes, design]);
 
   const selectedNodeData = nodes.find(n => n.id === selectedNode);
 
@@ -408,6 +406,12 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
                 style={{ pointerEvents: 'none' }}>
                 {node.subLabel ? node.subLabel.substring(0, 14) : ''}
               </text>
+              {node.sticker && (
+                <text x={node.x + node.r - 3} y={node.y + node.r - 3} textAnchor="middle"
+                  fontSize="12" style={{ pointerEvents: 'none' }}>
+                  {node.sticker}
+                </text>
+              )}
             </g>
           );
         })}

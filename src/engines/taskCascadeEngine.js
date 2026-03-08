@@ -110,12 +110,17 @@ export const PHASE_B_SERVICES = [
 
 export const PHASE_C_SERVICES = [
   { serviceKey: 'payslip_sending',   title: 'משלוח תלושים' },
+];
+
+// MSB Collector Services — these are multi-parent nodes, NOT children of a single task.
+// They collect dependencies from ALL P1 payroll tasks for the same client+month.
+export const MSB_COLLECTOR_SERVICES = [
   { serviceKey: 'masav_social',      title: 'מס"ב סוציאליות' },
   { serviceKey: 'masav_employees',   title: 'מס"ב עובדים' },
 ];
 
 // Combined for backward compat
-const POST_PAYROLL_SERVICES = [...PHASE_B_SERVICES, ...PHASE_C_SERVICES];
+const POST_PAYROLL_SERVICES = [...PHASE_B_SERVICES, ...PHASE_C_SERVICES, ...MSB_COLLECTOR_SERVICES];
 
 // ============================================================
 // SERVICE FILTERING (חוק בל יעבור)
@@ -480,10 +485,51 @@ export function evaluatePayrollStatus(task, updatedSteps) {
         };
       });
 
-    result.autoCreateTasks = [
+    // Phase B + C child tasks (single-parent: this payroll task)
+    const childTasks = [
       ...buildChildTasks(PHASE_B_SERVICES, 'phase_b', 'שלב ב\' | דיווחי רשויות'),
       ...buildChildTasks(PHASE_C_SERVICES, 'phase_c', 'שלב ג\' | שירותים נלווים'),
     ];
+
+    // MSB Collector tasks — multi-parent: depend on ALL P1 reporting tasks
+    // for this client+month. Initially locked (waiting_for_materials).
+    const msbCollectors = MSB_COLLECTOR_SERVICES.map(svc => {
+      const templateSteps = getStepsForService(svc.serviceKey);
+      const processSteps = {};
+      templateSteps.forEach(step => {
+        processSteps[step.key] = { done: false, date: null, notes: '' };
+      });
+      const childCategory = ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title;
+      const autoStart = getScheduledStartForCategory(childCategory, subDueDate);
+      return {
+        serviceKey: svc.serviceKey,
+        title: `${svc.title} - ${task.client_name}`,
+        client_name: task.client_name,
+        client_id: task.client_id,
+        category: childCategory,
+        status: 'waiting_for_materials',       // LOCKED until all deps done
+        branch: 'P1',
+        due_date: subDueDate,
+        scheduled_start: autoStart || undefined,
+        report_month: task.report_month,
+        report_year: task.report_year,
+        report_period: task.report_period,
+        context: 'work',
+        is_recurring: true,
+        workflow_phase: 'msb_collector',
+        workflow_phase_label: 'מס"ב רשויות — אוסף מרכזי',
+        // Multi-parent: collect IDs of all Phase B reporting tasks
+        dependency_ids: [],                     // Will be populated by useTaskCascade after creation
+        is_collector: true,                     // Marks this as a multi-parent collector node
+        master_task_id: task.id,
+        triggered_by: task.id,
+        source: 'payroll_cascade',
+        process_steps: processSteps,
+        estimated_duration: 15,
+      };
+    });
+
+    result.autoCreateTasks = [...childTasks, ...msbCollectors];
     return result;
   }
 

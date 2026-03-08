@@ -107,7 +107,8 @@ export default function FocusMapView({
 
       const depsOk = areDependenciesMet(task, siblingPool);
       const { r, load, duration, tierLabel } = getCognitiveRadius(task);
-      const color = getCategoryColor(task.category, branchColors);
+      const ov = design?.getNodeOverride?.(task.id) || {};
+      const color = ov.color || getCategoryColor(task.category, branchColors);
       const cat = task.category || 'כללי';
 
       if (!catMap[cat]) catMap[cat] = { unlocked: 0, locked: 0, color };
@@ -119,11 +120,13 @@ export default function FocusMapView({
         category: cat,
         r,
         color,
+        shape: ov.shape || globalShape,
         load,
         duration,
         tierLabel,
         status: task.status || 'not_started',
         statusColor: STATUS_COLORS[task.status] || '#546E7A',
+        sticker: design?.stickerMap?.[task.id] || null,
       };
 
       if (depsOk) {
@@ -207,6 +210,8 @@ export default function FocusMapView({
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
     setFocusedNode(prev => prev === nodeId ? null : nodeId);
+    // Notify Design Engine of selection
+    window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId } }));
   }, []);
 
   return (
@@ -375,10 +380,10 @@ export default function FocusMapView({
                 fill="none" stroke={node.statusColor} strokeWidth={1.5} opacity={0.5}>
                 <animate attributeName="opacity" values="0.5;0.2;0.5" dur="3s" repeatCount="indefinite" />
               </circle>
-              {/* Main node — shape from Design Engine, size varies by cognitive load */}
+              {/* Main node — shape from Design Engine (per-node or global), size varies by cognitive load */}
               <g filter="url(#focus-shadow)">
-                {renderNodeShape(globalShape, node.x, node.y, node.r, node.color + '18', node.color, 2)}
-                {renderNodeShape(globalShape, node.x, node.y, node.r - 2, 'white', 'none', 0)}
+                {renderNodeShape(node.shape, node.x, node.y, node.r, node.color + '18', node.color, 2)}
+                {renderNodeShape(node.shape, node.x, node.y, node.r - 2, 'white', 'none', 0)}
               </g>
               {/* Duration badge */}
               <circle cx={node.x + node.r - 2} cy={node.y - node.r + 2} r={7}
@@ -402,6 +407,13 @@ export default function FocusMapView({
                 style={{ pointerEvents: 'none' }}>
                 {node.tierLabel}
               </text>
+              {/* Sticker from Design Engine */}
+              {node.sticker && (
+                <text x={node.x + node.r - 4} y={node.y + node.r - 4} textAnchor="middle"
+                  fontSize="12" style={{ pointerEvents: 'none' }}>
+                  {node.sticker}
+                </text>
+              )}
             </g>
           );
         })}
