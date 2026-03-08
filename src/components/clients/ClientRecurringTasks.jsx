@@ -93,6 +93,19 @@ const REPORT_CATEGORIES = {
     order: 3,
     branch: 'P2',
   },
+  'ביטוח לאומי': {
+    label: 'סוציאליות',
+    icon: Building,
+    color: 'bg-rose-100 text-rose-800',
+    accent: 'border-rose-400',
+    bgSoft: 'bg-rose-50',
+    dot: 'bg-rose-500',
+    frequencyField: 'payroll_frequency',
+    serviceTypeKey: 'payroll',  // Linked to payroll — if client has payroll, they get social security
+    dayOfMonth: 15,
+    order: 4,
+    branch: 'P1',
+  },
 };
 
 const BIMONTHLY_PERIOD_NAMES = {
@@ -272,8 +285,10 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setSelectedMonths(new Set([currentMonth]));
   };
 
-  const generateTasksPreview = () => {
-    const monthsArray = Array.from(selectedMonths).sort((a, b) => a - b);
+  const generateTasksPreview = (overrideMonths) => {
+    const monthsArray = overrideMonths
+      ? Array.from(overrideMonths).sort((a, b) => a - b)
+      : Array.from(selectedMonths).sort((a, b) => a - b);
     if (monthsArray.length === 0) return;
 
     const tasksToCreate = [];
@@ -615,6 +630,19 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
               </Button>
             </div>
           </div>
+
+          {/* Quick inject: one-click current month generation */}
+          <Button
+            onClick={() => {
+              setSelectedMonths(new Set([currentMonth]));
+              generateTasksPreview(new Set([currentMonth]));
+            }}
+            className="w-full h-12 text-base font-bold rounded-2xl bg-rose-500 hover:bg-rose-600 text-white shadow-lg hover:shadow-xl transition-all"
+            size="lg"
+          >
+            <Sparkles className="w-5 h-5 ml-2" />
+            הזרקת משימות {HEBREW_MONTH_NAMES[currentMonth - 1]} {currentYear} — כל הלקוחות
+          </Button>
 
           {/* Generate button — prominent */}
           <Button
