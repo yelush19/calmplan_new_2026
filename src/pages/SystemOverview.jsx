@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle, AlertCircle, XCircle, RefreshCw, Database, Monitor, TriangleAlert } from 'lucide-react';
 import { Client, Task, AccountReconciliation, ClientAccount, Dashboard, WeeklySchedule, Therapist } from '@/api/entities';
+import ClientAuditTool from '@/components/audit/ClientAuditTool';
 
 const StatusIcon = ({ status }) => {
   switch (status) {
@@ -36,7 +37,9 @@ export default function SystemOverviewPage() {
   const [systemStatus, setSystemStatus] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [boardConfigs, setBoardConfigs] = useState([]); // This state variable is not used after its initial declaration.
+  const [boardConfigs, setBoardConfigs] = useState([]);
+  const [liveClients, setLiveClients] = useState([]);
+  const [liveTasks, setLiveTasks] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -54,6 +57,10 @@ export default function SystemOverviewPage() {
         ClientAccount.filter({}, '-updated_date', 1000).catch(() => []),
         Therapist.list(null, 1000).catch(() => [])
       ]);
+
+      // Store live data for audit tool
+      setLiveClients(clientsData);
+      setLiveTasks(tasksData);
 
       // Function to analyze ID fields for any entity
       const analyzeEntityIds = (entities, entityName) => {
@@ -614,11 +621,30 @@ export default function SystemOverviewPage() {
         )}
       </div>
 
+      {/* ── Client Audit Tool: System-to-Customer Mapping ── */}
+      {liveClients.length > 0 && (
+        <Card className="border-2 border-indigo-200 bg-indigo-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <AlertCircle className="w-5 h-5 text-indigo-500" />
+              ביקורת מיפוי לקוח-מערכת
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ClientAuditTool
+              clients={liveClients}
+              tasks={liveTasks}
+              onRefresh={loadData}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Alert */}
       <Alert>
         <Monitor className="h-4 w-4" />
         <AlertDescription>
-          <strong>מצב כללי:</strong> בדוק את הכרטיסים למעלה כדי לראות מה עובד ומה צריך תיקון. 
+          <strong>מצב כללי:</strong> בדוק את הכרטיסים למעלה כדי לראות מה עובד ומה צריך תיקון.
           ירוק = עובד מושלם (ללוחות Monday), צהוב = עובד חלקית (חלק מהרשומות מסונכרנות), אדום = לא עובד.
         </AlertDescription>
       </Alert>
