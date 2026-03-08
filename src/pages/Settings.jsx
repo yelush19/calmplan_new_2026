@@ -19,6 +19,7 @@ import { loadPlatformConfig, savePlatformConfig, DEFAULT_PLATFORMS } from '@/con
 import ExecutionPeriodSettings from '@/components/settings/ExecutionPeriodSettings';
 import SettingsMindMap from '@/components/settings/SettingsMindMap';
 import TemplatePanel from '@/components/settings/TemplatePanel';
+import ServiceCatalogSection from '@/components/settings/ServiceCatalogSection';
 
 // =====================================================
 // MAIN SETTINGS PAGE - Tabbed UI + Process Architect
@@ -700,6 +701,7 @@ function SystemSettings() {
         <Monitor className="w-5 h-5 text-gray-600" />
         <h2 className="text-lg font-bold text-gray-800">הגדרות מערכת</h2>
       </div>
+      <ServiceCatalogSection />
       <div className="grid grid-cols-1 gap-4">
         <DataCleanupSection />
         <CloudSyncSection />
