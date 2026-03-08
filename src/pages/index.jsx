@@ -101,6 +101,8 @@ import FinancialResultsDashboard from "./FinancialResultsDashboard";
 
 import MyFocus from "./MyFocus";
 
+import Inventory from "./Inventory";
+
 import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -202,6 +204,8 @@ const PAGES = {
     FinancialResultsDashboard: FinancialResultsDashboard,
 
     MyFocus: MyFocus,
+
+    Inventory: Inventory,
 
 }
 
@@ -331,6 +335,8 @@ function PagesContent() {
                 <Route path="/FinancialResultsDashboard" element={<FinancialResultsDashboard />} />
 
                 <Route path="/MyFocus" element={<MyFocus />} />
+
+                <Route path="/Inventory" element={<Inventory />} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">
