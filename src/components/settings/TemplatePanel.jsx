@@ -5,13 +5,13 @@
  * Changes sync immediately to the map state (localStorage persisted).
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  X, Plus, Link2, Layers, ChevronRight, Save,
+  X, Plus, Link2, Layers, ChevronRight, Save, Search,
   CheckCircle, FileText, Trash2, AlertTriangle, Zap,
   GitBranch, ArrowRight, GitMerge,
 } from 'lucide-react';
@@ -310,15 +310,13 @@ export default function TemplatePanel({ service, onClose }) {
                 נוכחי: <strong>{currentPath}</strong>
               </div>
 
-              <select
-                value={currentParentId || ''}
-                onChange={(e) => {
-                  const newParentId = e.target.value;
+              <SearchableParentList
+                candidates={sorted}
+                currentParentId={currentParentId}
+                buildPath={buildPath}
+                onSelect={(newParentId) => {
                   if (!newParentId || !crudRef) return;
-
-                  // TRUE reparenting — ONLY updates parentId, NEVER touches dashboard
                   crudRef.updateService(currentKey, { parentId: newParentId });
-
                   console.log('STATE MUTATED:', {
                     action: 'reparent_node',
                     key: currentKey,
@@ -327,20 +325,7 @@ export default function TemplatePanel({ service, onClose }) {
                     newParentPath: buildPath(newParentId),
                   });
                 }}
-                style={{ width: '100%', padding: '8px 12px', fontSize: '12px', border: '2px solid red', borderRadius: '8px', backgroundColor: 'white', direction: 'rtl' }}
-              >
-                <option value="" disabled>-- בחר ענף אב --</option>
-                {sorted.map(n => {
-                  const path = buildPath(n.id);
-                  const prefix = n.type === 'root' ? '●' : '└─';
-                  const indent = n.type === 'root' ? '' : '   ';
-                  return (
-                    <option key={n.id} value={n.id}>
-                      {indent}{prefix} {path}
-                    </option>
-                  );
-                })}
-              </select>
+              />
 
               {/* ── Section 2: Manual Board Override (DECOUPLED from hierarchy) ── */}
               <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #e88' }}>
@@ -457,26 +442,12 @@ export default function TemplatePanel({ service, onClose }) {
                     })}
                   </div>
                 )}
-                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1.5px solid #90CAF9', borderRadius: '8px', backgroundColor: 'white' }}>
-                  {flowCandidates.length === 0 && (
-                    <div className="text-[10px] text-gray-400 p-2 text-center">אין צמתים זמינים</div>
-                  )}
-                  {flowCandidates.map(n => {
-                    const isChecked = editNextStepIds.includes(n.id);
-                    return (
-                      <label key={n.id}
-                        className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-blue-50 cursor-pointer text-[11px]"
-                        style={{ direction: 'rtl', borderBottom: '1px solid #f0f0f0' }}>
-                        <input type="checkbox" checked={isChecked} onChange={() => toggleNextStep(n.id)}
-                          style={{ accentColor: '#1565C0' }} />
-                        <span className={isChecked ? 'font-bold text-blue-700' : 'text-gray-600'}>
-                          {n.label || n.id}
-                        </span>
-                        <span className="text-[9px] text-gray-400 mr-auto">{buildPath(n.id)}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                <SearchableNextStepsList
+                  candidates={flowCandidates}
+                  selectedIds={editNextStepIds}
+                  buildPath={buildPath}
+                  onToggle={toggleNextStep}
+                />
               </div>
 
               {/* Parallel Toggle */}
@@ -589,28 +560,23 @@ export default function TemplatePanel({ service, onClose }) {
         </div>
 
         {/* Categories */}
-        <div className="px-4 py-3 border-b">
-          <div className="text-xs font-bold text-gray-700 mb-2">קטגוריות משימה</div>
-          <div className="flex flex-wrap gap-1 mb-2">
-            {editCategories.map((cat, i) => (
-              <Badge key={`${cat}-${i}`} variant="outline"
-                className="text-[9px] px-2 py-0.5 rounded-full group cursor-default"
-                style={{ borderColor: pColor + '40', color: pColor }}>
-                {cat}
-                <button onClick={() => removeCategory(i)}
-                  className="mr-1 opacity-0 group-hover:opacity-100"><X className="w-2.5 h-2.5" /></button>
-              </Badge>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="קטגוריה חדשה..." className="h-7 text-[10px] flex-1"
-              onKeyDown={(e) => e.key === 'Enter' && addCategory()} />
-            <Button size="sm" onClick={addCategory} disabled={!newCategory.trim()}
-              className="h-7 px-2 text-[10px]" variant="outline"
-              style={{ borderColor: pColor + '30', color: pColor }}><Plus className="w-3 h-3" /></Button>
-          </div>
-        </div>
+        <CategoryEditor
+          categories={editCategories}
+          allNodes={service?._allNodes || []}
+          allServices={service?._crud ? service._crud : null}
+          pColor={pColor}
+          onAdd={(cat) => {
+            const updated = [...editCategories, cat];
+            setEditCategories(updated);
+            if (crud) {
+              crud.updateService(service.key, { taskCategories: updated });
+              console.log('STATE MUTATED:', { action: 'add_category', key: service.key, category: cat, all: updated });
+            }
+          }}
+          onRemove={(index) => {
+            removeCategory(index);
+          }}
+        />
 
         {/* Metadata */}
         <div className="px-4 py-3 border-b bg-gray-50/50">
@@ -664,5 +630,216 @@ export default function TemplatePanel({ service, onClose }) {
         </div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+// ── Searchable Parent Selection List ──
+function SearchableParentList({ candidates, currentParentId, buildPath, onSelect }) {
+  const [search, setSearch] = useState('');
+  const filtered = useMemo(() => {
+    if (!search.trim()) return candidates;
+    const q = search.trim().toLowerCase();
+    return candidates.filter(n => {
+      const path = buildPath(n.id).toLowerCase();
+      const label = (n.label || n.id || '').toLowerCase();
+      return path.includes(q) || label.includes(q);
+    });
+  }, [candidates, search, buildPath]);
+
+  return (
+    <div>
+      <div style={{ position: 'relative', marginBottom: '4px' }}>
+        <Search style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#999' }} />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="חפש ענף אב..."
+          style={{ width: '100%', padding: '7px 30px 7px 10px', fontSize: '11px', border: '1.5px solid #E57373', borderRadius: '8px', direction: 'rtl', outline: 'none' }}
+        />
+      </div>
+      <div style={{ maxHeight: '160px', overflowY: 'auto', border: '2px solid red', borderRadius: '8px', backgroundColor: 'white' }}>
+        {filtered.length === 0 && (
+          <div style={{ padding: '8px', textAlign: 'center', fontSize: '10px', color: '#999' }}>אין תוצאות</div>
+        )}
+        {filtered.map(n => {
+          const path = buildPath(n.id);
+          const prefix = n.type === 'root' ? '●' : '└─';
+          const isActive = currentParentId === n.id;
+          return (
+            <button
+              key={n.id}
+              onClick={() => onSelect(n.id)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '6px 10px', fontSize: '11px', border: 'none', borderBottom: '1px solid #f0f0f0',
+                backgroundColor: isActive ? '#FFEBEE' : 'white', cursor: 'pointer', direction: 'rtl',
+                fontWeight: isActive ? 'bold' : 'normal', color: isActive ? '#C62828' : '#333',
+                textAlign: 'right',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FFF3E0'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isActive ? '#FFEBEE' : 'white'; }}
+            >
+              <span style={{ fontSize: '10px', color: '#999' }}>{prefix}</span>
+              <span>{path}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Category Editor with existing category selection + new category input ──
+function CategoryEditor({ categories, allNodes, allServices, pColor, onAdd, onRemove }) {
+  const [newCategory, setNewCategory] = useState('');
+  const [showExisting, setShowExisting] = useState(false);
+  const [catSearch, setCatSearch] = useState('');
+
+  // Collect all unique categories from all service nodes
+  const existingCategories = useMemo(() => {
+    const cats = new Set();
+    if (allNodes) {
+      allNodes.forEach(n => {
+        if (n.taskCategories) n.taskCategories.forEach(c => cats.add(c));
+      });
+    }
+    // Also read from localStorage service overrides
+    try {
+      const overrides = JSON.parse(localStorage.getItem('calmplan_service_overrides') || '{}');
+      Object.values(overrides).forEach(svc => {
+        if (svc.taskCategories) svc.taskCategories.forEach(c => cats.add(c));
+      });
+      const customs = JSON.parse(localStorage.getItem('calmplan_custom_services') || '{}');
+      Object.values(customs).forEach(svc => {
+        if (svc.taskCategories) svc.taskCategories.forEach(c => cats.add(c));
+      });
+    } catch { /* ignore */ }
+    // Remove already-assigned categories
+    categories.forEach(c => cats.delete(c));
+    return [...cats].sort();
+  }, [allNodes, categories]);
+
+  const filteredExisting = useMemo(() => {
+    if (!catSearch.trim()) return existingCategories;
+    const q = catSearch.trim().toLowerCase();
+    return existingCategories.filter(c => c.toLowerCase().includes(q));
+  }, [existingCategories, catSearch]);
+
+  const handleAdd = () => {
+    if (!newCategory.trim()) return;
+    onAdd(newCategory.trim());
+    setNewCategory('');
+  };
+
+  return (
+    <div className="px-4 py-3 border-b">
+      <div className="text-xs font-bold text-gray-700 mb-2">קטגוריות משימה</div>
+      <div className="flex flex-wrap gap-1 mb-2">
+        {categories.map((cat, i) => (
+          <Badge key={`${cat}-${i}`} variant="outline"
+            className="text-[9px] px-2 py-0.5 rounded-full group cursor-default"
+            style={{ borderColor: pColor + '40', color: pColor }}>
+            {cat}
+            <button onClick={() => onRemove(i)}
+              className="mr-1 opacity-0 group-hover:opacity-100"><X className="w-2.5 h-2.5" /></button>
+          </Badge>
+        ))}
+      </div>
+
+      {/* Select from existing categories */}
+      <button
+        onClick={() => setShowExisting(!showExisting)}
+        className="w-full mb-1.5 flex items-center justify-center gap-1 px-2 py-1 rounded-lg border border-dashed text-[10px] font-medium transition-all hover:bg-gray-50"
+        style={{ borderColor: pColor + '40', color: pColor }}>
+        <Search className="w-3 h-3" />
+        {showExisting ? 'הסתר קטגוריות קיימות' : 'בחר מקטגוריות קיימות'}
+      </button>
+
+      {showExisting && (
+        <div className="mb-2">
+          <input
+            type="text"
+            value={catSearch}
+            onChange={(e) => setCatSearch(e.target.value)}
+            placeholder="חפש קטגוריה..."
+            className="w-full px-2 py-1 text-[10px] border rounded-lg mb-1"
+            style={{ borderColor: pColor + '30', direction: 'rtl' }}
+          />
+          <div style={{ maxHeight: '100px', overflowY: 'auto', border: `1px solid ${pColor}30`, borderRadius: '8px' }}>
+            {filteredExisting.length === 0 && (
+              <div className="text-[9px] text-gray-400 p-2 text-center">אין קטגוריות נוספות</div>
+            )}
+            {filteredExisting.map(cat => (
+              <button key={cat}
+                onClick={() => { onAdd(cat); setCatSearch(''); }}
+                className="w-full text-right px-2.5 py-1.5 text-[10px] hover:bg-blue-50 transition-all"
+                style={{ borderBottom: '1px solid #f0f0f0', direction: 'rtl' }}>
+                + {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add new category */}
+      <div className="flex items-center gap-1.5">
+        <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)}
+          placeholder="קטגוריה חדשה..." className="h-7 text-[10px] flex-1"
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
+        <Button size="sm" onClick={handleAdd} disabled={!newCategory.trim()}
+          className="h-7 px-2 text-[10px]" variant="outline"
+          style={{ borderColor: pColor + '30', color: pColor }}><Plus className="w-3 h-3" /></Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Searchable Next Steps Multi-Select List ──
+function SearchableNextStepsList({ candidates, selectedIds, buildPath, onToggle }) {
+  const [search, setSearch] = useState('');
+  const filtered = useMemo(() => {
+    if (!search.trim()) return candidates;
+    const q = search.trim().toLowerCase();
+    return candidates.filter(n => {
+      const label = (n.label || n.id || '').toLowerCase();
+      const path = buildPath(n.id).toLowerCase();
+      return label.includes(q) || path.includes(q);
+    });
+  }, [candidates, search, buildPath]);
+
+  return (
+    <div>
+      <div style={{ position: 'relative', marginBottom: '4px' }}>
+        <Search style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#999' }} />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="חפש שלב הבא..."
+          style={{ width: '100%', padding: '7px 30px 7px 10px', fontSize: '11px', border: '1.5px solid #90CAF9', borderRadius: '8px', direction: 'rtl', outline: 'none' }}
+        />
+      </div>
+      <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1.5px solid #90CAF9', borderRadius: '8px', backgroundColor: 'white' }}>
+        {filtered.length === 0 && (
+          <div className="text-[10px] text-gray-400 p-2 text-center">אין צמתים זמינים</div>
+        )}
+        {filtered.map(n => {
+          const isChecked = selectedIds.includes(n.id);
+          return (
+            <label key={n.id}
+              className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-blue-50 cursor-pointer text-[11px]"
+              style={{ direction: 'rtl', borderBottom: '1px solid #f0f0f0' }}>
+              <input type="checkbox" checked={isChecked} onChange={() => onToggle(n.id)}
+                style={{ accentColor: '#1565C0' }} />
+              <span className={isChecked ? 'font-bold text-blue-700' : 'text-gray-600'}>
+                {n.label || n.id}
+              </span>
+              <span className="text-[9px] text-gray-400 mr-auto">{buildPath(n.id)}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
   );
 }

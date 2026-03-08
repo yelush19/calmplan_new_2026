@@ -124,6 +124,7 @@ const getSidebarSections = () => ({
         { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
       ]},
       { key: 'p3_system', label: 'הגדרות מערכת', icon: Settings, items: [
+        { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Eye },
         { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
         { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
         { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
@@ -1020,7 +1021,10 @@ function LayoutInner({ children }) {
                 <div className="hidden md:block p-4 border-b border-[#B0BEC5]" style={{ backgroundColor: '#FAFBFC' }}>
                   <div className="max-w-full mx-auto flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-foreground">{findPageTitle()}</h2>
-                    <Link to={createPageUrl("Home")}>
+                    <Link to={createPageUrl("Home")} onClick={() => {
+                      // Focus on P4 (Home branch) when navigating home
+                      window.dispatchEvent(new CustomEvent('calmplan:focus-branch', { detail: { branch: 'P4' } }));
+                    }}>
                       <Button variant="outline" className="flex items-center gap-2">
                         <ArrowRight className="w-4 h-4" />
                         חזור לדף הבית
@@ -1035,7 +1039,9 @@ function LayoutInner({ children }) {
                 <div className="md:hidden px-4 py-3 border-b border-[#B0BEC5]" style={{ backgroundColor: '#FAFBFC' }}>
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold text-foreground">{findPageTitle()}</h2>
-                    <Link to={createPageUrl("Home")}>
+                    <Link to={createPageUrl("Home")} onClick={() => {
+                      window.dispatchEvent(new CustomEvent('calmplan:focus-branch', { detail: { branch: 'P4' } }));
+                    }}>
                       <Button variant="outline" size="sm" className="flex items-center gap-2">
                         <ArrowRight className="w-4 h-4" />
                         חזור לבית
