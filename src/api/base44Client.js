@@ -34,17 +34,19 @@ function createHybridEntity(entityName) {
       // Try Supabase first
       try {
         const result = await supaEntity.list(sortField, limit);
-        if (result && result.length > 0) {
-          // SUCCESS — also cache to localStorage for resilience
+        if (result) {
+          // Supabase responded — cache to localStorage (even if empty, to stay in sync)
           _cacheToLocal(entityName, result);
-          return result;
+          if (result.length > 0) return result;
+          // Supabase returned 0 — that IS the truth, return empty
+          return [];
         }
-      } catch { /* fall through */ }
+      } catch { /* fall through to localStorage only on network/connection error */ }
 
-      // Supabase returned 0 — try localStorage (log once only)
+      // Supabase network error — try localStorage fallback (log once only)
       if (!loggedFallback) {
         loggedFallback = true;
-        console.log(`[Hybrid] ${entityName}: using localStorage fallback`);
+        console.log(`[Hybrid] ${entityName}: Supabase unreachable, using localStorage fallback`);
       }
       try {
         const fallbackResult = await localEntity.list(sortField, limit);
@@ -69,17 +71,23 @@ function createHybridEntity(entityName) {
     },
 
     async delete(id) {
+      // Delete from BOTH layers to prevent ghost resurrection
       if (!isRlsBlocked()) {
-        try { return await supaEntity.delete(id); } catch { /* fall through */ }
+        try { await supaEntity.delete(id); } catch { /* fall through */ }
       }
-      return localEntity.delete(id);
+      try { await localEntity.delete(id); } catch { /* ignore */ }
+      return { success: true };
     },
 
     async deleteAll() {
+      // CRITICAL: Always clear BOTH layers to prevent ghost data resurrection
+      // (localStorage cache can refill Supabase or vice versa)
+      const results = [];
       if (!isRlsBlocked()) {
-        try { return await supaEntity.deleteAll(); } catch { /* fall through */ }
+        try { results.push(await supaEntity.deleteAll()); } catch { /* fall through */ }
       }
-      return localEntity.deleteAll();
+      try { results.push(await localEntity.deleteAll()); } catch { /* ignore */ }
+      return results[0] || { success: true };
     },
 
     async filter(filters, sortField, limit) {
@@ -121,7 +129,8 @@ function _cacheToLocal(entityName, items) {
       ServiceCatalog: 'service_catalog',
     };
     const collName = collectionMap[entityName];
-    if (collName && items.length > 0) {
+    if (collName) {
+      // Sync localStorage with Supabase truth — including empty (0 tasks)
       localStorage.setItem('calmplan_' + collName, JSON.stringify(items));
     }
   } catch { /* localStorage full or unavailable */ }

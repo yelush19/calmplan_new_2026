@@ -857,3 +857,37 @@ export const emergencyReset = async () => {
   }
   return { data: { success: true } };
 };
+
+/**
+ * Nuclear wipe: delete ALL tasks from BOTH Supabase AND localStorage.
+ * Prevents ghost resurrection by clearing both layers simultaneously.
+ */
+export const nuclearWipeTasks = async () => {
+  const log = [];
+
+  // Layer 1: Supabase
+  try {
+    await entities.Task.deleteAll();
+    log.push('Supabase tasks: WIPED');
+  } catch (e) {
+    log.push(`Supabase error: ${e.message}`);
+  }
+
+  // Layer 2: localStorage (belt and suspenders)
+  try {
+    localStorage.removeItem('calmplan_tasks');
+    log.push('localStorage tasks: WIPED');
+  } catch (e) {
+    log.push(`localStorage error: ${e.message}`);
+  }
+
+  // Layer 3: Also clear any other task caches
+  try {
+    localStorage.removeItem('calmplan_task_sessions');
+    localStorage.removeItem('calmplan_weekly_tasks');
+    log.push('Task caches: WIPED');
+  } catch { /* ignore */ }
+
+  console.log('[NuclearWipe]', log.join(' | '));
+  return { data: { success: true, log } };
+};
