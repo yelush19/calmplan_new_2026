@@ -533,44 +533,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
   }, [tasks]);
 
-  // ── NUCLEAR RESET v15: TOTAL PURGE — Delete ALL tasks ──
-  // User will regenerate via "משימות חוזרות" module manually.
-  // This runs ONCE, wipes everything, then the user controls task creation.
-  const nuclearRan = useRef(false);
+  // ── NUCLEAR RESET v15: DISABLED ──
+  // The auto-purge has been permanently disabled to allow February/March
+  // data injection. Tasks are no longer deleted on mount.
+  const nuclearRan = useRef(true); // permanently disabled
   useEffect(() => {
-    const NUCLEAR_KEY = 'calmplan-nuclear-v15-total-purge';
-    if (nuclearRan.current) return;
-    try { if (localStorage.getItem(NUCLEAR_KEY) === 'true') return; } catch {}
-    nuclearRan.current = true;
-
-    (async () => {
-      try {
-        console.log('[CalmPlan] RESET v15: TOTAL PURGE — deleting ALL tasks...');
-        await Task.deleteAll();
-        console.log('[CalmPlan] RESET v15: All tasks deleted. Use "משימות חוזרות" to regenerate.');
-
-        try { localStorage.setItem(NUCLEAR_KEY, 'true'); } catch {}
-        // Clear stale manual positions since all data is gone
-        try { localStorage.removeItem('mindmap-positions'); } catch {}
-        window.location.reload();
-      } catch (err) {
-        console.error('[CalmPlan] Reset v15 error:', err);
-        // Fallback: try deleting one by one
-        try {
-          const allTasks = await Task.list(null, 10000);
-          let deleted = 0;
-          for (const t of allTasks) {
-            try { await Task.delete(t.id); deleted++; } catch {}
-          }
-          console.log(`[CalmPlan] Fallback purge: deleted ${deleted} tasks`);
-          try { localStorage.setItem(NUCLEAR_KEY, 'true'); } catch {}
-          try { localStorage.removeItem('mindmap-positions'); } catch {}
-          window.location.reload();
-        } catch (e2) {
-          console.error('[CalmPlan] Fallback purge also failed:', e2);
-        }
-      }
-    })();
+    // DISABLED: No longer deletes tasks. User controls data via recurring tasks module.
+    console.log('[CalmPlan] Nuclear reset DISABLED — task data preserved.');
   }, []);
 
   const [focusedClients, setFocusedClients] = useState(new Set());

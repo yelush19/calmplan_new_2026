@@ -434,10 +434,10 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         </div>
         <div className="flex items-center gap-2">
           {[
-            { label: 'P1 שכר', color: DNA.P1 },
-            { label: 'P2 הנה"ח', color: DNA.P2 },
-            { label: 'P3 ביצוע', color: DNA.P3 },
-            { label: 'P4 בית', color: DNA.P4 },
+            { label: 'P1 שכר', color: DNA_DEFAULTS.P1 },
+            { label: 'P2 הנה"ח', color: DNA_DEFAULTS.P2 },
+            { label: 'P3 ביצוע', color: DNA_DEFAULTS.P3 },
+            { label: 'P4 בית', color: DNA_DEFAULTS.P4 },
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
