@@ -11,7 +11,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Zap, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Settings, Play, Loader2, X, CheckSquare, Square, CalendarDays, ChevronDown, ChevronRight } from 'lucide-react';
+import { Zap, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Settings, Play, Loader2, X, CheckSquare, Square, CalendarDays, ChevronDown, ChevronRight, Pause, PlayCircle } from 'lucide-react';
+import { useDesign } from '@/contexts/DesignContext';
 import {
   loadAutomationRules, saveAutomationRules,
   SERVICE_LABELS, BUSINESS_TYPES, REPORT_ENTITIES,
@@ -375,6 +376,9 @@ export default function AutomationRules() {
   const [dueDatesConfigId, setDueDatesConfigId] = useState(null);
   const [dueDatesSaving, setDueDatesSaving] = useState(false);
   const [expandedSections, setExpandedSections] = useState(new Set(['service_auto_link']));
+  // ── Consolidated: read pause state from DesignContext (same source as Settings tab) ──
+  const design = useDesign();
+  const automationsPaused = design.automationsPaused || false;
 
   useEffect(() => {
     loadRules();
@@ -1042,6 +1046,11 @@ export default function AutomationRules() {
           <div>
             <h1 className="text-2xl font-bold">אוטומציות</h1>
             <p className="text-gray-500 text-sm">חוקים אוטומטיים שרצים בעת הוספה ועדכון לקוחות</p>
+            {automationsPaused && (
+              <div className="flex items-center gap-1.5 mt-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-lg w-fit">
+                <Pause className="w-3 h-3" /> אוטומציות מושהות (ניתן לשנות בהגדרות מערכת)
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">

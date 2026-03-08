@@ -103,12 +103,58 @@ export async function processSequenceUnlock(completedTask, allTasks, paused = fa
   return unlocked;
 }
 
+/**
+ * AND Convergence Rule: A locked task unlocks ONLY when ALL prerequisites are Done.
+ * Checks both 'production_completed' and 'completed' as "done" statuses.
+ */
+const DONE_STATUSES = ['production_completed', 'completed'];
+
 function checkAllPrerequisitesMet(task, allTasks) {
   if (!task.dependency_ids || task.dependency_ids.length === 0) return true;
   return task.dependency_ids.every(depId => {
     const depTask = allTasks.find(t => t.id === depId);
-    return depTask && depTask.status === 'production_completed';
+    return depTask && DONE_STATUSES.includes(depTask.status);
   });
+}
+
+/**
+ * Proactive AND Convergence Scanner:
+ * Scans ALL locked/waiting tasks and unlocks any whose prerequisites are now ALL met.
+ * This catches cases where multiple prerequisites complete across different sessions.
+ */
+export async function processConvergenceUnlock(allTasks, paused = false) {
+  if (paused) return [];
+  const unlocked = [];
+
+  // Find all tasks that are locked/waiting and have dependency_ids
+  const lockedTasks = allTasks.filter(t =>
+    t.status === 'waiting_for_materials' &&
+    Array.isArray(t.dependency_ids) &&
+    t.dependency_ids.length > 0
+  );
+
+  for (const task of lockedTasks) {
+    if (checkAllPrerequisitesMet(task, allTasks)) {
+      try {
+        await Task.update(task.id, { ...task, status: 'not_started' });
+        unlocked.push(task);
+
+        // Log which prerequisites were satisfied
+        const prereqNames = task.dependency_ids
+          .map(id => allTasks.find(t => t.id === id)?.title || id)
+          .join(', ');
+
+        logAutomation('convergence_unlock', {
+          taskId: task.id,
+          taskTitle: task.title,
+          prerequisiteCount: task.dependency_ids.length,
+          prerequisites: prereqNames,
+          rule: 'AND — all prerequisites met',
+        });
+      } catch { /* skip */ }
+    }
+  }
+  return unlocked;
 }
 
 // ═══════════════════════════════════════════════
@@ -222,5 +268,8 @@ export async function runAllAutomations(allTasks, paused = false) {
 
   const archived = await processAutoArchive(allTasks, paused);
 
-  return { archived, unlockedCount: 0 };
+  // AND Convergence: proactively scan locked tasks and unlock if all prereqs are done
+  const converged = await processConvergenceUnlock(allTasks, paused);
+
+  return { archived, unlockedCount: converged.length };
 }

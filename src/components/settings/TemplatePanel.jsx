@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import {
   X, Plus, Link2, Layers, ChevronRight, Save,
   CheckCircle, FileText, Trash2, AlertTriangle, Zap,
-  GitBranch, ArrowRight, GitMerge,
+  GitBranch, ArrowRight, GitMerge, Search,
 } from 'lucide-react';
 import { getServiceWeight } from '@/config/serviceWeights';
 
@@ -99,6 +99,10 @@ export default function TemplatePanel({ service, onClose }) {
   const [editIsParallel, setEditIsParallel] = useState(service?.isParallel || false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // ── Search filters for dropdowns ──
+  const [parentSearch, setParentSearch] = useState('');
+  const [nextStepSearch, setNextStepSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
 
   if (!service) return null;
 
@@ -310,37 +314,44 @@ export default function TemplatePanel({ service, onClose }) {
                 נוכחי: <strong>{currentPath}</strong>
               </div>
 
-              <select
-                value={currentParentId || ''}
-                onChange={(e) => {
-                  const newParentId = e.target.value;
-                  if (!newParentId || !crudRef) return;
-
-                  // TRUE reparenting — ONLY updates parentId, NEVER touches dashboard
-                  crudRef.updateService(currentKey, { parentId: newParentId });
-
-                  console.log('STATE MUTATED:', {
-                    action: 'reparent_node',
-                    key: currentKey,
-                    oldParent: currentParentId,
-                    newParent: newParentId,
-                    newParentPath: buildPath(newParentId),
-                  });
-                }}
-                style={{ width: '100%', padding: '8px 12px', fontSize: '12px', border: '2px solid red', borderRadius: '8px', backgroundColor: 'white', direction: 'rtl' }}
-              >
-                <option value="" disabled>-- בחר ענף אב --</option>
-                {sorted.map(n => {
-                  const path = buildPath(n.id);
-                  const prefix = n.type === 'root' ? '●' : '└─';
-                  const indent = n.type === 'root' ? '' : '   ';
-                  return (
-                    <option key={n.id} value={n.id}>
-                      {indent}{prefix} {path}
-                    </option>
-                  );
-                })}
-              </select>
+              {/* Search filter for parent selection */}
+              <div style={{ position: 'relative', marginBottom: '4px' }}>
+                <Search style={{ position: 'absolute', right: '8px', top: '7px', width: '14px', height: '14px', color: '#999' }} />
+                <input
+                  type="text"
+                  value={parentSearch}
+                  onChange={(e) => setParentSearch(e.target.value)}
+                  placeholder="חפש ענף אב..."
+                  style={{ width: '100%', padding: '6px 28px 6px 8px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '6px', direction: 'rtl' }}
+                />
+              </div>
+              <div style={{ maxHeight: '160px', overflowY: 'auto', border: '2px solid red', borderRadius: '8px', backgroundColor: 'white' }}>
+                {sorted
+                  .filter(n => !parentSearch || buildPath(n.id).includes(parentSearch) || (n.label || '').includes(parentSearch))
+                  .map(n => {
+                    const path = buildPath(n.id);
+                    const prefix = n.type === 'root' ? '●' : '└─';
+                    const isActive = n.id === currentParentId;
+                    return (
+                      <div key={n.id}
+                        onClick={() => {
+                          if (!crudRef) return;
+                          crudRef.updateService(currentKey, { parentId: n.id });
+                          console.log('STATE MUTATED:', { action: 'reparent_node', key: currentKey, oldParent: currentParentId, newParent: n.id, newParentPath: buildPath(n.id) });
+                        }}
+                        style={{
+                          padding: '6px 10px', fontSize: '11px', cursor: 'pointer', direction: 'rtl',
+                          borderBottom: '1px solid #f0f0f0',
+                          backgroundColor: isActive ? '#FFF0F0' : 'white',
+                          fontWeight: isActive ? 'bold' : 'normal',
+                        }}
+                        className="hover:bg-red-50"
+                      >
+                        {n.type !== 'root' && <span style={{ color: '#ccc' }}>{'   '}</span>}{prefix} {path}
+                      </div>
+                    );
+                  })}
+              </div>
 
               {/* ── Section 2: Manual Board Override (DECOUPLED from hierarchy) ── */}
               <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #e88' }}>
@@ -457,25 +468,38 @@ export default function TemplatePanel({ service, onClose }) {
                     })}
                   </div>
                 )}
+                {/* Search filter for next steps */}
+                <div style={{ position: 'relative', marginBottom: '4px' }}>
+                  <Search style={{ position: 'absolute', right: '8px', top: '7px', width: '14px', height: '14px', color: '#999' }} />
+                  <input
+                    type="text"
+                    value={nextStepSearch}
+                    onChange={(e) => setNextStepSearch(e.target.value)}
+                    placeholder="חפש שלב..."
+                    style={{ width: '100%', padding: '6px 28px 6px 8px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '6px', direction: 'rtl' }}
+                  />
+                </div>
                 <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1.5px solid #90CAF9', borderRadius: '8px', backgroundColor: 'white' }}>
                   {flowCandidates.length === 0 && (
                     <div className="text-[10px] text-gray-400 p-2 text-center">אין צמתים זמינים</div>
                   )}
-                  {flowCandidates.map(n => {
-                    const isChecked = editNextStepIds.includes(n.id);
-                    return (
-                      <label key={n.id}
-                        className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-blue-50 cursor-pointer text-[11px]"
-                        style={{ direction: 'rtl', borderBottom: '1px solid #f0f0f0' }}>
-                        <input type="checkbox" checked={isChecked} onChange={() => toggleNextStep(n.id)}
-                          style={{ accentColor: '#1565C0' }} />
-                        <span className={isChecked ? 'font-bold text-blue-700' : 'text-gray-600'}>
-                          {n.label || n.id}
-                        </span>
-                        <span className="text-[9px] text-gray-400 mr-auto">{buildPath(n.id)}</span>
-                      </label>
-                    );
-                  })}
+                  {flowCandidates
+                    .filter(n => !nextStepSearch || (n.label || '').includes(nextStepSearch) || buildPath(n.id).includes(nextStepSearch))
+                    .map(n => {
+                      const isChecked = editNextStepIds.includes(n.id);
+                      return (
+                        <label key={n.id}
+                          className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-blue-50 cursor-pointer text-[11px]"
+                          style={{ direction: 'rtl', borderBottom: '1px solid #f0f0f0' }}>
+                          <input type="checkbox" checked={isChecked} onChange={() => toggleNextStep(n.id)}
+                            style={{ accentColor: '#1565C0' }} />
+                          <span className={isChecked ? 'font-bold text-blue-700' : 'text-gray-600'}>
+                            {n.label || n.id}
+                          </span>
+                          <span className="text-[9px] text-gray-400 mr-auto">{buildPath(n.id)}</span>
+                        </label>
+                      );
+                    })}
                 </div>
               </div>
 
@@ -588,7 +612,7 @@ export default function TemplatePanel({ service, onClose }) {
           </div>
         </div>
 
-        {/* Categories */}
+        {/* Categories — Live: select existing or type new */}
         <div className="px-4 py-3 border-b">
           <div className="text-xs font-bold text-gray-700 mb-2">קטגוריות משימה</div>
           <div className="flex flex-wrap gap-1 mb-2">
@@ -602,13 +626,54 @@ export default function TemplatePanel({ service, onClose }) {
               </Badge>
             ))}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="קטגוריה חדשה..." className="h-7 text-[10px] flex-1"
-              onKeyDown={(e) => e.key === 'Enter' && addCategory()} />
-            <Button size="sm" onClick={addCategory} disabled={!newCategory.trim()}
-              className="h-7 px-2 text-[10px]" variant="outline"
-              style={{ borderColor: pColor + '30', color: pColor }}><Plus className="w-3 h-3" /></Button>
+          {/* Search/add input with existing category suggestions */}
+          <div style={{ position: 'relative' }}>
+            <div className="flex items-center gap-1.5">
+              <div style={{ position: 'relative', flex: 1 }}>
+                <Search style={{ position: 'absolute', right: '6px', top: '5px', width: '12px', height: '12px', color: '#999' }} />
+                <Input value={newCategory} onChange={(e) => { setNewCategory(e.target.value); setCategorySearch(e.target.value); }}
+                  placeholder="חפש או הוסף קטגוריה..." className="h-7 text-[10px] pr-6"
+                  onKeyDown={(e) => e.key === 'Enter' && addCategory()} />
+              </div>
+              <Button size="sm" onClick={addCategory} disabled={!newCategory.trim()}
+                className="h-7 px-2 text-[10px]" variant="outline"
+                style={{ borderColor: pColor + '30', color: pColor }}><Plus className="w-3 h-3" /></Button>
+            </div>
+            {/* Existing categories from all services — live suggestions */}
+            {categorySearch && (() => {
+              const allNodes = service?._allNodes || [];
+              const existingCats = new Set();
+              allNodes.forEach(n => {
+                (n.taskCategories || []).forEach(c => existingCats.add(c));
+              });
+              const matches = [...existingCats]
+                .filter(c => c.includes(categorySearch) && !editCategories.includes(c))
+                .slice(0, 8);
+              if (matches.length === 0) return null;
+              return (
+                <div style={{ position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 20, marginTop: '2px',
+                  border: '1px solid #e0e0e0', borderRadius: '8px', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  maxHeight: '120px', overflowY: 'auto' }}>
+                  {matches.map(cat => (
+                    <div key={cat}
+                      onClick={() => {
+                        const updated = [...editCategories, cat];
+                        setEditCategories(updated);
+                        setNewCategory('');
+                        setCategorySearch('');
+                        if (crud) {
+                          crud.updateService(service.key, { taskCategories: updated });
+                        }
+                      }}
+                      style={{ padding: '4px 10px', fontSize: '10px', cursor: 'pointer', borderBottom: '1px solid #f5f5f5', direction: 'rtl' }}
+                      className="hover:bg-blue-50"
+                    >
+                      {cat}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

@@ -13,7 +13,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Plus, Hourglass, Maximize2, Star,
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
   CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2,
-  Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import
+  Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import, Activity
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -122,6 +122,7 @@ const getSidebarSections = () => ({
         { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
       ]},
       { key: 'p3_system', label: 'הגדרות מערכת', icon: Settings, items: [
+        { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Activity },
         { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
         { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
         { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
@@ -752,6 +753,20 @@ function LayoutInner({ children }) {
                         <p className="block font-black text-xl py-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#E91E63] via-[#00A3E0] to-[#FFC107]">
                           עשוי טוב יותר ממושלם
                         </p>
+                      </div>
+
+                      {/* P4 Home shortcut — hard-wired to Branch P4 */}
+                      <div className="px-3 pt-1 pb-0">
+                        <Link to={createPageUrl("LifeSettings")}
+                          className="flex items-center justify-center gap-2 px-3 py-2 rounded-2xl text-sm font-bold transition-all hover:shadow-md"
+                          style={{
+                            background: 'linear-gradient(135deg, #FFC10720, #FF980020)',
+                            color: '#FFC107',
+                            border: '1px solid #FFC10730',
+                          }}>
+                          <Home className="w-4 h-4" />
+                          <span className="text-xs">P4 | בית</span>
+                        </Link>
                       </div>
 
                       {/* Work Mode Selector */}

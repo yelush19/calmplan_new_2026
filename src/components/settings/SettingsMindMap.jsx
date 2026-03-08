@@ -608,6 +608,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [syncStatus, setSyncStatus] = useState(null); // null | 'syncing' | 'success' | 'error'
   const [syncResults, setSyncResults] = useState(null);
   const [syncTimestamp, setSyncTimestamp] = useState(null);
+  // Shapes palette hidden by default — logic preserved, toggle reveals it
+  const [showShapePalette, setShowShapePalette] = useState(false);
 
   // ── Build LIVE service registry (directive #1, #2, #3) ──
   // DEDUP GUARD: template services always win. Custom services only add NEW keys.
@@ -1063,7 +1065,9 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     e.stopPropagation();
     const branch = parentNode.type === 'root' ? parentNode.id : getDashboardBranch(parentNode.dashboard);
     const dashboard = DNA[branch]?.dashboard || 'admin';
-    const key = createService({ dashboard, label: 'שירות חדש' });
+    // Connect child to parent via parentId — true hierarchy linking
+    const parentId = parentNode.type === 'root' ? parentNode.id : parentNode.id;
+    const key = createService({ dashboard, label: 'שירות חדש', parentId });
 
     // Position near parent
     const angle = Math.random() * Math.PI * 2;
@@ -1383,27 +1387,38 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         </g>
       </svg>
 
-      {/* ══════ Shape Palette (directive #5) ══════ */}
-      <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-2 z-10">
-        <div className="text-[9px] font-bold text-gray-400 mb-1.5 px-1 flex items-center gap-1">
-          <Zap className="w-3 h-3" /> צורות
-        </div>
-        <div className="flex flex-col gap-1">
-          {PALETTE_SHAPES.map(shape => {
-            const Icon = shape.icon;
-            return (
-              <button
-                key={shape.key}
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 transition-all cursor-grab active:cursor-grabbing group text-right"
-                onMouseDown={(e) => handlePaletteDragStart(shape.key, e)}
-                title={`גרור ${shape.label} לקנבס`}
-              >
-                <Icon className="w-4 h-4 text-[#4682B4] group-hover:text-[#E91E63] transition-colors" />
-                <span className="text-[10px] text-gray-600 font-medium">{shape.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* ══════ Shape Palette (directive #5) — hidden by default, toggle to reveal ══════ */}
+      <div className="absolute top-3 left-3 z-10">
+        <button
+          onClick={() => setShowShapePalette(prev => !prev)}
+          className="bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-100 p-2 hover:bg-gray-50 transition-colors"
+          title={showShapePalette ? 'הסתר צורות' : 'הצג צורות'}
+        >
+          <Zap className="w-4 h-4 text-[#4682B4]" />
+        </button>
+        {showShapePalette && (
+          <div className="mt-1 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-2">
+            <div className="text-[9px] font-bold text-gray-400 mb-1.5 px-1 flex items-center gap-1">
+              <Zap className="w-3 h-3" /> צורות
+            </div>
+            <div className="flex flex-col gap-1">
+              {PALETTE_SHAPES.map(shape => {
+                const Icon = shape.icon;
+                return (
+                  <button
+                    key={shape.key}
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-blue-50 transition-all cursor-grab active:cursor-grabbing group text-right"
+                    onMouseDown={(e) => handlePaletteDragStart(shape.key, e)}
+                    title={`גרור ${shape.label} לקנבס`}
+                  >
+                    <Icon className="w-4 h-4 text-[#4682B4] group-hover:text-[#E91E63] transition-colors" />
+                    <span className="text-[10px] text-gray-600 font-medium">{shape.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ══════ DNA Legend + Sync Button ══════ */}

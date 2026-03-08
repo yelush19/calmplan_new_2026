@@ -19,6 +19,7 @@ import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 import { buildCollisionNodes, resolveCollisions } from '@/engines/mapCollisionEngine';
 import { LOAD_COLORS, BRANCH_PATH_COLORS, PRODUCTION_FLOW_COLORS } from '@/lib/theme-constants';
 import { getServiceWeight } from '@/config/serviceWeights';
+import { useDesign } from '@/contexts/DesignContext';
 
 // ─── AYOA Shape Definitions (Shape UI Engine) ──────────────────────────────
 const BUBBLE_SHAPES = {
@@ -705,9 +706,13 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     }
   }, [radialTarget]);
 
-  // ── SHAPE PICKER state ──
+  // ── Global Design Engine connection ──
+  let design = null;
+  try { design = useDesign(); } catch { /* not mounted in DesignProvider */ }
+
+  // ── SHAPE PICKER state — reads global default from DesignContext ──
   const [showShapePicker, setShowShapePicker] = useState(false);
-  const [selectedShape, setSelectedShape] = useState('bubble'); // default shape
+  const [selectedShape, setSelectedShape] = useState(design?.shape || 'bubble');
   const [nodeShapes, setNodeShapes] = useState(() => {
     try {
       const saved = localStorage.getItem('calmplan-node-shapes');
@@ -715,12 +720,16 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     } catch { return {}; }
   });
   const setNodeShape = useCallback((nodeKey, shape) => {
+    // Persist both locally and to global DesignContext
     setNodeShapes(prev => {
       const next = { ...prev, [nodeKey]: shape };
       try { localStorage.setItem('calmplan-node-shapes', JSON.stringify(next)); } catch {}
       return next;
     });
-  }, []);
+    if (design?.setNodeOverride) {
+      design.setNodeOverride(nodeKey, { shape });
+    }
+  }, [design]);
   const toggleFuncBubbleExpand = useCallback((fbKey) => {
     setExpandedFuncBubbles(prev => {
       const next = new Set(prev);
