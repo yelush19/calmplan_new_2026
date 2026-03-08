@@ -35,6 +35,8 @@ import RealityCheck from "@/components/tasks/RealityCheck";
 import CompletionFeedback from "@/components/tasks/CompletionFeedback";
 import DesktopBridge from "@/components/desktop/DesktopBridge";
 import { AyoaViewProvider, useAyoaView } from "@/contexts/AyoaViewContext";
+import { DesignProvider } from "@/contexts/DesignContext";
+import DesignFloatingTab from "@/components/canvas/DesignFloatingTab";
 import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
 
 // Work Modes — aligned to P1-P5 pillar tree
@@ -1035,6 +1037,9 @@ function LayoutInner({ children }) {
       <RealityCheck />
       <CompletionFeedback />
 
+      {/* Design Engine Floating Tab — persistent across all pages */}
+      <DesignFloatingTab />
+
       {/* Floating Add Event FAB — draggable, always visible */}
       <DraggableFab storageKey="fab_add_event" className="fixed bottom-5 left-[8.5rem] z-[9999]">
         {({ guardClick }) => (
@@ -1116,9 +1121,11 @@ function LayoutInner({ children }) {
 export default function Layout({ children, currentPageName }) {
   return (
     <AppProvider>
-      <AyoaViewProvider>
-        <LayoutInner>{children}</LayoutInner>
-      </AyoaViewProvider>
+      <DesignProvider>
+        <AyoaViewProvider>
+          <LayoutInner>{children}</LayoutInner>
+        </AyoaViewProvider>
+      </DesignProvider>
     </AppProvider>
   );
 }

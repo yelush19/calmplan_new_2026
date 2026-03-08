@@ -104,9 +104,23 @@ const SHAPE_RENDERERS = {
     <rect x={cx - r} y={cy - r * 0.7} width={r * 2} height={r * 1.4}
       rx={14} fill={fill} stroke={stroke} strokeWidth={sw} />
   ),
+
+  // ── New shapes for Design Engine ──
+  capsule: (cx, cy, r, fill, stroke, sw) => (
+    <rect x={cx - r * 1.2} y={cy - r * 0.5} width={r * 2.4} height={r}
+      rx={r * 0.5} fill={fill} stroke={stroke} strokeWidth={sw} />
+  ),
+
+  hexagon: (cx, cy, r, fill, stroke, sw) => {
+    const pts = Array.from({ length: 6 }, (_, i) => {
+      const a = (Math.PI / 3) * i - Math.PI / 6;
+      return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+    }).join(' ');
+    return <polygon points={pts} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />;
+  },
 };
 
-export const SHAPE_KEYS = ['cloud', 'bubble', 'speech', 'diamond', 'pill', 'star'];
+export const SHAPE_KEYS = ['cloud', 'bubble', 'speech', 'diamond', 'pill', 'star', 'capsule', 'hexagon', 'roundedRect'];
 
 export default function AyoaNode({
   cx, cy, size = 30,
