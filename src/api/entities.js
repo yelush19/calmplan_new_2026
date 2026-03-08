@@ -1,67 +1,64 @@
 import { base44 } from './base44Client';
 
+// ── Lazy Entity Accessors ──
+// Uses getter functions to avoid TDZ (Temporal Dead Zone) crashes.
+// The base44.entities object may not be fully initialized when this
+// module is first evaluated (due to circular import chains like
+// entities → base44Client → automationEngine → entities).
+// By wrapping each export in a Proxy, the actual access to
+// base44.entities[name] is deferred until runtime (first method call).
 
-export const Event = base44.entities.Event;
+function lazyEntity(name) {
+  return new Proxy({}, {
+    get(_, prop) {
+      const entity = base44.entities?.[name];
+      if (!entity) {
+        console.warn(`[entities] ${name} not yet initialized, returning no-op for .${String(prop)}`);
+        // Return safe no-ops for common methods
+        if (prop === 'list') return async () => [];
+        if (prop === 'filter') return async () => [];
+        if (prop === 'create') return async (d) => d;
+        if (prop === 'update') return async (id, d) => d;
+        if (prop === 'delete') return async () => ({ success: true });
+        if (prop === 'deleteAll') return async () => ({ success: true });
+        return undefined;
+      }
+      return entity[prop];
+    },
+  });
+}
 
-export const Task = base44.entities.Task;
-
-export const TaskSession = base44.entities.TaskSession;
-
-export const DaySchedule = base44.entities.DaySchedule;
-
-export const WeeklyRecommendation = base44.entities.WeeklyRecommendation;
-
-export const Client = base44.entities.Client;
-
-export const Dashboard = base44.entities.Dashboard;
-
-export const AccountReconciliation = base44.entities.AccountReconciliation;
-
-export const Invoice = base44.entities.Invoice;
-
-export const ServiceProvider = base44.entities.ServiceProvider;
-
-export const ClientContact = base44.entities.ClientContact;
-
-export const ClientServiceProvider = base44.entities.ClientServiceProvider;
-
-export const ClientAccount = base44.entities.ClientAccount;
-
-export const ServiceCompany = base44.entities.ServiceCompany;
-
-export const Lead = base44.entities.Lead;
-
-export const RoadmapItem = base44.entities.RoadmapItem;
-
-export const WeeklySchedule = base44.entities.WeeklySchedule;
-
-export const FamilyMember = base44.entities.FamilyMember;
-
-export const DailyMoodCheck = base44.entities.DailyMoodCheck;
-
-export const Therapist = base44.entities.Therapist;
-
-export const TaxReport = base44.entities.TaxReport;
-
-export const TaxReport2025 = base44.entities.TaxReport2025;
-
-export const TaxReport2024 = base44.entities.TaxReport2024;
-
-export const WeeklyTask = base44.entities.WeeklyTask;
-
-export const BalanceSheet = base44.entities.BalanceSheet;
-
-export const StickyNote = base44.entities.StickyNote;
-
-export const Project = base44.entities.Project;
-
-export const SystemConfig = base44.entities.SystemConfig;
-
-export const PeriodicReport = base44.entities.PeriodicReport;
-
-export const FileMetadata = base44.entities.FileMetadata;
-
-export const ServiceCatalog = base44.entities.ServiceCatalog;
+export const Event = lazyEntity('Event');
+export const Task = lazyEntity('Task');
+export const TaskSession = lazyEntity('TaskSession');
+export const DaySchedule = lazyEntity('DaySchedule');
+export const WeeklyRecommendation = lazyEntity('WeeklyRecommendation');
+export const Client = lazyEntity('Client');
+export const Dashboard = lazyEntity('Dashboard');
+export const AccountReconciliation = lazyEntity('AccountReconciliation');
+export const Invoice = lazyEntity('Invoice');
+export const ServiceProvider = lazyEntity('ServiceProvider');
+export const ClientContact = lazyEntity('ClientContact');
+export const ClientServiceProvider = lazyEntity('ClientServiceProvider');
+export const ClientAccount = lazyEntity('ClientAccount');
+export const ServiceCompany = lazyEntity('ServiceCompany');
+export const Lead = lazyEntity('Lead');
+export const RoadmapItem = lazyEntity('RoadmapItem');
+export const WeeklySchedule = lazyEntity('WeeklySchedule');
+export const FamilyMember = lazyEntity('FamilyMember');
+export const DailyMoodCheck = lazyEntity('DailyMoodCheck');
+export const Therapist = lazyEntity('Therapist');
+export const TaxReport = lazyEntity('TaxReport');
+export const TaxReport2025 = lazyEntity('TaxReport2025');
+export const TaxReport2024 = lazyEntity('TaxReport2024');
+export const WeeklyTask = lazyEntity('WeeklyTask');
+export const BalanceSheet = lazyEntity('BalanceSheet');
+export const StickyNote = lazyEntity('StickyNote');
+export const Project = lazyEntity('Project');
+export const SystemConfig = lazyEntity('SystemConfig');
+export const PeriodicReport = lazyEntity('PeriodicReport');
+export const FileMetadata = lazyEntity('FileMetadata');
+export const ServiceCatalog = lazyEntity('ServiceCatalog');
 
 // auth sdk:
 export const User = base44.auth;

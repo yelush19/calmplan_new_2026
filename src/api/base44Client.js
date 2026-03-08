@@ -113,6 +113,7 @@ export const syncStatus = {
   connectionTested: false,
   connectionOk: false,
   connectionError: null,
+  get rlsBlocked() { return isRlsBlocked(); },
 };
 
 // Test connection on startup (non-blocking)
