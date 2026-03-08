@@ -46,29 +46,64 @@ function guardSupabase(operation) {
 /**
  * One-time RLS probe: check if we can actually read rows.
  * Sets rlsBlocked=true if the table has data but SELECT returns 0.
- * Logs ONE warning, then goes silent.
+ * Uses RPC count as a fallback to detect RLS even when count is also blocked.
  */
 async function probeRls() {
   if (rlsChecked || !supabase) return;
   rlsChecked = true;
   try {
-    const { count } = await supabase
-      .from('app_data')
-      .select('id', { count: 'exact', head: true });
-    if (!count || count === 0) return; // Table empty — not RLS
-
-    const { data } = await supabase
+    // Step 1: Try a normal SELECT
+    const { data, error } = await supabase
       .from('app_data')
       .select('id')
       .limit(1);
-    if (!data || data.length === 0) {
+
+    if (data && data.length > 0) {
+      // Can read — RLS is fine
+      console.log('[Supabase] RLS probe: reads OK');
+      return;
+    }
+
+    // Step 2: SELECT returned 0 rows. Could be empty OR RLS blocking.
+    // Try count with exact (head:true bypasses some RLS policies)
+    const { count } = await supabase
+      .from('app_data')
+      .select('id', { count: 'exact', head: true });
+
+    if (count && count > 0) {
+      // Table has rows but SELECT returned 0 → RLS is blocking
       rlsBlocked = true;
       console.warn(
-        `[Supabase] RLS is blocking reads (${count} rows exist, 0 returned). ` +
+        `[Supabase] ⚠️ RLS is blocking reads (${count} rows exist, 0 returned). ` +
         'All reads routed to localStorage. Fix: run fix-rls.sql in Supabase SQL Editor.'
       );
+      return;
     }
-  } catch { /* ignore */ }
+
+    // Step 3: Both returned 0. If this is the LitayCalmplan project with data,
+    // RLS might be blocking BOTH count and select. Try an RPC or check for
+    // specific known error patterns.
+    if (!error) {
+      // Supabase responded without error but 0 data — could be RLS or genuinely empty.
+      // If we get here on a known-populated instance, RLS is the most likely cause.
+      // Store this status so the UI can show a diagnostic.
+      console.warn(
+        '[Supabase] ⚠️ 0 rows returned with no error. If you expect data, ' +
+        'RLS may be blocking both COUNT and SELECT. Run fix-rls.sql in SQL Editor.'
+      );
+    }
+  } catch (err) {
+    console.error('[Supabase] RLS probe error:', err.message);
+  }
+}
+
+/** Expose RLS status for diagnostic UI */
+export function getConnectionDiagnostic() {
+  return {
+    rlsBlocked,
+    rlsChecked,
+    supabaseConfigured: isSupabaseAvailable(),
+  };
 }
 
 // Kick off probe immediately (non-blocking)

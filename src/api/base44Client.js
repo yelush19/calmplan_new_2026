@@ -1,115 +1,80 @@
-// Smart data layer - uses Supabase if configured, falls back to localStorage
-// ══ RLS AUTO-DETECT: If Supabase has rows but reads return 0, switch to localStorage ══
+// CalmPlan Data Layer — Supabase REQUIRED
+// ══ Fails visibly if Supabase is not configured ══
 import { isSupabaseConfigured, supabase, testSupabaseConnection } from './supabaseClient';
 import * as localDB from './localDB';
 import * as supabaseDB from './supabaseDB';
-// supabaseDB exports rlsBlocked flag — probeRls() sets it on module load
 
 const primary = isSupabaseConfigured ? supabaseDB : localDB;
-console.log(`[CalmPlan] DATA SOURCE: ${isSupabaseConfigured ? 'SUPABASE (cloud)' : 'localStorage (local)'}`);
+
+// ── STRICT MODE: Supabase must be configured ──
+if (!isSupabaseConfigured) {
+  console.error(
+    '[CalmPlan] ❌ FATAL: Supabase is NOT configured.\n' +
+    'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel Environment Variables.\n' +
+    'The app will NOT function without a database connection.'
+  );
+}
 
 function isRlsBlocked() {
   return isSupabaseConfigured && supabaseDB.rlsBlocked;
 }
 
-// ── Hybrid entities: Supabase → localStorage fallback ──
-// When RLS blocks Supabase, transparently serve data from localStorage.
-function createHybridEntity(entityName) {
+// ── Supabase-first entities (localStorage only as offline read cache) ──
+function createEntity(entityName) {
   const supaEntity = isSupabaseConfigured ? primary.entities[entityName] : null;
   const localEntity = localDB.entities[entityName];
 
-  // If no Supabase, just use localStorage directly
-  if (!supaEntity) return localEntity;
-
-  // Track if we already logged the fallback for this entity (don't spam)
-  let loggedFallback = false;
+  // If Supabase not configured, return entity that throws on every operation
+  if (!supaEntity) {
+    const fail = () => { throw new Error('Supabase not configured — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel'); };
+    return {
+      async list() { fail(); },
+      async create() { fail(); },
+      async update() { fail(); },
+      async delete() { fail(); },
+      async deleteAll() { fail(); },
+      async filter() { fail(); },
+    };
+  }
 
   return {
     async list(sortField = null, limit = 1000) {
-      // If RLS is known to be blocked, go straight to localStorage (silent)
-      if (isRlsBlocked()) {
-        try { return await localEntity.list(sortField, limit); } catch { return []; }
+      // Try Supabase — the single source of truth
+      const result = await supaEntity.list(sortField, limit);
+      if (result && result.length > 0) {
+        _cacheToLocal(entityName, result);
+        return result;
       }
-
-      // Try Supabase first
-      try {
-        const result = await supaEntity.list(sortField, limit);
-        if (result) {
-          // Supabase responded — cache to localStorage (even if empty, to stay in sync)
-          _cacheToLocal(entityName, result);
-          if (result.length > 0) return result;
-          // Supabase returned 0 — that IS the truth, return empty
-          return [];
-        }
-      } catch { /* fall through to localStorage only on network/connection error */ }
-
-      // Supabase network error — try localStorage fallback (log once only)
-      if (!loggedFallback) {
-        loggedFallback = true;
-        console.log(`[Hybrid] ${entityName}: Supabase unreachable, using localStorage fallback`);
-      }
-      try {
-        const fallbackResult = await localEntity.list(sortField, limit);
-        if (fallbackResult && fallbackResult.length > 0) return fallbackResult;
-      } catch { /* ignore */ }
+      // Supabase returned 0 — return empty (trust Supabase)
       return [];
     },
 
     async create(data) {
-      // Write to both if possible
-      if (!isRlsBlocked()) {
-        try { const r = await supaEntity.create(data); _cacheItemToLocal(entityName, r); return r; } catch { /* fall through */ }
-      }
-      return localEntity.create(data);
+      return await supaEntity.create(data);
     },
 
     async update(id, data) {
-      if (!isRlsBlocked()) {
-        try { return await supaEntity.update(id, data); } catch { /* fall through */ }
-      }
-      return localEntity.update(id, data);
+      return await supaEntity.update(id, data);
     },
 
     async delete(id) {
-      // Delete from BOTH layers to prevent ghost resurrection
-      if (!isRlsBlocked()) {
-        try { await supaEntity.delete(id); } catch { /* fall through */ }
-      }
+      const result = await supaEntity.delete(id);
+      // Also clean localStorage cache
       try { await localEntity.delete(id); } catch { /* ignore */ }
-      return { success: true };
+      return result;
     },
 
     async deleteAll() {
-      // CRITICAL: Always clear BOTH layers to prevent ghost data resurrection
-      // (localStorage cache can refill Supabase or vice versa)
-      const results = [];
-      if (!isRlsBlocked()) {
-        try { results.push(await supaEntity.deleteAll()); } catch { /* fall through */ }
-      }
-      try { results.push(await localEntity.deleteAll()); } catch { /* ignore */ }
-      return results[0] || { success: true };
+      return await supaEntity.deleteAll();
     },
 
     async filter(filters, sortField, limit) {
-      if (isRlsBlocked()) {
-        try { return await localEntity.filter(filters, sortField, limit); } catch { return []; }
-      }
-
-      try {
-        const result = await supaEntity.filter(filters, sortField, limit);
-        if (result && result.length > 0) return result;
-      } catch { /* fall through */ }
-
-      try {
-        const fallbackResult = await localEntity.filter(filters, sortField, limit);
-        if (fallbackResult && fallbackResult.length > 0) return fallbackResult;
-      } catch { /* ignore */ }
-      return [];
+      return await supaEntity.filter(filters, sortField, limit);
     },
   };
 }
 
-// Cache Supabase results to localStorage for offline resilience
+// Cache Supabase results to localStorage for offline reads
 function _cacheToLocal(entityName, items) {
   try {
     const collectionMap = {
@@ -130,39 +95,25 @@ function _cacheToLocal(entityName, items) {
     };
     const collName = collectionMap[entityName];
     if (collName) {
-      // Sync localStorage with Supabase truth — including empty (0 tasks)
       localStorage.setItem('calmplan_' + collName, JSON.stringify(items));
     }
   } catch { /* localStorage full or unavailable */ }
 }
 
-function _cacheItemToLocal(entityName, item) {
-  // Individual item caching not implemented — full cache happens on list()
-}
-
-// Build hybrid entities for all collections
-const hybridEntities = {};
+// Build entities for all collections
+const entities = {};
 for (const name of Object.keys(primary.entities)) {
-  hybridEntities[name] = createHybridEntity(name);
+  entities[name] = createEntity(name);
 }
 
 // ── Cloud Sync Status ────────────────────────────────────────────
 export const syncStatus = {
   isCloud: isSupabaseConfigured,
-  source: isSupabaseConfigured ? 'supabase' : 'localStorage',
+  source: isSupabaseConfigured ? 'supabase' : 'NOT_CONFIGURED',
   connectionTested: false,
   connectionOk: false,
   connectionError: null,
-  get rlsBlocked() { return rlsBlocked; },
 };
-
-// Warn loudly when running in local-only mode
-if (!isSupabaseConfigured) {
-  console.warn(
-    '[CalmPlan] ⚠️ Running in LOCAL-ONLY mode. Data will NOT sync between devices.\n' +
-    'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file to enable cloud sync.'
-  );
-}
 
 // Test connection on startup (non-blocking)
 if (isSupabaseConfigured) {
@@ -174,7 +125,6 @@ if (isSupabaseConfigured) {
       console.log('[CalmPlan] ✅ Supabase connection verified');
     } else {
       console.error(`[CalmPlan] ❌ Supabase connection failed: ${result.error}`);
-      console.warn('[CalmPlan] Data will still be read from localStorage cache if available');
     }
   });
 }
@@ -193,7 +143,6 @@ function notifyDataChange(payload) {
   }
 }
 
-// Subscribe to Supabase Realtime for instant cross-device sync
 let realtimeChannel = null;
 
 export function startRealtimeSync() {
@@ -205,7 +154,7 @@ export function startRealtimeSync() {
       { event: '*', schema: 'public', table: 'app_data' },
       (payload) => {
         notifyDataChange({
-          type: payload.eventType, // INSERT, UPDATE, DELETE
+          type: payload.eventType,
           collection: payload.new?.collection || payload.old?.collection,
           record: payload.new || payload.old,
         });
@@ -213,7 +162,7 @@ export function startRealtimeSync() {
     )
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        console.log('[CalmPlan] Realtime sync active - changes will appear across devices');
+        console.log('[CalmPlan] Realtime sync active');
       }
     });
 }
@@ -225,17 +174,28 @@ export function stopRealtimeSync() {
   }
 }
 
-// Auto-start realtime sync when using cloud
 if (isSupabaseConfigured) {
   startRealtimeSync();
 }
 
 export const base44 = {
-  entities: hybridEntities,
+  entities,
   auth: primary.auth,
   functions: {},
   integrations: { Core: {} }
 };
+
+/** Runtime diagnostic: what data source is active? */
+export function getDataSourceInfo() {
+  return {
+    source: isSupabaseConfigured ? 'supabase' : 'NOT_CONFIGURED',
+    supabaseConfigured: isSupabaseConfigured,
+    rlsBlocked: isRlsBlocked(),
+    supabaseUrl: isSupabaseConfigured
+      ? (import.meta.env.VITE_SUPABASE_URL || '').substring(0, 40) + '...'
+      : null,
+  };
+}
 
 export const exportAllData = primary.exportAllData;
 export const importAllData = primary.importAllData;
