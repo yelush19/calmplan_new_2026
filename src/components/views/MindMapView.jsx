@@ -691,7 +691,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     new Set(['P1 חשבות שכר', 'P2 הנהלת חשבונות', 'P4 בית'])
   );
   const [expandedBranches, setExpandedBranches] = useState(
-    new Set(['בית-תחזוקה', 'בית-אישי', 'בית-מלאי'])
+    new Set(['בית-תחזוקה', 'בית-אישי', 'בית-מלאי', 'p4-maintenance', 'p4-personal', 'p4-inventory'])
   );
   const [expandedFuncBubbles, setExpandedFuncBubbles] = useState(new Set());
 
@@ -2310,7 +2310,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               </text>
               {/* Stats */}
               <text x={W / 2 + 4} y={H / 2 + 12} textAnchor="middle" fill="#B3D4FC" fontSize="10" style={{ pointerEvents: 'none' }}>
-                {mf.totalTasks} משימות · {mf.totalClients} לקוחות
+                {mf.name === 'P4 בית'
+                  ? `3 ענפים · ${mf.totalTasks || 9} פריטים`
+                  : `${mf.totalTasks} משימות · ${mf.totalClients} לקוחות`}
               </text>
               {/* P1→P2 Sync indicator: shows on P2 meta-folder */}
               {mf.p1SyncPct != null && (
@@ -2327,6 +2329,203 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           </motion.div>
           );
         })}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            P4 HOME: FORCE-RENDERED SUB-BRANCHES
+            These nodes are ALWAYS visible when P4 is expanded, regardless
+            of any task data in the database. They render directly as visual
+            nodes attached to the P4 meta-folder position.
+            ══════════════════════════════════════════════════════════════════ */}
+        {(() => {
+          const p4Meta = layout.metaFolderPositions?.find(m => m.name === 'P4 בית');
+          const isP4Expanded = expandedMetaFolders.has('P4 בית');
+          if (!p4Meta || !isP4Expanded) return null;
+
+          const P4_SUBS = [
+            { key: 'maintenance', label: 'תחזוקה', icon: '🔧', color: '#6D4C41',
+              children: [
+                { key: 'cleaning', label: 'ניקיון', icon: '🧹', color: '#4CAF50' },
+                { key: 'laundry', label: 'כביסה', icon: '👕', color: '#42A5F5' },
+                { key: 'garden', label: 'גינה', icon: '🌿', color: '#66BB6A' },
+                { key: 'supplies', label: 'חומרי ניקיון', icon: '🧴', color: '#8BC34A' },
+              ],
+            },
+            { key: 'personal', label: 'אישי', icon: '👤', color: '#7B1FA2',
+              children: [
+                { key: 'medical', label: 'רפואי', icon: '🏥', color: '#EF5350' },
+                { key: 'legal', label: 'ביטוח', icon: '⚖️', color: '#5C6BC0' },
+                { key: 'family', label: 'משפחה', icon: '👨‍👩‍👧‍👦', color: '#EC407A' },
+              ],
+            },
+            { key: 'inventory', label: 'מלאי', icon: '📦', color: '#FF9800',
+              children: [
+                { key: 'food', label: 'מזון', icon: '🍎', color: '#FF7043' },
+                { key: 'shopping', label: 'קניות', icon: '🛒', color: '#FFA726' },
+              ],
+            },
+          ];
+
+          const SUB_DIST = 140;  // p4 → sub-department
+          const LEAF_DIST = 100; // sub-department → leaf
+          const subSpread = (P4_SUBS.length - 1) * 180;
+
+          return (
+            <>
+              {P4_SUBS.map((sub, si) => {
+                const subOffsetX = P4_SUBS.length <= 1 ? 0 : -subSpread / 2 + si * (subSpread / (P4_SUBS.length - 1));
+                const subKey = `p4-sub-${sub.key}`;
+                const manualSub = manualPositions[subKey];
+                const subX = manualSub?.x ?? (p4Meta.x + subOffsetX);
+                const subY = manualSub?.y ?? (p4Meta.y + SUB_DIST);
+                const isSubExpanded = expandedBranches.has(`p4-${sub.key}`);
+
+                return (
+                  <React.Fragment key={subKey}>
+                    {/* SVG branch line: P4 → sub-department */}
+                    <svg width={layout.virtualW} height={layout.virtualH}
+                      className="absolute inset-0 pointer-events-none" style={{ overflow: 'visible', zIndex: 0 }}>
+                      {(() => {
+                        const dx = subX - p4Meta.x, dy = subY - p4Meta.y;
+                        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                        const sx = p4Meta.x + (dx / len) * 50;
+                        const sy = p4Meta.y + (dy / len) * 50;
+                        const ex = subX - (dx / len) * 30;
+                        const ey = subY - (dy / len) * 30;
+                        const tapered = createTaperedBranch(sx, sy, ex, ey, 5, 2, sub.color, 0.7);
+                        return <path d={tapered.d} fill={tapered.fill} opacity={tapered.opacity} />;
+                      })()}
+                      {/* Branch lines to leaf nodes */}
+                      {isSubExpanded && sub.children.map((leaf, li) => {
+                        const leafSpreadW = Math.max(sub.children.length - 1, 1) * 110;
+                        const leafOffsetX = sub.children.length <= 1 ? 0 : -leafSpreadW / 2 + li * (leafSpreadW / (sub.children.length - 1));
+                        const leafKey = `p4-leaf-${sub.key}-${leaf.key}`;
+                        const manualLeaf = manualPositions[leafKey];
+                        const leafX = manualLeaf?.x ?? (subX + leafOffsetX);
+                        const leafY = manualLeaf?.y ?? (subY + LEAF_DIST);
+                        const dx2 = leafX - subX, dy2 = leafY - subY;
+                        const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1;
+                        const sx2 = subX + (dx2 / len2) * 28;
+                        const sy2 = subY + (dy2 / len2) * 28;
+                        const ex2 = leafX - (dx2 / len2) * 24;
+                        const ey2 = leafY - (dy2 / len2) * 24;
+                        const tp = createTaperedBranch(sx2, sy2, ex2, ey2, 3, 1.5, leaf.color, 0.6);
+                        return <path key={`line-${leafKey}`} d={tp.d} fill={tp.fill} opacity={tp.opacity} />;
+                      })}
+                    </svg>
+
+                    {/* Sub-department bubble */}
+                    <motion.div
+                      data-node-draggable
+                      className="absolute z-20 select-none touch-none cursor-pointer"
+                      style={{
+                        left: subX,
+                        top: subY,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: si * 0.08, type: 'spring', stiffness: 200 }}
+                      whileHover={{ scale: 1.08 }}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        nodeHasDragged.current = false;
+                        const childPos = sub.children.map((leaf, li) => {
+                          const leafSpreadW = Math.max(sub.children.length - 1, 1) * 110;
+                          const leafOffsetX = sub.children.length <= 1 ? 0 : -leafSpreadW / 2 + li * (leafSpreadW / (sub.children.length - 1));
+                          const lk = `p4-leaf-${sub.key}-${leaf.key}`;
+                          const ml = manualPositions[lk];
+                          return { key: lk, x: ml?.x ?? (subX + leafOffsetX), y: ml?.y ?? (subY + LEAF_DIST) };
+                        });
+                        draggingNode.current = {
+                          key: subKey, startX: e.clientX, startY: e.clientY,
+                          origX: subX, origY: subY, isFolder: true, childPositions: childPos,
+                        };
+                      }}
+                      onPointerUp={(e) => {
+                        const wasDragging = nodeHasDragged.current;
+                        draggingNode.current = null;
+                        nodeHasDragged.current = false;
+                        if (wasDragging) {
+                          setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
+                        } else {
+                          // Toggle expand/collapse
+                          setExpandedBranches(prev => {
+                            const next = new Set(prev);
+                            const k = `p4-${sub.key}`;
+                            next.has(k) ? next.delete(k) : next.add(k);
+                            return next;
+                          });
+                        }
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-1 px-5 py-3 rounded-2xl border-3 shadow-lg"
+                        style={{ backgroundColor: '#FFFFFF', borderColor: sub.color, borderWidth: 3, minWidth: 100 }}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{sub.icon}</span>
+                          <span className="text-sm font-bold" style={{ color: sub.color }}>{sub.label}</span>
+                          <span className="w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center text-white"
+                            style={{ backgroundColor: isSubExpanded ? '#1565C0' : sub.color }}>
+                            {isSubExpanded ? '−' : '+'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-gray-500">{sub.children.length} פריטים</span>
+                      </div>
+                    </motion.div>
+
+                    {/* Leaf nodes — visible when sub-department is expanded */}
+                    {isSubExpanded && sub.children.map((leaf, li) => {
+                      const leafSpreadW = Math.max(sub.children.length - 1, 1) * 110;
+                      const leafOffsetX = sub.children.length <= 1 ? 0 : -leafSpreadW / 2 + li * (leafSpreadW / (sub.children.length - 1));
+                      const leafKey = `p4-leaf-${sub.key}-${leaf.key}`;
+                      const manualLeaf = manualPositions[leafKey];
+                      const leafX = manualLeaf?.x ?? (subX + leafOffsetX);
+                      const leafY = manualLeaf?.y ?? (subY + LEAF_DIST);
+
+                      return (
+                        <motion.div
+                          key={leafKey}
+                          data-node-draggable
+                          className="absolute z-20 select-none touch-none cursor-pointer"
+                          style={{
+                            left: leafX,
+                            top: leafY,
+                            transform: 'translate(-50%, -50%)',
+                          }}
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: si * 0.08 + li * 0.04, type: 'spring', stiffness: 200 }}
+                          whileHover={{ scale: 1.1 }}
+                          onPointerDown={(e) => handleNodePointerDown(e, leafKey, leafX, leafY)}
+                          onPointerUp={(e) => {
+                            const wasDragging = nodeHasDragged.current;
+                            draggingNode.current = null;
+                            nodeHasDragged.current = false;
+                            if (wasDragging) {
+                              setManualPositions(prev => { savePositionsToStorage(prev); return prev; });
+                            } else {
+                              // Navigate to relevant page
+                              if (leaf.key === 'shopping' || leaf.key === 'food' || leaf.key === 'supplies') {
+                                navigate('/Inventory');
+                              } else {
+                                navigate('/HomeTaskGenerator');
+                              }
+                            }
+                          }}
+                        >
+                          <div className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl border-2 shadow-md hover:shadow-lg transition-shadow"
+                            style={{ backgroundColor: '#FFFFFF', borderColor: leaf.color, minWidth: 80 }}>
+                            <span className="text-lg">{leaf.icon}</span>
+                            <span className="text-xs font-bold" style={{ color: leaf.color }}>{leaf.label}</span>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </>
+          );
+        })()}
 
         {/* ── LAW 3: Level 2 — Glass-Morphism Rectangle Sub-Folders ── */}
         {layout.metaSubFolderPositions?.filter(sf => expandedMetaFolders.has(sf.metaFolderName)).map((sf, si) => {
