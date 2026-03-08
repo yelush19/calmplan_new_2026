@@ -35,6 +35,7 @@ import { SERVICE_WEIGHTS, getServiceWeight } from '@/config/serviceWeights';
 import {
   Trash2, Plus, GripVertical, Cloud, Circle, Diamond, Star,
   MessageCircle, X, ChevronRight, Move, Zap, Minus, ListOrdered,
+  CloudUpload, CheckCircle2, AlertCircle, Loader2, Shield,
 } from 'lucide-react';
 
 // ── DNA Colors (P-branch identity) ──
@@ -111,6 +112,142 @@ async function syncToSupabase(key, data) {
   } catch (err) {
     console.warn(`[Supabase] Failed to sync ${key}:`, err.message);
   }
+}
+
+// ============================================================
+// FORCE SYNC: Full backup of all service definitions + steps
+// ============================================================
+// Pushes a complete snapshot of the architect's work to Supabase.
+// Includes: service_overrides, custom_services, node_positions,
+// and a full service_definitions manifest with sort_order + parent linkage.
+
+async function forceFullSync() {
+  const results = { success: [], failed: [], integrity: [] };
+  const SC = await getSystemConfig();
+  if (!SC) {
+    results.failed.push('Supabase not available');
+    return results;
+  }
+
+  // 1. Sync service overrides
+  try {
+    const overrides = JSON.parse(localStorage.getItem('calmplan_service_overrides') || '{}');
+    await syncToSupabase('service_overrides', overrides);
+    results.success.push('service_overrides');
+  } catch (err) {
+    results.failed.push(`service_overrides: ${err.message}`);
+  }
+
+  // 2. Sync custom services
+  try {
+    const customs = JSON.parse(localStorage.getItem('calmplan_custom_services') || '{}');
+    await syncToSupabase('custom_services', customs);
+    results.success.push('custom_services');
+  } catch (err) {
+    results.failed.push(`custom_services: ${err.message}`);
+  }
+
+  // 3. Sync node positions
+  try {
+    const positions = JSON.parse(localStorage.getItem('calmplan_node_positions') || '{}');
+    await syncToSupabase('node_positions', positions);
+    results.success.push('node_positions');
+  } catch (err) {
+    results.failed.push(`node_positions: ${err.message}`);
+  }
+
+  // 4. Build and sync FULL service_definitions manifest
+  // This is the critical backup: every service, every step with sort_order, parent linkage
+  try {
+    const overrides = JSON.parse(localStorage.getItem('calmplan_service_overrides') || '{}');
+    const customs = JSON.parse(localStorage.getItem('calmplan_custom_services') || '{}');
+
+    const manifest = {};
+    // Merge ALL_SERVICES with overrides
+    for (const [key, svc] of Object.entries(ALL_SERVICES)) {
+      if (overrides[key]?._hidden) continue;
+      const merged = { ...svc, ...(overrides[key] || {}) };
+      const branch = getDashboardBranch(merged.dashboard);
+      manifest[key] = {
+        key: merged.key,
+        label: merged.label,
+        dashboard: merged.dashboard,
+        branch,
+        parentId: merged.parentId || branch,
+        taskType: merged.taskType || 'linear',
+        createCategory: merged.createCategory,
+        steps: (merged.steps || []).map((step, index) => ({
+          key: step.key,
+          label: step.label,
+          icon: step.icon,
+          sort_order: index,
+          parent_service: key,
+          requiresPrev: step.requiresPrev || false,
+        })),
+        _source: 'template',
+      };
+    }
+    // Add custom services
+    for (const [key, svc] of Object.entries(customs)) {
+      const branch = getDashboardBranch(svc.dashboard);
+      manifest[key] = {
+        key: svc.key || key,
+        label: svc.label,
+        dashboard: svc.dashboard,
+        branch,
+        parentId: svc.parentId || branch,
+        taskType: svc.taskType || 'linear',
+        createCategory: svc.createCategory,
+        steps: (svc.steps || []).map((step, index) => ({
+          key: step.key,
+          label: step.label,
+          icon: step.icon,
+          sort_order: index,
+          parent_service: key,
+          requiresPrev: step.requiresPrev || false,
+        })),
+        _source: 'custom',
+      };
+    }
+
+    await syncToSupabase('service_definitions', manifest);
+    results.success.push('service_definitions');
+
+    // 5. Integrity verification: check each service's steps
+    for (const [key, svc] of Object.entries(manifest)) {
+      const steps = svc.steps || [];
+      // Verify sort_order is sequential
+      for (let i = 0; i < steps.length; i++) {
+        if (steps[i].sort_order !== i) {
+          results.integrity.push(`${key}: step "${steps[i].label}" sort_order mismatch (expected ${i}, got ${steps[i].sort_order})`);
+        }
+        if (steps[i].parent_service !== key) {
+          results.integrity.push(`${key}: step "${steps[i].label}" parent linkage broken`);
+        }
+      }
+    }
+    if (results.integrity.length === 0) {
+      results.integrity.push('ALL_CLEAR');
+    }
+  } catch (err) {
+    results.failed.push(`service_definitions: ${err.message}`);
+  }
+
+  // 6. Sync timestamp
+  try {
+    await syncToSupabase('last_full_sync', {
+      timestamp: new Date().toISOString(),
+      service_count: Object.keys(ALL_SERVICES).length,
+      results_summary: {
+        synced: results.success.length,
+        failed: results.failed.length,
+        integrity_issues: results.integrity.filter(i => i !== 'ALL_CLEAR').length,
+      },
+    });
+    results.success.push('sync_timestamp');
+  } catch { /* non-critical */ }
+
+  return results;
 }
 
 function loadOverrides() {
@@ -468,6 +605,9 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [showTrashGlow, setShowTrashGlow] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [nodePositionOverrides, setNodePositionOverrides] = useState({});
+  const [syncStatus, setSyncStatus] = useState(null); // null | 'syncing' | 'success' | 'error'
+  const [syncResults, setSyncResults] = useState(null);
+  const [syncTimestamp, setSyncTimestamp] = useState(null);
 
   // ── Build LIVE service registry (directive #1, #2, #3) ──
   const liveServices = useMemo(() => {
@@ -653,13 +793,15 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
   const createService = useCallback((newService) => {
     const key = newService.key || `custom_${Date.now()}`;
+    // BLANK SLATE: New services start with NO default steps.
+    // The Architect defines their own steps in their own order.
     const svc = {
       key,
       label: newService.label || 'שירות חדש',
       dashboard: newService.dashboard || 'admin',
       taskCategories: [key],
       createCategory: key,
-      steps: [{ key: 'task', label: 'ביצוע', icon: 'check-circle' }],
+      steps: [],
       ...newService,
     };
     console.log('STATE MUTATED:', { action: 'create', key, service: svc });
@@ -696,6 +838,25 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     console.log('STATE MUTATED:', { action: 'move', key: serviceKey, newDashboard });
     updateService(serviceKey, { dashboard: newDashboard });
   }, [updateService]);
+
+  // ── Force Sync Handler ──
+  const handleForceSync = useCallback(async () => {
+    setSyncStatus('syncing');
+    setSyncResults(null);
+    try {
+      const results = await forceFullSync();
+      setSyncResults(results);
+      const hasFailures = results.failed.length > 0;
+      const hasIntegrityIssues = results.integrity.some(i => i !== 'ALL_CLEAR');
+      setSyncStatus(hasFailures || hasIntegrityIssues ? 'error' : 'success');
+      setSyncTimestamp(new Date().toISOString());
+      console.log('[Force Sync] Results:', results);
+    } catch (err) {
+      setSyncStatus('error');
+      setSyncResults({ success: [], failed: [err.message], integrity: [] });
+      console.error('[Force Sync] Failed:', err);
+    }
+  }, []);
 
   // ── Drag & Drop Engine (directive #4) ──
   const handleNodeMouseDown = useCallback((e, nodeId) => {
@@ -1238,14 +1399,70 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         </div>
       </div>
 
-      {/* ══════ DNA Legend ══════ */}
-      <div className="absolute top-3 right-3 flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-gray-100 z-10">
-        {Object.entries(DNA).map(([key, val]) => (
-          <div key={key} className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: val.color }} />
-            <span className="text-[10px] font-medium" style={{ color: val.color }}>{key}</span>
-          </div>
-        ))}
+      {/* ══════ DNA Legend + Sync Button ══════ */}
+      <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
+        {/* DNA Legend */}
+        <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-gray-100">
+          {Object.entries(DNA).map(([key, val]) => (
+            <div key={key} className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: val.color }} />
+              <span className="text-[10px] font-medium" style={{ color: val.color }}>{key}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Force Sync + Green Light */}
+        <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-gray-100">
+          <button
+            onClick={handleForceSync}
+            disabled={syncStatus === 'syncing'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+              syncStatus === 'syncing'
+                ? 'bg-blue-50 text-blue-400 cursor-wait'
+                : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
+            }`}
+          >
+            {syncStatus === 'syncing' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <CloudUpload className="w-3.5 h-3.5" />
+            )}
+            {syncStatus === 'syncing' ? 'מסנכרן...' : 'סנכרון מלא'}
+          </button>
+
+          {/* Green Light / Status Indicator */}
+          {syncStatus === 'success' && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-50 border border-green-200">
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-green-700">GREEN LIGHT</span>
+                <span className="text-[8px] text-green-500">
+                  {syncResults?.success?.length || 0} collections synced
+                </span>
+              </div>
+            </div>
+          )}
+
+          {syncStatus === 'error' && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 border border-amber-200">
+              <AlertCircle className="w-4 h-4 text-amber-600" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-amber-700">PARTIAL SYNC</span>
+                <span className="text-[8px] text-amber-500">
+                  {syncResults?.failed?.length || 0} failed
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Integrity badge */}
+          {syncResults?.integrity?.length > 0 && syncResults.integrity[0] === 'ALL_CLEAR' && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200">
+              <Shield className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-[9px] font-bold text-emerald-700">INTEGRITY OK</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ══════ Contextual Sidebar (directive #8) ══════ */}

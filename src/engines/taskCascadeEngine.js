@@ -47,14 +47,14 @@ const CATEGORY_TO_BRANCH = {
   'masav_social': 'P1', 'מס"ב סוציאליות': 'P1',
   'masav_employees': 'P1', 'מס"ב עובדים': 'P1',
   'payslip_sending': 'P1', 'משלוח תלושים': 'P1',
-  // P2 — Bookkeeping
+  // P2 — Bookkeeping (monthly recurring: VAT, Advances, P&L)
   'work_bookkeeping': 'P2', 'bookkeeping': 'P2', 'הנה"ח': 'P2',
   'work_vat_reporting': 'P2', 'vat_reporting': 'P2', 'מע"מ': 'P2', 'דיווח מע"מ': 'P2',
   'work_tax_advances': 'P2', 'tax_advances': 'P2', 'מקדמות מס': 'P2', 'מקדמות מס הכנסה': 'P2',
   'pnl_reports': 'P2', 'רווח והפסד': 'P2', 'דוח רווח והפסד': 'P2',
-  'work_annual_reports': 'P2', 'annual_reports': 'P2', 'מאזנים': 'P2',
-  'work_balance_sheets': 'P2', 'balance_sheets': 'P2',
   'work_financial_reports': 'P2',
+  'income_collection': 'P2', 'קליטת הכנסות': 'P2',
+  'expense_collection': 'P2', 'קליטת הוצאות': 'P2',
   // P3 — Office Management
   'work_additional': 'P3', 'work_extra': 'P3', 'work_other': 'P3',
   'consulting': 'P3', 'ייעוץ': 'P3', 'work_consulting': 'P3',
