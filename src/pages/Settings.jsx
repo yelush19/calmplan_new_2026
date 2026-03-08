@@ -511,33 +511,93 @@ function DataCleanupSection() {
 
   const deleteOldTasks = async () => {
     if (!scanResult?.oldTasks?.length) return;
-    if (!window.confirm(`למחוק ${scanResult.oldCount} משימות עם due_date לפני ${CUTOFF_DATE}?\n\nפעולה זו בלתי הפיכה.`)) return;
+    if (!window.confirm(`למחוק ${scanResult.oldCount} משימות עם due_date לפני ${CUTOFF_DATE}?\n\nפעולה זו בלתי הפיכה — מוחק מ-Supabase ומ-localStorage.`)) return;
     setIsDeleting(true);
     setDeleteResult(null);
-    let deleted = 0;
-    let errors = 0;
-    const batch = scanResult.oldTasks;
+    const log = [];
+    let supaDeleted = 0;
+    let localDeleted = 0;
+    let supaError = null;
 
-    // Delete in parallel batches of 20
-    for (let i = 0; i < batch.length; i += 20) {
-      const chunk = batch.slice(i, i + 20);
-      const results = await Promise.allSettled(
-        chunk.map(t => Task.delete(t.id))
-      );
-      results.forEach(r => { if (r.status === 'fulfilled') deleted++; else errors++; });
+    // ── LAYER 1: Direct Supabase DELETE on app_data table ──
+    try {
+      const { supabase } = await import('@/api/supabaseClient');
+      const { isSupabaseConfigured } = await import('@/api/supabaseClient');
+
+      if (isSupabaseConfigured && supabase) {
+        // DELETE FROM app_data WHERE collection = 'tasks' AND data->>'due_date' < '2026-03-01'
+        const { data: deletedRows, error } = await supabase
+          .from('app_data')
+          .delete()
+          .eq('collection', 'tasks')
+          .lt('data->>due_date', CUTOFF_DATE)
+          .select('id');
+
+        if (error) {
+          supaError = error.message;
+          log.push(`Supabase DELETE error: ${error.message}`);
+          // Fallback: delete row-by-row using task IDs from scan
+          let fallbackOk = 0;
+          for (let i = 0; i < scanResult.oldTasks.length; i += 20) {
+            const chunk = scanResult.oldTasks.slice(i, i + 20);
+            const ids = chunk.map(t => t.id);
+            const { error: batchErr } = await supabase
+              .from('app_data')
+              .delete()
+              .eq('collection', 'tasks')
+              .in('id', ids);
+            if (!batchErr) fallbackOk += ids.length;
+          }
+          supaDeleted = fallbackOk;
+          log.push(`Supabase fallback: deleted ${fallbackOk} rows by ID`);
+        } else {
+          supaDeleted = deletedRows?.length || 0;
+          log.push(`Supabase: deleted ${supaDeleted} rows directly`);
+        }
+
+        // Also delete tasks with NO due_date that have report_period before March
+        // (catches engine-generated tasks that only have date but not due_date)
+        const { data: noDateRows } = await supabase
+          .from('app_data')
+          .delete()
+          .eq('collection', 'tasks')
+          .lt('data->>date', CUTOFF_DATE)
+          .is('data->>due_date', null)
+          .select('id');
+        if (noDateRows?.length) {
+          supaDeleted += noDateRows.length;
+          log.push(`Supabase: deleted ${noDateRows.length} additional rows with date < cutoff and no due_date`);
+        }
+      } else {
+        log.push('Supabase not configured — skipping cloud delete');
+      }
+    } catch (e) {
+      supaError = e.message;
+      log.push(`Supabase import/connection error: ${e.message}`);
     }
 
-    // Also clean localStorage directly as safety net
+    // ── LAYER 2: Clean localStorage directly ──
     try {
       const raw = localStorage.getItem('calmplan_tasks');
       if (raw) {
         const tasks = JSON.parse(raw);
-        const cleaned = tasks.filter(t => !t.due_date || t.due_date >= CUTOFF_DATE);
+        const before = tasks.length;
+        const cleaned = tasks.filter(t => {
+          // Keep if no due_date AND no date before cutoff
+          if (t.due_date) return t.due_date >= CUTOFF_DATE;
+          if (t.date) return t.date >= CUTOFF_DATE;
+          return true; // keep tasks with neither date
+        });
         localStorage.setItem('calmplan_tasks', JSON.stringify(cleaned));
+        localDeleted = before - cleaned.length;
+        log.push(`localStorage: removed ${localDeleted} of ${before} tasks, ${cleaned.length} remain`);
       }
-    } catch { /* localStorage cleanup failed, entity deletes already handled it */ }
+    } catch (e) {
+      log.push(`localStorage cleanup error: ${e.message}`);
+    }
 
-    setDeleteResult({ deleted, errors });
+    console.log('[DataCleanup] Log:', log.join('\n'));
+    setDeleteResult({ supaDeleted, localDeleted, supaError, log });
     setScanResult(null);
     setIsDeleting(false);
   };
@@ -622,14 +682,32 @@ function DataCleanupSection() {
 
         {/* Delete results */}
         {deleteResult && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            <div className="text-xs">
-              <p className="font-bold text-green-800">נמחקו {deleteResult.deleted} משימות בהצלחה!</p>
-              {deleteResult.errors > 0 && (
-                <p className="text-orange-600">{deleteResult.errors} שגיאות</p>
-              )}
+          <div className={`p-3 rounded-lg space-y-2 ${deleteResult.supaError ? 'bg-orange-50 border border-orange-200' : 'bg-green-50 border border-green-200'}`}>
+            <div className="flex items-center gap-2">
+              <CheckCircle className={`w-5 h-5 ${deleteResult.supaError ? 'text-orange-500' : 'text-green-600'}`} />
+              <p className="font-bold text-sm text-gray-800">סיכום מחיקה</p>
             </div>
+            <div className="text-xs space-y-1">
+              <div className="flex items-center gap-2">
+                <Server className="w-3 h-3 text-blue-500" />
+                <span>Supabase: נמחקו <strong>{deleteResult.supaDeleted}</strong> שורות</span>
+                {deleteResult.supaError && (
+                  <Badge className="bg-orange-100 text-orange-700 text-[9px]">{deleteResult.supaError}</Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Database className="w-3 h-3 text-purple-500" />
+                <span>localStorage: הוסרו <strong>{deleteResult.localDeleted}</strong> משימות</span>
+              </div>
+            </div>
+            {deleteResult.log?.length > 0 && (
+              <details className="text-[10px] text-gray-500 mt-1">
+                <summary className="cursor-pointer hover:text-gray-700">לוג מפורט</summary>
+                <pre className="mt-1 p-2 bg-gray-100 rounded text-[9px] whitespace-pre-wrap max-h-32 overflow-y-auto">
+                  {deleteResult.log.join('\n')}
+                </pre>
+              </details>
+            )}
           </div>
         )}
       </CardContent>
