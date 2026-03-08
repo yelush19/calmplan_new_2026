@@ -153,16 +153,12 @@ export const ADDITIONAL_SERVICES = {
   annual_reports: {
     key: 'annual_reports',
     label: 'דוחות שנתיים / מאזנים',
-    dashboard: 'tax',
+    dashboard: 'annual_reports',
+    branch: 'P5',
     taskCategories: ['דוח שנתי', 'work_annual_reports'],
     createCategory: 'דוח שנתי',
     supportsComplexity: true,
-    steps: [
-      { key: 'gather_materials', label: 'איסוף חומרים',  icon: 'inbox' },
-      { key: 'report_prep',      label: 'הכנת דו"ח',     icon: 'file-text' },
-      { key: 'review',           label: 'עיון ובדיקה',   icon: 'eye' },
-      { key: 'submission',       label: 'הגשה',           icon: 'send' },
-    ],
+    steps: [],
     // Extended steps for High complexity balance sheets
     highComplexitySteps: [
       { key: 'gather_materials',   label: 'איסוף חומרים',         icon: 'inbox' },
@@ -173,6 +169,34 @@ export const ADDITIONAL_SERVICES = {
       { key: 'final_close',        label: 'סגירה',               icon: 'check-circle' },
       { key: 'submission',         label: 'הגשה',                icon: 'send' },
     ],
+  },
+
+  capital_statement: {
+    key: 'capital_statement',
+    label: 'הצהרת הון',
+    dashboard: 'annual_reports',
+    branch: 'P5',
+    taskCategories: ['הצהרת הון', 'work_capital_statement'],
+    createCategory: 'הצהרת הון',
+    steps: [],
+  },
+
+  income_collection: {
+    key: 'income_collection',
+    label: 'קליטת הכנסות',
+    dashboard: 'tax',
+    taskCategories: ['קליטת הכנסות', 'work_income_collection'],
+    createCategory: 'קליטת הכנסות',
+    steps: [],
+  },
+
+  expense_collection: {
+    key: 'expense_collection',
+    label: 'קליטת הוצאות',
+    dashboard: 'tax',
+    taskCategories: ['קליטת הוצאות', 'work_expense_collection'],
+    createCategory: 'קליטת הוצאות',
+    steps: [],
   },
 
   authorities_payment: {
