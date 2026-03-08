@@ -29,7 +29,6 @@ import useBackupMonitor from "@/hooks/useBackupMonitor";
 import BackupHealthIndicator from "@/components/BackupHealthIndicator";
 import SyncStatusIndicator from "@/components/SyncStatusIndicator";
 import { Task, Client } from "@/api/entities";
-import { autoSeedIfEmpty } from "@/api/autoSeed";
 import { importAllData } from "@/api/base44Client";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import RealityCheck from "@/components/tasks/RealityCheck";
@@ -307,16 +306,6 @@ function LayoutInner({ children }) {
       navigate(createPageUrl("Home"));
     }
   }, [location.pathname, navigate]);
-
-  // Auto-seed real client data + March 2026 tasks if database is empty
-  useEffect(() => {
-    autoSeedIfEmpty().then(result => {
-      if (result.seeded) {
-        console.log(`[Layout] Auto-seeded ${result.clients} clients, ${result.tasks} tasks`);
-        window.location.reload(); // Reload so all components pick up the new data
-      }
-    });
-  }, []);
 
   // Load emergency tasks
   useEffect(() => {

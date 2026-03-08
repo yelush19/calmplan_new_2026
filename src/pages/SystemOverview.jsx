@@ -3,31 +3,22 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw, Shield, TriangleAlert, Users, CheckSquare, Database } from 'lucide-react';
+import { AlertCircle, RefreshCw, Shield, TriangleAlert, Users, CheckSquare, Database, Wifi, WifiOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Client, Task } from '@/api/entities';
+import { getDataSourceInfo, syncStatus } from '@/api/base44Client';
 import ClientAuditTool from '@/components/audit/ClientAuditTool';
-import { autoSeedIfEmpty } from '@/api/autoSeed';
 
 export default function SystemOverviewPage() {
   const [clients, setClients] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [seedStatus, setSeedStatus] = useState(null);
+  const [dataSource, setDataSource] = useState(null);
 
   useEffect(() => {
-    initPage();
+    loadData();
   }, []);
-
-  const initPage = async () => {
-    // If DB is empty, auto-seed first, then load
-    const result = await autoSeedIfEmpty();
-    if (result.seeded) {
-      setSeedStatus(`נטענו ${result.clients} לקוחות ו-${result.tasks} משימות מרץ 2026`);
-    }
-    await loadData();
-  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -39,6 +30,8 @@ export default function SystemOverviewPage() {
       ]);
       setClients(clientsData);
       setTasks(tasksData);
+      // Get diagnostic info after data loads
+      try { setDataSource(getDataSourceInfo()); } catch { /* ignore */ }
     } catch (err) {
       console.error('Error loading data:', err);
       setError('שגיאה בטעינת נתונים: ' + err.message);
@@ -69,6 +62,45 @@ export default function SystemOverviewPage() {
         </Button>
       </div>
 
+      {/* Connection diagnostic */}
+      {dataSource && (
+        <Card className={`border-2 ${dataSource.supabaseConfigured && !dataSource.rlsBlocked ? 'border-green-200 bg-green-50/30' : 'border-red-200 bg-red-50/30'}`}>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-4 flex-wrap text-sm">
+              <div className="flex items-center gap-2">
+                {dataSource.supabaseConfigured ? (
+                  <Wifi className="w-4 h-4 text-green-600" />
+                ) : (
+                  <WifiOff className="w-4 h-4 text-red-600" />
+                )}
+                <span className="font-medium">מקור נתונים:</span>
+                <Badge variant={dataSource.supabaseConfigured ? 'default' : 'destructive'}>
+                  {dataSource.source === 'supabase' ? 'Supabase (ענן)' : 'localStorage (מקומי)'}
+                </Badge>
+              </div>
+              {dataSource.supabaseUrl && (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">URL:</span>
+                  <code className="text-xs bg-white px-2 py-0.5 rounded border font-mono" dir="ltr">
+                    {dataSource.supabaseUrl}
+                  </code>
+                </div>
+              )}
+              {dataSource.rlsBlocked && (
+                <Badge variant="destructive" className="animate-pulse">
+                  RLS חוסם קריאה — הרץ fix-rls.sql
+                </Badge>
+              )}
+              {!dataSource.supabaseConfigured && (
+                <Badge variant="destructive">
+                  VITE_SUPABASE_URL ריק — בדוק Vercel Env Vars
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Data summary bar */}
       <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border">
         <div className="flex items-center gap-2">
@@ -88,10 +120,44 @@ export default function SystemOverviewPage() {
         </div>
       </div>
 
-      {seedStatus && (
-        <Alert className="border-green-200 bg-green-50">
-          <Database className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">{seedStatus}</AlertDescription>
+      {/* Warning when 0 clients + Supabase not configured */}
+      {clients.length === 0 && dataSource && !dataSource.supabaseConfigured && (
+        <Alert variant="destructive">
+          <TriangleAlert className="h-4 w-4" />
+          <AlertTitle>Supabase לא מחובר!</AlertTitle>
+          <AlertDescription>
+            <p className="mb-2">
+              המערכת פועלת ב-localStorage בלבד כי <code dir="ltr">VITE_SUPABASE_URL</code> ריק.
+            </p>
+            <p className="font-semibold">פעולה נדרשת:</p>
+            <ol className="list-decimal list-inside mt-1 space-y-1 text-sm">
+              <li dir="ltr">Go to Vercel → Project Settings → Environment Variables</li>
+              <li dir="ltr">Set <code>VITE_SUPABASE_URL</code> = <code>https://ryivxxdqxexcsxvexkiu.supabase.co</code></li>
+              <li dir="ltr">Set <code>VITE_SUPABASE_ANON_KEY</code> = your anon key from Supabase Dashboard → Settings → API</li>
+              <li dir="ltr">Redeploy (Vercel → Deployments → Redeploy)</li>
+            </ol>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Warning when 0 clients + RLS blocked */}
+      {clients.length === 0 && dataSource?.rlsBlocked && (
+        <Alert variant="destructive">
+          <TriangleAlert className="h-4 w-4" />
+          <AlertTitle>RLS חוסם גישה לנתונים!</AlertTitle>
+          <AlertDescription>
+            <p className="mb-2">
+              Supabase מחובר אבל Row Level Security חוסם קריאת נתונים.
+              הנתונים קיימים בטבלה אבל לא מוצגים.
+            </p>
+            <p className="font-semibold">פעולה נדרשת:</p>
+            <ol className="list-decimal list-inside mt-1 space-y-1 text-sm">
+              <li dir="ltr">Go to Supabase Dashboard → SQL Editor</li>
+              <li dir="ltr">Paste the contents of <code>fix-rls.sql</code> (in the project root)</li>
+              <li dir="ltr">Click Run</li>
+              <li>רענן את הדף — הנתונים אמורים להופיע</li>
+            </ol>
+          </AlertDescription>
         </Alert>
       )}
 

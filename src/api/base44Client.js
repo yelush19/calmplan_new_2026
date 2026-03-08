@@ -26,21 +26,38 @@ function createHybridEntity(entityName) {
 
   return {
     async list(sortField = null, limit = 1000) {
-      // If RLS is known to be blocked, go straight to localStorage (silent)
+      // If RLS is known to be blocked, go straight to localStorage
       if (isRlsBlocked()) {
+        if (!loggedFallback) {
+          loggedFallback = true;
+          console.log(`[Hybrid] ${entityName}: RLS blocked, using localStorage`);
+        }
         try { return await localEntity.list(sortField, limit); } catch { return []; }
       }
 
       // Try Supabase first
       try {
         const result = await supaEntity.list(sortField, limit);
-        if (result) {
-          // Supabase responded — cache to localStorage (even if empty, to stay in sync)
+        if (result && result.length > 0) {
+          // Supabase returned data — cache to localStorage and return
           _cacheToLocal(entityName, result);
-          if (result.length > 0) return result;
-          // Supabase returned 0 — that IS the truth, return empty
-          return [];
+          return result;
         }
+        // Supabase returned 0 rows — check localStorage before assuming empty.
+        // RLS might be silently blocking even if rlsBlocked flag isn't set yet.
+        try {
+          const localResult = await localEntity.list(sortField, limit);
+          if (localResult && localResult.length > 0) {
+            // localStorage has data that Supabase doesn't show — possible RLS issue
+            if (!loggedFallback) {
+              loggedFallback = true;
+              console.warn(`[Hybrid] ${entityName}: Supabase returned 0 but localStorage has ${localResult.length} items — possible RLS block`);
+            }
+            return localResult;
+          }
+        } catch { /* ignore */ }
+        // Both empty — genuinely no data
+        return [];
       } catch { /* fall through to localStorage only on network/connection error */ }
 
       // Supabase network error — try localStorage fallback (log once only)
@@ -236,6 +253,18 @@ export const base44 = {
   functions: {},
   integrations: { Core: {} }
 };
+
+/** Runtime diagnostic: what data source is active? */
+export function getDataSourceInfo() {
+  return {
+    source: isSupabaseConfigured ? 'supabase' : 'localStorage',
+    supabaseConfigured: isSupabaseConfigured,
+    rlsBlocked: isRlsBlocked(),
+    supabaseUrl: isSupabaseConfigured
+      ? (import.meta.env.VITE_SUPABASE_URL || '').substring(0, 40) + '...'
+      : null,
+  };
+}
 
 export const exportAllData = primary.exportAllData;
 export const importAllData = primary.importAllData;
