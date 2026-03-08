@@ -27,6 +27,7 @@ import { Pencil, Trash2, Pin } from "lucide-react";
 import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
 import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import { nuclearWipeTasks } from '@/api/functions';
 import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
 import useTaskCascade from "@/hooks/useTaskCascade";
 import { useApp } from "@/contexts/AppContext";
@@ -731,6 +732,20 @@ export default function HomePage() {
                       <Plus className="w-3.5 h-3.5" />
                       משימה מהירה
                     </Button>
+
+                    {/* Nuclear Wipe — removes all tasks from Supabase + localStorage */}
+                    {data.workCount > 0 && (
+                      <Button size="sm" variant="outline"
+                        onClick={async () => {
+                          if (!window.confirm(`מחק ${data.workCount + data.homeCount} משימות מ-Supabase + localStorage?\nפעולה בלתי הפיכה.`)) return;
+                          await nuclearWipeTasks();
+                          window.location.reload();
+                        }}
+                        className="gap-1 h-7 text-[10px] px-3 w-full border-red-300 text-red-600 hover:bg-red-50">
+                        <Trash2 className="w-3 h-3" />
+                        מחק הכל (Nuclear Wipe)
+                      </Button>
+                    )}
                   </div>
                 </motion.div>
               )}
