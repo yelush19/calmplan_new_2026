@@ -78,12 +78,11 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
   const [selectedNode, setSelectedNode] = useState(null);
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
 
-  // Design engine
-  let design = null;
-  try { design = useDesign(); } catch { /* not mounted */ }
-  const globalShape = design?.shape || 'bubble';
-  const globalLineStyle = design?.lineStyle || 'tapered';
-  const branchColors = design?.branchColors || DNA_DEFAULTS;
+  // Design engine (safe — useDesign returns fallback if outside provider)
+  const design = useDesign();
+  const globalShape = design.shape || 'bubble';
+  const globalLineStyle = design.lineStyle || 'tapered';
+  const branchColors = design.branchColors || DNA_DEFAULTS;
 
   // Status Sync: detect which categories have active sub-tasks
   const activeBranches = useMemo(() => getActiveBranches(tasks), [tasks]);

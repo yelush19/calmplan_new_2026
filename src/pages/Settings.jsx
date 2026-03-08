@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { DaySchedule, WeeklyRecommendation, SystemConfig, Task } from '@/api/entities';
 import {
   Clock, Sun, Moon, Coffee, Save, Lightbulb, Bell, CheckCircle,
   Plus, X, Download, Upload, Database, Cloud, AlertTriangle, RefreshCw,
-  Settings, Trash2, Server, Pencil, Briefcase, Heart,
-  Monitor, FileText, CalendarClock, BarChart3, Users, Tag, Network, Zap
+  Settings, Trash2, Server, Pencil, Briefcase, Heart, ChevronDown,
+  Monitor, FileText, CalendarClock, BarChart3, Users, Tag, Network, Zap, CloudUpload, Loader2
 } from 'lucide-react';
 import { exportAllData, importAllData } from '@/api/base44Client';
 import { isSupabaseConfigured } from '@/api/supabaseClient';
@@ -26,6 +27,7 @@ import { useDesign } from '@/contexts/DesignContext';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ExternalLink } from 'lucide-react';
+import { ALL_SERVICES, getStepsForService } from '@/config/processTemplates';
 
 // =====================================================
 // MAIN SETTINGS PAGE - Tabbed UI + Process Architect
@@ -37,15 +39,139 @@ const TABS = [
   { key: 'system', label: 'מערכת', icon: Monitor, color: 'text-[#4682B4]', bg: 'bg-[#4682B408] border-[#4682B430]', activeBg: 'bg-[#4682B4] text-white' },
 ];
 
+// ── P1-P5 Branch DNA for Settings ──
+const P_BRANCHES = [
+  { key: 'P1', label: 'P1 | חשבות שכר', color: '#00A3E0', icon: '💰', dashboards: ['payroll'] },
+  { key: 'P2', label: 'P2 | הנהלת חשבונות ומיסים', color: '#4682B4', icon: '📊', dashboards: ['tax'] },
+  { key: 'P3', label: 'P3 | ניהול ותכנון', color: '#E91E63', icon: '📋', dashboards: ['admin', 'additional'] },
+  { key: 'P4', label: 'P4 | בית ואישי', color: '#FFC107', icon: '🏠', dashboards: ['home'] },
+  { key: 'P5', label: 'P5 | דוחות שנתיים', color: '#2E7D32', icon: '📈', dashboards: ['annual_reports'] },
+];
+
+function getDashboardBranch(dashboard) {
+  if (dashboard === 'payroll') return 'P1';
+  if (dashboard === 'tax') return 'P2';
+  if (dashboard === 'admin' || dashboard === 'additional') return 'P3';
+  if (dashboard === 'home') return 'P4';
+  if (dashboard === 'annual_reports') return 'P5';
+  return 'P3';
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('architect');
   const [selectedService, setSelectedService] = useState(null);
-  const [showBusinessParams, setShowBusinessParams] = useState(false);
-  const [showPersonalSettings, setShowPersonalSettings] = useState(false);
-  const [showServiceCatalog, setShowServiceCatalog] = useState(false);
+
+  // ── New category state ──
+  const [addingTo, setAddingTo] = useState(null); // branch key (P1, P2, etc.) or null
+  const [newCatName, setNewCatName] = useState('');
+
+  // ── Save state ──
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveResult, setSaveResult] = useState(null); // null | 'success' | 'error'
+  const [isDirty, setIsDirty] = useState(false);
+
+  // ── Custom categories stored in localStorage ──
+  const [customCategories, setCustomCategories] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('calmplan_custom_categories') || '{}'); }
+    catch { return {}; }
+  });
+
+  // Group ALL_SERVICES by P-branch
+  const groupedServices = React.useMemo(() => {
+    const groups = {};
+    for (const branch of P_BRANCHES) groups[branch.key] = [];
+    for (const [key, svc] of Object.entries(ALL_SERVICES || {})) {
+      const branch = svc.branch || getDashboardBranch(svc.dashboard);
+      if (!groups[branch]) groups[branch] = [];
+      groups[branch].push({ ...svc, key, _branch: branch });
+    }
+    // Add custom categories
+    for (const [branchKey, cats] of Object.entries(customCategories)) {
+      if (!groups[branchKey]) groups[branchKey] = [];
+      (cats || []).forEach(cat => {
+        groups[branchKey].push({ key: cat.key, label: cat.label, _branch: branchKey, _source: 'custom', steps: [] });
+      });
+    }
+    return groups;
+  }, [customCategories]);
+
+  const handleAddCategory = useCallback((branchKey) => {
+    if (!newCatName.trim()) return;
+    const catKey = `custom_${Date.now()}`;
+    setCustomCategories(prev => {
+      const updated = { ...prev, [branchKey]: [...(prev[branchKey] || []), { key: catKey, label: newCatName.trim() }] };
+      localStorage.setItem('calmplan_custom_categories', JSON.stringify(updated));
+      return updated;
+    });
+    setNewCatName('');
+    setAddingTo(null);
+    setIsDirty(true);
+  }, [newCatName]);
+
+  const handleRemoveCustomCat = useCallback((branchKey, catKey) => {
+    setCustomCategories(prev => {
+      const updated = { ...prev, [branchKey]: (prev[branchKey] || []).filter(c => c.key !== catKey) };
+      localStorage.setItem('calmplan_custom_categories', JSON.stringify(updated));
+      return updated;
+    });
+    setIsDirty(true);
+  }, []);
+
+  // ── Global Save: push full DNA structure to Supabase ──
+  const handleGlobalSave = useCallback(async () => {
+    setIsSaving(true);
+    setSaveResult(null);
+    try {
+      const manifest = {};
+      for (const [branchKey, services] of Object.entries(groupedServices)) {
+        for (const svc of services) {
+          manifest[svc.key] = {
+            key: svc.key,
+            label: svc.label,
+            branch: branchKey,
+            dashboard: svc.dashboard,
+            taskType: svc.taskType || 'linear',
+            _source: svc._source || 'template',
+            steps: (svc.steps || []).map((step, i) => ({
+              key: step.key,
+              label: step.label,
+              sort_order: i,
+              parent_service: svc.key,
+            })),
+          };
+        }
+      }
+
+      const existing = await SystemConfig.list();
+      const upsert = async (configKey, data) => {
+        const record = existing.find(r => r.config_key === configKey);
+        const payload = { config_key: configKey, config_value: data, updated_at: new Date().toISOString() };
+        if (record) await SystemConfig.update(record.id, payload);
+        else await SystemConfig.create(payload);
+      };
+
+      await upsert('service_definitions', manifest);
+      await upsert('custom_categories', customCategories);
+      await upsert('custom_services', JSON.parse(localStorage.getItem('calmplan_custom_services') || '{}'));
+      await upsert('node_positions', JSON.parse(localStorage.getItem('calmplan_node_positions') || '{}'));
+      await upsert('last_full_sync', {
+        timestamp: new Date().toISOString(),
+        total: Object.keys(manifest).length,
+        branches: Object.fromEntries(P_BRANCHES.map(b => [b.key, (groupedServices[b.key] || []).length])),
+      });
+
+      setSaveResult('success');
+      setIsDirty(false);
+      setTimeout(() => setSaveResult(null), 3000);
+    } catch (err) {
+      console.error('[Settings] Global save failed:', err);
+      setSaveResult('error');
+    }
+    setIsSaving(false);
+  }, [groupedServices, customCategories]);
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6 pb-24" dir="rtl">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="p-3 rounded-full" style={{ background: 'linear-gradient(135deg, #E91E6320, #FFC10720)' }}>
@@ -89,56 +215,204 @@ export default function SettingsPage() {
               )}
             </div>
 
-            {/* Integrated sections — collapsible panels below the MindMap */}
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setShowBusinessParams(!showBusinessParams)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all border ${
-                  showBusinessParams
-                    ? 'bg-[#00A3E0] text-white border-transparent shadow-md'
-                    : 'bg-[#00A3E008] border-[#00A3E030] text-[#00A3E0] hover:shadow-sm'
-                }`}
-              >
-                <Briefcase className="w-3.5 h-3.5" />
-                פרמטרים עסקיים
-              </button>
-              <button
-                onClick={() => setShowPersonalSettings(!showPersonalSettings)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all border ${
-                  showPersonalSettings
-                    ? 'bg-[#FFC107] text-gray-900 border-transparent shadow-md'
-                    : 'bg-amber-50 border-amber-200 text-amber-700 hover:shadow-sm'
-                }`}
-              >
-                <Heart className="w-3.5 h-3.5" />
-                P4 אישי — סדר יום והפסקות
-              </button>
-              <button
-                onClick={() => setShowServiceCatalog(!showServiceCatalog)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all border ${
-                  showServiceCatalog
-                    ? 'bg-gray-900 text-white border-transparent shadow-md'
-                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:shadow-sm'
-                }`}
-              >
-                <Database className="w-3.5 h-3.5" />
-                קטלוג שירותים ושמירה ל-DB
-              </button>
+            {/* ═══════════════════════════════════════════════════
+                P1-P5 ACCORDION SECTIONS — Collapsible by branch
+                Default: all collapsed. Click to expand one.
+                ═══════════════════════════════════════════════════ */}
+            <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="w-5 h-5 text-gray-600" />
+                  <h2 className="text-base font-bold text-gray-800">קטגוריות ושירותים — P1-P5</h2>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {Object.values(groupedServices).reduce((sum, arr) => sum + arr.length, 0)} שירותים
+                </Badge>
+              </div>
+
+              <Accordion type="single" collapsible className="w-full">
+                {P_BRANCHES.map(branch => {
+                  const services = groupedServices[branch.key] || [];
+                  return (
+                    <AccordionItem key={branch.key} value={branch.key} className="border-b-0">
+                      <AccordionTrigger className="px-5 py-3 hover:no-underline hover:bg-gray-50/50 group">
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-lg"
+                            style={{ backgroundColor: branch.color + '15' }}>
+                            {branch.icon}
+                          </div>
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="text-sm font-bold" style={{ color: branch.color }}>{branch.label}</span>
+                            <Badge variant="outline" className="text-[10px] h-5"
+                              style={{ borderColor: branch.color + '40', color: branch.color }}>
+                              {services.length} שירותים
+                            </Badge>
+                          </div>
+                          {/* + button inside section header */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAddingTo(addingTo === branch.key ? null : branch.key);
+                              setNewCatName('');
+                            }}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ backgroundColor: branch.color }}
+                            title={`הוסף קטגוריה ל-${branch.key}`}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-5 pb-4">
+                        {/* Add new category input — visible when + was clicked */}
+                        {addingTo === branch.key && (
+                          <div className="flex items-center gap-2 mb-3 p-2 rounded-xl border-2"
+                            style={{ borderColor: branch.color + '60', backgroundColor: branch.color + '08' }}>
+                            <Input
+                              value={newCatName}
+                              onChange={(e) => setNewCatName(e.target.value)}
+                              placeholder="שם קטגוריה חדשה..."
+                              className="flex-1 h-8 text-sm border-0 bg-transparent focus-visible:ring-0"
+                              autoFocus
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(branch.key); if (e.key === 'Escape') setAddingTo(null); }}
+                            />
+                            <Button size="sm" onClick={() => handleAddCategory(branch.key)}
+                              disabled={!newCatName.trim()}
+                              className="h-7 px-3 text-xs text-white"
+                              style={{ backgroundColor: branch.color }}>
+                              <Plus className="w-3 h-3 ml-1" /> הוסף
+                            </Button>
+                            <button onClick={() => setAddingTo(null)} className="text-gray-400 hover:text-gray-600">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Services list */}
+                        {services.length === 0 ? (
+                          <div className="text-center py-6 text-gray-400 text-sm">
+                            {branch.key === 'P4' ? 'ענף אישי — לחץ + להוספת קטגוריות' : 'אין שירותים'}
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            {services.map(svc => {
+                              const steps = svc.steps || [];
+                              const isCustom = svc._source === 'custom';
+                              return (
+                                <div key={svc.key}
+                                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors group/svc">
+                                  <div className="w-2.5 h-2.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: branch.color }} />
+                                  <span className="text-sm font-medium text-gray-800 flex-1">{svc.label}</span>
+                                  {steps.length > 0 && (
+                                    <span className="text-[10px] text-gray-400">{steps.length} שלבים</span>
+                                  )}
+                                  {isCustom && (
+                                    <>
+                                      <Badge className="text-[9px] h-4 px-1.5 bg-purple-100 text-purple-700">מותאם</Badge>
+                                      <button
+                                        onClick={() => handleRemoveCustomCat(branch.key, svc.key)}
+                                        className="opacity-0 group-hover/svc:opacity-100 text-gray-300 hover:text-red-500 transition-all"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
             </div>
 
-            {/* Business Parameters (was LitayHub) */}
-            {showBusinessParams && <LitaySettings />}
+            {/* Existing sub-panels — Business Params, Personal, Catalog */}
+            <Accordion type="multiple" className="w-full space-y-2">
+              <AccordionItem value="business" className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <AccordionTrigger className="px-5 py-3 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-[#00A3E0]" />
+                    <span className="text-sm font-bold text-gray-800">פרמטרים עסקיים</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-2">
+                  <LitaySettings />
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* Personal Settings - P4 (was Lena) */}
-            {showPersonalSettings && <LenaSettings />}
+              <AccordionItem value="personal" className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <AccordionTrigger className="px-5 py-3 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <Heart className="w-4 h-4 text-[#FFC107]" />
+                    <span className="text-sm font-bold text-gray-800">P4 אישי — סדר יום והפסקות</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-2">
+                  <LenaSettings />
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* Service Catalog with Save to DB */}
-            {showServiceCatalog && <ServiceCatalog />}
+              <AccordionItem value="catalog" className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <AccordionTrigger className="px-5 py-3 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-bold text-gray-800">קטלוג שירותים מפורט</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-2">
+                  <ServiceCatalog />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         )}
         {activeTab === 'automations' && <AutomationSettings />}
         {activeTab === 'system' && <SystemSettings />}
       </motion.div>
+
+      {/* ══════════════════════════════════════════════════════
+          STICKY GLOBAL SAVE BUTTON — always visible at bottom
+          ══════════════════════════════════════════════════════ */}
+      {activeTab === 'architect' && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t shadow-lg px-6 py-3">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isDirty && (
+                <Badge className="bg-amber-100 text-amber-700 text-xs gap-1 animate-pulse">
+                  <AlertTriangle className="w-3 h-3" /> שינויים שלא נשמרו
+                </Badge>
+              )}
+              {saveResult === 'success' && (
+                <Badge className="bg-green-100 text-green-700 text-xs gap-1">
+                  <CheckCircle className="w-3 h-3" /> נשמר בהצלחה
+                </Badge>
+              )}
+              {saveResult === 'error' && (
+                <Badge className="bg-red-100 text-red-700 text-xs gap-1">
+                  <AlertTriangle className="w-3 h-3" /> שגיאה בשמירה
+                </Badge>
+              )}
+            </div>
+            <Button
+              onClick={handleGlobalSave}
+              disabled={isSaving}
+              className="gap-2 px-8 py-2.5 text-sm font-bold rounded-xl shadow-md"
+              style={{ backgroundColor: '#2E7D32', color: 'white' }}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CloudUpload className="w-4 h-4" />
+              )}
+              {isSaving ? 'שומר...' : 'שמור שינויים'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

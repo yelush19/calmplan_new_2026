@@ -281,10 +281,26 @@ export function DesignProvider({ children }) {
   );
 }
 
+// Safe fallback object when used outside DesignProvider (prevents TDZ / crash)
+const SAFE_FALLBACK = {
+  ...DEFAULTS,
+  updatePref: () => {},
+  applyTemplate: () => {},
+  setSticker: () => {},
+  setNodeOverride: () => {},
+  getNodeOverride: () => null,
+  resetToDefaults: () => {},
+  getBranchColor: (b) => DEFAULTS.branchColors[b] || '#64748B',
+  setBranchColor: () => {},
+  activeTaskId: null,
+  setActiveTaskId: () => {},
+  updateTaskStyle: () => {},
+  clearSelection: () => {},
+};
+
 export function useDesign() {
   const ctx = useContext(DesignContext);
-  if (!ctx) throw new Error('useDesign must be used within DesignProvider');
-  return ctx;
+  return ctx || SAFE_FALLBACK;
 }
 
 export { THEME_VARS };

@@ -29,6 +29,7 @@ import ResizableTable from '@/components/ui/ResizableTable';
 import useTaskCascade from '@/hooks/useTaskCascade';
 import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/processTemplates';
 
@@ -161,8 +162,6 @@ const getCategoryLabel = (cat) => {
   };
   return labels[cat] || cat;
 };
-
-import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 export default function TasksPage() {
   const { confirm, ConfirmDialogComponent } = useConfirm();
