@@ -3,19 +3,31 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw, Shield, TriangleAlert } from 'lucide-react';
+import { AlertCircle, RefreshCw, Shield, TriangleAlert, Users, CheckSquare, Database } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Client, Task } from '@/api/entities';
 import ClientAuditTool from '@/components/audit/ClientAuditTool';
+import { autoSeedIfEmpty } from '@/api/autoSeed';
 
 export default function SystemOverviewPage() {
   const [clients, setClients] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [seedStatus, setSeedStatus] = useState(null);
 
   useEffect(() => {
-    loadData();
+    initPage();
   }, []);
+
+  const initPage = async () => {
+    // If DB is empty, auto-seed first, then load
+    const result = await autoSeedIfEmpty();
+    if (result.seeded) {
+      setSeedStatus(`נטענו ${result.clients} לקוחות ו-${result.tasks} משימות מרץ 2026`);
+    }
+    await loadData();
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -56,6 +68,32 @@ export default function SystemOverviewPage() {
           רענן
         </Button>
       </div>
+
+      {/* Data summary bar */}
+      <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-blue-500" />
+          <span className="text-sm font-medium">לקוחות:</span>
+          <Badge variant={clients.length > 0 ? 'default' : 'destructive'}>{clients.length}</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <CheckSquare className="w-4 h-4 text-green-500" />
+          <span className="text-sm font-medium">משימות:</span>
+          <Badge variant={tasks.length > 0 ? 'default' : 'destructive'}>{tasks.length}</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Database className="w-4 h-4 text-purple-500" />
+          <span className="text-sm font-medium">פעילים:</span>
+          <Badge variant="outline">{clients.filter(c => c.status === 'active').length}</Badge>
+        </div>
+      </div>
+
+      {seedStatus && (
+        <Alert className="border-green-200 bg-green-50">
+          <Database className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">{seedStatus}</AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">
