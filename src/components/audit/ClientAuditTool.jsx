@@ -34,7 +34,7 @@ const SERVICE_DEPENDENCIES = [
   { child: 'masav_social',       parent: 'payroll',          condition: null,       label: 'מס"ב סוציאליות ← שכר' },
   { child: 'masav_authorities',  parent: 'payroll',          condition: null,       label: 'מס"ב רשויות ← שכר' },
   { child: 'payslip_sending',    parent: 'payroll',          condition: null,       label: 'משלוח תלושים ← שכר' },
-  { child: 'authorities_payment', parent: 'payroll',         condition: null,       label: 'תשלום רשויות ← שכר' },
+  { child: 'authorities_payment', parent: 'payroll',         altParent: ['vat_reporting', 'tax_advances'], condition: null, label: 'תשלום רשויות ← שכר/מע"מ/מקדמות' },
 ];
 
 // ══════════════════════════════════════════════════════════════
@@ -111,9 +111,12 @@ function scanConditionalMissingFields(clients) {
     }
 
     // ── Only check tax_advances_id if tax_advances is ACTIVE ──
+    // For companies, the ח"פ (entity_number) IS the tax advances number,
+    // so accept either field as valid.
     if (services.includes('tax_advances')) {
       const taxAdvancesId = client.tax_info?.annual_tax_ids?.tax_advances_id || '';
-      if (!taxAdvancesId) {
+      const companyId = client.entity_number || '';
+      if (!taxAdvancesId && !companyId) {
         issues.push({
           field: 'tax_advances_id',
           label: 'תיק מקדמות מס',
@@ -174,18 +177,23 @@ function scanProcessIntegrity(clients) {
         }
       }
 
-      // Does the client have the parent?
+      // Does the client have the parent (or any altParent)?
+      const altParents = !dep.altParent ? [] :
+        Array.isArray(dep.altParent) ? dep.altParent : [dep.altParent];
       const hasParent = services.includes(dep.parent) ||
-                        (dep.altParent && services.includes(dep.altParent));
+                        altParents.some(p => services.includes(p));
 
       if (!hasParent) {
+        const altParentLabels = altParents
+          .map(p => SERVICE_LABELS[p] || p)
+          .filter(Boolean);
         violations.push({
           child: dep.child,
           childLabel: SERVICE_LABELS[dep.child] || dep.child,
           parent: dep.parent,
           parentLabel: SERVICE_LABELS[dep.parent] || dep.parent,
           altParent: dep.altParent,
-          altParentLabel: dep.altParent ? (SERVICE_LABELS[dep.altParent] || dep.altParent) : null,
+          altParentLabel: altParentLabels.length > 0 ? altParentLabels.join(' / ') : null,
           ruleLabel: dep.label,
         });
       }
