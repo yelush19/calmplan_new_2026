@@ -35,6 +35,8 @@ import RealityCheck from "@/components/tasks/RealityCheck";
 import CompletionFeedback from "@/components/tasks/CompletionFeedback";
 import DesktopBridge from "@/components/desktop/DesktopBridge";
 import { AyoaViewProvider, useAyoaView } from "@/contexts/AyoaViewContext";
+import { DesignProvider } from "@/contexts/DesignContext";
+import DesignFloatingTab from "@/components/canvas/DesignFloatingTab";
 import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
 
 // Work Modes — aligned to P1-P5 pillar tree
@@ -99,26 +101,28 @@ const getSidebarSections = () => ({
     ]
   },
   // ── P3 | ניהול ותכנון — VIEWER/HUB (Law 1: no own service steps) ──
+  // Structure: 3 nested groups — Strategy, Clients, Settings
   p3_hub: {
     title: "P3 | ניהול ותכנון",
     icon: Brain,
     tabColor: 'border-[#E91E63]',
-    items: [
-      { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
-      { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
-      { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
-      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
-      { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
-    ],
+    items: [],
     subGroups: [
-      { key: 'p3_admin', label: 'ניהול עסקי', icon: Building2, items: [
+      { key: 'p3_strategy', label: 'אסטרטגיה ותכנון', icon: Brain, items: [
+        { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
+        { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+        { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
+      ]},
+      { key: 'p3_clients', label: 'לקוחות וניהול עסקי', icon: Users, items: [
+        { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
         { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
         { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
         { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
         { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
       ]},
-      { key: 'p3_system', label: 'מערכת והגדרות', icon: Settings, items: [
+      { key: 'p3_system', label: 'הגדרות מערכת', icon: Settings, items: [
         { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
+        { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
         { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
         { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
       ]},
@@ -262,7 +266,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['personal_tools', 'p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p3_admin', 'p3_system']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['personal_tools', 'p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p3_strategy', 'p3_clients', 'p3_system']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
@@ -354,17 +358,33 @@ function LayoutInner({ children }) {
     }
   }, []);
 
-  // Load Daily Focus tasks (due today, not done)
+  // Load Daily Focus tasks — auto-populated from Planning section
+  // Includes: overdue + due this week (Sunday→Friday), sorted by urgency
   useEffect(() => {
     const loadDailyFocus = async () => {
       try {
         const allTasks = await Task.list(null, 5000).catch(() => []);
         const tasks = Array.isArray(allTasks) ? allTasks : [];
-        const today = new Date().toISOString().split('T')[0];
-        const todayTasks = tasks
-          .filter(t => t.status !== 'completed' && t.status !== 'not_relevant' && t.due_date === today)
-          .slice(0, 5);
-        setDailyFocusTasks(todayTasks);
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        // Week window: Sunday → Friday
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        const weekStartStr = weekStart.toISOString().split('T')[0];
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 5);
+        const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+        const focusTasks = tasks
+          .filter(t => {
+            if (t.status === 'completed' || t.status === 'not_relevant' || t.status === 'production_completed') return false;
+            if (!t.due_date) return false;
+            // Overdue OR due this week → auto-populate focus
+            return t.due_date <= weekEndStr;
+          })
+          .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+          .slice(0, 8);
+        setDailyFocusTasks(focusTasks);
       } catch { setDailyFocusTasks([]); }
     };
     loadDailyFocus();
@@ -1017,6 +1037,9 @@ function LayoutInner({ children }) {
       <RealityCheck />
       <CompletionFeedback />
 
+      {/* Design Engine Floating Tab — persistent across all pages */}
+      <DesignFloatingTab />
+
       {/* Floating Add Event FAB — draggable, always visible */}
       <DraggableFab storageKey="fab_add_event" className="fixed bottom-5 left-[8.5rem] z-[9999]">
         {({ guardClick }) => (
@@ -1098,9 +1121,11 @@ function LayoutInner({ children }) {
 export default function Layout({ children, currentPageName }) {
   return (
     <AppProvider>
-      <AyoaViewProvider>
-        <LayoutInner>{children}</LayoutInner>
-      </AyoaViewProvider>
+      <DesignProvider>
+        <AyoaViewProvider>
+          <LayoutInner>{children}</LayoutInner>
+        </AyoaViewProvider>
+      </DesignProvider>
     </AppProvider>
   );
 }

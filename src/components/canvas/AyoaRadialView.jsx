@@ -14,6 +14,8 @@
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { renderNodeShape, buildTaperedBranch } from './AyoaNode';
+import { getConnectionProps } from '@/engines/lineStyleEngine';
+import { useDesign } from '@/contexts/DesignContext';
 import FloatingToolbar from './FloatingToolbar';
 
 const VB = 1000;
@@ -75,6 +77,12 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
   const [selectedNode, setSelectedNode] = useState(null);
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
   const [overrides, setOverrides] = useState({});
+
+  // Design engine
+  let design = null;
+  try { design = useDesign(); } catch { /* not mounted */ }
+  const globalShape = design?.shape || 'bubble';
+  const globalLineStyle = design?.lineStyle || 'tapered';
 
   const { nodes, ringSegments } = useMemo(() => {
     const catMap = {};
@@ -161,7 +169,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           x: CX + Math.cos(taskAngle) * taskRing,
           y: CY + Math.sin(taskAngle) * taskRing,
           r,
-          shape: ov.shape || 'bubble',
+          shape: ov.shape || globalShape,
           color: ov.color || dnaColor,
           bg: (ov.color || dnaColor) + '12',
           label: task.title || '',
@@ -262,28 +270,34 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           <path key={seg.key} d={seg.d} fill={seg.fill} stroke={seg.stroke} strokeWidth={0.8} />
         ))}
 
-        {/* Tapered branches: center → categories */}
+        {/* Branches: center → categories (uses Design Engine line style) */}
         {nodes.filter(n => n.type === 'category').map(node => {
           const isBlurred = focusedNode !== null && focusedNode !== node.id;
+          const conn = getConnectionProps(
+            globalLineStyle, CX, CY, node.x, node.y, node.color,
+            isBlurred ? 0.06 : 0.45,
+            { startWidth: 7, endWidth: 2.5, strokeWidth: 3 }
+          );
           return (
-            <path key={`b-cat-${node.id}`}
-              d={buildTaperedBranch(CX, CY, node.x, node.y, 7, 2.5)}
-              fill={node.color} opacity={isBlurred ? 0.06 : 0.45}
+            <path key={`b-cat-${node.id}`} {...conn.props}
               style={{ transition: 'opacity 0.4s ease' }} />
           );
         })}
 
-        {/* Tapered branches: categories → tasks */}
+        {/* Branches: categories → tasks */}
         {nodes.filter(n => n.type === 'task').map(node => {
           const isBlurred = focusedNode !== null && focusedNode !== node.id;
           const parentCat = nodes.find(n2 => n2.type === 'category' && Math.abs(n2.angle - node.parentAngle) < 0.01);
           const px = parentCat ? parentCat.x : CX;
           const py = parentCat ? parentCat.y : CY;
+          const conn = getConnectionProps(
+            globalLineStyle, px, py, node.x, node.y,
+            node.parentColor || node.color,
+            isBlurred ? 0.04 : 0.3,
+            { startWidth: 4, endWidth: 1, strokeWidth: 2 }
+          );
           return (
-            <path key={`b-task-${node.id}`}
-              d={buildTaperedBranch(px, py, node.x, node.y, 4, 1)}
-              fill={node.parentColor || node.color}
-              opacity={isBlurred ? 0.04 : 0.3}
+            <path key={`b-task-${node.id}`} {...conn.props}
               style={{ transition: 'opacity 0.4s ease' }} />
           );
         })}
@@ -325,9 +339,9 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
                     dur="10s" repeatCount="indefinite" />
                 </circle>
               )}
-              {renderNodeShape('bubble', node.x, node.y, node.r + 2, 'none', node.color + '20')}
-              {renderNodeShape('bubble', node.x, node.y, node.r, node.bg, node.color, 2)}
-              {renderNodeShape('bubble', node.x, node.y, node.r - 2, 'white', 'none', 0)}
+              {renderNodeShape(globalShape, node.x, node.y, node.r + 2, 'none', node.color + '20')}
+              {renderNodeShape(globalShape, node.x, node.y, node.r, node.bg, node.color, 2)}
+              {renderNodeShape(globalShape, node.x, node.y, node.r - 2, 'white', 'none', 0)}
               <text x={node.x} y={node.y - 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#0F172A"
                 style={{ pointerEvents: 'none' }}>
                 {node.label}

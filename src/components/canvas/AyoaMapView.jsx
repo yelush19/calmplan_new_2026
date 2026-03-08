@@ -8,8 +8,10 @@
  * DIRECTIVE #10: No pale gray. Bold labels. Deep fills.
  */
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useContext, createContext } from 'react';
 import { renderNodeShape, buildTaperedBranch } from './AyoaNode';
+import { getConnectionProps } from '@/engines/lineStyleEngine';
+import { useDesign } from '@/contexts/DesignContext';
 import FloatingToolbar from './FloatingToolbar';
 
 const VB_W = 1400, VB_H = 900;
@@ -38,6 +40,13 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
   const [overrides, setOverrides] = useState({});
 
+  // Design engine — global shape & line preferences
+  let design = null;
+  try { design = useDesign(); } catch { /* not mounted */ }
+  const globalShape = design?.shape || 'bubble';
+  const globalLineStyle = design?.lineStyle || 'tapered';
+  const softShadows = design?.softShadows !== false;
+
   const { categoryNodes, taskNodes } = useMemo(() => {
     const catMap = {};
     tasks.forEach(task => {
@@ -65,7 +74,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
         id: `cat-${ci}`,
         x: cx, y: cy,
         r: 38,
-        shape: 'bubble',
+        shape: globalShape,
         color: dnaColor,
         bg: dnaColor + '12',
         label: cat.substring(0, 16),
@@ -93,7 +102,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
           x: cx + Math.cos(tAngle) * tRadius + (Math.sin(ti * 1.3) * 20),
           y: cy + Math.sin(tAngle) * tRadius + (Math.cos(ti * 0.9) * 15),
           r,
-          shape: ov.shape || 'bubble',
+          shape: ov.shape || globalShape,
           color: ov.color || dnaColor,
           bg: (ov.color || dnaColor) + '12',
           label: task.title || '',
@@ -107,7 +116,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
     });
 
     return { categoryNodes: catNodes, taskNodes: tNodes };
-  }, [tasks, overrides]);
+  }, [tasks, overrides, globalShape]);
 
   const allNodes = [...categoryNodes, ...taskNodes];
 
@@ -171,25 +180,31 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
           </radialGradient>
         </defs>
 
-        {/* Tapered branches: center → categories */}
+        {/* Branches: center → categories (uses Design Engine line style) */}
         {categoryNodes.map(node => {
           const isBlurred = focusedNode !== null && focusedNode !== node.id;
+          const conn = getConnectionProps(
+            globalLineStyle, CX, CY, node.x, node.y, node.color,
+            isBlurred ? 0.06 : 0.45,
+            { startWidth: 8, endWidth: 3, strokeWidth: 3 }
+          );
           return (
-            <path key={`br-${node.id}`}
-              d={buildTaperedBranch(CX, CY, node.x, node.y, 8, 3)}
-              fill={node.color} opacity={isBlurred ? 0.06 : 0.45}
+            <path key={`br-${node.id}`} {...conn.props}
               style={{ transition: 'opacity 0.4s ease' }} />
           );
         })}
 
-        {/* Tapered branches: categories → tasks */}
+        {/* Branches: categories → tasks */}
         {taskNodes.map(node => {
           const isBlurred = focusedNode !== null && focusedNode !== node.id;
+          const conn = getConnectionProps(
+            globalLineStyle, node.parentX, node.parentY, node.x, node.y,
+            node.parentColor || node.color,
+            isBlurred ? 0.04 : 0.3,
+            { startWidth: 4, endWidth: 1, strokeWidth: 2 }
+          );
           return (
-            <path key={`br-t-${node.id}`}
-              d={buildTaperedBranch(node.parentX, node.parentY, node.x, node.y, 4, 1)}
-              fill={node.parentColor || node.color}
-              opacity={isBlurred ? 0.04 : 0.3}
+            <path key={`br-t-${node.id}`} {...conn.props}
               style={{ transition: 'opacity 0.4s ease' }} />
           );
         })}

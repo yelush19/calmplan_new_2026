@@ -20,6 +20,8 @@
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { renderNodeShape, buildTaperedBranch } from './AyoaNode';
+import { getConnectionProps } from '@/engines/lineStyleEngine';
+import { useDesign } from '@/contexts/DesignContext';
 import { getServiceWeight } from '@/config/serviceWeights';
 import { COMPLEXITY_TIERS, LOAD_COLORS } from '@/lib/theme-constants';
 import { areDependenciesMet } from '@/engines/taskCascadeEngine';
@@ -78,6 +80,12 @@ export default function FocusMapView({
 }) {
   const svgRef = useRef(null);
   const [focusedNode, setFocusedNode] = useState(null);
+
+  // Design engine — global preferences
+  let design = null;
+  try { design = useDesign(); } catch { /* not mounted */ }
+  const globalShape = design?.shape || 'bubble';
+  const globalLineStyle = design?.lineStyle || 'tapered';
 
   // All sibling tasks for dependency checking — use allTasks if provided, else tasks
   const siblingPool = allTasks || tasks;
@@ -263,13 +271,14 @@ export default function FocusMapView({
           נעול
         </text>
 
-        {/* ── Branches: center → categories ── */}
-        {categoryNodes.map(node => (
-          <path key={`br-fcat-${node.id}`}
-            d={buildTaperedBranch(CX, CY, node.x, node.y, 6, 2)}
-            fill={node.color} opacity={0.35}
-            style={{ transition: 'opacity 0.4s' }} />
-        ))}
+        {/* ── Branches: center → categories (uses Design Engine) ── */}
+        {categoryNodes.map(node => {
+          const conn = getConnectionProps(
+            globalLineStyle, CX, CY, node.x, node.y, node.color, 0.35,
+            { startWidth: 6, endWidth: 2, strokeWidth: 2.5 }
+          );
+          return <path key={`br-fcat-${node.id}`} {...conn.props} style={{ transition: 'opacity 0.4s' }} />;
+        })}
 
         {/* ── Branches: categories → unlocked tasks (warm, visible) ── */}
         {unlockedNodes.map(node => {
@@ -277,25 +286,24 @@ export default function FocusMapView({
           const px = parent ? parent.x : CX;
           const py = parent ? parent.y : CY;
           const isBlurred = focusedNode !== null && focusedNode !== node.id;
-          return (
-            <path key={`br-u-${node.id}`}
-              d={buildTaperedBranch(px, py, node.x, node.y, 3.5, 1)}
-              fill={node.color} opacity={isBlurred ? 0.06 : 0.3}
-              style={{ transition: 'opacity 0.4s' }} />
+          const conn = getConnectionProps(
+            globalLineStyle, px, py, node.x, node.y, node.color,
+            isBlurred ? 0.06 : 0.3,
+            { startWidth: 3.5, endWidth: 1, strokeWidth: 2 }
           );
+          return <path key={`br-u-${node.id}`} {...conn.props} style={{ transition: 'opacity 0.4s' }} />;
         })}
 
-        {/* ── Branches: categories → locked tasks (gray, faded) ── */}
+        {/* ── Branches: categories → locked tasks (gray, faded — always dotted) ── */}
         {lockedNodes.map(node => {
           const parent = categoryNodes.find(c => Math.abs(c.angle - node.parentAngle) < 0.01);
           const px = parent ? parent.x : CX;
           const py = parent ? parent.y : CY;
-          return (
-            <path key={`br-l-${node.id}`}
-              d={buildTaperedBranch(px, py, node.x, node.y, 2, 0.5)}
-              fill="#B0BEC5" opacity={0.12}
-              style={{ transition: 'opacity 0.4s' }} />
+          const conn = getConnectionProps(
+            'dotted', px, py, node.x, node.y, '#B0BEC5', 0.12,
+            { strokeWidth: 1.5 }
           );
+          return <path key={`br-l-${node.id}`} {...conn.props} style={{ transition: 'opacity 0.4s' }} />;
         })}
 
         {/* ── Center hub (warm sunrise — Focus identity) ── */}
@@ -314,11 +322,11 @@ export default function FocusMapView({
           ~{stats.totalMinutes} דק׳
         </text>
 
-        {/* ── Category nodes ── */}
+        {/* ── Category nodes (uses Design Engine shape) ── */}
         {categoryNodes.map(node => (
           <g key={node.id}>
-            {renderNodeShape('bubble', node.x, node.y, node.r, node.color + '15', node.color, 2)}
-            {renderNodeShape('bubble', node.x, node.y, node.r - 3, 'white', 'none', 0)}
+            {renderNodeShape(globalShape, node.x, node.y, node.r, node.color + '15', node.color, 2)}
+            {renderNodeShape(globalShape, node.x, node.y, node.r - 3, 'white', 'none', 0)}
             <text x={node.x} y={node.y - 5} textAnchor="middle" fontSize="10" fontWeight="800" fill="#0F172A"
               style={{ pointerEvents: 'none' }}>
               {node.label}
@@ -354,10 +362,10 @@ export default function FocusMapView({
                 fill="none" stroke={node.statusColor} strokeWidth={1.5} opacity={0.5}>
                 <animate attributeName="opacity" values="0.5;0.2;0.5" dur="3s" repeatCount="indefinite" />
               </circle>
-              {/* Main bubble — size varies by cognitive load */}
+              {/* Main node — shape from Design Engine, size varies by cognitive load */}
               <g filter="url(#focus-shadow)">
-                {renderNodeShape('bubble', node.x, node.y, node.r, node.color + '18', node.color, 2)}
-                {renderNodeShape('bubble', node.x, node.y, node.r - 2, 'white', 'none', 0)}
+                {renderNodeShape(globalShape, node.x, node.y, node.r, node.color + '18', node.color, 2)}
+                {renderNodeShape(globalShape, node.x, node.y, node.r - 2, 'white', 'none', 0)}
               </g>
               {/* Duration badge */}
               <circle cx={node.x + node.r - 2} cy={node.y - node.r + 2} r={7}
