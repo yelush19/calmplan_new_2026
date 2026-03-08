@@ -19,6 +19,7 @@ import { loadPlatformConfig, savePlatformConfig, DEFAULT_PLATFORMS } from '@/con
 import ExecutionPeriodSettings from '@/components/settings/ExecutionPeriodSettings';
 import SettingsMindMap from '@/components/settings/SettingsMindMap';
 import TemplatePanel from '@/components/settings/TemplatePanel';
+import ServiceCatalog from '@/components/settings/ServiceCatalog';
 import ServiceCatalogSection from '@/components/settings/ServiceCatalogSection';
 
 // =====================================================
@@ -27,14 +28,15 @@ import ServiceCatalogSection from '@/components/settings/ServiceCatalogSection';
 
 const TABS = [
   { key: 'architect', label: 'Process Architect', icon: Network, color: 'text-[#E91E63]', bg: 'bg-gradient-to-r from-[#E91E6310] to-[#FFC10710] border-[#E91E6330]', activeBg: 'bg-gradient-to-r from-[#E91E63] to-[#FFC107] text-white' },
-  { key: 'litay', label: 'LitayHub - עבודה', icon: Briefcase, color: 'text-[#00A3E0]', bg: 'bg-[#00A3E008] border-[#00A3E030]', activeBg: 'bg-[#00A3E0] text-white' },
-  { key: 'lena', label: 'LENA - אישי', icon: Heart, color: 'text-pink-600', bg: 'bg-pink-50 border-pink-200', activeBg: 'bg-pink-600 text-white' },
   { key: 'system', label: 'מערכת', icon: Monitor, color: 'text-[#4682B4]', bg: 'bg-[#4682B408] border-[#4682B430]', activeBg: 'bg-[#4682B4] text-white' },
 ];
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('architect');
   const [selectedService, setSelectedService] = useState(null);
+  const [showBusinessParams, setShowBusinessParams] = useState(false);
+  const [showPersonalSettings, setShowPersonalSettings] = useState(false);
+  const [showServiceCatalog, setShowServiceCatalog] = useState(false);
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -45,7 +47,7 @@ export default function SettingsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">הגדרות ופרמטרים</h1>
-          <p className="text-sm text-gray-500">אדריכל תהליכים • הגדרות עבודה • אישי • מערכת</p>
+          <p className="text-sm text-gray-500">אדריכל תהליכים מאוחד • P1-P5 • מערכת</p>
         </div>
       </div>
 
@@ -72,15 +74,62 @@ export default function SettingsPage() {
       {/* Tab content */}
       <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
         {activeTab === 'architect' && (
-          <div className="relative">
-            <SettingsMindMap onSelectService={setSelectedService} />
-            {selectedService && (
-              <TemplatePanel service={selectedService} onClose={() => setSelectedService(null)} />
-            )}
+          <div className="space-y-4">
+            {/* MindMap + TemplatePanel */}
+            <div className="relative">
+              <SettingsMindMap onSelectService={setSelectedService} />
+              {selectedService && (
+                <TemplatePanel service={selectedService} onClose={() => setSelectedService(null)} />
+              )}
+            </div>
+
+            {/* Integrated sections — collapsible panels below the MindMap */}
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setShowBusinessParams(!showBusinessParams)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all border ${
+                  showBusinessParams
+                    ? 'bg-[#00A3E0] text-white border-transparent shadow-md'
+                    : 'bg-[#00A3E008] border-[#00A3E030] text-[#00A3E0] hover:shadow-sm'
+                }`}
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                פרמטרים עסקיים
+              </button>
+              <button
+                onClick={() => setShowPersonalSettings(!showPersonalSettings)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all border ${
+                  showPersonalSettings
+                    ? 'bg-[#FFC107] text-gray-900 border-transparent shadow-md'
+                    : 'bg-amber-50 border-amber-200 text-amber-700 hover:shadow-sm'
+                }`}
+              >
+                <Heart className="w-3.5 h-3.5" />
+                P4 אישי — סדר יום והפסקות
+              </button>
+              <button
+                onClick={() => setShowServiceCatalog(!showServiceCatalog)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all border ${
+                  showServiceCatalog
+                    ? 'bg-gray-900 text-white border-transparent shadow-md'
+                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:shadow-sm'
+                }`}
+              >
+                <Database className="w-3.5 h-3.5" />
+                קטלוג שירותים ושמירה ל-DB
+              </button>
+            </div>
+
+            {/* Business Parameters (was LitayHub) */}
+            {showBusinessParams && <LitaySettings />}
+
+            {/* Personal Settings - P4 (was Lena) */}
+            {showPersonalSettings && <LenaSettings />}
+
+            {/* Service Catalog with Save to DB */}
+            {showServiceCatalog && <ServiceCatalog />}
           </div>
         )}
-        {activeTab === 'litay' && <LitaySettings />}
-        {activeTab === 'lena' && <LenaSettings />}
         {activeTab === 'system' && <SystemSettings />}
       </motion.div>
     </div>
@@ -196,8 +245,9 @@ function LitaySettings() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
-        <Briefcase className="w-5 h-5 text-blue-600" />
-        <h2 className="text-lg font-bold text-gray-800">פרמטרים עסקיים - LitayHub</h2>
+        <Briefcase className="w-5 h-5 text-[#00A3E0]" />
+        <h2 className="text-lg font-bold text-gray-800">פרמטרים עסקיים</h2>
+        <span className="text-xs text-gray-400">סוגי שירותים, תדירויות, שלבי מאזן</span>
         {saveStatus === 'saved' && (
           <Badge className="bg-green-100 text-green-700 text-xs mr-auto">
             <CheckCircle className="w-3 h-3 ml-1" /> נשמר
@@ -322,12 +372,13 @@ function LenaSettings() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
-        <Heart className="w-5 h-5 text-pink-600" />
-        <h2 className="text-lg font-bold text-gray-800">הגדרות אישיות - LENA</h2>
+        <Heart className="w-5 h-5 text-[#FFC107]" />
+        <h2 className="text-lg font-bold text-gray-800">P4 | הגדרות אישיות</h2>
+        <span className="text-xs text-gray-400">סדר יום, ארוחות, הפסקות</span>
       </div>
 
       {/* Display Name */}
-      <Card className="border-pink-200 bg-pink-50">
+      <Card className="border-amber-200 bg-amber-50">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">שם תצוגה</Label>
@@ -347,10 +398,10 @@ function LenaSettings() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Daily Schedule */}
-        <Card className="border-pink-200 bg-pink-50">
+        <Card className="border-amber-200 bg-amber-50">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Clock className="w-4 h-4 text-pink-600" />
+              <Clock className="w-4 h-4 text-amber-600" />
               סדר יום
             </CardTitle>
           </CardHeader>
@@ -373,7 +424,7 @@ function LenaSettings() {
                 <Input type="time" value={schedule.personal_time_start || ''} onChange={e => handleScheduleChange('personal_time_start', e.target.value)} className="h-8 text-sm" />
               </div>
             </div>
-            <Button onClick={saveSchedule} size="sm" className="w-full bg-pink-600 hover:bg-pink-700">
+            <Button onClick={saveSchedule} size="sm" className="w-full bg-amber-600 hover:bg-amber-700">
               <Save className="w-3.5 h-3.5 ml-1" /> שמור שינויים
             </Button>
           </CardContent>
