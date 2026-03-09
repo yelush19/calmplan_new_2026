@@ -60,5 +60,17 @@ export const PeriodicReport = lazyEntity('PeriodicReport');
 export const FileMetadata = lazyEntity('FileMetadata');
 export const ServiceCatalog = lazyEntity('ServiceCatalog');
 
-// auth sdk:
-export const User = base44.auth;
+// auth sdk — lazy accessor to avoid TDZ crash (same pattern as entities above)
+export const User = new Proxy({}, {
+  get(_, prop) {
+    const auth = base44.auth;
+    if (!auth) {
+      console.warn(`[entities] User.auth not yet initialized, returning no-op for .${String(prop)}`);
+      if (prop === 'login') return async () => ({});
+      if (prop === 'logout') return async () => ({});
+      if (prop === 'current') return () => null;
+      return undefined;
+    }
+    return typeof auth[prop] === 'function' ? auth[prop].bind(auth) : auth[prop];
+  },
+});

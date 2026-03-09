@@ -31,6 +31,7 @@ import { format, formatDistanceToNow, parseISO, isBefore, differenceInDays } fro
 import { he } from 'date-fns/locale';
 import OverdueTags from "./OverdueTags";
 import { STATUS_CONFIG, ALL_SERVICES } from '@/config/processTemplates';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import { getVatEnergyTier } from '@/engines/taskCascadeEngine';
 
 const statusTranslations = {
@@ -79,25 +80,7 @@ const categoryTranslations = {
     home_maintenance: 'תחזוקת הבית'
 };
 
-// Resolve custom category IDs (custom_1772...) to their Hebrew labels
-function resolveCategoryLabel(category) {
-  if (!category) return '';
-  if (categoryTranslations[category]) return categoryTranslations[category];
-  // Check custom categories from localStorage
-  if (category.startsWith('custom_')) {
-    try {
-      const customCats = JSON.parse(localStorage.getItem('calmplan_custom_categories') || '{}');
-      for (const cats of Object.values(customCats)) {
-        const found = (cats || []).find(c => c.key === category);
-        if (found) return found.label;
-      }
-    } catch { /* ignore */ }
-  }
-  // Check ALL_SERVICES label as fallback
-  const svc = ALL_SERVICES?.[category];
-  if (svc?.label) return svc.label;
-  return category;
-}
+// resolveCategoryLabel imported from @/utils/categoryLabels
 
 export default function TaskCard({
   task,

@@ -25,20 +25,7 @@ import {
 import { he } from 'date-fns/locale';
 
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
-
-const getCategoryLabel = (cat) => {
-  const labels = {
-    'work_vat_reporting': 'מע"מ', 'work_vat_874': 'מע"מ 874',
-    'work_tax_advances': 'מקדמות מס', 'work_deductions': 'ניכויים',
-    'work_social_security': 'ביטוח לאומי', 'work_payroll': 'שכר',
-    'work_client_management': 'ניהול לקוחות', 'work_reconciliation': 'התאמות חשבונות',
-    'work_bookkeeping': 'הנהלת חשבונות', 'work_annual_reports': 'דוח שנתי',
-    'work_admin': 'אדמיניסטרציה',
-    'מע"מ': 'מע"מ', 'מקדמות מס': 'מקדמות מס', 'ניכויים': 'ניכויים',
-    'ביטוח לאומי': 'ביטוח לאומי', 'שכר': 'שכר', 'התאמות': 'התאמות חשבונות',
-  };
-  return labels[cat] || cat || '';
-};
+import { getCategoryLabel } from '@/utils/categoryLabels';
 
 function ProgressBar({ value, max, color = 'bg-blue-500', label, sublabel }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
