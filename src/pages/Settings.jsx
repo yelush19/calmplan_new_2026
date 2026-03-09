@@ -98,14 +98,17 @@ export default function SettingsPage() {
   const handleAddCategory = useCallback((branchKey) => {
     if (!newCatName.trim()) return;
     const catKey = `custom_${Date.now()}`;
+    const newCat = { key: catKey, label: newCatName.trim() };
     setCustomCategories(prev => {
-      const updated = { ...prev, [branchKey]: [...(prev[branchKey] || []), { key: catKey, label: newCatName.trim() }] };
+      const updated = { ...prev, [branchKey]: [...(prev[branchKey] || []), newCat] };
       localStorage.setItem('calmplan_custom_categories', JSON.stringify(updated));
       return updated;
     });
     setNewCatName('');
     setAddingTo(null);
     setIsDirty(true);
+    // Auto-select the newly created service for editing in TemplatePanel
+    setSelectedService({ key: catKey, label: newCat.label, branch: branchKey, _source: 'custom', steps: [], dashboard: 'admin' });
   }, [newCatName]);
 
   const handleRemoveCustomCat = useCallback((branchKey, catKey) => {
@@ -271,7 +274,7 @@ export default function SettingsPage() {
                             <Input
                               value={newCatName}
                               onChange={(e) => setNewCatName(e.target.value)}
-                              placeholder="שם קטגוריה חדשה..."
+                              placeholder="שם שירות חדש (לדוגמה: ייעוץ מס, דוח רווח והפסד)"
                               className="flex-1 h-8 text-sm border-0 bg-transparent focus-visible:ring-0"
                               autoFocus
                               onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(branch.key); if (e.key === 'Escape') setAddingTo(null); }}
@@ -377,42 +380,44 @@ export default function SettingsPage() {
       {/* ══════════════════════════════════════════════════════
           STICKY GLOBAL SAVE BUTTON — always visible at bottom
           ══════════════════════════════════════════════════════ */}
-      {activeTab === 'architect' && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t shadow-lg px-6 py-3">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {isDirty && (
-                <Badge className="bg-amber-100 text-amber-700 text-xs gap-1 animate-pulse">
-                  <AlertTriangle className="w-3 h-3" /> שינויים שלא נשמרו
-                </Badge>
-              )}
-              {saveResult === 'success' && (
-                <Badge className="bg-green-100 text-green-700 text-xs gap-1">
-                  <CheckCircle className="w-3 h-3" /> נשמר בהצלחה
-                </Badge>
-              )}
-              {saveResult === 'error' && (
-                <Badge className="bg-red-100 text-red-700 text-xs gap-1">
-                  <AlertTriangle className="w-3 h-3" /> שגיאה בשמירה
-                </Badge>
-              )}
-            </div>
-            <Button
-              onClick={handleGlobalSave}
-              disabled={isSaving}
-              className="gap-2 px-8 py-2.5 text-sm font-bold rounded-xl shadow-md"
-              style={{ backgroundColor: '#2E7D32', color: 'white' }}
-            >
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <CloudUpload className="w-4 h-4" />
-              )}
-              {isSaving ? 'שומר...' : 'שמור שינויים'}
-            </Button>
+      {/* STICKY GLOBAL SAVE BUTTON — always visible at bottom of Settings */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t shadow-lg px-6 py-3">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isDirty && (
+              <Badge className="bg-amber-100 text-amber-700 text-xs gap-1 animate-pulse">
+                <AlertTriangle className="w-3 h-3" /> שינויים שלא נשמרו
+              </Badge>
+            )}
+            {saveResult === 'success' && (
+              <Badge className="bg-green-100 text-green-700 text-xs gap-1">
+                <CheckCircle className="w-3 h-3" /> נשמר בהצלחה
+              </Badge>
+            )}
+            {saveResult === 'error' && (
+              <Badge className="bg-red-100 text-red-700 text-xs gap-1">
+                <AlertTriangle className="w-3 h-3" /> שגיאה בשמירה
+              </Badge>
+            )}
+            {!isDirty && !saveResult && (
+              <span className="text-xs text-gray-400">אין שינויים לשמירה</span>
+            )}
           </div>
+          <Button
+            onClick={handleGlobalSave}
+            disabled={isSaving}
+            className={`gap-2 px-8 py-2.5 text-sm font-bold rounded-xl shadow-md ${isDirty ? 'ring-2 ring-amber-300 ring-offset-1' : ''}`}
+            style={{ backgroundColor: isDirty ? '#2E7D32' : '#546E7A', color: 'white' }}
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CloudUpload className="w-4 h-4" />
+            )}
+            {isSaving ? 'שומר...' : isDirty ? 'שמור שינויים' : 'שמור שינויים'}
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

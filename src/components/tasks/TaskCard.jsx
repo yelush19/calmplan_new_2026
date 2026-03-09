@@ -30,7 +30,7 @@ import {
 import { format, formatDistanceToNow, parseISO, isBefore, differenceInDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import OverdueTags from "./OverdueTags";
-import { STATUS_CONFIG } from '@/config/processTemplates';
+import { STATUS_CONFIG, ALL_SERVICES } from '@/config/processTemplates';
 import { getVatEnergyTier } from '@/engines/taskCascadeEngine';
 
 const statusTranslations = {
@@ -78,6 +78,26 @@ const categoryTranslations = {
     home_errands: 'סידורים',
     home_maintenance: 'תחזוקת הבית'
 };
+
+// Resolve custom category IDs (custom_1772...) to their Hebrew labels
+function resolveCategoryLabel(category) {
+  if (!category) return '';
+  if (categoryTranslations[category]) return categoryTranslations[category];
+  // Check custom categories from localStorage
+  if (category.startsWith('custom_')) {
+    try {
+      const customCats = JSON.parse(localStorage.getItem('calmplan_custom_categories') || '{}');
+      for (const cats of Object.values(customCats)) {
+        const found = (cats || []).find(c => c.key === category);
+        if (found) return found.label;
+      }
+    } catch { /* ignore */ }
+  }
+  // Check ALL_SERVICES label as fallback
+  const svc = ALL_SERVICES?.[category];
+  if (svc?.label) return svc.label;
+  return category;
+}
 
 export default function TaskCard({
   task,
@@ -450,7 +470,7 @@ export default function TaskCard({
 
                   <div className="flex flex-wrap items-center gap-2 ml-8">
                     <Badge className={categoryColors[task.category] || 'bg-gray-200'}>
-                      {categoryTranslations[task.category] || task.category}
+                      {resolveCategoryLabel(task.category)}
                     </Badge>
                     {task.due_date && (
                       <Badge variant="outline" className="flex items-center gap-1">
