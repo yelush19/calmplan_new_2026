@@ -19,7 +19,7 @@
  */
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { renderNodeShape, buildTaperedBranch } from './AyoaNode';
+import { renderNodeShape } from './AyoaNode';
 import { getConnectionProps } from '@/engines/lineStyleEngine';
 import { useDesign } from '@/contexts/DesignContext';
 import { getServiceWeight } from '@/config/serviceWeights';
@@ -88,6 +88,20 @@ export default function FocusMapView({
 
   // All sibling tasks for dependency checking — use allTasks if provided, else tasks
   const siblingPool = allTasks || tasks;
+
+  // Guard clause: if no tasks or design not ready, show loading state
+  if (!tasks || tasks.length === 0) {
+    return (
+      <div className="flex items-center justify-center w-full h-full min-h-[300px]">
+        <div className="text-center">
+          <div className="text-4xl mb-3">🎯</div>
+          <div className="text-sm font-bold" style={{ color: 'var(--cp-text-secondary, #64748B)' }}>
+            טוען מפת פוקוס...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Cognitive load alert
   const cogLoadThreshold = design?.cognitiveLoadLimit || 480;
@@ -205,7 +219,7 @@ export default function FocusMapView({
       categoryNodes: catNodes,
       stats: { unlockedCount, lockedCount, totalMinutes },
     };
-  }, [tasks, siblingPool]);
+  }, [tasks, siblingPool, design?.nodeOverrides, design?.stickerMap, branchColors, globalShape]);
 
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();

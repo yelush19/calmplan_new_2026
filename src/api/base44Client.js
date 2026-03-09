@@ -93,6 +93,7 @@ function _cacheToLocal(entityName, items) {
       SystemConfig: 'system_config', PeriodicReport: 'periodic_reports',
       FileMetadata: 'file_metadata',
       ServiceCatalog: 'service_catalog',
+      UserPreferences: 'user_preferences',
     };
     const collName = collectionMap[entityName];
     if (collName) {
