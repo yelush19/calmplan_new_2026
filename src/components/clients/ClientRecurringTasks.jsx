@@ -20,7 +20,7 @@ import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_
 import { getScheduledStartForCategory } from '@/config/automationRules';
 
 // ============================================================
-// P-Branch definitions: P1 = Payroll, P2 = Bookkeeping/Tax
+// P-Branch definitions: P1-P5 full pipeline
 // ============================================================
 const P_BRANCHES = {
   P1: {
@@ -42,6 +42,26 @@ const P_BRANCHES = {
     dot: 'bg-purple-500',
     order: 2,
     categories: ['מע"מ', 'מקדמות מס', 'דוח רו"ה'],
+  },
+  P3: {
+    key: 'P3',
+    label: 'P3 | ניהול ותכנון',
+    color: 'bg-pink-100 text-pink-800',
+    accent: 'border-pink-400',
+    bgSoft: 'bg-pink-50',
+    dot: 'bg-pink-500',
+    order: 3,
+    categories: ['התאמות חשבונות'],
+  },
+  P5: {
+    key: 'P5',
+    label: 'P5 | דוחות שנתיים',
+    color: 'bg-green-100 text-green-800',
+    accent: 'border-green-400',
+    bgSoft: 'bg-green-50',
+    dot: 'bg-green-500',
+    order: 5,
+    categories: ['דוח שנתי', 'הצהרת הון'],
   },
 };
 
@@ -142,6 +162,36 @@ const REPORT_CATEGORIES = {
     order: 6,
     branch: 'P2',
   },
+  // ── P3: Account Reconciliation (depends on P2 completion) ──
+  'התאמות חשבונות': {
+    label: 'התאמות חשבונות',
+    icon: FileText,
+    color: 'bg-pink-100 text-pink-800',
+    accent: 'border-pink-400',
+    bgSoft: 'bg-pink-50',
+    dot: 'bg-pink-500',
+    frequencyField: 'pnl_frequency',
+    serviceTypeKey: 'reconciliation',
+    fallbackFrequencyField: 'vat_reporting_frequency',
+    dayOfMonth: 25,
+    order: 7,
+    branch: 'P3',
+  },
+  // ── P5: Annual Reports (yearly — May 31 deadline) ──
+  'דוח שנתי': {
+    label: 'דוח שנתי / מאזן',
+    icon: FileText,
+    color: 'bg-green-100 text-green-800',
+    accent: 'border-green-400',
+    bgSoft: 'bg-green-50',
+    dot: 'bg-green-500',
+    frequencyField: null,
+    serviceTypeKey: 'annual_reports',
+    dayOfMonth: 31,
+    order: 8,
+    branch: 'P5',
+    frequency: 'yearly',
+  },
 };
 
 const BIMONTHLY_PERIOD_NAMES = {
@@ -170,6 +220,8 @@ const FREQUENCY_LABELS = {
 function getClientFrequency(categoryKey, client) {
   const cat = REPORT_CATEGORIES[categoryKey];
   if (!cat) return 'monthly';
+  // Hard-coded frequency override (e.g., annual reports = yearly)
+  if (cat.frequency) return cat.frequency;
   const reporting = client.reporting_info || {};
   // Try primary frequency field first
   const field = cat.frequencyField;
@@ -190,7 +242,7 @@ function getClientFrequency(categoryKey, client) {
  * full_service = vat_reporting + payroll + tax_advances + annual_reports
  * Payroll auto-links: payroll → social_security + deductions (via automation rules)
  */
-const FULL_SERVICE_EXPANSION = ['vat_reporting', 'payroll', 'tax_advances', 'annual_reports', 'social_security', 'deductions'];
+const FULL_SERVICE_EXPANSION = ['vat_reporting', 'payroll', 'tax_advances', 'annual_reports', 'social_security', 'deductions', 'reconciliation'];
 
 function getExpandedServices(client) {
   const raw = client.service_types || [];
@@ -229,6 +281,7 @@ function clientHasService(categoryKey, client) {
  *   semi_annual → only for מ"ה ניכויים: reportMonth 6 (Jan-Jun) and 12 (Jul-Dec)
  *                  task in month 07 for 01-06, month 01 for 07-12
  *   quarterly   → report months 3, 6, 9, 12
+ *   yearly      → single task per year (e.g., annual report — May 31)
  */
 function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
   const frequency = getClientFrequency(categoryKey, client);
@@ -236,6 +289,18 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
 
   const tasks = [];
   const catLabel = REPORT_CATEGORIES[categoryKey].label;
+
+  // Yearly: single task — triggered when any month is selected (but only once)
+  if (frequency === 'yearly') {
+    const dueDate = getDueDateForCategory(categoryKey, client, 5) || `${year}-05-31`;
+    tasks.push({
+      date: new Date(dueDate),
+      period: `שנת ${year}`,
+      description: `${catLabel} עבור שנת ${year - 1}`,
+      reportMonth: 5,
+    });
+    return tasks;
+  }
 
   // Semi-annual: only for ניכויים (מ"ה). Two periods per year.
   // Task appears only when the END month of the period is selected (6 for H1, 12 for H2)
@@ -388,10 +453,14 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setIsClearingCache(false);
   };
 
-  // ── Task dependency map: parent category → depends_on category ──
-  // דוח רו"ה depends on bookkeeping input being done (מע"מ)
+  // ── Task dependency chain: child → parent (must finish parent before child) ──
+  // P1 → P2: P&L report depends on payroll completion
+  // P2 → P3: Reconciliation depends on VAT/bookkeeping
+  // P2 → P5: Annual report depends on all monthly bookkeeping
   const TASK_DEPENDENCIES = {
-    'דוח רו"ה': 'מע"מ',
+    'דוח רו"ה': 'שכר',          // P&L depends on payroll data being ready
+    'התאמות חשבונות': 'מע"מ',    // Reconciliation depends on VAT filing
+    'דוח שנתי': 'דוח רו"ה',     // Annual report depends on monthly P&L
   };
 
   const generateTasksPreview = (overrideMonths) => {
@@ -403,11 +472,10 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     // ── Coverage tracking per category ──
     const coverage = {};
     for (const catKey of Object.keys(REPORT_CATEGORIES)) {
-      coverage[catKey] = { eligible: 0, generated: 0, skippedFreq: 0, skippedDup: 0, clients: [] };
+      coverage[catKey] = { eligible: 0, generated: 0, skippedFreq: 0, skippedDup: 0, freqMismatch: 0, clients: [], freqMismatchClients: [] };
     }
 
     const tasksToCreate = [];
-    // First pass: index for depends_on linking
     const taskIndex = {};
 
     for (const client of clients) {
@@ -425,6 +493,11 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
         coverage[categoryKey].eligible++;
 
         const dueDates = generateTasksForMonths(categoryKey, client, monthsArray, selectedYear);
+        // Track frequency mismatch: client is eligible but no tasks generated for selected months
+        if (dueDates.length === 0 && monthsArray.length > 0) {
+          coverage[categoryKey].freqMismatch++;
+          coverage[categoryKey].freqMismatchClients.push(`${client.name} (${freq})`);
+        }
         for (const { date, period, description, reportMonth } of dueDates) {
           const taskTitle = `${client.name} - ${description}`;
           const dueDateStr = format(date, 'yyyy-MM-dd');
@@ -474,12 +547,15 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     }
 
     // ── Coverage report ──
-    console.group('[RecurringTasks] Coverage Report');
+    console.group('[RecurringTasks] 📊 Coverage Report — Months:', monthsArray.join(','));
     for (const [catKey, stats] of Object.entries(coverage)) {
       const branch = REPORT_CATEGORIES[catKey]?.branch || '?';
       console.log(
-        `${branch} - ${catKey}: ${stats.generated} tasks | ${stats.eligible}/${clients.length} eligible clients | ${stats.skippedFreq} freq-skipped | ${stats.skippedDup} dup-skipped`
+        `${branch} - ${catKey}: ${stats.generated} tasks | ${stats.eligible}/${clients.length} eligible | ${stats.skippedFreq} freq-N/A | ${stats.skippedDup} dup | ${stats.freqMismatch} freq-mismatch`
       );
+      if (stats.freqMismatchClients.length > 0) {
+        console.log(`  ⚠ Frequency Mismatch (${catKey}):`, stats.freqMismatchClients.join(', '));
+      }
     }
     // Cross-reference: find clients that have services but got 0 tasks
     const clientsWithNoTasks = clients.filter(c => {
@@ -487,10 +563,11 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
       return services.size > 0 && !tasksToCreate.some(t => t.client_id === c.id);
     });
     if (clientsWithNoTasks.length > 0) {
-      console.warn('[RecurringTasks] Clients with services but 0 tasks:', clientsWithNoTasks.map(c => ({
+      console.warn('[RecurringTasks] ⚠ Clients with services but 0 tasks:', clientsWithNoTasks.map(c => ({
         name: c.name, services: Array.from(getExpandedServices(c)), reporting_info: c.reporting_info,
       })));
     }
+    console.log(`[RecurringTasks] Total: ${tasksToCreate.length} tasks for ${new Set(tasksToCreate.map(t => t.client_id)).size} clients`);
     console.groupEnd();
 
     tasksToCreate.sort((a, b) => {
