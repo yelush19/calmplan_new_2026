@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserPreferences } from '@/api/entities';
 
+// ייצוא התבניות שחסר וגורם לשגיאת Build
+export const MAP_TEMPLATES = {
+  modern: { bg: '#f8f9fa', node: 'bubble' },
+  organic: { bg: '#ffffff', node: 'cloud' },
+  dark: { bg: '#1a1a1a', node: 'rect' }
+};
+
 const DesignContext = createContext();
 
 export const DesignProvider = ({ children }) => {
@@ -15,16 +22,11 @@ export const DesignProvider = ({ children }) => {
     isLoaded: false
   });
 
-  // טעינת העדפות מהשרת עם הגנה מפני קריסה (Temporal Dead Zone)
   useEffect(() => {
     async function initDesign() {
       try {
-        // בדיקה שהישות קיימת ושיש לה פונקציית פילטר לפני שמנסים לקרוא לה
-        const hasUserPrefs = typeof UserPreferences !== 'undefined' && 
-                             UserPreferences !== null && 
-                             typeof UserPreferences.filter === 'function';
-
-        if (hasUserPrefs) {
+        // הגנה מפני קריסה אם הישות עדיין לא נטענה
+        if (typeof UserPreferences !== 'undefined' && UserPreferences?.filter) {
           const prefs = await UserPreferences.filter();
           if (prefs && prefs.length > 0) {
             const p = prefs[0];
@@ -39,34 +41,28 @@ export const DesignProvider = ({ children }) => {
             return;
           }
         }
-        // אם אין העדפות ב-DB או שהישות לא מוכנה, פשוט מסמנים כנטען עם ברירת מחדל
         setDesignState(prev => ({ ...prev, isLoaded: true }));
       } catch (err) {
-        console.warn('Design initialization deferred or failed:', err);
+        console.warn('Design init deferred');
         setDesignState(prev => ({ ...prev, isLoaded: true }));
       }
     }
     initDesign();
   }, []);
 
-  // עדכון הגדרות ושמירה ל-DB
   const updateDesign = useCallback(async (updates) => {
     setDesignState(prev => ({ ...prev, ...updates }));
-    
     try {
-      if (typeof UserPreferences !== 'undefined' && typeof UserPreferences.update === 'function') {
+      if (typeof UserPreferences !== 'undefined' && UserPreferences?.update) {
         const dbUpdates = {};
         if (updates.lineStyle) dbUpdates.line_style = updates.lineStyle;
         if (updates.theme) dbUpdates.theme = updates.theme;
         if (updates.shape) dbUpdates.shape = updates.shape;
         if (typeof updates.curvature !== 'undefined') dbUpdates.curvature = updates.curvature;
-
-        if (Object.keys(dbUpdates).length > 0) {
-          await UserPreferences.update('me', dbUpdates);
-        }
+        await UserPreferences.update('me', dbUpdates);
       }
     } catch (err) {
-      console.error('Failed to persist design updates:', err);
+      console.error('Save failed', err);
     }
   }, []);
 
@@ -80,35 +76,8 @@ export const DesignProvider = ({ children }) => {
     }));
   }, []);
 
-  const addCompletionSticker = useCallback((nodeId) => {
-    setDesignState(prev => ({
-      ...prev,
-      stickerMap: { ...prev.stickerMap, [nodeId]: '✅' }
-    }));
-  }, []);
-
-  // מאזיני אירועים לעדכון עיצוב בזמן אמת ממקורות אחרים
-  useEffect(() => {
-    const handleDesignEvent = (e) => {
-      const { nodeId, color, shape } = e.detail;
-      if (nodeId) setNodeOverride(nodeId, { color, shape });
-    };
-
-    const handleStickerEvent = (e) => {
-      if (e.detail.nodeId) addCompletionSticker(e.detail.nodeId);
-    };
-
-    window.addEventListener('calmplan:design-changed', handleDesignEvent);
-    window.addEventListener('calmplan:task-completed', handleStickerEvent);
-    
-    return () => {
-      window.removeEventListener('calmplan:design-changed', handleDesignEvent);
-      window.removeEventListener('calmplan:task-completed', handleStickerEvent);
-    };
-  }, [setNodeOverride, addCompletionSticker]);
-
   return (
-    <DesignContext.Provider value={{ ...designState, updateDesign, setNodeOverride, addCompletionSticker }}>
+    <DesignContext.Provider value={{ ...designState, updateDesign, setNodeOverride }}>
       {children}
     </DesignContext.Provider>
   );
