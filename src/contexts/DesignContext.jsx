@@ -15,12 +15,16 @@ export const DesignProvider = ({ children }) => {
     isLoaded: false
   });
 
-  // טעינת העדפות מהשרת עם הגנה מפני קריסה
+  // טעינת העדפות מהשרת עם הגנה מפני קריסה (Temporal Dead Zone)
   useEffect(() => {
     async function initDesign() {
       try {
-        // בדיקה שהישות מוכנה לפני הרצה
-        if (UserPreferences && typeof UserPreferences.filter === 'function') {
+        // בדיקה שהישות קיימת ושיש לה פונקציית פילטר לפני שמנסים לקרוא לה
+        const hasUserPrefs = typeof UserPreferences !== 'undefined' && 
+                             UserPreferences !== null && 
+                             typeof UserPreferences.filter === 'function';
+
+        if (hasUserPrefs) {
           const prefs = await UserPreferences.filter();
           if (prefs && prefs.length > 0) {
             const p = prefs[0];
@@ -29,15 +33,16 @@ export const DesignProvider = ({ children }) => {
               theme: p.theme || prev.theme,
               lineStyle: p.line_style || prev.lineStyle,
               shape: p.shape || prev.shape,
-              curvature: p.curvature ?? prev.curvature,
+              curvature: typeof p.curvature === 'number' ? p.curvature : prev.curvature,
               isLoaded: true
             }));
-          } else {
-            setDesignState(prev => ({ ...prev, isLoaded: true }));
+            return;
           }
         }
+        // אם אין העדפות ב-DB או שהישות לא מוכנה, פשוט מסמנים כנטען עם ברירת מחדל
+        setDesignState(prev => ({ ...prev, isLoaded: true }));
       } catch (err) {
-        console.error('Design initialization failed:', err);
+        console.warn('Design initialization deferred or failed:', err);
         setDesignState(prev => ({ ...prev, isLoaded: true }));
       }
     }
@@ -49,13 +54,12 @@ export const DesignProvider = ({ children }) => {
     setDesignState(prev => ({ ...prev, ...updates }));
     
     try {
-      if (UserPreferences && typeof UserPreferences.update === 'function') {
-        // מיפוי שמות המשתנים לפורמט של ה-DB
+      if (typeof UserPreferences !== 'undefined' && typeof UserPreferences.update === 'function') {
         const dbUpdates = {};
         if (updates.lineStyle) dbUpdates.line_style = updates.lineStyle;
         if (updates.theme) dbUpdates.theme = updates.theme;
         if (updates.shape) dbUpdates.shape = updates.shape;
-        if (updates.curvature !== undefined) dbUpdates.curvature = updates.curvature;
+        if (typeof updates.curvature !== 'undefined') dbUpdates.curvature = updates.curvature;
 
         if (Object.keys(dbUpdates).length > 0) {
           await UserPreferences.update('me', dbUpdates);
@@ -83,7 +87,7 @@ export const DesignProvider = ({ children }) => {
     }));
   }, []);
 
-  // האזנה לאירועים חיצוניים (מ-Automation או Cascade)
+  // מאזיני אירועים לעדכון עיצוב בזמן אמת ממקורות אחרים
   useEffect(() => {
     const handleDesignEvent = (e) => {
       const { nodeId, color, shape } = e.detail;
