@@ -3,26 +3,28 @@
  * 9 Organic Shapes: Cloud, Bubble, Speech, Diamond, Pill, Star, Capsule, Hexagon, RoundedRect
  * Soft glow halos, DNA-driven colors, absolute SVG coords.
  *
- * Now integrated with DesignContext:
- * - Checks nodeOverrides[nodeId] for per-node shape/color before falling back to props
- * - Renders stickers from stickerMap as emoji overlays
- * - Triggers pulse/glow animation when the node's branch is active
+ * ARCHITECTURE NOTE: This component is a LEAF module with ZERO context imports.
+ * All design data (overrides, stickers, active-branch state) is passed via PROPS
+ * from parent views (AyoaMapView, AyoaRadialView, FocusMapView) which own the
+ * DesignContext. This prevents circular import chains that cause TDZ crashes:
+ *   AyoaMapView → AyoaNode → DesignContext → entities  ← BREAKS MINIFIED BUNDLE
  *
  * Props:
- *   cx, cy     -- center coordinates (SVG viewBox units)
- *   size       -- radius/half-width
- *   shape      -- 'cloud' | 'bubble' | 'speech' | 'diamond' | 'pill' | 'star' | ...
- *   fill       -- background fill color
- *   stroke     -- border stroke color
- *   strokeWidth -- border width (default 2)
- *   glow       -- enable soft glow halo (default true)
- *   glowColor  -- glow color (defaults to stroke)
- *   nodeId     -- unique node identifier for DesignContext overrides & stickers
- *   branchKey  -- branch identifier (P1-P5) for pulse animation
+ *   cx, cy         -- center coordinates (SVG viewBox units)
+ *   size           -- radius/half-width
+ *   shape          -- 'cloud' | 'bubble' | 'speech' | 'diamond' | 'pill' | 'star' | ...
+ *   fill           -- background fill color
+ *   stroke         -- border stroke color
+ *   strokeWidth    -- border width (default 2)
+ *   glow           -- enable soft glow halo (default true)
+ *   glowColor      -- glow color (defaults to stroke)
+ *   sticker        -- emoji sticker overlay (from parent's design.stickerMap)
+ *   isActive       -- pulse/glow when branch is active (from parent's design.isBranchActive)
+ *   overrideShape  -- per-node shape override (from parent's design.getNodeOverride)
+ *   overrideFill   -- per-node color override (from parent's design.getNodeOverride)
  */
 
 import React from 'react';
-import { useDesign } from '@/contexts/DesignContext';
 
 // -- AYOA Hex Bible -- Full Vibrant Spectrum --
 export const AYOA_PALETTE = {
@@ -66,7 +68,6 @@ const SHAPE_RENDERERS = {
   ),
 
   speech: (cx, cy, r, fill, stroke, sw) => {
-    // Speech bubble with a small tail at bottom-left
     const d = `M ${cx - r * 0.8} ${cy - r * 0.5}` +
       ` Q ${cx - r * 0.8} ${cy - r * 0.85} ${cx - r * 0.2} ${cy - r * 0.85}` +
       ` L ${cx + r * 0.2} ${cy - r * 0.85}` +
@@ -93,7 +94,6 @@ const SHAPE_RENDERERS = {
   ),
 
   star: (cx, cy, r, fill, stroke, sw) => {
-    // 5-pointed star
     const points = [];
     for (let i = 0; i < 5; i++) {
       const outerAngle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
@@ -113,7 +113,6 @@ const SHAPE_RENDERERS = {
       rx={14} fill={fill} stroke={stroke} strokeWidth={sw} />
   ),
 
-  // -- New shapes for Design Engine --
   capsule: (cx, cy, r, fill, stroke, sw) => (
     <rect x={cx - r * 1.2} y={cy - r * 0.5} width={r * 2.4} height={r}
       rx={r * 0.5} fill={fill} stroke={stroke} strokeWidth={sw} />
@@ -150,6 +149,10 @@ function ensurePulseStyles() {
   document.head.appendChild(style);
 }
 
+/**
+ * AyoaNode component — pure presentational, NO context imports.
+ * Design overrides arrive via props from the parent view.
+ */
 export default function AyoaNode({
   cx, cy, size = 30,
   shape = 'bubble',
@@ -161,19 +164,16 @@ export default function AyoaNode({
   onClick,
   style,
   children,
-  nodeId,
-  branchKey,
+  // Design props — passed down from parent view (which owns DesignContext)
+  overrideShape,
+  overrideFill,
+  sticker,
+  isActive = false,
 }) {
-  const design = useDesign();
+  // Apply per-node overrides (resolved by parent view from DesignContext)
+  const effectiveShape = overrideShape || shape;
+  const effectiveFill = overrideFill || fill;
 
-  // -- Global Rendering: Check nodeOverrides for this node before using prop defaults --
-  const override = nodeId ? design.getNodeOverride?.(nodeId) : null;
-  const effectiveShape = override?.shape || shape;
-  const effectiveFill = override?.color || fill;
-  const sticker = nodeId ? design.stickerMap?.[nodeId] : null;
-
-  // -- Pulse Animation: Glow when branch is active --
-  const isActive = branchKey ? design.isBranchActive?.(branchKey) : false;
   if (isActive) ensurePulseStyles();
 
   const renderer = SHAPE_RENDERERS[effectiveShape] || SHAPE_RENDERERS.bubble;
@@ -195,7 +195,7 @@ export default function AyoaNode({
       )}
       {/* Main shape */}
       {renderer(cx, cy, size, effectiveFill, stroke, strokeWidth)}
-      {/* Sticker overlay from DesignContext */}
+      {/* Sticker overlay */}
       {sticker && (
         <text
           x={cx + size * 0.55}
@@ -215,10 +215,9 @@ export default function AyoaNode({
 
 /**
  * Render a shape at the given position (standalone function for views).
- * Now supports optional nodeId for DesignContext override lookups.
+ * Accepts optional designCtx for per-node override lookups.
  */
 export function renderNodeShape(shape, x, y, r, fill, stroke, sw = 2.5, nodeId = null, designCtx = null) {
-  // If a designCtx is passed, check for per-node overrides
   let effectiveShape = shape;
   let effectiveFill = fill;
   if (designCtx && nodeId) {
