@@ -1,4 +1,5 @@
-import { SystemConfig } from '@/api/entities';
+// LAZY: SystemConfig loaded on-demand to avoid TDZ circular dependency
+const getSystemConfig = () => import('@/api/entities').then(m => m.SystemConfig);
 
 const CONFIG_KEY = 'automation_rules';
 
@@ -306,6 +307,7 @@ export const DEFAULT_RULES = [
 // Load rules from SystemConfig (or return defaults)
 export async function loadAutomationRules() {
   try {
+    const SystemConfig = await getSystemConfig();
     const configs = await SystemConfig.list(null, 50);
     const config = configs.find(c => c.config_key === CONFIG_KEY);
     if (config && config.data?.rules) {
@@ -326,6 +328,7 @@ export async function loadAutomationRules() {
 // Save rules to SystemConfig
 export async function saveAutomationRules(configId, rules) {
   try {
+    const SystemConfig = await getSystemConfig();
     if (configId) {
       await SystemConfig.update(configId, { data: { rules } });
     } else {
@@ -414,6 +417,7 @@ export const PAYMENT_METHOD_CATEGORIES = ['מע"מ', 'מקדמות מס', 'ני�
 
 export async function loadServiceDueDates() {
   try {
+    const SystemConfig = await getSystemConfig();
     const configs = await SystemConfig.list(null, 50);
     const config = configs.find(c => c.config_key === DUE_DATES_CONFIG_KEY);
     if (config && config.data?.dueDates) {
@@ -439,6 +443,7 @@ export async function loadServiceDueDates() {
 
 export async function saveServiceDueDates(configId, dueDates) {
   try {
+    const SystemConfig = await getSystemConfig();
     if (configId) {
       await SystemConfig.update(configId, { data: { dueDates } });
     } else {
@@ -496,6 +501,7 @@ export const DEFAULT_EXECUTION_PERIODS = {
 
 export async function loadExecutionPeriods() {
   try {
+    const SystemConfig = await getSystemConfig();
     const configs = await SystemConfig.list(null, 50);
     const config = configs.find(c => c.config_key === EXECUTION_PERIODS_CONFIG_KEY);
     if (config && config.data?.periods) {
@@ -514,6 +520,7 @@ export async function loadExecutionPeriods() {
 
 export async function saveExecutionPeriods(configId, periods) {
   try {
+    const SystemConfig = await getSystemConfig();
     if (configId) {
       await SystemConfig.update(configId, { data: { periods } });
     } else {

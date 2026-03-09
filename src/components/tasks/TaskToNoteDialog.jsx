@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
 const fixShortYear = (v) => { if (!v) return v; const m = v.match(/^(\d{1,2})-(\d{2})-(\d{2})$/); if (m) { const yr = parseInt(m[1], 10); return `${yr < 100 ? (yr < 50 ? 2000 + yr : 1900 + yr) : yr}-${m[2]}-${m[3]}`; } return v; };
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ export default function TaskToNoteDialog({ task, open, onClose, onCreated }) {
       setTitle(task.title || '');
       const parts = [];
       if (task.client_name) parts.push(`לקוח: ${task.client_name}`);
-      if (task.category) parts.push(`קטגוריה: ${task.category}`);
+      if (task.category) parts.push(`קטגוריה: ${resolveCategoryLabel(task.category)}`);
       if (task.description) parts.push(task.description);
       setContent(parts.join('\n'));
       setDueDate(task.due_date || '');

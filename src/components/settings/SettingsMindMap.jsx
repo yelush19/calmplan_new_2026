@@ -39,6 +39,8 @@ import {
   CloudUpload, CheckCircle2, AlertCircle, Loader2, Shield,
 } from 'lucide-react';
 
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
+
 // ── DNA Colors (P-branch identity) ──
 const DNA = {
   P1: { color: '#00A3E0', label: 'P1 שכר', bg: '#00A3E015', glow: '#00A3E040', dashboard: 'payroll' },
@@ -718,7 +720,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         const node = {
           id: svc.key,
           type: 'service',
-          label: svc.label || svc.key,
+          label: svc.label || resolveCategoryLabel(svc.key),
           shape: nodeShape,
           color: nodeColor,
           bg: designOverride.color ? (designOverride.color + '15') : (DNA[branch]?.bg || '#f5f5f5'),
@@ -1580,7 +1582,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                 </div>
                 <p className="text-sm font-bold text-gray-800">מחיקת שירות</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {liveServices[deleteConfirm]?.label || deleteConfirm}
+                  {liveServices[deleteConfirm]?.label || resolveCategoryLabel(deleteConfirm)}
                 </p>
               </div>
               <div className="flex gap-2">

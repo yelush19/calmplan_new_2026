@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import { Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -107,7 +108,7 @@ export default function HouseholdTaskCard({ task, index, onStatusChange, onAssig
                                     <span className="capitalize">{task.energy_level || 'בינונית'}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5" title="קטגוריה">
-                                    <Badge variant="outline">{task.category}</Badge>
+                                    <Badge variant="outline">{resolveCategoryLabel(task.category)}</Badge>
                                 </div>
                             </div>
                             

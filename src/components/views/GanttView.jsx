@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import { motion } from 'framer-motion';
 import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, addDays, addMonths, subMonths, isWithinInterval } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -627,7 +628,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                         </span>
                       </div>
                       <p className="text-xs !text-[#90A4AE] mt-1">
-                        {task.category} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}
+                        {resolveCategoryLabel(task.category)} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}
                         {` \u2022 ${dnaMinutes} דק׳ (DNA)`}
                       </p>
                       {pos.durationDays > 1 && (
