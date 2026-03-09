@@ -17,6 +17,9 @@ import { renderNodeShape, buildTaperedBranch } from './AyoaNode';
 import { getConnectionProps } from '@/engines/lineStyleEngine';
 import { useDesign } from '@/contexts/DesignContext';
 import { getActiveBranches } from '@/engines/automationEngine';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
+import { ServiceCatalog } from '@/api/entities';
+import { Plus } from 'lucide-react';
 import FloatingToolbar from './FloatingToolbar';
 
 const VB = 1000;
@@ -38,7 +41,9 @@ const DNA_DEFAULTS = {
 function getCategoryColor(category, branchColors) {
   const c = branchColors || DNA_DEFAULTS;
   if (!category) return c.P3;
-  const cat = (category || '').toLowerCase();
+  // Resolve custom_XXX IDs and English keys to Hebrew before matching
+  const resolved = resolveCategoryLabel(category);
+  const cat = (resolved || category || '').toLowerCase();
   if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return c.P1;
   if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות') || cat.includes('מאזנ')) return c.P2;
   if (cat.includes('בית') || cat.includes('אישי') || cat.includes('home') || cat.includes('ארוחות')) return c.P4;
@@ -145,7 +150,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         shape: 'bubble',
         color: dnaColor,
         bg: dnaColor + '15',
-        label: cat.substring(0, 14),
+        label: resolveCategoryLabel(cat).substring(0, 14),
         subLabel: `${catTasks.length}`,
         angle: midAngle,
       });
@@ -215,11 +220,23 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
   const handleColorChange = useCallback((color) => {
     if (!selectedNode || !design?.setNodeOverride) return;
     design.setNodeOverride(selectedNode, { color });
+    // Persist to DB
+    ServiceCatalog.filter({ key: selectedNode }).then(results => {
+      if (results?.[0]) ServiceCatalog.update(results[0].id, { color });
+    }).catch(() => {});
+    // Notify parent that design changed (activates Save button)
+    window.dispatchEvent(new CustomEvent('calmplan:design-changed', { detail: { nodeId: selectedNode, color } }));
   }, [selectedNode, design]);
 
   const handleShapeChange = useCallback((shape) => {
     if (!selectedNode || !design?.setNodeOverride) return;
     design.setNodeOverride(selectedNode, { shape });
+    // Persist to DB
+    ServiceCatalog.filter({ key: selectedNode }).then(results => {
+      if (results?.[0]) ServiceCatalog.update(results[0].id, { shape });
+    }).catch(() => {});
+    // Notify parent that design changed (activates Save button)
+    window.dispatchEvent(new CustomEvent('calmplan:design-changed', { detail: { nodeId: selectedNode, shape } }));
   }, [selectedNode, design]);
 
   const handleApplyToChildren = useCallback(() => {
@@ -461,6 +478,17 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         onApplyToChildren={selectedNodeData?.type === 'category' ? handleApplyToChildren : undefined}
         onClose={() => setSelectedNode(null)}
       />
+
+      {/* Green '+' Floating Action Button — add new service node */}
+      <button
+        onClick={() => {
+          window.dispatchEvent(new CustomEvent('calmplan:add-new-service', { detail: {} }));
+        }}
+        className="absolute bottom-4 left-4 w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+        title="הוסף שירות חדש"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   );
 }
