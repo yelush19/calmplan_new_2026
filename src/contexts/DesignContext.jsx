@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserPreferences } from '@/api/entities';
 
-// ייצוא התבניות - פותר את שגיאת ה-Build ב-Vercel
 export const MAP_TEMPLATES = {
   modern: { bg: '#f8f9fa', node: 'bubble' },
   organic: { bg: '#ffffff', node: 'cloud' },
@@ -17,30 +16,26 @@ export const DesignProvider = ({ children }) => {
     shape: 'bubble',
     curvature: 0.5,
     nodeOverrides: {},
-    stickerMap: {},
     isLoaded: false
   });
 
-  // אתחול בטוח עם מנגנון המתנה לישות ה-API
   useEffect(() => {
     let isMounted = true;
 
-    const initDesign = async () => {
-      // בדיקה אם הישות קיימת ומוכנה לפעולה (מונע את שגיאת ה-O)
-      const isEntityReady = typeof UserPreferences !== 'undefined' && 
-                             UserPreferences !== null && 
-                             typeof UserPreferences.filter === 'function';
-
-      if (!isEntityReady) {
-        // אם לא מוכן, נחכה רגע וננסה שוב
-        setTimeout(initDesign, 500);
-        return;
-      }
-
+    async function initDesign() {
+      // בדיקה קריטית: האם המערכת בכלל מוכנה לעבודה עם Entities?
+      // אם UserPreferences.filter מחזיר undefined או no-op, אנחנו פשוט מחכים.
       try {
-        const prefs = await UserPreferences.filter();
-        if (isMounted) {
-          if (prefs && prefs.length > 0) {
+        if (typeof UserPreferences !== 'undefined' && UserPreferences?.filter) {
+          const prefs = await UserPreferences.filter();
+          
+          // אם חזר מערך ריק או לא תקין בגלל חוסר אתחול, אנחנו עוצרים כאן ולא קורסים
+          if (!prefs || !Array.isArray(prefs)) {
+            console.log("Waiting for UserPreferences initialization...");
+            return; 
+          }
+
+          if (isMounted && prefs.length > 0) {
             const p = prefs[0];
             setDesignState(prev => ({
               ...prev,
@@ -50,25 +45,35 @@ export const DesignProvider = ({ children }) => {
               curvature: typeof p.curvature === 'number' ? p.curvature : prev.curvature,
               isLoaded: true
             }));
-          } else {
-            setDesignState(prev => ({ ...prev, isLoaded: true }));
+            return;
           }
         }
+        
+        // אם הגענו לכאן ואין נתונים, פשוט מסמנים כנטען עם ברירת מחדל
+        if (isMounted) setDesignState(prev => ({ ...prev, isLoaded: true }));
       } catch (err) {
-        console.warn('Design settings loaded with defaults');
         if (isMounted) setDesignState(prev => ({ ...prev, isLoaded: true }));
       }
-    };
+    }
 
+    // ניסיון אתחול ראשון
     initDesign();
-    return () => { isMounted = false; };
+
+    // האזנה לאירוע שהדאטה סונכרן - זה הטריגר הכי בטוח במערכת שלך
+    const handleSync = () => initDesign();
+    window.addEventListener('calmplan:data-synced', handleSync);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('calmplan:data-synced', handleSync);
+    };
   }, []);
 
-  // עדכון ושמירה ל-DB
   const updateDesign = useCallback(async (updates) => {
     setDesignState(prev => ({ ...prev, ...updates }));
     
     try {
+      // הגנה גם בזמן עדכון
       if (typeof UserPreferences !== 'undefined' && UserPreferences?.update) {
         const dbUpdates = {};
         if (updates.lineStyle) dbUpdates.line_style = updates.lineStyle;
@@ -81,7 +86,7 @@ export const DesignProvider = ({ children }) => {
         }
       }
     } catch (err) {
-      console.error('Failed to save design preferences:', err);
+      console.error('Design update failed:', err);
     }
   }, []);
 
