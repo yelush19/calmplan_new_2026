@@ -70,6 +70,13 @@ export default function SettingsPage() {
   const [saveResult, setSaveResult] = useState(null); // null | 'success' | 'error'
   const [isDirty, setIsDirty] = useState(false);
 
+  // Listen for design engine changes (color/shape from AyoaRadialView)
+  useEffect(() => {
+    const handler = () => setIsDirty(true);
+    window.addEventListener('calmplan:design-changed', handler);
+    return () => window.removeEventListener('calmplan:design-changed', handler);
+  }, []);
+
   // ── Custom categories stored in localStorage ──
   const [customCategories, setCustomCategories] = useState(() => {
     try { return JSON.parse(localStorage.getItem('calmplan_custom_categories') || '{}'); }

@@ -15,6 +15,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { ServiceCatalog } from '@/api/entities';
 
 const LS_KEY = 'calmplan_design_prefs';
 
@@ -120,6 +121,32 @@ export function DesignProvider({ children }) {
     return { ...DEFAULTS };
   });
 
+  // Load node overrides from DB on startup (merge with localStorage)
+  useEffect(() => {
+    ServiceCatalog.list().then(items => {
+      if (!items?.length) return;
+      const dbOverrides = {};
+      const dbStickers = {};
+      for (const item of items) {
+        if (!item.key) continue;
+        if (item.color || item.shape) {
+          dbOverrides[item.key] = {
+            ...(item.color ? { color: item.color } : {}),
+            ...(item.shape ? { shape: item.shape } : {}),
+          };
+        }
+        if (item.sticker) dbStickers[item.key] = item.sticker;
+      }
+      if (Object.keys(dbOverrides).length > 0 || Object.keys(dbStickers).length > 0) {
+        setPrefs(prev => ({
+          ...prev,
+          nodeOverrides: { ...dbOverrides, ...prev.nodeOverrides },
+          stickerMap: { ...dbStickers, ...prev.stickerMap },
+        }));
+      }
+    }).catch(() => {});
+  }, []);
+
   // Apply CSS variables whenever theme, font, or branch colors change
   useEffect(() => {
     const root = document.documentElement;
@@ -180,7 +207,7 @@ export function DesignProvider({ children }) {
     }));
   }, []);
 
-  // Per-node style override (shape, color) — persisted to localStorage, syncs across all views
+  // Per-node style override (shape, color) — persisted to localStorage + DB
   const setNodeOverride = useCallback((nodeId, overrideProps) => {
     setPrefs(prev => ({
       ...prev,
@@ -189,6 +216,17 @@ export function DesignProvider({ children }) {
         [nodeId]: { ...(prev.nodeOverrides?.[nodeId] || {}), ...overrideProps },
       },
     }));
+    // Persist to ServiceCatalog DB (non-blocking)
+    if (overrideProps.color || overrideProps.shape) {
+      ServiceCatalog.filter({ key: nodeId }).then(results => {
+        if (results?.[0]) {
+          const updates = {};
+          if (overrideProps.color) updates.color = overrideProps.color;
+          if (overrideProps.shape) updates.shape = overrideProps.shape;
+          ServiceCatalog.update(results[0].id, updates);
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const getNodeOverride = useCallback((nodeId) => {
@@ -230,13 +268,26 @@ export function DesignProvider({ children }) {
           },
         },
       }));
+      // Persist to ServiceCatalog DB (non-blocking)
+      const dbUpdates = {};
+      if (shape) dbUpdates.shape = shape;
+      if (color) dbUpdates.color = color;
+      ServiceCatalog.filter({ key: targetId }).then(results => {
+        if (results?.[0]) ServiceCatalog.update(results[0].id, dbUpdates);
+      }).catch(() => {});
     }
     if (sticker !== undefined) {
       setPrefs(prev => ({
         ...prev,
         stickerMap: { ...prev.stickerMap, [targetId]: sticker },
       }));
+      // Persist sticker to ServiceCatalog DB
+      ServiceCatalog.filter({ key: targetId }).then(results => {
+        if (results?.[0]) ServiceCatalog.update(results[0].id, { sticker });
+      }).catch(() => {});
     }
+    // Emit global event so Settings page knows design changed
+    window.dispatchEvent(new CustomEvent('calmplan:design-changed', { detail: { targetId, shape, color, sticker } }));
   }, [activeTaskId]);
 
   const clearSelection = useCallback(() => {
