@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserPreferences } from '@/api/entities';
 
-// ייצוא התבניות שחסר וגורם לשגיאת Build
 export const MAP_TEMPLATES = {
   modern: { bg: '#f8f9fa', node: 'bubble' },
   organic: { bg: '#ffffff', node: 'cloud' },
@@ -18,15 +17,22 @@ export const DesignProvider = ({ children }) => {
     curvature: 0.5,
     nodeOverrides: {},
     stickerMap: {},
-    activeBranches: [],
     isLoaded: false
   });
 
+  // מנגנון אתחול בטוח
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 5;
+
     async function initDesign() {
-      try {
-        // הגנה מפני קריסה אם הישות עדיין לא נטענה
-        if (typeof UserPreferences !== 'undefined' && UserPreferences?.filter) {
+      // בדיקה אם הישות קיימת ומוכנה לפעולה
+      const isEntityReady = typeof UserPreferences !== 'undefined' && 
+                             UserPreferences !== null && 
+                             typeof UserPreferences.filter === 'function';
+
+      if (isEntityReady) {
+        try {
           const prefs = await UserPreferences.filter();
           if (prefs && prefs.length > 0) {
             const p = prefs[0];
@@ -40,29 +46,43 @@ export const DesignProvider = ({ children }) => {
             }));
             return;
           }
+        } catch (err) {
+          console.warn('Preferences filter failed, using defaults');
         }
         setDesignState(prev => ({ ...prev, isLoaded: true }));
-      } catch (err) {
-        console.warn('Design init deferred');
+      } else if (retryCount < maxRetries) {
+        // אם הישות עוד לא נטענה (race condition), נחכה חצי שנייה וננסה שוב
+        retryCount++;
+        setTimeout(initDesign, 500);
+      } else {
+        // ויתור ושימוש בברירת מחדל כדי לא לתקוע את האפליקציה
         setDesignState(prev => ({ ...prev, isLoaded: true }));
       }
     }
+
     initDesign();
   }, []);
 
   const updateDesign = useCallback(async (updates) => {
     setDesignState(prev => ({ ...prev, ...updates }));
+    
     try {
-      if (typeof UserPreferences !== 'undefined' && UserPreferences?.update) {
+      const canUpdate = typeof UserPreferences !== 'undefined' && 
+                        UserPreferences?.update;
+
+      if (canUpdate) {
         const dbUpdates = {};
         if (updates.lineStyle) dbUpdates.line_style = updates.lineStyle;
         if (updates.theme) dbUpdates.theme = updates.theme;
         if (updates.shape) dbUpdates.shape = updates.shape;
         if (typeof updates.curvature !== 'undefined') dbUpdates.curvature = updates.curvature;
-        await UserPreferences.update('me', dbUpdates);
+
+        if (Object.keys(dbUpdates).length > 0) {
+          await UserPreferences.update('me', dbUpdates);
+        }
       }
     } catch (err) {
-      console.error('Save failed', err);
+      console.error('Persistence failed:', err);
     }
   }, []);
 
