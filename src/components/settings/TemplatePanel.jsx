@@ -16,6 +16,7 @@ import {
   GitBranch, ArrowRight, GitMerge,
 } from 'lucide-react';
 import { getServiceWeight } from '@/config/serviceWeights';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
 
 const DNA_COLORS = {
   P1: '#00A3E0',
@@ -757,7 +758,7 @@ function CategoryEditor({ categories, allNodes, allServices, pColor, onAdd, onRe
           <Badge key={`${cat}-${i}`} variant="outline"
             className="text-[9px] px-2 py-0.5 rounded-full group cursor-default"
             style={{ borderColor: pColor + '40', color: pColor }}>
-            {cat}
+            {resolveCategoryLabel(cat)}
             <button onClick={() => onRemove(i)}
               className="mr-1 opacity-0 group-hover:opacity-100"><X className="w-2.5 h-2.5" /></button>
           </Badge>
@@ -792,7 +793,7 @@ function CategoryEditor({ categories, allNodes, allServices, pColor, onAdd, onRe
                 onClick={() => { onAdd(cat); setCatSearch(''); }}
                 className="w-full text-right px-2.5 py-1.5 text-[10px] hover:bg-blue-50 transition-all"
                 style={{ borderBottom: '1px solid #f0f0f0', direction: 'rtl' }}>
-                + {cat}
+                + {resolveCategoryLabel(cat)}
               </button>
             ))}
           </div>

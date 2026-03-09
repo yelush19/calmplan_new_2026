@@ -12,6 +12,7 @@ import {
 import { Task, Client, Project, StickyNote as StickyNoteEntity } from '@/api/entities';
 import { createPageUrl } from '@/utils';
 import { ALL_SERVICES } from '@/config/processTemplates';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
 
 const ENTITY_CONFIGS = [
   {
@@ -38,7 +39,7 @@ const ENTITY_CONFIGS = [
       if (item.client_name) params.set('clientName', item.client_name);
       return `${createPageUrl('Tasks')}?${params.toString()}`;
     },
-    getSubtitle: (item) => [item.client_name, item.category, item.branch, item.status === 'production_completed' ? 'הושלם ייצור' : item.status === 'not_started' ? 'טרם התחיל' : ''].filter(Boolean).join(' | '),
+    getSubtitle: (item) => [item.client_name, resolveCategoryLabel(item.category), item.branch, item.status === 'production_completed' ? 'הושלם ייצור' : item.status === 'not_started' ? 'טרם התחיל' : ''].filter(Boolean).join(' | '),
   },
   {
     key: 'projects',

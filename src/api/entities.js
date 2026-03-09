@@ -1,20 +1,18 @@
-import { base44 } from './base44Client';
+import { _registry } from './entityRegistry';
 
 // ── Lazy Entity Accessors ──
-// Uses getter functions to avoid TDZ (Temporal Dead Zone) crashes.
-// The base44.entities object may not be fully initialized when this
-// module is first evaluated (due to circular import chains like
-// entities → base44Client → automationEngine → entities).
-// By wrapping each export in a Proxy, the actual access to
-// base44.entities[name] is deferred until runtime (first method call).
+// Reads from the shared _registry object (populated by base44Client.js).
+// This completely eliminates the circular import chain that caused
+// "Cannot access 'T' before initialization" TDZ crashes.
+// The Proxy defers access until the first method call (runtime),
+// by which point base44Client.js has finished initializing.
 
 function lazyEntity(name) {
   return new Proxy({}, {
     get(_, prop) {
-      const entity = base44.entities?.[name];
+      const entity = _registry.entities?.[name];
       if (!entity) {
         console.warn(`[entities] ${name} not yet initialized, returning no-op for .${String(prop)}`);
-        // Return safe no-ops for common methods
         if (prop === 'list') return async () => [];
         if (prop === 'filter') return async () => [];
         if (prop === 'create') return async (d) => d;
@@ -60,10 +58,10 @@ export const PeriodicReport = lazyEntity('PeriodicReport');
 export const FileMetadata = lazyEntity('FileMetadata');
 export const ServiceCatalog = lazyEntity('ServiceCatalog');
 
-// auth sdk — lazy accessor to avoid TDZ crash (same pattern as entities above)
+// auth sdk — lazy accessor via registry (no direct base44 import)
 export const User = new Proxy({}, {
   get(_, prop) {
-    const auth = base44.auth;
+    const auth = _registry.auth;
     if (!auth) {
       console.warn(`[entities] User.auth not yet initialized, returning no-op for .${String(prop)}`);
       if (prop === 'login') return async () => ({});
