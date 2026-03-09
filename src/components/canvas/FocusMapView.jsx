@@ -80,12 +80,11 @@ export default function FocusMapView({
   const [focusedNode, setFocusedNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
 
-  // Design engine — global preferences
-  let design = null;
-  try { design = useDesign(); } catch { /* not mounted */ }
-  const globalShape = design?.shape || 'bubble';
-  const globalLineStyle = design?.lineStyle || 'tapered';
-  const branchColors = design?.branchColors || FOCUS_DNA_DEFAULTS;
+  // Design engine (safe — useDesign returns fallback if outside provider)
+  const design = useDesign();
+  const globalShape = design.shape || 'bubble';
+  const globalLineStyle = design.lineStyle || 'tapered';
+  const branchColors = design.branchColors || FOCUS_DNA_DEFAULTS;
 
   // All sibling tasks for dependency checking — use allTasks if provided, else tasks
   const siblingPool = allTasks || tasks;
