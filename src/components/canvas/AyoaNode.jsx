@@ -1,22 +1,30 @@
 /**
- * ── AyoaNode: Reusable AYOA-style SVG node shapes ──
- * 6 Organic Shapes: Cloud, Bubble, Speech, Diamond, Pill, Star
+ * -- AyoaNode: Reusable AYOA-style SVG node shapes --
+ * 9 Organic Shapes: Cloud, Bubble, Speech, Diamond, Pill, Star, Capsule, Hexagon, RoundedRect
  * Soft glow halos, DNA-driven colors, absolute SVG coords.
  *
+ * Now integrated with DesignContext:
+ * - Checks nodeOverrides[nodeId] for per-node shape/color before falling back to props
+ * - Renders stickers from stickerMap as emoji overlays
+ * - Triggers pulse/glow animation when the node's branch is active
+ *
  * Props:
- *   cx, cy     — center coordinates (SVG viewBox units)
- *   size       — radius/half-width
- *   shape      — 'cloud' | 'bubble' | 'speech' | 'diamond' | 'pill' | 'star'
- *   fill       — background fill color
- *   stroke     — border stroke color
- *   strokeWidth — border width (default 2)
- *   glow       — enable soft glow halo (default true)
- *   glowColor  — glow color (defaults to stroke)
+ *   cx, cy     -- center coordinates (SVG viewBox units)
+ *   size       -- radius/half-width
+ *   shape      -- 'cloud' | 'bubble' | 'speech' | 'diamond' | 'pill' | 'star' | ...
+ *   fill       -- background fill color
+ *   stroke     -- border stroke color
+ *   strokeWidth -- border width (default 2)
+ *   glow       -- enable soft glow halo (default true)
+ *   glowColor  -- glow color (defaults to stroke)
+ *   nodeId     -- unique node identifier for DesignContext overrides & stickers
+ *   branchKey  -- branch identifier (P1-P5) for pulse animation
  */
 
 import React from 'react';
+import { useDesign } from '@/contexts/DesignContext';
 
-// ── AYOA Hex Bible — Full Vibrant Spectrum ──
+// -- AYOA Hex Bible -- Full Vibrant Spectrum --
 export const AYOA_PALETTE = {
   magenta:  '#E91E63',
   mustard:  '#FFC107',
@@ -40,7 +48,7 @@ export const AYOA_PALETTE = {
   mint:     '#1DE9B6',
 };
 
-// ── Shape path builders — all return SVG element(s), absolute coords only ──
+// -- Shape path builders -- all return SVG element(s), absolute coords only --
 const SHAPE_RENDERERS = {
   cloud: (cx, cy, r, fill, stroke, sw) => {
     const d = `M ${cx - r * 0.55} ${cy + r * 0.22} ` +
@@ -105,7 +113,7 @@ const SHAPE_RENDERERS = {
       rx={14} fill={fill} stroke={stroke} strokeWidth={sw} />
   ),
 
-  // ── New shapes for Design Engine ──
+  // -- New shapes for Design Engine --
   capsule: (cx, cy, r, fill, stroke, sw) => (
     <rect x={cx - r * 1.2} y={cy - r * 0.5} width={r * 2.4} height={r}
       rx={r * 0.5} fill={fill} stroke={stroke} strokeWidth={sw} />
@@ -122,6 +130,26 @@ const SHAPE_RENDERERS = {
 
 export const SHAPE_KEYS = ['cloud', 'bubble', 'speech', 'diamond', 'pill', 'star', 'capsule', 'hexagon', 'roundedRect'];
 
+// -- Pulse animation keyframes (injected once) --
+const PULSE_STYLE_ID = 'ayoa-pulse-keyframes';
+function ensurePulseStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(PULSE_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = PULSE_STYLE_ID;
+  style.textContent = `
+    @keyframes ayoa-pulse {
+      0%, 100% { opacity: 0.15; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(1.08); }
+    }
+    .ayoa-pulse-glow {
+      animation: ayoa-pulse 2s ease-in-out infinite;
+      transform-origin: center center;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 export default function AyoaNode({
   cx, cy, size = 30,
   shape = 'bubble',
@@ -133,18 +161,53 @@ export default function AyoaNode({
   onClick,
   style,
   children,
+  nodeId,
+  branchKey,
 }) {
-  const renderer = SHAPE_RENDERERS[shape] || SHAPE_RENDERERS.bubble;
+  const design = useDesign();
+
+  // -- Global Rendering: Check nodeOverrides for this node before using prop defaults --
+  const override = nodeId ? design.getNodeOverride?.(nodeId) : null;
+  const effectiveShape = override?.shape || shape;
+  const effectiveFill = override?.color || fill;
+  const sticker = nodeId ? design.stickerMap?.[nodeId] : null;
+
+  // -- Pulse Animation: Glow when branch is active --
+  const isActive = branchKey ? design.isBranchActive?.(branchKey) : false;
+  if (isActive) ensurePulseStyles();
+
+  const renderer = SHAPE_RENDERERS[effectiveShape] || SHAPE_RENDERERS.bubble;
   const gc = glowColor || stroke;
 
   return (
     <g onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', ...style }}>
+      {/* Pulse glow ring for active branches */}
+      {isActive && (
+        <g className="ayoa-pulse-glow" opacity={0.25}>
+          {renderer(cx, cy, size + 10, 'none', gc, 3)}
+        </g>
+      )}
+      {/* Standard soft glow halo */}
       {glow && (
         <g opacity={0.2}>
           {renderer(cx, cy, size + 5, 'none', gc, 0)}
         </g>
       )}
-      {renderer(cx, cy, size, fill, stroke, strokeWidth)}
+      {/* Main shape */}
+      {renderer(cx, cy, size, effectiveFill, stroke, strokeWidth)}
+      {/* Sticker overlay from DesignContext */}
+      {sticker && (
+        <text
+          x={cx + size * 0.55}
+          y={cy - size * 0.55}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={size * 0.55}
+          style={{ pointerEvents: 'none', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' }}
+        >
+          {sticker}
+        </text>
+      )}
       {children}
     </g>
   );
@@ -152,14 +215,23 @@ export default function AyoaNode({
 
 /**
  * Render a shape at the given position (standalone function for views).
+ * Now supports optional nodeId for DesignContext override lookups.
  */
-export function renderNodeShape(shape, x, y, r, fill, stroke, sw = 2.5) {
-  const renderer = SHAPE_RENDERERS[shape] || SHAPE_RENDERERS.bubble;
-  return renderer(x, y, r, fill, stroke, sw);
+export function renderNodeShape(shape, x, y, r, fill, stroke, sw = 2.5, nodeId = null, designCtx = null) {
+  // If a designCtx is passed, check for per-node overrides
+  let effectiveShape = shape;
+  let effectiveFill = fill;
+  if (designCtx && nodeId) {
+    const override = designCtx.getNodeOverride?.(nodeId);
+    if (override?.shape) effectiveShape = override.shape;
+    if (override?.color) effectiveFill = override.color;
+  }
+  const renderer = SHAPE_RENDERERS[effectiveShape] || SHAPE_RENDERERS.bubble;
+  return renderer(x, y, r, effectiveFill, stroke, sw);
 }
 
 /**
- * Tapered Bezier branch path — thick at base, thin at tip.
+ * Tapered Bezier branch path -- thick at base, thin at tip.
  * Returns SVG path d-string. Absolute coords only.
  */
 export function buildTaperedBranch(sx, sy, ex, ey, startW = 5, endW = 1.5) {

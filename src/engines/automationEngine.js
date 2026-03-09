@@ -1,15 +1,19 @@
 /**
- * ── Automation Engine: Sequence, Archive, Status Sync, Cognitive Load ──
+ * -- Automation Engine: Sequence, Archive, Status Sync, Cognitive Load --
  *
  * 5 automation modules:
- *   1. Sequence Engine — auto-unlock tasks when prerequisites complete
- *   2. Auto-Archive — move completed tasks to archive after 24h
- *   3. Status Sync — detect active sub-tasks for parent branch pulse
- *   4. Cognitive Load — compute daily load vs threshold
- *   5. Automation Log — record all automated actions
+ *   1. Sequence Engine -- auto-unlock tasks when prerequisites complete
+ *   2. Auto-Archive -- move completed tasks to archive after 24h
+ *   3. Status Sync -- detect active sub-tasks for parent branch pulse
+ *   4. Cognitive Load -- compute daily load vs threshold
+ *   5. Automation Log -- record all automated actions
  *
  * All automations respect the global "automationsPaused" toggle.
  * Log is stored in localStorage for UI display.
+ *
+ * IMPORTANT: All Task.update calls use PARTIAL updates (only status-related
+ * fields) to preserve shape, color, sticker, and other design metadata
+ * set by the DesignContext.
  */
 
 import { Task } from '@/api/entities';
@@ -17,9 +21,9 @@ import { Task } from '@/api/entities';
 const LOG_KEY = 'calmplan_automation_log';
 const MAX_LOG_ENTRIES = 200;
 
-// ═══════════════════════════════════════════════
+// ===============================================
 // AUTOMATION LOG
-// ═══════════════════════════════════════════════
+// ===============================================
 
 export function getAutomationLog() {
   try {
@@ -45,22 +49,30 @@ export function clearAutomationLog() {
   localStorage.removeItem(LOG_KEY);
 }
 
-// ═══════════════════════════════════════════════
-// 1. SEQUENCE ENGINE — Auto-Unlock Prerequisites
-// ═══════════════════════════════════════════════
+// ===============================================
+// 1. SEQUENCE ENGINE -- Auto-Unlock Prerequisites
+// ===============================================
 
 /**
  * When a task is marked as done, check if any other task was
  * waiting for it as a prerequisite. If so, "unlock" the dependent task.
  *
- * @param {Object} completedTask — the task that was just completed
- * @param {Object[]} allTasks — all tasks in the system
- * @param {boolean} paused — global automation pause toggle
- * @returns {Object[]} — list of tasks that were unlocked
+ * Uses PARTIAL updates to preserve design metadata (shape, color, sticker).
+ * Also triggers sticker automation: auto-adds checkmark sticker on completion.
+ *
+ * @param {Object} completedTask -- the task that was just completed
+ * @param {Object[]} allTasks -- all tasks in the system
+ * @param {boolean} paused -- global automation pause toggle
+ * @returns {Object[]} -- list of tasks that were unlocked
  */
 export async function processSequenceUnlock(completedTask, allTasks, paused = false) {
   if (paused) return [];
   if (completedTask.status !== 'production_completed') return [];
+
+  // -- Sticker Automation: auto-add checkmark on production_completed --
+  window.dispatchEvent(new CustomEvent('calmplan:task-completed', {
+    detail: { taskId: completedTask.id },
+  }));
 
   const unlocked = [];
 
@@ -92,7 +104,8 @@ export async function processSequenceUnlock(completedTask, allTasks, paused = fa
       (dep.status === 'not_started' && Array.isArray(dep.dependency_ids) && dep.dependency_ids.length > 0);
     if (allPrereqsMet && isLocked) {
       try {
-        await Task.update(dep.id, { ...dep, status: 'not_started' });
+        // PARTIAL update: only change status, preserve all other fields (shape, color, sticker, etc.)
+        await Task.update(dep.id, { status: 'not_started' });
         unlocked.push(dep);
         logAutomation('task_unlocked', {
           taskId: dep.id,
@@ -123,7 +136,7 @@ function checkAllPrerequisitesMet(task, allTasks) {
 }
 
 /**
- * isTaskLocked — UI helper: returns true if a task has unmet prerequisites.
+ * isTaskLocked -- UI helper: returns true if a task has unmet prerequisites.
  * Use this to visually lock tasks on kanban/lists/maps.
  */
 export function isTaskLocked(task, allTasks) {
@@ -132,7 +145,7 @@ export function isTaskLocked(task, allTasks) {
 }
 
 /**
- * getPrerequisiteStatus — returns detailed AND gate state for a task.
+ * getPrerequisiteStatus -- returns detailed AND gate state for a task.
  * { locked, total, completed, pending: [{ id, title, status }] }
  */
 export function getPrerequisiteStatus(task, allTasks) {
@@ -158,8 +171,10 @@ export function getPrerequisiteStatus(task, allTasks) {
 }
 
 /**
- * runConditionalFlowCheck — Scan all tasks and lock/unlock based on AND rule.
+ * runConditionalFlowCheck -- Scan all tasks and lock/unlock based on AND rule.
  * Called on startup or after batch operations to ensure consistency.
+ *
+ * Uses PARTIAL updates to preserve design metadata.
  */
 export async function runConditionalFlowCheck(allTasks, paused = false) {
   if (paused) return { locked: 0, unlocked: 0 };
@@ -173,9 +188,9 @@ export async function runConditionalFlowCheck(allTasks, paused = false) {
     const allMet = checkAllPrerequisitesMet(task, allTasks);
 
     if (!allMet && task.status === 'not_started') {
-      // Lock: set to waiting_for_materials
+      // Lock: set to waiting_for_materials (PARTIAL update only)
       try {
-        await Task.update(task.id, { ...task, status: 'waiting_for_materials' });
+        await Task.update(task.id, { status: 'waiting_for_materials' });
         locked++;
         logAutomation('task_locked_by_and_rule', {
           taskId: task.id, taskTitle: task.title,
@@ -186,9 +201,9 @@ export async function runConditionalFlowCheck(allTasks, paused = false) {
         });
       } catch { /* skip */ }
     } else if (allMet && task.status === 'waiting_for_materials') {
-      // Unlock: all prerequisites met
+      // Unlock: all prerequisites met (PARTIAL update only)
       try {
-        await Task.update(task.id, { ...task, status: 'not_started' });
+        await Task.update(task.id, { status: 'not_started' });
         unlocked++;
         logAutomation('task_unlocked_by_and_rule', {
           taskId: task.id, taskTitle: task.title,
@@ -200,17 +215,19 @@ export async function runConditionalFlowCheck(allTasks, paused = false) {
   return { locked, unlocked };
 }
 
-// ═══════════════════════════════════════════════
-// 2. AUTO-ARCHIVE — Move completed tasks after 24h
-// ═══════════════════════════════════════════════
+// ===============================================
+// 2. AUTO-ARCHIVE -- Move completed tasks after 24h
+// ===============================================
 
 /**
  * Scan all tasks and archive those completed more than 24h ago.
  * "Archive" = set context to 'archived' (preserves data, hides from active views).
  *
+ * Uses PARTIAL updates to preserve design metadata.
+ *
  * @param {Object[]} allTasks
  * @param {boolean} paused
- * @returns {number} — count of archived tasks
+ * @returns {number} -- count of archived tasks
  */
 export async function processAutoArchive(allTasks, paused = false) {
   if (paused) return 0;
@@ -230,7 +247,8 @@ export async function processAutoArchive(allTasks, paused = false) {
     const elapsed = now - new Date(completedAt).getTime();
     if (elapsed >= TWENTY_FOUR_HOURS) {
       try {
-        await Task.update(task.id, { ...task, context: 'archived' });
+        // PARTIAL update: only set context, preserve all design metadata
+        await Task.update(task.id, { context: 'archived' });
         archived++;
         logAutomation('task_archived', {
           taskId: task.id,
@@ -244,17 +262,20 @@ export async function processAutoArchive(allTasks, paused = false) {
   return archived;
 }
 
-// ═══════════════════════════════════════════════
-// 3. STATUS SYNC — Detect active sub-tasks for parent pulse
-// ═══════════════════════════════════════════════
+// ===============================================
+// 3. STATUS SYNC -- Detect active sub-tasks for parent pulse
+// ===============================================
 
 /**
  * Find branches (P1-P5 categories) that have at least one
  * sub-task currently "in_progress" or "needs_corrections".
  * These branches should visually pulse in the MindMap.
  *
+ * Also dispatches 'calmplan:active-branches' event so the DesignContext
+ * can trigger pulse/glow animations on AyoaNode rendering.
+ *
  * @param {Object[]} allTasks
- * @returns {Set<string>} — set of active branch categories
+ * @returns {Set<string>} -- set of active branch categories
  */
 export function getActiveBranches(allTasks) {
   const active = new Set();
@@ -266,18 +287,26 @@ export function getActiveBranches(allTasks) {
       if (task.branch) active.add(task.branch);
     }
   }
+
+  // Dispatch event for DesignContext to pick up and trigger pulse animations
+  window.dispatchEvent(new CustomEvent('calmplan:active-branches', {
+    detail: { branches: Array.from(active) },
+  }));
+
   return active;
 }
 
-// ═══════════════════════════════════════════════
-// 4. COGNITIVE LOAD — Compute daily load vs threshold
-// ═══════════════════════════════════════════════
+// ===============================================
+// 4. COGNITIVE LOAD -- Compute daily load vs threshold
+// ===============================================
 
 /**
  * Compute total cognitive load (minutes) for today's active tasks.
+ * When overloaded, dispatches 'calmplan:cognitive-overload' event so the
+ * DesignContext auto-switches to 'soft-gray' theme and disables softShadows.
  *
- * @param {Object[]} todayTasks — tasks due today or in focus
- * @param {number} threshold — max allowed minutes (from settings)
+ * @param {Object[]} todayTasks -- tasks due today or in focus
+ * @param {number} threshold -- max allowed minutes (from settings)
  * @returns {{ total: number, threshold: number, overloaded: boolean, percentage: number }}
  */
 export function computeCognitiveLoad(todayTasks, threshold = 480) {
@@ -286,21 +315,29 @@ export function computeCognitiveLoad(todayTasks, threshold = 480) {
     if (t.status === 'production_completed' || t.status === 'cancelled') continue;
     total += (t.duration || t.estimated_minutes || 15); // default 15 min per task
   }
-  return {
-    total,
-    threshold,
-    overloaded: total > threshold,
-    percentage: threshold > 0 ? Math.round((total / threshold) * 100) : 0,
-  };
+
+  const overloaded = total > threshold;
+  const percentage = threshold > 0 ? Math.round((total / threshold) * 100) : 0;
+
+  // Dispatch cognitive overload event for DesignContext auto-theme switching
+  if (overloaded) {
+    window.dispatchEvent(new CustomEvent('calmplan:cognitive-overload', {
+      detail: { total, threshold, percentage, overloaded: true },
+    }));
+  }
+
+  return { total, threshold, overloaded, percentage };
 }
 
-// ═══════════════════════════════════════════════
-// 5. MASTER RUNNER — Runs all automations (called from useEffect)
-// ═══════════════════════════════════════════════
+// ===============================================
+// 5. MASTER RUNNER -- Runs all automations (called from useEffect)
+// ===============================================
 
 /**
  * Run all background automations. Called once per session or on task changes.
  * Respects the global pause toggle.
+ *
+ * Now also syncs active branches and cognitive load state with DesignContext.
  *
  * @param {Object[]} allTasks
  * @param {boolean} paused
@@ -311,6 +348,9 @@ export async function runAllAutomations(allTasks, paused = false) {
 
   const archived = await processAutoArchive(allTasks, paused);
   const andResult = await runConditionalFlowCheck(allTasks, paused);
+
+  // Sync active branches with DesignContext for pulse animations
+  getActiveBranches(allTasks);
 
   return {
     archived,

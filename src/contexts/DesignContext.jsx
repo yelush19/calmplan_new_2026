@@ -1,45 +1,48 @@
 /**
- * ── DesignContext: Global Visual Identity Engine ──
+ * -- DesignContext: Global Visual Identity Engine --
  *
  * Single source of truth for all visual preferences:
  * - Typography (font family)
  * - Theme (light / soft-gray / dark)
  * - Shape (cloud / capsule / hexagon / star / speech / bubble)
- * - Line style (solid / dashed / dotted / tapered)
+ * - Line style (solid / dashed / dotted / tapered / tapered-dashed / tapered-dotted)
+ * - Curvature (0-0.5 organic control from Design Panel)
  * - Glassmorphism toggle
  * - Soft shadows toggle
  * - Map template (ayoa-organic / mindmap-classic / minimalist)
  *
- * All changes persist in localStorage and propagate via CSS variables
- * to every mounted component — no refresh needed.
+ * All changes persist in localStorage, propagate via CSS variables,
+ * AND save to UserPreferences DB so the map doesn't reset on refresh.
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { ServiceCatalog } from '@/api/entities';
+import { ServiceCatalog, UserPreferences } from '@/api/entities';
 
 const LS_KEY = 'calmplan_design_prefs';
+const USER_PREFS_KEY = 'calmplan_global_design';
 
 const DEFAULTS = {
   fontFamily: 'Heebo',
   theme: 'light',           // light | soft-gray | dark
   shape: 'bubble',          // cloud | capsule | hexagon | star | speech | bubble | pill | diamond | roundedRect
-  lineStyle: 'tapered',     // solid | dashed | dotted | tapered
+  lineStyle: 'tapered',     // solid | dashed | dotted | tapered | tapered-dashed | tapered-dotted
+  curvature: 0.25,          // 0 = straight, 0.5 = very organic (linked to Design Panel)
   glassmorphism: false,
   softShadows: true,
   mapTemplate: 'ayoa-organic', // ayoa-organic | mindmap-classic | minimalist
-  stickerMap: {},            // nodeId → emoji/icon key
-  nodeOverrides: {},         // nodeId → { shape, color } — per-node style overrides (cross-page)
-  // ── Branch Color Engine: P1-P5 customizable colors ──
+  stickerMap: {},            // nodeId -> emoji/icon key
+  nodeOverrides: {},         // nodeId -> { shape, color, lineStyle } -- per-node style overrides (cross-page)
+  // -- Branch Color Engine: P1-P5 customizable colors --
   branchColors: {
-    P1: '#00A3E0',   // שכר — Sky Blue
-    P2: '#4682B4',   // הנה"ח — Steel Blue
-    P3: '#E91E63',   // ניהול — Magenta
-    P4: '#FFC107',   // בית/אישי — Warm Amber (hard default)
-    P5: '#2E7D32',   // דוחות — Forest Green
+    P1: '#00A3E0',   // Sky Blue
+    P2: '#4682B4',   // Steel Blue
+    P3: '#E91E63',   // Magenta
+    P4: '#FFC107',   // Warm Amber (hard default)
+    P5: '#2E7D32',   // Forest Green
   },
-  // ── Automation control ──
+  // -- Automation control --
   automationsPaused: false,
-  cognitiveLoadLimit: 480,   // minutes — daily focus threshold
+  cognitiveLoadLimit: 480,   // minutes -- daily focus threshold
 };
 
 // Theme CSS variable maps
@@ -82,29 +85,32 @@ const THEME_VARS = {
   },
 };
 
-// Map templates — preset combinations
+// Map templates -- preset combinations
 export const MAP_TEMPLATES = {
   'ayoa-organic': {
-    label: 'AYOA אורגני',
-    description: 'ענן + קווים טפלים + פסטל',
+    label: 'AYOA \u05d0\u05d5\u05e8\u05d2\u05e0\u05d9',
+    description: '\u05e2\u05e0\u05df + \u05e7\u05d5\u05d5\u05d9\u05dd \u05d8\u05e4\u05dc\u05d9\u05dd + \u05e4\u05e1\u05d8\u05dc',
     shape: 'cloud',
     lineStyle: 'tapered',
+    curvature: 0.25,
     glassmorphism: false,
     softShadows: true,
   },
   'mindmap-classic': {
-    label: 'מפת חשיבה קלאסית',
-    description: 'כמוסה + בזיה מלאה + צבעים חזקים',
+    label: '\u05de\u05e4\u05ea \u05d7\u05e9\u05d9\u05d1\u05d4 \u05e7\u05dc\u05e1\u05d9\u05ea',
+    description: '\u05db\u05de\u05d5\u05e1\u05d4 + \u05d1\u05d6\u05d9\u05d4 \u05de\u05dc\u05d0\u05d4 + \u05e6\u05d1\u05e2\u05d9\u05dd \u05d7\u05d6\u05e7\u05d9\u05dd',
     shape: 'capsule',
     lineStyle: 'solid',
+    curvature: 0.15,
     glassmorphism: false,
     softShadows: true,
   },
   minimalist: {
-    label: 'מינימליסטי',
-    description: 'מלבנים + קו מקווקו דק + גווני אפור',
+    label: '\u05de\u05d9\u05e0\u05d9\u05de\u05dc\u05d9\u05e1\u05d8\u05d9',
+    description: '\u05de\u05dc\u05d1\u05e0\u05d9\u05dd + \u05e7\u05d5 \u05de\u05e7\u05d5\u05d5\u05e7\u05d5 \u05d3\u05e7 + \u05d2\u05d5\u05d5\u05e0\u05d9 \u05d0\u05e4\u05d5\u05e8',
     shape: 'roundedRect',
     lineStyle: 'dashed',
+    curvature: 0.1,
     glassmorphism: true,
     softShadows: false,
   },
@@ -121,8 +127,12 @@ export function DesignProvider({ children }) {
     return { ...DEFAULTS };
   });
 
+  // Track DB prefs record ID for updates
+  const dbPrefsIdRef = useRef(null);
+
   // Load node overrides from DB on startup (merge with localStorage)
   useEffect(() => {
+    // Load per-node overrides from ServiceCatalog
     ServiceCatalog.list().then(items => {
       if (!items?.length) return;
       const dbOverrides = {};
@@ -145,6 +155,22 @@ export function DesignProvider({ children }) {
         }));
       }
     }).catch(() => {});
+
+    // Load global design prefs from UserPreferences DB (lineStyle, curvature, theme, etc.)
+    UserPreferences.filter({ key: USER_PREFS_KEY }).then(results => {
+      if (results?.[0]) {
+        dbPrefsIdRef.current = results[0].id;
+        const dbPrefs = {};
+        if (results[0].line_style) dbPrefs.lineStyle = results[0].line_style;
+        if (results[0].curvature != null) dbPrefs.curvature = results[0].curvature;
+        if (results[0].theme) dbPrefs.theme = results[0].theme;
+        if (results[0].shape) dbPrefs.shape = results[0].shape;
+        if (results[0].font_family) dbPrefs.fontFamily = results[0].font_family;
+        if (Object.keys(dbPrefs).length > 0) {
+          setPrefs(prev => ({ ...prev, ...dbPrefs }));
+        }
+      }
+    }).catch(() => {});
   }, []);
 
   // Apply CSS variables whenever theme, font, or branch colors change
@@ -153,8 +179,10 @@ export function DesignProvider({ children }) {
     const vars = THEME_VARS[prefs.theme] || THEME_VARS.light;
     Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v));
     root.style.setProperty('--cp-font', prefs.fontFamily);
+    // Curvature CSS variable for use in animations/transitions
+    root.style.setProperty('--cp-curvature', String(prefs.curvature));
 
-    // Branch color CSS variables — available everywhere
+    // Branch color CSS variables -- available everywhere
     if (prefs.branchColors) {
       Object.entries(prefs.branchColors).forEach(([branch, color]) => {
         root.style.setProperty(`--cp-${branch.toLowerCase()}`, color);
@@ -174,7 +202,7 @@ export function DesignProvider({ children }) {
     } else {
       root.classList.remove('cp-dark');
     }
-  }, [prefs.theme, prefs.fontFamily, prefs.glassmorphism, prefs.branchColors]);
+  }, [prefs.theme, prefs.fontFamily, prefs.glassmorphism, prefs.branchColors, prefs.curvature]);
 
   // Persist to localStorage on every change
   useEffect(() => {
@@ -183,31 +211,61 @@ export function DesignProvider({ children }) {
     } catch { /* ignore */ }
   }, [prefs]);
 
+  // -- Save Logic: Persist global design prefs to UserPreferences DB --
+  const persistToDb = useCallback((updates) => {
+    const dbPayload = {};
+    if (updates.lineStyle !== undefined) dbPayload.line_style = updates.lineStyle;
+    if (updates.curvature !== undefined) dbPayload.curvature = updates.curvature;
+    if (updates.theme !== undefined) dbPayload.theme = updates.theme;
+    if (updates.shape !== undefined) dbPayload.shape = updates.shape;
+    if (updates.fontFamily !== undefined) dbPayload.font_family = updates.fontFamily;
+    if (Object.keys(dbPayload).length === 0) return;
+
+    if (dbPrefsIdRef.current) {
+      UserPreferences.update(dbPrefsIdRef.current, dbPayload).catch(() => {});
+    } else {
+      UserPreferences.create({ key: USER_PREFS_KEY, ...dbPayload }).then(result => {
+        if (result?.id) dbPrefsIdRef.current = result.id;
+      }).catch(() => {});
+    }
+  }, []);
+
   const updatePref = useCallback((key, value) => {
     setPrefs(prev => ({ ...prev, [key]: value }));
-  }, []);
+    // Persist design-critical prefs to DB so the map doesn't reset on refresh
+    const DB_KEYS = ['lineStyle', 'curvature', 'theme', 'shape', 'fontFamily'];
+    if (DB_KEYS.includes(key)) {
+      persistToDb({ [key]: value });
+    }
+  }, [persistToDb]);
 
   const applyTemplate = useCallback((templateKey) => {
     const t = MAP_TEMPLATES[templateKey];
     if (!t) return;
-    setPrefs(prev => ({
-      ...prev,
+    const updates = {
       mapTemplate: templateKey,
       shape: t.shape,
       lineStyle: t.lineStyle,
+      curvature: t.curvature ?? DEFAULTS.curvature,
       glassmorphism: t.glassmorphism,
       softShadows: t.softShadows,
-    }));
-  }, []);
+    };
+    setPrefs(prev => ({ ...prev, ...updates }));
+    persistToDb(updates);
+  }, [persistToDb]);
 
   const setSticker = useCallback((nodeId, sticker) => {
     setPrefs(prev => ({
       ...prev,
       stickerMap: { ...prev.stickerMap, [nodeId]: sticker },
     }));
+    // Persist sticker to ServiceCatalog DB
+    ServiceCatalog.filter({ key: nodeId }).then(results => {
+      if (results?.[0]) ServiceCatalog.update(results[0].id, { sticker });
+    }).catch(() => {});
   }, []);
 
-  // Per-node style override (shape, color) — persisted to localStorage + DB
+  // Per-node style override (shape, color, lineStyle) -- persisted to localStorage + DB
   const setNodeOverride = useCallback((nodeId, overrideProps) => {
     setPrefs(prev => ({
       ...prev,
@@ -233,9 +291,12 @@ export function DesignProvider({ children }) {
     return prefs.nodeOverrides?.[nodeId] || null;
   }, [prefs.nodeOverrides]);
 
-  // ── Global Active Task Selection ──
+  // -- Global Active Task Selection --
   // Tracks which node is currently selected across ALL views.
   const [activeTaskId, setActiveTaskId] = useState(null);
+
+  // -- Active Branches for pulse animation --
+  const [activeBranches, setActiveBranches] = useState(new Set());
 
   // Listen for node-selected events from any canvas view
   useEffect(() => {
@@ -247,8 +308,34 @@ export function DesignProvider({ children }) {
     return () => window.removeEventListener('calmplan:node-selected', handler);
   }, []);
 
+  // Listen for active-branches updates from AutomationEngine
+  useEffect(() => {
+    const handler = (e) => {
+      const branches = e.detail?.branches;
+      if (branches) setActiveBranches(new Set(branches));
+    };
+    window.addEventListener('calmplan:active-branches', handler);
+    return () => window.removeEventListener('calmplan:active-branches', handler);
+  }, []);
+
+  // -- Cognitive Load auto-theme: switch to soft-gray when overloaded --
+  useEffect(() => {
+    const handler = (e) => {
+      const { overloaded } = e.detail || {};
+      if (overloaded) {
+        setPrefs(prev => {
+          // Only auto-switch if not already on soft-gray
+          if (prev.theme === 'soft-gray' && !prev.softShadows) return prev;
+          return { ...prev, theme: 'soft-gray', softShadows: false };
+        });
+      }
+    };
+    window.addEventListener('calmplan:cognitive-overload', handler);
+    return () => window.removeEventListener('calmplan:cognitive-overload', handler);
+  }, []);
+
   /**
-   * updateTaskStyle — the single function Design Panel buttons call.
+   * updateTaskStyle -- the single function Design Panel buttons call.
    * Applies shape/color/sticker to the currently selected activeTaskId.
    * Works across ALL views because nodeOverrides and stickerMap are global.
    */
@@ -290,6 +377,18 @@ export function DesignProvider({ children }) {
     window.dispatchEvent(new CustomEvent('calmplan:design-changed', { detail: { targetId, shape, color, sticker } }));
   }, [activeTaskId]);
 
+  // -- Sticker Automation: auto-add checkmark when task completes --
+  const addCompletionSticker = useCallback((taskId) => {
+    if (!taskId) return;
+    setPrefs(prev => ({
+      ...prev,
+      stickerMap: { ...prev.stickerMap, [taskId]: '\u2705' },
+    }));
+    ServiceCatalog.filter({ key: taskId }).then(results => {
+      if (results?.[0]) ServiceCatalog.update(results[0].id, { sticker: '\u2705' });
+    }).catch(() => {});
+  }, []);
+
   const clearSelection = useCallback(() => {
     setActiveTaskId(null);
   }, []);
@@ -311,6 +410,11 @@ export function DesignProvider({ children }) {
     }));
   }, []);
 
+  // Check if a branch is currently active (has in-progress work)
+  const isBranchActive = useCallback((branchKey) => {
+    return activeBranches.has(branchKey);
+  }, [activeBranches]);
+
   return (
     <DesignContext.Provider value={{
       ...prefs,
@@ -326,6 +430,9 @@ export function DesignProvider({ children }) {
       setActiveTaskId,
       updateTaskStyle,
       clearSelection,
+      activeBranches,
+      isBranchActive,
+      addCompletionSticker,
     }}>
       {children}
     </DesignContext.Provider>
@@ -347,6 +454,9 @@ const SAFE_FALLBACK = {
   setActiveTaskId: () => {},
   updateTaskStyle: () => {},
   clearSelection: () => {},
+  activeBranches: new Set(),
+  isBranchActive: () => false,
+  addCompletionSticker: () => {},
 };
 
 export function useDesign() {

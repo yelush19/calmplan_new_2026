@@ -412,35 +412,64 @@ export default function DesignFloatingTab() {
 
               {/* ══ LINES TAB ══ */}
               {activeTab === 'lines' && (
-                <Section label="סגנון חיבור">
-                  <div className="space-y-1.5">
-                    {LINE_STYLE_OPTIONS.map(ls => {
-                      const isActive = design.lineStyle === ls.key;
-                      return (
-                        <button key={ls.key} onClick={() => design.updatePref('lineStyle', ls.key)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all ${
-                            isActive ? 'shadow-sm' : 'border-transparent hover:bg-gray-50'
-                          }`}
-                          style={{
-                            borderColor: isActive ? '#E91E63' : 'transparent',
-                            background: isActive ? '#E91E6308' : undefined,
-                          }}>
-                          <LinePreview style={ls.key} color={isActive ? '#E91E63' : '#94A3B8'} active={isActive} />
-                          <div className="flex-1 text-right">
-                            <div className="text-[11px] font-bold"
-                              style={{ color: isActive ? '#E91E63' : 'var(--cp-text)' }}>
-                              {ls.label}
+                <>
+                  <Section label="סגנון חיבור">
+                    <div className="space-y-1.5">
+                      {LINE_STYLE_OPTIONS.map(ls => {
+                        const isActive = design.lineStyle === ls.key;
+                        return (
+                          <button key={ls.key} onClick={() => design.updatePref('lineStyle', ls.key)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all ${
+                              isActive ? 'shadow-sm' : 'border-transparent hover:bg-gray-50'
+                            }`}
+                            style={{
+                              borderColor: isActive ? '#E91E63' : 'transparent',
+                              background: isActive ? '#E91E6308' : undefined,
+                            }}>
+                            <LinePreview style={ls.key} color={isActive ? '#E91E63' : '#94A3B8'} active={isActive} />
+                            <div className="flex-1 text-right">
+                              <div className="text-[11px] font-bold"
+                                style={{ color: isActive ? '#E91E63' : 'var(--cp-text)' }}>
+                                {ls.label}
+                              </div>
+                              <div className="text-[9px]"
+                                style={{ color: 'var(--cp-text-secondary)' }}>
+                                {ls.description}
+                              </div>
                             </div>
-                            <div className="text-[9px]"
-                              style={{ color: 'var(--cp-text-secondary)' }}>
-                              {ls.description}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </Section>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Section>
+
+                  {/* Curvature slider — controls how organic or straight the lines are */}
+                  <Section label="עקמומיות (אורגני ↔ ישר)">
+                    <div className="flex items-center gap-3 px-1">
+                      <span className="text-[10px] font-bold shrink-0" style={{ color: 'var(--cp-text-secondary)' }}>ישר</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="50"
+                        step="1"
+                        value={Math.round((design.curvature || 0.25) * 100)}
+                        onChange={(e) => design.updatePref('curvature', Number(e.target.value) / 100)}
+                        className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+                        style={{
+                          background: `linear-gradient(to right, #E91E63 ${((design.curvature || 0.25) / 0.5) * 100}%, #E2E8F0 ${((design.curvature || 0.25) / 0.5) * 100}%)`,
+                          accentColor: '#E91E63',
+                        }}
+                      />
+                      <span className="text-[10px] font-bold shrink-0" style={{ color: 'var(--cp-text-secondary)' }}>אורגני</span>
+                    </div>
+                    <div className="text-center mt-1">
+                      <span className="text-[9px] font-mono px-2 py-0.5 rounded-lg"
+                        style={{ background: 'var(--cp-bg-secondary)', color: 'var(--cp-text-secondary)' }}>
+                        {(design.curvature || 0.25).toFixed(2)}
+                      </span>
+                    </div>
+                  </Section>
+                </>
               )}
 
               {/* ══ STICKERS TAB ══ */}
