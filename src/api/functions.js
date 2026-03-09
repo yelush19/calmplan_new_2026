@@ -4,12 +4,13 @@
  * Monday.com integration REMOVED (Kill Monday directive)
  */
 
-import { base44, exportAllData, importAllData, clearAllData } from './base44Client';
+import { exportAllData, importAllData, clearAllData } from './base44Client';
+import { _registry } from './entityRegistry';
 
-// Lazy accessor to avoid TDZ crash from circular imports
+// Lazy accessor via shared registry — no direct base44 import needed
 const entities = new Proxy({}, {
   get(_, prop) {
-    return base44.entities?.[prop];
+    return _registry.entities?.[prop];
   },
 });
 import { getDueDateForCategory, isClient874 } from '@/config/taxCalendar2026';

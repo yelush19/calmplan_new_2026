@@ -3,6 +3,7 @@
 import { isSupabaseConfigured, supabase, testSupabaseConnection } from './supabaseClient';
 import * as localDB from './localDB';
 import * as supabaseDB from './supabaseDB';
+import { _registry } from './entityRegistry';
 
 const primary = isSupabaseConfigured ? supabaseDB : localDB;
 
@@ -185,6 +186,10 @@ export const base44 = {
   functions: {},
   integrations: { Core: {} }
 };
+
+// ── Register into shared registry so entities.js can access without circular import ──
+_registry.entities = entities;
+_registry.auth = primary.auth;
 
 /** Runtime diagnostic: what data source is active? */
 export function getDataSourceInfo() {

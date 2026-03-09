@@ -212,7 +212,7 @@ export default function SettingsPage() {
           <div className="space-y-4">
             {/* MindMap + TemplatePanel */}
             <div className="relative">
-              <SettingsMindMap onSelectService={setSelectedService} />
+              <SettingsMindMap onSelectService={setSelectedService} onConfigChange={() => setIsDirty(true)} />
               {selectedService && (
                 <TemplatePanel service={selectedService} onClose={() => setSelectedService(null)} />
               )}
