@@ -162,7 +162,7 @@ export function DesignProvider({ children }) {
       }
     }).catch(() => {});
 
-    // Load global design prefs from UserPreferences DB (lineStyle, curvature, theme, etc.)
+    // Load global design prefs from UserPreferences DB (lineStyle, curvature, theme, branchColors, etc.)
     UserPreferences.filter({ key: USER_PREFS_KEY }).then(results => {
       if (results?.[0]) {
         dbPrefsIdRef.current = results[0].id;
@@ -172,6 +172,10 @@ export function DesignProvider({ children }) {
         if (results[0].theme) dbPrefs.theme = results[0].theme;
         if (results[0].shape) dbPrefs.shape = results[0].shape;
         if (results[0].font_family) dbPrefs.fontFamily = results[0].font_family;
+        // Restore branch colors from DB (P1-P5 customized colors)
+        if (results[0].branch_colors && typeof results[0].branch_colors === 'object') {
+          dbPrefs.branchColors = { ...DEFAULTS.branchColors, ...results[0].branch_colors };
+        }
         if (Object.keys(dbPrefs).length > 0) {
           setPrefs(prev => ({ ...prev, ...dbPrefs }));
         }
@@ -232,6 +236,7 @@ export function DesignProvider({ children }) {
     if (updates.theme !== undefined) dbPayload.theme = updates.theme;
     if (updates.shape !== undefined) dbPayload.shape = updates.shape;
     if (updates.fontFamily !== undefined) dbPayload.font_family = updates.fontFamily;
+    if (updates.branchColors !== undefined) dbPayload.branch_colors = updates.branchColors;
     if (Object.keys(dbPayload).length === 0) return;
 
     // If a write is in-flight, merge into pending queue (will flush after current write)
@@ -272,6 +277,7 @@ export function DesignProvider({ children }) {
             Object.fromEntries(Object.entries(pending).map(([k, v]) => {
               if (k === 'line_style') return ['lineStyle', v];
               if (k === 'font_family') return ['fontFamily', v];
+              if (k === 'branch_colors') return ['branchColors', v];
               return [k, v];
             }))
           );
@@ -285,7 +291,7 @@ export function DesignProvider({ children }) {
   const updatePref = useCallback((key, value) => {
     setPrefs(prev => ({ ...prev, [key]: value }));
     // Persist design-critical prefs to DB so the map doesn't reset on refresh
-    const DB_KEYS = ['lineStyle', 'curvature', 'theme', 'shape', 'fontFamily'];
+    const DB_KEYS = ['lineStyle', 'curvature', 'theme', 'shape', 'fontFamily', 'branchColors'];
     if (DB_KEYS.includes(key)) {
       persistToDb({ [key]: value });
     }
@@ -454,13 +460,17 @@ export function DesignProvider({ children }) {
     return prefs.branchColors?.[branch] || DEFAULTS.branchColors[branch] || '#64748B';
   }, [prefs.branchColors]);
 
-  // Set a single branch color
+  // Set a single branch color — updates state + CSS var + DB in one shot
   const setBranchColor = useCallback((branch, color) => {
-    setPrefs(prev => ({
-      ...prev,
-      branchColors: { ...prev.branchColors, [branch]: color },
-    }));
-  }, []);
+    setPrefs(prev => {
+      const newBranchColors = { ...prev.branchColors, [branch]: color };
+      // Immediate CSS variable update (no wait for useEffect cycle)
+      document.documentElement.style.setProperty(`--cp-${branch.toLowerCase()}`, color);
+      // Persist full branchColors object to DB
+      persistToDb({ branchColors: newBranchColors });
+      return { ...prev, branchColors: newBranchColors };
+    });
+  }, [persistToDb]);
 
   // Check if a branch is currently active (has in-progress work)
   const isBranchActive = useCallback((branchKey) => {
