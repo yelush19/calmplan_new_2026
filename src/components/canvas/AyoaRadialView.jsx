@@ -18,7 +18,7 @@ import { getConnectionProps } from '@/engines/lineStyleEngine';
 import { useDesign } from '@/contexts/DesignContext';
 import { getActiveBranches } from '@/engines/automationEngine';
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
-import { ServiceCatalog } from '@/api/entities';
+import { ServiceCatalog, Task } from '@/api/entities';
 import { Plus } from 'lucide-react';
 import FloatingToolbar from './FloatingToolbar';
 
@@ -217,25 +217,33 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
     setFocusedNode(prev => prev === nodeId ? null : nodeId);
   }, [nodes, selectedNode]);
 
-  const handleColorChange = useCallback((color) => {
+  const handleColorChange = useCallback(async (color) => {
     if (!selectedNode || !design?.setNodeOverride) return;
+    // Optimistic UI update
     design.setNodeOverride(selectedNode, { color });
-    // Persist to DB
-    ServiceCatalog.filter({ key: selectedNode }).then(results => {
-      if (results?.[0]) ServiceCatalog.update(results[0].id, { color });
-    }).catch(() => {});
-    // Notify parent that design changed (activates Save button)
+    // Persist to DB (Task + ServiceCatalog)
+    try {
+      await Promise.all([
+        Task.update(selectedNode, { color }).catch(() => {}),
+        ServiceCatalog.filter({ key: selectedNode }).then(results => {
+          if (results?.[0]) ServiceCatalog.update(results[0].id, { color });
+        }).catch(() => {}),
+      ]);
+    } catch { /* silent — localStorage is saved via DesignContext */ }
     window.dispatchEvent(new CustomEvent('calmplan:design-changed', { detail: { nodeId: selectedNode, color } }));
   }, [selectedNode, design]);
 
-  const handleShapeChange = useCallback((shape) => {
+  const handleShapeChange = useCallback(async (shape) => {
     if (!selectedNode || !design?.setNodeOverride) return;
     design.setNodeOverride(selectedNode, { shape });
-    // Persist to DB
-    ServiceCatalog.filter({ key: selectedNode }).then(results => {
-      if (results?.[0]) ServiceCatalog.update(results[0].id, { shape });
-    }).catch(() => {});
-    // Notify parent that design changed (activates Save button)
+    try {
+      await Promise.all([
+        Task.update(selectedNode, { shape }).catch(() => {}),
+        ServiceCatalog.filter({ key: selectedNode }).then(results => {
+          if (results?.[0]) ServiceCatalog.update(results[0].id, { shape });
+        }).catch(() => {}),
+      ]);
+    } catch { /* silent */ }
     window.dispatchEvent(new CustomEvent('calmplan:design-changed', { detail: { nodeId: selectedNode, shape } }));
   }, [selectedNode, design]);
 

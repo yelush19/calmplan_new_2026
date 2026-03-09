@@ -89,7 +89,7 @@ const THEME_VARS = {
 export const MAP_TEMPLATES = {
   'ayoa-organic': {
     label: 'AYOA \u05d0\u05d5\u05e8\u05d2\u05e0\u05d9',
-    description: '\u05e2\u05e0\u05df + \u05e7\u05d5\u05d5\u05d9\u05dd \u05d8\u05e4\u05dc\u05d9\u05dd + \u05e4\u05e1\u05d8\u05dc',
+    description: '\u05e2\u05e0\u05e3 + \u05e7\u05d5\u05d5\u05d9\u05dd \u05d8\u05e4\u05dc\u05d9\u05dd + \u05e4\u05e1\u05d8\u05dc',
     shape: 'cloud',
     lineStyle: 'tapered',
     curvature: 0.25,
