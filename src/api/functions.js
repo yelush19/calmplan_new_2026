@@ -78,13 +78,16 @@ const PROCESS_TEMPLATES = {
 };
 
 // Map client service_types → which process templates apply
-// STRICT: Only 3 recurring services. No social_security or deductions (they are payroll sub-steps).
+// Each service generates only its own template. social_security and deductions
+// are explicit services (auto-linked from payroll via automation rules).
 const SERVICE_TYPE_TO_TEMPLATES = {
   'vat_reporting': ['vat'],
   'tax_advances': ['tax_advances'],
   'payroll': ['payroll'],
+  'social_security': ['social_security'],
+  'deductions': ['deductions'],
   'annual_reports': ['annual_report'],
-  'full_service': ['vat', 'payroll', 'tax_advances', 'annual_report'],
+  'full_service': ['vat', 'payroll', 'tax_advances', 'annual_report', 'social_security', 'deductions'],
 };
 
 // Bi-monthly period names (due month → period name)
@@ -178,37 +181,57 @@ export function isActiveClient(client) {
  * SERVICE-AWARE template selection — STRICT.
  * ZERO GHOST DATA: service key must be EXPLICITLY in client.service_types[].
  * No derivation. No loose matching (bookkeeping does NOT imply VAT).
- * Social Security and Deductions are NOT standalone templates.
+ * Social Security and Deductions are explicit services (auto-linked from payroll).
  */
 function getClientTemplates(client) {
   const serviceTypes = client.service_types || [];
   if (serviceTypes.length === 0) return [];
+
+  // Expand full_service into constituent services
+  const expanded = new Set(serviceTypes);
+  if (expanded.has('full_service')) {
+    for (const s of ['vat_reporting', 'payroll', 'tax_advances', 'annual_reports', 'social_security', 'deductions']) {
+      expanded.add(s);
+    }
+  }
 
   const reporting = client.reporting_info || {};
   const templateKeys = [];
 
   const freqIsActive = (freq) => !!freq && freq !== 'not_applicable';
 
-  // STRICT: vat_reporting must be explicitly in service_types[]
-  if (serviceTypes.includes('vat_reporting') && freqIsActive(reporting.vat_reporting_frequency)) {
+  if (expanded.has('vat_reporting') && freqIsActive(reporting.vat_reporting_frequency)) {
     templateKeys.push('vat');
   }
 
-  // STRICT: tax_advances must be explicitly in service_types[]
-  if (serviceTypes.includes('tax_advances') && freqIsActive(reporting.tax_advances_frequency)) {
+  if (expanded.has('tax_advances') && freqIsActive(reporting.tax_advances_frequency)) {
     templateKeys.push('tax_advances');
   }
 
-  // STRICT: payroll must be explicitly in service_types[]
-  // NO social_security or deductions — they are payroll sub-steps, not standalone
-  if (serviceTypes.includes('payroll') && freqIsActive(reporting.payroll_frequency)) {
+  if (expanded.has('payroll') && freqIsActive(reporting.payroll_frequency)) {
     templateKeys.push('payroll');
   }
 
+  // Social security: explicit service check, frequency inherits from payroll if not set
+  if (expanded.has('social_security')) {
+    const ssFreq = reporting.social_security_frequency;
+    const payrollFreq = reporting.payroll_frequency;
+    if (freqIsActive(ssFreq) || freqIsActive(payrollFreq)) {
+      templateKeys.push('social_security');
+    }
+  }
+
+  // Deductions: explicit service check, frequency inherits from payroll if not set
+  if (expanded.has('deductions')) {
+    const dedFreq = reporting.deductions_frequency;
+    const payrollFreq = reporting.payroll_frequency;
+    if (freqIsActive(dedFreq) || freqIsActive(payrollFreq)) {
+      templateKeys.push('deductions');
+    }
+  }
+
   // Annual Report: Only if explicitly subscribed
-  const hasAnnualService = serviceTypes.some(st =>
-    ['annual_reports', 'full_service', 'tax_reports'].includes(st)
-  );
+  const hasAnnualService = expanded.has('annual_reports');
   if (hasAnnualService) {
     templateKeys.push('annual_report');
   }

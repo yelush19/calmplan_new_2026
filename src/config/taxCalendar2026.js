@@ -147,6 +147,10 @@ export function getDueDateForCategory(category, client, reportMonth) {
       // Payroll follows the online filing deadline
       return entry.onlineFiling;
 
+    case 'דוח רו"ה':
+      // Monthly P&L report — due by end of following month
+      return entry.onlineFiling;
+
     case 'דוח שנתי':
       // Annual report has its own deadline (May 31)
       return `${entry.dueYear}-05-31`;
