@@ -129,6 +129,12 @@ export function DesignProvider({ children }) {
 
   // Track DB prefs record ID for updates
   const dbPrefsIdRef = useRef(null);
+  // Guard: true once initial DB load completes (prevents writes before load)
+  const dbLoadedRef = useRef(false);
+  // Guard: true while a DB write is in-flight (prevents concurrent writes)
+  const dbWritingRef = useRef(false);
+  // Pending payload: queued while a write is in-flight
+  const dbPendingRef = useRef(null);
 
   // Load node overrides from DB on startup (merge with localStorage)
   useEffect(() => {
@@ -170,7 +176,9 @@ export function DesignProvider({ children }) {
           setPrefs(prev => ({ ...prev, ...dbPrefs }));
         }
       }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => {
+      dbLoadedRef.current = true;
+    });
   }, []);
 
   // Apply CSS variables whenever theme, font, or branch colors change
@@ -212,7 +220,12 @@ export function DesignProvider({ children }) {
   }, [prefs]);
 
   // -- Save Logic: Persist global design prefs to UserPreferences DB --
+  // Uses upsert-with-fallback pattern: update → fallback to create on failure.
+  // Serialized writes: only one DB call at a time, pending payloads merged.
   const persistToDb = useCallback((updates) => {
+    // Don't write before initial load completes (prevents race condition)
+    if (!dbLoadedRef.current) return;
+
     const dbPayload = {};
     if (updates.lineStyle !== undefined) dbPayload.line_style = updates.lineStyle;
     if (updates.curvature !== undefined) dbPayload.curvature = updates.curvature;
@@ -221,13 +234,52 @@ export function DesignProvider({ children }) {
     if (updates.fontFamily !== undefined) dbPayload.font_family = updates.fontFamily;
     if (Object.keys(dbPayload).length === 0) return;
 
-    if (dbPrefsIdRef.current) {
-      UserPreferences.update(dbPrefsIdRef.current, dbPayload).catch(() => {});
-    } else {
-      UserPreferences.create({ key: USER_PREFS_KEY, ...dbPayload }).then(result => {
-        if (result?.id) dbPrefsIdRef.current = result.id;
-      }).catch(() => {});
+    // If a write is in-flight, merge into pending queue (will flush after current write)
+    if (dbWritingRef.current) {
+      dbPendingRef.current = { ...(dbPendingRef.current || {}), ...dbPayload };
+      return;
     }
+
+    dbWritingRef.current = true;
+
+    const doWrite = async (payload) => {
+      try {
+        if (dbPrefsIdRef.current) {
+          // Try update first
+          try {
+            await UserPreferences.update(dbPrefsIdRef.current, payload);
+            return; // success
+          } catch {
+            // Update failed (record missing / RLS / 406) — clear stale ID, fall through to create
+            dbPrefsIdRef.current = null;
+          }
+        }
+        // Create new record
+        try {
+          const result = await UserPreferences.create({ key: USER_PREFS_KEY, ...payload });
+          if (result?.id) dbPrefsIdRef.current = result.id;
+        } catch {
+          // Create also failed (Supabase down / RLS) — silently give up, localStorage is still saved
+        }
+      } finally {
+        dbWritingRef.current = false;
+        // Flush any pending payload that accumulated during this write
+        if (dbPendingRef.current) {
+          const pending = dbPendingRef.current;
+          dbPendingRef.current = null;
+          persistToDb(
+            // Convert DB field names back to pref keys for the recursive call
+            Object.fromEntries(Object.entries(pending).map(([k, v]) => {
+              if (k === 'line_style') return ['lineStyle', v];
+              if (k === 'font_family') return ['fontFamily', v];
+              return [k, v];
+            }))
+          );
+        }
+      }
+    };
+
+    doWrite(dbPayload);
   }, []);
 
   const updatePref = useCallback((key, value) => {

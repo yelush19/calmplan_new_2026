@@ -180,14 +180,16 @@ function createEntity(collectionName) {
 
       const { id: _id, created_date: _cd, updated_date: _ud, ...cleanUpdate } = updateData;
 
+      // Use maybeSingle() instead of single() to avoid 406 "Not Acceptable"
+      // when the row doesn't exist (single() throws on 0 results).
       const { data: current, error: fetchError } = await supabase
         .from('app_data')
         .select('data')
         .eq('collection', collectionName)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (fetchError) {
+      if (fetchError || !current) {
         throw new Error(`Item ${id} not found in ${collectionName}`);
       }
 
