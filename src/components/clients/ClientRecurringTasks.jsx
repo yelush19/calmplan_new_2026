@@ -31,7 +31,7 @@ const P_BRANCHES = {
     bgSoft: 'bg-sky-50',
     dot: 'bg-sky-500',
     order: 1,
-    categories: ['שכר'],
+    categories: ['שכר', 'ביטוח לאומי', 'ניכויים'],
   },
   P2: {
     key: 'P2',
@@ -41,7 +41,7 @@ const P_BRANCHES = {
     bgSoft: 'bg-purple-50',
     dot: 'bg-purple-500',
     order: 2,
-    categories: ['מע"מ', 'מקדמות מס'],
+    categories: ['מע"מ', 'מקדמות מס', 'דוח רו"ה'],
   },
 };
 
@@ -49,9 +49,15 @@ const P_BRANCHES = {
 // Category definitions with branch assignment
 // ============================================================
 /**
- * REPORT_CATEGORIES — Only 3 explicit services.
+ * REPORT_CATEGORIES — Service-aware task generation.
  * ZERO GHOST DATA: Only services that exist in client.service_types[] generate tasks.
  * Each category is assigned to a P-branch for hierarchical tagging.
+ *
+ * Filtering rules:
+ *   - ביטוח לאומי: ONLY if client.service_types includes 'social_security'
+ *   - ניכויים: ONLY if client.service_types includes 'deductions'
+ *   - דוח רו"ה: ONLY if client.service_types includes 'pnl_reports'
+ *   - Frequency is checked per-category via reporting_info[frequencyField]
  */
 const REPORT_CATEGORIES = {
   'שכר': {
@@ -67,6 +73,36 @@ const REPORT_CATEGORIES = {
     order: 1,
     branch: 'P1',
   },
+  'ביטוח לאומי': {
+    label: 'סוציאליות',
+    icon: Building,
+    color: 'bg-rose-100 text-rose-800',
+    accent: 'border-rose-400',
+    bgSoft: 'bg-rose-50',
+    dot: 'bg-rose-500',
+    frequencyField: 'social_security_frequency',
+    serviceTypeKey: 'social_security',
+    // Fallback: if no dedicated frequency, inherit from payroll
+    fallbackFrequencyField: 'payroll_frequency',
+    dayOfMonth: 15,
+    order: 2,
+    branch: 'P1',
+  },
+  'ניכויים': {
+    label: 'ניכויים',
+    icon: FileText,
+    color: 'bg-amber-100 text-amber-800',
+    accent: 'border-amber-400',
+    bgSoft: 'bg-amber-50',
+    dot: 'bg-amber-500',
+    frequencyField: 'deductions_frequency',
+    serviceTypeKey: 'deductions',
+    // Fallback: if no dedicated frequency, inherit from payroll
+    fallbackFrequencyField: 'payroll_frequency',
+    dayOfMonth: 19,
+    order: 3,
+    branch: 'P1',
+  },
   'מע"מ': {
     label: 'מע"מ',
     icon: Calculator,
@@ -77,7 +113,7 @@ const REPORT_CATEGORIES = {
     frequencyField: 'vat_reporting_frequency',
     serviceTypeKey: 'vat_reporting',
     dayOfMonth: 15,
-    order: 2,
+    order: 4,
     branch: 'P2',
   },
   'מקדמות מס': {
@@ -90,21 +126,21 @@ const REPORT_CATEGORIES = {
     frequencyField: 'tax_advances_frequency',
     serviceTypeKey: 'tax_advances',
     dayOfMonth: 15,
-    order: 3,
+    order: 5,
     branch: 'P2',
   },
-  'ביטוח לאומי': {
-    label: 'סוציאליות',
-    icon: Building,
-    color: 'bg-rose-100 text-rose-800',
-    accent: 'border-rose-400',
-    bgSoft: 'bg-rose-50',
-    dot: 'bg-rose-500',
-    frequencyField: 'payroll_frequency',
-    serviceTypeKey: 'payroll',  // Linked to payroll — if client has payroll, they get social security
+  'דוח רו"ה': {
+    label: 'דוח רו"ה חודשי',
+    icon: FileText,
+    color: 'bg-indigo-100 text-indigo-800',
+    accent: 'border-indigo-400',
+    bgSoft: 'bg-indigo-50',
+    dot: 'bg-indigo-500',
+    frequencyField: 'pnl_frequency',
+    serviceTypeKey: 'pnl_reports',
     dayOfMonth: 15,
-    order: 4,
-    branch: 'P1',
+    order: 6,
+    branch: 'P2',
   },
 };
 
@@ -134,23 +170,52 @@ const FREQUENCY_LABELS = {
 function getClientFrequency(categoryKey, client) {
   const cat = REPORT_CATEGORIES[categoryKey];
   if (!cat) return 'monthly';
+  const reporting = client.reporting_info || {};
+  // Try primary frequency field first
   const field = cat.frequencyField;
-  if (!field) return 'monthly';
-  const freq = client.reporting_info?.[field];
-  return freq || 'monthly';
+  if (field) {
+    const freq = reporting[field];
+    if (freq && freq !== 'not_applicable') return freq;
+  }
+  // Fallback frequency field (e.g., social_security inherits from payroll)
+  if (cat.fallbackFrequencyField) {
+    const fallback = reporting[cat.fallbackFrequencyField];
+    if (fallback && fallback !== 'not_applicable') return fallback;
+  }
+  return 'monthly';
+}
+
+/**
+ * Expand 'full_service' into its constituent services.
+ * full_service = vat_reporting + payroll + tax_advances + annual_reports
+ * Payroll auto-links: payroll → social_security + deductions (via automation rules)
+ */
+const FULL_SERVICE_EXPANSION = ['vat_reporting', 'payroll', 'tax_advances', 'annual_reports', 'social_security', 'deductions'];
+
+function getExpandedServices(client) {
+  const raw = client.service_types || [];
+  const expanded = new Set(raw);
+  if (expanded.has('full_service')) {
+    for (const s of FULL_SERVICE_EXPANSION) expanded.add(s);
+  }
+  return expanded;
 }
 
 /**
  * STRICT service check — ZERO GHOST DATA.
- * Returns true ONLY if client.service_types[] explicitly contains the exact service key.
- * No derivation. No loose matching. No fallback-to-true.
+ * Returns true ONLY if client has the exact service key in service_types[],
+ * with full_service expansion applied.
+ * Also checks that the frequency is active (not 'not_applicable').
  */
 function clientHasService(categoryKey, client) {
   const cat = REPORT_CATEGORIES[categoryKey];
   if (!cat) return false;
-  const services = client.service_types || [];
-  // STRICT: must explicitly include the exact service key
-  return services.includes(cat.serviceTypeKey);
+  const services = getExpandedServices(client);
+  if (!services.has(cat.serviceTypeKey)) return false;
+  // Also verify frequency is active
+  const freq = getClientFrequency(categoryKey, client);
+  if (freq === 'not_applicable') return false;
+  return true;
 }
 
 /**
@@ -323,80 +388,116 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setIsClearingCache(false);
   };
 
+  // ── Task dependency map: parent category → depends_on category ──
+  // דוח רו"ה depends on bookkeeping input being done (מע"מ)
+  const TASK_DEPENDENCIES = {
+    'דוח רו"ה': 'מע"מ',
+  };
+
   const generateTasksPreview = (overrideMonths) => {
-    console.log('[RecurringTasks] generateTasksPreview called', {
-      overrideMonths,
-      selectedMonths: Array.from(selectedMonths),
-      clientsCount: clients.length,
-      existingTasksCount: existingTasks.length,
-      forceInject,
-    });
     const monthsArray = overrideMonths instanceof Set
       ? Array.from(overrideMonths).sort((a, b) => a - b)
       : Array.from(selectedMonths).sort((a, b) => a - b);
-    if (monthsArray.length === 0) {
-      console.warn('[RecurringTasks] No months selected, aborting');
-      return;
+    if (monthsArray.length === 0) return;
+
+    // ── Coverage tracking per category ──
+    const coverage = {};
+    for (const catKey of Object.keys(REPORT_CATEGORIES)) {
+      coverage[catKey] = { eligible: 0, generated: 0, skippedFreq: 0, skippedDup: 0, clients: [] };
     }
 
     const tasksToCreate = [];
+    // First pass: index for depends_on linking
+    const taskIndex = {};
+
     for (const client of clients) {
+      const expandedServices = getExpandedServices(client);
+
       for (const [categoryKey, categoryDef] of Object.entries(REPORT_CATEGORIES)) {
-        if (!clientHasService(categoryKey, client)) continue;
+        // ── SERVICE FILTER: strict check against client's actual services ──
+        if (!expandedServices.has(categoryDef.serviceTypeKey)) continue;
+
         const freq = getClientFrequency(categoryKey, client);
-        if (freq === 'not_applicable') continue;
+        if (freq === 'not_applicable') {
+          coverage[categoryKey].skippedFreq++;
+          continue;
+        }
+        coverage[categoryKey].eligible++;
 
         const dueDates = generateTasksForMonths(categoryKey, client, monthsArray, selectedYear);
         for (const { date, period, description, reportMonth } of dueDates) {
           const taskTitle = `${client.name} - ${description}`;
           const dueDateStr = format(date, 'yyyy-MM-dd');
-          // Check for existing tasks (by exact title OR by client+category+date)
-          // Force Inject mode: skip duplicate check entirely
+
+          // Duplicate check (skip in force-inject mode)
           const alreadyExists = !forceInject && existingTasks.some(t =>
             t.title === taskTitle ||
             (t.client_name === client.name && t.category === categoryKey && t.due_date === dueDateStr)
           );
-          if (!alreadyExists) {
-            const taskId = `${client.id}_${categoryKey}_${dueDateStr}`;
-            const clientIs874 = categoryKey === 'מע"מ' && isClient874(client);
-            const scheduledStart = getScheduledStartForCategory(categoryKey, dueDateStr);
-            // CRITICAL: Every task MUST have a branch tag (P1/P2).
-            // Without it, the task is a "ghost" — no map sync, no filtering.
-            const branchKey = categoryDef.branch;
-            if (!branchKey || !P_BRANCHES[branchKey]) {
-              console.error(`[RecurringTasks] Category "${categoryKey}" has no valid branch tag. Skipping.`);
-              continue;
-            }
-
-            tasksToCreate.push({
-              _previewId: taskId, title: taskTitle,
-              description: `${description}\nלקוח: ${client.name}${clientIs874 ? '\nסוג: מע"מ מפורט (874)' : ''}`,
-              due_date: dueDateStr, scheduled_start: scheduledStart || undefined,
-              client_name: client.name, client_id: client.id,
-              category: categoryKey, branch: branchKey,
-              context: 'work', priority: 'high', status: 'not_started',
-              is_recurring: true, source: 'recurring_tasks',
-              _categoryOrder: categoryDef.order, _categoryLabel: categoryDef.label,
-              _categoryColor: categoryDef.color, _categoryAccent: categoryDef.accent,
-              _categoryBgSoft: categoryDef.bgSoft, _categoryDot: categoryDef.dot,
-              _branchKey: branchKey, _branchLabel: P_BRANCHES[branchKey].label,
-              _frequency: freq, _is874: clientIs874, period,
-              _reportMonth: reportMonth,
-            });
+          if (alreadyExists) {
+            coverage[categoryKey].skippedDup++;
+            continue;
           }
+
+          const taskId = `${client.id}_${categoryKey}_${dueDateStr}`;
+          const clientIs874 = categoryKey === 'מע"מ' && isClient874(client);
+          const scheduledStart = getScheduledStartForCategory(categoryKey, dueDateStr);
+          const branchKey = categoryDef.branch;
+          if (!branchKey || !P_BRANCHES[branchKey]) continue;
+
+          // ── depends_on: link to parent task if exists ──
+          const parentCategory = TASK_DEPENDENCIES[categoryKey];
+          const parentTaskId = parentCategory ? `${client.id}_${parentCategory}_${dueDateStr}` : null;
+
+          const task = {
+            _previewId: taskId, title: taskTitle,
+            description: `${description}\nלקוח: ${client.name}${clientIs874 ? '\nסוג: מע"מ מפורט (874)' : ''}`,
+            due_date: dueDateStr, scheduled_start: scheduledStart || undefined,
+            client_name: client.name, client_id: client.id,
+            category: categoryKey, branch: branchKey,
+            context: 'work', priority: 'high', status: 'not_started',
+            is_recurring: true, source: 'recurring_tasks',
+            _categoryOrder: categoryDef.order, _categoryLabel: categoryDef.label,
+            _categoryColor: categoryDef.color, _categoryAccent: categoryDef.accent,
+            _categoryBgSoft: categoryDef.bgSoft, _categoryDot: categoryDef.dot,
+            _branchKey: branchKey, _branchLabel: P_BRANCHES[branchKey].label,
+            _frequency: freq, _is874: clientIs874, period,
+            _reportMonth: reportMonth,
+          };
+          if (parentTaskId) task.depends_on = parentTaskId;
+          tasksToCreate.push(task);
+          taskIndex[taskId] = task;
+          coverage[categoryKey].generated++;
+          coverage[categoryKey].clients.push(client.name);
         }
       }
     }
+
+    // ── Coverage report ──
+    console.group('[RecurringTasks] Coverage Report');
+    for (const [catKey, stats] of Object.entries(coverage)) {
+      const branch = REPORT_CATEGORIES[catKey]?.branch || '?';
+      console.log(
+        `${branch} - ${catKey}: ${stats.generated} tasks | ${stats.eligible}/${clients.length} eligible clients | ${stats.skippedFreq} freq-skipped | ${stats.skippedDup} dup-skipped`
+      );
+    }
+    // Cross-reference: find clients that have services but got 0 tasks
+    const clientsWithNoTasks = clients.filter(c => {
+      const services = getExpandedServices(c);
+      return services.size > 0 && !tasksToCreate.some(t => t.client_id === c.id);
+    });
+    if (clientsWithNoTasks.length > 0) {
+      console.warn('[RecurringTasks] Clients with services but 0 tasks:', clientsWithNoTasks.map(c => ({
+        name: c.name, services: Array.from(getExpandedServices(c)), reporting_info: c.reporting_info,
+      })));
+    }
+    console.groupEnd();
+
     tasksToCreate.sort((a, b) => {
       if (a._categoryOrder !== b._categoryOrder) return a._categoryOrder - b._categoryOrder;
       const nameCompare = a.client_name.localeCompare(b.client_name, 'he');
       if (nameCompare !== 0) return nameCompare;
       return new Date(a.due_date) - new Date(b.due_date);
-    });
-    console.log('[RecurringTasks] Preview result:', {
-      tasksToCreate: tasksToCreate.length,
-      monthsArray,
-      clientsProcessed: clients.length,
     });
     setPreviewTasks(tasksToCreate);
     setSelectedTaskIds(new Set(tasksToCreate.map(t => t._previewId)));
@@ -729,7 +830,6 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           {/* Quick inject: one-click current month generation */}
           <Button
             onClick={() => {
-              console.log('[RecurringTasks] PINK BUTTON CLICKED — currentMonth:', currentMonth);
               setSelectedMonths(new Set([currentMonth]));
               generateTasksPreview(new Set([currentMonth]));
             }}
@@ -742,10 +842,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
 
           {/* Generate button — prominent */}
           <Button
-            onClick={() => {
-              console.log('[RecurringTasks] GREEN BUTTON CLICKED — selectedMonths:', Array.from(selectedMonths));
-              generateTasksPreview();
-            }}
+            onClick={() => generateTasksPreview()}
             disabled={selectedMonths.size === 0}
             className="w-full h-14 text-lg font-bold rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-40"
             size="lg"
