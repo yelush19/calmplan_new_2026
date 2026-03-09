@@ -365,8 +365,8 @@ export default function TasksPage() {
     return sorted;
   }, [filteredTasks, sortField, sortDir]);
 
-  // P-branch color dots
-  const pBranchDots = { 'P1': 'bg-blue-600', 'P2': 'bg-teal-600', 'P3': 'bg-gray-500', 'P4': 'bg-amber-700' };
+  // P-branch color dots — using DNA branch colors
+  const pBranchDots = { 'P1': 'bg-sky-500', 'P2': 'bg-blue-600', 'P3': 'bg-pink-500', 'P4': 'bg-amber-500', 'P5': 'bg-green-600' };
 
   // Group sorted tasks by status, category, client, or p_branch
   const groupedTasks = useMemo(() => {
@@ -415,7 +415,7 @@ export default function TasksPage() {
         if (!groups[branch]) groups[branch] = [];
         groups[branch].push(task);
       });
-      const branchOrder = ['P1', 'P2', 'P3', 'P4', '__none__'];
+      const branchOrder = ['P1', 'P2', 'P3', 'P4', 'P5', '__none__'];
       return branchOrder
         .filter(b => groups[b] && groups[b].length > 0)
         .map(b => ({
@@ -722,7 +722,7 @@ export default function TasksPage() {
               { key: 'status', label: 'סטטוס' },
               { key: 'category', label: 'סוג דיווח' },
               { key: 'client', label: 'לקוח' },
-              { key: 'p_branch', label: 'ענף (P1-P4)' },
+              { key: 'p_branch', label: 'ענף (P1-P5)' },
             ].map(opt => (
               <button
                 key={opt.key}

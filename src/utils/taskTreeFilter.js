@@ -1,5 +1,5 @@
 /**
- * Unified task filter: returns only tasks that belong to the P1-P4 tree
+ * Unified task filter: returns only tasks that belong to the P1-P5 tree
  * and fall within the active period (current + previous month, or active status).
  *
  * This is the SINGLE SOURCE OF TRUTH for task counts across all views:
@@ -12,25 +12,31 @@ const CATEGORY_TO_P_BRANCH = {
   'שכר': 'P1', 'work_payroll': 'P1',
   'ביטוח לאומי': 'P1', 'work_social_security': 'P1',
   'ניכויים': 'P1', 'work_deductions': 'P1',
-  // P2 — Bookkeeping
+  'מס"ב עובדים': 'P1', 'מס"ב סוציאליות': 'P1',
+  // P2 — Bookkeeping & Tax
   'מע"מ': 'P2', 'work_vat_reporting': 'P2',
   'מע"מ 874': 'P2', 'work_vat_874': 'P2',
   'מקדמות מס': 'P2', 'work_tax_advances': 'P2',
-  'התאמות': 'P2', 'work_reconciliation': 'P2',
   'הנחש': 'P2', 'הנהלת חשבונות': 'P2', 'work_bookkeeping': 'P2',
-  'מאזנים': 'P2',
-  // P3 — Office / Admin
-  'דוח שנתי': 'P3', 'work_client_management': 'P3', 'work_annual_reports': 'P3',
+  'דוח רו"ה': 'P2', 'work_pnl_reports': 'P2',
+  'מס"ב ספקים': 'P2',
+  // P3 — Management & Reconciliation
+  'התאמות חשבונות': 'P3', 'התאמות': 'P3', 'work_reconciliation': 'P3',
+  'work_client_management': 'P3',
   'personal': 'P3', 'אחר': 'P3',
   // P4 — Home
   'home': 'P4',
+  // P5 — Annual Reports & Declarations
+  'דוח שנתי': 'P5', 'work_annual_reports': 'P5',
+  'מאזנים': 'P5', 'הצהרת הון': 'P5',
 };
 
 const P_BRANCH_LABELS = {
   'P1': 'P1 חשבות שכר',
   'P2': 'P2 הנהלת חשבונות',
-  'P3': 'P3 ניהול משרד',
+  'P3': 'P3 ניהול ותכנון',
   'P4': 'P4 בית',
+  'P5': 'P5 דוחות שנתיים',
 };
 
 /**
@@ -39,6 +45,8 @@ const P_BRANCH_LABELS = {
  */
 export function getTaskPBranch(task) {
   if (!task) return null;
+  // Direct branch tag from recurring task engine
+  if (task.branch && P_BRANCH_LABELS[task.branch]) return task.branch;
   const cat = task.category;
   if (cat && CATEGORY_TO_P_BRANCH[cat]) {
     return CATEGORY_TO_P_BRANCH[cat];

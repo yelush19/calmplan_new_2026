@@ -45,9 +45,10 @@ function getCategoryColor(category, branchColors) {
   const resolved = resolveCategoryLabel(category);
   const cat = (resolved || category || '').toLowerCase();
   if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return c.P1;
-  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות') || cat.includes('מאזנ')) return c.P2;
+  if (cat.includes('מע"מ') || cat.includes('vat') || cat.includes('הנה"ח') || cat.includes('bookkeeping') || cat.includes('מקדמות') || cat.includes('התאמות') || cat.includes('מאזנ') || cat.includes('רו"ה') || cat.includes('pnl')) return c.P2;
+  if (cat.includes('סוציאלי') || cat.includes('פנסיה') || cat.includes('social')) return c.P3;
   if (cat.includes('בית') || cat.includes('אישי') || cat.includes('home') || cat.includes('ארוחות')) return c.P4;
-  if (cat.includes('דוח שנתי') || cat.includes('הצהרת הון')) return c.P5;
+  if (cat.includes('דוח שנתי') || cat.includes('הצהרת הון') || cat.includes('annual')) return c.P5;
   if (cat.includes('admin') || cat.includes('אדמיני') || cat.includes('ייעוץ') || cat.includes('פגישה') || cat.includes('שיווק')) return c.P3;
   return c.P4;
 }
