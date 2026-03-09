@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserPreferences } from '@/api/entities';
 
+// ייצוא התבניות - פותר את שגיאת ה-Build ב-Vercel
 export const MAP_TEMPLATES = {
   modern: { bg: '#f8f9fa', node: 'bubble' },
   organic: { bg: '#ffffff', node: 'cloud' },
@@ -20,20 +21,25 @@ export const DesignProvider = ({ children }) => {
     isLoaded: false
   });
 
-  // מנגנון אתחול בטוח
+  // אתחול בטוח עם מנגנון המתנה לישות ה-API
   useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 5;
+    let isMounted = true;
 
-    async function initDesign() {
-      // בדיקה אם הישות קיימת ומוכנה לפעולה
+    const initDesign = async () => {
+      // בדיקה אם הישות קיימת ומוכנה לפעולה (מונע את שגיאת ה-O)
       const isEntityReady = typeof UserPreferences !== 'undefined' && 
                              UserPreferences !== null && 
                              typeof UserPreferences.filter === 'function';
 
-      if (isEntityReady) {
-        try {
-          const prefs = await UserPreferences.filter();
+      if (!isEntityReady) {
+        // אם לא מוכן, נחכה רגע וננסה שוב
+        setTimeout(initDesign, 500);
+        return;
+      }
+
+      try {
+        const prefs = await UserPreferences.filter();
+        if (isMounted) {
           if (prefs && prefs.length > 0) {
             const p = prefs[0];
             setDesignState(prev => ({
@@ -44,33 +50,26 @@ export const DesignProvider = ({ children }) => {
               curvature: typeof p.curvature === 'number' ? p.curvature : prev.curvature,
               isLoaded: true
             }));
-            return;
+          } else {
+            setDesignState(prev => ({ ...prev, isLoaded: true }));
           }
-        } catch (err) {
-          console.warn('Preferences filter failed, using defaults');
         }
-        setDesignState(prev => ({ ...prev, isLoaded: true }));
-      } else if (retryCount < maxRetries) {
-        // אם הישות עוד לא נטענה (race condition), נחכה חצי שנייה וננסה שוב
-        retryCount++;
-        setTimeout(initDesign, 500);
-      } else {
-        // ויתור ושימוש בברירת מחדל כדי לא לתקוע את האפליקציה
-        setDesignState(prev => ({ ...prev, isLoaded: true }));
+      } catch (err) {
+        console.warn('Design settings loaded with defaults');
+        if (isMounted) setDesignState(prev => ({ ...prev, isLoaded: true }));
       }
-    }
+    };
 
     initDesign();
+    return () => { isMounted = false; };
   }, []);
 
+  // עדכון ושמירה ל-DB
   const updateDesign = useCallback(async (updates) => {
     setDesignState(prev => ({ ...prev, ...updates }));
     
     try {
-      const canUpdate = typeof UserPreferences !== 'undefined' && 
-                        UserPreferences?.update;
-
-      if (canUpdate) {
+      if (typeof UserPreferences !== 'undefined' && UserPreferences?.update) {
         const dbUpdates = {};
         if (updates.lineStyle) dbUpdates.line_style = updates.lineStyle;
         if (updates.theme) dbUpdates.theme = updates.theme;
@@ -82,7 +81,7 @@ export const DesignProvider = ({ children }) => {
         }
       }
     } catch (err) {
-      console.error('Persistence failed:', err);
+      console.error('Failed to save design preferences:', err);
     }
   }, []);
 
