@@ -119,12 +119,11 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const panRef = useRef({ active: false, startX: 0, startY: 0, origPanX: 0, origPanY: 0 });
 
-  // Design engine
-  let design = null;
-  try { design = useDesign(); } catch { /* not mounted */ }
-  const globalShape = design?.shape || 'bubble';
-  const globalLineStyle = design?.lineStyle || 'tapered';
-  const branchColors = design?.branchColors || DNA_DEFAULTS;
+  // Design engine (safe — useDesign returns fallback if outside provider)
+  const design = useDesign();
+  const globalShape = design.shape || 'bubble';
+  const globalLineStyle = design.lineStyle || 'tapered';
+  const branchColors = design.branchColors || DNA_DEFAULTS;
 
   // ── Focus Branch listener: scroll/pan to a specific P-branch (e.g. P4) ──
   useEffect(() => {
