@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   CommandDialog, CommandInput, CommandList, CommandEmpty,
@@ -7,9 +7,11 @@ import {
 import {
   CheckSquare, Users, FolderKanban, StickyNote, Search,
   ArrowLeft, Plus, UserCheck, FileBarChart, Calculator, Eye, Zap,
+  Network, Home as HomeIcon,
 } from 'lucide-react';
 import { Task, Client, Project, StickyNote as StickyNoteEntity } from '@/api/entities';
 import { createPageUrl } from '@/utils';
+import { ALL_SERVICES } from '@/config/processTemplates';
 
 const ENTITY_CONFIGS = [
   {
@@ -28,7 +30,7 @@ const ENTITY_CONFIGS = [
     icon: CheckSquare,
     color: 'text-blue-600',
     entity: Task,
-    searchFields: ['title', 'description', 'client_name'],
+    searchFields: ['title', 'description', 'client_name', 'category', 'branch'],
     getUrl: (item) => {
       // Feature 8: Deep-link to task's client drawer in MindMap
       const params = new URLSearchParams({ view: 'mindmap' });
@@ -36,7 +38,7 @@ const ENTITY_CONFIGS = [
       if (item.client_name) params.set('clientName', item.client_name);
       return `${createPageUrl('Tasks')}?${params.toString()}`;
     },
-    getSubtitle: (item) => [item.client_name, item.category, item.status === 'completed' ? 'הושלם' : item.status === 'in_progress' ? 'בעבודה' : ''].filter(Boolean).join(' | '),
+    getSubtitle: (item) => [item.client_name, item.category, item.branch, item.status === 'production_completed' ? 'הושלם ייצור' : item.status === 'not_started' ? 'טרם התחיל' : ''].filter(Boolean).join(' | '),
   },
   {
     key: 'projects',
@@ -68,6 +70,19 @@ export default function GlobalSearch() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // ── Service Catalog index (static — from processTemplates DNA) ──
+  const serviceIndex = useMemo(() => {
+    return Object.entries(ALL_SERVICES).map(([key, svc]) => ({
+      id: key,
+      key,
+      label: svc.label,
+      dashboard: svc.dashboard,
+      branch: svc.branch || (svc.dashboard === 'payroll' ? 'P1' : svc.dashboard === 'home' ? 'P4' : svc.dashboard === 'annual_reports' ? 'P5' : 'P2'),
+      categories: (svc.taskCategories || []).join(' '),
+      stepLabels: (svc.steps || []).map(s => s.label).join(' '),
+    }));
+  }, []);
 
   // Determine current page for context-aware boosting
   const getCurrentPage = () => {
@@ -119,6 +134,22 @@ export default function GlobalSearch() {
       color: 'text-sky-600',
       keywords: ['ריכוז', 'פוקוס', 'focus', 'יומי'],
       action: () => navigate(createPageUrl('Home')),
+    },
+    {
+      key: 'meal_planner',
+      label: 'תכנון ארוחות',
+      icon: HomeIcon,
+      color: 'text-amber-600',
+      keywords: ['ארוחות', 'תכנון ארוחות', 'meals', 'בישול', 'אוכל'],
+      action: () => navigate(createPageUrl('MealPlanner')),
+    },
+    {
+      key: 'recurring_tasks',
+      label: 'הזרקת משימות חוזרות',
+      icon: Zap,
+      color: 'text-rose-600',
+      keywords: ['הזרקה', 'inject', 'חוזרות', 'recurring', 'פברואר', 'מרץ'],
+      action: () => navigate(createPageUrl('RecurringTasks')),
     },
   ];
 
@@ -208,8 +239,19 @@ export default function GlobalSearch() {
     );
     if (matchingActions.length > 0) filtered['actions'] = matchingActions;
 
+    // ── Service Catalog search ──
+    const serviceMatches = serviceIndex.filter(svc =>
+      svc.label.toLowerCase().includes(q) ||
+      svc.key.toLowerCase().includes(q) ||
+      svc.categories.toLowerCase().includes(q) ||
+      svc.stepLabels.toLowerCase().includes(q) ||
+      svc.branch.toLowerCase().includes(q) ||
+      (svc.dashboard || '').toLowerCase().includes(q)
+    ).slice(0, 6);
+    if (serviceMatches.length > 0) filtered['services'] = serviceMatches;
+
     setResults(filtered);
-  }, [query, allData]);
+  }, [query, allData, serviceIndex]);
 
   const handleSelect = useCallback((config, item) => {
     const url = config.getUrl(item);
@@ -239,7 +281,7 @@ export default function GlobalSearch() {
       {/* Command palette dialog */}
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
-          placeholder="חפש לקוחות, משימות, פרויקטים או הקלד פעולה..."
+          placeholder="חפש לקוחות, משימות, שירותים (P1-P5), פתקים או הקלד פעולה..."
           value={query}
           onValueChange={setQuery}
           dir="rtl"
@@ -315,6 +357,35 @@ export default function GlobalSearch() {
               </CommandGroup>
             );
           })}
+
+          {/* Service Catalog results */}
+          {!isLoading && results.services && results.services.length > 0 && (
+            <CommandGroup heading={
+              <span className="flex items-center gap-1.5">
+                <Network className="w-3.5 h-3.5 text-pink-600" />
+                שירותים (קטלוג P1-P5)
+                <span className="text-gray-400 font-normal">({results.services.length})</span>
+              </span>
+            }>
+              {results.services.map((svc) => (
+                <CommandItem
+                  key={svc.id}
+                  value={`service-${svc.id}-${svc.label}`}
+                  onSelect={() => { navigate(createPageUrl('Settings')); setOpen(false); }}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Network className="w-4 h-4 text-pink-600 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{svc.label}</div>
+                    <div className="text-[11px] text-gray-400 truncate">
+                      {svc.branch} | {svc.dashboard} | {svc.key}
+                    </div>
+                  </div>
+                  <ArrowLeft className="w-3 h-3 text-gray-300 shrink-0" />
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
         </CommandList>
       </CommandDialog>
     </>
