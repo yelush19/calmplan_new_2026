@@ -73,6 +73,9 @@ function describeWedge(cx, cy, innerR, outerR, startAngle, endAngle) {
 }
 
 export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', centerSub = '' }) {
+  // Guard: if critical dependencies aren't ready, show loading instead of crashing
+  if (!Array.isArray(tasks)) return null;
+
   const svgRef = useRef(null);
   const [focusedNode, setFocusedNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
