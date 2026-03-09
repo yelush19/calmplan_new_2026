@@ -30,12 +30,32 @@ const SERVICE_GROUPS = [
   { key: 'balance', label: 'מאזנים' },
 ];
 
-const SERVICE_LIST = Object.values(ALL_SERVICES).map(s => ({
-  key: s.key,
-  label: s.label,
-  dashboard: s.dashboard,
-  createCategory: s.createCategory,
-}));
+// Build service list from processTemplates + custom categories from localStorage
+function buildServiceList() {
+  const base = Object.values(ALL_SERVICES).map(s => ({
+    key: s.key,
+    label: s.label,
+    dashboard: s.dashboard,
+    createCategory: s.createCategory,
+  }));
+
+  // Merge custom categories so they show Hebrew labels, not raw 'custom_...' IDs
+  try {
+    const customCats = JSON.parse(localStorage.getItem('calmplan_custom_categories') || '{}');
+    for (const [branchKey, cats] of Object.entries(customCats)) {
+      const dashboard = branchKey === 'P1' ? 'payroll' : branchKey === 'P2' ? 'tax' : branchKey === 'P4' ? 'home' : branchKey === 'P5' ? 'annual_reports' : 'admin';
+      for (const cat of (cats || [])) {
+        if (!base.find(s => s.key === cat.key)) {
+          base.push({ key: cat.key, label: cat.label, dashboard, createCategory: cat.label });
+        }
+      }
+    }
+  } catch { /* ignore */ }
+
+  return base;
+}
+
+const SERVICE_LIST = buildServiceList();
 
 // Searchable dropdown component
 function SearchableSelect({ value, onChange, items, placeholder, renderItem, groupBy, groupLabels, allowNone, noneLabel = 'ללא', disabled = false }) {

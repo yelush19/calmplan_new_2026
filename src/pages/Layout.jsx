@@ -271,13 +271,14 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['personal_tools', 'p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p3_strategy', 'p3_clients', 'p3_system']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p3_strategy', 'p3_clients', 'p3_system']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
   const [myMenu, setMyMenu] = useState([]);
   const [dailyFocusTasks, setDailyFocusTasks] = useState([]);
   const [importStatus, setImportStatus] = useState(null); // {type, message}
+  const [sidebarSearch, setSidebarSearch] = useState('');
   const importFileRef = useRef(null);
 
   useAutoReminders();
@@ -427,6 +428,24 @@ function LayoutInner({ children }) {
   }, []);
 
   const isActive = (href) => location.pathname.startsWith(href);
+
+  // Sidebar search: filter items by query
+  const sidebarSearchLower = sidebarSearch.trim().toLowerCase();
+  const matchesSidebarSearch = useCallback((item) => {
+    if (!sidebarSearchLower) return true;
+    return (item.name || '').toLowerCase().includes(sidebarSearchLower);
+  }, [sidebarSearchLower]);
+
+  const sectionMatchesSearch = useCallback((section) => {
+    if (!sidebarSearchLower) return true;
+    if ((section.title || '').toLowerCase().includes(sidebarSearchLower)) return true;
+    if (section.items?.some(matchesSidebarSearch)) return true;
+    if (section.subGroups?.some(sg =>
+      (sg.label || '').toLowerCase().includes(sidebarSearchLower) ||
+      sg.items?.some(matchesSidebarSearch)
+    )) return true;
+    return false;
+  }, [sidebarSearchLower, matchesSidebarSearch]);
 
   const findPageTitle = () => {
     if (location.pathname === createPageUrl("Home")) return 'פוקוס יומי';
@@ -802,6 +821,33 @@ function LayoutInner({ children }) {
                         </div>
                       </div>
 
+                      {/* ── Sidebar Filter Search ── */}
+                      <div className="px-3 py-1.5">
+                        <div className="relative">
+                          <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                          <input
+                            value={sidebarSearch}
+                            onChange={(e) => {
+                              setSidebarSearch(e.target.value);
+                              // Auto-expand sections when searching
+                              if (e.target.value.trim()) {
+                                setCollapsedSections(new Set());
+                              }
+                            }}
+                            placeholder="סנן תפריט... (מע״מ, P1...)"
+                            className="w-full h-8 text-xs pr-8 pl-2 rounded-xl border border-gray-200 bg-white/70 focus:outline-none focus:ring-1 focus:ring-[#4682B4] focus:bg-white placeholder:text-gray-400"
+                          />
+                          {sidebarSearch && (
+                            <button
+                              onClick={() => setSidebarSearch('')}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
                       {/* כלים אישיים — Always visible so users can see starred items */}
                       {(
                         <div className="px-2 py-1">
@@ -913,6 +959,7 @@ function LayoutInner({ children }) {
 
                         {Object.entries(sidebarSections)
                           .filter(([key]) => getVisibleSections(workMode).includes(key))
+                          .filter(([, section]) => sectionMatchesSearch(section))
                           .map(([key, section]) => {
                             const isOpen = !collapsedSections.has(key);
                             return (
@@ -949,11 +996,12 @@ function LayoutInner({ children }) {
                                 </button>
                                 {isOpen && (
                                   <div className="mr-3 border-r-2 border-[#E0E0E0] pr-1 mt-0.5 mb-1">
-                                    {section.items.map(item => (
+                                    {section.items.filter(matchesSidebarSearch).map(item => (
                                       <div key={item.href} className="flex items-center group">
                                         <Link to={item.href}
                                           onClick={() => {
                                             setIsMobileMenuOpen(false);
+                                            setSidebarSearch('');
                                             const targetMode = SECTION_TO_MODE[key];
                                             if (targetMode && targetMode !== workMode) {
                                               setWorkMode(targetMode);
@@ -974,7 +1022,7 @@ function LayoutInner({ children }) {
                                       </div>
                                     ))}
                                     {/* Sub-group folders (max 5 items per level) */}
-                                    {section.subGroups?.map(sg => {
+                                    {section.subGroups?.filter(sg => !sidebarSearchLower || (sg.label || '').toLowerCase().includes(sidebarSearchLower) || sg.items?.some(matchesSidebarSearch)).map(sg => {
                                       const sgOpen = !collapsedSections.has(sg.key);
                                       return (
                                         <div key={sg.key} className="mt-0.5">
@@ -994,11 +1042,12 @@ function LayoutInner({ children }) {
                                           </button>
                                           {sgOpen && (
                                             <div className="mr-3 border-r-2 border-[#E8F5F7] pr-1">
-                                              {sg.items.map(item => (
+                                              {sg.items.filter(matchesSidebarSearch).map(item => (
                                                 <div key={item.href} className="flex items-center group">
                                                   <Link to={item.href}
                                                     onClick={() => {
                                                       setIsMobileMenuOpen(false);
+                                                      setSidebarSearch('');
                                                       const targetMode = SECTION_TO_MODE[key];
                                                       if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
                                                     }}

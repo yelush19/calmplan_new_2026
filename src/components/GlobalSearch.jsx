@@ -57,7 +57,7 @@ const ENTITY_CONFIGS = [
     color: 'text-amber-600',
     entity: StickyNoteEntity,
     searchFields: ['title', 'content'],
-    getUrl: () => null,
+    getUrl: () => createPageUrl('Home'),
     getSubtitle: (item) => item.content?.substring(0, 60) || '',
   },
 ];
@@ -371,7 +371,21 @@ export default function GlobalSearch() {
                 <CommandItem
                   key={svc.id}
                   value={`service-${svc.id}-${svc.label}`}
-                  onSelect={() => { navigate(createPageUrl('Settings')); setOpen(false); }}
+                  onSelect={() => {
+                    // Navigate to the service's dashboard page, not just Settings
+                    const dashboardMap = {
+                      payroll: 'PayrollDashboard',
+                      tax: 'TaxReportsDashboard',
+                      reconciliation: 'Reconciliations',
+                      additional: 'AdditionalServicesDashboard',
+                      annual_reports: 'BalanceSheets',
+                      admin: 'Settings',
+                      home: 'LifeSettings',
+                    };
+                    const targetPage = dashboardMap[svc.dashboard] || 'Settings';
+                    navigate(createPageUrl(targetPage));
+                    setOpen(false);
+                  }}
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   <Network className="w-4 h-4 text-pink-600 shrink-0" />
