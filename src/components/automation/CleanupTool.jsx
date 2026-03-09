@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -447,7 +448,7 @@ export default function CleanupTool({ rules = [] }) {
                                           {item.task.title}
                                         </span>
                                         <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                                          {item.task.category}
+                                          {resolveCategoryLabel(item.task.category)}
                                         </Badge>
                                         {item.task.due_date && (
                                           <span className="text-gray-400 flex items-center gap-0.5">

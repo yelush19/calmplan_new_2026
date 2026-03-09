@@ -25,16 +25,16 @@ function createEntity(entityName) {
   const supaEntity = isSupabaseConfigured ? primary.entities[entityName] : null;
   const localEntity = localDB.entities[entityName];
 
-  // If Supabase not configured, return entity that throws on every operation
+  // If Supabase not configured, return graceful no-op entity (prevents White Screen)
   if (!supaEntity) {
-    const fail = () => { throw new Error('Supabase not configured — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel'); };
+    console.warn(`[CalmPlan] Entity "${entityName}" — Supabase not configured, returning empty data`);
     return {
-      async list() { fail(); },
-      async create() { fail(); },
-      async update() { fail(); },
-      async delete() { fail(); },
-      async deleteAll() { fail(); },
-      async filter() { fail(); },
+      async list() { return []; },
+      async create(data) { return { id: `offline_${Date.now()}`, ...data }; },
+      async update(id, data) { return { id, ...data }; },
+      async delete() { return { success: true }; },
+      async deleteAll() { return { success: true }; },
+      async filter() { return []; },
     };
   }
 
@@ -106,6 +106,12 @@ const entities = {};
 for (const name of Object.keys(primary.entities)) {
   entities[name] = createEntity(name);
 }
+
+// ── CRITICAL: Register IMMEDIATELY after building, before any export ──
+// This must happen before `base44` export so that any module importing
+// from entities.js can read from the registry as soon as this module finishes.
+_registry.entities = entities;
+_registry.auth = primary.auth;
 
 // ── Cloud Sync Status ────────────────────────────────────────────
 export const syncStatus = {
@@ -186,10 +192,6 @@ export const base44 = {
   functions: {},
   integrations: { Core: {} }
 };
-
-// ── Register into shared registry so entities.js can access without circular import ──
-_registry.entities = entities;
-_registry.auth = primary.auth;
 
 /** Runtime diagnostic: what data source is active? */
 export function getDataSourceInfo() {

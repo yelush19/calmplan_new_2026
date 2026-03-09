@@ -1,4 +1,5 @@
-import { SystemConfig } from '@/api/entities';
+// LAZY: SystemConfig loaded on-demand to avoid TDZ circular dependency
+const getSystemConfig = () => import('@/api/entities').then(m => m.SystemConfig);
 
 const CONFIG_KEY = 'balance_sheet_templates';
 
@@ -67,6 +68,7 @@ export const DEFAULT_STAGE_TEMPLATES = {
  */
 export async function loadBalanceSheetTemplates() {
   try {
+    const SystemConfig = await getSystemConfig();
     const configs = await SystemConfig.list(null, 50);
     const config = configs.find(c => c.config_key === CONFIG_KEY);
     if (config && config.data?.templates) {
@@ -89,6 +91,7 @@ export async function loadBalanceSheetTemplates() {
  */
 export async function saveBalanceSheetTemplates(configId, templates) {
   try {
+    const SystemConfig = await getSystemConfig();
     if (configId) {
       await SystemConfig.update(configId, { data: { templates } });
     } else {

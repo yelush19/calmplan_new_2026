@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
-import { DaySchedule } from '@/api/entities';
+import React, { useState, useEffect, useRef } from 'react';
+import { DaySchedule, SystemConfig } from '@/api/entities';
+import { injectRecurringTasks } from '@/engines/TaskInjectionEngine';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,14 +101,45 @@ export default function LifeSettingsPage() {
         ...schedule,
         date: format(new Date(), 'yyyy-MM-dd')
       };
-      
+
+      // 1. Save to DaySchedule entity
       const existingSchedules = await DaySchedule.list(null, 1);
       if (existingSchedules && existingSchedules.length > 0) {
         await DaySchedule.update(existingSchedules[0].id, scheduleData);
       } else {
         await DaySchedule.create(scheduleData);
       }
-      
+
+      // 2. Sync to SystemConfig DNA so the rest of the app knows work hours changed
+      try {
+        const configs = await SystemConfig.list(null, 50);
+        const dnaConfig = configs.find(c => c.config_key === 'biological_week');
+        const dnaPayload = {
+          work_start: schedule.work_start,
+          work_end: schedule.work_end,
+          meal_times: schedule.meal_times,
+          break_reminders: schedule.break_reminders,
+          updated_at: new Date().toISOString(),
+        };
+        if (dnaConfig) {
+          await SystemConfig.update(dnaConfig.id, { data: dnaPayload });
+        } else {
+          await SystemConfig.create({ config_key: 'biological_week', data: dnaPayload });
+        }
+      } catch (dnaErr) {
+        console.warn('[LifeSettings] DNA sync failed (non-fatal):', dnaErr);
+      }
+
+      // 3. Trigger task injection engine — generate recurring tasks based on new schedule
+      try {
+        const injected = await injectRecurringTasks();
+        if (injected.length > 0) {
+          console.log(`[LifeSettings] Injected ${injected.length} recurring task(s) after schedule save`);
+        }
+      } catch (injErr) {
+        console.warn('[LifeSettings] Task injection failed (non-fatal):', injErr);
+      }
+
       setHasChanges(false);
       alert('השבוע הביולוגי נשמר בהצלחה!');
     } catch (error) {
@@ -116,6 +148,16 @@ export default function LifeSettingsPage() {
     }
     setIsSaving(false);
   };
+
+  // Auto-inject tasks when schedule work hours change
+  const prevWorkHoursRef = useRef(`${schedule.work_start}-${schedule.work_end}`);
+  useEffect(() => {
+    const key = `${schedule.work_start}-${schedule.work_end}`;
+    if (key !== prevWorkHoursRef.current && !isLoading) {
+      prevWorkHoursRef.current = key;
+      setHasChanges(true);
+    }
+  }, [schedule.work_start, schedule.work_end, isLoading]);
 
   const updateSchedule = (field, value) => {
     setSchedule(prev => ({ ...prev, [field]: value }));

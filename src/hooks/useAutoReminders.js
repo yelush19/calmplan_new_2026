@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import { Task, StickyNote } from '@/api/entities';
 import { differenceInDays, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
@@ -96,7 +97,7 @@ export default function useAutoReminders() {
 
             const contentParts = [prefix];
             if (task.client_name) contentParts.push(`לקוח: ${task.client_name}`);
-            if (task.category) contentParts.push(`קטגוריה: ${task.category}`);
+            if (task.category) contentParts.push(`קטגוריה: ${resolveCategoryLabel(task.category)}`);
             if (task.description) contentParts.push(task.description);
 
             await StickyNote.create({

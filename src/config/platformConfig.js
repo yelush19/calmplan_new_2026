@@ -1,4 +1,5 @@
-import { SystemConfig } from '@/api/entities';
+// LAZY: SystemConfig loaded on-demand to avoid TDZ circular dependency
+const getSystemConfig = () => import('@/api/entities').then(m => m.SystemConfig);
 
 const CONFIG_KEY = 'platform_config';
 
@@ -63,6 +64,7 @@ export const DEFAULT_PLATFORMS = [
 
 export async function loadPlatformConfig() {
   try {
+    const SystemConfig = await getSystemConfig();
     const configs = await SystemConfig.list(null, 50);
     const config = configs.find(c => c.config_key === CONFIG_KEY);
     if (config && config.data?.platforms) {
@@ -81,6 +83,7 @@ export async function loadPlatformConfig() {
 
 export async function savePlatformConfig(configId, platforms) {
   try {
+    const SystemConfig = await getSystemConfig();
     if (configId) {
       await SystemConfig.update(configId, { data: { platforms } });
     } else {
