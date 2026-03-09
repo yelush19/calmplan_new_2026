@@ -720,7 +720,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
 
           {/* Generate button — prominent */}
           <Button
-            onClick={generateTasksPreview}
+            onClick={() => generateTasksPreview()}
             disabled={selectedMonths.size === 0}
             className="w-full h-14 text-lg font-bold rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-40"
             size="lg"
