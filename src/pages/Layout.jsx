@@ -13,7 +13,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Plus, Hourglass, Maximize2, Star,
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
   CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2,
-  Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import, Activity
+  Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import, Activity, Search
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
