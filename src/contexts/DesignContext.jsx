@@ -16,99 +16,67 @@ export const DesignProvider = ({ children }) => {
     shape: 'bubble',
     curvature: 0.5,
     nodeOverrides: {},
-    isLoaded: false
+    isLoaded: false // חשוב: נשאר false עד שהכל באמת מוכן
   });
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadPrefs = useCallback(async () => {
+    // בודק פיזית אם הפונקציות קיימות על האובייקט
+    const isReady = UserPreferences && typeof UserPreferences.filter === 'function';
+    if (!isReady) return false;
 
-    async function initDesign() {
-      // בדיקה קריטית: האם המערכת בכלל מוכנה לעבודה עם Entities?
-      // אם UserPreferences.filter מחזיר undefined או no-op, אנחנו פשוט מחכים.
-      try {
-        if (typeof UserPreferences !== 'undefined' && UserPreferences?.filter) {
-          const prefs = await UserPreferences.filter();
-          
-          // אם חזר מערך ריק או לא תקין בגלל חוסר אתחול, אנחנו עוצרים כאן ולא קורסים
-          if (!prefs || !Array.isArray(prefs)) {
-            console.log("Waiting for UserPreferences initialization...");
-            return; 
-          }
-
-          if (isMounted && prefs.length > 0) {
-            const p = prefs[0];
-            setDesignState(prev => ({
-              ...prev,
-              theme: p.theme || prev.theme,
-              lineStyle: p.line_style || prev.lineStyle,
-              shape: p.shape || prev.shape,
-              curvature: typeof p.curvature === 'number' ? p.curvature : prev.curvature,
-              isLoaded: true
-            }));
-            return;
-          }
-        }
-        
-        // אם הגענו לכאן ואין נתונים, פשוט מסמנים כנטען עם ברירת מחדל
-        if (isMounted) setDesignState(prev => ({ ...prev, isLoaded: true }));
-      } catch (err) {
-        if (isMounted) setDesignState(prev => ({ ...prev, isLoaded: true }));
+    try {
+      const prefs = await UserPreferences.filter();
+      if (prefs && Array.isArray(prefs) && prefs.length > 0) {
+        const p = prefs[0];
+        setDesignState(prev => ({
+          ...prev,
+          theme: p.theme || prev.theme,
+          lineStyle: p.line_style || prev.lineStyle,
+          shape: p.shape || prev.shape,
+          curvature: typeof p.curvature === 'number' ? p.curvature : prev.curvature,
+          isLoaded: true
+        }));
+        return true;
       }
+    } catch (e) {
+      console.warn("Design fallback used");
     }
-
-    // ניסיון אתחול ראשון
-    initDesign();
-
-    // האזנה לאירוע שהדאטה סונכרן - זה הטריגר הכי בטוח במערכת שלך
-    const handleSync = () => initDesign();
-    window.addEventListener('calmplan:data-synced', handleSync);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener('calmplan:data-synced', handleSync);
-    };
+    setDesignState(prev => ({ ...prev, isLoaded: true }));
+    return true;
   }, []);
+
+  useEffect(() => {
+    let timer;
+    
+    // ניסיון ראשון מידי
+    loadPrefs().then(success => {
+      if (!success) {
+        // אם נכשל (כי Entities לא מוכן), ננסה שוב כל שניה עד שיעבוד
+        timer = setInterval(async () => {
+          const ok = await loadPrefs();
+          if (ok) clearInterval(timer);
+        }, 1000);
+      }
+    });
+
+    return () => clearInterval(timer);
+  }, [loadPrefs]);
 
   const updateDesign = useCallback(async (updates) => {
     setDesignState(prev => ({ ...prev, ...updates }));
-    
-    try {
-      // הגנה גם בזמן עדכון
-      if (typeof UserPreferences !== 'undefined' && UserPreferences?.update) {
-        const dbUpdates = {};
-        if (updates.lineStyle) dbUpdates.line_style = updates.lineStyle;
-        if (updates.theme) dbUpdates.theme = updates.theme;
-        if (updates.shape) dbUpdates.shape = updates.shape;
-        if (typeof updates.curvature !== 'undefined') dbUpdates.curvature = updates.curvature;
-
-        if (Object.keys(dbUpdates).length > 0) {
-          await UserPreferences.update('me', dbUpdates);
-        }
-      }
-    } catch (err) {
-      console.error('Design update failed:', err);
+    if (UserPreferences?.update) {
+      const dbMap = { lineStyle: 'line_style', theme: 'theme', shape: 'shape', curvature: 'curvature' };
+      const toUpdate = {};
+      Object.keys(updates).forEach(k => { if(dbMap[k]) toUpdate[dbMap[k]] = updates[k]; });
+      if (Object.keys(toUpdate).length > 0) await UserPreferences.update('me', toUpdate);
     }
   }, []);
 
-  const setNodeOverride = useCallback((nodeId, override) => {
-    setDesignState(prev => ({
-      ...prev,
-      nodeOverrides: {
-        ...prev.nodeOverrides,
-        [nodeId]: { ...(prev.nodeOverrides[nodeId] || {}), ...override }
-      }
-    }));
-  }, []);
-
   return (
-    <DesignContext.Provider value={{ ...designState, updateDesign, setNodeOverride }}>
+    <DesignContext.Provider value={{ ...designState, updateDesign }}>
       {children}
     </DesignContext.Provider>
   );
 };
 
-export const useDesign = () => {
-  const context = useContext(DesignContext);
-  if (!context) throw new Error('useDesign must be used within DesignProvider');
-  return context;
-};
+export const useDesign = () => useContext(DesignContext);
