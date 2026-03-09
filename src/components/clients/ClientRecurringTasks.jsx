@@ -259,7 +259,13 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
         Client.list(null, 500).catch(() => []),
         Task.list(null, 5000).catch(() => [])
       ]);
-      setClients((clientsData || []).filter(c => c.status === 'active'));
+      const activeClients = (clientsData || []).filter(c => c.status === 'active');
+      console.log('[RecurringTasks] Data loaded:', {
+        totalClients: (clientsData || []).length,
+        activeClients: activeClients.length,
+        existingTasks: (tasksData || []).length,
+      });
+      setClients(activeClients);
       setExistingTasks(tasksData || []);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -318,10 +324,20 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   };
 
   const generateTasksPreview = (overrideMonths) => {
-    const monthsArray = overrideMonths
+    console.log('[RecurringTasks] generateTasksPreview called', {
+      overrideMonths,
+      selectedMonths: Array.from(selectedMonths),
+      clientsCount: clients.length,
+      existingTasksCount: existingTasks.length,
+      forceInject,
+    });
+    const monthsArray = overrideMonths instanceof Set
       ? Array.from(overrideMonths).sort((a, b) => a - b)
       : Array.from(selectedMonths).sort((a, b) => a - b);
-    if (monthsArray.length === 0) return;
+    if (monthsArray.length === 0) {
+      console.warn('[RecurringTasks] No months selected, aborting');
+      return;
+    }
 
     const tasksToCreate = [];
     for (const client of clients) {
@@ -376,6 +392,11 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
       const nameCompare = a.client_name.localeCompare(b.client_name, 'he');
       if (nameCompare !== 0) return nameCompare;
       return new Date(a.due_date) - new Date(b.due_date);
+    });
+    console.log('[RecurringTasks] Preview result:', {
+      tasksToCreate: tasksToCreate.length,
+      monthsArray,
+      clientsProcessed: clients.length,
     });
     setPreviewTasks(tasksToCreate);
     setSelectedTaskIds(new Set(tasksToCreate.map(t => t._previewId)));
@@ -708,6 +729,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           {/* Quick inject: one-click current month generation */}
           <Button
             onClick={() => {
+              console.log('[RecurringTasks] PINK BUTTON CLICKED — currentMonth:', currentMonth);
               setSelectedMonths(new Set([currentMonth]));
               generateTasksPreview(new Set([currentMonth]));
             }}
@@ -720,7 +742,10 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
 
           {/* Generate button — prominent */}
           <Button
-            onClick={() => generateTasksPreview()}
+            onClick={() => {
+              console.log('[RecurringTasks] GREEN BUTTON CLICKED — selectedMonths:', Array.from(selectedMonths));
+              generateTasksPreview();
+            }}
             disabled={selectedMonths.size === 0}
             className="w-full h-14 text-lg font-bold rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-40"
             size="lg"
