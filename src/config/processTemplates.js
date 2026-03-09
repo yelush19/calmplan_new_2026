@@ -417,6 +417,78 @@ export const ADDITIONAL_SERVICES = {
 };
 
 // ============================================================
+// P4: HOME / PERSONAL SERVICES
+// ============================================================
+
+export const HOME_SERVICES = {
+  meal_planning: {
+    key: 'meal_planning',
+    label: 'תכנון ארוחות',
+    dashboard: 'home',
+    branch: 'P4',
+    taskCategories: ['ארוחות', 'home_meals', 'תכנון ארוחות'],
+    createCategory: 'ארוחות',
+    steps: [
+      { key: 'plan_menu',    label: 'תכנון תפריט',   icon: 'clipboard' },
+      { key: 'shopping',     label: 'רשימת קניות',    icon: 'shopping-cart' },
+      { key: 'preparation',  label: 'הכנה',           icon: 'check-circle' },
+    ],
+  },
+
+  morning_routine: {
+    key: 'morning_routine',
+    label: 'שגרת בוקר',
+    dashboard: 'home',
+    branch: 'P4',
+    taskCategories: ['שגרת בוקר', 'home_morning', 'בוקר'],
+    createCategory: 'שגרת בוקר',
+    steps: [
+      { key: 'wake_up',   label: 'קימה',       icon: 'sun' },
+      { key: 'exercise',  label: 'פעילות גופנית', icon: 'heart' },
+      { key: 'planning',  label: 'תכנון יום',   icon: 'calendar' },
+    ],
+  },
+
+  evening_routine: {
+    key: 'evening_routine',
+    label: 'שגרת ערב',
+    dashboard: 'home',
+    branch: 'P4',
+    taskCategories: ['שגרת ערב', 'home_evening', 'ערב'],
+    createCategory: 'שגרת ערב',
+    steps: [
+      { key: 'review',    label: 'סיכום יום',    icon: 'book' },
+      { key: 'prep_next', label: 'הכנה למחר',    icon: 'check-circle' },
+    ],
+  },
+
+  personal_errands: {
+    key: 'personal_errands',
+    label: 'סידורים אישיים',
+    dashboard: 'home',
+    branch: 'P4',
+    taskCategories: ['סידורים', 'home_errands', 'אישי'],
+    createCategory: 'סידורים',
+    steps: [
+      { key: 'task',  label: 'ביצוע',  icon: 'check-circle' },
+    ],
+  },
+
+  home_maintenance: {
+    key: 'home_maintenance',
+    label: 'תחזוקת בית',
+    dashboard: 'home',
+    branch: 'P4',
+    taskCategories: ['תחזוקה', 'home_maintenance', 'בית'],
+    createCategory: 'תחזוקה',
+    steps: [
+      { key: 'identify',  label: 'זיהוי משימה',  icon: 'alert-triangle' },
+      { key: 'execute',   label: 'ביצוע',         icon: 'check-circle' },
+    ],
+  },
+};
+
+// ============================================================
 // COMBINED & HELPERS
 // ============================================================
 
@@ -424,6 +496,7 @@ export const ALL_SERVICES = {
   ...TAX_SERVICES,
   ...PAYROLL_SERVICES,
   ...ADDITIONAL_SERVICES,
+  ...HOME_SERVICES,
 };
 
 /**

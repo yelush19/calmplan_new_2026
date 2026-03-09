@@ -235,6 +235,8 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
 
   const selectedNodeData = nodes.find(n => n.id === selectedNode);
 
+  if (!DNA_DEFAULTS) return null;
+
   return (
     <div className="relative w-full h-full">
       <svg
@@ -437,6 +439,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
             { label: 'P2 הנה"ח', color: DNA_DEFAULTS.P2 },
             { label: 'P3 ביצוע', color: DNA_DEFAULTS.P3 },
             { label: 'P4 בית', color: DNA_DEFAULTS.P4 },
+            { label: 'P5 דוחות', color: DNA_DEFAULTS.P5 },
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
