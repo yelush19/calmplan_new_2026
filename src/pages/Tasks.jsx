@@ -33,6 +33,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/processTemplates';
 import { getCategoryLabel } from '@/utils/categoryLabels';
+import { useDesign } from '@/contexts/DesignContext';
 
 // Error Boundary to prevent white screen crashes
 class ViewErrorBoundary extends React.Component {
@@ -148,6 +149,7 @@ function getTimePeriods() {
 // getCategoryLabel imported from @/utils/categoryLabels
 
 export default function TasksPage() {
+  const design = useDesign();
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { prevMonthStart, prevMonthEnd, currMonthStart, currMonthEnd, tabs: TIME_TABS } = useMemo(() => getTimePeriods(), []);
   const [tasks, setTasks] = useState([]);
@@ -365,8 +367,10 @@ export default function TasksPage() {
     return sorted;
   }, [filteredTasks, sortField, sortDir]);
 
-  // P-branch color dots — using DNA branch colors
-  const pBranchDots = { 'P1': 'bg-sky-500', 'P2': 'bg-blue-600', 'P3': 'bg-pink-500', 'P4': 'bg-amber-500', 'P5': 'bg-green-600' };
+  // P-branch colors — dynamic from Design Engine (CSS variable: --cp-p1 etc.)
+  const getBranchDotStyle = (branch) => ({
+    backgroundColor: design.getBranchColor(branch),
+  });
 
   // Group sorted tasks by status, category, client, or p_branch
   const groupedTasks = useMemo(() => {
@@ -421,7 +425,8 @@ export default function TasksPage() {
         .map(b => ({
           key: b,
           label: b === '__none__' ? 'לא משויך' : getPBranchLabel(b),
-          dot: pBranchDots[b] || 'bg-gray-400',
+          dotStyle: b !== '__none__' ? getBranchDotStyle(b) : null,
+          dot: 'bg-gray-400',
           tasks: groups[b],
         }));
     }
@@ -774,7 +779,7 @@ export default function TasksPage() {
                 </tr>
               </thead>
               <tbody>
-                {groupedTasks.map(({ key: groupKey, label: groupLabel, dot: groupDot, tasks: groupTasks }) => {
+                {groupedTasks.map(({ key: groupKey, label: groupLabel, dot: groupDot, dotStyle: groupDotStyle, tasks: groupTasks }) => {
                   const isGroupCollapsed = !!collapsedStatuses[groupKey];
                   return (
                     <React.Fragment key={groupKey}>
@@ -786,7 +791,7 @@ export default function TasksPage() {
                         <td colSpan={7} className="py-2 px-3 border-b border-gray-100">
                           <div className="flex items-center gap-2.5">
                             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isGroupCollapsed ? 'rotate-[-90deg]' : ''}`} />
-                            <div className={`w-2.5 h-2.5 rounded-full ${groupDot} shrink-0`} />
+                            <div className={`w-2.5 h-2.5 rounded-full ${groupDotStyle ? '' : groupDot} shrink-0`} style={groupDotStyle || undefined} />
                             <span className="font-semibold text-gray-700 text-xs">{groupLabel}</span>
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 font-normal">
                               {groupTasks.length}

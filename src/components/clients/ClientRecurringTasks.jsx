@@ -18,6 +18,7 @@ import { he } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
 import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_NAMES } from '@/config/taxCalendar2026';
 import { getScheduledStartForCategory } from '@/config/automationRules';
+import { useDesign } from '@/contexts/DesignContext';
 
 // ============================================================
 // P-Branch definitions: P1-P5 full pipeline
@@ -362,6 +363,7 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
 // Main Component — ADHD-Friendly Design
 // ============================================================
 export default function ClientRecurringTasks({ onGenerateComplete }) {
+  const design = useDesign();
   const [clients, setClients] = useState([]);
   const [existingTasks, setExistingTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -677,6 +679,35 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     if (onGenerateComplete) onGenerateComplete();
   };
 
+  // ── CSV Export: download all preview tasks as spreadsheet ──
+  const exportPreviewToCSV = () => {
+    const FREQ_LABELS = { monthly: 'חודשי', bimonthly: 'דו-חודשי', quarterly: 'רבעוני', semi_annual: 'חצי שנתי', yearly: 'שנתי' };
+    const header = 'שם לקוח,סוג שירות,ענף (P),תדר דיווח,תאריך יעד,תלוי ב (Depends On),תקופה';
+    const rows = previewTasks
+      .filter(t => selectedTaskIds.has(t._previewId))
+      .map(t => {
+        const dependsOn = t.depends_on ? previewTasks.find(p => p._previewId === t.depends_on)?.category || '' : '';
+        return [
+          t.client_name,
+          t._categoryLabel || t.category,
+          t._branchKey || t.branch,
+          FREQ_LABELS[t._frequency] || t._frequency,
+          t.due_date,
+          dependsOn,
+          t.period || '',
+        ].map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',');
+      });
+    const bom = '\uFEFF'; // UTF-8 BOM for Excel Hebrew support
+    const csv = bom + header + '\n' + rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `preview_tasks_${selectedYear}_${Array.from(selectedMonths).join('-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Summary grouped by P-branch
   const branchSummary = useMemo(() => {
     const result = [];
@@ -749,7 +780,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
               >
                 {/* Branch header */}
                 <div className={`px-4 py-3 ${branch.bgSoft} flex items-center gap-3`}>
-                  <div className={`w-4 h-4 rounded-full ${branch.dot}`} />
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: design.getBranchColor(branch.key) }} />
                   <span className="text-lg font-black text-gray-800">{branch.label}</span>
                   <span className="text-base font-bold text-gray-500 mr-auto">{branch.totalClients} לקוחות</span>
                 </div>
@@ -1070,7 +1101,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                     <div key={branch.branchKey} className="space-y-3">
                       {/* Branch header */}
                       <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${branch.bgSoft} border-2 ${branch.accent}`}>
-                        <div className={`w-5 h-5 rounded-full ${branch.dot}`} />
+                        <div className="w-5 h-5 rounded-full" style={{ backgroundColor: design.getBranchColor(branch.branchKey) }} />
                         <span className="text-lg font-black text-gray-800 flex-1">{branch.label}</span>
                         <span className="text-base font-bold text-gray-500">
                           {branchSelectedCount}/{allBranchTasks.length}
@@ -1216,6 +1247,14 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                         אשרי יצירת {selectedCount} משימות
                       </>
                     )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={exportPreviewToCSV}
+                    disabled={isGenerating || selectedCount === 0}
+                    className="h-14 px-6 text-base font-bold rounded-2xl border-2"
+                  >
+                    CSV
                   </Button>
                   <Button
                     variant="outline"
