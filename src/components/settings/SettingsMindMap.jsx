@@ -1115,6 +1115,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   }, [selectedNodeId, allNodes, liveServices, customServices, updateService, deleteService, moveService, createService]);
 
   // Notify parent of selection (directive #8)
+  // ONLY open Service Editor for actual service nodes, NOT for branch/root headers (P1-P5)
   useEffect(() => {
     if (selectedNode && selectedNode.type === 'service') {
       onSelectService?.({

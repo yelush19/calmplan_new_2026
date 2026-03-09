@@ -13,7 +13,14 @@ export default function EmergencyResetPage() {
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
 
+    // SAFETY LOCK: Emergency reset is disabled to prevent accidental data loss
+    const RESET_ENABLED = false;
+
     const handleFullReset = async () => {
+        if (!RESET_ENABLED) {
+            setError('איפוס חירום מושבת. השתמשי ב-Force Inject + Clear Month Cache במקום.');
+            return;
+        }
         const ok = await confirm({
             title: 'איפוס מלא של המערכת',
             description: 'פעולה הרסנית! כל הנתונים יימחקו.\nפעולה זו בלתי הפיכה!',

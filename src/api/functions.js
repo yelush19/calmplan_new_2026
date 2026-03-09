@@ -862,7 +862,19 @@ export const emergencyReset = async () => {
  * Nuclear wipe: delete ALL tasks from BOTH Supabase AND localStorage.
  * Prevents ghost resurrection by clearing both layers simultaneously.
  */
+/**
+ * DISABLED: Nuclear wipe is locked to prevent accidental data loss.
+ * Use the Force Inject + Clear Month Cache in the injection engine instead.
+ * To re-enable, set NUCLEAR_ENABLED = true below.
+ */
+const NUCLEAR_ENABLED = false;
+
 export const nuclearWipeTasks = async () => {
+  if (!NUCLEAR_ENABLED) {
+    console.warn('[NuclearWipe] BLOCKED — nuclear reset is disabled. Use Force Inject instead.');
+    return { data: { success: false, blocked: true, log: ['Nuclear reset is DISABLED. Use Force Inject + Clear Month Cache instead.'] } };
+  }
+
   const log = [];
 
   // Layer 1: Supabase

@@ -632,6 +632,19 @@ export default function TemplatePanel({ service, onClose }) {
             </Button>
           )}
         </div>
+
+        {/* ── Sticky Save Footer ── */}
+        <div className="sticky bottom-0 bg-white border-t px-4 py-3 z-10">
+          <Button
+            onClick={handleSave}
+            disabled={!hasChanges}
+            className="w-full h-10 text-sm font-bold rounded-xl gap-2 disabled:opacity-40"
+            style={{ backgroundColor: hasChanges ? pColor : '#d1d5db' }}
+          >
+            <Save className="w-4 h-4" />
+            {hasChanges ? 'שמור שינויים' : 'אין שינויים לשמירה'}
+          </Button>
+        </div>
       </motion.div>
     </AnimatePresence>
   );

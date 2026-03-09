@@ -802,8 +802,8 @@ function LayoutInner({ children }) {
                         </div>
                       </div>
 
-                      {/* כלים אישיים — Collapsible accordion for pinned clients + my menu */}
-                      {(pinnedClients.length > 0 || myMenu.length > 0) && (
+                      {/* כלים אישיים — Always visible so users can see starred items */}
+                      {(
                         <div className="px-2 py-1">
                           <button
                             onClick={() => setCollapsedSections(prev => {
@@ -845,6 +845,14 @@ function LayoutInner({ children }) {
                                     for (const section of Object.values(sidebarSections)) {
                                       menuItem = section.items.find(i => i.href === href);
                                       if (menuItem) break;
+                                      // Also search subGroups (P3 has nested items)
+                                      if (section.subGroups) {
+                                        for (const sg of section.subGroups) {
+                                          menuItem = sg.items.find(i => i.href === href);
+                                          if (menuItem) break;
+                                        }
+                                        if (menuItem) break;
+                                      }
                                     }
                                     if (!menuItem) return null;
                                     return (
@@ -858,6 +866,12 @@ function LayoutInner({ children }) {
                                     );
                                   })}
                                 </>
+                              )}
+                              {/* Empty state hint */}
+                              {pinnedClients.length === 0 && myMenu.length === 0 && (
+                                <p className="text-[10px] text-gray-400 px-3 py-2">
+                                  לחצי על ⭐ ליד פריט בתפריט כדי להוסיף אותו לכאן
+                                </p>
                               )}
                             </div>
                           )}
