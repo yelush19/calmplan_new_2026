@@ -214,6 +214,7 @@ export const entities = {
   PeriodicReport: createEntity('periodic_reports'),
   FileMetadata: createEntity('file_metadata'),
   ServiceCatalog: createEntity('service_catalog'),
+  UserPreferences: createEntity('user_preferences'),
 };
 
 export { auth };
