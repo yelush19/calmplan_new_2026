@@ -192,7 +192,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
     });
 
     return { nodes: allNodes, ringSegments: segments };
-  }, [tasks, design?.nodeOverrides]);
+  }, [tasks, design?.nodeOverrides, design?.stickerMap, branchColors, globalShape]);
 
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
@@ -252,7 +252,19 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
 
   const selectedNodeData = nodes.find(n => n.id === selectedNode);
 
-  if (!DNA_DEFAULTS) return null;
+  // Guard clause: show loading state when tasks are empty
+  if (!tasks || tasks.length === 0) {
+    return (
+      <div className="flex items-center justify-center w-full h-full min-h-[300px]">
+        <div className="text-center">
+          <div className="text-4xl mb-3">🎯</div>
+          <div className="text-sm font-bold" style={{ color: 'var(--cp-text-secondary, #64748B)' }}>
+            טוען מפת ארכיטקט...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-full">

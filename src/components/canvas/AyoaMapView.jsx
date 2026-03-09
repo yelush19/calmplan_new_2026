@@ -399,6 +399,20 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
 
   const selectedNodeData = allNodes.find(n => n.id === selectedNode);
 
+  // Guard clause: show loading state when tasks are empty
+  if (!tasks || tasks.length === 0) {
+    return (
+      <div className="flex items-center justify-center w-full h-full min-h-[300px]">
+        <div className="text-center">
+          <div className="text-4xl mb-3">🧠</div>
+          <div className="text-sm font-bold" style={{ color: 'var(--cp-text-secondary, #64748B)' }}>
+            טוען מפת חשיבה...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Computed viewBox for zoom
   const vbX = (VB_W - VB_W / zoom) / 2 - pan.x / zoom;
   const vbY = (VB_H - VB_H / zoom) / 2 - pan.y / zoom;
