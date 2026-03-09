@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StickyNote, Client, FileMetadata } from '@/api/entities';
+import { StickyNote, Client, FileMetadata, Task } from '@/api/entities';
 import { UploadFile, DeleteFile } from '@/api/integrations';
+import { differenceInDays, parseISO } from 'date-fns';
+import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -238,9 +240,50 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
     loadNotes();
   };
 
+  // ── 3-Day Rule: tasks due within 3 days auto-appear as virtual sticky notes ──
+  const [urgentTasks, setUrgentTasks] = useState([]);
+  useEffect(() => {
+    const loadUrgentTasks = async () => {
+      try {
+        const allTasks = await Task.list(null, 5000).catch(() => []);
+        const tasks = Array.isArray(allTasks) ? allTasks : [];
+        const now = new Date();
+        const linked = new Set(notes.map(n => n.linked_task_id).filter(Boolean));
+        const urgent = tasks
+          .filter(t => {
+            if (t.status === 'completed' || t.status === 'not_relevant' || t.status === 'production_completed') return false;
+            if (!t.due_date) return false;
+            if (linked.has(t.id)) return false; // already has a sticky note
+            const due = parseISO(t.due_date);
+            const days = differenceInDays(due, now);
+            return days >= 0 && days <= 3; // due within 3 days
+          })
+          .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+          .slice(0, 5);
+        setUrgentTasks(urgent);
+      } catch { setUrgentTasks([]); }
+    };
+    loadUrgentTasks();
+  }, [notes]);
+
+  // Build virtual notes from urgent tasks (3-day rule)
+  const threeDayNotes = urgentTasks.map(t => ({
+    id: `__3day_${t.id}`,
+    title: `${t.title}`,
+    content: `${resolveCategoryLabel(t.category)} | ${t.client_name || ''} | יעד: ${t.due_date}`,
+    color: 'pink',
+    pinned: false,
+    _isVirtual: true,
+    _taskId: t.id,
+    due_date: t.due_date,
+    urgency: 'urgent',
+    client_name: t.client_name,
+  }));
+
   const pinnedNotes = notes.filter(n => n.pinned);
   const unpinnedNotes = notes.filter(n => !n.pinned);
-  const displayNotes = compact ? [...pinnedNotes, ...unpinnedNotes.slice(0, 3)] : [...pinnedNotes, ...unpinnedNotes];
+  const allDisplayNotes = [...pinnedNotes, ...threeDayNotes, ...unpinnedNotes];
+  const displayNotes = compact ? allDisplayNotes.slice(0, 6) : allDisplayNotes;
 
   return (
     <div className="space-y-3">
@@ -250,6 +293,12 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
           <Pin className="w-5 h-5 text-amber-500" />
           פתקים
           {notes.length > 0 && <span className="text-sm font-normal text-gray-400">({notes.length})</span>}
+          {threeDayNotes.length > 0 && (
+            <Badge className="bg-rose-100 text-rose-700 text-[10px] px-1.5 py-0 gap-0.5">
+              <AlertTriangle className="w-2.5 h-2.5" />
+              {threeDayNotes.length} ב-3 ימים
+            </Badge>
+          )}
         </h3>
         <Button
           variant="ghost"
@@ -474,27 +523,36 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
 
                     {/* Actions - show on hover */}
                     <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => togglePin(note)}
-                        className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
-                        title={note.pinned ? 'הסר הצמדה' : 'הצמד'}
-                      >
-                        {note.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={() => startEdit(note)}
-                        className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
-                        title="ערוך"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => deleteNote(note.id)}
-                        className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
-                        title="מחק"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {note._isVirtual ? (
+                        <Badge className="bg-rose-100 text-rose-700 text-[9px] px-1 py-0">
+                          <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
+                          כלל 3 ימים
+                        </Badge>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => togglePin(note)}
+                            className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
+                            title={note.pinned ? 'הסר הצמדה' : 'הצמד'}
+                          >
+                            {note.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={() => startEdit(note)}
+                            className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
+                            title="ערוך"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteNote(note.id)}
+                            className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
+                            title="מחק"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </>
                 )}

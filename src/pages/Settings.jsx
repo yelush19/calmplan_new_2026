@@ -381,7 +381,7 @@ export default function SettingsPage() {
           STICKY GLOBAL SAVE BUTTON — always visible at bottom
           ══════════════════════════════════════════════════════ */}
       {/* STICKY GLOBAL SAVE BUTTON — always visible at bottom of Settings */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t shadow-lg px-6 py-3">
+      <div className={`fixed bottom-0 left-0 right-0 z-50 backdrop-blur-sm border-t shadow-lg px-6 py-3 transition-all ${isDirty ? 'bg-amber-50/95 ring-2 ring-amber-400 ring-inset' : 'bg-white/95'}`}>
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             {isDirty && (

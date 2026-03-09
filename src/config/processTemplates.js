@@ -414,6 +414,20 @@ export const ADDITIONAL_SERVICES = {
       { key: 'send',      label: 'שליחה',         icon: 'send' },
     ],
   },
+
+  update_reports_folder: {
+    key: 'update_reports_folder',
+    label: 'עדכון דוחות בתיקייה',
+    dashboard: 'payroll',
+    taskType: 'linear',
+    taskCategories: ['עדכון דוחות בתיקייה', 'work_update_reports_folder'],
+    createCategory: 'עדכון דוחות בתיקייה',
+    steps: [
+      { key: 'gather_reports', label: 'איסוף דוחות',    icon: 'folder-open' },
+      { key: 'update_folder',  label: 'עדכון תיקייה',   icon: 'upload' },
+      { key: 'verify',         label: 'אימות ובדיקה',   icon: 'check-circle' },
+    ],
+  },
 };
 
 // ============================================================

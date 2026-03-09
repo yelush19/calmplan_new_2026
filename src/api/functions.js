@@ -6,7 +6,12 @@
 
 import { base44, exportAllData, importAllData, clearAllData } from './base44Client';
 
-const entities = base44.entities;
+// Lazy accessor to avoid TDZ crash from circular imports
+const entities = new Proxy({}, {
+  get(_, prop) {
+    return base44.entities?.[prop];
+  },
+});
 import { getDueDateForCategory, isClient874 } from '@/config/taxCalendar2026';
 import { getScheduledStartForCategory, DEFAULT_EXECUTION_PERIODS } from '@/config/automationRules';
 
