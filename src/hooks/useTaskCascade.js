@@ -1,10 +1,5 @@
-/**
- * useTaskCascade - Updated for Design Awareness
- */
-
 import { useCallback, useMemo } from 'react';
-import { Task, ServiceCatalog } from '@/api/entities';
-import { useDesign } from '@/contexts/DesignContext'; // הוספת הקשר לעיצוב
+import { Task } from '@/api/entities';
 import {
   processTaskCascade,
   computeInsights,
@@ -35,21 +30,21 @@ function notifyChange(collection = 'tasks') {
 }
 
 export default function useTaskCascade(tasks, setTasks, clients = []) {
-  const design = useDesign(); // גישה להגדרות העיצוב
 
   const updateTaskWithCascade = useCallback(async (taskId, updates) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // שליפת העיצוב של משימת האם כדי להוריש אותו הלאה
+    // Capture parent design metadata for inheritance
     const parentDesign = {
       color: updates.color || task.color,
       shape: updates.shape || task.shape,
-      sticker: updates.sticker || task.sticker
+      branch: updates.branch || task.branch
     };
 
     const merged = { ...task, ...updates };
     const steps = merged.process_steps || {};
+
     const siblings = tasks.filter(t =>
       t.client_name === task.client_name &&
       t.reporting_month === task.reporting_month &&
@@ -68,12 +63,15 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
       finalUpdates.status = cascade.statusUpdate.status;
     }
 
-    const isDirectProduction = updates.status === 'production_completed' && task.status !== 'production_completed';
+    const isDirectProduction = updates.status === 'production_completed' &&
+      task.status !== 'production_completed';
 
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...finalUpdates } : t));
+    setTasks(prev => prev.map(t =>
+      t.id === taskId ? { ...t, ...finalUpdates } : t
+    ));
 
     try {
-      await Task.update(taskId, finalUpdates);
+      await Task.update(taskId, { ...task, ...finalUpdates });
 
       let tasksToCreate = cascade.tasksToCreate || [];
 
@@ -90,13 +88,13 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
             client_id: task.client_id,
             category: ALL_SERVICES[svc.serviceKey]?.createCategory || svc.title,
             status: 'not_started',
-            branch: task.branch || 'P1',
+            branch: parentDesign.branch || 'P1',
             due_date: subDueDate,
             report_month: task.report_month,
             report_year: task.report_year,
             workflow_phase: phase,
             master_task_id: task.id,
-            // --- ירושת עיצוב ---
+            triggered_by: task.id,
             color: parentDesign.color,
             shape: parentDesign.shape,
             process_steps: templateSteps,
@@ -107,26 +105,39 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
           tasksToCreate = [
             ...PHASE_B_SERVICES.map(s => buildChild(s, 'phase_b')),
             ...PHASE_C_SERVICES.map(s => buildChild(s, 'phase_c')),
-            ...MSB_COLLECTOR_SERVICES.map(s => ({ ...buildChild(s, 'msb_collector'), status: 'waiting_for_materials', is_collector: true }))
+            ...MSB_COLLECTOR_SERVICES.map(s => ({ ...buildChild(s, 'msb_collector'), is_collector: true, status: 'waiting_for_materials' }))
           ];
         } else if (service?.key === 'bookkeeping') {
           tasksToCreate = [
             ...P2_PHASE_B_SERVICES.map(s => buildChild(s, 'phase_b')),
             ...P2_PHASE_C_SERVICES.map(s => buildChild(s, 'phase_c')),
-            ...P2_COLLECTOR_SERVICES.map(s => ({ ...buildChild(s, 'pnl_collector'), status: 'waiting_for_materials', is_collector: true }))
+            ...P2_COLLECTOR_SERVICES.map(s => ({ ...buildChild(s, 'pnl_collector'), is_collector: true, status: 'waiting_for_materials' }))
           ];
         }
       }
 
-      // יצירת המשימות ב-DB
-      for (const newTask of tasksToCreate) {
-        const created = await Task.create(newTask);
-        if (created) {
-          setTasks(prev => [...prev, created]);
-          // עדכון ה-Cache של העיצוב
-          if (created.color || created.shape) {
-            design.setNodeOverride(created.id, { color: created.color, shape: created.shape });
+      if (tasksToCreate.length > 0) {
+        const existingTitles = new Set(tasks.map(t => t.title));
+        for (const newTask of tasksToCreate) {
+          if (existingTitles.has(newTask.title)) continue;
+          const created = await Task.create(newTask);
+          if (created) {
+            setTasks(prev => [...prev, created]);
+            // Sync design without circular dependency
+            window.dispatchEvent(new CustomEvent('calmplan:design-changed', { 
+              detail: { nodeId: created.id, color: created.color, shape: created.shape } 
+            }));
           }
+        }
+      }
+
+      if (finalUpdates.status === 'production_completed') {
+        const unlocked = await processSequenceUnlock({ ...task, ...finalUpdates }, tasks);
+        if (unlocked.length > 0) {
+          setTasks(prev => prev.map(t => {
+            const u = unlocked.find(ul => ul.id === t.id);
+            return u ? { ...t, status: 'not_started' } : t;
+          }));
         }
       }
 
@@ -135,10 +146,39 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
       console.error('Cascade update failed:', err);
       setTasks(prev => prev.map(t => t.id === taskId ? task : t));
     }
-  }, [tasks, setTasks, design, clients]);
+  }, [tasks, setTasks, clients]);
 
-  // שאר הפונקציות (updateStepWithCascade, insights, וכו') נשארות דומות
-  // עם הוספת ירושת העיצוב במידת הצורך.
+  const updateStepWithCascade = useCallback(async (taskId, stepKey) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const currentSteps = getTaskProcessSteps(task);
+    const updatedSteps = toggleStep(currentSteps, stepKey);
+    const siblings = tasks.filter(t => t.client_name === task.client_name && t.reporting_month === task.reporting_month && t.id !== task.id);
+    
+    const client = clients.find(c => c.name === task.client_name || c.id === task.client_id);
+    const cascade = processTaskCascade({ ...task, process_steps: updatedSteps }, updatedSteps, siblings, { clientServices: client?.service_types || [] });
+
+    const updates = { process_steps: updatedSteps };
+    if (cascade.statusUpdate) updates.status = cascade.statusUpdate.status;
+
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+
+    try {
+      await Task.update(taskId, updates);
+      if (cascade.tasksToCreate?.length > 0) {
+        const existingTitles = new Set(tasks.map(t => t.title));
+        for (const newTask of cascade.tasksToCreate) {
+          if (existingTitles.has(newTask.title)) continue;
+          const created = await Task.create(newTask);
+          if (created) setTasks(prev => [...prev, created]);
+        }
+      }
+      notifyChange('tasks');
+    } catch (err) {
+      setTasks(prev => prev.map(t => t.id === taskId ? task : t));
+    }
+  }, [tasks, setTasks, clients]);
 
   return {
     updateTaskWithCascade,
