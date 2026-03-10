@@ -19,23 +19,29 @@ import {
 } from '@/config/companyProcessTree';
 
 // ============================================================
-// DB ACCESS — lazy import to avoid circular deps
+// DB ACCESS — Direct Supabase on calmplan_system_config table
 // ============================================================
+//
+// The SystemConfig entity writes to the generic `app_data` table,
+// but the dedicated `calmplan_system_config` table is where the
+// user expects to see config data. We bypass the entity layer
+// and write directly to the dedicated table.
 
+const TABLE = 'calmplan_system_config';
 const CONFIG_KEY = 'company_process_tree';
 
-let _systemConfig = null;
-
-async function getSystemConfig() {
-  if (!_systemConfig) {
-    try {
-      const { SystemConfig } = await import('@/api/entities');
-      _systemConfig = SystemConfig;
-    } catch {
-      console.warn('[ProcessTreeService] SystemConfig not available — using seed only');
+/** Lazy import of the raw Supabase client */
+let _supabase = null;
+async function getSupabase() {
+  if (!_supabase) {
+    const { supabase, isSupabaseAvailable } = await import('@/api/supabaseClient');
+    if (!isSupabaseAvailable()) {
+      console.warn('[ProcessTreeService] Supabase not available — using seed only');
+      return null;
     }
+    _supabase = supabase;
   }
-  return _systemConfig;
+  return _supabase;
 }
 
 // ============================================================
@@ -47,7 +53,7 @@ let _cachedTree = null;
 let _cachedConfigId = null;
 
 /**
- * Load the company process tree from DB.
+ * Load the company process tree from DB (calmplan_system_config table).
  * Falls back to SEED on first run (and writes it to DB).
  *
  * @returns {{ tree: object, configId: string|null }}
@@ -58,26 +64,54 @@ export async function loadCompanyTree() {
     return { tree: _cachedTree, configId: _cachedConfigId };
   }
 
-  const SystemConfig = await getSystemConfig();
+  const supabase = await getSupabase();
 
-  if (SystemConfig) {
+  if (supabase) {
     try {
-      const configs = await SystemConfig.list(null, 50);
-      const config = configs.find(c => c.config_key === CONFIG_KEY);
+      // Read from dedicated table
+      const { data: rows, error: readErr } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('config_key', CONFIG_KEY)
+        .limit(1);
 
-      if (config?.data?.tree) {
-        _cachedTree = config.data.tree;
-        _cachedConfigId = config.id;
+      if (readErr) {
+        console.error('[ProcessTreeService] DB read error:', readErr);
+        throw readErr;
+      }
+
+      if (rows && rows.length > 0 && rows[0].data?.tree) {
+        _cachedTree = rows[0].data.tree;
+        _cachedConfigId = rows[0].id;
+        console.log('[ProcessTreeService] ✅ Loaded tree from DB, configId:', _cachedConfigId);
         return { tree: _cachedTree, configId: _cachedConfigId };
       }
 
       // First run — seed to DB
-      const newConfig = await SystemConfig.create({
-        config_key: CONFIG_KEY,
-        data: { tree: PROCESS_TREE_SEED },
-      });
+      console.log('[ProcessTreeService] No tree in DB — seeding...');
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from(TABLE)
+        .insert({
+          id,
+          config_key: CONFIG_KEY,
+          data: { tree: PROCESS_TREE_SEED },
+          created_date: now,
+          updated_date: now,
+        })
+        .select()
+        .single();
+
+      if (insertErr) {
+        console.error('[ProcessTreeService] DB insert error:', insertErr);
+        throw insertErr;
+      }
+
       _cachedTree = PROCESS_TREE_SEED;
-      _cachedConfigId = newConfig.id;
+      _cachedConfigId = inserted.id;
+      console.log('[ProcessTreeService] ✅ Seeded tree to DB, configId:', _cachedConfigId);
       return { tree: _cachedTree, configId: _cachedConfigId };
     } catch (err) {
       console.error('[ProcessTreeService] DB error, falling back to seed:', err);
@@ -98,21 +132,38 @@ export async function loadCompanyTree() {
  * @returns {string|null} configId
  */
 export async function saveCompanyTree(tree, configId) {
-  const SystemConfig = await getSystemConfig();
-  if (!SystemConfig) {
-    console.warn('[ProcessTreeService] Cannot save — SystemConfig not available');
+  const supabase = await getSupabase();
+  if (!supabase) {
+    console.warn('[ProcessTreeService] Cannot save — Supabase not available');
     return null;
   }
 
   try {
+    const now = new Date().toISOString();
+
     if (configId) {
-      await SystemConfig.update(configId, { data: { tree } });
+      const { error } = await supabase
+        .from(TABLE)
+        .update({ data: { tree }, updated_date: now })
+        .eq('id', configId);
+
+      if (error) throw error;
     } else {
-      const newConfig = await SystemConfig.create({
-        config_key: CONFIG_KEY,
-        data: { tree },
-      });
-      configId = newConfig.id;
+      const id = crypto.randomUUID();
+      const { data: inserted, error } = await supabase
+        .from(TABLE)
+        .insert({
+          id,
+          config_key: CONFIG_KEY,
+          data: { tree },
+          created_date: now,
+          updated_date: now,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      configId = inserted.id;
     }
 
     // Update cache

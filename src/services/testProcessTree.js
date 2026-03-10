@@ -32,20 +32,50 @@ export async function testProcessTree() {
     const { flattenTree, buildNodeMap, PROCESS_TREE_SEED } =
       await import('@/config/companyProcessTree');
     const { Client } = await import('@/api/entities');
+    const { supabase, isSupabaseAvailable } = await import('@/api/supabaseClient');
+
+    // ══════════════════════════════════════════════════════
+    // TEST 0: Supabase connectivity diagnostic
+    // ══════════════════════════════════════════════════════
+    log('TEST 0: Supabase Connectivity');
+    console.log('  isSupabaseAvailable():', isSupabaseAvailable());
+    if (supabase) {
+      const { data: probe, error: probeErr } = await supabase
+        .from('calmplan_system_config')
+        .select('id')
+        .limit(1);
+      console.log('  calmplan_system_config probe:', probeErr ? `❌ ${probeErr.message}` : `✅ OK (${probe?.length || 0} rows)`);
+    } else {
+      console.warn('  ⚠️ supabase client is null');
+    }
 
     // ══════════════════════════════════════════════════════
     // TEST 1: Seed company tree to DB
     // ══════════════════════════════════════════════════════
-    log('TEST 1: loadCompanyTree() — Seed to Supabase');
+    log('TEST 1: loadCompanyTree() — Seed to calmplan_system_config');
     invalidateTreeCache(); // Force fresh DB read
     const { tree, configId } = await loadCompanyTree();
     console.log('  configId:', configId);
+    if (!configId) {
+      console.error('  ❌ configId is null — seed did NOT write to DB!');
+    }
     console.log('  version:', tree.version);
     console.log('  branches:', Object.keys(tree.branches));
     const flat = flattenTree(tree);
     console.log(`  total nodes: ${flat.length}`);
     console.log('  node IDs:', flat.map(n => n.id));
-    console.log('  ✅ Company tree seeded to SystemConfig');
+
+    // Verify it's actually in the DB
+    if (supabase) {
+      const { data: verify, error: verifyErr } = await supabase
+        .from('calmplan_system_config')
+        .select('id, config_key')
+        .eq('config_key', 'company_process_tree');
+      console.log('  DB verification:', verifyErr
+        ? `❌ ${verifyErr.message}`
+        : `✅ Found ${verify?.length || 0} row(s) in calmplan_system_config`);
+    }
+    console.log('  ✅ Company tree seeded');
 
     // ══════════════════════════════════════════════════════
     // TEST 2: Migration preview on a real client
