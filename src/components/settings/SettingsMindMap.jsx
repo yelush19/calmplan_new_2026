@@ -1378,8 +1378,37 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   // ONLY open Service Editor for actual service nodes, NOT for branch/root headers (P1-P5)
   useEffect(() => {
     if (selectedNode && selectedNode.type === 'service') {
+      // Merge steps from DB tree (ProcessArchitect) if they exist
+      let mergedSteps = selectedNode.steps || [];
+      if (dbTreeRef.tree?.branches) {
+        const findNodeInTree = (nodes, id) => {
+          for (const n of (nodes || [])) {
+            if (n.id === id || n.service_key === id) return n;
+            if (n.children?.length) {
+              const found = findNodeInTree(n.children, id);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        for (const branch of Object.values(dbTreeRef.tree.branches)) {
+          const treeNode = findNodeInTree(branch.children, selectedNodeId);
+          if (treeNode?.steps?.length > 0 && mergedSteps.length === 0) {
+            // DB tree has steps but local doesn't — use DB tree steps
+            mergedSteps = treeNode.steps.map((s, i) => ({
+              key: s.key || `step_${i}`,
+              label: s.label,
+              icon: s.icon || 'check-circle',
+              sort_order: i,
+              parent_service: selectedNodeId,
+            }));
+            break;
+          }
+        }
+      }
       onSelectService?.({
         ...selectedNode,
+        steps: mergedSteps,
         _crud: { updateService, deleteService, moveService, createService },
         _liveServices: liveServices,
         _allNodes: allNodes,
@@ -1388,7 +1417,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     } else {
       onSelectService?.(null);
     }
-  }, [selectedNodeId, selectedNode?.type, selectedNode?.parentId, allNodes.length, liveServices]);
+  }, [selectedNodeId, selectedNode?.type, selectedNode?.parentId, allNodes.length, liveServices, dbTreeRef.tree]);
 
   // ── Build hierarchy edges (solid tapered branches) ──
   const edges = useMemo(() => {
