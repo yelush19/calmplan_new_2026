@@ -36,11 +36,11 @@ import { useDesign } from '@/contexts/DesignContext';
 import {
   Trash2, Plus, GripVertical, Cloud, Circle, Diamond, Star,
   MessageCircle, X, ChevronRight, Move, Zap, Minus, ListOrdered,
-  CloudUpload, CheckCircle2, AlertCircle, Loader2, Shield,
+  CloudUpload, CheckCircle2, AlertCircle, Loader2, Shield, Save,
 } from 'lucide-react';
 
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
-import { loadCompanyTree, invalidateTreeCache } from '@/services/processTreeService';
+import { loadCompanyTree, invalidateTreeCache, saveCompanyTree } from '@/services/processTreeService';
 
 // ── DNA Colors (P-branch identity) — base set, extended dynamically from DB ──
 const BASE_DNA = {
@@ -631,8 +631,9 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [dbBranches, setDbBranches] = useState({});
   useEffect(() => {
     invalidateTreeCache();
-    loadCompanyTree().then(({ tree }) => {
+    loadCompanyTree().then(({ tree, configId }) => {
       if (!tree?.branches) return;
+      setDbTreeRef({ tree, configId });
       const extra = {};
       let dynIdx = 0;
       for (const [branchId, branch] of Object.entries(tree.branches)) {
@@ -643,7 +644,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
             label: `${branchId} ${branch.label}`,
             bg: palette.color + '15',
             glow: palette.glow,
-            dashboard: 'admin', // fallback dashboard
+            dashboard: branchId, // use branch ID so services map back correctly
           };
           dynIdx++;
         }
@@ -653,6 +654,10 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       }
     }).catch(err => console.warn('[MindMap] Could not load DB branches:', err));
   }, []);
+
+  const [mapDirty, setMapDirty] = useState(false);
+  const [mapSaving, setMapSaving] = useState(false);
+  const [dbTreeRef, setDbTreeRef] = useState({ tree: null, configId: null });
 
   // Merged DNA: base + dynamic branches
   const DNA = useMemo(() => ({ ...BASE_DNA, ...dbBranches }), [dbBranches]);
@@ -841,7 +846,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
     // Apply force repulsion (directive #11)
     return applyForceRepulsion(nodes);
-  }, [liveServices, savedPositions, selectedNodeId, customServices, nodePositionOverrides]);
+  }, [DNA, liveServices, savedPositions, selectedNodeId, customServices, nodePositionOverrides]);
 
   // ── SVG coordinate helper (directive #14: absolute math) ──
   const svgPoint = useCallback((clientX, clientY) => {
@@ -895,6 +900,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       return next;
     });
     onConfigChange?.({ action: 'create', key, service: svc });
+    setMapDirty(true);
     return key;
   }, [onConfigChange]);
 
@@ -915,6 +921,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       });
     }
     onConfigChange?.({ action: 'delete', key: serviceKey });
+    setMapDirty(true);
     if (selectedNodeId === serviceKey) setSelectedNodeId(null);
   }, [onConfigChange, selectedNodeId]);
 
@@ -1154,6 +1161,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       return next;
     });
     setSelectedNodeId(key);
+    setMapDirty(true);
 
     // Sync to DB process tree (fire-and-forget)
     syncNewNodeToDbTree(branch, key, 'שירות חדש', parentId);
@@ -1526,7 +1534,31 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         </g>
       </svg>
 
-      {/* Legacy Shape Palette removed — DesignFloatingTab is the single styling tool */}
+      {/* ══════ Floating Save Button ══════ */}
+      {mapDirty && (
+        <button
+          onClick={async () => {
+            setMapSaving(true);
+            try {
+              invalidateTreeCache();
+              const { tree, configId } = await loadCompanyTree();
+              if (tree) {
+                await saveCompanyTree(tree, configId);
+                setDbTreeRef({ tree, configId });
+              }
+              setMapDirty(false);
+            } catch (err) {
+              console.error('[MindMap] Save failed:', err);
+            }
+            setMapSaving(false);
+          }}
+          disabled={mapSaving}
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-5 py-2.5 rounded-full bg-green-500 text-white font-bold text-sm shadow-lg hover:bg-green-600 active:scale-95 transition-all"
+        >
+          {mapSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {mapSaving ? 'שומר...' : 'שמור שינויים'}
+        </button>
+      )}
 
       {/* ══════ DNA Legend + Sync Button ══════ */}
       <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
