@@ -1267,6 +1267,15 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     } catch (err) {
       console.error(`[MindMap QuickSpawn] ❌ DB sync FAILED:`, err);
       toast({ title: 'שגיאה בשמירה ל-DB', description: err.message || 'שגיאה לא ידועה', variant: 'destructive' });
+      // Rollback: DB is authority — if DB write failed, remove from local state
+      setCustomServices(prev => {
+        const next = { ...prev };
+        delete next[createdKey];
+        saveCustomServices(next);
+        return next;
+      });
+      setSelectedNodeId(null);
+      console.log(`[MindMap QuickSpawn] 🔄 Rolled back local service "${createdKey}" — DB write failed`);
     }
     setSpawnLoading(false);
   }, [createService, DNA, spawnLoading]);

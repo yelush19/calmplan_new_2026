@@ -34,6 +34,7 @@ import {
   syncSettingToDb,
 } from '@/services/processTreeService';
 import { flattenTree } from '@/config/companyProcessTree';
+import { toast } from '@/components/ui/use-toast';
 
 // ── Branch color palette for dynamic branches ──
 const BRANCH_PALETTE = [
@@ -476,6 +477,7 @@ export default function ProcessArchitect() {
       setIsDirty(false);
       setSaveResult('success');
       console.log('[ProcessArchitect] ✅ Saved & broadcasted to all consumers');
+      toast({ title: 'עץ התהליכים נשמר', description: 'השינויים ישתקפו מיד בכל המערכת' });
 
       // Clean MindMap's localStorage: remove custom services whose branch was deleted
       try {
@@ -509,6 +511,7 @@ export default function ProcessArchitect() {
     } catch (err) {
       console.error('[ProcessArchitect] Save failed:', err);
       setSaveResult('error');
+      toast({ title: 'שגיאה בשמירה', description: err.message || 'שגיאה לא ידועה', variant: 'destructive' });
     }
     setSaving(false);
   }, [tree, configId]);
