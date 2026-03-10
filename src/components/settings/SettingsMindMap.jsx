@@ -1390,7 +1390,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         })()}
 
         {/* ── Center Hub — Logo ── */}
-        <circle cx={CX} cy={CY} r={55} fill="url(#hub-grad)" filter="url(#settings-glow)" />
+        <circle cx={CX} cy={CY} r={55} fill="white" />
         <image
           href={`${window.location.origin}/logo-litay.png`}
           x={CX - 50} y={CY - 50}
@@ -1399,6 +1399,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           preserveAspectRatio="xMidYMid slice"
           onError={(e) => { e.target.style.display = 'none'; }}
         />
+        <circle cx={CX} cy={CY} r={55} fill="none" stroke="#66BB6A" strokeWidth={1.5} strokeDasharray="4 3" />
         <text x={CX} y={CY + 48} textAnchor="middle" fill="#78909C" fontSize="9">{totalServices} שירותים</text>
 
         {/* ── All Nodes (directive #4: draggable) ── */}
