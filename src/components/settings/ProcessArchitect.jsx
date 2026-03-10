@@ -592,7 +592,7 @@ export default function ProcessArchitect() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-row-reverse">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-gradient-to-br from-[#E91E6315] to-[#FFC10715]">
             <Network className="w-5 h-5 text-[#E91E63]" />

@@ -22,7 +22,7 @@
  *   - is_collector:       AND convergence — waits for ALL depends_on to complete
  *   - children:           Array of child nodes (recursive)
  *
- * P4 (Home/Personal) is excluded — not relevant for client service management.
+ * P4 (Home/Personal) — personal daily management services.
  */
 
 // ============================================================
@@ -274,15 +274,59 @@ const P5_BRANCH = {
 };
 
 // ============================================================
+// P4 — HOME / PERSONAL
+// ============================================================
+
+const P4_BRANCH = {
+  label: 'אישי — סדר יום והפסקות',
+  children: [
+    node('P4_meal_planning', 'תכנון ארוחות', 'meal_planning', {
+      default_frequency: 'daily',
+      children: [
+        node('P4_plan_menu', 'תכנון תפריט', 'plan_menu'),
+        node('P4_shopping', 'רשימת קניות', 'shopping'),
+        node('P4_preparation', 'הכנה', 'preparation'),
+      ],
+    }),
+    node('P4_morning_routine', 'שגרת בוקר', 'morning_routine', {
+      default_frequency: 'daily',
+      children: [
+        node('P4_wake_up', 'קימה', 'wake_up'),
+        node('P4_exercise', 'פעילות גופנית', 'exercise'),
+        node('P4_planning', 'תכנון יום', 'planning'),
+      ],
+    }),
+    node('P4_evening_routine', 'שגרת ערב', 'evening_routine', {
+      default_frequency: 'daily',
+      children: [
+        node('P4_review', 'סיכום יום', 'review'),
+        node('P4_prep_next', 'הכנה למחר', 'prep_next'),
+      ],
+    }),
+    node('P4_personal_errands', 'סידורים אישיים', 'personal_errands', {
+      default_frequency: 'weekly',
+    }),
+    node('P4_home_maintenance', 'תחזוקת בית', 'home_maintenance', {
+      default_frequency: 'monthly',
+      children: [
+        node('P4_identify', 'זיהוי משימה', 'identify'),
+        node('P4_execute', 'ביצוע', 'execute'),
+      ],
+    }),
+  ],
+};
+
+// ============================================================
 // FULL TREE — SEED
 // ============================================================
 
 export const PROCESS_TREE_SEED = {
-  version: '3.1',
+  version: '3.2',
   branches: {
     P1: P1_BRANCH,
     P2: P2_BRANCH,
     P3: P3_BRANCH,
+    P4: P4_BRANCH,
     P5: P5_BRANCH,
   },
 };
