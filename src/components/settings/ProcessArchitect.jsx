@@ -388,14 +388,27 @@ export default function ProcessArchitect() {
     setIsDirty(true);
   }, []);
 
-  const handleRemoveNode = useCallback((branchId, nodeIndex) => {
-    setTree(prev => {
-      const branch = { ...prev.branches[branchId] };
-      branch.children = branch.children.filter((_, i) => i !== nodeIndex);
-      return { ...prev, branches: { ...prev.branches, [branchId]: branch } };
-    });
-    setIsDirty(true);
-  }, []);
+  const handleRemoveNode = useCallback(async (branchId, nodeIndex) => {
+    const updatedTree = { ...tree, branches: { ...tree.branches } };
+    const branch = { ...updatedTree.branches[branchId] };
+    const removedNode = branch.children[nodeIndex];
+    branch.children = branch.children.filter((_, i) => i !== nodeIndex);
+    updatedTree.branches[branchId] = branch;
+    setTree(updatedTree);
+
+    // AUTO-SAVE: node deletion persists immediately
+    try {
+      setSaving(true);
+      const { configId: newConfigId } = await saveAndBroadcast(updatedTree, configId, 'ProcessArchitect');
+      setConfigId(newConfigId);
+      setIsDirty(false);
+      toast({ title: 'צומת נמחק', description: `"${removedNode?.label || removedNode?.id}" נמחק ונשמר` });
+    } catch (err) {
+      console.error('[ProcessArchitect] Auto-save after node removal failed:', err);
+      setIsDirty(true);
+    }
+    setSaving(false);
+  }, [tree, configId]);
 
   const handleAddNodeToBranch = useCallback((branchId, nodeName) => {
     const id = `${branchId}_custom_${Date.now()}`;
@@ -446,14 +459,55 @@ export default function ProcessArchitect() {
     setIsDirty(true);
   }, [newBranchLabel, tree]);
 
-  const handleRemoveBranch = useCallback((branchId) => {
+  const handleRemoveBranch = useCallback(async (branchId) => {
     if (!window.confirm(`למחוק את ענף ${branchId} וכל הצמתים שבו?`)) return;
-    setTree(prev => {
-      const { [branchId]: _, ...rest } = prev.branches;
-      return { ...prev, branches: rest };
-    });
-    setIsDirty(true);
-  }, []);
+
+    // Update local state
+    const updatedTree = { ...tree, branches: { ...tree.branches } };
+    delete updatedTree.branches[branchId];
+    setTree(updatedTree);
+
+    // AUTO-SAVE immediately — branch deletion is destructive, must persist to DB
+    try {
+      setSaving(true);
+      const { configId: newConfigId } = await saveAndBroadcast(updatedTree, configId, 'ProcessArchitect');
+      setConfigId(newConfigId);
+      setIsDirty(false);
+      toast({ title: `ענף ${branchId} נמחק`, description: 'השינויים נשמרו ל-DB ומסונכרנים בכל המערכת' });
+
+      // Clean MindMap's localStorage: remove custom services for the deleted branch
+      try {
+        const customStr = localStorage.getItem('calmplan_custom_services');
+        if (customStr) {
+          const customs = JSON.parse(customStr);
+          const validBranches = new Set(Object.keys(updatedTree.branches));
+          const baseBranches = ['P1', 'P2', 'P3', 'P4', 'P5'];
+          const cleaned = {};
+          let removed = 0;
+          for (const [key, svc] of Object.entries(customs)) {
+            const dashboard = svc.dashboard || '';
+            const parentBranch = svc.parentId || '';
+            const brId = dashboard.startsWith('P') ? dashboard : parentBranch.match(/^P\d+/)?.[0];
+            if (!brId || validBranches.has(brId) || baseBranches.includes(brId)) {
+              cleaned[key] = svc;
+            } else {
+              removed++;
+            }
+          }
+          if (removed > 0) {
+            localStorage.setItem('calmplan_custom_services', JSON.stringify(cleaned));
+            syncSettingToDb('custom_services', cleaned);
+            console.log(`[ProcessArchitect] Cleaned ${removed} orphan services after branch deletion`);
+          }
+        }
+      } catch (e) { /* non-critical */ }
+    } catch (err) {
+      console.error('[ProcessArchitect] Auto-save after branch deletion failed:', err);
+      toast({ title: 'שגיאה', description: 'המחיקה בוצעה מקומית אך לא נשמרה ל-DB. נסה לשמור ידנית.', variant: 'destructive' });
+      setIsDirty(true);
+    }
+    setSaving(false);
+  }, [tree, configId]);
 
   const handleRenameBranch = useCallback((branchId, newLabel) => {
     setTree(prev => ({
