@@ -1389,12 +1389,15 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         })()}
 
         {/* ── Center Hub — Logo ── */}
+        <defs>
+          <clipPath id="hub-clip"><circle cx={CX} cy={CY} r={50} /></clipPath>
+        </defs>
         <circle cx={CX} cy={CY} r={55} fill="url(#hub-grad)" filter="url(#settings-glow)" />
-        <clipPath id="hub-clip"><circle cx={CX} cy={CY} r={52} /></clipPath>
         <image
+          xlinkHref="/logo-litay.png"
           href="/logo-litay.png"
-          x={CX - 40} y={CY - 40}
-          width={80} height={80}
+          x={CX - 50} y={CY - 50}
+          width={100} height={100}
           clipPath="url(#hub-clip)"
           preserveAspectRatio="xMidYMid slice"
         />
