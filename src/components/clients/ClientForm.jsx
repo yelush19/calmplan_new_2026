@@ -16,6 +16,7 @@ import { createPageUrl } from '@/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Client, ServiceCompany, ServiceProvider, ClientServiceProvider } from '@/api/entities';
 import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
+import ProcessTreeManager from '@/components/clients/ProcessTreeManager';
 import { loadAutomationRules, getAutoLinkedServices } from '@/config/automationRules';
 
 
@@ -99,7 +100,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     fee_status: '',
     paying_client_id: '',
     tags: [],
-    notes: ''
+    notes: '',
+    process_tree: {}
   });
 
   const [onboardingLink, setOnboardingLink] = useState('');
@@ -651,9 +653,10 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="basic" className="space-y-6">
-            <TabsList className="grid grid-cols-6 w-full">
+            <TabsList className="grid grid-cols-7 w-full">
               <TabsTrigger value="basic">פרטים בסיסיים</TabsTrigger>
               <TabsTrigger value="services">שירותים</TabsTrigger>
+              <TabsTrigger value="process_tree">עץ תהליכים</TabsTrigger>
               <TabsTrigger value="reporting">תדירות דיווח</TabsTrigger>
               <TabsTrigger value="tax">פרטי מס</TabsTrigger>
               <TabsTrigger value="accounts">חשבונות בנק</TabsTrigger>
@@ -905,6 +908,12 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                   </div>
                 )}
               </div>
+            </TabsContent>
+            <TabsContent value="process_tree" className="space-y-4">
+              <ProcessTreeManager
+                processTree={formData.process_tree}
+                onChange={(updated) => setFormData(prev => ({ ...prev, process_tree: updated }))}
+              />
             </TabsContent>
             <TabsContent value="reporting" className="space-y-5">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
