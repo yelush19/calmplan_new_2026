@@ -41,6 +41,7 @@ import {
 
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import { loadCompanyTree, invalidateTreeCache, saveCompanyTree } from '@/services/processTreeService';
+import { toast } from '@/components/ui/use-toast';
 
 // ── DNA Colors (P-branch identity) — base set, extended dynamically from DB ──
 const BASE_DNA = {
@@ -1143,80 +1144,123 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   }, [dragState, paletteDrag, allNodes, magnetTarget, svgPoint, createService, moveService, nodePositionOverrides]);
 
   // ── Quick Spawn "+" (directive #7) — Creates a child task/service under the selected node ──
-  // Also syncs to the DB process tree (Process Architect) for single-source-of-truth
-  const handleQuickSpawn = useCallback((parentNode, e) => {
+  // Full feedback chain: loading → DB write → toast → force re-render
+  const [spawnLoading, setSpawnLoading] = useState(false);
+  const handleQuickSpawn = useCallback(async (parentNode, e) => {
     e.stopPropagation();
-    const branch = parentNode.type === 'root' ? parentNode.id : getDashboardBranch(parentNode.dashboard);
-    const dashboard = DNA[branch]?.dashboard || 'admin';
-    // Connect child to parent via parentId — true hierarchy linking
-    const parentId = parentNode.type === 'root' ? parentNode.id : parentNode.id;
-    const key = createService({ dashboard, label: 'שירות חדש', parentId });
+    if (spawnLoading) return; // prevent double-click
+    setSpawnLoading(true);
 
-    // Position near parent
+    const branch = parentNode.type === 'root' ? parentNode.id : getDashboardBranch(parentNode.dashboard);
+    const dashboard = DNA[branch]?.dashboard || branch; // use branch ID as fallback (not 'admin')
+    const parentId = parentNode.id;
+    const key = `custom_${Date.now()}`;
+
+    console.log(`[MindMap QuickSpawn] ▶ START: creating node "${key}" under parent "${parentId}" in branch "${branch}" (dashboard: "${dashboard}")`);
+
+    // 1) Create local service (state + localStorage)
+    const createdKey = createService({ key, dashboard, label: 'שירות חדש', parentId });
+    console.log(`[MindMap QuickSpawn] ✅ Local service created: ${createdKey}`);
+
+    // 2) Position near parent
     const angle = Math.random() * Math.PI * 2;
     const dist = 100 + Math.random() * 40;
     setSavedPositions(prev => {
-      const next = { ...prev, [key]: { x: parentNode.x + Math.cos(angle) * dist, y: parentNode.y + Math.sin(angle) * dist } };
+      const next = { ...prev, [createdKey]: { x: parentNode.x + Math.cos(angle) * dist, y: parentNode.y + Math.sin(angle) * dist } };
       saveNodePositions(next);
       return next;
     });
-    setSelectedNodeId(key);
+    setSelectedNodeId(createdKey);
     setMapDirty(true);
 
-    // Sync to DB process tree (fire-and-forget)
-    syncNewNodeToDbTree(branch, key, 'שירות חדש', parentId);
-  }, [createService, DNA]);
+    // 3) Sync to DB process tree (WITH feedback)
+    try {
+      console.log(`[MindMap QuickSpawn] 🔄 Syncing to DB...`);
+      const dbResult = await syncNewNodeToDbTree(branch, createdKey, 'שירות חדש', parentId);
+      if (dbResult.success) {
+        console.log(`[MindMap QuickSpawn] ✅ DB sync success:`, dbResult);
+        toast({ title: 'צומת נוסף בהצלחה', description: `"שירות חדש" נוסף לענף ${branch}` });
+      } else {
+        console.warn(`[MindMap QuickSpawn] ⚠️ DB sync partial — node saved locally only:`, dbResult.reason);
+        toast({ title: 'נשמר מקומית בלבד', description: dbResult.reason, variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error(`[MindMap QuickSpawn] ❌ DB sync FAILED:`, err);
+      toast({ title: 'שגיאה בשמירה ל-DB', description: err.message || 'שגיאה לא ידועה', variant: 'destructive' });
+    }
+    setSpawnLoading(false);
+  }, [createService, DNA, spawnLoading]);
 
   // ── Sync a newly-created node into the DB process tree ──
+  // Returns { success: boolean, reason?: string } for feedback chain
   const syncNewNodeToDbTree = useCallback(async (branchId, nodeId, label, parentNodeId) => {
-    try {
-      invalidateTreeCache();
-      const { tree, configId } = await loadCompanyTree();
-      if (!tree?.branches?.[branchId]) return; // branch not in DB tree
+    console.log(`[MindMap SyncDB] Loading tree to insert node "${nodeId}" into branch "${branchId}"...`);
+    invalidateTreeCache();
+    const { tree, configId } = await loadCompanyTree();
 
-      const newNode = {
-        id: nodeId,
-        label,
-        service_key: nodeId,
-        is_parent_task: false,
-        default_frequency: 'monthly',
-        frequency_field: null,
-        frequency_fallback: null,
-        frequency_inherit: false,
-        depends_on: parentNodeId && parentNodeId !== branchId ? [parentNodeId] : [],
-        execution: 'sequential',
-        is_collector: false,
-        children: [],
-        steps: [],
-      };
-
-      // Find the parent node and add as child, or add to branch root
-      const addToTree = (nodes) => {
-        for (let i = 0; i < nodes.length; i++) {
-          if (nodes[i].id === parentNodeId) {
-            nodes[i] = { ...nodes[i], children: [...(nodes[i].children || []), newNode] };
-            return true;
-          }
-          if (nodes[i].children?.length && addToTree(nodes[i].children)) return true;
-        }
-        return false;
-      };
-
-      const branch = { ...tree.branches[branchId] };
-      const children = [...(branch.children || [])];
-      if (!addToTree(children)) {
-        // Parent not found — add to branch root
-        children.push(newNode);
-      }
-      branch.children = children;
-
-      const updatedTree = { ...tree, branches: { ...tree.branches, [branchId]: branch } };
-      const { saveCompanyTree: saveFn } = await import('@/services/processTreeService');
-      await saveFn(updatedTree, configId);
-      console.log(`[MindMap] Synced new node ${nodeId} to DB process tree`);
-    } catch (err) {
-      console.warn('[MindMap] Could not sync new node to DB:', err);
+    if (!tree) {
+      return { success: false, reason: 'לא נמצא עץ תהליכים ב-DB' };
     }
+
+    if (!tree.branches?.[branchId]) {
+      console.warn(`[MindMap SyncDB] Branch "${branchId}" not found in DB tree. Available branches:`, Object.keys(tree.branches || {}));
+      return { success: false, reason: `ענף ${branchId} לא נמצא ב-DB — יש לשמור אותו קודם מ-Process Architect` };
+    }
+
+    const newNode = {
+      id: nodeId,
+      label,
+      service_key: nodeId,
+      is_parent_task: false,
+      default_frequency: 'monthly',
+      frequency_field: null,
+      frequency_fallback: null,
+      frequency_inherit: false,
+      depends_on: parentNodeId && parentNodeId !== branchId ? [parentNodeId] : [],
+      execution: 'sequential',
+      is_collector: false,
+      children: [],
+      steps: [],
+    };
+
+    // Find the parent node recursively and add as child
+    const addToTree = (nodes) => {
+      for (let i = 0; i < nodes.length; i++) {
+        if (nodes[i].id === parentNodeId) {
+          nodes[i] = { ...nodes[i], children: [...(nodes[i].children || []), newNode] };
+          console.log(`[MindMap SyncDB] ✅ Inserted under parent "${parentNodeId}" in recursive tree`);
+          return true;
+        }
+        if (nodes[i].children?.length && addToTree(nodes[i].children)) return true;
+      }
+      return false;
+    };
+
+    const branch = { ...tree.branches[branchId] };
+    const children = [...(branch.children || [])];
+    const foundParent = addToTree(children);
+    if (!foundParent) {
+      // Parent not found in children — add to branch root level
+      children.push(newNode);
+      console.log(`[MindMap SyncDB] Parent "${parentNodeId}" not found in children — added to branch root`);
+    }
+    branch.children = children;
+
+    const updatedTree = { ...tree, branches: { ...tree.branches, [branchId]: branch } };
+    console.log(`[MindMap SyncDB] Saving updated tree with new node...`, {
+      branchId,
+      nodeId,
+      totalChildren: children.length,
+      configId,
+    });
+
+    await saveCompanyTree(updatedTree, configId);
+
+    // Update local ref so floating save button knows about this
+    setDbTreeRef({ tree: updatedTree, configId });
+
+    console.log(`[MindMap SyncDB] ✅ Node "${nodeId}" saved to DB successfully`);
+    return { success: true };
   }, []);
 
   // ── Palette drag start (HTML → SVG bridge, directive #5) ──
@@ -1495,10 +1539,12 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               {(isHovered || isSelected) && !isDragging && node.type !== 'step' && (
                 <g
                   onClick={(e) => handleQuickSpawn(node, e)}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: spawnLoading ? 'wait' : 'pointer', opacity: spawnLoading ? 0.5 : 1 }}
                 >
-                  <circle cx={node.x + r + 8} cy={node.y - r - 8} r={10} fill="#8BC34A" stroke="white" strokeWidth={1.5} />
-                  <text x={node.x + r + 8} y={node.y - r - 8 + 1} textAnchor="middle" fontSize="14" fontWeight="bold" fill="white" style={{ pointerEvents: 'none' }}>+</text>
+                  <circle cx={node.x + r + 8} cy={node.y - r - 8} r={10} fill={spawnLoading ? '#FFC107' : '#8BC34A'} stroke="white" strokeWidth={1.5} />
+                  <text x={node.x + r + 8} y={node.y - r - 8 + 1} textAnchor="middle" fontSize={spawnLoading ? 10 : 14} fontWeight="bold" fill="white" style={{ pointerEvents: 'none' }}>
+                    {spawnLoading ? '⏳' : '+'}
+                  </text>
                 </g>
               )}
             </g>
@@ -1539,21 +1585,66 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         <button
           onClick={async () => {
             setMapSaving(true);
+            console.log('[MindMap FloatSave] ▶ Starting full save...');
             try {
+              // 1) Load current DB tree
               invalidateTreeCache();
               const { tree, configId } = await loadCompanyTree();
-              if (tree) {
-                await saveCompanyTree(tree, configId);
-                setDbTreeRef({ tree, configId });
+              if (!tree) {
+                toast({ title: 'שגיאה', description: 'לא נמצא עץ תהליכים ב-DB', variant: 'destructive' });
+                setMapSaving(false);
+                return;
               }
+
+              // 2) Merge any custom services that aren't yet in the DB tree
+              let merged = { ...tree };
+              for (const [key, svc] of Object.entries(customServices)) {
+                if (ALL_SERVICES[key]) continue; // template services skip
+                const branch = getDashboardBranch(svc.dashboard);
+                if (!merged.branches?.[branch]) {
+                  console.log(`[MindMap FloatSave] Skipping "${key}" — branch "${branch}" not in DB`);
+                  continue;
+                }
+                // Check if node already exists in the tree
+                const existsInTree = (nodes) => {
+                  for (const n of (nodes || [])) {
+                    if (n.id === key) return true;
+                    if (n.children?.length && existsInTree(n.children)) return true;
+                  }
+                  return false;
+                };
+                if (!existsInTree(merged.branches[branch].children)) {
+                  console.log(`[MindMap FloatSave] Adding missing node "${key}" to branch "${branch}"`);
+                  const branchObj = { ...merged.branches[branch] };
+                  branchObj.children = [...(branchObj.children || []), {
+                    id: key,
+                    label: svc.label || 'שירות חדש',
+                    service_key: key,
+                    is_parent_task: false,
+                    default_frequency: 'monthly',
+                    depends_on: svc.parentId && svc.parentId !== branch ? [svc.parentId] : [],
+                    execution: 'sequential',
+                    children: [],
+                    steps: [],
+                  }];
+                  merged = { ...merged, branches: { ...merged.branches, [branch]: branchObj } };
+                }
+              }
+
+              // 3) Save to DB
+              await saveCompanyTree(merged, configId);
+              setDbTreeRef({ tree: merged, configId });
               setMapDirty(false);
+              console.log('[MindMap FloatSave] ✅ Saved successfully');
+              toast({ title: 'נשמר בהצלחה', description: 'כל השינויים נשמרו ל-DB' });
             } catch (err) {
-              console.error('[MindMap] Save failed:', err);
+              console.error('[MindMap FloatSave] ❌ Save failed:', err);
+              toast({ title: 'שגיאה בשמירה', description: err.message || 'שגיאה לא ידועה', variant: 'destructive' });
             }
             setMapSaving(false);
           }}
           disabled={mapSaving}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-5 py-2.5 rounded-full bg-green-500 text-white font-bold text-sm shadow-lg hover:bg-green-600 active:scale-95 transition-all"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-5 py-2.5 rounded-full bg-green-500 text-white font-bold text-sm shadow-lg hover:bg-green-600 active:scale-95 transition-all animate-pulse"
         >
           {mapSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {mapSaving ? 'שומר...' : 'שמור שינויים'}
