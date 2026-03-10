@@ -284,28 +284,28 @@ const P4_BRANCH = {
   children: [
     node('P4_meal_planning', 'תכנון ארוחות', 'meal_planning', {
       is_parent_task: true,
-      default_frequency: 'weekly',
+      default_frequency: 'daily',
       children: [
-        node('P4_plan_menu', 'תכנון תפריט', 'meal_planning'),
-        node('P4_shopping', 'רשימת קניות', 'meal_planning'),
-        node('P4_preparation', 'הכנה', 'meal_planning'),
+        node('P4_plan_menu', 'תכנון תפריט', 'plan_menu'),
+        node('P4_shopping', 'רשימת קניות', 'shopping'),
+        node('P4_preparation', 'הכנה', 'preparation'),
       ],
     }),
     node('P4_morning_routine', 'שגרת בוקר', 'morning_routine', {
       is_parent_task: true,
       default_frequency: 'daily',
       children: [
-        node('P4_wake_up', 'קימה', 'morning_routine'),
-        node('P4_exercise', 'פעילות גופנית', 'morning_routine'),
-        node('P4_day_planning', 'תכנון יום', 'morning_routine'),
+        node('P4_wake_up', 'קימה', 'wake_up'),
+        node('P4_exercise', 'פעילות גופנית', 'exercise'),
+        node('P4_planning', 'תכנון יום', 'planning'),
       ],
     }),
     node('P4_evening_routine', 'שגרת ערב', 'evening_routine', {
       is_parent_task: true,
       default_frequency: 'daily',
       children: [
-        node('P4_review', 'סיכום יום', 'evening_routine'),
-        node('P4_prep_next', 'הכנה למחר', 'evening_routine'),
+        node('P4_review', 'סיכום יום', 'review'),
+        node('P4_prep_next', 'הכנה למחר', 'prep_next'),
       ],
     }),
     node('P4_personal_errands', 'סידורים אישיים', 'personal_errands', {
@@ -315,6 +315,10 @@ const P4_BRANCH = {
     node('P4_home_maintenance', 'תחזוקת בית', 'home_maintenance', {
       is_parent_task: true,
       default_frequency: 'monthly',
+      children: [
+        node('P4_identify', 'זיהוי משימה', 'identify'),
+        node('P4_execute', 'ביצוע', 'execute'),
+      ],
     }),
   ],
 };

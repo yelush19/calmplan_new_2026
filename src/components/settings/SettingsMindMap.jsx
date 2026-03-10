@@ -43,6 +43,7 @@ import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import {
   loadCompanyTree, invalidateTreeCache, saveCompanyTree,
   saveAndBroadcast, onTreeChange,
+  loadSettingFromDb, syncSettingToDb,
 } from '@/services/processTreeService';
 import { toast } from '@/components/ui/use-toast';
 
@@ -639,6 +640,34 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [saveBtnPos, setSaveBtnPos] = useState({ x: 80, y: VB_H - 80 });
   const [saveBtnDrag, setSaveBtnDrag] = useState(null);
 
+  // ── Mount: Reconcile localStorage with Supabase (DB is authority) ──
+  // localStorage provides instant initial render (stale-while-revalidate).
+  // DB data arrives async and REPLACES any stale localStorage values.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      console.log('[MindMap] 🔄 Reconciling localStorage with DB...');
+      // 1) Load overrides from DB
+      const dbOverrides = await loadSettingFromDb('service_overrides');
+      if (cancelled) return;
+      if (dbOverrides && typeof dbOverrides === 'object' && Object.keys(dbOverrides).length > 0) {
+        setOverrides(dbOverrides);
+        localStorage.setItem('calmplan_service_overrides', JSON.stringify(dbOverrides));
+        console.log('[MindMap] ✅ Overrides reconciled from DB:', Object.keys(dbOverrides).length, 'entries');
+      }
+      // 2) Load custom services from DB
+      const dbCustom = await loadSettingFromDb('custom_services');
+      if (cancelled) return;
+      if (dbCustom && typeof dbCustom === 'object') {
+        // DB might have an empty object (all deleted) — that's valid, it means "no customs"
+        setCustomServices(dbCustom);
+        localStorage.setItem('calmplan_custom_services', JSON.stringify(dbCustom));
+        console.log('[MindMap] ✅ Custom services reconciled from DB:', Object.keys(dbCustom).length, 'entries');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Central function to refresh branches from DB
   const refreshBranchesFromDb = useCallback(async () => {
     console.log('[MindMap] 🔄 Refreshing branches from DB...');
@@ -694,9 +723,21 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
   // LISTEN for tree changes from Architect / other sources → auto-refresh
   useEffect(() => {
-    const unsub = onTreeChange((detail) => {
-      console.log(`[MindMap] 📡 Received tree-changed from "${detail.source}" — refreshing...`);
+    const unsub = onTreeChange(async (detail) => {
+      console.log(`[MindMap] 📡 Received tree-changed from "${detail.source}" — full refresh...`);
       refreshBranchesFromDb();
+      // Also re-reconcile custom services from DB (handles deletions from Architect)
+      const dbCustom = await loadSettingFromDb('custom_services');
+      if (dbCustom && typeof dbCustom === 'object') {
+        setCustomServices(dbCustom);
+        localStorage.setItem('calmplan_custom_services', JSON.stringify(dbCustom));
+        console.log('[MindMap] ✅ Custom services re-reconciled from DB after tree change');
+      }
+      const dbOverrides = await loadSettingFromDb('service_overrides');
+      if (dbOverrides && typeof dbOverrides === 'object' && Object.keys(dbOverrides).length > 0) {
+        setOverrides(dbOverrides);
+        localStorage.setItem('calmplan_service_overrides', JSON.stringify(dbOverrides));
+      }
     });
     return unsub;
   }, [refreshBranchesFromDb]);
@@ -1195,9 +1236,11 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   // ── Quick Spawn "+" (directive #7) — Creates a child task/service under the selected node ──
   // Full feedback chain: loading → DB write → toast → force re-render
   const [spawnLoading, setSpawnLoading] = useState(false);
+  const spawnLoadingRef = React.useRef(false);
   const handleQuickSpawn = useCallback(async (parentNode, e) => {
     e.stopPropagation();
-    if (spawnLoading) return; // prevent double-click
+    if (spawnLoadingRef.current) return; // prevent double-click (ref avoids stale closure)
+    spawnLoadingRef.current = true;
     setSpawnLoading(true);
 
     const branch = parentNode.type === 'root' ? parentNode.id : getDashboardBranch(parentNode.dashboard);
@@ -1236,9 +1279,19 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     } catch (err) {
       console.error(`[MindMap QuickSpawn] ❌ DB sync FAILED:`, err);
       toast({ title: 'שגיאה בשמירה ל-DB', description: err.message || 'שגיאה לא ידועה', variant: 'destructive' });
+      // Rollback: DB is authority — if DB write failed, remove from local state
+      setCustomServices(prev => {
+        const next = { ...prev };
+        delete next[createdKey];
+        saveCustomServices(next);
+        return next;
+      });
+      setSelectedNodeId(null);
+      console.log(`[MindMap QuickSpawn] 🔄 Rolled back local service "${createdKey}" — DB write failed`);
     }
+    spawnLoadingRef.current = false;
     setSpawnLoading(false);
-  }, [createService, DNA, spawnLoading]);
+  }, [createService, DNA]);
 
   // ── Sync a newly-created node into the DB process tree ──
   // Returns { success: boolean, reason?: string } for feedback chain
@@ -1335,8 +1388,37 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   // ONLY open Service Editor for actual service nodes, NOT for branch/root headers (P1-P5)
   useEffect(() => {
     if (selectedNode && selectedNode.type === 'service') {
+      // Merge steps from DB tree (ProcessArchitect) if they exist
+      let mergedSteps = selectedNode.steps || [];
+      if (dbTreeRef.tree?.branches) {
+        const findNodeInTree = (nodes, id) => {
+          for (const n of (nodes || [])) {
+            if (n.id === id || n.service_key === id) return n;
+            if (n.children?.length) {
+              const found = findNodeInTree(n.children, id);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        for (const branch of Object.values(dbTreeRef.tree.branches)) {
+          const treeNode = findNodeInTree(branch.children, selectedNodeId);
+          if (treeNode?.steps?.length > 0 && mergedSteps.length === 0) {
+            // DB tree has steps but local doesn't — use DB tree steps
+            mergedSteps = treeNode.steps.map((s, i) => ({
+              key: s.key || `step_${i}`,
+              label: s.label,
+              icon: s.icon || 'check-circle',
+              sort_order: i,
+              parent_service: selectedNodeId,
+            }));
+            break;
+          }
+        }
+      }
       onSelectService?.({
         ...selectedNode,
+        steps: mergedSteps,
         _crud: { updateService, deleteService, moveService, createService },
         _liveServices: liveServices,
         _allNodes: allNodes,
@@ -1345,7 +1427,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     } else {
       onSelectService?.(null);
     }
-  }, [selectedNodeId, selectedNode?.type, selectedNode?.parentId, allNodes.length, liveServices]);
+  }, [selectedNodeId, selectedNode?.type, selectedNode?.parentId, allNodes.length, liveServices, dbTreeRef.tree]);
 
   // ── Build hierarchy edges (solid tapered branches) ──
   const edges = useMemo(() => {
@@ -1587,7 +1669,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               {/* Quick Spawn "+" button (directive #7) */}
               {(isHovered || isSelected) && !isDragging && node.type !== 'step' && (
                 <g
-                  onClick={(e) => handleQuickSpawn(node, e)}
+                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                  onClick={(e) => { e.stopPropagation(); handleQuickSpawn(node, e); }}
                   style={{ cursor: spawnLoading ? 'wait' : 'pointer', opacity: spawnLoading ? 0.5 : 1 }}
                 >
                   <circle cx={node.x + r + 8} cy={node.y - r - 8} r={10} fill={spawnLoading ? '#FFC107' : '#8BC34A'} stroke="white" strokeWidth={1.5} />
@@ -1842,6 +1925,53 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                   <span className="text-green-500 font-bold">מותאם</span>
                 )}
               </div>
+
+              {/* Save to DB button */}
+              <button
+                onClick={async () => {
+                  setMapSaving(true);
+                  try {
+                    invalidateTreeCache();
+                    const { tree, configId: cid } = await loadCompanyTree();
+                    if (!tree) throw new Error('No tree in DB');
+                    // Update node label in tree if it's a custom service
+                    let merged = { ...tree };
+                    const svc = liveServices[selectedNodeId];
+                    if (svc) {
+                      const branch = getDashboardBranch(svc.dashboard);
+                      if (merged.branches?.[branch]) {
+                        const updateNodeInTree = (nodes) => nodes.map(n => {
+                          if (n.id === selectedNodeId) return { ...n, label: svc.label || n.label };
+                          if (n.children?.length) return { ...n, children: updateNodeInTree(n.children) };
+                          return n;
+                        });
+                        merged = { ...merged, branches: { ...merged.branches, [branch]: { ...merged.branches[branch], children: updateNodeInTree(merged.branches[branch].children || []) } } };
+                      }
+                    }
+                    // Also merge any missing custom services
+                    for (const [key, cs] of Object.entries(customServices)) {
+                      if (ALL_SERVICES[key]) continue;
+                      const br = getDashboardBranch(cs.dashboard);
+                      if (!merged.branches?.[br]) continue;
+                      const exists = (nodes) => nodes.some(n => n.id === key || (n.children?.length && exists(n.children)));
+                      if (!exists(merged.branches[br].children || [])) {
+                        merged.branches[br] = { ...merged.branches[br], children: [...(merged.branches[br].children || []), { id: key, label: cs.label || 'שירות חדש', service_key: key, is_parent_task: false, default_frequency: 'monthly', depends_on: [], execution: 'sequential', children: [], steps: [] }] };
+                      }
+                    }
+                    await saveAndBroadcast(merged, cid, 'MindMap:SidebarSave');
+                    setMapDirty(false);
+                    toast({ title: 'נשמר ל-DB', description: 'השינויים נשמרו בהצלחה' });
+                  } catch (err) {
+                    toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+                  }
+                  setMapSaving(false);
+                }}
+                disabled={mapSaving}
+                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-green-50 text-green-600 text-[10px] font-bold hover:bg-green-100 transition-all border border-green-200"
+              >
+                {mapSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                {mapSaving ? 'שומר...' : 'שמור ל-DB'}
+              </button>
 
               {/* Delete button */}
               <button

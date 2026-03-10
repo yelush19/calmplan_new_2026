@@ -30,8 +30,11 @@ import {
   saveCompanyTree,
   invalidateTreeCache,
   saveAndBroadcast,
+  onTreeChange,
+  syncSettingToDb,
 } from '@/services/processTreeService';
 import { flattenTree } from '@/config/companyProcessTree';
+import { toast } from '@/components/ui/use-toast';
 
 // ── Branch color palette for dynamic branches ──
 const BRANCH_PALETTE = [
@@ -348,6 +351,21 @@ export default function ProcessArchitect() {
     });
   }, []);
 
+  // Listen for tree changes from MindMap / other sources → refresh if not dirty
+  useEffect(() => {
+    const unsub = onTreeChange((detail) => {
+      if (detail.source === 'ProcessArchitect') return; // skip own events
+      if (isDirty) return; // don't overwrite unsaved local changes
+      console.log(`[ProcessArchitect] 📡 Tree changed (from ${detail.source}) — refreshing...`);
+      invalidateTreeCache();
+      loadCompanyTree().then(({ tree: t, configId: c }) => {
+        setTree(t);
+        setConfigId(c);
+      });
+    });
+    return unsub;
+  }, [isDirty]);
+
   // All node IDs for dependency selection
   const allNodeIds = tree ? flattenTree(tree).map(n => n.id) : [];
 
@@ -370,14 +388,27 @@ export default function ProcessArchitect() {
     setIsDirty(true);
   }, []);
 
-  const handleRemoveNode = useCallback((branchId, nodeIndex) => {
-    setTree(prev => {
-      const branch = { ...prev.branches[branchId] };
-      branch.children = branch.children.filter((_, i) => i !== nodeIndex);
-      return { ...prev, branches: { ...prev.branches, [branchId]: branch } };
-    });
-    setIsDirty(true);
-  }, []);
+  const handleRemoveNode = useCallback(async (branchId, nodeIndex) => {
+    const updatedTree = { ...tree, branches: { ...tree.branches } };
+    const branch = { ...updatedTree.branches[branchId] };
+    const removedNode = branch.children[nodeIndex];
+    branch.children = branch.children.filter((_, i) => i !== nodeIndex);
+    updatedTree.branches[branchId] = branch;
+    setTree(updatedTree);
+
+    // AUTO-SAVE: node deletion persists immediately
+    try {
+      setSaving(true);
+      const { configId: newConfigId } = await saveAndBroadcast(updatedTree, configId, 'ProcessArchitect');
+      setConfigId(newConfigId);
+      setIsDirty(false);
+      toast({ title: 'צומת נמחק', description: `"${removedNode?.label || removedNode?.id}" נמחק ונשמר` });
+    } catch (err) {
+      console.error('[ProcessArchitect] Auto-save after node removal failed:', err);
+      setIsDirty(true);
+    }
+    setSaving(false);
+  }, [tree, configId]);
 
   const handleAddNodeToBranch = useCallback((branchId, nodeName) => {
     const id = `${branchId}_custom_${Date.now()}`;
@@ -428,14 +459,55 @@ export default function ProcessArchitect() {
     setIsDirty(true);
   }, [newBranchLabel, tree]);
 
-  const handleRemoveBranch = useCallback((branchId) => {
+  const handleRemoveBranch = useCallback(async (branchId) => {
     if (!window.confirm(`למחוק את ענף ${branchId} וכל הצמתים שבו?`)) return;
-    setTree(prev => {
-      const { [branchId]: _, ...rest } = prev.branches;
-      return { ...prev, branches: rest };
-    });
-    setIsDirty(true);
-  }, []);
+
+    // Update local state
+    const updatedTree = { ...tree, branches: { ...tree.branches } };
+    delete updatedTree.branches[branchId];
+    setTree(updatedTree);
+
+    // AUTO-SAVE immediately — branch deletion is destructive, must persist to DB
+    try {
+      setSaving(true);
+      const { configId: newConfigId } = await saveAndBroadcast(updatedTree, configId, 'ProcessArchitect');
+      setConfigId(newConfigId);
+      setIsDirty(false);
+      toast({ title: `ענף ${branchId} נמחק`, description: 'השינויים נשמרו ל-DB ומסונכרנים בכל המערכת' });
+
+      // Clean MindMap's localStorage: remove custom services for the deleted branch
+      try {
+        const customStr = localStorage.getItem('calmplan_custom_services');
+        if (customStr) {
+          const customs = JSON.parse(customStr);
+          const validBranches = new Set(Object.keys(updatedTree.branches));
+          const baseBranches = ['P1', 'P2', 'P3', 'P4', 'P5'];
+          const cleaned = {};
+          let removed = 0;
+          for (const [key, svc] of Object.entries(customs)) {
+            const dashboard = svc.dashboard || '';
+            const parentBranch = svc.parentId || '';
+            const brId = dashboard.startsWith('P') ? dashboard : parentBranch.match(/^P\d+/)?.[0];
+            if (!brId || validBranches.has(brId) || baseBranches.includes(brId)) {
+              cleaned[key] = svc;
+            } else {
+              removed++;
+            }
+          }
+          if (removed > 0) {
+            localStorage.setItem('calmplan_custom_services', JSON.stringify(cleaned));
+            syncSettingToDb('custom_services', cleaned);
+            console.log(`[ProcessArchitect] Cleaned ${removed} orphan services after branch deletion`);
+          }
+        }
+      } catch (e) { /* non-critical */ }
+    } catch (err) {
+      console.error('[ProcessArchitect] Auto-save after branch deletion failed:', err);
+      toast({ title: 'שגיאה', description: 'המחיקה בוצעה מקומית אך לא נשמרה ל-DB. נסה לשמור ידנית.', variant: 'destructive' });
+      setIsDirty(true);
+    }
+    setSaving(false);
+  }, [tree, configId]);
 
   const handleRenameBranch = useCallback((branchId, newLabel) => {
     setTree(prev => ({
@@ -459,10 +531,41 @@ export default function ProcessArchitect() {
       setIsDirty(false);
       setSaveResult('success');
       console.log('[ProcessArchitect] ✅ Saved & broadcasted to all consumers');
+      toast({ title: 'עץ התהליכים נשמר', description: 'השינויים ישתקפו מיד בכל המערכת' });
+
+      // Clean MindMap's localStorage: remove custom services whose branch was deleted
+      try {
+        const validBranches = new Set(Object.keys(tree.branches));
+        const baseBranches = ['P1', 'P2', 'P3', 'P4', 'P5'];
+        const customStr = localStorage.getItem('calmplan_custom_services');
+        if (customStr) {
+          const customs = JSON.parse(customStr);
+          const cleaned = {};
+          let removed = 0;
+          for (const [key, svc] of Object.entries(customs)) {
+            const dashboard = svc.dashboard || '';
+            const parentBranch = svc.parentId || '';
+            // Keep if dashboard branch or parent branch is still valid
+            const branchId = dashboard.startsWith('P') ? dashboard : parentBranch.match(/^P\d+/)?.[0];
+            if (!branchId || validBranches.has(branchId) || baseBranches.includes(branchId)) {
+              cleaned[key] = svc;
+            } else {
+              removed++;
+            }
+          }
+          if (removed > 0) {
+            localStorage.setItem('calmplan_custom_services', JSON.stringify(cleaned));
+            syncSettingToDb('custom_services', cleaned); // keep DB in sync too
+            console.log(`[ProcessArchitect] 🧹 Cleaned ${removed} orphan services from localStorage`);
+          }
+        }
+      } catch (e) { /* non-critical cleanup */ }
+
       setTimeout(() => setSaveResult(null), 3000);
     } catch (err) {
       console.error('[ProcessArchitect] Save failed:', err);
       setSaveResult('error');
+      toast({ title: 'שגיאה בשמירה', description: err.message || 'שגיאה לא ידועה', variant: 'destructive' });
     }
     setSaving(false);
   }, [tree, configId]);
@@ -489,7 +592,7 @@ export default function ProcessArchitect() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-row-reverse">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-gradient-to-br from-[#E91E6315] to-[#FFC10715]">
             <Network className="w-5 h-5 text-[#E91E63]" />
