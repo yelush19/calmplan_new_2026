@@ -1,0 +1,934 @@
+/**
+ * Functions module — CalmPlan DNA Engine
+ * All data flows from serviceWeights.js / automationRules.js / taxCalendar2026.js
+ * Monday.com integration REMOVED (Kill Monday directive)
+ */
+
+import { exportAllData, importAllData, clearAllData } from './base44Client';
+import { _registry } from './entityRegistry';
+
+// Lazy accessor via shared registry — no direct base44 import needed
+const entities = new Proxy({}, {
+  get(_, prop) {
+    return _registry.entities?.[prop];
+  },
+});
+import { getDueDateForCategory, isClient874 } from '@/config/taxCalendar2026';
+import { getScheduledStartForCategory, DEFAULT_EXECUTION_PERIODS } from '@/config/automationRules';
+
+// ===== Reports Automation =====
+
+// ===== Israeli Accounting Process Definitions =====
+//
+// Process types and their frequencies (per client):
+//   מע"מ          - חודשי / דו-חודשי / לא רלוונטי (from vat_reporting_frequency)
+//   מקדמות מס     - חודשי / דו-חודשי / לא רלוונטי (from tax_advances_frequency)
+//   שכר           - חודשי / לא רלוונטי (from payroll_frequency)
+//   ביטוח לאומי   - רק ללקוחות עם שכר (payroll), חודשי
+//   ניכויים       - רק ללקוחות עם שכר (payroll), חודשי או דו-חודשי
+//   דוח שנתי      - שנתי, יעד 31 במאי
+//
+// Only active clients (status === 'active') get tasks.
+
+const PROCESS_TEMPLATES = {
+  vat: {
+    name: 'דיווח מע"מ',
+    category: 'מע"מ',
+    frequencyField: 'vat_reporting_frequency',
+    dayOfMonth: 19, // online filing; 874 clients get 23 via taxCalendar
+    requiresPayroll: false,
+  },
+  payroll: {
+    name: 'דיווח שכר',
+    category: 'שכר',
+    frequencyField: 'payroll_frequency',
+    dayOfMonth: 15,
+    requiresPayroll: true,
+  },
+  tax_advances: {
+    name: 'מקדמות מס',
+    category: 'מקדמות מס',
+    frequencyField: 'tax_advances_frequency',
+    dayOfMonth: 19, // online filing deadline
+    requiresPayroll: false,
+  },
+  social_security: {
+    name: 'ביטוח לאומי',
+    category: 'ביטוח לאומי',
+    frequencyField: null, // monthly when payroll exists
+    dayOfMonth: 15,
+    requiresPayroll: true,
+  },
+  deductions: {
+    name: 'ניכויים במקור',
+    category: 'ניכויים',
+    frequencyField: null, // monthly or bimonthly, follows payroll
+    dayOfMonth: 19, // online filing deadline
+    requiresPayroll: true,
+  },
+  annual_report: {
+    name: 'דוח שנתי',
+    category: 'דוח שנתי',
+    frequencyField: null,
+    dayOfMonth: 31,
+    dueMonth: 5,
+    frequency: 'yearly',
+    requiresPayroll: false,
+  },
+};
+
+// Map client service_types → which process templates apply
+// Each service generates only its own template. social_security and deductions
+// are explicit services (auto-linked from payroll via automation rules).
+const SERVICE_TYPE_TO_TEMPLATES = {
+  'vat_reporting': ['vat'],
+  'tax_advances': ['tax_advances'],
+  'payroll': ['payroll'],
+  'social_security': ['social_security'],
+  'deductions': ['deductions'],
+  'annual_reports': ['annual_report'],
+  'full_service': ['vat', 'payroll', 'tax_advances', 'annual_report', 'social_security', 'deductions'],
+};
+
+// Bi-monthly period names (due month → period name)
+const BIMONTHLY_PERIOD_NAMES = {
+  2: 'ינואר-פברואר',
+  4: 'מרץ-אפריל',
+  6: 'מאי-יוני',
+  8: 'יולי-אוגוסט',
+  10: 'ספטמבר-אוקטובר',
+  12: 'נובמבר-דצמבר',
+};
+
+const BIMONTHLY_DUE_MONTHS = [2, 4, 6, 8, 10, 12];
+
+const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+/**
+ * SERVICE-AWARE FILTER: Check each service by BOTH service_types AND reporting_info frequency.
+ * A client only gets a task if:
+ *   1. Their service_types includes the relevant service, AND
+ *   2. Their reporting_info frequency for that service is NOT 'not_applicable'
+ *
+ * If frequency field is undefined → treat as 'not_applicable' (strict mode).
+ * This prevents blind generation for clients who don't actually use the service.
+ */
+function clientHasPayroll(client) {
+  const services = client.service_types || [];
+  const hasPayrollService = services.some(st =>
+    st === 'payroll' || st === 'full_service'
+  );
+  // STRICT: frequency must be explicitly set and not 'not_applicable'
+  const payrollFreq = client.reporting_info?.payroll_frequency;
+  return hasPayrollService && !!payrollFreq && payrollFreq !== 'not_applicable';
+}
+
+/**
+ * ULTIMATE SERVICE-GRID LOGIC:
+ * Each client has a specific 'Service Profile'. Use this grid:
+ *
+ * Service Type      | Logic / Frequency           | Target Folder
+ * VAT (מע"מ)        | Only if vat_active === true  | Reports / מע"מ
+ * Payroll (שכר)     | Only if has_payroll === true  | Payroll / שכר
+ * Adjustments (התאמות)| Only if needs_adjustments    | Adjustments / התאמות
+ * Balances (מאזנים)  | All 19 active clients        | Balances / מאזנים
+ *
+ * NO GHOST TASKS: If a client doesn't have a service, DO NOT create a task for it.
+ */
+
+/**
+ * Check if client has ANY monthly recurring reporting task.
+ * Used to determine if a client is "reporting-active" (solid pill) vs
+ * "balance-only" (ghosted pill at 60% opacity).
+ *
+ * STRICT: Only checks explicit service_types[] keys.
+ * No derivation. No loose matching via bookkeeping.
+ */
+export function isReportingActiveClient(client) {
+  if (!client || client.status !== 'active' || client.is_deleted === true) return false;
+
+  const services = client.service_types || [];
+  const reporting = client.reporting_info || {};
+
+  // STRICT: service key must be explicitly in service_types[]
+  const hasVat = services.includes('vat_reporting') &&
+    !!reporting.vat_reporting_frequency && reporting.vat_reporting_frequency !== 'not_applicable';
+
+  const hasPayroll = services.includes('payroll') &&
+    !!reporting.payroll_frequency && reporting.payroll_frequency !== 'not_applicable';
+
+  const hasTaxAdv = services.includes('tax_advances') &&
+    !!reporting.tax_advances_frequency && reporting.tax_advances_frequency !== 'not_applicable';
+
+  return hasPayroll || hasVat || hasTaxAdv;
+}
+
+/**
+ * Check if a client is active (not deleted, status=active).
+ * ALL active clients appear in MindMap (reporting-active=solid, balance-only=ghosted).
+ */
+export function isActiveClient(client) {
+  return client && client.status === 'active' && client.is_deleted !== true;
+}
+
+/**
+ * SERVICE-AWARE template selection. No more blind generation.
+ * Each template requires BOTH:
+ *   (a) the service in service_types
+ *   (b) the frequency in reporting_info not being 'not_applicable'
+ */
+/**
+ * SERVICE-AWARE template selection — STRICT.
+ * ZERO GHOST DATA: service key must be EXPLICITLY in client.service_types[].
+ * No derivation. No loose matching (bookkeeping does NOT imply VAT).
+ * Social Security and Deductions are explicit services (auto-linked from payroll).
+ */
+function getClientTemplates(client) {
+  const serviceTypes = client.service_types || [];
+  if (serviceTypes.length === 0) return [];
+
+  // Expand full_service into constituent services
+  const expanded = new Set(serviceTypes);
+  if (expanded.has('full_service')) {
+    for (const s of ['vat_reporting', 'payroll', 'tax_advances', 'annual_reports', 'social_security', 'deductions']) {
+      expanded.add(s);
+    }
+  }
+
+  const reporting = client.reporting_info || {};
+  const templateKeys = [];
+
+  const freqIsActive = (freq) => !!freq && freq !== 'not_applicable';
+
+  if (expanded.has('vat_reporting') && freqIsActive(reporting.vat_reporting_frequency)) {
+    templateKeys.push('vat');
+  }
+
+  if (expanded.has('tax_advances') && freqIsActive(reporting.tax_advances_frequency)) {
+    templateKeys.push('tax_advances');
+  }
+
+  if (expanded.has('payroll') && freqIsActive(reporting.payroll_frequency)) {
+    templateKeys.push('payroll');
+  }
+
+  // Social security: explicit service check, frequency inherits from payroll if not set
+  if (expanded.has('social_security')) {
+    const ssFreq = reporting.social_security_frequency;
+    const payrollFreq = reporting.payroll_frequency;
+    if (freqIsActive(ssFreq) || freqIsActive(payrollFreq)) {
+      templateKeys.push('social_security');
+    }
+  }
+
+  // Deductions: explicit service check, frequency inherits from payroll if not set
+  if (expanded.has('deductions')) {
+    const dedFreq = reporting.deductions_frequency;
+    const payrollFreq = reporting.payroll_frequency;
+    if (freqIsActive(dedFreq) || freqIsActive(payrollFreq)) {
+      templateKeys.push('deductions');
+    }
+  }
+
+  // Annual Report: Only if explicitly subscribed
+  const hasAnnualService = expanded.has('annual_reports');
+  if (hasAnnualService) {
+    templateKeys.push('annual_report');
+  }
+
+  return templateKeys;
+}
+
+/**
+ * Get client frequency for a template.
+ * Returns: 'monthly' | 'bimonthly' | 'not_applicable' | 'yearly'
+ */
+function getClientFrequency(templateKey, client) {
+  const template = PROCESS_TEMPLATES[templateKey];
+  if (!template) return 'not_applicable';
+  if (template.frequency === 'yearly') return 'yearly';
+  if (template.frequencyField) {
+    const freq = client.reporting_info?.[template.frequencyField] || 'monthly';
+    // No quarterly - only monthly or bimonthly
+    if (freq === 'quarterly') return 'bimonthly';
+    return freq;
+  }
+  return 'monthly';
+}
+
+/**
+ * Check if a process template should run for a given month for a specific client.
+ */
+function shouldRunForMonth(templateKey, month, client) {
+  const freq = getClientFrequency(templateKey, client);
+  if (freq === 'not_applicable') return false;
+  if (freq === 'yearly') return month === PROCESS_TEMPLATES[templateKey]?.dueMonth;
+  if (freq === 'bimonthly') return BIMONTHLY_DUE_MONTHS.includes(month);
+  // Semi-annual: task in month 7 (for Jan-Jun) and month 1 (for Jul-Dec)
+  if (freq === 'semi_annual') return month === 7 || month === 1;
+  return true; // monthly
+}
+
+/**
+ * Get the description for a report item based on its frequency.
+ */
+function getReportDescription(templateKey, month, year, client) {
+  const template = PROCESS_TEMPLATES[templateKey];
+  const freq = getClientFrequency(templateKey, client);
+
+  if (freq === 'yearly') {
+    return `דוח שנתי לשנת ${year - 1}`;
+  }
+  if (freq === 'semi_annual') {
+    // Month 7 = report for Jan-Jun, Month 1 = report for Jul-Dec (previous year)
+    if (month === 7) return `${template.name} עבור ינואר-יוני ${year}`;
+    if (month === 1) return `${template.name} עבור יולי-דצמבר ${year - 1}`;
+    return `${template.name} חצי שנתי ${year}`;
+  }
+  if (freq === 'bimonthly') {
+    const periodName = BIMONTHLY_PERIOD_NAMES[month] || '';
+    return `${template.name} ${periodName} ${year}`;
+  }
+  // Monthly - report for previous month
+  const reportMonthIdx = month - 2; // e.g. Feb(2) -> Jan index(0)
+  const reportMonthName = MONTH_NAMES[reportMonthIdx < 0 ? 11 : reportMonthIdx];
+  const reportYear = reportMonthIdx < 0 ? year - 1 : year;
+  return `${template.name} ${reportMonthName} ${reportYear}`;
+}
+
+// ===== Monday.com functions REMOVED (Kill Monday directive) =====
+// All sync/push/board operations eliminated.
+// SSoT is now: serviceWeights.js + automationRules.js + taxCalendar2026.js
+
+/* QUARANTINED — The following Monday functions were removed:
+ * mondayReportsAutomation, syncClientsFromBoard, syncTasksFromBoard,
+ * syncReconciliationsFromBoard, syncClientAccountsFromBoard, syncTherapistsFromBoard,
+ * purgeAndResync, syncAllBoards, emergencyCleanup, handleAddColumn,
+ * handleCreateMonthlyBoards, handlePushClientToMonday, handlePushTaskToMonday,
+ * reverseSyncAllBoards, filterMondayItems, syncMondayReports, syncReconciliationTasks
+ */
+
+// Stubs for backwards compatibility (prevent import errors)
+export const mondayBoardApi = async () => ({ data: { success: false, error: 'Monday.com integration removed — use CalmPlan DNA' } });
+export const mondayApi = async () => ({ data: { success: false, error: 'Monday.com integration removed — use CalmPlan DNA' } });
+export const mondayReportsAutomation = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
+export const filterMondayItems = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
+export const syncMondayReports = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
+export const syncReconciliationTasks = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
+export const syncAllBoards = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
+
+export const exportClientsToExcel = async () => ({ data: { success: false, error: 'Export not available' } });
+export const importClientsFromExcel = async () => ({ data: { success: false, error: 'Import not available' } });
+export const exportClientAccountsTemplate = async () => ({ data: { success: false, error: 'Export not available' } });
+export const importClientAccounts = async () => ({ data: { success: false, error: 'Import not available' } });
+const PLACEHOLDER_END_KILL_MONDAY = true; // marker
+
+// ===== Task Generation (stubs) =====
+
+export const generateHomeTasks = async () => {
+  return { data: { success: false, error: 'Not available in standalone mode' } };
+};
+
+export const getWeeklyPlan = async () => {
+  return { data: { success: false, error: 'Not available in standalone mode' } };
+};
+
+export const createWeeklyPlan = async () => {
+  return { data: { success: false, error: 'Not available in standalone mode' } };
+};
+
+/**
+ * Generate process tasks for clients based on their services.
+ * Uses the same template/service mapping as ClientRecurringTasks.jsx.
+ * taskType: 'all' | 'mondayReports' | 'balanceSheets' | 'reconciliations'
+ */
+export const generateProcessTasks = async (params = {}) => {
+  const { taskType = 'all' } = params;
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const monthNum = String(currentMonth).padStart(2, '0');
+  const monthPrefix = `${currentYear}-${monthNum}`;
+
+  const TEMPLATE_TO_WORK_CATEGORY = {
+    vat: 'work_vat_reporting',
+    payroll: 'work_payroll',
+    tax_advances: 'work_tax_advances',
+    annual_report: 'work_client_management',
+  };
+
+  try {
+    // ── LAW 1.1: REPORTING-ACTIVE FILTER ──
+    // FORBIDDEN: inactive, deleted, archived, balance-only clients
+    // A client is reporting-active ONLY if they have recurring monthly tasks
+    const allClients = await entities.Client.list();
+    const allActiveClients = allClients.filter(c =>
+      c.status === 'active' && c.is_deleted !== true
+    );
+    // For monthly tasks: use STRICT reporting-active filter
+    const activeClients = allActiveClients.filter(c => isReportingActiveClient(c));
+    // For annual reports: use broader active filter (all active clients)
+    const annualEligibleClients = allActiveClients;
+
+    // ── LAW 1.3: COMPOSITE UNIQUE KEY via Set ──
+    // Key = `${client_id}::${task_type}::${period}`
+    // We track created keys to prevent any duplicates within this run
+    const createdKeys = new Set();
+
+    // Also load existing tasks to prevent duplicates across runs
+    const existingTasks = await entities.Task.list();
+    const existingForMonth = existingTasks.filter(t =>
+      t.due_date && t.due_date.startsWith(monthPrefix)
+    );
+
+    // Build existing composite keys
+    existingForMonth.forEach(t => {
+      const clientKey = t.client_id || t.client_name || '';
+      const typeKey = t.category || '';
+      createdKeys.add(`${clientKey}::${typeKey}::${monthPrefix}`);
+    });
+
+    log.push(`${timestamp()} LAW 1: ${activeClients.length} reporting-active clients (of ${allActiveClients.length} active, ${allClients.length} total), ${existingForMonth.length} existing tasks for ${monthPrefix}`);
+
+    const results = {
+      summary: { tasksCreated: 0, legacyRemoved: 0, errors: 0, skippedBalanceOnly: 0 },
+      details: []
+    };
+
+    // --- Monthly/Periodic Reports ---
+    if (taskType === 'all' || taskType === 'mondayReports') {
+      log.push(`${timestamp()} Generating periodic report tasks...`);
+
+      for (const client of activeClients) {
+        // ── LAW 1.2: SERVICE-AWARE GENERATION ──
+        // getClientTemplates checks service_types + reporting_info frequencies
+        // Balance-only clients return [] for monthly templates
+        const templateKeys = getClientTemplates(client);
+        const monthlyTemplates = templateKeys.filter(k => k !== 'annual_report');
+
+        if (monthlyTemplates.length === 0) {
+          if ((client.service_types || []).length > 0) {
+            results.summary.skippedBalanceOnly++;
+          }
+          continue;
+        }
+
+        log.push(`${timestamp()} ${client.name}: [${monthlyTemplates.join(', ')}]`);
+
+        for (const templateKey of monthlyTemplates) {
+          if (!shouldRunForMonth(templateKey, currentMonth, client)) continue;
+
+          const freq = getClientFrequency(templateKey, client);
+          if (freq === 'not_applicable' || freq === 'yearly') continue;
+
+          const template = PROCESS_TEMPLATES[templateKey];
+          const workCategory = TEMPLATE_TO_WORK_CATEGORY[templateKey] || template.category;
+
+          // ── COMPOSITE UNIQUE KEY CHECK ──
+          const compositeKey = `${client.id || client.name}::${workCategory}::${monthPrefix}`;
+          if (createdKeys.has(compositeKey)) continue;
+
+          // Also check Hebrew category variant
+          const hebrewKey = `${client.id || client.name}::${template.category}::${monthPrefix}`;
+          if (createdKeys.has(hebrewKey)) continue;
+
+          const description = getReportDescription(templateKey, currentMonth, currentYear, client);
+          const title = `${client.name} - ${description}`;
+          const calendarDueDate = getDueDateForCategory(template.category, client, currentMonth);
+          const taskDueDate = calendarDueDate || `${currentYear}-${monthNum}-19`;
+
+          try {
+            const scheduledStart = getScheduledStartForCategory(template.category, taskDueDate);
+            await entities.Task.create({
+              title,
+              category: workCategory,
+              client_related: true,
+              client_name: client.name,
+              client_id: client.id,
+              status: 'not_started',
+              priority: 'high',
+              due_date: taskDueDate,
+              scheduled_start: scheduledStart || undefined,
+              is_recurring: true,
+            });
+            createdKeys.add(compositeKey);
+            results.summary.tasksCreated++;
+          } catch (err) {
+            results.summary.errors++;
+          }
+        }
+      }
+
+      // Monday sync removed — DNA is the sole source of truth
+    }
+
+    // --- Balance Sheets / Annual Reports ---
+    // DISABLED: Annual report tasks (05-31) are NOT auto-generated.
+    // They require manual specification within P2 balance sheet workflow.
+    // Rule: "אין לייצר משימות ללא אפיון מקדים של תתי-המשימות בתוך העץ"
+    if (taskType === 'balanceSheets') {
+      log.push(`${timestamp()} Annual report tasks skipped — requires manual P2 workflow`);
+    }
+
+    // --- Reconciliations ---
+    if (taskType === 'all' || taskType === 'reconciliations') {
+      for (const client of activeClients) {
+        const clientServices = client.service_types || [];
+        if (!clientServices.includes('bookkeeping') &&
+            !clientServices.includes('bookkeeping_full') &&
+            !clientServices.includes('full_service') &&
+            !clientServices.includes('reconciliation')) continue;
+
+        const compositeKey = `${client.id || client.name}::work_reconciliation::${monthPrefix}`;
+        if (createdKeys.has(compositeKey)) continue;
+
+        const title = `${client.name} - התאמת חשבונות ${monthNum}/${currentYear}`;
+        try {
+          const reconDue = `${currentYear}-${monthNum}-25`;
+          const scheduledStart = getScheduledStartForCategory('התאמות', reconDue);
+          await entities.Task.create({
+            title,
+            category: 'work_reconciliation',
+            client_related: true,
+            client_name: client.name,
+            client_id: client.id,
+            status: 'not_started',
+            priority: 'medium',
+            due_date: reconDue,
+            scheduled_start: scheduledStart || undefined,
+            is_recurring: true,
+          });
+          createdKeys.add(compositeKey);
+          results.summary.tasksCreated++;
+        } catch (err) {
+          results.summary.errors++;
+        }
+      }
+    }
+
+    // ── CATEGORY COUNT AUDIT: Log task breakdown per category ──
+    const allTasksNow = await entities.Task.list();
+    const febTasks = allTasksNow.filter(t => t.due_date && t.due_date.startsWith(monthPrefix));
+    const categoryCounts = {};
+    febTasks.forEach(t => {
+      const cat = t.category || 'unknown';
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    });
+    log.push(`${timestamp()} ═══ TASK COUNT PER CATEGORY ═══`);
+    Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]).forEach(([cat, count]) => {
+      log.push(`${timestamp()}   ${cat}: ${count}`);
+    });
+    log.push(`${timestamp()} ═══ TOTAL: ${febTasks.length} tasks for ${monthPrefix} ═══`);
+    log.push(`${timestamp()} Reporting-active clients: ${activeClients.length}, Balance-only skipped: ${results.summary.skippedBalanceOnly}`);
+
+    return {
+      data: {
+        success: true,
+        message: `נוצרו ${results.summary.tasksCreated} משימות חדשות`,
+        results,
+        categoryCounts,
+        totalForMonth: febTasks.length,
+        log
+      }
+    };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
+};
+
+// ===== Cleanup: Remove tasks for Year-end-only clients in 02.2026 =====
+export const cleanupYearEndOnlyTasks = async () => {
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  let deleted = 0;
+
+  try {
+    const allClients = await entities.Client.list();
+    const allTasks = await entities.Task.list();
+
+    // Identify clients whose ONLY service is annual_reports (year-end only)
+    const yearEndOnlyClients = allClients.filter(c => {
+      const services = c.service_types || [];
+      return services.length > 0 &&
+        services.every(st => st === 'annual_reports') &&
+        (c.status === 'active' || c.status === 'balance_sheet_only');
+    });
+
+    const yearEndClientNames = new Set(yearEndOnlyClients.map(c => c.name));
+    log.push(`${timestamp()} נמצאו ${yearEndOnlyClients.length} לקוחות שנתיים בלבד: ${[...yearEndClientNames].join(', ')}`);
+
+    // Find monthly/periodic tasks created for these clients in 02.2026
+    const monthlyCategories = new Set([
+      'work_vat_reporting', 'work_payroll', 'work_tax_advances',
+      'work_social_security', 'work_deductions',
+      'מע"מ', 'שכר', 'מקדמות מס', 'ביטוח לאומי', 'ניכויים',
+    ]);
+
+    const tasksToDelete = allTasks.filter(t =>
+      yearEndClientNames.has(t.client_name) &&
+      monthlyCategories.has(t.category) &&
+      t.due_date && t.due_date.startsWith('2026-02') &&
+      t.status !== 'completed'
+    );
+
+    log.push(`${timestamp()} נמצאו ${tasksToDelete.length} משימות חודשיות שנוצרו בטעות`);
+
+    for (const task of tasksToDelete) {
+      try {
+        await entities.Task.delete(task.id);
+        deleted++;
+      } catch (err) {
+        log.push(`${timestamp()} שגיאה במחיקת "${task.title}": ${err.message}`);
+      }
+    }
+
+    log.push(`${timestamp()} נמחקו ${deleted} משימות`);
+    return { data: { success: true, deleted, log } };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
+};
+
+// ===== P3 GHOST CLEANUP: Delete placeholder/orphan tasks in P3 =====
+// Removes tasks that: have no title/empty title, no client, no category,
+// or are placeholder stubs that aren't actionable.
+export const cleanupP3GhostTasks = async () => {
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  let deleted = 0;
+
+  try {
+    const allTasks = await entities.Task.list();
+    const allClients = await entities.Client.list();
+    const activeClientNames = new Set(
+      allClients.filter(c => c.status === 'active' && !c.is_deleted).map(c => c.name)
+    );
+
+    // P3 categories (admin/other) — catch-all for ghost tasks
+    const p3Categories = new Set([
+      'work_client_management', 'work_annual_reports', 'דוח שנתי',
+      'personal', 'אחר', 'כללי', 'work_general', 'work_admin',
+      'אדמיניסטרציה', 'לחזור ללקוח', 'work_callback',
+      'פגישה', 'work_meeting', 'מעקב שיווק', 'work_marketing',
+    ]);
+
+    const ghostTasks = allTasks.filter(task => {
+      // Ghost condition 1: No title or empty title
+      if (!task.title || task.title.trim() === '') return true;
+
+      // Ghost condition 2: P3 category with no client AND no meaningful content
+      const isP3 = p3Categories.has(task.category) ||
+        (task.context === 'work' && !task.category);
+      if (isP3 && !task.client_name && !task.description && task.status === 'not_started') {
+        return true;
+      }
+
+      // Ghost condition 3: References a deleted/non-existent client
+      if (task.client_name && task.context === 'work' &&
+          !activeClientNames.has(task.client_name) &&
+          task.status !== 'production_completed') {
+        return true;
+      }
+
+      // Ghost condition 4: Placeholder titles (generic stubs)
+      const placeholderPatterns = [
+        /^placeholder/i, /^test\s/i, /^TODO$/i, /^$/,
+        /^משימה חדשה$/, /^ללא כותרת$/,
+      ];
+      if (placeholderPatterns.some(p => p.test(task.title?.trim()))) return true;
+
+      return false;
+    });
+
+    log.push(`${timestamp()} נמצאו ${ghostTasks.length} משימות רפאים ב-P3`);
+
+    for (const task of ghostTasks) {
+      try {
+        await entities.Task.delete(task.id);
+        deleted++;
+        log.push(`${timestamp()} נמחקה: "${task.title || '(ריק)'}" [${task.category || 'ללא'}]`);
+      } catch (err) {
+        log.push(`${timestamp()} שגיאה: ${err.message}`);
+      }
+    }
+
+    log.push(`${timestamp()} סה"כ נמחקו ${deleted} משימות רפאים`);
+    return { data: { success: true, deleted, log } };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
+};
+
+// ===== WIPE & RESET: Delete ALL tasks for a given month =====
+// LAW 1.3: Nuclear wipe before generation - DELETE FROM tasks WHERE period = 'MM.YYYY'
+export const wipeAllTasksForMonth = async (params = {}) => {
+  const { year = 2026, month = 2 } = params;
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  let deleted = 0;
+
+  try {
+    const allTasks = await entities.Task.list();
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+
+    // Delete ALL tasks for this month - clean slate
+    const tasksToDelete = allTasks.filter(t =>
+      t.due_date && t.due_date.startsWith(monthPrefix)
+    );
+
+    log.push(`${timestamp()} NUCLEAR WIPE: ${tasksToDelete.length} tasks for ${monthPrefix}`);
+
+    // Batch delete for speed
+    const deletePromises = tasksToDelete.map(task =>
+      entities.Task.delete(task.id).then(() => { deleted++; }).catch(err => {
+        log.push(`${timestamp()} Delete error "${task.title}": ${err.message}`);
+      })
+    );
+    await Promise.all(deletePromises);
+
+    log.push(`${timestamp()} Wiped ${deleted} of ${tasksToDelete.length} tasks`);
+    return { data: { success: true, deleted, total: tasksToDelete.length, log } };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
+};
+
+// ===== AUDIT PREVIEW: Count expected tasks without creating them =====
+export const previewTaskGeneration = async (params = {}) => {
+  const { taskType = 'all' } = params;
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const monthNum = String(currentMonth).padStart(2, '0');
+  const monthPrefix = `${currentYear}-${monthNum}`;
+
+  try {
+    const allClients = await entities.Client.list();
+    const activeClients = allClients.filter(c => c.status === 'active');
+    const existingTasks = await entities.Task.list();
+
+    const existingForMonth = existingTasks.filter(t =>
+      t.due_date && t.due_date.startsWith(monthPrefix)
+    );
+
+    const preview = {
+      totalClients: activeClients.length,
+      existingTasksThisMonth: existingForMonth.length,
+      breakdown: { vat: 0, payroll: 0, tax_advances: 0, social_security: 0, deductions: 0, annual_report: 0, reconciliation: 0 },
+      totalExpected: 0,
+      newTasks: 0,
+      alreadyExist: 0,
+    };
+
+    if (taskType === 'all' || taskType === 'mondayReports') {
+      for (const client of activeClients) {
+        const services = client.service_types || [];
+        // STRICT: Only pass if client has explicit recurring service
+        const hasMonthlyService = services.some(st =>
+          st === 'vat_reporting' || st === 'tax_advances' || st === 'payroll' || st === 'full_service'
+        );
+        if (!hasMonthlyService) continue;
+
+        const templateKeys = getClientTemplates(client);
+        for (const templateKey of templateKeys) {
+          if (templateKey === 'annual_report' && taskType === 'mondayReports') continue;
+          if (!shouldRunForMonth(templateKey, currentMonth, client)) continue;
+          const freq = getClientFrequency(templateKey, client);
+          if (freq === 'not_applicable' || freq === 'yearly') continue;
+
+          preview.breakdown[templateKey] = (preview.breakdown[templateKey] || 0) + 1;
+          preview.totalExpected++;
+
+          const template = PROCESS_TEMPLATES[templateKey];
+          const workCategory = TEMPLATE_TO_WORK_CATEGORY[templateKey] || template.category;
+          const hebrewCategory = template.category;
+          const exists = existingForMonth.some(t => {
+            const sameClient = t.client_name === client.name || (client.id && t.client_id === client.id);
+            if (!sameClient) return false;
+            const sameType = t.category === workCategory || t.category === hebrewCategory;
+            return sameType;
+          });
+
+          if (exists) preview.alreadyExist++;
+          else preview.newTasks++;
+        }
+      }
+    }
+
+    if (taskType === 'all' || taskType === 'reconciliations') {
+      for (const client of activeClients) {
+        const clientServices = client.service_types || [];
+        if (clientServices.length > 0 &&
+            !clientServices.includes('bookkeeping') &&
+            !clientServices.includes('full_service')) continue;
+        preview.breakdown.reconciliation++;
+        preview.totalExpected++;
+
+        const title = `${client.name} - התאמת חשבונות ${monthNum}/${currentYear}`;
+        const exists = existingForMonth.some(t => t.title === title);
+        if (exists) preview.alreadyExist++;
+        else preview.newTasks++;
+      }
+    }
+
+    return {
+      data: {
+        success: true,
+        preview,
+        label: `צפויות ${preview.totalExpected} משימות (${preview.newTasks} חדשות, ${preview.alreadyExist} קיימות)`,
+      }
+    };
+  } catch (error) {
+    return { data: { success: false, error: error.message } };
+  }
+};
+
+// ===== Dedup Purge: Remove duplicate tasks for a given month =====
+// LAW 1.3: Enforce composite unique key = client_id + task_type + period
+export const dedupTasksForMonth = async (params = {}) => {
+  const { year = 2026, month = 2 } = params;
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+  let deleted = 0;
+
+  try {
+    // Step 1: Get actual active clients for orphan detection
+    const allClients = await entities.Client.list();
+    const activeClientNames = new Set(
+      allClients
+        .filter(c => c.status === 'active' && c.is_deleted !== true)
+        .map(c => c.name)
+    );
+
+    const allTasks = await entities.Task.list();
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+    const monthTasks = allTasks.filter(t => t.due_date && t.due_date.startsWith(monthPrefix));
+
+    log.push(`${timestamp()} ${monthTasks.length} tasks for ${monthPrefix}, ${activeClientNames.size} active clients`);
+
+    // Step 2: Delete orphan tasks (client not in active list)
+    const orphans = monthTasks.filter(t =>
+      t.client_name && !activeClientNames.has(t.client_name)
+    );
+    const orphanDeletes = orphans.map(task =>
+      entities.Task.delete(task.id).then(() => { deleted++; }).catch(() => {})
+    );
+    await Promise.all(orphanDeletes);
+    if (orphans.length > 0) {
+      log.push(`${timestamp()} Deleted ${orphans.length} orphan tasks (inactive clients)`);
+    }
+
+    // Step 3: COMPOSITE KEY dedup — client_id + task_type (category) + period
+    // Keep oldest, delete newer duplicates
+    const survivingTasks = monthTasks.filter(t => !orphans.includes(t));
+    const seen = new Map();
+    const duplicates = [];
+
+    survivingTasks
+      .sort((a, b) => (a.created_date || '').localeCompare(b.created_date || ''))
+      .forEach(t => {
+        const clientKey = t.client_id || t.client_name || '';
+        const compositeKey = `${clientKey}::${t.category || ''}::${monthPrefix}`;
+        if (!seen.has(compositeKey)) {
+          seen.set(compositeKey, t.id);
+        } else {
+          duplicates.push(t);
+        }
+      });
+
+    const dupDeletes = duplicates.map(task =>
+      entities.Task.delete(task.id).then(() => { deleted++; }).catch(() => {})
+    );
+    await Promise.all(dupDeletes);
+    if (duplicates.length > 0) {
+      log.push(`${timestamp()} Deleted ${duplicates.length} duplicates (composite key)`);
+    }
+
+    const remaining = monthTasks.length - deleted;
+    log.push(`${timestamp()} Total deleted: ${deleted}. Remaining: ${remaining}`);
+    return { data: { success: true, deleted, remaining, duplicatesFound: duplicates.length + orphans.length, log } };
+  } catch (error) {
+    return { data: { success: false, error: error.message, log } };
+  }
+};
+
+// ===== Seed Data =====
+
+export const seedData = async () => {
+  const { default: seedDemoData } = await import('./seedDemoData');
+  return seedDemoData();
+};
+
+// ===== Backup =====
+
+export const emergencyBackup = async () => {
+  const data = exportAllData();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `litaycalmplan-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(url);
+  a.remove();
+  return { data: { success: true, message: 'Backup downloaded' } };
+};
+
+// ===== Reset =====
+
+export const emergencyReset = async () => {
+  if (window.confirm('Are you sure? This will delete ALL data!')) {
+    clearAllData();
+    window.location.reload();
+  }
+  return { data: { success: true } };
+};
+
+/**
+ * Nuclear wipe: delete ALL tasks from BOTH Supabase AND localStorage.
+ * Prevents ghost resurrection by clearing both layers simultaneously.
+ */
+/**
+ * DISABLED: Nuclear wipe is locked to prevent accidental data loss.
+ * Use the Force Inject + Clear Month Cache in the injection engine instead.
+ * To re-enable, set NUCLEAR_ENABLED = true below.
+ */
+const NUCLEAR_ENABLED = false;
+
+export const nuclearWipeTasks = async () => {
+  if (!NUCLEAR_ENABLED) {
+    console.warn('[NuclearWipe] BLOCKED — nuclear reset is disabled. Use Force Inject instead.');
+    return { data: { success: false, blocked: true, log: ['Nuclear reset is DISABLED. Use Force Inject + Clear Month Cache instead.'] } };
+  }
+
+  const log = [];
+
+  // Layer 1: Supabase
+  try {
+    await entities.Task.deleteAll();
+    log.push('Supabase tasks: WIPED');
+  } catch (e) {
+    log.push(`Supabase error: ${e.message}`);
+  }
+
+  // Layer 2: localStorage (belt and suspenders)
+  try {
+    localStorage.removeItem('calmplan_tasks');
+    log.push('localStorage tasks: WIPED');
+  } catch (e) {
+    log.push(`localStorage error: ${e.message}`);
+  }
+
+  // Layer 3: Also clear any other task caches
+  try {
+    localStorage.removeItem('calmplan_task_sessions');
+    localStorage.removeItem('calmplan_weekly_tasks');
+    log.push('Task caches: WIPED');
+  } catch { /* ignore */ }
+
+  console.log('[NuclearWipe]', log.join(' | '));
+  return { data: { success: true, log } };
+};

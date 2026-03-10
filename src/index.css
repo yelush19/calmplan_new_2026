@@ -1,0 +1,415 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* :root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+} */
+
+
+
+@layer base {
+  :root {
+    /* CalmPlan emerald theme — applied at CSS level to prevent FOUC */
+    --primary: 160 80% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 158 92% 30%;
+    --secondary-foreground: 0 0% 100%;
+    --accent: 158 92% 30%;
+    --accent-foreground: 0 0% 100%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --muted: 0 0% 97%;
+    --muted-foreground: 0 0% 25%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --border: 0 0% 0%;
+    --input: 0 0% 75%;
+    --ring: 160 80% 39%;
+    --destructive: 5 79% 57%;
+    --destructive-foreground: 0 0% 100%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 0 0% 0%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 97%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 0%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* CalmPlan custom tokens */
+    --neutral-dark: #2d3436;
+    --neutral-medium: #636e72;
+    --neutral-light: #b2bec3;
+    --neutral-bg: #f5f6fa;
+    --status-success: #10b981;
+    --status-warning: #f59e0b;
+    --status-error: #8b5cf6;
+    --status-info: #0ea5e9;
+    --status-pending: #6366f1;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply text-foreground;
+    font-family: 'Varela Round', 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
+    background: #FFFFFF;
+    min-height: 100vh;
+    color: #000000;
+  }
+  h1, h2, h3, h4, h5, h6, .heading {
+    font-family: 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
+    font-weight: 600;
+    color: #000000;
+  }
+  .btn, button {
+    font-family: 'Assistant', 'Varela Round', 'Heebo', sans-serif;
+    font-weight: 600;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CalmPlan ZERO GRAY Global Policy
+   SOLID WHITE backgrounds, BLACK text, NO transparency, NO blur.
+   Applied to ALL pages — every new page inherits this automatically.
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* ── ZERO GRAY: All gray backgrounds → solid white ── */
+  .bg-gray-50, .bg-gray-100 {
+    background-color: #FFFFFF !important;
+  }
+  .bg-gray-200, .bg-gray-300 {
+    background-color: #F5F5F5 !important;
+  }
+  .bg-gray-400, .bg-gray-500,
+  .bg-gray-600, .bg-gray-700, .bg-gray-800, .bg-gray-900 {
+    background-color: #EEEEEE !important;
+    color: #000000 !important;
+  }
+
+  /* ── Borders: solid visible borders, no transparency ── */
+  .border-gray-100, .border-gray-200, .border-gray-300 {
+    border-color: #B0BEC5 !important;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #FAFAFA;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #B0BEC5;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #78909C;
+  }
+
+  /* CalmPlan card utility — solid white, black border, no shadow */
+  .calm-glass {
+    background: #FFFFFF;
+    border: 1px solid #000000;
+    border-radius: 32px;
+    box-shadow: none;
+  }
+
+  /* CalmPlan list item — white, thin border */
+  .calm-bubble {
+    background: #FFFFFF;
+    border-radius: 24px;
+    border: 1px solid #E0E0E0;
+    box-shadow: none;
+    transition: all 0.2s ease;
+  }
+  .calm-bubble:hover {
+    background: #FFFFFF;
+    border-color: #000000;
+  }
+
+  /* DNA glow — steel blue border only */
+  .calm-glow {
+    border: 2px solid #4682B4;
+    box-shadow: none;
+  }
+  .calm-glow-active {
+    border: 2px solid #1E3A5F;
+    box-shadow: none;
+  }
+
+  /* ── bg-white MUST stay solid white — no transparency override ── */
+  .bg-white {
+    background-color: #FFFFFF !important;
+  }
+
+  /* ── Radix popover / card / dialog — solid white ── */
+  .bg-background, .bg-card, .bg-popover {
+    background-color: #FFFFFF !important;
+  }
+
+  /* ── Slate overrides — solid white backgrounds ── */
+  .bg-slate-50, .bg-slate-100 {
+    background-color: #FFFFFF !important;
+  }
+  .bg-slate-200, .bg-slate-300 {
+    background-color: #F5F5F5 !important;
+  }
+  .bg-slate-400, .bg-slate-500,
+  .bg-slate-600, .bg-slate-700, .bg-slate-800, .bg-slate-900 {
+    background-color: #EEEEEE !important;
+    color: #000000 !important;
+  }
+
+  /* ── Divide lines — solid borders ── */
+  .divide-gray-100 > * + *,
+  .divide-gray-200 > * + *,
+  .divide-gray-300 > * + * {
+    border-color: #B0BEC5 !important;
+  }
+
+  /* ── Hover states — solid hover colors ── */
+  .hover\:bg-gray-50:hover,
+  .hover\:bg-gray-100:hover,
+  .hover\:bg-gray-200:hover {
+    background-color: #E0E0E0 !important;
+  }
+
+  /* ── Text colors: BLACK — no gray text anywhere ── */
+  .text-gray-300, .text-gray-400, .text-gray-500 {
+    color: #000000 !important;
+  }
+  .text-gray-600, .text-gray-700 {
+    color: #000000 !important;
+  }
+  .text-gray-800, .text-gray-900 {
+    color: #000000 !important;
+  }
+  .text-slate-300, .text-slate-400, .text-slate-500 {
+    color: #000000 !important;
+  }
+  .text-slate-600, .text-slate-700 {
+    color: #000000 !important;
+  }
+  .text-slate-800, .text-slate-900 {
+    color: #000000 !important;
+  }
+  .text-muted-foreground {
+    color: #000000 !important;
+  }
+
+  /* Ring focus states — CalmPlan cyan */
+  .ring-gray-200, .ring-gray-300 {
+    --tw-ring-color: #00ACC14D !important;
+  }
+
+  /* ── Muted backgrounds — solid white ── */
+  .bg-muted {
+    background-color: #FFFFFF !important;
+  }
+
+  /* ── ZERO SHADOW: kill all shadows globally, use borders instead ── */
+  .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl {
+    box-shadow: none !important;
+    border: 1px solid #E0E0E0 !important;
+  }
+  .shadow-none {
+    box-shadow: none !important;
+  }
+
+  /* ── bg-[#FAFBFC] and bg-[#F9FAFB] overrides ── */
+  [class*="bg-[#FAFBFC]"], [class*="bg-[#F9FAFB]"] {
+    background-color: #FFFFFF !important;
+  }
+
+  /* ── Slate borders — solid ── */
+  .border-slate-100, .border-slate-200, .border-slate-300 {
+    border-color: #B0BEC5 !important;
+  }
+
+  /* ─── MindMap Level 3 Sparkle Hover ─────────────────────── */
+  .mindmap-sparkle-hover {
+    position: relative;
+  }
+  .mindmap-sparkle-hover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      110deg,
+      transparent 25%,
+      #FFFFFF 45%,
+      #FFFFFF 50%,
+      #FFFFFF 55%,
+      transparent 75%
+    );
+    background-size: 200% 100%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .mindmap-sparkle-hover:hover::after {
+    opacity: 1;
+    animation: mindmap-shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* ═══ AUDIT: Solid White Rule ═══ */
+  /* Kill ALL transparency patterns */
+  [class*="bg-white/"], [class*="bg-black/"] {
+    opacity: 1 !important;
+  }
+
+  /* Kill ALL backdrop-blur */
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* ═══ AUDIT: Black Text Rule ═══ */
+  /* All body text must be solid black */
+  body, p, span, div, li, td, th, label, a {
+    color: #000000;
+  }
+  .text-muted-foreground {
+    color: #37474F !important;
+  }
+
+  /* Preserve white text on colored backgrounds */
+  .text-white, [class*="text-white"] {
+    color: #FFFFFF !important;
+  }
+
+  /* Preserve colored text for status indicators */
+  .text-emerald-500, .text-emerald-600, .text-emerald-700,
+  .text-amber-500, .text-amber-600, .text-amber-700,
+  .text-blue-500, .text-blue-600, .text-blue-700,
+  .text-purple-500, .text-purple-600, .text-purple-700,
+  .text-orange-500, .text-orange-600, .text-orange-700,
+  .text-rose-400, .text-rose-500, .text-rose-600,
+  .text-violet-600, .text-violet-800,
+  [class*="text-primary"] {
+    color: revert-layer;
+  }
+}
+
+/* ─── Shimmer Keyframes (outside @layer for global scope) ─── */
+@keyframes mindmap-shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}

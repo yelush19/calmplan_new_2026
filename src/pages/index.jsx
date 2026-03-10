@@ -1,0 +1,360 @@
+import { Link as RouterLink } from 'react-router-dom';
+import Layout from "./Layout.jsx";
+
+import Calendar from "./Calendar";
+
+import NewEvent from "./NewEvent";
+
+import Print from "./Print";
+
+import Tasks from "./Tasks";
+
+import Analytics from "./Analytics";
+
+import TaskMatrix from "./TaskMatrix";
+
+import Settings from "./Settings";
+
+// MondayIntegration removed (Kill Monday directive)
+
+import Recommendations from "./Recommendations";
+
+import Dashboards from "./Dashboards";
+
+import LifeSettings from "./LifeSettings";
+
+import Reconciliations from "./Reconciliations";
+
+import Home from "./Home";
+
+import BusinessHub from "./BusinessHub";
+
+import MealPlanner from "./MealPlanner";
+
+import Inspiration from "./Inspiration";
+
+import ClientManagement from "./ClientManagement";
+
+import Collections from "./Collections";
+
+import ServiceProviders from "./ServiceProviders";
+
+import ClientOnboarding from "./ClientOnboarding";
+
+import PayrollDashboard from "./PayrollDashboard";
+
+import ClientsDashboard from "./ClientsDashboard";
+
+import TaxReportsDashboard from "./TaxReportsDashboard";
+
+import Leads from "./Leads";
+
+import Roadmap from "./Roadmap";
+
+import HomeTaskGenerator from "./HomeTaskGenerator";
+
+import TestDataManager from "./TestDataManager";
+
+import EmergencyRecovery from "./EmergencyRecovery";
+
+import SystemOverview from "./SystemOverview";
+
+import EmergencyReset from "./EmergencyReset";
+
+// FullSync removed (Kill Monday directive)
+
+import WeeklyPlanningDashboard from "./WeeklyPlanningDashboard";
+
+import BalanceSheets from "./BalanceSheets";
+
+import WeeklySummary from "./WeeklySummary";
+
+import RecurringTasks from "./RecurringTasks";
+
+import DataImportTool from "./DataImportTool";
+
+import FeeManagement from "./FeeManagement";
+
+import Projects from "./Projects";
+
+import PeriodicSummaryReports from "./PeriodicSummaryReports";
+
+import AutomationRules from "./AutomationRules";
+
+import AdditionalServicesDashboard from "./AdditionalServicesDashboard";
+
+import PayrollReportsDashboard from "./PayrollReportsDashboard";
+
+import AdminTasksDashboard from "./AdminTasksDashboard";
+
+import ClientFiles from "./ClientFiles";
+
+import BackupManager from "./BackupManager";
+
+import SystemReadiness from "./SystemReadiness";
+
+import ClientContracts from "./ClientContracts";
+
+import BatchSetup from "./BatchSetup";
+
+import FinancialResultsDashboard from "./FinancialResultsDashboard";
+
+import MyFocus from "./MyFocus";
+
+import Inventory from "./Inventory";
+
+import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+
+const PAGES = {
+    
+    Calendar: Calendar,
+    
+    NewEvent: NewEvent,
+    
+    Print: Print,
+    
+    Tasks: Tasks,
+    
+    Analytics: Analytics,
+    
+    TaskMatrix: TaskMatrix,
+    
+    Settings: Settings,
+    
+    // MondayIntegration: removed (Kill Monday)
+    
+    Recommendations: Recommendations,
+    
+    Dashboards: Dashboards,
+    
+    LifeSettings: LifeSettings,
+    
+    Reconciliations: Reconciliations,
+    
+    Home: Home,
+    
+    BusinessHub: BusinessHub,
+    
+    MealPlanner: MealPlanner,
+    
+    Inspiration: Inspiration,
+    
+    ClientManagement: ClientManagement,
+    
+    Collections: Collections,
+    
+    ServiceProviders: ServiceProviders,
+    
+    ClientOnboarding: ClientOnboarding,
+    
+    PayrollDashboard: PayrollDashboard,
+
+    ClientsDashboard: ClientsDashboard,
+
+    TaxReportsDashboard: TaxReportsDashboard,
+
+    Leads: Leads,
+    
+    Roadmap: Roadmap,
+
+    HomeTaskGenerator: HomeTaskGenerator,
+    
+    TestDataManager: TestDataManager,
+    
+    EmergencyRecovery: EmergencyRecovery,
+    
+    SystemOverview: SystemOverview,
+    
+    EmergencyReset: EmergencyReset,
+    
+    // FullSync: removed (Kill Monday)
+    
+    WeeklyPlanningDashboard: WeeklyPlanningDashboard,
+    
+    BalanceSheets: BalanceSheets,
+
+    WeeklySummary: WeeklySummary,
+
+    RecurringTasks: RecurringTasks,
+
+    DataImportTool: DataImportTool,
+
+    FeeManagement: FeeManagement,
+
+    Projects: Projects,
+
+    PeriodicSummaryReports: PeriodicSummaryReports,
+
+    AutomationRules: AutomationRules,
+
+    AdditionalServicesDashboard: AdditionalServicesDashboard,
+
+    AdminTasksDashboard: AdminTasksDashboard,
+
+    ClientFiles: ClientFiles,
+
+    BackupManager: BackupManager,
+
+    SystemReadiness: SystemReadiness,
+
+    ClientContracts: ClientContracts,
+
+    BatchSetup: BatchSetup,
+
+    FinancialResultsDashboard: FinancialResultsDashboard,
+
+    MyFocus: MyFocus,
+
+    Inventory: Inventory,
+
+}
+
+function _getCurrentPage(url) {
+    if (url.endsWith('/')) {
+        url = url.slice(0, -1);
+    }
+    let urlLastPart = url.split('/').pop();
+    if (urlLastPart.includes('?')) {
+        urlLastPart = urlLastPart.split('?')[0];
+    }
+
+    const pageName = Object.keys(PAGES).find(page => page.toLowerCase() === urlLastPart.toLowerCase());
+    return pageName || 'Home';
+}
+
+// Create a wrapper component that uses useLocation inside the Router context
+function PagesContent() {
+    const location = useLocation();
+    const currentPage = _getCurrentPage(location.pathname);
+    
+    return (
+        <Layout currentPageName={currentPage}>
+            <Routes>            
+                
+                    <Route path="/" element={<Home />} />
+                
+                
+                <Route path="/Calendar" element={<Calendar />} />
+                
+                <Route path="/NewEvent" element={<NewEvent />} />
+                
+                <Route path="/Print" element={<Print />} />
+                
+                <Route path="/Tasks" element={<Tasks />} />
+                
+                <Route path="/Analytics" element={<Analytics />} />
+                
+                <Route path="/TaskMatrix" element={<TaskMatrix />} />
+                
+                <Route path="/Settings" element={<Settings />} />
+                
+                {/* MondayIntegration route removed — Kill Monday */}
+                
+                <Route path="/Recommendations" element={<Recommendations />} />
+                
+                <Route path="/Dashboards" element={<Dashboards />} />
+                
+                <Route path="/LifeSettings" element={<LifeSettings />} />
+                
+                <Route path="/Reconciliations" element={<Reconciliations />} />
+                
+                <Route path="/Home" element={<Home />} />
+                
+                <Route path="/BusinessHub" element={<BusinessHub />} />
+                
+                <Route path="/MealPlanner" element={<MealPlanner />} />
+                
+                <Route path="/Inspiration" element={<Inspiration />} />
+                
+                <Route path="/ClientManagement" element={<ClientManagement />} />
+                
+                <Route path="/Collections" element={<Collections />} />
+                
+                <Route path="/ServiceProviders" element={<ServiceProviders />} />
+                
+                <Route path="/ClientOnboarding" element={<ClientOnboarding />} />
+                
+                <Route path="/PayrollDashboard" element={<PayrollDashboard />} />
+
+                <Route path="/ClientsDashboard" element={<ClientsDashboard />} />
+
+                <Route path="/TaxReportsDashboard" element={<TaxReportsDashboard />} />
+
+                <Route path="/Leads" element={<Leads />} />
+                
+                <Route path="/Roadmap" element={<Roadmap />} />
+
+                <Route path="/HomeTaskGenerator" element={<HomeTaskGenerator />} />
+                
+                <Route path="/TestDataManager" element={<TestDataManager />} />
+                
+                <Route path="/EmergencyRecovery" element={<EmergencyRecovery />} />
+                
+                <Route path="/SystemOverview" element={<SystemOverview />} />
+                
+                <Route path="/EmergencyReset" element={<EmergencyReset />} />
+                
+                {/* FullSync route removed — Kill Monday */}
+                
+                <Route path="/WeeklyPlanningDashboard" element={<WeeklyPlanningDashboard />} />
+                
+                <Route path="/BalanceSheets" element={<BalanceSheets />} />
+
+                <Route path="/WeeklySummary" element={<WeeklySummary />} />
+
+                <Route path="/RecurringTasks" element={<RecurringTasks />} />
+
+                <Route path="/DataImportTool" element={<DataImportTool />} />
+
+                <Route path="/FeeManagement" element={<FeeManagement />} />
+
+                <Route path="/Projects" element={<Projects />} />
+
+                <Route path="/PeriodicSummaryReports" element={<PeriodicSummaryReports />} />
+
+                <Route path="/AutomationRules" element={<AutomationRules />} />
+
+                <Route path="/AdditionalServicesDashboard" element={<AdditionalServicesDashboard scope="p1" />} />
+
+                <Route path="/PayrollReportsDashboard" element={<PayrollReportsDashboard />} />
+
+                <Route path="/BookkeepingExtrasDashboard" element={<AdditionalServicesDashboard scope="p2" />} />
+
+                <Route path="/AdminTasksDashboard" element={<AdminTasksDashboard />} />
+
+                <Route path="/ClientFiles" element={<ClientFiles />} />
+
+                <Route path="/BackupManager" element={<BackupManager />} />
+
+                <Route path="/SystemReadiness" element={<SystemReadiness />} />
+
+                <Route path="/ClientContracts" element={<ClientContracts />} />
+
+                <Route path="/BatchSetup" element={<BatchSetup />} />
+
+                <Route path="/FinancialResultsDashboard" element={<FinancialResultsDashboard />} />
+
+                <Route path="/MyFocus" element={<MyFocus />} />
+
+                <Route path="/Inventory" element={<Inventory />} />
+
+                <Route path="*" element={
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <h1 className="text-6xl font-bold text-gray-300 mb-4">404</h1>
+                        <p className="text-xl text-gray-600 mb-6">העמוד לא נמצא</p>
+                        <RouterLink to="/Home" className="text-primary hover:underline font-medium">חזור לדף הבית</RouterLink>
+                    </div>
+                } />
+
+            </Routes>
+        </Layout>
+    );
+}
+
+export default function Pages() {
+    return (
+        <Router>
+            <PagesContent />
+        </Router>
+    );
+}
