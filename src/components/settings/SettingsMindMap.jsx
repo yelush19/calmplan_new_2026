@@ -1324,6 +1324,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
             markerWidth="8" markerHeight="6" orient="auto-start-reverse">
             <path d="M0,0 L10,3.5 L0,7 Z" fill="#4CAF50" />
           </marker>
+          <clipPath id="hub-clip"><circle cx={CX} cy={CY} r={50} /></clipPath>
         </defs>
 
         {/* Background grid */}
@@ -1389,17 +1390,14 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         })()}
 
         {/* ── Center Hub — Logo ── */}
-        <defs>
-          <clipPath id="hub-clip"><circle cx={CX} cy={CY} r={50} /></clipPath>
-        </defs>
         <circle cx={CX} cy={CY} r={55} fill="url(#hub-grad)" filter="url(#settings-glow)" />
         <image
-          xlinkHref="/logo-litay.png"
-          href="/logo-litay.png"
+          href={`${window.location.origin}/logo-litay.png`}
           x={CX - 50} y={CY - 50}
           width={100} height={100}
           clipPath="url(#hub-clip)"
           preserveAspectRatio="xMidYMid slice"
+          onError={(e) => { e.target.style.display = 'none'; }}
         />
         <text x={CX} y={CY + 48} textAnchor="middle" fill="#78909C" fontSize="9">{totalServices} שירותים</text>
 
