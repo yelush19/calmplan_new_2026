@@ -250,6 +250,65 @@ export function invalidateTreeCache() {
 }
 
 // ============================================================
+// SHARED SETTINGS SYNC — read/write arbitrary config keys
+// ============================================================
+// These use the same calmplan_system_config table to store
+// service_overrides, custom_services, node_positions, etc.
+// This is the SINGLE SOURCE OF TRUTH for settings data.
+
+/**
+ * Load a setting value from Supabase (calmplan_system_config table).
+ * Handles both column schemas: `config_value` (Entity API) and `data` (direct Supabase).
+ * Returns null if not found or Supabase unavailable.
+ */
+export async function loadSettingFromDb(key) {
+  const supabase = await getSupabase();
+  if (!supabase) return null;
+  try {
+    const { data: rows, error } = await supabase
+      .from(TABLE)
+      .select('*')
+      .eq('config_key', key)
+      .limit(1);
+    if (error) throw error;
+    if (rows && rows.length > 0) {
+      // Entity API uses config_value, direct Supabase uses data
+      return rows[0].config_value ?? rows[0].data ?? null;
+    }
+    return null;
+  } catch (err) {
+    console.warn(`[ProcessTreeService] Failed to load setting "${key}":`, err.message);
+    return null;
+  }
+}
+
+/**
+ * Save a setting value to Supabase (calmplan_system_config table).
+ * Writes to BOTH config_value and data columns for compatibility.
+ */
+export async function syncSettingToDb(key, value) {
+  const supabase = await getSupabase();
+  if (!supabase) return;
+  try {
+    const now = new Date().toISOString();
+    const { data: rows } = await supabase
+      .from(TABLE)
+      .select('id')
+      .eq('config_key', key)
+      .limit(1);
+    const payload = { config_key: key, config_value: value, data: value, updated_date: now, updated_at: now };
+    if (rows && rows.length > 0) {
+      await supabase.from(TABLE).update(payload).eq('id', rows[0].id);
+    } else {
+      await supabase.from(TABLE).insert({ id: crypto.randomUUID(), ...payload, created_date: now });
+    }
+    console.log(`[ProcessTreeService] ✅ Setting "${key}" synced to DB`);
+  } catch (err) {
+    console.warn(`[ProcessTreeService] Failed to sync setting "${key}":`, err.message);
+  }
+}
+
+// ============================================================
 // GLOBAL TREE EVENT BUS — Single Source of Truth Broadcast
 // ============================================================
 

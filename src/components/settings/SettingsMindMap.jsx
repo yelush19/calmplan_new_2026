@@ -43,6 +43,7 @@ import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import {
   loadCompanyTree, invalidateTreeCache, saveCompanyTree,
   saveAndBroadcast, onTreeChange,
+  loadSettingFromDb, syncSettingToDb,
 } from '@/services/processTreeService';
 import { toast } from '@/components/ui/use-toast';
 
@@ -637,6 +638,34 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [mapSaving, setMapSaving] = useState(false);
   const [dbTreeRef, setDbTreeRef] = useState({ tree: null, configId: null });
 
+  // ── Mount: Reconcile localStorage with Supabase (DB is authority) ──
+  // localStorage provides instant initial render (stale-while-revalidate).
+  // DB data arrives async and REPLACES any stale localStorage values.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      console.log('[MindMap] 🔄 Reconciling localStorage with DB...');
+      // 1) Load overrides from DB
+      const dbOverrides = await loadSettingFromDb('service_overrides');
+      if (cancelled) return;
+      if (dbOverrides && typeof dbOverrides === 'object' && Object.keys(dbOverrides).length > 0) {
+        setOverrides(dbOverrides);
+        localStorage.setItem('calmplan_service_overrides', JSON.stringify(dbOverrides));
+        console.log('[MindMap] ✅ Overrides reconciled from DB:', Object.keys(dbOverrides).length, 'entries');
+      }
+      // 2) Load custom services from DB
+      const dbCustom = await loadSettingFromDb('custom_services');
+      if (cancelled) return;
+      if (dbCustom && typeof dbCustom === 'object') {
+        // DB might have an empty object (all deleted) — that's valid, it means "no customs"
+        setCustomServices(dbCustom);
+        localStorage.setItem('calmplan_custom_services', JSON.stringify(dbCustom));
+        console.log('[MindMap] ✅ Custom services reconciled from DB:', Object.keys(dbCustom).length, 'entries');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Central function to refresh branches from DB
   const refreshBranchesFromDb = useCallback(async () => {
     console.log('[MindMap] 🔄 Refreshing branches from DB...');
@@ -692,9 +721,21 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
   // LISTEN for tree changes from Architect / other sources → auto-refresh
   useEffect(() => {
-    const unsub = onTreeChange((detail) => {
-      console.log(`[MindMap] 📡 Received tree-changed from "${detail.source}" — refreshing...`);
+    const unsub = onTreeChange(async (detail) => {
+      console.log(`[MindMap] 📡 Received tree-changed from "${detail.source}" — full refresh...`);
       refreshBranchesFromDb();
+      // Also re-reconcile custom services from DB (handles deletions from Architect)
+      const dbCustom = await loadSettingFromDb('custom_services');
+      if (dbCustom && typeof dbCustom === 'object') {
+        setCustomServices(dbCustom);
+        localStorage.setItem('calmplan_custom_services', JSON.stringify(dbCustom));
+        console.log('[MindMap] ✅ Custom services re-reconciled from DB after tree change');
+      }
+      const dbOverrides = await loadSettingFromDb('service_overrides');
+      if (dbOverrides && typeof dbOverrides === 'object' && Object.keys(dbOverrides).length > 0) {
+        setOverrides(dbOverrides);
+        localStorage.setItem('calmplan_service_overrides', JSON.stringify(dbOverrides));
+      }
     });
     return unsub;
   }, [refreshBranchesFromDb]);
