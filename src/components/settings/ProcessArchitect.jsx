@@ -30,6 +30,8 @@ import {
   saveCompanyTree,
   invalidateTreeCache,
   saveAndBroadcast,
+  onTreeChange,
+  syncSettingToDb,
 } from '@/services/processTreeService';
 import { flattenTree } from '@/config/companyProcessTree';
 
@@ -348,6 +350,21 @@ export default function ProcessArchitect() {
     });
   }, []);
 
+  // Listen for tree changes from MindMap / other sources → refresh if not dirty
+  useEffect(() => {
+    const unsub = onTreeChange((detail) => {
+      if (detail.source === 'ProcessArchitect') return; // skip own events
+      if (isDirty) return; // don't overwrite unsaved local changes
+      console.log(`[ProcessArchitect] 📡 Tree changed (from ${detail.source}) — refreshing...`);
+      invalidateTreeCache();
+      loadCompanyTree().then(({ tree: t, configId: c }) => {
+        setTree(t);
+        setConfigId(c);
+      });
+    });
+    return unsub;
+  }, [isDirty]);
+
   // All node IDs for dependency selection
   const allNodeIds = tree ? flattenTree(tree).map(n => n.id) : [];
 
@@ -459,6 +476,35 @@ export default function ProcessArchitect() {
       setIsDirty(false);
       setSaveResult('success');
       console.log('[ProcessArchitect] ✅ Saved & broadcasted to all consumers');
+
+      // Clean MindMap's localStorage: remove custom services whose branch was deleted
+      try {
+        const validBranches = new Set(Object.keys(tree.branches));
+        const baseBranches = ['P1', 'P2', 'P3', 'P4', 'P5'];
+        const customStr = localStorage.getItem('calmplan_custom_services');
+        if (customStr) {
+          const customs = JSON.parse(customStr);
+          const cleaned = {};
+          let removed = 0;
+          for (const [key, svc] of Object.entries(customs)) {
+            const dashboard = svc.dashboard || '';
+            const parentBranch = svc.parentId || '';
+            // Keep if dashboard branch or parent branch is still valid
+            const branchId = dashboard.startsWith('P') ? dashboard : parentBranch.match(/^P\d+/)?.[0];
+            if (!branchId || validBranches.has(branchId) || baseBranches.includes(branchId)) {
+              cleaned[key] = svc;
+            } else {
+              removed++;
+            }
+          }
+          if (removed > 0) {
+            localStorage.setItem('calmplan_custom_services', JSON.stringify(cleaned));
+            syncSettingToDb('custom_services', cleaned); // keep DB in sync too
+            console.log(`[ProcessArchitect] 🧹 Cleaned ${removed} orphan services from localStorage`);
+          }
+        }
+      } catch (e) { /* non-critical cleanup */ }
+
       setTimeout(() => setSaveResult(null), 3000);
     } catch (err) {
       console.error('[ProcessArchitect] Save failed:', err);
