@@ -29,6 +29,7 @@ import {
   loadCompanyTree,
   saveCompanyTree,
   invalidateTreeCache,
+  saveAndBroadcast,
 } from '@/services/processTreeService';
 import { flattenTree } from '@/config/companyProcessTree';
 
@@ -452,10 +453,12 @@ export default function ProcessArchitect() {
     setSaving(true);
     setSaveResult(null);
     try {
-      const newConfigId = await saveCompanyTree(tree, configId);
+      // Save AND broadcast to all consumers (MindMap, ClientCard, etc.)
+      const { configId: newConfigId } = await saveAndBroadcast(tree, configId, 'ProcessArchitect');
       setConfigId(newConfigId);
       setIsDirty(false);
       setSaveResult('success');
+      console.log('[ProcessArchitect] ✅ Saved & broadcasted to all consumers');
       setTimeout(() => setSaveResult(null), 3000);
     } catch (err) {
       console.error('[ProcessArchitect] Save failed:', err);

@@ -26,6 +26,8 @@ import {
   getEnabledNodeIds,
   applyFullService,
   invalidateTreeCache,
+  onTreeChange,
+  cleanStaleClientNodes,
 } from '@/services/processTreeService';
 import { ClientAccount } from '@/api/entities';
 
@@ -261,32 +263,49 @@ export default function ProcessTreeManager({ processTree, onChange, clientId }) 
   const [bankAccounts, setBankAccounts] = useState([]);
   const [expandedBranches, setExpandedBranches] = useState({ P1: true, P2: true, P3: false, P5: false });
 
-  // Load company tree on mount — always fetch fresh from DB for Process Architect sync
-  useEffect(() => {
-    let mounted = true;
-    invalidateTreeCache(); // Force fresh load from DB
-    loadCompanyTree().then(({ tree }) => {
-      if (mounted) {
-        setCompanyTree(tree);
-        setLoading(false);
-        // Auto-expand any dynamic branches
-        if (tree?.branches) {
-          const branchKeys = Object.keys(tree.branches);
-          setExpandedBranches(prev => {
-            const updated = { ...prev };
-            for (const k of branchKeys) {
-              if (!(k in updated)) updated[k] = false;
-            }
-            return updated;
-          });
+  // Load company tree and clean stale client nodes
+  const refreshTree = useCallback(async () => {
+    invalidateTreeCache();
+    try {
+      const { tree } = await loadCompanyTree();
+      setCompanyTree(tree);
+      setLoading(false);
+      // Auto-expand any dynamic branches
+      if (tree?.branches) {
+        const branchKeys = Object.keys(tree.branches);
+        setExpandedBranches(prev => {
+          const updated = { ...prev };
+          for (const k of branchKeys) {
+            if (!(k in updated)) updated[k] = false;
+          }
+          return updated;
+        });
+      }
+      // INTERSECTION CLEANUP: remove client nodes that reference deleted branches/nodes
+      if (tree && processTree && Object.keys(processTree).length > 0) {
+        const { cleaned, removedKeys } = cleanStaleClientNodes(processTree, tree);
+        if (removedKeys.length > 0) {
+          console.log(`[ProcessTreeManager] 🧹 Auto-cleaned ${removedKeys.length} stale nodes from client tree:`, removedKeys);
+          onChange(cleaned);
         }
       }
-    }).catch(err => {
+    } catch (err) {
       console.error('[ProcessTreeManager] Failed to load tree:', err);
-      if (mounted) setLoading(false);
+      setLoading(false);
+    }
+  }, [processTree, onChange]);
+
+  // Load on mount
+  useEffect(() => { refreshTree(); }, []);
+
+  // LISTEN for tree changes from Architect/MindMap → auto-refresh
+  useEffect(() => {
+    const unsub = onTreeChange((detail) => {
+      console.log(`[ProcessTreeManager] 📡 Tree changed (from ${detail.source}) — refreshing...`);
+      refreshTree();
     });
-    return () => { mounted = false; };
-  }, []);
+    return unsub;
+  }, [refreshTree]);
 
   // Load bank accounts for smart reconciliation node
   useEffect(() => {

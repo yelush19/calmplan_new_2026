@@ -40,7 +40,10 @@ import {
 } from 'lucide-react';
 
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
-import { loadCompanyTree, invalidateTreeCache, saveCompanyTree } from '@/services/processTreeService';
+import {
+  loadCompanyTree, invalidateTreeCache, saveCompanyTree,
+  saveAndBroadcast, onTreeChange,
+} from '@/services/processTreeService';
 import { toast } from '@/components/ui/use-toast';
 
 // ── DNA Colors (P-branch identity) — base set, extended dynamically from DB ──
@@ -630,9 +633,16 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
   // ── Dynamic DNA: merge BASE_DNA with any extra branches from DB (P6+) ──
   const [dbBranches, setDbBranches] = useState({});
-  useEffect(() => {
+  const [mapDirty, setMapDirty] = useState(false);
+  const [mapSaving, setMapSaving] = useState(false);
+  const [dbTreeRef, setDbTreeRef] = useState({ tree: null, configId: null });
+
+  // Central function to refresh branches from DB
+  const refreshBranchesFromDb = useCallback(async () => {
+    console.log('[MindMap] 🔄 Refreshing branches from DB...');
     invalidateTreeCache();
-    loadCompanyTree().then(({ tree, configId }) => {
+    try {
+      const { tree, configId } = await loadCompanyTree();
       if (!tree?.branches) return;
       setDbTreeRef({ tree, configId });
       const extra = {};
@@ -645,20 +655,49 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
             label: `${branchId} ${branch.label}`,
             bg: palette.color + '15',
             glow: palette.glow,
-            dashboard: branchId, // use branch ID so services map back correctly
+            dashboard: branchId,
           };
           dynIdx++;
         }
       }
-      if (Object.keys(extra).length > 0) {
-        setDbBranches(extra);
-      }
-    }).catch(err => console.warn('[MindMap] Could not load DB branches:', err));
+      // INTERSECTION CLEANUP: remove dbBranches that no longer exist in DB
+      // (handles P6 deleted from Architect but still showing in MindMap)
+      setDbBranches(extra); // replaces entirely — deleted branches disappear
+      console.log('[MindMap] ✅ Branches refreshed. Dynamic:', Object.keys(extra));
+
+      // Also clean customServices: remove services whose branch no longer exists
+      const validBranches = new Set(Object.keys(tree.branches));
+      setCustomServices(prev => {
+        const cleaned = {};
+        let removed = 0;
+        for (const [key, svc] of Object.entries(prev)) {
+          const branch = getDashboardBranch(svc.dashboard);
+          if (validBranches.has(branch) || BASE_DNA[branch]) {
+            cleaned[key] = svc;
+          } else {
+            removed++;
+            console.log(`[MindMap] 🧹 Removed orphan service "${key}" (branch "${branch}" deleted)`);
+          }
+        }
+        if (removed > 0) saveCustomServices(cleaned);
+        return cleaned;
+      });
+    } catch (err) {
+      console.warn('[MindMap] Could not refresh branches:', err);
+    }
   }, []);
 
-  const [mapDirty, setMapDirty] = useState(false);
-  const [mapSaving, setMapSaving] = useState(false);
-  const [dbTreeRef, setDbTreeRef] = useState({ tree: null, configId: null });
+  // Load on mount
+  useEffect(() => { refreshBranchesFromDb(); }, [refreshBranchesFromDb]);
+
+  // LISTEN for tree changes from Architect / other sources → auto-refresh
+  useEffect(() => {
+    const unsub = onTreeChange((detail) => {
+      console.log(`[MindMap] 📡 Received tree-changed from "${detail.source}" — refreshing...`);
+      refreshBranchesFromDb();
+    });
+    return unsub;
+  }, [refreshBranchesFromDb]);
 
   // Merged DNA: base + dynamic branches
   const DNA = useMemo(() => ({ ...BASE_DNA, ...dbBranches }), [dbBranches]);
@@ -1254,10 +1293,10 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       configId,
     });
 
-    await saveCompanyTree(updatedTree, configId);
+    const saved = await saveAndBroadcast(updatedTree, configId, 'MindMap:QuickSpawn');
 
     // Update local ref so floating save button knows about this
-    setDbTreeRef({ tree: updatedTree, configId });
+    setDbTreeRef({ tree: updatedTree, configId: saved.configId });
 
     console.log(`[MindMap SyncDB] ✅ Node "${nodeId}" saved to DB successfully`);
     return { success: true };
@@ -1631,9 +1670,9 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                 }
               }
 
-              // 3) Save to DB
-              await saveCompanyTree(merged, configId);
-              setDbTreeRef({ tree: merged, configId });
+              // 3) Save to DB and broadcast to all consumers
+              const saved = await saveAndBroadcast(merged, configId, 'MindMap:FloatSave');
+              setDbTreeRef({ tree: merged, configId: saved.configId });
               setMapDirty(false);
               console.log('[MindMap FloatSave] ✅ Saved successfully');
               toast({ title: 'נשמר בהצלחה', description: 'כל השינויים נשמרו ל-DB' });

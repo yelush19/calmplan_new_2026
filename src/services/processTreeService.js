@@ -250,6 +250,108 @@ export function invalidateTreeCache() {
 }
 
 // ============================================================
+// GLOBAL TREE EVENT BUS — Single Source of Truth Broadcast
+// ============================================================
+
+/**
+ * Event name for tree changes. All consumers MUST listen to this.
+ * Payload: { tree, configId, source }
+ */
+export const TREE_CHANGED_EVENT = 'calmplan:tree-changed';
+
+/**
+ * Broadcast that the company tree has changed.
+ * Every component that displays tree data should listen to this event
+ * and re-fetch/re-render accordingly.
+ *
+ * @param {string} source - Who triggered the change (for logging)
+ */
+export function broadcastTreeChange(source = 'unknown') {
+  console.log(`[ProcessTreeService] 📡 Broadcasting tree change from "${source}"`);
+  window.dispatchEvent(new CustomEvent(TREE_CHANGED_EVENT, {
+    detail: { tree: _cachedTree, configId: _cachedConfigId, source, timestamp: Date.now() },
+  }));
+  // Also trigger generic data-synced for pages using useRealtimeRefresh
+  window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+    detail: { collection: 'system_config', source },
+  }));
+}
+
+/**
+ * Save the company tree AND broadcast the change globally.
+ * This is the ONLY function that should be used for tree writes.
+ * All UI components (Architect, MindMap, (+) button) must use this.
+ *
+ * @param {object} tree - The full tree to persist
+ * @param {string|null} configId - Existing config record ID
+ * @param {string} source - Who triggered the save (for logging)
+ * @returns {{ tree, configId }} — the saved state
+ */
+export async function saveAndBroadcast(tree, configId, source = 'unknown') {
+  const newConfigId = await saveCompanyTree(tree, configId);
+  broadcastTreeChange(source);
+  return { tree, configId: newConfigId };
+}
+
+/**
+ * Subscribe to tree changes. Returns an unsubscribe function.
+ * Use in useEffect for automatic cleanup.
+ *
+ * @param {(detail: { tree, configId, source }) => void} callback
+ * @returns {() => void} unsubscribe
+ */
+export function onTreeChange(callback) {
+  const handler = (e) => callback(e.detail);
+  window.addEventListener(TREE_CHANGED_EVENT, handler);
+  return () => window.removeEventListener(TREE_CHANGED_EVENT, handler);
+}
+
+/**
+ * Clean stale client process_tree entries.
+ * Removes nodes/branches that no longer exist in the company tree.
+ * Returns a cleaned copy (does NOT mutate the input).
+ *
+ * @param {object} clientProcessTree - client.process_tree map
+ * @param {object} companyTree - The current company tree (from DB)
+ * @returns {{ cleaned: object, removedKeys: string[] }}
+ */
+export function cleanStaleClientNodes(clientProcessTree, companyTree) {
+  if (!clientProcessTree || !companyTree?.branches) {
+    return { cleaned: clientProcessTree || {}, removedKeys: [] };
+  }
+
+  // Build set of all valid node IDs from company tree
+  const validIds = new Set();
+  const collectIds = (nodes) => {
+    for (const n of (nodes || [])) {
+      validIds.add(n.id);
+      if (n.children?.length) collectIds(n.children);
+    }
+  };
+  // Branch IDs are valid too
+  for (const [branchId, branch] of Object.entries(companyTree.branches)) {
+    validIds.add(branchId);
+    collectIds(branch.children);
+  }
+
+  const cleaned = {};
+  const removedKeys = [];
+  for (const [key, val] of Object.entries(clientProcessTree)) {
+    if (validIds.has(key)) {
+      cleaned[key] = val;
+    } else {
+      removedKeys.push(key);
+    }
+  }
+
+  if (removedKeys.length > 0) {
+    console.log(`[ProcessTreeService] 🧹 Cleaned ${removedKeys.length} stale nodes from client tree:`, removedKeys);
+  }
+
+  return { cleaned, removedKeys };
+}
+
+// ============================================================
 // FREQUENCY RESOLUTION
 // ============================================================
 

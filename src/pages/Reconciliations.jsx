@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+import { loadCompanyTree, isNodeEnabled, onTreeChange, invalidateTreeCache } from '@/services/processTreeService';
 
 // ─── Status Configuration — Glassmorphism Pill Styles ──────────
 const statusConfig = {
@@ -430,17 +431,40 @@ export default function ReconciliationsPage() {
 
   useEffect(() => { loadData(); }, []);
 
+  // Listen for tree changes → reload (e.g., reconciliation node disabled in Architect)
+  useEffect(() => {
+    const unsub = onTreeChange(() => {
+      console.log('[Reconciliations] 📡 Tree changed — reloading...');
+      loadData();
+    });
+    return unsub;
+  }, []);
+
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [recsData, clientsData, accountsData, tasksData] = await Promise.all([
+      // Load tree to check which clients have P2_reconciliation enabled
+      invalidateTreeCache();
+      const [recsData, clientsData, accountsData, tasksData, treeResult] = await Promise.all([
         AccountReconciliation.list(null, 500).catch(() => []),
         Client.list(null, 500).catch(() => []),
         ClientAccount.list(null, 2000).catch(() => []),
         Task.list(null, 5000).catch(() => []),
+        loadCompanyTree().catch(() => ({ tree: null })),
       ]);
+
+      // Filter active clients — only include those with P2_reconciliation enabled (if tree exists)
+      const activeClients = (clientsData || []).filter(c => {
+        if (c.status !== 'active') return false;
+        // If company tree is loaded, respect the client's tree config
+        if (treeResult?.tree && c.process_tree) {
+          return isNodeEnabled(c.process_tree, 'P2_reconciliation');
+        }
+        return true; // fallback: show all active if tree unavailable
+      });
+
       setReconciliations(recsData || []);
-      setClients((clientsData || []).filter(c => c.status === 'active'));
+      setClients(activeClients);
       setAllAccounts(accountsData || []);
       setAllTasks(tasksData || []);
     } catch (error) {
