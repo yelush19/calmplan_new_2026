@@ -621,13 +621,30 @@ export default function ProcessArchitect() {
       })}
 
       {/* Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 mb-16">
         <strong>סנכרון:</strong> לאחר שמירה, כל כרטיס לקוח יטען את המבנה המעודכן אוטומטית.
         <br />
         <strong>שלבים:</strong> לחץ על אייקון השלבים (⊞) ליד כל צומת כדי להגדיר Steps.
         <br />
         <strong>ענפים חדשים:</strong> לחץ "ענף חדש" ליצירת P6, P7 וכו'.
       </div>
+
+      {/* ── Floating Save Button ── */}
+      {isDirty && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-3 rounded-full shadow-lg text-white text-sm font-bold transition-all hover:scale-105 active:scale-95"
+            style={{ backgroundColor: '#2E7D32', boxShadow: '0 4px 20px rgba(46, 125, 50, 0.4)' }}
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? 'שומר...' : 'שמור שינויים ל-DB'}
+            {saveResult === 'success' && <CheckCircle className="w-4 h-4 text-green-200" />}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -89,10 +89,49 @@ export async function loadCompanyTree() {
         if (dbVersion < seedVersion) {
           console.log(`[ProcessTreeService] Upgrading tree ${dbVersion} → ${seedVersion}`);
           const merged = { ...dbTree, version: seedVersion };
-          // Add any branches that exist in seed but not in DB
-          for (const [branchId, branch] of Object.entries(PROCESS_TREE_SEED.branches)) {
+          // Merge seed branches: add missing branches AND update existing ones with new children
+          for (const [branchId, seedBranch] of Object.entries(PROCESS_TREE_SEED.branches)) {
             if (!merged.branches[branchId]) {
-              merged.branches[branchId] = branch;
+              // Brand new branch — add it whole
+              merged.branches[branchId] = seedBranch;
+            } else {
+              // Existing branch — merge new children that don't exist yet
+              const existingIds = new Set();
+              const collectIds = (nodes) => {
+                for (const n of (nodes || [])) {
+                  existingIds.add(n.id);
+                  if (n.children?.length) collectIds(n.children);
+                }
+              };
+              collectIds(merged.branches[branchId].children);
+
+              // Deep-merge: add missing children from seed into existing branch
+              const mergeChildren = (existing, seedChildren) => {
+                const result = [...existing];
+                for (const seedChild of seedChildren) {
+                  if (!existingIds.has(seedChild.id)) {
+                    result.push(seedChild);
+                  } else {
+                    // Node exists — check if seed has new children to merge
+                    const idx = result.findIndex(n => n.id === seedChild.id);
+                    if (idx >= 0 && seedChild.children?.length) {
+                      result[idx] = {
+                        ...result[idx],
+                        children: mergeChildren(result[idx].children || [], seedChild.children),
+                      };
+                    }
+                  }
+                }
+                return result;
+              };
+
+              merged.branches[branchId] = {
+                ...merged.branches[branchId],
+                children: mergeChildren(
+                  merged.branches[branchId].children || [],
+                  seedBranch.children || []
+                ),
+              };
             }
           }
           // Persist the upgrade

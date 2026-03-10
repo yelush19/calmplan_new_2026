@@ -278,7 +278,7 @@ const P5_BRANCH = {
 // ============================================================
 
 export const PROCESS_TREE_SEED = {
-  version: '3.0',
+  version: '3.1',
   branches: {
     P1: P1_BRANCH,
     P2: P2_BRANCH,

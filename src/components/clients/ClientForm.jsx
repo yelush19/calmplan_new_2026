@@ -743,6 +743,10 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               </div>
             </TabsContent>
             <TabsContent value="services" className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-center gap-2">
+                <span className="text-amber-600 font-bold">שים לב:</span>
+                טאב זה יוחלף בקרוב על ידי "עץ תהליכים" — מומלץ להגדיר שירותים שם.
+              </div>
               <div>
                 <Label className="text-lg font-bold">סוגי שירותים</Label>
                 <div className="space-y-4 mt-3">

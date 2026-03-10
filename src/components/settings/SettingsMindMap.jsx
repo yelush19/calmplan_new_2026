@@ -40,9 +40,10 @@ import {
 } from 'lucide-react';
 
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
+import { loadCompanyTree, invalidateTreeCache } from '@/services/processTreeService';
 
-// ── DNA Colors (P-branch identity) ──
-const DNA = {
+// ── DNA Colors (P-branch identity) — base set, extended dynamically from DB ──
+const BASE_DNA = {
   P1: { color: '#00A3E0', label: 'P1 שכר', bg: '#00A3E015', glow: '#00A3E040', dashboard: 'payroll' },
   P2: { color: '#B2AC88', label: 'P2 הנה"ח', bg: '#B2AC8815', glow: '#B2AC8840', dashboard: 'tax' },
   P3: { color: '#E91E63', label: 'P3 ניהול', bg: '#E91E6315', glow: '#E91E6340', dashboard: 'admin' },
@@ -50,12 +51,23 @@ const DNA = {
   P5: { color: '#2E7D32', label: 'P5 דוחות שנתיים', bg: '#2E7D3215', glow: '#2E7D3240', dashboard: 'annual_reports' },
 };
 
+// Dynamic color palette for user-created branches (P6, P7, ...)
+const DYNAMIC_COLORS = [
+  { color: '#9C27B0', glow: '#9C27B040' },
+  { color: '#FF5722', glow: '#FF572240' },
+  { color: '#00BCD4', glow: '#00BCD440' },
+  { color: '#795548', glow: '#79554840' },
+  { color: '#607D8B', glow: '#607D8B40' },
+];
+
 function getDashboardBranch(dashboard) {
   if (dashboard === 'payroll') return 'P1';
   if (dashboard === 'tax') return 'P2';
   if (dashboard === 'admin' || dashboard === 'additional') return 'P3';
   if (dashboard === 'home') return 'P4';
   if (dashboard === 'annual_reports') return 'P5';
+  // Dynamic branches: dashboard may be set to the branch ID directly (e.g., 'P6')
+  if (dashboard?.startsWith('P')) return dashboard;
   return 'P3';
 }
 
@@ -615,6 +627,36 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   // Shapes palette hidden by default — logic preserved, toggle reveals it
   const [showShapePalette, setShowShapePalette] = useState(false);
 
+  // ── Dynamic DNA: merge BASE_DNA with any extra branches from DB (P6+) ──
+  const [dbBranches, setDbBranches] = useState({});
+  useEffect(() => {
+    invalidateTreeCache();
+    loadCompanyTree().then(({ tree }) => {
+      if (!tree?.branches) return;
+      const extra = {};
+      let dynIdx = 0;
+      for (const [branchId, branch] of Object.entries(tree.branches)) {
+        if (!BASE_DNA[branchId]) {
+          const palette = DYNAMIC_COLORS[dynIdx % DYNAMIC_COLORS.length];
+          extra[branchId] = {
+            color: palette.color,
+            label: `${branchId} ${branch.label}`,
+            bg: palette.color + '15',
+            glow: palette.glow,
+            dashboard: 'admin', // fallback dashboard
+          };
+          dynIdx++;
+        }
+      }
+      if (Object.keys(extra).length > 0) {
+        setDbBranches(extra);
+      }
+    }).catch(err => console.warn('[MindMap] Could not load DB branches:', err));
+  }, []);
+
+  // Merged DNA: base + dynamic branches
+  const DNA = useMemo(() => ({ ...BASE_DNA, ...dbBranches }), [dbBranches]);
+
   // ── Sync node selection to global Design Engine ──
   useEffect(() => {
     if (selectedNodeId) {
@@ -646,7 +688,23 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   // ── Build node tree: center → P-roots → services → steps ──
   const allNodes = useMemo(() => {
     const nodes = [];
-    const rootAngles = { P1: -Math.PI * 0.8, P2: -Math.PI * 0.4, P3: 0, P4: Math.PI * 0.4, P5: Math.PI * 0.8 };
+    // Dynamic angle assignment: spread all branches evenly around the center
+    const branchKeys = Object.keys(DNA);
+    const rootAngles = {};
+    branchKeys.forEach((key, idx) => {
+      // Base angles for known branches, dynamic for new ones
+      const baseAngles = { P1: -Math.PI * 0.8, P2: -Math.PI * 0.4, P3: 0, P4: Math.PI * 0.4, P5: Math.PI * 0.8 };
+      if (baseAngles[key] !== undefined) {
+        rootAngles[key] = baseAngles[key];
+      } else {
+        // Distribute dynamic branches in remaining angular space
+        const dynamicKeys = branchKeys.filter(k => !baseAngles[k]);
+        const dynIdx = dynamicKeys.indexOf(key);
+        const startAngle = Math.PI * 0.9; // start after P5
+        const spread = (Math.PI * 0.8) / Math.max(dynamicKeys.length, 1);
+        rootAngles[key] = startAngle + dynIdx * spread;
+      }
+    });
     const rootDist = 220;
 
     // P-Root nodes
@@ -1078,6 +1136,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   }, [dragState, paletteDrag, allNodes, magnetTarget, svgPoint, createService, moveService, nodePositionOverrides]);
 
   // ── Quick Spawn "+" (directive #7) — Creates a child task/service under the selected node ──
+  // Also syncs to the DB process tree (Process Architect) for single-source-of-truth
   const handleQuickSpawn = useCallback((parentNode, e) => {
     e.stopPropagation();
     const branch = parentNode.type === 'root' ? parentNode.id : getDashboardBranch(parentNode.dashboard);
@@ -1095,7 +1154,62 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       return next;
     });
     setSelectedNodeId(key);
-  }, [createService]);
+
+    // Sync to DB process tree (fire-and-forget)
+    syncNewNodeToDbTree(branch, key, 'שירות חדש', parentId);
+  }, [createService, DNA]);
+
+  // ── Sync a newly-created node into the DB process tree ──
+  const syncNewNodeToDbTree = useCallback(async (branchId, nodeId, label, parentNodeId) => {
+    try {
+      invalidateTreeCache();
+      const { tree, configId } = await loadCompanyTree();
+      if (!tree?.branches?.[branchId]) return; // branch not in DB tree
+
+      const newNode = {
+        id: nodeId,
+        label,
+        service_key: nodeId,
+        is_parent_task: false,
+        default_frequency: 'monthly',
+        frequency_field: null,
+        frequency_fallback: null,
+        frequency_inherit: false,
+        depends_on: parentNodeId && parentNodeId !== branchId ? [parentNodeId] : [],
+        execution: 'sequential',
+        is_collector: false,
+        children: [],
+        steps: [],
+      };
+
+      // Find the parent node and add as child, or add to branch root
+      const addToTree = (nodes) => {
+        for (let i = 0; i < nodes.length; i++) {
+          if (nodes[i].id === parentNodeId) {
+            nodes[i] = { ...nodes[i], children: [...(nodes[i].children || []), newNode] };
+            return true;
+          }
+          if (nodes[i].children?.length && addToTree(nodes[i].children)) return true;
+        }
+        return false;
+      };
+
+      const branch = { ...tree.branches[branchId] };
+      const children = [...(branch.children || [])];
+      if (!addToTree(children)) {
+        // Parent not found — add to branch root
+        children.push(newNode);
+      }
+      branch.children = children;
+
+      const updatedTree = { ...tree, branches: { ...tree.branches, [branchId]: branch } };
+      const { saveCompanyTree: saveFn } = await import('@/services/processTreeService');
+      await saveFn(updatedTree, configId);
+      console.log(`[MindMap] Synced new node ${nodeId} to DB process tree`);
+    } catch (err) {
+      console.warn('[MindMap] Could not sync new node to DB:', err);
+    }
+  }, []);
 
   // ── Palette drag start (HTML → SVG bridge, directive #5) ──
   const handlePaletteDragStart = useCallback((shape, e) => {
@@ -1274,12 +1388,17 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           );
         })()}
 
-        {/* ── Center Hub ── */}
+        {/* ── Center Hub — Logo ── */}
         <circle cx={CX} cy={CY} r={55} fill="url(#hub-grad)" filter="url(#settings-glow)" />
-        <text x={CX} y={CY - 12} textAnchor="middle" fill="white" fontSize="16" fontWeight="bold">CalmPlan</text>
-        <text x={CX} y={CY + 6} textAnchor="middle" fill="#B0BEC5" fontSize="11">Process Architect</text>
-        <text x={CX} y={CY + 20} textAnchor="middle" fill="#78909C" fontSize="9">{totalServices} שירותים</text>
-        <text x={CX} y={CY + 32} textAnchor="middle" fill="#546E7A" fontSize="8">גרור צורה ליצירה</text>
+        <clipPath id="hub-clip"><circle cx={CX} cy={CY} r={52} /></clipPath>
+        <image
+          href="/logo-litay.png"
+          x={CX - 40} y={CY - 40}
+          width={80} height={80}
+          clipPath="url(#hub-clip)"
+          preserveAspectRatio="xMidYMid slice"
+        />
+        <text x={CX} y={CY + 48} textAnchor="middle" fill="#78909C" fontSize="9">{totalServices} שירותים</text>
 
         {/* ── All Nodes (directive #4: draggable) ── */}
         {allNodes.map(node => {
