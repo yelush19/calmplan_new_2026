@@ -437,9 +437,15 @@ export default function TemplatePanel({ service, onClose }) {
           const currentKey = service?.key;
 
           // Candidates for "next step": all service nodes except self
-          const flowCandidates = allNodes.filter(n =>
+          // Prioritize same-branch services (show them first)
+          const currentDashboard = service?.dashboard || '';
+          const allCandidates = allNodes.filter(n =>
             n.id !== currentKey && n.type === 'service'
           );
+          const flowCandidates = [
+            ...allCandidates.filter(n => n.dashboard === currentDashboard),
+            ...allCandidates.filter(n => n.dashboard !== currentDashboard),
+          ];
 
           // Build breadcrumb for display
           const buildPath = (nodeId) => {
