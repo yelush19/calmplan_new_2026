@@ -1119,10 +1119,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
   const handleMouseUp = useCallback((e) => {
     // ── Save button drag release ──
-    if (saveBtnDrag) {
-      setSaveBtnDrag(null);
-      return;
-    }
+    if (saveBtnDrag) { setSaveBtnDrag(null); return; }
     // ── Palette drop: spawn new template (directive #5) ──
     if (paletteDrag) {
       const pt = svgPoint(e.clientX, e.clientY);
@@ -1694,7 +1691,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           </g>
         )}
 
-        {/* ── Floating Save Circle (draggable inside SVG) ── */}
+        {/* ── Draggable Save Circle ── */}
         {mapDirty && (
           <g
             style={{ cursor: saveBtnDrag ? 'grabbing' : 'grab' }}
@@ -1704,50 +1701,57 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               const pt = svgPoint(e.clientX, e.clientY);
               setSaveBtnDrag({ offsetX: pt.x - saveBtnPos.x, offsetY: pt.y - saveBtnPos.y });
             }}
-          >
-            <circle cx={saveBtnPos.x} cy={saveBtnPos.y} r={26}
-              fill={mapSaving ? '#FFC107' : '#43A047'} stroke="white" strokeWidth={2}
-              filter="url(#drag-shadow)"
-              style={{ transition: mapSaving ? 'none' : 'fill 0.2s' }}
-              onClick={async (e) => {
-                e.stopPropagation();
-                if (saveBtnDrag) return;
-                setMapSaving(true);
-                try {
-                  invalidateTreeCache();
-                  const { tree, configId } = await loadCompanyTree();
-                  if (!tree) { toast({ title: 'שגיאה', description: 'לא נמצא עץ', variant: 'destructive' }); setMapSaving(false); return; }
-                  let merged = { ...tree };
-                  for (const [key, svc] of Object.entries(customServices)) {
-                    if (ALL_SERVICES[key]) continue;
-                    const branch = getDashboardBranch(svc.dashboard);
-                    if (!merged.branches?.[branch]) continue;
-                    const existsInTree = (nodes) => { for (const n of (nodes || [])) { if (n.id === key) return true; if (n.children?.length && existsInTree(n.children)) return true; } return false; };
-                    if (!existsInTree(merged.branches[branch].children)) {
-                      const brObj = { ...merged.branches[branch] };
-                      brObj.children = [...(brObj.children || []), { id: key, label: svc.label || 'שירות חדש', service_key: key, is_parent_task: false, default_frequency: 'monthly', depends_on: [], execution: 'sequential', children: [], steps: [] }];
-                      merged = { ...merged, branches: { ...merged.branches, [branch]: brObj } };
-                    }
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (mapSaving) return;
+              setMapSaving(true);
+              console.log('[MindMap SaveCircle] ▶ Starting save...');
+              try {
+                invalidateTreeCache();
+                const { tree, configId } = await loadCompanyTree();
+                if (!tree) { toast({ title: 'שגיאה', description: 'לא נמצא עץ תהליכים ב-DB', variant: 'destructive' }); setMapSaving(false); return; }
+                let merged = { ...tree };
+                for (const [key, svc] of Object.entries(customServices)) {
+                  if (ALL_SERVICES[key]) continue;
+                  const branch = getDashboardBranch(svc.dashboard);
+                  if (!merged.branches?.[branch]) continue;
+                  const existsInTree = (nodes) => { for (const n of (nodes || [])) { if (n.id === key) return true; if (n.children?.length && existsInTree(n.children)) return true; } return false; };
+                  if (!existsInTree(merged.branches[branch].children)) {
+                    const brObj = { ...merged.branches[branch] };
+                    brObj.children = [...(brObj.children || []), { id: key, label: svc.label || 'שירות חדש', service_key: key, is_parent_task: false, default_frequency: 'monthly', depends_on: svc.parentId && svc.parentId !== branch ? [svc.parentId] : [], execution: 'sequential', children: [], steps: [] }];
+                    merged = { ...merged, branches: { ...merged.branches, [branch]: brObj } };
                   }
-                  const saved = await saveAndBroadcast(merged, configId, 'MindMap:FloatSave');
-                  setDbTreeRef({ tree: merged, configId: saved.configId });
-                  setMapDirty(false);
-                  toast({ title: 'נשמר בהצלחה', description: 'כל השינויים נשמרו ל-DB' });
-                } catch (err) {
-                  toast({ title: 'שגיאה בשמירה', description: err.message, variant: 'destructive' });
                 }
-                setMapSaving(false);
-              }}
+                const saved = await saveAndBroadcast(merged, configId, 'MindMap:FloatSave');
+                setDbTreeRef({ tree: merged, configId: saved.configId });
+                setMapDirty(false);
+                console.log('[MindMap SaveCircle] ✅ Saved');
+                toast({ title: 'נשמר בהצלחה', description: 'כל השינויים נשמרו ל-DB' });
+              } catch (err) {
+                console.error('[MindMap SaveCircle] ❌ Save failed:', err);
+                toast({ title: 'שגיאה בשמירה', description: err.message || 'שגיאה לא ידועה', variant: 'destructive' });
+              }
+              setMapSaving(false);
+            }}
+          >
+            {/* Circle background */}
+            <circle cx={saveBtnPos.x} cy={saveBtnPos.y} r={24}
+              fill={mapSaving ? '#FFC107' : '#43A047'} stroke="white" strokeWidth={2.5}
+              filter="url(#drag-shadow)"
+              style={{ transition: 'fill 0.2s' }}
             />
+            {/* Icon or spinner */}
             {mapSaving
               ? <circle cx={saveBtnPos.x} cy={saveBtnPos.y} r="8" fill="none" stroke="white" strokeWidth="2.5" strokeDasharray="12 6" style={{ pointerEvents: 'none' }}>
                   <animateTransform attributeName="transform" type="rotate" from={`0 ${saveBtnPos.x} ${saveBtnPos.y}`} to={`360 ${saveBtnPos.x} ${saveBtnPos.y}`} dur="0.8s" repeatCount="indefinite" />
                 </circle>
-              : <g transform={`translate(${saveBtnPos.x - 7}, ${saveBtnPos.y - 9})`} style={{ pointerEvents: 'none' }}>
-                  <path d="M2 2h10l2 2v10H0V2h2zm2 0v4h6V2H4zm1 7h4v5H5v-5z" fill="white" />
+              : <g transform={`translate(${saveBtnPos.x - 7}, ${saveBtnPos.y - 7})`} style={{ pointerEvents: 'none' }}>
+                  <path d="M2 1h10l2 2v10H0V1h2zm2 0v4h6V1H4zm1 7h4v5H5V8z" fill="white" />
                 </g>
             }
-            <text x={saveBtnPos.x} y={saveBtnPos.y + 18} textAnchor="middle" fontSize="7" fontWeight="bold" fill={mapSaving ? '#F57F17' : '#2E7D32'} style={{ pointerEvents: 'none' }}>
+            {/* Label */}
+            <text x={saveBtnPos.x} y={saveBtnPos.y + 20} textAnchor="middle" fontSize="7" fontWeight="bold"
+              fill={mapSaving ? '#F57F17' : '#2E7D32'} style={{ pointerEvents: 'none' }}>
               {mapSaving ? 'שומר...' : 'שמור'}
             </text>
           </g>
@@ -1774,7 +1778,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         </g>
       </svg>
 
-      {/* Floating save button is now inside the SVG as a draggable circle */}
+      {/* Save button moved inside SVG as draggable circle */}
 
       {/* ══════ DNA Legend + Sync Button ══════ */}
       <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
