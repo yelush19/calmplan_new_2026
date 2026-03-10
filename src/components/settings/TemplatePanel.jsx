@@ -13,10 +13,16 @@ import { Input } from '@/components/ui/input';
 import {
   X, Plus, Link2, Layers, ChevronRight, Save, Search,
   CheckCircle, FileText, Trash2, AlertTriangle, Zap,
-  GitBranch, ArrowRight, GitMerge,
+  GitBranch, ArrowRight, GitMerge, Loader2,
 } from 'lucide-react';
 import { getServiceWeight } from '@/config/serviceWeights';
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
+import {
+  loadCompanyTree,
+  invalidateTreeCache,
+  saveAndBroadcast,
+} from '@/services/processTreeService';
+import { toast } from '@/components/ui/use-toast';
 
 const DNA_COLORS = {
   P1: '#00A3E0',
@@ -100,6 +106,7 @@ export default function TemplatePanel({ service, onClose }) {
   const [editIsParallel, setEditIsParallel] = useState(service?.isParallel || false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [savingToDb, setSavingToDb] = useState(false);
   // ── Search filters for dropdowns ──
   const [parentSearch, setParentSearch] = useState('');
   const [nextStepSearch, setNextStepSearch] = useState('');
@@ -124,6 +131,44 @@ export default function TemplatePanel({ service, onClose }) {
       isParallel: editIsParallel,
     });
     setHasChanges(false);
+  };
+
+  const handleSaveToDb = async () => {
+    // First save locally
+    handleSave();
+    setSavingToDb(true);
+    try {
+      invalidateTreeCache();
+      const { tree, configId } = await loadCompanyTree();
+      if (!tree) throw new Error('No tree found in DB');
+
+      // Find and update the node in the tree
+      const updateNodeRecursive = (nodes) => nodes.map(n => {
+        if (n.id === service.key || n.service_key === service.key) {
+          return {
+            ...n,
+            label: editLabel,
+            steps: editSteps.map(s => ({ key: s.key, label: s.label, icon: s.icon || 'check-circle' })),
+          };
+        }
+        if (n.children?.length) return { ...n, children: updateNodeRecursive(n.children) };
+        return n;
+      });
+
+      const merged = { ...tree };
+      for (const [branchId, branch] of Object.entries(merged.branches || {})) {
+        if (branch.children?.length) {
+          merged.branches[branchId] = { ...branch, children: updateNodeRecursive(branch.children) };
+        }
+      }
+
+      await saveAndBroadcast(merged, configId, 'TemplatePanel');
+      toast({ title: 'נשמר ל-DB', description: `"${editLabel}" עודכן בהצלחה בכל המערכת` });
+    } catch (err) {
+      console.error('[TemplatePanel] Save to DB failed:', err);
+      toast({ title: 'שגיאה בשמירה ל-DB', description: err.message, variant: 'destructive' });
+    }
+    setSavingToDb(false);
   };
 
   const markChanged = () => setHasChanges(true);
@@ -221,6 +266,12 @@ export default function TemplatePanel({ service, onClose }) {
                   שמור
                 </Button>
               )}
+              <Button size="sm" onClick={handleSaveToDb}
+                disabled={savingToDb}
+                className="h-7 px-2 text-[10px] gap-1 bg-green-600 hover:bg-green-700 text-white">
+                {savingToDb ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                {savingToDb ? 'שומר...' : 'שמור ל-DB'}
+              </Button>
               <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
                 <X className="w-4 h-4 text-gray-400" />
               </button>

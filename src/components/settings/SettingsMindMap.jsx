@@ -1226,9 +1226,11 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   // ── Quick Spawn "+" (directive #7) — Creates a child task/service under the selected node ──
   // Full feedback chain: loading → DB write → toast → force re-render
   const [spawnLoading, setSpawnLoading] = useState(false);
+  const spawnLoadingRef = React.useRef(false);
   const handleQuickSpawn = useCallback(async (parentNode, e) => {
     e.stopPropagation();
-    if (spawnLoading) return; // prevent double-click
+    if (spawnLoadingRef.current) return; // prevent double-click (ref avoids stale closure)
+    spawnLoadingRef.current = true;
     setSpawnLoading(true);
 
     const branch = parentNode.type === 'root' ? parentNode.id : getDashboardBranch(parentNode.dashboard);
@@ -1277,8 +1279,9 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       setSelectedNodeId(null);
       console.log(`[MindMap QuickSpawn] 🔄 Rolled back local service "${createdKey}" — DB write failed`);
     }
+    spawnLoadingRef.current = false;
     setSpawnLoading(false);
-  }, [createService, DNA, spawnLoading]);
+  }, [createService, DNA]);
 
   // ── Sync a newly-created node into the DB process tree ──
   // Returns { success: boolean, reason?: string } for feedback chain
@@ -1627,7 +1630,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               {/* Quick Spawn "+" button (directive #7) */}
               {(isHovered || isSelected) && !isDragging && node.type !== 'step' && (
                 <g
-                  onClick={(e) => handleQuickSpawn(node, e)}
+                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                  onClick={(e) => { e.stopPropagation(); handleQuickSpawn(node, e); }}
                   style={{ cursor: spawnLoading ? 'wait' : 'pointer', opacity: spawnLoading ? 0.5 : 1 }}
                 >
                   <circle cx={node.x + r + 8} cy={node.y - r - 8} r={10} fill={spawnLoading ? '#FFC107' : '#8BC34A'} stroke="white" strokeWidth={1.5} />
@@ -1885,6 +1889,53 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                   <span className="text-green-500 font-bold">מותאם</span>
                 )}
               </div>
+
+              {/* Save to DB button */}
+              <button
+                onClick={async () => {
+                  setMapSaving(true);
+                  try {
+                    invalidateTreeCache();
+                    const { tree, configId: cid } = await loadCompanyTree();
+                    if (!tree) throw new Error('No tree in DB');
+                    // Update node label in tree if it's a custom service
+                    let merged = { ...tree };
+                    const svc = liveServices[selectedNodeId];
+                    if (svc) {
+                      const branch = getDashboardBranch(svc.dashboard);
+                      if (merged.branches?.[branch]) {
+                        const updateNodeInTree = (nodes) => nodes.map(n => {
+                          if (n.id === selectedNodeId) return { ...n, label: svc.label || n.label };
+                          if (n.children?.length) return { ...n, children: updateNodeInTree(n.children) };
+                          return n;
+                        });
+                        merged = { ...merged, branches: { ...merged.branches, [branch]: { ...merged.branches[branch], children: updateNodeInTree(merged.branches[branch].children || []) } } };
+                      }
+                    }
+                    // Also merge any missing custom services
+                    for (const [key, cs] of Object.entries(customServices)) {
+                      if (ALL_SERVICES[key]) continue;
+                      const br = getDashboardBranch(cs.dashboard);
+                      if (!merged.branches?.[br]) continue;
+                      const exists = (nodes) => nodes.some(n => n.id === key || (n.children?.length && exists(n.children)));
+                      if (!exists(merged.branches[br].children || [])) {
+                        merged.branches[br] = { ...merged.branches[br], children: [...(merged.branches[br].children || []), { id: key, label: cs.label || 'שירות חדש', service_key: key, is_parent_task: false, default_frequency: 'monthly', depends_on: [], execution: 'sequential', children: [], steps: [] }] };
+                      }
+                    }
+                    await saveAndBroadcast(merged, cid, 'MindMap:SidebarSave');
+                    setMapDirty(false);
+                    toast({ title: 'נשמר ל-DB', description: 'השינויים נשמרו בהצלחה' });
+                  } catch (err) {
+                    toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+                  }
+                  setMapSaving(false);
+                }}
+                disabled={mapSaving}
+                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-green-50 text-green-600 text-[10px] font-bold hover:bg-green-100 transition-all border border-green-200"
+              >
+                {mapSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                {mapSaving ? 'שומר...' : 'שמור ל-DB'}
+              </button>
 
               {/* Delete button */}
               <button
