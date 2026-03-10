@@ -1,0 +1,679 @@
+/**
+ * ProcessArchitect — Dynamic Process Tree Editor
+ *
+ * Allows the user to:
+ *   - View & edit the company process tree (branches, nodes, steps)
+ *   - Add new branches (P6, P7, ...)
+ *   - Add/remove/rename child nodes under any branch
+ *   - Edit steps for each node
+ *   - Configure frequency, dependencies, and extra fields
+ *   - Save changes to DB (calmplan_system_config)
+ *   - Changes sync immediately to all client cards
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import {
+  Plus, Trash2, Save, ChevronDown, ChevronLeft, GripVertical,
+  Pencil, Check, X, Network, Loader2, AlertTriangle, CheckCircle,
+  GitBranch, Calendar, Layers
+} from 'lucide-react';
+import {
+  loadCompanyTree,
+  saveCompanyTree,
+  invalidateTreeCache,
+} from '@/services/processTreeService';
+import { flattenTree } from '@/config/companyProcessTree';
+
+// ── Branch color palette for dynamic branches ──
+const BRANCH_PALETTE = [
+  { color: '#00A3E0', icon: '💰' }, // P1 blue
+  { color: '#4682B4', icon: '📊' }, // P2 steel blue
+  { color: '#E91E63', icon: '📋' }, // P3 pink
+  { color: '#2E7D32', icon: '📈' }, // P5 green
+  { color: '#9C27B0', icon: '🔮' }, // P6 purple
+  { color: '#FF5722', icon: '🔥' }, // P7 deep orange
+  { color: '#00BCD4', icon: '🌊' }, // P8 cyan
+  { color: '#795548', icon: '🏗️' }, // P9 brown
+];
+
+function getColorForBranch(branchId, index) {
+  const knownColors = { P1: '#00A3E0', P2: '#4682B4', P3: '#E91E63', P5: '#2E7D32' };
+  if (knownColors[branchId]) return knownColors[branchId];
+  return BRANCH_PALETTE[(index || 0) % BRANCH_PALETTE.length].color;
+}
+
+const FREQUENCY_OPTIONS = [
+  { value: 'monthly', label: 'חודשי' },
+  { value: 'bimonthly', label: 'דו-חודשי' },
+  { value: 'quarterly', label: 'רבעוני' },
+  { value: 'semi_annual', label: 'חצי שנתי' },
+  { value: 'yearly', label: 'שנתי' },
+];
+
+// ── Inline editable text ──
+function InlineEdit({ value, onSave, className = '' }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  const save = () => {
+    if (draft.trim() && draft !== value) onSave(draft.trim());
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className="h-6 text-sm px-1 w-[200px]"
+          autoFocus
+          onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+          onBlur={save}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <span
+      className={`cursor-pointer hover:underline decoration-dashed underline-offset-2 ${className}`}
+      onClick={() => { setDraft(value); setEditing(true); }}
+      title="לחץ לעריכה"
+    >
+      {value}
+      <Pencil className="w-3 h-3 inline mr-1 opacity-0 group-hover/node:opacity-50" />
+    </span>
+  );
+}
+
+// ── Steps editor for a node ──
+function StepsEditor({ steps, onChange }) {
+  const [newStep, setNewStep] = useState('');
+
+  const addStep = () => {
+    if (!newStep.trim()) return;
+    const key = `step_${Date.now()}`;
+    onChange([...steps, { key, label: newStep.trim() }]);
+    setNewStep('');
+  };
+
+  const removeStep = (idx) => {
+    onChange(steps.filter((_, i) => i !== idx));
+  };
+
+  const renameStep = (idx, newLabel) => {
+    const updated = [...steps];
+    updated[idx] = { ...updated[idx], label: newLabel };
+    onChange(updated);
+  };
+
+  return (
+    <div className="space-y-2 mt-2 mr-6 p-3 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+      <div className="flex items-center gap-2">
+        <Layers className="w-3.5 h-3.5 text-gray-400" />
+        <span className="text-xs font-medium text-gray-600">שלבים ({steps.length})</span>
+      </div>
+      {steps.map((step, idx) => (
+        <div key={step.key || idx} className="flex items-center gap-2 group/step">
+          <GripVertical className="w-3 h-3 text-gray-300" />
+          <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0 shrink-0">{idx + 1}</Badge>
+          <InlineEdit
+            value={step.label}
+            onSave={(val) => renameStep(idx, val)}
+            className="text-xs text-gray-700 flex-1"
+          />
+          <button
+            onClick={() => removeStep(idx)}
+            className="opacity-0 group-hover/step:opacity-100 text-gray-300 hover:text-red-500 transition-all"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+      <div className="flex gap-1.5">
+        <Input
+          value={newStep}
+          onChange={(e) => setNewStep(e.target.value)}
+          placeholder="הוסף שלב חדש..."
+          className="flex-1 h-6 text-xs"
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addStep(); } }}
+        />
+        <Button type="button" variant="outline" size="sm" onClick={addStep} disabled={!newStep.trim()} className="h-6 w-6 p-0">
+          <Plus className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Single node editor (recursive) ──
+function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, allNodeIds }) {
+  const [collapsed, setCollapsed] = useState(depth > 0);
+  const [showSteps, setShowSteps] = useState(false);
+  const [addingChild, setAddingChild] = useState(false);
+  const [newChildName, setNewChildName] = useState('');
+  const hasChildren = node.children && node.children.length > 0;
+
+  const updateField = (field, value) => {
+    onUpdate({ ...node, [field]: value });
+  };
+
+  const updateChild = (index, updatedChild) => {
+    const children = [...(node.children || [])];
+    children[index] = updatedChild;
+    onUpdate({ ...node, children });
+  };
+
+  const removeChild = (index) => {
+    const children = (node.children || []).filter((_, i) => i !== index);
+    onUpdate({ ...node, children });
+  };
+
+  const addChild = () => {
+    if (!newChildName.trim()) return;
+    const nodeKey = `${branchId}_${newChildName.trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\u0590-\u05FF]/g, '')}`;
+    const id = `${branchId}_custom_${Date.now()}`;
+    const newChild = {
+      id,
+      label: newChildName.trim(),
+      service_key: nodeKey,
+      is_parent_task: false,
+      default_frequency: node.default_frequency || 'monthly',
+      frequency_field: null,
+      frequency_fallback: null,
+      frequency_inherit: true,
+      depends_on: [node.id],
+      execution: 'sequential',
+      is_collector: false,
+      children: [],
+      steps: [],
+    };
+    onUpdate({ ...node, children: [...(node.children || []), newChild] });
+    setNewChildName('');
+    setAddingChild(false);
+  };
+
+  return (
+    <div className={depth > 0 ? 'mr-4 border-r-2 pr-3' : ''} style={depth > 0 ? { borderColor: branchColor + '40' } : {}}>
+      <div className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 transition-colors group/node">
+        {/* Collapse */}
+        {hasChildren ? (
+          <button type="button" onClick={() => setCollapsed(!collapsed)} className="w-5 h-5 flex items-center justify-center text-gray-400">
+            {collapsed ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+        ) : <div className="w-5" />}
+
+        {/* Color dot */}
+        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: branchColor }} />
+
+        {/* Editable label */}
+        <InlineEdit
+          value={node.label}
+          onSave={(val) => updateField('label', val)}
+          className="text-sm font-medium text-gray-800 flex-1"
+        />
+
+        {/* Parent badge */}
+        {node.is_parent_task && (
+          <Badge className="text-[9px] px-1 py-0 bg-blue-50 text-blue-600 border-blue-200">אב</Badge>
+        )}
+
+        {/* Frequency */}
+        <Select value={node.default_frequency || 'monthly'} onValueChange={(val) => updateField('default_frequency', val)}>
+          <SelectTrigger className="h-5 w-[80px] text-[10px] border-gray-200">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FREQUENCY_OPTIONS.map(opt => (
+              <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Steps toggle */}
+        <button
+          type="button"
+          onClick={() => setShowSteps(!showSteps)}
+          className="text-[10px] text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
+          title="ערוך שלבים"
+        >
+          <Layers className="w-3 h-3" />
+          {(node.steps || []).length > 0 && <span>{(node.steps || []).length}</span>}
+        </button>
+
+        {/* Add child */}
+        <button
+          type="button"
+          onClick={() => setAddingChild(!addingChild)}
+          className="opacity-0 group-hover/node:opacity-100 text-gray-300 hover:text-green-600 transition-all"
+          title="הוסף צומת בן"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Remove */}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="opacity-0 group-hover/node:opacity-100 text-gray-300 hover:text-red-500 transition-all"
+          title="מחק צומת"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Steps editor */}
+      {showSteps && (
+        <StepsEditor
+          steps={node.steps || []}
+          onChange={(steps) => updateField('steps', steps)}
+        />
+      )}
+
+      {/* Add child form */}
+      {addingChild && (
+        <div className="mr-9 mt-1 mb-1 flex items-center gap-2 p-2 rounded-lg border-2 border-dashed" style={{ borderColor: branchColor + '60', backgroundColor: branchColor + '08' }}>
+          <Input
+            value={newChildName}
+            onChange={(e) => setNewChildName(e.target.value)}
+            placeholder="שם צומת בן חדש..."
+            className="flex-1 h-7 text-xs border-0 bg-transparent focus-visible:ring-0"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') addChild(); if (e.key === 'Escape') setAddingChild(false); }}
+          />
+          <Button type="button" size="sm" onClick={addChild} disabled={!newChildName.trim()}
+            className="h-6 px-2 text-[10px] text-white" style={{ backgroundColor: branchColor }}>
+            <Plus className="w-3 h-3 ml-0.5" /> הוסף
+          </Button>
+          <button onClick={() => setAddingChild(false)} className="text-gray-400 hover:text-gray-600">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Children */}
+      {hasChildren && !collapsed && (
+        <div className="mt-0.5">
+          {node.children.map((child, idx) => (
+            <NodeEditor
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              branchId={branchId}
+              branchColor={branchColor}
+              onUpdate={(updated) => updateChild(idx, updated)}
+              onRemove={() => removeChild(idx)}
+              allNodeIds={allNodeIds}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Component ──
+export default function ProcessArchitect() {
+  const [tree, setTree] = useState(null);
+  const [configId, setConfigId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveResult, setSaveResult] = useState(null); // 'success' | 'error' | null
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Add branch state
+  const [addingBranch, setAddingBranch] = useState(false);
+  const [newBranchLabel, setNewBranchLabel] = useState('');
+
+  // Load tree
+  useEffect(() => {
+    invalidateTreeCache();
+    loadCompanyTree().then(({ tree: loadedTree, configId: cId }) => {
+      setTree(loadedTree);
+      setConfigId(cId);
+      setLoading(false);
+    }).catch(err => {
+      console.error('[ProcessArchitect] Failed to load:', err);
+      setLoading(false);
+    });
+  }, []);
+
+  // All node IDs for dependency selection
+  const allNodeIds = tree ? flattenTree(tree).map(n => n.id) : [];
+
+  const handleUpdateBranch = useCallback((branchId, updatedBranch) => {
+    setTree(prev => ({
+      ...prev,
+      branches: { ...prev.branches, [branchId]: updatedBranch },
+    }));
+    setIsDirty(true);
+  }, []);
+
+  const handleUpdateNode = useCallback((branchId, nodeIndex, updatedNode) => {
+    setTree(prev => {
+      const branch = { ...prev.branches[branchId] };
+      const children = [...branch.children];
+      children[nodeIndex] = updatedNode;
+      branch.children = children;
+      return { ...prev, branches: { ...prev.branches, [branchId]: branch } };
+    });
+    setIsDirty(true);
+  }, []);
+
+  const handleRemoveNode = useCallback((branchId, nodeIndex) => {
+    setTree(prev => {
+      const branch = { ...prev.branches[branchId] };
+      branch.children = branch.children.filter((_, i) => i !== nodeIndex);
+      return { ...prev, branches: { ...prev.branches, [branchId]: branch } };
+    });
+    setIsDirty(true);
+  }, []);
+
+  const handleAddNodeToBranch = useCallback((branchId, nodeName) => {
+    const id = `${branchId}_custom_${Date.now()}`;
+    const newNode = {
+      id,
+      label: nodeName,
+      service_key: id,
+      is_parent_task: false,
+      default_frequency: 'monthly',
+      frequency_field: null,
+      frequency_fallback: null,
+      frequency_inherit: false,
+      depends_on: [],
+      execution: 'sequential',
+      is_collector: false,
+      children: [],
+      steps: [],
+    };
+    setTree(prev => {
+      const branch = { ...prev.branches[branchId] };
+      branch.children = [...branch.children, newNode];
+      return { ...prev, branches: { ...prev.branches, [branchId]: branch } };
+    });
+    setIsDirty(true);
+  }, []);
+
+  const handleAddBranch = useCallback(() => {
+    if (!newBranchLabel.trim()) return;
+    // Find next branch ID
+    const existingKeys = Object.keys(tree.branches);
+    const nums = existingKeys.map(k => parseInt(k.replace('P', ''), 10)).filter(n => !isNaN(n));
+    const nextNum = Math.max(...nums, 0) + 1;
+    // Skip P4 (personal)
+    const branchId = nextNum === 4 ? `P${nextNum + 1}` : `P${nextNum}`;
+
+    const newBranch = {
+      id: branchId,
+      label: newBranchLabel.trim(),
+      color_var: `--cp-p${nextNum}`,
+      children: [],
+    };
+    setTree(prev => ({
+      ...prev,
+      branches: { ...prev.branches, [branchId]: newBranch },
+    }));
+    setNewBranchLabel('');
+    setAddingBranch(false);
+    setIsDirty(true);
+  }, [newBranchLabel, tree]);
+
+  const handleRemoveBranch = useCallback((branchId) => {
+    if (!window.confirm(`למחוק את ענף ${branchId} וכל הצמתים שבו?`)) return;
+    setTree(prev => {
+      const { [branchId]: _, ...rest } = prev.branches;
+      return { ...prev, branches: rest };
+    });
+    setIsDirty(true);
+  }, []);
+
+  const handleRenameBranch = useCallback((branchId, newLabel) => {
+    setTree(prev => ({
+      ...prev,
+      branches: {
+        ...prev.branches,
+        [branchId]: { ...prev.branches[branchId], label: newLabel },
+      },
+    }));
+    setIsDirty(true);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!tree) return;
+    setSaving(true);
+    setSaveResult(null);
+    try {
+      const newConfigId = await saveCompanyTree(tree, configId);
+      setConfigId(newConfigId);
+      setIsDirty(false);
+      setSaveResult('success');
+      setTimeout(() => setSaveResult(null), 3000);
+    } catch (err) {
+      console.error('[ProcessArchitect] Save failed:', err);
+      setSaveResult('error');
+    }
+    setSaving(false);
+  }, [tree, configId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <span className="mr-2 text-sm text-gray-500">טוען עץ תהליכים...</span>
+      </div>
+    );
+  }
+
+  if (!tree) {
+    return (
+      <div className="text-center py-8 text-gray-500 text-sm">
+        לא ניתן לטעון את עץ התהליכים. בדוק חיבור ל-Supabase.
+      </div>
+    );
+  }
+
+  const totalNodes = flattenTree(tree).length;
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-[#E91E6315] to-[#FFC10715]">
+            <Network className="w-5 h-5 text-[#E91E63]" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-gray-800">אדריכל תהליכים</h3>
+            <p className="text-xs text-gray-500">
+              {Object.keys(tree.branches).length} ענפים • {totalNodes} צמתים
+              {isDirty && <span className="text-amber-600 mr-2 font-medium"> • שינויים שלא נשמרו</span>}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {saveResult === 'success' && (
+            <Badge className="bg-green-100 text-green-700 text-xs gap-1">
+              <CheckCircle className="w-3 h-3" /> נשמר — ישתקף מיד בכרטיסי לקוח
+            </Badge>
+          )}
+          {saveResult === 'error' && (
+            <Badge className="bg-red-100 text-red-700 text-xs gap-1">
+              <AlertTriangle className="w-3 h-3" /> שגיאה בשמירה
+            </Badge>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setAddingBranch(!addingBranch)}
+            className="text-xs h-8 gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            ענף חדש
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSave}
+            disabled={saving || !isDirty}
+            className="text-xs h-8 gap-1 bg-[#2E7D32] text-white hover:bg-[#1B5E20]"
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            {saving ? 'שומר...' : 'שמור לDB'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Add branch form */}
+      {addingBranch && (
+        <div className="flex items-center gap-2 p-3 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50/50">
+          <Input
+            value={newBranchLabel}
+            onChange={(e) => setNewBranchLabel(e.target.value)}
+            placeholder="שם ענף חדש (לדוגמה: ייעוץ מס, ניהול נכסים...)"
+            className="flex-1 h-8 text-sm"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddBranch(); if (e.key === 'Escape') setAddingBranch(false); }}
+          />
+          <Button type="button" size="sm" onClick={handleAddBranch} disabled={!newBranchLabel.trim()}
+            className="h-8 px-4 text-xs bg-purple-600 text-white hover:bg-purple-700">
+            <Plus className="w-3 h-3 ml-1" /> צור ענף
+          </Button>
+          <button onClick={() => setAddingBranch(false)} className="text-gray-400 hover:text-gray-600">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Branch sections */}
+      {Object.entries(tree.branches).map(([branchId, branch], branchIdx) => {
+        const color = getColorForBranch(branchId, branchIdx);
+        const nodeCount = (branch.children || []).reduce((count, n) => {
+          const countAll = (node) => 1 + (node.children || []).reduce((s, c) => s + countAll(c), 0);
+          return count + countAll(n);
+        }, 0);
+        const isUserBranch = !['P1', 'P2', 'P3', 'P5'].includes(branchId);
+
+        return (
+          <Card key={branchId} className="overflow-hidden" style={{ borderColor: color + '40' }}>
+            <CardHeader className="py-2 px-4" style={{ backgroundColor: color + '08' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                <span className="text-sm font-bold" style={{ color }}>
+                  {branchId} |{' '}
+                  <InlineEdit
+                    value={branch.label}
+                    onSave={(val) => handleRenameBranch(branchId, val)}
+                    className="inline"
+                  />
+                </span>
+                <Badge variant="outline" className="text-[10px] h-5" style={{ borderColor: color + '40', color }}>
+                  {nodeCount} צמתים
+                </Badge>
+                <div className="flex-1" />
+                {/* Add node to branch */}
+                <AddNodeButton branchId={branchId} color={color} onAdd={(name) => handleAddNodeToBranch(branchId, name)} />
+                {/* Remove branch (only user-created) */}
+                {isUserBranch && (
+                  <button
+                    onClick={() => handleRemoveBranch(branchId)}
+                    className="text-gray-300 hover:text-red-500 transition-colors"
+                    title="מחק ענף"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="py-2 px-3">
+              {(branch.children || []).length === 0 ? (
+                <div className="text-center py-4 text-gray-400 text-xs">
+                  ענף ריק — לחץ + להוספת צומת
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  {branch.children.map((node, nodeIdx) => (
+                    <NodeEditor
+                      key={node.id}
+                      node={node}
+                      depth={0}
+                      branchId={branchId}
+                      branchColor={color}
+                      onUpdate={(updated) => handleUpdateNode(branchId, nodeIdx, updated)}
+                      onRemove={() => handleRemoveNode(branchId, nodeIdx)}
+                      allNodeIds={allNodeIds}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {/* Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+        <strong>סנכרון:</strong> לאחר שמירה, כל כרטיס לקוח יטען את המבנה המעודכן אוטומטית.
+        <br />
+        <strong>שלבים:</strong> לחץ על אייקון השלבים (⊞) ליד כל צומת כדי להגדיר Steps.
+        <br />
+        <strong>ענפים חדשים:</strong> לחץ "ענף חדש" ליצירת P6, P7 וכו'.
+      </div>
+    </div>
+  );
+}
+
+// ── Small helper: Add node button with inline input ──
+function AddNodeButton({ branchId, color, onAdd }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+
+  const add = () => {
+    if (!name.trim()) return;
+    onAdd(name.trim());
+    setName('');
+    setOpen(false);
+  };
+
+  if (open) {
+    return (
+      <div className="flex items-center gap-1">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="שם צומת חדש..."
+          className="h-6 text-xs w-[160px]"
+          autoFocus
+          onKeyDown={(e) => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setOpen(false); }}
+        />
+        <Button type="button" size="sm" onClick={add} disabled={!name.trim()}
+          className="h-6 px-2 text-[10px] text-white" style={{ backgroundColor: color }}>
+          <Plus className="w-3 h-3" />
+        </Button>
+        <button onClick={() => setOpen(false)} className="text-gray-400">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setOpen(true)}
+      className="w-6 h-6 rounded-lg flex items-center justify-center text-white hover:opacity-80 transition-opacity"
+      style={{ backgroundColor: color }}
+      title="הוסף צומת"
+    >
+      <Plus className="w-3.5 h-3.5" />
+    </button>
+  );
+}

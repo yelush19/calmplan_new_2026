@@ -913,6 +913,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <ProcessTreeManager
                 processTree={formData.process_tree}
                 onChange={(updated) => setFormData(prev => ({ ...prev, process_tree: updated }))}
+                clientId={client?.id}
               />
             </TabsContent>
             <TabsContent value="reporting" className="space-y-5">

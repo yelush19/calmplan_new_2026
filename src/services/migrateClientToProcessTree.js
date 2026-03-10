@@ -201,6 +201,86 @@ export function batchMigrateClients(clients) {
   };
 }
 
+// ============================================================
+// VAT REPORTING METHOD MIGRATION
+// ============================================================
+
+/**
+ * Maps the legacy authorities_payment_method to VAT reporting method.
+ * The payment method determines how VAT is filed and its SLA deadline.
+ *
+ * Legacy values (from services tab):
+ *   masav, credit_card, bank_standing_order → digital filing → periodic_digital (deadline 19)
+ *   standing_order, check                  → manual filing  → periodic_manual  (deadline 15)
+ *
+ * If the client has service_types including '874' or vat_reporting_frequency
+ * indicates detailed reporting → detailed_874 (deadline 23)
+ */
+const PAYMENT_TO_VAT_METHOD = {
+  masav: 'periodic_digital',
+  credit_card: 'periodic_digital',
+  bank_standing_order: 'periodic_digital',
+  standing_order: 'periodic_manual',
+  check: 'periodic_manual',
+};
+
+/**
+ * Migrate a client's VAT payment method into the process tree's P2_vat node.
+ *
+ * @param {object} client - Client entity
+ * @returns {{ process_tree: object, vat_method: string|null }}
+ */
+export function migrateVatReportingMethod(client) {
+  const tree = { ...(client.process_tree || {}) };
+  const paymentMethod = client.authorities_payment_method;
+  const serviceTypes = client.service_types || [];
+
+  // Detect 874 detailed reporting from service types or existing config
+  const is874 = serviceTypes.some(s => s.includes('874')) ||
+    client.reporting_info?.vat_report_type === '874';
+
+  let vatMethod = null;
+
+  if (is874) {
+    vatMethod = 'detailed_874';
+  } else if (paymentMethod && PAYMENT_TO_VAT_METHOD[paymentMethod]) {
+    vatMethod = PAYMENT_TO_VAT_METHOD[paymentMethod];
+  }
+
+  if (vatMethod && tree.P2_vat) {
+    tree.P2_vat = {
+      ...tree.P2_vat,
+      vat_reporting_method: vatMethod,
+    };
+  }
+
+  return { process_tree: tree, vat_method: vatMethod };
+}
+
+/**
+ * Batch migrate VAT reporting method for all clients.
+ *
+ * @param {object[]} clients
+ * @returns {{ migrated: number, skipped: number, results: Array }}
+ */
+export function batchMigrateVatMethod(clients) {
+  const results = [];
+  let migrated = 0;
+  let skipped = 0;
+
+  for (const client of clients) {
+    const { process_tree, vat_method } = migrateVatReportingMethod(client);
+    if (vat_method) {
+      results.push({ clientId: client.id, name: client.name, vat_method });
+      migrated++;
+    } else {
+      skipped++;
+    }
+  }
+
+  return { results, migrated, skipped, total: clients.length };
+}
+
 /**
  * Dry-run migration for a single client — returns a human-readable summary.
  * Useful for debugging and verification in console.

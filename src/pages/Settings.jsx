@@ -23,6 +23,7 @@ import SettingsMindMap from '@/components/settings/SettingsMindMap';
 import TemplatePanel from '@/components/settings/TemplatePanel';
 import ServiceCatalog from '@/components/settings/ServiceCatalog';
 import ServiceCatalogSection from '@/components/settings/ServiceCatalogSection';
+import ProcessArchitect from '@/components/settings/ProcessArchitect';
 import { useDesign } from '@/contexts/DesignContext';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -226,119 +227,10 @@ export default function SettingsPage() {
             </div>
 
             {/* ═══════════════════════════════════════════════════
-                P1-P5 ACCORDION SECTIONS — Collapsible by branch
-                Default: all collapsed. Click to expand one.
+                PROCESS ARCHITECT — Dynamic tree editor (replaces P1-P5 accordion)
+                Full CRUD: branches, nodes, steps. Saved to DB.
                 ═══════════════════════════════════════════════════ */}
-            <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-              <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Database className="w-5 h-5 text-gray-600" />
-                  <h2 className="text-base font-bold text-gray-800">קטגוריות ושירותים — P1-P5</h2>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  {Object.values(groupedServices).reduce((sum, arr) => sum + arr.length, 0)} שירותים
-                </Badge>
-              </div>
-
-              <Accordion type="single" collapsible className="w-full">
-                {P_BRANCHES.map(branch => {
-                  const services = groupedServices[branch.key] || [];
-                  return (
-                    <AccordionItem key={branch.key} value={branch.key} className="border-b-0">
-                      <AccordionTrigger className="px-5 py-3 hover:no-underline hover:bg-gray-50/50 group">
-                        <div className="flex items-center gap-3 flex-1">
-                          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-lg"
-                            style={{ backgroundColor: branch.color + '15' }}>
-                            {branch.icon}
-                          </div>
-                          <div className="flex items-center gap-2 flex-1">
-                            <span className="text-sm font-bold" style={{ color: branch.color }}>{branch.label}</span>
-                            <Badge variant="outline" className="text-[10px] h-5"
-                              style={{ borderColor: branch.color + '40', color: branch.color }}>
-                              {services.length} שירותים
-                            </Badge>
-                          </div>
-                          {/* + button inside section header */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAddingTo(addingTo === branch.key ? null : branch.key);
-                              setNewCatName('');
-                            }}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                            style={{ backgroundColor: branch.color }}
-                            title={`הוסף קטגוריה ל-${branch.key}`}
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-5 pb-4">
-                        {/* Add new category input — visible when + was clicked */}
-                        {addingTo === branch.key && (
-                          <div className="flex items-center gap-2 mb-3 p-2 rounded-xl border-2"
-                            style={{ borderColor: branch.color + '60', backgroundColor: branch.color + '08' }}>
-                            <Input
-                              value={newCatName}
-                              onChange={(e) => setNewCatName(e.target.value)}
-                              placeholder="שם שירות חדש (לדוגמה: ייעוץ מס, דוח רווח והפסד)"
-                              className="flex-1 h-8 text-sm border-0 bg-transparent focus-visible:ring-0"
-                              autoFocus
-                              onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(branch.key); if (e.key === 'Escape') setAddingTo(null); }}
-                            />
-                            <Button size="sm" onClick={() => handleAddCategory(branch.key)}
-                              disabled={!newCatName.trim()}
-                              className="h-7 px-3 text-xs text-white"
-                              style={{ backgroundColor: branch.color }}>
-                              <Plus className="w-3 h-3 ml-1" /> הוסף
-                            </Button>
-                            <button onClick={() => setAddingTo(null)} className="text-gray-400 hover:text-gray-600">
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Services list */}
-                        {services.length === 0 ? (
-                          <div className="text-center py-6 text-gray-400 text-sm">
-                            {branch.key === 'P4' ? 'ענף אישי — לחץ + להוספת קטגוריות' : 'אין שירותים'}
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            {services.map(svc => {
-                              const steps = svc.steps || [];
-                              const isCustom = svc._source === 'custom';
-                              return (
-                                <div key={svc.key}
-                                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors group/svc">
-                                  <div className="w-2.5 h-2.5 rounded-full shrink-0"
-                                    style={{ backgroundColor: branch.color }} />
-                                  <span className="text-sm font-medium text-gray-800 flex-1">{svc.label}</span>
-                                  {steps.length > 0 && (
-                                    <span className="text-[10px] text-gray-400">{steps.length} שלבים</span>
-                                  )}
-                                  {isCustom && (
-                                    <>
-                                      <Badge className="text-[9px] h-4 px-1.5 bg-purple-100 text-purple-700">מותאם</Badge>
-                                      <button
-                                        onClick={() => handleRemoveCustomCat(branch.key, svc.key)}
-                                        className="opacity-0 group-hover/svc:opacity-100 text-gray-300 hover:text-red-500 transition-all"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
-            </div>
+            <ProcessArchitect />
 
             {/* Existing sub-panels — Business Params, Personal, Catalog */}
             <Accordion type="multiple" className="w-full space-y-2">

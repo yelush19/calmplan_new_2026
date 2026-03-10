@@ -81,7 +81,33 @@ export async function loadCompanyTree() {
       }
 
       if (rows && rows.length > 0 && rows[0].data?.tree) {
-        _cachedTree = rows[0].data.tree;
+        const dbTree = rows[0].data.tree;
+        const dbVersion = dbTree.version || '1.0';
+        const seedVersion = PROCESS_TREE_SEED.version || '2.0';
+
+        // If DB version is behind the seed, merge new branches/nodes into existing tree
+        if (dbVersion < seedVersion) {
+          console.log(`[ProcessTreeService] Upgrading tree ${dbVersion} → ${seedVersion}`);
+          const merged = { ...dbTree, version: seedVersion };
+          // Add any branches that exist in seed but not in DB
+          for (const [branchId, branch] of Object.entries(PROCESS_TREE_SEED.branches)) {
+            if (!merged.branches[branchId]) {
+              merged.branches[branchId] = branch;
+            }
+          }
+          // Persist the upgrade
+          const { error: upErr } = await supabase
+            .from(TABLE)
+            .update({ data: { tree: merged }, updated_date: new Date().toISOString() })
+            .eq('id', rows[0].id);
+          if (upErr) console.warn('[ProcessTreeService] Version upgrade write failed:', upErr);
+
+          _cachedTree = merged;
+          _cachedConfigId = rows[0].id;
+          return { tree: _cachedTree, configId: _cachedConfigId };
+        }
+
+        _cachedTree = dbTree;
         _cachedConfigId = rows[0].id;
         console.log('[ProcessTreeService] ✅ Loaded tree from DB, configId:', _cachedConfigId);
         return { tree: _cachedTree, configId: _cachedConfigId };

@@ -119,6 +119,19 @@ const P2_BRANCH = {
           frequency_field: 'vat_reporting_frequency',
           depends_on: ['P2_bookkeeping'],
           execution: 'parallel',
+          // VAT reporting method determines SLA deadline
+          extra_fields: {
+            vat_reporting_method: {
+              type: 'select',
+              label: 'שיטת דיווח מע"מ',
+              options: [
+                { value: 'periodic_manual', label: 'תקופתי (המחאה/ידני)', sla_day: 15 },
+                { value: 'periodic_digital', label: 'תקופתי (דיגיטלי)', sla_day: 19 },
+                { value: 'detailed_874', label: 'דיווח מפורט (874)', sla_day: 23 },
+              ],
+              default_value: 'periodic_digital',
+            },
+          },
         }),
         node('P2_tax_advances', 'מקדמות מס הכנסה', 'tax_advances', {
           default_frequency: 'bimonthly',
@@ -137,6 +150,8 @@ const P2_BRANCH = {
     node('P2_reconciliation', 'התאמות חשבונות', 'reconciliation', {
       default_frequency: 'monthly',
       depends_on: ['P2_vat'],
+      // Smart node: frequency derived from client bank accounts
+      smart_link: 'bank_accounts',
     }),
   ],
 };
@@ -168,16 +183,92 @@ const P5_BRANCH = {
   label: 'דוחות שנתיים',
   color_var: '--cp-p5',
   children: [
-    node('P5_annual_reports', 'דוחות שנתיים / מאזנים', 'annual_reports', {
+    node('P5_annual_reports', 'מאזנים / דוחות שנתיים', 'annual_reports', {
       is_parent_task: true,
       default_frequency: 'yearly',
       depends_on: ['P1_payroll', 'P2_pnl'],
       children: [
-        node('P5_capital_statement', 'הצהרת הון', 'capital_statement', {
+        node('P5_gather_materials', 'איסוף חומרים', 'gather_materials', {
           default_frequency: 'yearly',
           depends_on: ['P5_annual_reports'],
+          execution: 'sequential',
+        }),
+        node('P5_data_entry', 'קליטת נתונים', 'data_entry', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_gather_materials'],
+          execution: 'sequential',
+        }),
+        node('P5_basic_reconciliation', 'התאמות יסוד', 'basic_reconciliation', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_data_entry'],
+          execution: 'sequential',
+        }),
+        node('P5_reasonableness_check', 'בדיקת סבירות', 'reasonableness_check', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_basic_reconciliation'],
+          execution: 'sequential',
+        }),
+        node('P5_review', 'סקירה', 'review', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_reasonableness_check'],
+          execution: 'sequential',
+        }),
+        node('P5_closing', 'סגירה', 'closing', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_review'],
+          execution: 'sequential',
+        }),
+        node('P5_submission', 'הגשה', 'submission', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_closing'],
+          execution: 'sequential',
         }),
       ],
+    }),
+    node('P5_personal_reports', 'דוחות אישיים', 'personal_reports', {
+      is_parent_task: true,
+      default_frequency: 'yearly',
+      children: [
+        node('P5_personal_gather', 'איסוף חומרים', 'personal_gather', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_personal_reports'],
+          execution: 'sequential',
+        }),
+        node('P5_personal_data_entry', 'קליטת נתונים', 'personal_data_entry', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_personal_gather'],
+          execution: 'sequential',
+        }),
+        node('P5_personal_reconciliation', 'התאמות יסוד', 'personal_reconciliation', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_personal_data_entry'],
+          execution: 'sequential',
+        }),
+        node('P5_personal_check', 'בדיקת סבירות', 'personal_check', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_personal_reconciliation'],
+          execution: 'sequential',
+        }),
+        node('P5_personal_review', 'סקירה', 'personal_review', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_personal_check'],
+          execution: 'sequential',
+        }),
+        node('P5_personal_closing', 'סגירה', 'personal_closing', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_personal_review'],
+          execution: 'sequential',
+        }),
+        node('P5_personal_submission', 'הגשה', 'personal_submission', {
+          default_frequency: 'yearly',
+          depends_on: ['P5_personal_closing'],
+          execution: 'sequential',
+        }),
+      ],
+    }),
+    node('P5_capital_statement', 'הצהרת הון', 'capital_statement', {
+      default_frequency: 'yearly',
+      depends_on: ['P5_annual_reports'],
     }),
   ],
 };
@@ -187,7 +278,7 @@ const P5_BRANCH = {
 // ============================================================
 
 export const PROCESS_TREE_SEED = {
-  version: '2.0',
+  version: '3.0',
   branches: {
     P1: P1_BRANCH,
     P2: P2_BRANCH,
@@ -209,7 +300,15 @@ export const FULL_SERVICE_NODES = [
   'P2_bookkeeping',
   'P2_vat',
   'P2_tax_advances',
+  'P2_reconciliation',
   'P5_annual_reports',
+  'P5_gather_materials',
+  'P5_data_entry',
+  'P5_basic_reconciliation',
+  'P5_reasonableness_check',
+  'P5_review',
+  'P5_closing',
+  'P5_submission',
 ];
 
 // ============================================================
