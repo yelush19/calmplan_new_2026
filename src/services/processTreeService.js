@@ -787,9 +787,46 @@ export async function moveNodeInCompanyTree(nodeId, newParentId, insertIndex = n
 
   if (!extractedNode) throw new Error(`Node "${nodeId}" not found`);
 
-  // Step 2: Insert at new location
+  // Step 2: Update depends_on for the moved node and its children
+  // The moved node's depends_on should point to its new parent (not branch root)
+  const isBranchRoot = !!updatedTree.branches[newParentId];
+  const newParentRef = isBranchRoot ? [] : [newParentId];
+
+  // Find the OLD depends_on so we can update children that referenced it
+  const oldDependsOn = extractedNode.depends_on || [];
+
+  // Update the extracted node's depends_on
+  extractedNode = { ...extractedNode, depends_on: newParentRef };
+
+  // Recursively update children: if a child's depends_on pointed to the OLD parent
+  // of the moved node (i.e., the moved node's old depends_on target), update it
+  // to point to the moved node itself (preserving the hierarchy)
+  const updateChildDependsOn = (node, parentId) => {
+    return {
+      ...node,
+      children: (node.children || []).map(child => {
+        const updatedChild = { ...child };
+        // If child depends_on references the old parent chain, update to current parent
+        if (updatedChild.depends_on?.length > 0) {
+          updatedChild.depends_on = updatedChild.depends_on.map(depId => {
+            // If this dep pointed to the old parent of the moved subtree, fix it
+            if (oldDependsOn.includes(depId)) return parentId;
+            return depId;
+          });
+        }
+        // Recurse into grandchildren
+        if (updatedChild.children?.length) {
+          return updateChildDependsOn(updatedChild, updatedChild.id);
+        }
+        return updatedChild;
+      }),
+    };
+  };
+  extractedNode = updateChildDependsOn(extractedNode, extractedNode.id);
+
+  // Step 3: Insert at new location
   // Check if newParentId is a branch root
-  if (updatedTree.branches[newParentId]) {
+  if (isBranchRoot) {
     const branch = { ...updatedTree.branches[newParentId] };
     const children = [...(branch.children || [])];
     if (insertIndex !== null && insertIndex >= 0) {
@@ -826,6 +863,30 @@ export async function moveNodeInCompanyTree(nodeId, newParentId, insertIndex = n
     if (!inserted) throw new Error(`Target parent "${newParentId}" not found`);
   }
 
+  // Step 4: Clean up stale depends_on references across the entire tree
+  // Any node in the tree that had depends_on pointing to the moved node
+  // but is NOT a child of the moved node should have that reference removed
+  const movedSubtreeIds = new Set();
+  const collectIds = (n) => { movedSubtreeIds.add(n.id); (n.children || []).forEach(collectIds); };
+  collectIds(extractedNode);
+
+  const cleanDependsOnRefs = (nodes) =>
+    nodes.map(n => {
+      if (movedSubtreeIds.has(n.id)) return n; // skip the moved subtree itself
+      const updated = { ...n };
+      if (updated.depends_on?.length > 0) {
+        updated.depends_on = updated.depends_on.filter(depId => !movedSubtreeIds.has(depId) || depId === nodeId);
+      }
+      if (updated.children?.length) {
+        updated.children = cleanDependsOnRefs(updated.children);
+      }
+      return updated;
+    });
+
+  for (const [branchId, branch] of Object.entries(updatedTree.branches)) {
+    updatedTree.branches[branchId] = { ...branch, children: cleanDependsOnRefs(branch.children || []) };
+  }
+
   return saveAndBroadcast(updatedTree, configId, source);
 }
 
@@ -859,6 +920,55 @@ export async function deleteNodeFromCompanyTree(nodeId, source = 'unknown') {
 
   if (!found) throw new Error(`Node "${nodeId}" not found in company tree`);
   return saveAndBroadcast(updatedTree, configId, source);
+}
+
+/**
+ * Clean up stale depends_on references across the entire company tree.
+ * For each node, ensures depends_on only references its direct parent in
+ * the tree hierarchy (or is empty for root-level nodes).
+ * This fixes orphaned flow edges in the mind map after node moves.
+ *
+ * @param {string} source - Source identifier for broadcast
+ * @returns {Object} { fixedCount }
+ */
+export async function cleanStaleDependsOn(source = 'unknown') {
+  invalidateTreeCache();
+  const { tree, configId } = await loadCompanyTree();
+  if (!tree?.branches) throw new Error('Company tree not found');
+
+  const updatedTree = { ...tree, branches: { ...tree.branches } };
+  let fixedCount = 0;
+
+  const fixDepsInChildren = (nodes, parentId) =>
+    nodes.map(n => {
+      const correctDeps = parentId ? [parentId] : [];
+      const current = n.depends_on || [];
+      const needsFix = current.length !== correctDeps.length ||
+        current.some((d, i) => d !== correctDeps[i]);
+      if (needsFix) {
+        fixedCount++;
+        console.log(`[cleanStaleDependsOn] Fixed "${n.id}": [${current.join(',')}] → [${correctDeps.join(',')}]`);
+      }
+      return {
+        ...n,
+        depends_on: correctDeps,
+        children: n.children?.length
+          ? fixDepsInChildren(n.children, n.id)
+          : n.children,
+      };
+    });
+
+  for (const [branchId, branch] of Object.entries(updatedTree.branches)) {
+    updatedTree.branches[branchId] = {
+      ...branch,
+      children: fixDepsInChildren(branch.children || [], null),
+    };
+  }
+
+  if (fixedCount > 0) {
+    await saveAndBroadcast(updatedTree, configId, source);
+  }
+  return { fixedCount };
 }
 
 /**
