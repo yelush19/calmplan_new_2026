@@ -162,18 +162,32 @@ export function getDueDateForCategory(category, client, reportMonth) {
 
 /**
  * Check if a client is a "מע"מ מפורט" (874) reporter.
- * This is determined by the deadlines.vat field from Monday containing "874".
+ *
+ * Resolution sources (in priority order):
+ *   1. Process tree: client.process_tree.P2_vat_report.vat_reporting_method === 'detailed_874'
+ *   2. reporting_info.vat_report_type === '874'
+ *   3. deadlines.vat containing "874" (from Monday import)
+ *   4. reporting_info.vat_detailed === true
  */
 export function isClient874(client) {
-  // Check explicit vat_report_type field (set in client form)
+  // 1. Process tree — vat_reporting_method on the P2_vat_report node
+  const vatReportNode = client?.process_tree?.P2_vat_report;
+  if (vatReportNode?.vat_reporting_method === 'detailed_874') {
+    return true;
+  }
+  // Also check nested extra_fields path
+  if (vatReportNode?.extra_fields?.vat_reporting_method === 'detailed_874') {
+    return true;
+  }
+  // 2. Explicit vat_report_type field (set in client form)
   if (client?.reporting_info?.vat_report_type === '874') {
     return true;
   }
-  // Check deadlines.vat field (from Monday import)
+  // 3. deadlines.vat field (from Monday import)
   if (client?.deadlines?.vat && String(client.deadlines.vat).includes('874')) {
     return true;
   }
-  // Also check reporting_info for any indicator
+  // 4. reporting_info flag
   if (client?.reporting_info?.vat_detailed === true) {
     return true;
   }

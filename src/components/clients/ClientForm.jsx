@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building, User, FileText, Settings, Save, X, Trash2, Plus, Send, UserPlus, Phone, Mail, ChevronDown } from 'lucide-react';
+import { Building, User, FileText, Settings, Save, X, Trash2, Plus, Send, UserPlus, Phone, Mail, ChevronDown, Upload } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -653,11 +653,12 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="basic" className="space-y-6">
-            <TabsList className="grid grid-cols-7 w-full">
+            <TabsList className="grid grid-cols-8 w-full">
               <TabsTrigger value="basic">פרטים בסיסיים</TabsTrigger>
               <TabsTrigger value="services">שירותים</TabsTrigger>
               <TabsTrigger value="process_tree">עץ תהליכים</TabsTrigger>
-              <TabsTrigger value="reporting">נותני שירותים</TabsTrigger>
+              <TabsTrigger value="financial">נתונים כספיים</TabsTrigger>
+              <TabsTrigger value="providers">נותני שירותים</TabsTrigger>
               <TabsTrigger value="tax">פרטי מס</TabsTrigger>
               <TabsTrigger value="accounts">חשבונות בנק</TabsTrigger>
               <TabsTrigger value="integration">מזהים ואינטגרציות</TabsTrigger>
@@ -776,82 +777,22 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                     <br />
                     סימון "הנה״ח" + סוג עסק "חברה" → אוטומטית מוסיף "מאזנים/דוחות שנתיים" ו"התאמות חשבונות"
                   </div>
-                  {/* אמצעי תשלום רשויות */}
-                  {(formData.service_types || []).includes('authorities_payment') && (
-                    <div className="border-2 border-orange-200 rounded-lg p-3 bg-orange-50 space-y-2">
-                      <Label className="font-bold">אמצעי תשלום רשויות</Label>
-                      <Select
-                        value={formData.authorities_payment_method || 'masav'}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, authorities_payment_method: value }))}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="masav">מס״ב</SelectItem>
-                          <SelectItem value="credit_card">כרטיס אשראי</SelectItem>
-                          <SelectItem value="bank_standing_order">הו״ק בנקאית</SelectItem>
-                          <SelectItem value="standing_order">כתב אישור (כ״א)</SelectItem>
-                          <SelectItem value="check">המחאה</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
                 </div>
               </div>
-              {/* Reporting frequencies moved to dedicated "תדירות דיווח" tab */}
+            </TabsContent>
+            <TabsContent value="process_tree" className="space-y-4">
+              <ProcessTreeManager
+                processTree={formData.process_tree}
+                onChange={(updated) => setFormData(prev => ({ ...prev, process_tree: updated }))}
+                clientId={client?.id}
+                clientName={formData.name}
+                reportingInfo={formData.reporting_info}
+              />
+            </TabsContent>
+            {/* ===== נתונים כספיים TAB ===== */}
+            <TabsContent value="financial" className="space-y-5">
+              {/* שכ"ט חודשי */}
               <div>
-                <Label>שעות עבודה חודשיות משוערות</Label>
-                <div className="grid md:grid-cols-4 gap-4 mt-2">
-                  <div>
-                    <Label htmlFor="payroll_hours">שכר</Label>
-                    <Input
-                      id="payroll_hours"
-                      type="number"
-                      min="0"
-                      step="0.25"
-                      value={formData.business_info.estimated_monthly_hours.payroll}
-                      onChange={(e) => handleInputChange('estimated_monthly_hours', { ...formData.business_info.estimated_monthly_hours, payroll: parseFloat(e.target.value) || 0 }, 'business_info')}
-                      placeholder="0.5"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="vat_hours">מע״מ</Label>
-                    <Input
-                      id="vat_hours"
-                      type="number"
-                      min="0"
-                      step="0.25"
-                      value={formData.business_info.estimated_monthly_hours.vat_reporting}
-                      onChange={(e) => handleInputChange('estimated_monthly_hours', { ...formData.business_info.estimated_monthly_hours, vat_reporting: parseFloat(e.target.value) || 0 }, 'business_info')}
-                      placeholder="1.25"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="bookkeeping_hours">הנה״ח</Label>
-                    <Input
-                      id="bookkeeping_hours"
-                      type="number"
-                      min="0"
-                      step="0.25"
-                      value={formData.business_info.estimated_monthly_hours.bookkeeping}
-                      onChange={(e) => handleInputChange('estimated_monthly_hours', { ...formData.business_info.estimated_monthly_hours, bookkeeping: parseFloat(e.target.value) || 0 }, 'business_info')}
-                      placeholder="2.75"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="reports_hours">דוחות</Label>
-                    <Input
-                      id="reports_hours"
-                      type="number"
-                      min="0"
-                      step="0.25"
-                      value={formData.business_info.estimated_monthly_hours.reports}
-                      onChange={(e) => handleInputChange('estimated_monthly_hours', { ...formData.business_info.estimated_monthly_hours, reports: parseFloat(e.target.value) || 0 }, 'business_info')}
-                      placeholder="0.75"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="border-t pt-4">
                 <Label className="text-lg font-bold">שכ״ט חודשי</Label>
                 <div className="grid md:grid-cols-2 gap-4 mt-2">
                   <div>
@@ -876,9 +817,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                         paying_client_id: value !== 'linked_to_parent' ? '' : prev.paying_client_id
                       }))}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="normal">רגיל - שכ״ט עצמאי</SelectItem>
                         <SelectItem value="oth">תיק עצמי (OTH) - ללא חיוב</SelectItem>
@@ -912,195 +851,210 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                   </div>
                 )}
               </div>
-            </TabsContent>
-            <TabsContent value="process_tree" className="space-y-4">
-              <ProcessTreeManager
-                processTree={formData.process_tree}
-                onChange={(updated) => setFormData(prev => ({ ...prev, process_tree: updated }))}
-                clientId={client?.id}
-                clientName={formData.name}
-                reportingInfo={formData.reporting_info}
-              />
-            </TabsContent>
-            <TabsContent value="reporting" className="space-y-5">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                קישור נותני שירותים (רו"ח, סוכני ביטוח, יועצים) ללקוח.
-                <br />
-                תדירות דיווח מנוהלת כעת דרך טאב עץ תהליכים.
-              </div>
 
-              {/* שכר - FIRST, because it controls social security and deductions */}
-              <div className="border-2 border-blue-200 rounded-xl p-4 space-y-2 bg-blue-50">
-                <Label className="text-base font-bold">שכר</Label>
-                <p className="text-xs text-gray-500">תדירות עיבוד שכר — שולט גם על ביטוח לאומי ומ״ה ניכויים</p>
-                <Select value={formData.reporting_info.payroll_frequency} onValueChange={(value) => {
-                  handleInputChange('payroll_frequency', value, 'reporting_info');
-                  // Auto-link: if payroll becomes not_applicable, also set social_security and deductions
-                  if (value === 'not_applicable') {
-                    handleInputChange('social_security_frequency', 'not_applicable', 'reporting_info');
-                    handleInputChange('deductions_frequency', 'not_applicable', 'reporting_info');
-                  }
-                }}>
+              {/* אמצעי תשלום שכ"ט */}
+              <div className="border-2 border-orange-200 rounded-lg p-3 bg-orange-50 space-y-2">
+                <Label className="font-bold">אמצעי תשלום שכ״ט</Label>
+                <Select
+                  value={formData.authorities_payment_method || 'masav'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, authorities_payment_method: value }))}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="monthly">חודשי</SelectItem>
-                    <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
+                    <SelectItem value="masav">מס״ב</SelectItem>
+                    <SelectItem value="credit_card">כרטיס אשראי</SelectItem>
+                    <SelectItem value="bank_standing_order">הו״ק בנקאית</SelectItem>
+                    <SelectItem value="standing_order">כתב אישור (כ״א)</SelectItem>
+                    <SelectItem value="check">המחאה</SelectItem>
+                    <SelectItem value="client_pays">לקוח</SelectItem>
+                    <SelectItem value="payment_plan">הסדר</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-5">
-                {/* מע"מ */}
-                <div className="border rounded-xl p-4 space-y-2">
-                  <Label className="text-base font-bold">מע״מ</Label>
-                  <p className="text-xs text-gray-500">דיווח מע״מ תקופתי</p>
-                  <Select value={formData.reporting_info.vat_reporting_frequency} onValueChange={(value) => handleInputChange('vat_reporting_frequency', value, 'reporting_info')}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">חודשי</SelectItem>
-                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
-                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="pt-2 border-t mt-2">
-                    <Label className="text-sm font-semibold">סוג דוח מע״מ</Label>
-                    <p className="text-xs text-gray-500 mb-1">משפיע על תאריך היעד: תקופתי=19, מפורט 874=23</p>
-                    <Select value={formData.reporting_info.vat_report_type || 'periodic'} onValueChange={(value) => handleInputChange('vat_report_type', value, 'reporting_info')}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="periodic">תקופתי (יעד 19 לחודש)</SelectItem>
-                        <SelectItem value="874">874 מפורט (יעד 23 לחודש)</SelectItem>
-                      </SelectContent>
-                    </Select>
+              {/* שעות עבודה חודשיות */}
+              <div className="border-t pt-4">
+                <Label className="text-lg font-bold">שעות עבודה חודשיות משוערות</Label>
+                <div className="grid md:grid-cols-4 gap-4 mt-2">
+                  <div>
+                    <Label htmlFor="payroll_hours">שכר</Label>
+                    <Input id="payroll_hours" type="number" min="0" step="0.25"
+                      value={formData.business_info.estimated_monthly_hours.payroll}
+                      onChange={(e) => handleInputChange('estimated_monthly_hours', { ...formData.business_info.estimated_monthly_hours, payroll: parseFloat(e.target.value) || 0 }, 'business_info')}
+                      placeholder="0.5" />
                   </div>
-                </div>
-                {/* מקדמות מס */}
-                <div className="border rounded-xl p-4 space-y-2">
-                  <Label className="text-base font-bold">מקדמות מס</Label>
-                  <p className="text-xs text-gray-500">מקדמות מס הכנסה</p>
-                  <Select value={formData.reporting_info.tax_advances_frequency} onValueChange={(value) => handleInputChange('tax_advances_frequency', value, 'reporting_info')}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">חודשי</SelectItem>
-                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
-                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {/* ב"ל - ביטוח לאומי */}
-                <div className={`border rounded-xl p-4 space-y-2 ${formData.reporting_info.payroll_frequency === 'not_applicable' ? 'opacity-50' : ''}`}>
-                  <Label className="text-base font-bold">ב״ל ניכויים</Label>
-                  <p className="text-xs text-gray-500">ביטוח לאומי {formData.reporting_info.payroll_frequency === 'not_applicable' && '(נשלט ע"י שכר)'}</p>
-                  <Select
-                    value={formData.reporting_info.social_security_frequency}
-                    onValueChange={(value) => handleInputChange('social_security_frequency', value, 'reporting_info')}
-                    disabled={formData.reporting_info.payroll_frequency === 'not_applicable'}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">חודשי</SelectItem>
-                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
-                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {/* מ"ה ניכויים */}
-                <div className={`border rounded-xl p-4 space-y-2 ${formData.reporting_info.payroll_frequency === 'not_applicable' ? 'opacity-50' : ''}`}>
-                  <Label className="text-base font-bold">מ״ה ניכויים</Label>
-                  <p className="text-xs text-gray-500">ניכויי מס הכנסה {formData.reporting_info.payroll_frequency === 'not_applicable' && '(נשלט ע"י שכר)'}</p>
-                  <Select
-                    value={formData.reporting_info.deductions_frequency}
-                    onValueChange={(value) => handleInputChange('deductions_frequency', value, 'reporting_info')}
-                    disabled={formData.reporting_info.payroll_frequency === 'not_applicable'}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">חודשי</SelectItem>
-                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
-                      <SelectItem value="semi_annual">חצי שנתי</SelectItem>
-                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {/* דוחות רווח והפסד PNL */}
-                <div className="border rounded-xl p-4 space-y-2">
-                  <Label className="text-base font-bold">דוחות רווח והפסד (PNL)</Label>
-                  <p className="text-xs text-gray-500">תדירות הפקת דוח PNL</p>
-                  <Select value={formData.reporting_info.pnl_frequency || 'not_applicable'} onValueChange={(value) => handleInputChange('pnl_frequency', value, 'reporting_info')}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">חודשי</SelectItem>
-                      <SelectItem value="bimonthly">דו-חודשי</SelectItem>
-                      <SelectItem value="quarterly">רבעוני</SelectItem>
-                      <SelectItem value="not_applicable">לא רלוונטי</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {formData.reporting_info.pnl_frequency && formData.reporting_info.pnl_frequency !== 'not_applicable' && (
-                    <div className="pt-2 border-t mt-2">
-                      <Label className="text-sm font-semibold">יום יעד בחודש</Label>
-                      <p className="text-xs text-gray-500 mb-1">באיזה יום בחודש צריך להיות מוכן הדוח</p>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="31"
-                        value={formData.reporting_info.pnl_target_day || ''}
-                        onChange={(e) => handleInputChange('pnl_target_day', parseInt(e.target.value) || '', 'reporting_info')}
-                        placeholder="לדוגמה: 15"
-                        className="w-32"
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <Label htmlFor="vat_hours">מע״מ</Label>
+                    <Input id="vat_hours" type="number" min="0" step="0.25"
+                      value={formData.business_info.estimated_monthly_hours.vat_reporting}
+                      onChange={(e) => handleInputChange('estimated_monthly_hours', { ...formData.business_info.estimated_monthly_hours, vat_reporting: parseFloat(e.target.value) || 0 }, 'business_info')}
+                      placeholder="1.25" />
+                  </div>
+                  <div>
+                    <Label htmlFor="bookkeeping_hours">הנה״ח</Label>
+                    <Input id="bookkeeping_hours" type="number" min="0" step="0.25"
+                      value={formData.business_info.estimated_monthly_hours.bookkeeping}
+                      onChange={(e) => handleInputChange('estimated_monthly_hours', { ...formData.business_info.estimated_monthly_hours, bookkeeping: parseFloat(e.target.value) || 0 }, 'business_info')}
+                      placeholder="2.75" />
+                  </div>
+                  <div>
+                    <Label htmlFor="reports_hours">דוחות</Label>
+                    <Input id="reports_hours" type="number" min="0" step="0.25"
+                      value={formData.business_info.estimated_monthly_hours.reports}
+                      onChange={(e) => handleInputChange('estimated_monthly_hours', { ...formData.business_info.estimated_monthly_hours, reports: parseFloat(e.target.value) || 0 }, 'business_info')}
+                      placeholder="0.75" />
+                  </div>
                 </div>
               </div>
 
-              {/* מס"ב ספקים - סייקלים */}
-              {(formData.service_types || []).includes('masav_suppliers') && (
-                <div className="border-2 border-purple-200 rounded-xl p-4 space-y-3 bg-purple-50">
-                  <Label className="text-base font-bold">מס״ב ספקים - סייקלים</Label>
-                  <p className="text-xs text-gray-500">כמה סייקלים בחודש ובאילו תאריכים</p>
-                  <div className="flex items-center gap-3">
-                    <Label className="text-sm whitespace-nowrap">מספר סייקלים בחודש</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="10"
-                      value={formData.reporting_info.masav_suppliers_cycles || 0}
-                      onChange={(e) => {
-                        const numCycles = parseInt(e.target.value) || 0;
-                        handleInputChange('masav_suppliers_cycles', numCycles, 'reporting_info');
-                        const currentDates = formData.reporting_info.masav_suppliers_cycle_dates || [];
-                        if (numCycles > currentDates.length) {
-                          const newDates = [...currentDates, ...Array(numCycles - currentDates.length).fill('')];
-                          handleInputChange('masav_suppliers_cycle_dates', newDates, 'reporting_info');
-                        } else {
-                          handleInputChange('masav_suppliers_cycle_dates', currentDates.slice(0, numCycles), 'reporting_info');
-                        }
-                      }}
-                      className="w-20"
-                    />
+              {/* העלאת הצעות מחיר וחוזים */}
+              <div className="border-t pt-4">
+                <Label className="text-lg font-bold">הצעות מחיר וחוזים</Label>
+                <p className="text-xs text-gray-500 mt-1 mb-3">העלאת קבצי הצעות מחיר, חוזי התקשרות ומסמכים כספיים</p>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                  onClick={() => document.getElementById('file-upload-quotes')?.click()}
+                >
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">לחץ להעלאת קובץ או גרור לכאן</p>
+                  <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX, XLS, XLSX, JPG, PNG</p>
+                  <input
+                    id="file-upload-quotes"
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) {
+                        const existingFiles = formData.quote_files || [];
+                        const newFiles = files.map(f => ({
+                          name: f.name,
+                          size: f.size,
+                          type: f.type,
+                          uploaded_at: new Date().toISOString(),
+                          file: f,
+                        }));
+                        setFormData(prev => ({ ...prev, quote_files: [...existingFiles, ...newFiles] }));
+                      }
+                    }}
+                  />
+                </div>
+                {(formData.quote_files || []).length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {formData.quote_files.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded border text-sm">
+                        <span className="truncate">{file.name}</span>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6"
+                          onClick={() => setFormData(prev => ({
+                            ...prev,
+                            quote_files: prev.quote_files.filter((_, i) => i !== idx)
+                          }))}
+                        >
+                          <X className="w-3 h-3 text-amber-500" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                  {(formData.reporting_info.masav_suppliers_cycles || 0) > 0 && (
-                    <div className="grid md:grid-cols-3 gap-3 mt-2">
-                      {Array.from({ length: formData.reporting_info.masav_suppliers_cycles }).map((_, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <Label className="text-sm whitespace-nowrap">סייקל {idx + 1} - יום</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="31"
-                            value={(formData.reporting_info.masav_suppliers_cycle_dates || [])[idx] || ''}
-                            onChange={(e) => {
-                              const dates = [...(formData.reporting_info.masav_suppliers_cycle_dates || [])];
-                              dates[idx] = parseInt(e.target.value) || '';
-                              handleInputChange('masav_suppliers_cycle_dates', dates, 'reporting_info');
-                            }}
-                            placeholder="יום בחודש"
-                            className="w-24"
-                          />
-                        </div>
-                      ))}
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ===== נותני שירותים TAB ===== */}
+            <TabsContent value="providers" className="space-y-5">
+              {client?.id ? (
+                <div className="space-y-4">
+                  {/* Linked Companies Display */}
+                  <div className="space-y-2">
+                    <Label className="text-lg font-bold">גורמי שירות מקושרים</Label>
+                    {clientLinks.length === 0 && <p className="text-sm text-gray-500">לקוח זה אינו משוייך לאף גורם שירות.</p>}
+                    <div className="space-y-2">
+                      {serviceCompanies.map(company => {
+                        const companyProviders = serviceProviders.filter(p => p.service_company_id === company.id);
+                        const linkedProviders = companyProviders.filter(p => linkedProviderIds.has(p.id));
+                        if (linkedProviders.length === 0) return null;
+                        return (
+                          <motion.div key={company.id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                            className="p-3 bg-gray-50 rounded-md border">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium">{company.name}</h4>
+                              <Button variant="ghost" size="icon" onClick={() => handleUnlinkCompany(company.id)} type="button" title="ביטול שיוך כל החברה">
+                                <Trash2 className="w-4 h-4 text-amber-500" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {linkedProviders.map(provider => (
+                                <div key={provider.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
+                                  <span>{provider.name} ({serviceProviderTypeLabels[provider.type]})</span>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"
+                                    onClick={async () => {
+                                      const linkToDelete = clientLinks.find(l => l.service_provider_id === provider.id);
+                                      if (linkToDelete) {
+                                        await ClientServiceProvider.delete(linkToDelete.id);
+                                        const links = await ClientServiceProvider.filter({ client_id: client.id }, null, 500);
+                                        setClientLinks(links || []);
+                                      }
+                                    }}
+                                    type="button"
+                                  >
+                                    <X className="w-3 h-3 text-amber-500" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Add New Links */}
+                  <div className="border-t pt-4">
+                    <Label className="font-bold">שיוך גורמי שירות חדשים</Label>
+                    <Select onValueChange={handleCompanySelectForLinking} value={selectedCompanyToLink || ""}>
+                      <SelectTrigger className="mt-2">
+                        <SelectValue placeholder="בחר חברה לשיוך אנשי קשר ממנה..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableCompanies.map(company => (
+                          <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Provider Selection for Selected Company */}
+                  {selectedCompanyToLink && unlinkedProvidersByCompany.get(selectedCompanyToLink) && (
+                    <div className="bg-blue-50 p-4 rounded-md border">
+                      <h4 className="font-semibold mb-3">
+                        בחר אנשי קשר לשיוך מתוך: {serviceCompanies.find(c => c.id === selectedCompanyToLink)?.name}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto">
+                        {unlinkedProvidersByCompany.get(selectedCompanyToLink)?.map(provider => (
+                          <div key={provider.id} className="flex items-center space-x-2 space-x-reverse p-2 bg-white rounded-md border">
+                            <Checkbox
+                              id={`provider-${provider.id}`}
+                              checked={selectedProvidersToLink.includes(provider.id)}
+                              onCheckedChange={(checked) => handleProviderSelection(provider.id, checked)}
+                            />
+                            <Label htmlFor={`provider-${provider.id}`} className="text-sm">
+                              {provider.name}
+                              <span className="text-gray-500 mr-1">({serviceProviderTypeLabels[provider.type]})</span>
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-end gap-2 mt-4">
+                        <Button type="button" variant="outline" onClick={() => { setSelectedCompanyToLink(null); setSelectedProvidersToLink([]); }}>בטל</Button>
+                        <Button type="button" onClick={handleLinkSelectedProviders} disabled={selectedProvidersToLink.length === 0} className="bg-blue-600 hover:bg-blue-700 text-white">
+                          שייך {selectedProvidersToLink.length} גורמים
+                        </Button>
+                      </div>
                     </div>
                   )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>יש לשמור את הלקוח תחילה כדי לקשר נותני שירותים.</p>
                 </div>
               )}
             </TabsContent>
@@ -1285,133 +1239,6 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
             </TabsContent>
           </Tabs>
 
-          {/* Service Providers Linking Section - Show for existing clients */}
-          {client?.id && (
-            <Card className="mt-6 shadow-none border">
-              <CardHeader>
-                <CardTitle>שיוך נותני שירותים</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingLinks ? (
-                  <p className="text-center text-gray-500 py-4">טוען נתונים...</p>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Linked Companies Display */}
-                    <div className="space-y-2">
-                      <Label>חברות וגורמים מקושרים</Label>
-                      {clientLinks.length === 0 && <p className="text-sm text-gray-500">לקוח זה אינו משוייך לאף גורם שירות.</p>}
-                      <div className="space-y-2">
-                        {serviceCompanies.map(company => {
-                          const companyProviders = serviceProviders.filter(p => p.service_company_id === company.id);
-                          const linkedProviders = companyProviders.filter(p => linkedProviderIds.has(p.id));
-                          
-                          if (linkedProviders.length === 0) return null;
-                          
-                          return (
-                            <motion.div
-                              key={company.id}
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="p-3 bg-gray-50 rounded-md border"
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="font-medium">{company.name}</h4>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => handleUnlinkCompany(company.id)} 
-                                  type="button"
-                                  title="ביטול שיוך כל החברה"
-                                >
-                                  <Trash2 className="w-4 h-4 text-amber-500" />
-                                </Button>
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {linkedProviders.map(provider => (
-                                  <div key={provider.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
-                                    <span>{provider.name} ({serviceProviderTypeLabels[provider.type]})</span>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-6 w-6"
-                                      onClick={async () => {
-                                        const linkToDelete = clientLinks.find(l => l.service_provider_id === provider.id);
-                                        if (linkToDelete) {
-                                          await ClientServiceProvider.delete(linkToDelete.id);
-                                          const links = await ClientServiceProvider.filter({ client_id: client.id }, null, 500);
-                                          setClientLinks(links || []);
-                                        }
-                                      }}
-                                      type="button"
-                                    >
-                                      <X className="w-3 h-3 text-amber-500" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Add New Links */}
-                    <div>
-                      <Label>שיוך גורמי שירות חדשים</Label>
-                      <Select onValueChange={handleCompanySelectForLinking} value={selectedCompanyToLink || ""}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="בחר חברה לשיוך אנשי קשר ממנה..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableCompanies.map(company => (
-                            <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Provider Selection for Selected Company */}
-                    {selectedCompanyToLink && unlinkedProvidersByCompany.get(selectedCompanyToLink) && (
-                        <div className="bg-blue-50 p-4 rounded-md border">
-                            <h4 className="font-semibold mb-3">
-                                בחר אנשי קשר לשיוך מתוך: {serviceCompanies.find(c => c.id === selectedCompanyToLink)?.name}
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto">
-                                {unlinkedProvidersByCompany.get(selectedCompanyToLink)?.map(provider => (
-                                    <div key={provider.id} className="flex items-center space-x-2 space-x-reverse p-2 bg-white rounded-md border">
-                                        <Checkbox
-                                            id={`provider-${provider.id}`}
-                                            checked={selectedProvidersToLink.includes(provider.id)}
-                                            onCheckedChange={(checked) => handleProviderSelection(provider.id, checked)}
-                                        />
-                                        <Label htmlFor={`provider-${provider.id}`} className="text-sm">
-                                          {provider.name} 
-                                          <span className="text-gray-500 mr-1">({serviceProviderTypeLabels[provider.type]})</span>
-                                        </Label>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="flex justify-end gap-2 mt-4">
-                                <Button type="button" variant="outline" onClick={() => { setSelectedCompanyToLink(null); setSelectedProvidersToLink([]); }}>
-                                    בטל
-                                </Button>
-                                <Button 
-                                  type="button" 
-                                  onClick={handleLinkSelectedProviders} 
-                                  disabled={selectedProvidersToLink.length === 0}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                    שייך {selectedProvidersToLink.length} גורמים
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
           <div className="flex justify-end gap-3 pt-6 border-t mt-6">
             <Button type="button" variant="outline" onClick={onCancel}>

@@ -725,7 +725,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
       )}
 
       {/* Branch sections */}
-      {Object.entries(companyTree.branches).map(([branchId, branch]) => {
+      {Object.entries(companyTree.branches).filter(([branchId]) => branchId !== 'P4').map(([branchId, branch]) => {
         const colors = getBranchColors(branchId);
         const isExpanded = expandedBranches[branchId] !== false;
         const branchEnabledCount = (branch.children || []).reduce((count, node) => {

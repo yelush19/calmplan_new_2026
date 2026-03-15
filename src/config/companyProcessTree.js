@@ -61,6 +61,8 @@ const PAYMENT_METHOD_FIELD = {
       { value: 'credit_card', label: 'כרטיס אשראי' },
       { value: 'bank_standing_order', label: 'הו״ק אוטומטית' },
       { value: 'check', label: 'המחאה' },
+      { value: 'client_pays', label: 'לקוח' },
+      { value: 'payment_plan', label: 'הסדר' },
     ],
     default_value: 'masav',
   },
@@ -202,6 +204,24 @@ const P2_BRANCH = {
           is_collector: true,
         }),
       ],
+    }),
+    node('P2_masav_suppliers', 'מס"ב ספקים', 'masav_suppliers', {
+      default_frequency: 'monthly',
+      depends_on: ['P2_bookkeeping'],
+      execution: 'sequential',
+      extra_fields: {
+        masav_cycles: {
+          type: 'select',
+          label: 'מספר סייקלים בחודש',
+          options: [
+            { value: '1', label: 'סייקל 1 (אמצע חודש - 15)' },
+            { value: '2', label: '2 סייקלים (אמצע + סוף חודש - 15, 30)' },
+          ],
+          default_value: '1',
+        },
+      },
+      // Cycle dates: 15=mid-month, 30=end-month (Feb auto-adjusts to 28/29)
+      cycle_dates: [15, 30],
     }),
     node('P2_reconciliation', 'התאמות חשבונות', 'reconciliation', {
       default_frequency: 'monthly',
@@ -396,7 +416,7 @@ const P4_BRANCH = {
 // ============================================================
 
 export const PROCESS_TREE_SEED = {
-  version: '3.4',
+  version: '3.5',
   branches: {
     P1: P1_BRANCH,
     P2: P2_BRANCH,

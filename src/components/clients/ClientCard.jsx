@@ -67,22 +67,17 @@ const serviceTypeColors = {
     special_reports: 'bg-green-100 text-green-800 border-green-200',
 };
 
-// סדר מיון לפי קבוצת צבעים - אותה קטגוריה באותה שורה
+// סדר מיון לפי קבוצות — 2 קבוצות ראשיות
 const serviceGroupOrder = {
-    // קבוצה 1 (ירוק): הנה"ח
+    // קבוצה 1 (ירוק): הנה"ח ודוחות (כולל מע"מ, מקדמות, מס"ב ספקים)
     bookkeeping: 1, bookkeeping_full: 1, reconciliation: 1,
     annual_reports: 1, pnl_reports: 1, admin: 1, special_reports: 1,
-    // מע"מ ומקדמות (אמרלד)
-    vat_reporting: 2, tax_advances: 2,
-    // קבוצה 2 (כחול): שכר
-    payroll: 3, social_security: 3, deductions: 3,
-    authorities: 3, authorities_payment: 3, social_benefits: 3, reserve_claims: 3,
-    // קבוצה 3 (סגול): תלושים
-    payslip_sending: 4, masav_employees: 4,
-    // קבוצה 4 (כתום): מס"ב סוציאליות
-    masav_social: 5, masav_authorities: 5, operator_reporting: 5, taml_reporting: 5,
-    // קבוצה 5 (אינדיגו): מס"ב ספקים
-    masav_suppliers: 6,
+    masav_suppliers: 1, vat_reporting: 1, tax_advances: 1,
+    // קבוצה 2 (כחול): שכר (כולל תלושים, סוציאליות, מס"ב)
+    payroll: 2, social_security: 2, deductions: 2,
+    authorities: 2, authorities_payment: 2, social_benefits: 2, reserve_claims: 2,
+    payslip_sending: 2, masav_employees: 2,
+    masav_social: 2, masav_authorities: 2, operator_reporting: 2, taml_reporting: 2,
 };
 
 const statusUI = {
@@ -96,21 +91,13 @@ const statusUI = {
 
 // ── Collapsible service group with steps ──
 const serviceGroupLabels = {
-  1: 'הנה"ח ומאזנים',
-  2: 'מע"מ ומקדמות',
-  3: 'שכר ורשויות',
-  4: 'תלושים ומס"ב עובדים',
-  5: 'מס"ב ומתפעלים',
-  6: 'מס"ב ספקים',
+  1: 'הנה"ח ודוחות',
+  2: 'שכר',
 };
 
 const serviceGroupIcons = {
-  1: 'bg-green-100 text-green-700 border-green-200',
-  2: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  3: 'bg-blue-100 text-blue-700 border-blue-200',
-  4: 'bg-purple-100 text-purple-700 border-purple-200',
-  5: 'bg-amber-100 text-amber-700 border-amber-200',
-  6: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  1: 'bg-green-600 text-white border-green-700',
+  2: 'bg-blue-600 text-white border-blue-700',
 };
 
 function ServiceTreeSection({ services }) {
@@ -155,15 +142,15 @@ function ServiceTreeSection({ services }) {
             {/* Group header - collapsible */}
             <button
               onClick={(e) => { e.stopPropagation(); toggleGroup(Number(groupId)); }}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs font-medium transition-colors hover:bg-gray-50 ${groupColor.split(' ').slice(0, 1).join(' ')}`}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs font-bold transition-colors rounded-t-md ${groupColor}`}
             >
               {isGroupExpanded ? (
-                <ChevronDown className="w-3 h-3 shrink-0 text-gray-400" />
+                <ChevronDown className="w-3 h-3 shrink-0 text-white/80" />
               ) : (
-                <ChevronLeft className="w-3 h-3 shrink-0 text-gray-400" />
+                <ChevronLeft className="w-3 h-3 shrink-0 text-white/80" />
               )}
-              <span className={groupColor.split(' ').slice(1, 2).join(' ')}>{groupLabel}</span>
-              <Badge className={`${groupColor} text-[9px] px-1 py-0 border mr-auto`}>
+              <span className="text-white">{groupLabel}</span>
+              <Badge className="bg-white/20 text-white text-[9px] px-1 py-0 border border-white/30 mr-auto">
                 {svcs.length}
               </Badge>
             </button>
