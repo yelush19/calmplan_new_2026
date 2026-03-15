@@ -481,10 +481,16 @@ export async function syncTreeToMindMap(tree) {
   let customChanged = false;
   let overridesChanged = false;
 
+  // Collect all tree node keys for deletion detection
+  const treeNodeKeys = new Set();
+
   // Walk tree and sync each node
   const syncNode = (node, branchId, parentNodeId) => {
     const dashboard = branchToDashboard(branchId);
     const serviceKey = node.service_key || node.id;
+    treeNodeKeys.add(serviceKey);
+    // Also track by node.id in case service_key differs
+    if (node.id !== serviceKey) treeNodeKeys.add(node.id);
 
     if (ALL_SERVICES[serviceKey]) {
       // Template service — update override with correct parentId
@@ -492,6 +498,11 @@ export async function syncTreeToMindMap(tree) {
       const correctParent = parentNodeId || branchId;
       if (currentParent !== correctParent) {
         overrides[serviceKey] = { ...(overrides[serviceKey] || {}), parentId: correctParent };
+        overridesChanged = true;
+      }
+      // Un-hide if it was previously hidden but now exists in tree
+      if (overrides[serviceKey]?._hidden) {
+        overrides[serviceKey] = { ...overrides[serviceKey], _hidden: false };
         overridesChanged = true;
       }
     } else {
@@ -527,6 +538,28 @@ export async function syncTreeToMindMap(tree) {
   for (const [branchId, branch] of Object.entries(tree.branches)) {
     for (const node of (branch.children || [])) {
       syncNode(node, branchId, null);
+    }
+  }
+
+  // CLEANUP: Remove custom_services that came from tree but no longer exist in it
+  for (const [key, svc] of Object.entries(customServices)) {
+    if (svc._source === 'process_tree' && !treeNodeKeys.has(key)) {
+      console.log(`[syncTreeToMindMap] 🧹 Removing deleted tree node "${key}" from custom_services`);
+      delete customServices[key];
+      customChanged = true;
+    }
+  }
+
+  // CLEANUP: Hide template services that were removed from tree
+  for (const [key] of Object.entries(ALL_SERVICES)) {
+    if (!treeNodeKeys.has(key) && !overrides[key]?._hidden) {
+      // Only hide if this template service was previously managed by the tree
+      // (has a parentId override set by tree sync)
+      if (overrides[key]?.parentId) {
+        overrides[key] = { ...(overrides[key] || {}), _hidden: true };
+        overridesChanged = true;
+        console.log(`[syncTreeToMindMap] 🧹 Hiding deleted template service "${key}"`);
+      }
     }
   }
 
