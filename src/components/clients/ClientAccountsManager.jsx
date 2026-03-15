@@ -3,13 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Banknote, CreditCard, BookUser, Building2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Banknote, CreditCard, BookUser, Building2, ExternalLink, Settings } from 'lucide-react';
 import { ClientAccount } from '@/api/entities';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const accountTypeIcons = {
     bank: <Banknote className="w-5 h-5" />,
@@ -281,13 +282,28 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="text-sm text-gray-700 text-right">
-                                     <p>
+                                <div className="text-sm text-gray-700 text-right space-y-1">
+                                    <p>
+                                        תדירות: <span className="font-medium">{
+                                          { monthly: 'חודשי', bimonthly: 'דו-חודשי', quarterly: 'רבעוני', semi_annual: 'חצי שנתי', yearly: 'שנתי' }[account.reconciliation_frequency] || 'חודשי'
+                                        }</span>
+                                    </p>
+                                    <p>
                                         התאמה אחרונה: {account.last_reconciliation_date ? new Date(account.last_reconciliation_date).toLocaleDateString('he-IL') : 'לא עודכן'}
                                     </p>
                                     <p className="font-semibold">
                                         יעד הבא: {account.next_reconciliation_due ? new Date(account.next_reconciliation_due).toLocaleDateString('he-IL') : 'לא הוגדר'}
                                     </p>
+                                    <div className="flex gap-2 mt-1">
+                                        <Link to="/reconciliation" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                            <ExternalLink className="w-3 h-3" />
+                                            התאמת חשבונות
+                                        </Link>
+                                        <Link to="/settings" className="text-xs text-gray-500 hover:underline flex items-center gap-1">
+                                            <Settings className="w-3 h-3" />
+                                            הגדרות
+                                        </Link>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2 items-center justify-end">
                                     <Button variant="outline" size="icon" onClick={() => handleEdit(account)}>

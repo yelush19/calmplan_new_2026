@@ -125,36 +125,59 @@ const POST_PAYROLL_SERVICES = [...PHASE_B_SERVICES, ...PHASE_C_SERVICES, ...MSB_
 // ============================================================
 // SERVICE FILTERING (חוק בל יעבור)
 // ============================================================
-// Maps cascade serviceKey → client.service_types key.
+// Maps cascade serviceKey → process tree node ID.
 // Used to filter auto-created tasks: only create if the client
-// has the corresponding service flagged as active.
+// has the corresponding node enabled in process_tree.
+// Falls back to service_types[] for legacy clients.
+const CASCADE_SERVICE_TO_TREE_NODE = {
+  deductions:          'P1_deductions',
+  social_security:     'P1_social_security',
+  payslip_sending:     'P1_payslip_sending',
+  masav_social:        'P1_masav_social',
+  masav_employees:     'P1_masav_employees',
+  masav_suppliers:     'P1_masav_suppliers',
+  authorities_payment: 'P1_authorities_payment',
+  vat_reporting:       'P2_vat',
+  tax_advances:        'P2_tax_advances',
+  pnl_reports:         'P2_pnl',
+};
+
+// Legacy mapping for clients without process_tree
 const CASCADE_SERVICE_TO_CLIENT_SERVICE = {
-  deductions:        'deductions',
-  social_security:   'social_security',
-  payslip_sending:   'payslip_sending',
-  masav_social:      'masav_social',
-  masav_employees:   'masav_employees',
-  masav_authorities: 'masav_authorities',
-  masav_suppliers:   'masav_suppliers',
+  deductions:          'deductions',
+  social_security:     'social_security',
+  payslip_sending:     'payslip_sending',
+  masav_social:        'masav_social',
+  masav_employees:     'masav_employees',
+  masav_suppliers:     'masav_suppliers',
   authorities_payment: 'authorities_payment',
-  vat_reporting:     'vat_reporting',
-  tax_advances:      'tax_advances',
-  pnl_reports:       'pnl_reports',
+  vat_reporting:       'vat_reporting',
+  tax_advances:        'tax_advances',
+  pnl_reports:         'pnl_reports',
 };
 
 /**
- * Filter auto-created tasks based on client's active services (service_types[]).
- * חוק בל יעבור: NEVER create a task for a service the client doesn't have.
+ * Filter auto-created tasks based on client's process_tree or service_types[].
+ * PRIMARY: process_tree node enabled check.
+ * FALLBACK: service_types[] for legacy clients.
  *
  * @param {Object[]} tasksToCreate - Array of task blueprints from cascade
- * @param {string[]} clientServices - client.service_types array
+ * @param {string[]} clientServices - client.service_types array (legacy)
+ * @param {Object} [clientProcessTree] - client.process_tree object
  * @returns {Object[]} filtered tasks
  */
-export function filterByClientServices(tasksToCreate, clientServices) {
-  if (!clientServices || clientServices.length === 0) return tasksToCreate;
+export function filterByClientServices(tasksToCreate, clientServices, clientProcessTree) {
+  const hasProcessTree = clientProcessTree && Object.keys(clientProcessTree).length > 0;
+
   return tasksToCreate.filter(task => {
+    if (hasProcessTree) {
+      const nodeId = CASCADE_SERVICE_TO_TREE_NODE[task.serviceKey];
+      if (!nodeId) return true;
+      return !!clientProcessTree[nodeId]?.enabled;
+    }
+    // Legacy fallback
+    if (!clientServices || clientServices.length === 0) return true;
     const requiredService = CASCADE_SERVICE_TO_CLIENT_SERVICE[task.serviceKey];
-    // If no mapping exists, allow the task (it's not service-gated)
     if (!requiredService) return true;
     return clientServices.includes(requiredService);
   });

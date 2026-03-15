@@ -436,6 +436,84 @@ export const exportCustomerServicesCSV = async () => {
   URL.revokeObjectURL(url);
   return { success: true, count: rows.length };
 };
+/**
+ * Export a single client's process tree to CSV.
+ * Shows all enabled nodes with hierarchy, frequency, and extra fields.
+ */
+export const exportClientProcessTreeCSV = async (client) => {
+  const { PROCESS_TREE_SEED, flattenTree } = await import('@/config/companyProcessTree');
+  const { loadCompanyTree, resolveFrequency } = await import('@/services/processTreeService');
+
+  let companyTree;
+  try {
+    companyTree = await loadCompanyTree();
+    companyTree = companyTree.tree || companyTree;
+  } catch {
+    companyTree = PROCESS_TREE_SEED;
+  }
+
+  const allNodes = flattenTree(companyTree);
+  const clientTree = client.process_tree || {};
+
+  const FREQ_LABELS = {
+    monthly: 'חודשי', bimonthly: 'דו-חודשי', quarterly: 'רבעוני',
+    semi_annual: 'חצי שנתי', yearly: 'שנתי', daily: 'יומי',
+    weekly: 'שבועי', not_applicable: 'לא רלוונטי',
+  };
+
+  const branchLabels = {};
+  for (const [branchId, branch] of Object.entries(companyTree.branches)) {
+    branchLabels[branchId] = branch.label;
+  }
+
+  const rows = [];
+  for (const treeNode of allNodes) {
+    if (treeNode.branch === 'P4') continue; // Skip home/personal
+    if (!clientTree[treeNode.id]?.enabled) continue;
+
+    const rawFreq = resolveFrequency(treeNode.id, client, companyTree);
+    const freq = FREQ_LABELS[rawFreq] || rawFreq || '';
+
+    // Extra fields info
+    let extras = '';
+    if (treeNode.extra_fields) {
+      const parts = [];
+      for (const [fieldKey, fieldDef] of Object.entries(treeNode.extra_fields)) {
+        const val = clientTree[treeNode.id]?.[fieldKey];
+        if (val && fieldDef.options) {
+          const opt = fieldDef.options.find(o => o.value === val);
+          if (opt) parts.push(`${fieldDef.label}: ${opt.label}`);
+        }
+      }
+      extras = parts.join('; ');
+    }
+
+    rows.push([
+      branchLabels[treeNode.branch] || treeNode.branch,
+      treeNode.label,
+      freq,
+      extras,
+    ]);
+  }
+
+  const header = 'ענף,שירות,תדירות,הגדרות נוספות';
+  const csvRows = rows.map(r =>
+    r.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',')
+  );
+  const bom = '\uFEFF';
+  const csv = bom + header + '\n' + csvRows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const today = new Date().toISOString().slice(0, 10);
+  const safeName = (client.name || 'client').replace(/[^a-zA-Z0-9\u0590-\u05FF]/g, '_');
+  a.download = `process_tree_${safeName}_${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  return { success: true, count: rows.length };
+};
+
 export const importClientsFromExcel = async () => ({ data: { success: false, error: 'Import not available' } });
 export const exportClientAccountsTemplate = async () => ({ data: { success: false, error: 'Export not available' } });
 export const importClientAccounts = async () => ({ data: { success: false, error: 'Import not available' } });
