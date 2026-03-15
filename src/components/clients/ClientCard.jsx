@@ -105,12 +105,12 @@ const serviceGroupLabels = {
 };
 
 const serviceGroupIcons = {
-  1: 'bg-green-100 text-green-700 border-green-200',
-  2: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  3: 'bg-blue-100 text-blue-700 border-blue-200',
-  4: 'bg-purple-100 text-purple-700 border-purple-200',
-  5: 'bg-amber-100 text-amber-700 border-amber-200',
-  6: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  1: 'bg-green-600 text-white border-green-700',
+  2: 'bg-emerald-600 text-white border-emerald-700',
+  3: 'bg-blue-600 text-white border-blue-700',
+  4: 'bg-purple-600 text-white border-purple-700',
+  5: 'bg-amber-500 text-white border-amber-600',
+  6: 'bg-indigo-600 text-white border-indigo-700',
 };
 
 function ServiceTreeSection({ services }) {
@@ -155,15 +155,15 @@ function ServiceTreeSection({ services }) {
             {/* Group header - collapsible */}
             <button
               onClick={(e) => { e.stopPropagation(); toggleGroup(Number(groupId)); }}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs font-medium transition-colors hover:bg-gray-50 ${groupColor.split(' ').slice(0, 1).join(' ')}`}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs font-bold transition-colors rounded-t-md ${groupColor}`}
             >
               {isGroupExpanded ? (
-                <ChevronDown className="w-3 h-3 shrink-0 text-gray-400" />
+                <ChevronDown className="w-3 h-3 shrink-0 text-white/80" />
               ) : (
-                <ChevronLeft className="w-3 h-3 shrink-0 text-gray-400" />
+                <ChevronLeft className="w-3 h-3 shrink-0 text-white/80" />
               )}
-              <span className={groupColor.split(' ').slice(1, 2).join(' ')}>{groupLabel}</span>
-              <Badge className={`${groupColor} text-[9px] px-1 py-0 border mr-auto`}>
+              <span className="text-white">{groupLabel}</span>
+              <Badge className="bg-white/20 text-white text-[9px] px-1 py-0 border border-white/30 mr-auto">
                 {svcs.length}
               </Badge>
             </button>

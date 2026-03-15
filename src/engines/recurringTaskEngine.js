@@ -25,6 +25,7 @@
 
 import { TAX_SERVICES, PAYROLL_SERVICES, ALL_SERVICES } from '@/config/processTemplates';
 import { getDueDateForCategory, isClient874, isBimonthlyOffMonth } from '@/config/taxCalendar2026';
+import { resolveFrequency, shouldInjectForMonth } from '@/services/processTreeService';
 
 // ============================================================
 // SERVICE GROUP DEFINITIONS
@@ -212,16 +213,32 @@ function clientHasService(client, serviceDef) {
  * Determines if the given month is an off-month for this client+service.
  * Off-month = client's frequency for this service skips this month.
  *
+ * Resolution order:
+ *   1. Process tree frequency (via resolveFrequency) — checks client override,
+ *      reporting_info, fallback, parent inheritance, and tree defaults.
+ *   2. Legacy fallback — client.reporting_info[frequencyField] (for clients
+ *      without a process tree or when companyTree is not provided).
+ *
  * @param {Object} client
  * @param {Object} serviceDef
  * @param {number} reportMonth - 1-indexed month
+ * @param {Object} [companyTree] - Company process tree (enables full resolution chain)
  * @returns {boolean} true if this month should be SKIPPED
  */
-function isOffMonth(client, serviceDef, reportMonth) {
-  const frequency = client?.reporting_info?.[serviceDef.frequencyField];
+function isOffMonth(client, serviceDef, reportMonth, companyTree) {
+  let frequency;
+
+  // PRIMARY: Use process tree resolution chain if company tree is available
+  if (companyTree && serviceDef.treeNodeId) {
+    frequency = resolveFrequency(serviceDef.treeNodeId, client, companyTree);
+    // shouldInjectForMonth returns true if task SHOULD be created
+    return !shouldInjectForMonth(frequency, reportMonth);
+  }
+
+  // FALLBACK: Legacy reporting_info lookup
+  frequency = client?.reporting_info?.[serviceDef.frequencyField];
 
   if (!frequency || frequency === 'monthly' || frequency === 'not_applicable') {
-    // monthly = every month; not_applicable handled by clientHasService returning false
     return frequency === 'not_applicable';
   }
 
@@ -229,18 +246,14 @@ function isOffMonth(client, serviceDef, reportMonth) {
   const monthIndex = reportMonth - 1;
 
   if (frequency === 'bimonthly') {
-    // Bimonthly reports on even months (Feb=1, Apr=3, Jun=5, Aug=7, Oct=9, Dec=11)
-    // Off-months: Jan(0), Mar(2), May(4), Jul(6), Sep(8), Nov(10)
     return monthIndex % 2 === 0;
   }
 
   if (frequency === 'quarterly') {
-    // Quarterly: months 3, 6, 9, 12 (indices 2, 5, 8, 11)
     return !([2, 5, 8, 11].includes(monthIndex));
   }
 
   if (frequency === 'semi_annual') {
-    // Semi-annual: months 6, 12 (indices 5, 11)
     return !([5, 11].includes(monthIndex));
   }
 
@@ -277,7 +290,7 @@ function initProcessSteps(templateKey) {
  * @param {Array} [params.existingTasks] - Existing tasks for duplicate detection
  * @returns {Object} { clientBreakdown, flatTasks, totalCount, validationReport }
  */
-export function generateRecurringTasks({ clients, reportMonth, reportYear, existingTasks = [] }) {
+export function generateRecurringTasks({ clients, reportMonth, reportYear, existingTasks = [], companyTree = null }) {
   // GATE 1: Filter to active clients only
   const activeClients = clients.filter(c => c.status === 'active');
 
@@ -310,8 +323,8 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
         const hasService = clientHasService(client, serviceDef);
         if (!hasService) continue;
 
-        // RULE 2: Is this an off-month?
-        if (isOffMonth(client, serviceDef, reportMonth)) continue;
+        // RULE 2: Is this an off-month? (uses process tree resolution if available)
+        if (isOffMonth(client, serviceDef, reportMonth, companyTree)) continue;
 
         // RULE 3: Duplicate detection
         const dedupKey = `${client.name}|${serviceDef.category}|${reportYear}-${String(reportMonth).padStart(2, '0')}`;
@@ -394,7 +407,7 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
  * @param {number} reportYear
  * @returns {Object} { headers, rows, totals }
  */
-export function buildServiceMatrix(clients, reportMonth, reportYear) {
+export function buildServiceMatrix(clients, reportMonth, reportYear, companyTree = null) {
   const activeClients = clients.filter(c => c.status === 'active');
 
   // All main services in column order (P1 first, then P2)
@@ -419,7 +432,7 @@ export function buildServiceMatrix(clients, reportMonth, reportYear) {
 
     allServices.forEach((serviceDef, colIdx) => {
       const hasService = clientHasService(client, serviceDef);
-      const offMonth = hasService && isOffMonth(client, serviceDef, reportMonth);
+      const offMonth = hasService && isOffMonth(client, serviceDef, reportMonth, companyTree);
 
       if (!hasService) {
         row.cells.push({ status: 'X', subTasks: [], label: 'X' });
