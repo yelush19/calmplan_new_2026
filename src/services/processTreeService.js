@@ -308,8 +308,7 @@ export async function loadSettingFromDb(key) {
       .limit(1);
     if (error) throw error;
     if (rows && rows.length > 0) {
-      // Entity API uses config_value, direct Supabase uses data
-      return rows[0].config_value ?? rows[0].data ?? null;
+      return rows[0].data ?? rows[0].config_value ?? null;
     }
     return null;
   } catch (err) {
@@ -332,11 +331,16 @@ export async function syncSettingToDb(key, value) {
       .select('id')
       .eq('config_key', key)
       .limit(1);
-    const payload = { config_key: key, config_value: value, data: value, updated_date: now, updated_at: now };
+    // Use only columns known to exist: id, config_key, data, created_date, updated_date
     if (rows && rows.length > 0) {
-      await supabase.from(TABLE).update(payload).eq('id', rows[0].id);
+      const { error } = await supabase.from(TABLE)
+        .update({ data: value, updated_date: now })
+        .eq('id', rows[0].id);
+      if (error) throw error;
     } else {
-      await supabase.from(TABLE).insert({ id: crypto.randomUUID(), ...payload, created_date: now });
+      const { error } = await supabase.from(TABLE)
+        .insert({ id: crypto.randomUUID(), config_key: key, data: value, created_date: now, updated_date: now });
+      if (error) throw error;
     }
     console.log(`[ProcessTreeService] ✅ Setting "${key}" synced to DB`);
   } catch (err) {
