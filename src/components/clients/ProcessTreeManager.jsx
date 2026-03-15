@@ -205,8 +205,18 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
   };
 
   return (
-    <div className={depth === 0 ? '' : 'mr-5 border-r border-gray-200 pr-3'}>
-      <div className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors group/treenode ${enabled ? colors.bg : 'bg-gray-50 opacity-60'}`}>
+    <div className={
+      depth === 0
+        ? 'mb-1'
+        : depth === 1
+          ? 'mr-6 pr-3 border-r-2 border-gray-300 mb-0.5'
+          : 'mr-4 pr-2 border-r border-dashed border-gray-200 mb-0.5'
+    }>
+      <div className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors group/treenode ${
+        depth === 0
+          ? (enabled ? `${colors.bg} border ${colors.border} shadow-sm` : 'bg-gray-50 opacity-60 border border-gray-200')
+          : (enabled ? colors.bg : 'bg-gray-50 opacity-60')
+      }`}>
         {/* Collapse toggle */}
         {hasChildren ? (
           <button
@@ -241,7 +251,13 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           </div>
         ) : (
           <span
-            className={`text-sm font-medium flex-1 cursor-pointer hover:underline decoration-dashed underline-offset-2 ${enabled ? 'text-gray-800' : 'text-gray-400'}`}
+            className={`flex-1 cursor-pointer hover:underline decoration-dashed underline-offset-2 ${
+              depth === 0
+                ? `text-sm font-bold ${enabled ? 'text-gray-900' : 'text-gray-400'}`
+                : depth === 1
+                  ? `text-[13px] font-medium ${enabled ? 'text-gray-800' : 'text-gray-400'}`
+                  : `text-xs font-normal ${enabled ? 'text-gray-600' : 'text-gray-400'}`
+            }`}
             onClick={() => { setLabelDraft(node.label); setEditingLabel(true); }}
             title="לחץ לשינוי שם"
           >
@@ -783,16 +799,16 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
         }, 0);
 
         return (
-          <div key={branchId} className={`border rounded-lg overflow-hidden ${colors.border}`}>
+          <div key={branchId} className={`border-2 rounded-xl overflow-hidden ${colors.border} shadow-sm`}>
             {/* Branch header */}
             <button
               type="button"
               onClick={() => setExpandedBranches(prev => ({ ...prev, [branchId]: !isExpanded }))}
-              className={`w-full flex items-center justify-between px-3 py-2 ${colors.bg} hover:opacity-90 transition-opacity`}
+              className={`w-full flex items-center justify-between px-4 py-3 ${colors.bg} hover:opacity-90 transition-opacity`}
             >
               <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${colors.dot}`} />
-                <span className={`text-sm font-bold ${colors.text}`}>{branchId} | {branch.label}</span>
+                <div className={`w-3 h-3 rounded-full ${colors.dot}`} />
+                <span className={`text-base font-black ${colors.text}`}>{branchId} | {branch.label}</span>
                 {branchEnabledCount > 0 && (
                   <Badge className={`${colors.badge} text-[10px] px-1.5 py-0`}>
                     {branchEnabledCount} פעילים
@@ -804,7 +820,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
 
             {/* Branch children */}
             {isExpanded && (
-              <div className="p-2 space-y-0.5">
+              <div className="p-3 space-y-1 bg-white">
                 {(branch.children || []).map((node, nodeIdx) => (
                   <TreeNode
                     key={node.id}
