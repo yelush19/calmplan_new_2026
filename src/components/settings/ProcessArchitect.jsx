@@ -333,48 +333,48 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
   };
 
   return (
-    <div className={depth > 0 ? 'mr-4 border-r-2 pr-3' : ''} style={depth > 0 ? { borderColor: branchColor + '40' } : {}}>
-      <div className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-gray-50 transition-colors group/node">
+    <div className={depth > 0 ? 'mr-6 border-r-2 pr-4' : ''} style={depth > 0 ? { borderColor: branchColor + '40' } : {}}>
+      <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors group/node">
         {/* Collapse */}
         {hasChildren ? (
-          <button type="button" onClick={() => setCollapsed(!collapsed)} className="w-5 h-5 flex items-center justify-center text-gray-400">
-            {collapsed ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          <button type="button" onClick={() => setCollapsed(!collapsed)} className="w-7 h-7 flex items-center justify-center rounded-md border-2 transition-colors" style={{ borderColor: branchColor + '60', color: branchColor, backgroundColor: collapsed ? branchColor + '15' : 'transparent' }}>
+            {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
-        ) : <div className="w-5" />}
+        ) : <div className="w-7" />}
 
         {/* Color dot */}
-        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: branchColor }} />
+        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: branchColor }} />
 
         {/* Editable label */}
         <InlineEdit
           value={node.label}
           onSave={(val) => updateField('label', val)}
-          className="text-sm font-medium text-gray-800 flex-1"
+          className="text-base font-semibold text-gray-800 flex-1"
         />
 
         {/* Parent badge */}
         {node.is_parent_task && (
-          <Badge className="text-[9px] px-1 py-0 bg-blue-50 text-blue-600 border-blue-200">אב</Badge>
+          <Badge className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 border-blue-200">אב</Badge>
         )}
 
         {/* Frequency inherit badge */}
         {node.frequency_inherit && (
-          <Badge className="text-[8px] px-1 py-0 bg-gray-100 text-gray-500">ירושה</Badge>
+          <Badge className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500">ירושה</Badge>
         )}
 
         {/* Extra fields badge */}
         {hasExtraFields && (
-          <Badge className="text-[8px] px-1 py-0 bg-purple-50 text-purple-500">{Object.keys(node.extra_fields).length} שדות</Badge>
+          <Badge className="text-xs px-2 py-0.5 bg-purple-50 text-purple-500">{Object.keys(node.extra_fields).length} שדות</Badge>
         )}
 
         {/* Frequency */}
         <Select value={node.default_frequency || 'monthly'} onValueChange={(val) => updateField('default_frequency', val)}>
-          <SelectTrigger className="h-5 w-[80px] text-[10px] border-gray-200">
+          <SelectTrigger className="h-7 w-[90px] text-sm border-gray-300">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {FREQUENCY_OPTIONS.map(opt => (
-              <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+              <SelectItem key={opt.value} value={opt.value} className="text-sm">{opt.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -383,33 +383,33 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
         <button
           type="button"
           onClick={() => setShowSettings(!showSettings)}
-          className={`text-[10px] flex items-center gap-0.5 transition-colors ${showSettings ? 'text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}
+          className={`flex items-center gap-1 transition-colors ${showSettings ? 'text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}
           title="הגדרות מתקדמות"
         >
-          <Settings2 className="w-3 h-3" />
+          <Settings2 className="w-4 h-4" />
         </button>
 
         {/* Steps toggle + inline badges */}
         <button
           type="button"
           onClick={() => setShowSteps(!showSteps)}
-          className={`text-[10px] flex items-center gap-0.5 transition-colors ${showSteps ? 'text-amber-600' : 'text-gray-400 hover:text-gray-600'}`}
+          className={`text-sm flex items-center gap-1 transition-colors ${showSteps ? 'text-amber-600' : 'text-gray-400 hover:text-gray-600'}`}
           title="ערוך שלבים"
         >
-          <Layers className="w-3 h-3" />
-          {resolvedSteps.length > 0 && <span className="font-medium">{resolvedSteps.length}</span>}
-          {isInheritedSteps && <span className="text-[8px] text-blue-400 mr-0.5">T</span>}
+          <Layers className="w-4 h-4" />
+          {resolvedSteps.length > 0 && <span className="font-semibold">{resolvedSteps.length}</span>}
+          {isInheritedSteps && <span className="text-xs text-blue-400 mr-0.5">T</span>}
         </button>
         {/* Inline step labels (always visible when steps exist) */}
         {!showSteps && resolvedSteps.length > 0 && (
-          <div className="flex flex-wrap gap-0.5 max-w-[200px]">
+          <div className="flex flex-wrap gap-1 max-w-[280px]">
             {resolvedSteps.slice(0, 4).map((step, i) => (
-              <Badge key={step.key || i} className={`text-[8px] px-1 py-0 border whitespace-nowrap ${isInheritedSteps ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+              <Badge key={step.key || i} className={`text-xs px-1.5 py-0.5 border whitespace-nowrap ${isInheritedSteps ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                 {step.label}
               </Badge>
             ))}
             {resolvedSteps.length > 4 && (
-              <Badge className="bg-gray-50 text-gray-500 text-[8px] px-1 py-0 border border-gray-200">
+              <Badge className="bg-gray-50 text-gray-500 text-xs px-1.5 py-0.5 border border-gray-200">
                 +{resolvedSteps.length - 4}
               </Badge>
             )}
@@ -420,21 +420,21 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
         <button
           type="button"
           onClick={() => setAddingChild(!addingChild)}
-          className="opacity-0 group-hover/node:opacity-100 text-gray-300 hover:text-green-600 transition-all"
+          className="text-green-500 hover:text-green-700 transition-all"
           title="הוסף צומת בן"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-4 h-4" />
         </button>
 
-        {/* Move node */}
+        {/* Move node (re-parent) */}
         {onMoveNode && (
           <button
             type="button"
             onClick={() => setShowMoveMenu(!showMoveMenu)}
-            className="opacity-0 group-hover/node:opacity-100 text-gray-300 hover:text-blue-500 transition-all"
-            title="העבר צומת"
+            className="text-blue-400 hover:text-blue-600 transition-all"
+            title="העבר לאב אחר"
           >
-            <ArrowRightLeft className="w-3.5 h-3.5" />
+            <ArrowRightLeft className="w-4 h-4" />
           </button>
         )}
 
@@ -442,10 +442,10 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
         <button
           type="button"
           onClick={onRemove}
-          className="opacity-0 group-hover/node:opacity-100 text-gray-300 hover:text-red-500 transition-all"
+          className="text-gray-300 hover:text-red-500 transition-all"
           title="מחק צומת"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-4 h-4" />
         </button>
       </div>
 

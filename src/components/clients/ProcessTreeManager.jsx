@@ -277,12 +277,12 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           <button
             type="button"
             onClick={() => setCollapsed(!collapsed)}
-            className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600"
+            className="w-6 h-6 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-colors"
           >
-            {collapsed ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         ) : (
-          <div className="w-5" />
+          <div className="w-6" />
         )}
 
         {/* Enable/disable switch */}
@@ -308,10 +308,10 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           <span
             className={`flex-1 cursor-pointer hover:underline decoration-dashed underline-offset-2 ${
               depth === 0
-                ? `text-sm font-black ${enabled ? 'text-gray-900' : 'text-gray-400'}`
+                ? `text-base font-black ${enabled ? 'text-gray-900' : 'text-gray-400'}`
                 : depth === 1
-                  ? `text-[13px] font-semibold ${enabled ? 'text-gray-700' : 'text-gray-400'}`
-                  : `text-xs font-normal ${enabled ? 'text-gray-500' : 'text-gray-300'}`
+                  ? `text-sm font-bold ${enabled ? 'text-gray-700' : 'text-gray-400'}`
+                  : `text-sm font-medium ${enabled ? 'text-gray-600' : 'text-gray-300'}`
             }`}
             onClick={() => { setLabelDraft(node.label); setEditingLabel(true); }}
             title="לחץ לשינוי שם"
@@ -323,35 +323,34 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
 
         {/* Parent task badge */}
         {node.is_parent_task && (
-          <Badge className={`${colors.badge} text-[10px] px-1.5 py-0 border ${colors.border}`}>
+          <Badge className={`${colors.badge} text-xs px-2 py-0.5 border ${colors.border}`}>
             משימת אב
           </Badge>
         )}
 
-        {/* Frequency indicator / override */}
-        {enabled && hasFrequencyField && (
+        {/* Frequency selector — available for ALL enabled nodes */}
+        {enabled && (
           <Select
             value={clientOverride || 'inherit'}
             onValueChange={(val) => onFrequencyChange(node.id, val === 'inherit' ? null : val)}
           >
-            <SelectTrigger className="h-6 w-[100px] text-[11px] border-gray-300">
-              <Calendar className="w-3 h-3 ml-1 text-gray-400" />
+            <SelectTrigger className="h-7 w-[110px] text-sm border-gray-300">
+              <Calendar className="w-3.5 h-3.5 ml-1 text-gray-400" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {FREQUENCY_OPTIONS.map(opt => (
-                <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                <SelectItem key={opt.value} value={opt.value} className="text-sm">
                   {opt.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         )}
-
-        {/* Show resolved frequency for nodes without direct override */}
-        {enabled && !hasFrequencyField && effectiveFreq && (
-          <span className="text-[10px] text-gray-400">
-            {FREQUENCY_LABELS[effectiveFreq] || effectiveFreq}
+        {/* Show resolved default when client uses inherit */}
+        {enabled && !clientOverride && effectiveFreq && (
+          <span className="text-xs text-gray-400" title="ברירת מחדל מהגדרות מערכת">
+            ({FREQUENCY_LABELS[effectiveFreq] || effectiveFreq})
           </span>
         )}
 
@@ -366,33 +365,33 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setStepsExpanded(!stepsExpanded); }}
-          className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded transition-colors ${stepsExpanded ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'}`}
+          className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${stepsExpanded ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'}`}
           title="ערוך שלבים"
         >
-          <Layers className="w-3 h-3" />
-          <span className="font-medium">{nodeSteps.length}</span>
+          <Layers className="w-3.5 h-3.5" />
+          <span className="font-semibold">{nodeSteps.length}</span>
         </button>
 
-        {/* Move up/down/reparent buttons — visible on hover */}
-        <div className="opacity-0 group-hover/treenode:opacity-100 flex items-center gap-0.5 transition-opacity relative">
+        {/* Move up/down/reparent buttons */}
+        <div className="flex items-center gap-1 transition-opacity relative">
           {siblingIndex > 0 && (
-            <button type="button" onClick={handleMoveUp} className="text-gray-300 hover:text-blue-500" title="הזז למעלה">
-              <ArrowUp className="w-3 h-3" />
+            <button type="button" onClick={handleMoveUp} className="text-gray-400 hover:text-blue-500" title="הזז למעלה">
+              <ArrowUp className="w-4 h-4" />
             </button>
           )}
           {siblingIndex < siblingCount - 1 && (
-            <button type="button" onClick={handleMoveDown} className="text-gray-300 hover:text-blue-500" title="הזז למטה">
-              <ArrowDown className="w-3 h-3" />
+            <button type="button" onClick={handleMoveDown} className="text-gray-400 hover:text-blue-500" title="הזז למטה">
+              <ArrowDown className="w-4 h-4" />
             </button>
           )}
-          <button type="button" onClick={() => setShowMoveMenu(!showMoveMenu)} className="text-gray-300 hover:text-violet-500" title="העבר לצומת אחר">
-            <MoveRight className="w-3 h-3" />
+          <button type="button" onClick={() => setShowMoveMenu(!showMoveMenu)} className="text-violet-400 hover:text-violet-600" title="העבר לאב אחר">
+            <MoveRight className="w-4 h-4" />
           </button>
-          <button type="button" onClick={() => setAddingChild(!addingChild)} className="text-gray-300 hover:text-emerald-500" title="הוסף צומת בן">
-            <Plus className="w-3 h-3" />
+          <button type="button" onClick={() => setAddingChild(!addingChild)} className="text-emerald-400 hover:text-emerald-600" title="הוסף צומת בן">
+            <Plus className="w-4 h-4" />
           </button>
           <button type="button" onClick={handleDeleteNode} className="text-gray-300 hover:text-red-500" title="מחק צומת">
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="w-4 h-4" />
           </button>
 
           {/* Move-to dropdown */}
