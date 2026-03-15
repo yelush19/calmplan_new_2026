@@ -69,20 +69,17 @@ const serviceTypeColors = {
 
 // סדר מיון לפי קבוצת צבעים - אותה קטגוריה באותה שורה
 const serviceGroupOrder = {
-    // קבוצה 1 (ירוק): הנה"ח
+    // קבוצה 1 (ירוק): הנה"ח ודוחות (כולל מס"ב ספקים)
     bookkeeping: 1, bookkeeping_full: 1, reconciliation: 1,
     annual_reports: 1, pnl_reports: 1, admin: 1, special_reports: 1,
-    // מע"מ ומקדמות (אמרלד)
+    masav_suppliers: 1,
+    // קבוצה 2 (אמרלד): מע"מ ומקדמות
     vat_reporting: 2, tax_advances: 2,
-    // קבוצה 2 (כחול): שכר
+    // קבוצה 3 (כחול): שכר (כולל נוספים לשכר + סוציאליות)
     payroll: 3, social_security: 3, deductions: 3,
     authorities: 3, authorities_payment: 3, social_benefits: 3, reserve_claims: 3,
-    // קבוצה 3 (סגול): תלושים
-    payslip_sending: 4, masav_employees: 4,
-    // קבוצה 4 (כתום): מס"ב סוציאליות
-    masav_social: 5, masav_authorities: 5, operator_reporting: 5, taml_reporting: 5,
-    // קבוצה 5 (אינדיגו): מס"ב ספקים
-    masav_suppliers: 6,
+    payslip_sending: 3, masav_employees: 3,
+    masav_social: 3, masav_authorities: 3, operator_reporting: 3, taml_reporting: 3,
 };
 
 const statusUI = {
@@ -96,21 +93,15 @@ const statusUI = {
 
 // ── Collapsible service group with steps ──
 const serviceGroupLabels = {
-  1: 'הנה"ח ומאזנים',
+  1: 'הנה"ח ודוחות',
   2: 'מע"מ ומקדמות',
-  3: 'שכר ורשויות',
-  4: 'תלושים ומס"ב עובדים',
-  5: 'מס"ב ומתפעלים',
-  6: 'מס"ב ספקים',
+  3: 'שכר',
 };
 
 const serviceGroupIcons = {
   1: 'bg-green-600 text-white border-green-700',
   2: 'bg-emerald-600 text-white border-emerald-700',
   3: 'bg-blue-600 text-white border-blue-700',
-  4: 'bg-purple-600 text-white border-purple-700',
-  5: 'bg-amber-500 text-white border-amber-600',
-  6: 'bg-indigo-600 text-white border-indigo-700',
 };
 
 function ServiceTreeSection({ services }) {
