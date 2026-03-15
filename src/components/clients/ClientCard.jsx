@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard, BookUser, FolderOpen, Receipt } from 'lucide-react';
+import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, ChevronLeft, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard, BookUser, FolderOpen, Receipt, Layers, Link2 } from 'lucide-react';
 import TaxInfoDialog from '@/components/clients/TaxInfoDialog';
+import { ALL_SERVICES } from '@/config/processTemplates';
 
 const serviceTypeLabels = {
     bookkeeping: 'הנהלת חשבונות',
@@ -92,6 +93,130 @@ const statusUI = {
   onboarding_pending: { label: 'ממתין לקליטה', icon: UserCheck, color: 'text-purple-600', badge: 'bg-purple-100 text-purple-800 border-purple-200' },
   balance_sheet_only: { label: 'סגירת מאזן בלבד', icon: FileText, color: 'text-cyan-600', badge: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
 };
+
+// ── Collapsible service group with steps ──
+const serviceGroupLabels = {
+  1: 'הנה"ח ומאזנים',
+  2: 'מע"מ ומקדמות',
+  3: 'שכר ורשויות',
+  4: 'תלושים ומס"ב עובדים',
+  5: 'מס"ב ומתפעלים',
+  6: 'מס"ב ספקים',
+};
+
+const serviceGroupIcons = {
+  1: 'bg-green-100 text-green-700 border-green-200',
+  2: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  3: 'bg-blue-100 text-blue-700 border-blue-200',
+  4: 'bg-purple-100 text-purple-700 border-purple-200',
+  5: 'bg-amber-100 text-amber-700 border-amber-200',
+  6: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+};
+
+function ServiceTreeSection({ services }) {
+  const [expandedGroups, setExpandedGroups] = useState(new Set());
+  const [expandedServices, setExpandedServices] = useState(new Set());
+
+  // Group services by their group
+  const grouped = {};
+  services.forEach(svc => {
+    const group = serviceGroupOrder[svc] || 99;
+    if (!grouped[group]) grouped[group] = [];
+    grouped[group].push(svc);
+  });
+
+  const toggleGroup = (groupId) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
+
+  const toggleService = (svcKey) => {
+    setExpandedServices(prev => {
+      const next = new Set(prev);
+      if (next.has(svcKey)) next.delete(svcKey);
+      else next.add(svcKey);
+      return next;
+    });
+  };
+
+  return (
+    <div className="border-t border-gray-100 pt-3 mt-2 space-y-1">
+      {Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).map(([groupId, svcs]) => {
+        const isGroupExpanded = expandedGroups.has(Number(groupId));
+        const groupLabel = serviceGroupLabels[groupId] || `קבוצה ${groupId}`;
+        const groupColor = serviceGroupIcons[groupId] || 'bg-gray-100 text-gray-700 border-gray-200';
+
+        return (
+          <div key={groupId} className="rounded-md border border-gray-100 overflow-hidden">
+            {/* Group header - collapsible */}
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleGroup(Number(groupId)); }}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs font-medium transition-colors hover:bg-gray-50 ${groupColor.split(' ').slice(0, 1).join(' ')}`}
+            >
+              {isGroupExpanded ? (
+                <ChevronDown className="w-3 h-3 shrink-0 text-gray-400" />
+              ) : (
+                <ChevronLeft className="w-3 h-3 shrink-0 text-gray-400" />
+              )}
+              <span className={groupColor.split(' ').slice(1, 2).join(' ')}>{groupLabel}</span>
+              <Badge className={`${groupColor} text-[9px] px-1 py-0 border mr-auto`}>
+                {svcs.length}
+              </Badge>
+            </button>
+
+            {/* Expanded: show services */}
+            {isGroupExpanded && (
+              <div className="px-2 pb-1.5 space-y-0.5">
+                {svcs.map(svcKey => {
+                  const svcTemplate = ALL_SERVICES[svcKey];
+                  const steps = svcTemplate?.steps || [];
+                  const isServiceExpanded = expandedServices.has(svcKey);
+                  const hasSteps = steps.length > 0;
+
+                  return (
+                    <div key={svcKey} className="mr-2 border-r-2 pr-2" style={{ borderColor: groupColor.includes('green') ? '#86efac' : groupColor.includes('blue') ? '#93c5fd' : groupColor.includes('purple') ? '#c4b5fd' : groupColor.includes('amber') ? '#fcd34d' : groupColor.includes('emerald') ? '#6ee7b7' : '#a5b4fc' }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (hasSteps) toggleService(svcKey); }}
+                        className="w-full flex items-center gap-1.5 py-0.5 text-xs hover:text-gray-900 transition-colors"
+                      >
+                        {hasSteps ? (
+                          isServiceExpanded ? <ChevronDown className="w-2.5 h-2.5 text-gray-400" /> : <ChevronLeft className="w-2.5 h-2.5 text-gray-400" />
+                        ) : <div className="w-2.5" />}
+                        <span className="text-gray-700">{serviceTypeLabels[svcKey] || svcKey.replace(/_/g, ' ')}</span>
+                        {hasSteps && (
+                          <span className="text-[9px] text-gray-400 mr-auto flex items-center gap-0.5">
+                            <Layers className="w-2.5 h-2.5" />
+                            {steps.length}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Steps list */}
+                      {isServiceExpanded && hasSteps && (
+                        <div className="mr-4 pb-1 space-y-0.5">
+                          {steps.map((step, idx) => (
+                            <div key={step.key} className="flex items-center gap-1.5 text-[10px] text-gray-500 py-0.5">
+                              <Badge className="bg-amber-50 text-amber-600 text-[8px] px-1 py-0 border border-amber-200">{idx + 1}</Badge>
+                              <span>{step.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function ClientCard({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks, onSelectFiles }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -297,17 +422,9 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
           </div>
         )}
 
-        {/* שירותים */}
+        {/* שירותים עם שלבים - מקופל */}
         {services.length > 0 && (
-          <div className="border-t border-gray-100 pt-3 mt-2">
-            <div className="flex flex-wrap gap-1.5">
-              {services.map(service => (
-                <Badge key={service} className={`${serviceTypeColors[service] || 'bg-gray-50 text-gray-700 border-gray-200'} text-xs px-2 py-1 border`}>
-                  {serviceTypeLabels[service] || service.replace(/_/g, ' ')}
-                </Badge>
-              ))}
-            </div>
-          </div>
+          <ServiceTreeSection services={services} />
         )}
 
         {/* Tax IDs - quick reference */}
