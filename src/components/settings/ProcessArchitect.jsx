@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
   Plus, Trash2, Save, ChevronDown, ChevronLeft, GripVertical,
   Pencil, Check, X, Network, Loader2, AlertTriangle, CheckCircle,
@@ -32,6 +33,7 @@ import {
   saveAndBroadcast,
   onTreeChange,
   syncSettingToDb,
+  getLastSyncResult,
 } from '@/services/processTreeService';
 import { flattenTree } from '@/config/companyProcessTree';
 import { getStepsForService } from '@/config/processTemplates';
@@ -268,7 +270,7 @@ function ExtraFieldsEditor({ extraFields, onChange }) {
 }
 
 // ── Single node editor (recursive) ──
-function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, allNodeIds, onMoveNode, allBranchIds, allNodesFlat }) {
+function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, allNodeIds, onMoveNode, allBranchIds, allNodesFlat, onOpenEditor }) {
   const [collapsed, setCollapsed] = useState(depth > 0);
   const [showSteps, setShowSteps] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -414,6 +416,19 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
               </Badge>
             )}
           </div>
+        )}
+
+        {/* Open side panel editor */}
+        {onOpenEditor && (
+          <button
+            type="button"
+            onClick={() => onOpenEditor(node.id, branchId)}
+            className="px-2 py-1 rounded-md text-xs font-bold border-2 transition-all hover:shadow-sm"
+            style={{ borderColor: branchColor, color: branchColor, backgroundColor: branchColor + '10' }}
+            title="ערוך בחלון צידי"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
         )}
 
         {/* Add child */}
@@ -584,6 +599,7 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
               onMoveNode={onMoveNode}
               allBranchIds={allBranchIds}
               allNodesFlat={allNodesFlat}
+              onOpenEditor={onOpenEditor}
             />
           ))}
         </div>
@@ -604,6 +620,10 @@ export default function ProcessArchitect() {
   // Add branch state
   const [addingBranch, setAddingBranch] = useState(false);
   const [newBranchLabel, setNewBranchLabel] = useState('');
+
+  // Side panel editor state
+  const [editingNodeId, setEditingNodeId] = useState(null);
+  const [editingBranchId, setEditingBranchId] = useState(null);
 
   // Load tree
   useEffect(() => {
@@ -903,7 +923,14 @@ export default function ProcessArchitect() {
       setIsDirty(false);
       setSaveResult('success');
       console.log('[ProcessArchitect] ✅ Saved & broadcasted to all consumers');
-      toast({ title: 'עץ התהליכים נשמר', description: 'השינויים ישתקפו מיד בכל המערכת' });
+      const syncResult = getLastSyncResult();
+      if (syncResult?.errors?.length > 0) {
+        toast({ title: 'עץ נשמר — סנכרון חלקי', description: `${syncResult.updatedCount} לקוחות עודכנו, ${syncResult.errors.length} נכשלו`, variant: 'destructive' });
+      } else if (syncResult?.updatedCount > 0) {
+        toast({ title: 'עץ נשמר וסונכרן', description: `${syncResult.updatedCount} כרטיסי לקוח עודכנו אוטומטית` });
+      } else {
+        toast({ title: 'עץ התהליכים נשמר', description: 'השינויים ישתקפו מיד בכל המערכת' });
+      }
 
       // Clean MindMap's localStorage: remove custom services whose branch was deleted
       try {
@@ -961,8 +988,161 @@ export default function ProcessArchitect() {
 
   const totalNodes = flattenTree(tree).length;
 
+  // Find a node by ID anywhere in the tree (for side panel editor)
+  const findNodeInTree = useCallback((nodeId) => {
+    if (!tree?.branches) return null;
+    const search = (nodes) => {
+      for (const n of (nodes || [])) {
+        if (n.id === nodeId) return n;
+        if (n.children?.length) {
+          const found = search(n.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    for (const [, branch] of Object.entries(tree.branches)) {
+      const found = search(branch.children);
+      if (found) return found;
+    }
+    return null;
+  }, [tree]);
+
+  // Update a node deep in the tree by ID
+  const updateNodeById = useCallback((nodeId, updates) => {
+    setTree(prev => {
+      const updateDeep = (nodes) =>
+        nodes.map(n => {
+          if (n.id === nodeId) return { ...n, ...updates };
+          if (n.children?.length) return { ...n, children: updateDeep(n.children) };
+          return n;
+        });
+
+      const branches = {};
+      for (const [branchId, branch] of Object.entries(prev.branches)) {
+        branches[branchId] = { ...branch, children: updateDeep(branch.children || []) };
+      }
+      return { ...prev, branches };
+    });
+    setIsDirty(true);
+  }, []);
+
+  const editingNode = editingNodeId ? findNodeInTree(editingNodeId) : null;
+  const editingBranchColor = editingBranchId ? getColorForBranch(editingBranchId, Object.keys(tree?.branches || {}).indexOf(editingBranchId)) : '#666';
+
   return (
     <div className="space-y-4">
+      {/* ── Side Panel Editor (Sheet) ── */}
+      <Sheet open={!!editingNode} onOpenChange={(open) => { if (!open) { setEditingNodeId(null); setEditingBranchId(null); } }}>
+        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] overflow-y-auto" style={{ backgroundColor: '#FFFFFF' }}>
+          {editingNode && (
+            <>
+              <SheetHeader className="border-b pb-4 mb-4">
+                <SheetTitle className="text-lg font-black flex items-center gap-2" style={{ color: editingBranchColor }}>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: editingBranchColor }} />
+                  {editingNode.label}
+                </SheetTitle>
+                <SheetDescription className="text-sm text-gray-500">
+                  {editingBranchId} | {editingNode.id}
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="space-y-5">
+                {/* ── Label ── */}
+                <div>
+                  <Label className="text-sm font-bold text-gray-700">שם הצומת</Label>
+                  <Input
+                    value={editingNode.label}
+                    onChange={(e) => updateNodeById(editingNodeId, { label: e.target.value })}
+                    className="mt-1 text-base"
+                  />
+                </div>
+
+                {/* ── Frequency ── */}
+                <div>
+                  <Label className="text-sm font-bold text-gray-700">תדירות ברירת מחדל</Label>
+                  <Select value={editingNode.default_frequency || 'monthly'} onValueChange={(val) => updateNodeById(editingNodeId, { default_frequency: val })}>
+                    <SelectTrigger className="mt-1 h-9 text-sm">
+                      <Calendar className="w-4 h-4 ml-2 text-gray-400" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FREQUENCY_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value} className="text-sm">{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-400 mt-1">תדירות זו תחול על כל לקוח שלא הגדיר דריסה ידנית</p>
+                </div>
+
+                {/* ── Toggles ── */}
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={!!editingNode.is_parent_task} onCheckedChange={(val) => updateNodeById(editingNodeId, { is_parent_task: val })} />
+                    <span className="text-sm text-gray-700">משימת אב</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={!!editingNode.frequency_inherit} onCheckedChange={(val) => updateNodeById(editingNodeId, { frequency_inherit: val })} />
+                    <span className="text-sm text-gray-700">ירושת תדירות</span>
+                  </div>
+                </div>
+
+                {/* ── Execution ── */}
+                <div>
+                  <Label className="text-sm font-bold text-gray-700">מצב ביצוע</Label>
+                  <Select value={editingNode.execution || 'sequential'} onValueChange={(val) => updateNodeById(editingNodeId, { execution: val })}>
+                    <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sequential" className="text-sm">סדרתי</SelectItem>
+                      <SelectItem value="parallel" className="text-sm">מקבילי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* ── Frequency Field ── */}
+                <div>
+                  <Label className="text-sm font-bold text-gray-700">שדה תדירות (מ-reporting_info)</Label>
+                  <Input
+                    value={editingNode.frequency_field || ''}
+                    onChange={(e) => updateNodeById(editingNodeId, { frequency_field: e.target.value || null })}
+                    placeholder="לדוגמה: vat_reporting_frequency"
+                    className="mt-1 text-sm"
+                  />
+                </div>
+
+                {/* ── Steps Editor ── */}
+                <div className="border border-amber-200 rounded-lg overflow-hidden">
+                  <div className="px-3 py-2 bg-amber-50 flex items-center gap-2 border-b border-amber-200">
+                    <Layers className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-bold text-amber-700">שלבים ({(editingNode.steps || []).length})</span>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <StepsEditor
+                      steps={editingNode.steps || []}
+                      onChange={(steps) => updateNodeById(editingNodeId, { steps })}
+                    />
+                  </div>
+                </div>
+
+                {/* ── Extra Fields Editor ── */}
+                <div className="border border-purple-200 rounded-lg overflow-hidden">
+                  <div className="px-3 py-2 bg-purple-50 flex items-center gap-2 border-b border-purple-200">
+                    <Settings2 className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm font-bold text-purple-700">שדות נוספים</span>
+                  </div>
+                  <div className="p-3">
+                    <ExtraFieldsEditor
+                      extraFields={editingNode.extra_fields || {}}
+                      onChange={(ef) => updateNodeById(editingNodeId, { extra_fields: Object.keys(ef).length > 0 ? ef : undefined })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
       {/* Header */}
       <div className="flex items-center justify-between flex-row-reverse">
         <div className="flex items-center gap-3">
@@ -1092,6 +1272,7 @@ export default function ProcessArchitect() {
                       onMoveNode={handleMoveNode}
                       allBranchIds={Object.keys(tree.branches)}
                       allNodesFlat={allNodesFlat}
+                      onOpenEditor={(nodeId, bId) => { setEditingNodeId(nodeId); setEditingBranchId(bId); }}
                     />
                   ))}
                 </div>

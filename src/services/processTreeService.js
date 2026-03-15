@@ -51,6 +51,10 @@ async function getSupabase() {
 /** In-memory cache to avoid repeated DB reads within a session */
 let _cachedTree = null;
 let _cachedConfigId = null;
+let _lastSyncResult = { updatedCount: 0, errors: [] };
+
+/** Get the result of the last syncCompanyTreeToClients run */
+export function getLastSyncResult() { return _lastSyncResult; }
 
 /**
  * Load the company process tree from DB (calmplan_system_config table).
@@ -387,11 +391,15 @@ export async function saveAndBroadcast(tree, configId, source = 'unknown') {
     console.warn('[ProcessTreeService] MindMap sync failed (non-critical):', err);
   }
   // Sync tree structure changes to all clients (auto-enable new children, clean stale)
+  let syncResult = { updatedCount: 0, errors: [] };
   try {
-    await syncCompanyTreeToClients(tree);
+    syncResult = await syncCompanyTreeToClients(tree);
   } catch (err) {
-    console.warn('[ProcessTreeService] Client tree sync failed (non-critical):', err);
+    console.error('[ProcessTreeService] Client tree sync failed:', err);
+    syncResult = { updatedCount: 0, errors: ['sync-crash'] };
   }
+  // Attach sync result to broadcast so UI can show toast
+  _lastSyncResult = syncResult;
   broadcastTreeChange(source);
   return { tree, configId: newConfigId };
 }
@@ -404,14 +412,15 @@ export async function saveAndBroadcast(tree, configId, source = 'unknown') {
  *   - Steps changes → inherited automatically (steps live in company tree, not client tree)
  *
  * @param {object} companyTree - The current company tree
+ * @returns {{ updatedCount: number }} - how many clients were updated
  */
 export async function syncCompanyTreeToClients(companyTree) {
-  if (!companyTree?.branches) return;
+  if (!companyTree?.branches) return { updatedCount: 0 };
 
   // Lazy-import Client entity to avoid circular deps
   const { Client } = await import('@/api/entities');
   const clients = await Client.list(null, 5000).catch(() => []);
-  if (!clients || clients.length === 0) return;
+  if (!clients || clients.length === 0) return { updatedCount: 0 };
 
   // Build a parent→children map from company tree
   const parentChildMap = {};  // parentId → [childId, ...]
@@ -430,24 +439,31 @@ export async function syncCompanyTreeToClients(companyTree) {
   }
 
   let updatedCount = 0;
+  const errors = [];
 
   for (const client of clients) {
     const clientTree = client.process_tree;
-    if (!clientTree || Object.keys(clientTree).length === 0) continue;
+    // Skip only null/undefined — empty {} is valid (might get new enabled nodes)
+    if (clientTree == null) continue;
 
     let updated = { ...clientTree };
     let changed = false;
 
-    // 1. Auto-enable new children of enabled parents
-    for (const [nodeId, nodeState] of Object.entries(clientTree)) {
-      if (!nodeState?.enabled) continue;
-      // Check if this node has children in company tree that are missing from client tree
-      const children = parentChildMap[nodeId] || [];
-      for (const childId of children) {
-        if (!(childId in updated)) {
-          updated[childId] = { enabled: true };
-          changed = true;
-          console.log(`[syncToClients] "${client.name}": auto-enabled new node "${childId}" (parent "${nodeId}" is enabled)`);
+    // 1. Auto-enable new children of enabled parents (cascading)
+    //    Use a loop to handle multi-level cascading (grandchildren etc.)
+    let foundNew = true;
+    while (foundNew) {
+      foundNew = false;
+      for (const [nodeId, nodeState] of Object.entries(updated)) {
+        if (!nodeState?.enabled) continue;
+        const children = parentChildMap[nodeId] || [];
+        for (const childId of children) {
+          if (!(childId in updated)) {
+            updated[childId] = { enabled: true };
+            changed = true;
+            foundNew = true;
+            console.log(`[syncToClients] "${client.name}": auto-enabled new node "${childId}" (parent "${nodeId}" is enabled)`);
+          }
         }
       }
     }
@@ -466,7 +482,8 @@ export async function syncCompanyTreeToClients(companyTree) {
         await Client.update(client.id, { process_tree: updated });
         updatedCount++;
       } catch (err) {
-        console.warn(`[syncToClients] Failed to update client "${client.name}":`, err);
+        console.error(`[syncToClients] Failed to update client "${client.name}":`, err);
+        errors.push(client.name);
       }
     }
   }
@@ -474,6 +491,11 @@ export async function syncCompanyTreeToClients(companyTree) {
   if (updatedCount > 0) {
     console.log(`[ProcessTreeService] ✅ Synced company tree → ${updatedCount} client(s)`);
   }
+  if (errors.length > 0) {
+    console.error(`[ProcessTreeService] ❌ Failed to sync ${errors.length} client(s):`, errors);
+  }
+
+  return { updatedCount, errors };
 }
 
 /**
@@ -1168,7 +1190,10 @@ export function resolveFrequency(nodeId, client, companyTree) {
     visited.add(nId);
 
     const nodeConfig = nodeMap[nId];
-    if (!nodeConfig) return 'monthly';
+    if (!nodeConfig) {
+      console.warn(`[resolveFrequency] Node "${nId}" not found in company tree — parent may have been deleted. Falling back to 'monthly'.`);
+      return 'monthly';
+    }
 
     // 1. Client-level override
     const clientOverride = clientTree[nId]?.frequency;
