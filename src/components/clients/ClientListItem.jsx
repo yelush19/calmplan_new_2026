@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FolderOpen } from 'lucide-react';
+import { Phone, Mail, Edit, Building, DollarSign, Trash2, UserCheck, FolderOpen, ChevronLeft } from 'lucide-react';
 
 const statusUI = {
   active: { label: 'פעיל', badge: 'bg-green-100 text-green-800 border-green-200' },
@@ -39,57 +39,54 @@ const serviceTypeLabels = {
   admin: 'אדמין',
 };
 
-const serviceTypeColors = {
-  // קבוצה 1 (ירוק): הנה"ח, התאמות, מאזנים, PNL
-  bookkeeping: 'bg-green-100 text-green-800 border-green-200',
-  bookkeeping_full: 'bg-green-100 text-green-800 border-green-200',
-  reconciliation: 'bg-green-100 text-green-800 border-green-200',
-  annual_reports: 'bg-green-100 text-green-800 border-green-200',
-  pnl_reports: 'bg-green-100 text-green-800 border-green-200',
-  // מע"מ ומקדמות
-  vat_reporting: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  tax_advances: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  // קבוצה 2 (כחול): שכר, ביטוח לאומי, ניכויים
-  payroll: 'bg-blue-100 text-blue-800 border-blue-200',
-  social_security: 'bg-blue-100 text-blue-800 border-blue-200',
-  deductions: 'bg-blue-100 text-blue-800 border-blue-200',
-  authorities: 'bg-blue-100 text-blue-800 border-blue-200',
-  authorities_payment: 'bg-blue-100 text-blue-800 border-blue-200',
-  social_benefits: 'bg-blue-100 text-blue-800 border-blue-200',
-  // קבוצה 3 (סגול): תלושים, מס"ב עובדים
-  payslip_sending: 'bg-purple-100 text-purple-800 border-purple-200',
-  masav_employees: 'bg-purple-100 text-purple-800 border-purple-200',
-  // קבוצה 4 (כתום): מס"ב סוציאליות, מתפעל, טמל
-  masav_social: 'bg-amber-100 text-amber-800 border-amber-200',
-  masav_authorities: 'bg-amber-100 text-amber-800 border-amber-200',
-  operator_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
-  taml_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
-  // קבוצה 5 (אינדיגו): מס"ב ספקים
-  masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  // שייכויות נוספות
-  reserve_claims: 'bg-blue-100 text-blue-800 border-blue-200',
-  admin: 'bg-green-100 text-green-800 border-green-200',
-  special_reports: 'bg-green-100 text-green-800 border-green-200',
+// Branch grouping — matches ClientCard exactly
+const SERVICE_TO_BRANCH = {
+  // P2 הנה"ח ודוחות
+  bookkeeping: 'P2', bookkeeping_full: 'P2', reconciliation: 'P2',
+  annual_reports: 'P2', pnl_reports: 'P2', admin: 'P2', special_reports: 'P2',
+  masav_suppliers: 'P2', vat_reporting: 'P2', tax_advances: 'P2',
+  // P1 שכר
+  payroll: 'P1', social_security: 'P1', deductions: 'P1',
+  authorities: 'P1', authorities_payment: 'P1', social_benefits: 'P1', reserve_claims: 'P1',
+  payslip_sending: 'P1', masav_employees: 'P1',
+  masav_social: 'P1', masav_authorities: 'P1', operator_reporting: 'P1', taml_reporting: 'P1',
 };
 
-// סדר מיון לפי קבוצת צבעים
-const serviceGroupOrder = {
-  bookkeeping: 1, bookkeeping_full: 1, reconciliation: 1,
-  annual_reports: 1, pnl_reports: 1, admin: 1, special_reports: 1,
-  vat_reporting: 2, tax_advances: 2,
-  payroll: 3, social_security: 3, deductions: 3,
-  authorities: 3, authorities_payment: 3, social_benefits: 3, reserve_claims: 3,
-  payslip_sending: 4, masav_employees: 4,
-  masav_social: 5, masav_authorities: 5, operator_reporting: 5, taml_reporting: 5,
-  masav_suppliers: 6,
+const BRANCH_DISPLAY = {
+  P2: {
+    order: 1,
+    label: 'הנה"ח',
+    headerBg: 'bg-[#1a472a]',
+    badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  },
+  P1: {
+    order: 2,
+    label: 'שכר',
+    headerBg: 'bg-[#4a6274]',
+    badgeBg: 'bg-sky-50 text-sky-800 border-sky-200',
+  },
 };
 
 export default function ClientListItem({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectFiles }) {
     const uiProps = statusUI[client.status] || statusUI.inactive;
     const mainContact = client.contacts?.find(c => c.is_primary) || client.contacts?.[0] || { name: client.contact_person, email: client.email, phone: client.phone };
 
+    // Group services by branch
+    const branchGroups = {};
+    (client.service_types || []).forEach(svc => {
+      const branch = SERVICE_TO_BRANCH[svc] || 'OTHER';
+      if (!branchGroups[branch]) branchGroups[branch] = [];
+      branchGroups[branch].push(svc);
+    });
+
+    const sortedBranches = Object.entries(branchGroups).sort(([a], [b]) => {
+      const orderA = BRANCH_DISPLAY[a]?.order ?? 99;
+      const orderB = BRANCH_DISPLAY[b]?.order ?? 99;
+      return orderA - orderB;
+    });
+
     return (
-        <div className={`group flex flex-col md:flex-row items-start md:items-center justify-between p-4 hover:bg-neutral-bg transition-colors duration-200 border-b border-neutral-light/50 ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}>
+        <div className={`group flex flex-col md:flex-row items-start md:items-center justify-between px-4 py-3 transition-all duration-200 border-b-2 border-gray-100 hover:bg-gray-50/80 ${isSelected ? 'bg-blue-50/60 border-r-4 border-r-blue-500' : 'hover:border-r-4 hover:border-r-emerald-300'}`}>
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 {/* Selection Checkbox */}
                 <div onClick={(e) => e.stopPropagation()}>
@@ -102,52 +99,77 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-neutral-dark group-hover:text-emerald-600 transition-colors truncate">{client.name}</h3>
+                      <h3 className="text-base font-bold text-gray-800 group-hover:text-emerald-700 transition-colors truncate">{client.name}</h3>
                   </div>
-                  <div className="text-sm text-neutral-medium mt-1">{mainContact?.name || ''}</div>
-                  {client.service_types?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {[...client.service_types].sort((a, b) => (serviceGroupOrder[a] || 99) - (serviceGroupOrder[b] || 99)).map(st => (
-                        <Badge key={st} className={`${serviceTypeColors[st] || 'bg-gray-50 text-gray-700 border-gray-200'} text-[10px] px-1.5 py-0 border`}>
-                          {serviceTypeLabels[st] || st}
-                        </Badge>
-                      ))}
+
+                  {/* Services grouped by branch — matching card layout */}
+                  {sortedBranches.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      {sortedBranches.map(([branchId, svcs]) => {
+                        const branchCfg = BRANCH_DISPLAY[branchId];
+                        if (!branchCfg) {
+                          // Unknown branch — plain badges
+                          return svcs.map(st => (
+                            <Badge key={st} className="bg-gray-50 text-gray-600 border-gray-200 text-[10px] px-1.5 py-0 border">
+                              {serviceTypeLabels[st] || st}
+                            </Badge>
+                          ));
+                        }
+                        return (
+                          <div key={branchId} className="flex items-center gap-0.5">
+                            <span className={`${branchCfg.headerBg} text-white text-[9px] font-bold px-1.5 py-0.5 rounded-r-md`}>
+                              {branchCfg.label}
+                            </span>
+                            <div className="flex gap-0.5">
+                              {svcs.map(st => (
+                                <Badge key={st} className={`${branchCfg.badgeBg} text-[10px] px-1.5 py-0 border rounded-none last:rounded-l-md`}>
+                                  {serviceTypeLabels[st] || st}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
             </div>
-            
+
             <div className="w-full md:w-auto flex items-center justify-start gap-4 mt-3 md:mt-0">
-                <a href={`tel:${mainContact?.phone}`} className="text-sm text-neutral-medium hover:text-litay-accent flex items-center gap-2">
-                  <Phone className="w-4 h-4"/> 
-                  <span className="hidden sm:inline">{mainContact?.phone}</span>
-                </a>
-                <a href={`mailto:${mainContact?.email}`} className="text-sm text-neutral-medium hover:text-litay-accent flex items-center gap-2">
-                  <Mail className="w-4 h-4"/> 
-                  <span className="hidden sm:inline truncate max-w-xs">{mainContact?.email}</span>
-                </a>
+                {mainContact?.phone && (
+                  <a href={`tel:${mainContact.phone}`} className="text-sm text-gray-500 hover:text-emerald-700 flex items-center gap-1.5 transition-colors">
+                    <Phone className="w-3.5 h-3.5"/>
+                    <span className="hidden sm:inline">{mainContact.phone}</span>
+                  </a>
+                )}
+                {mainContact?.email && (
+                  <a href={`mailto:${mainContact.email}`} className="text-sm text-gray-500 hover:text-emerald-700 flex items-center gap-1.5 transition-colors">
+                    <Mail className="w-3.5 h-3.5"/>
+                    <span className="hidden sm:inline truncate max-w-xs">{mainContact.email}</span>
+                  </a>
+                )}
             </div>
 
-            <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-4 mt-4 md:mt-0">
-                <Badge className={`${uiProps.badge} flex items-center gap-1 border`}>
+            <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 mt-3 md:mt-0">
+                <Badge className={`${uiProps.badge} flex items-center gap-1 border text-xs font-semibold`}>
                     {client.status === 'onboarding_pending' && <UserCheck className="w-3 h-3"/>}
                     {uiProps.label}
                 </Badge>
-                <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(client)} title="עריכת פרטים">
-                        <Edit className="w-4 h-4 text-neutral-medium hover:text-litay-accent" />
+                <div className="flex gap-0.5">
+                    <Button variant="ghost" size="icon" onClick={() => onEdit(client)} title="עריכת פרטים" className="h-8 w-8 hover:bg-white hover:shadow-sm">
+                        <Edit className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onSelectAccounts(client)} title="ניהול חשבונות">
-                        <Building className="w-4 h-4 text-neutral-medium hover:text-litay-accent" />
+                    <Button variant="ghost" size="icon" onClick={() => onSelectAccounts(client)} title="ניהול חשבונות" className="h-8 w-8 hover:bg-white hover:shadow-sm">
+                        <Building className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onSelectCollections(client)} title="ניהול גבייה">
-                        <DollarSign className="w-4 h-4 text-neutral-medium hover:text-litay-accent" />
+                    <Button variant="ghost" size="icon" onClick={() => onSelectCollections(client)} title="ניהול גבייה" className="h-8 w-8 hover:bg-white hover:shadow-sm">
+                        <DollarSign className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onSelectFiles?.(client)} title="ניהול קבצים">
-                        <FolderOpen className="w-4 h-4 text-neutral-medium hover:text-litay-accent" />
+                    <Button variant="ghost" size="icon" onClick={() => onSelectFiles?.(client)} title="ניהול קבצים" className="h-8 w-8 hover:bg-white hover:shadow-sm">
+                        <FolderOpen className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                     </Button>
-                     <Button variant="ghost" size="icon" onClick={() => onDelete(client.id)} title="מחיקת לקוח">
-                        <Trash2 className="w-4 h-4 text-status-error hover:text-status-error/80" />
+                     <Button variant="ghost" size="icon" onClick={() => onDelete(client.id)} title="מחיקת לקוח" className="h-8 w-8 hover:bg-rose-50">
+                        <Trash2 className="w-4 h-4 text-gray-300 hover:text-red-500" />
                     </Button>
                 </div>
             </div>
