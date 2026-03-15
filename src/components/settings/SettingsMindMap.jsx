@@ -290,8 +290,8 @@ function saveNodePositions(p) {
 }
 
 // ── Force-directed repulsion (directive #11) ──
-function applyForceRepulsion(nodes, iterations = 15) {
-  const MIN_DIST = 65;
+function applyForceRepulsion(nodes, iterations = 20) {
+  const MIN_DIST = 75;
   const result = nodes.map(n => ({ ...n }));
   for (let iter = 0; iter < iterations; iter++) {
     let moved = false;
@@ -799,7 +799,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         rootAngles[key] = startAngle + dynIdx * spread;
       }
     });
-    const rootDist = 250;
+    const rootDist = 280;
 
     // P-Root nodes
     Object.entries(DNA).forEach(([key, dna]) => {
@@ -844,10 +844,12 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       const parentNode = nodeMap[parentId];
       if (!parentNode) return;
 
-      // Distance shrinks at deeper levels, spread stays wide
-      const dist = Math.max(65, 120 - depth * 18);
-      const spreadAngle = Math.PI * 0.7;
       const count = children.length;
+      // Adaptive distance: more children or shallower depth = larger radius
+      const baseDist = depth === 1 ? 140 : Math.max(80, 130 - depth * 15);
+      const dist = baseDist + Math.max(0, count - 3) * 12; // grow when many children
+      // Adaptive spread: more children = wider fan, fewer = tighter
+      const spreadAngle = count <= 1 ? 0 : Math.min(Math.PI * 1.2, Math.PI * 0.35 + count * Math.PI * 0.12);
       // Base angle: point away from parent's parent (or use default)
       const grandParent = nodeMap[parentNode.parentId];
       const baseDirection = grandParent
@@ -1525,11 +1527,11 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     const result = [];
     displayNodes.forEach(node => {
       if (node.parentId === 'hub') {
-        result.push({ from: { x: CX, y: CY }, to: node, color: node.color, thickness: [8, 3] });
+        result.push({ from: { x: CX, y: CY }, to: node, color: node.color, thickness: [6, 2] });
       } else {
         const parent = displayNodes.find(n => n.id === node.parentId);
         if (parent) {
-          const thick = node.type === 'step' ? [2.5, 0.8] : [4, 1.5];
+          const thick = node.type === 'step' ? [1.8, 0.6] : [3, 1.2];
           result.push({ from: parent, to: node, color: node.color, thickness: thick });
         }
       }
@@ -1617,32 +1619,31 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
         {/* ── Flow Arrows (dashed directional — nextStepId links) ── */}
         {flowEdges.map((fe, i) => {
-          // Compute curved path from fe.from to fe.to with offset to avoid overlapping hierarchy lines
           const dx = fe.to.x - fe.from.x;
           const dy = fe.to.y - fe.from.y;
           const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          // Shorten line by node radii so arrow touches edge not center
           const fromR = fe.from.r || 30;
           const toR = fe.to.r || 30;
           const nx = dx / len;
           const ny = dy / len;
           const x1 = fe.from.x + nx * fromR;
           const y1 = fe.from.y + ny * fromR;
-          const x2 = fe.to.x - nx * (toR + 8); // extra gap for arrowhead
+          const x2 = fe.to.x - nx * (toR + 8);
           const y2 = fe.to.y - ny * (toR + 8);
-          // Curved control point perpendicular to line
-          const cpx = (x1 + x2) / 2 - ny * 25;
-          const cpy = (y1 + y2) / 2 + nx * 25;
+          // Stronger curve for longer lines to avoid crossing through other nodes
+          const curveFactor = Math.min(60, len * 0.15);
+          const cpx = (x1 + x2) / 2 - ny * curveFactor;
+          const cpy = (y1 + y2) / 2 + nx * curveFactor;
           return (
             <path
               key={`flow-${i}`}
               d={`M${x1},${y1} Q${cpx},${cpy} ${x2},${y2}`}
               fill="none"
               stroke={fe.color}
-              strokeWidth={2.5}
-              strokeDasharray="8 4"
+              strokeWidth={1.5}
+              strokeDasharray="6 5"
               markerEnd="url(#flow-arrow)"
-              opacity={0.7}
+              opacity={0.35}
               style={{ transition: 'opacity 0.2s' }}
             />
           );
@@ -1745,10 +1746,23 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                       }}
                       style={{ cursor: 'pointer' }}
                     >
-                      <circle cx={node.x + r + 6} cy={node.y + r + 6} r={9} fill="white" stroke={node.color} strokeWidth={1.5} />
-                      <text x={node.x + r + 6} y={node.y + r + 6 + 1} textAnchor="middle" fontSize="12" fontWeight="bold" fill={node.color} style={{ pointerEvents: 'none' }}>
+                      {/* Shadow */}
+                      <circle cx={node.x + r + 8} cy={node.y + r + 9} r={12} fill="rgba(0,0,0,0.12)" />
+                      {/* Main circle - filled with node color */}
+                      <circle cx={node.x + r + 8} cy={node.y + r + 8} r={12} fill={node.color} stroke="white" strokeWidth={2} />
+                      {/* Arrow icon */}
+                      <text x={node.x + r + 8} y={node.y + r + 8 + 1} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="bold" fill="white" style={{ pointerEvents: 'none' }}>
                         {isCollapsed ? '▶' : '▼'}
                       </text>
+                      {/* Child count badge */}
+                      {isCollapsed && childCount > 0 && (
+                        <>
+                          <circle cx={node.x + r + 17} cy={node.y + r - 1} r={7} fill="#FF5722" stroke="white" strokeWidth={1.5} />
+                          <text x={node.x + r + 17} y={node.y + r - 1} textAnchor="middle" dominantBaseline="central" fontSize="8" fontWeight="bold" fill="white" style={{ pointerEvents: 'none' }}>
+                            {childCount}
+                          </text>
+                        </>
+                      )}
                     </g>
                   </>
                 );
@@ -1820,10 +1834,23 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                           }}
                           style={{ cursor: 'pointer' }}
                         >
-                          <circle cx={node.x + r + 5} cy={node.y + r + 5} r={8} fill="white" stroke={node.color} strokeWidth={1.5} />
-                          <text x={node.x + r + 5} y={node.y + r + 5 + 1} textAnchor="middle" fontSize="10" fontWeight="bold" fill={node.color} style={{ pointerEvents: 'none' }}>
+                          {/* Shadow */}
+                          <circle cx={node.x + r + 6} cy={node.y + r + 7} r={10} fill="rgba(0,0,0,0.12)" />
+                          {/* Main circle - filled with node color */}
+                          <circle cx={node.x + r + 6} cy={node.y + r + 6} r={10} fill={node.color} stroke="white" strokeWidth={2} />
+                          {/* Arrow icon */}
+                          <text x={node.x + r + 6} y={node.y + r + 6} textAnchor="middle" dominantBaseline="central" fontSize="10" fontWeight="bold" fill="white" style={{ pointerEvents: 'none' }}>
                             {isCollapsed ? '▶' : '▼'}
                           </text>
+                          {/* Child count badge */}
+                          {isCollapsed && totalChildren > 0 && (
+                            <>
+                              <circle cx={node.x + r + 14} cy={node.y + r - 2} r={6} fill="#FF5722" stroke="white" strokeWidth={1.5} />
+                              <text x={node.x + r + 14} y={node.y + r - 2} textAnchor="middle" dominantBaseline="central" fontSize="7" fontWeight="bold" fill="white" style={{ pointerEvents: 'none' }}>
+                                {totalChildren}
+                              </text>
+                            </>
+                          )}
                         </g>
                       );
                     })()}
