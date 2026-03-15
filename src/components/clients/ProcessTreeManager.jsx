@@ -35,6 +35,7 @@ import {
   deleteNodeFromCompanyTree,
   deduplicateCompanyTree,
   findOrphanClientNodes,
+  cleanStaleDependsOn,
 } from '@/services/processTreeService';
 import { getStepsForService } from '@/config/processTemplates';
 import { toast } from '@/components/ui/use-toast';
@@ -797,6 +798,20 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
     }
   }, [refreshTree]);
 
+  const handleCleanDeps = useCallback(async () => {
+    try {
+      const { fixedCount } = await cleanStaleDependsOn('ProcessTreeManager');
+      if (fixedCount > 0) {
+        toast({ title: 'תיקון קישורים', description: `תוקנו ${fixedCount} קישורי זרימה` });
+        await refreshTree();
+      } else {
+        toast({ title: 'תיקון קישורים', description: 'לא נמצאו קישורים שגויים' });
+      }
+    } catch (err) {
+      toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+    }
+  }, [refreshTree]);
+
   const enabledCount = getEnabledNodeIds(clientTree).length;
 
   if (loading) {
@@ -834,6 +849,15 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
             className="text-xs h-7 text-amber-600 border-amber-300 hover:bg-amber-50"
           >
             🧹 נקה כפילויות
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCleanDeps}
+            className="text-xs h-7 text-violet-600 border-violet-300 hover:bg-violet-50"
+          >
+            🔗 תקן קישורים
           </Button>
           <Button
             type="button"
