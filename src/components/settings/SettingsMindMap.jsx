@@ -44,6 +44,7 @@ import {
   loadCompanyTree, invalidateTreeCache, saveCompanyTree,
   saveAndBroadcast, onTreeChange,
   loadSettingFromDb, syncSettingToDb,
+  ensureMindMapSync,
 } from '@/services/processTreeService';
 import { toast } from '@/components/ui/use-toast';
 
@@ -647,7 +648,12 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     let cancelled = false;
     (async () => {
       console.log('[MindMap] 🔄 Reconciling localStorage with DB...');
-      // 1) Load overrides from DB
+
+      // 0) Run tree→MindMap sync to clean up stale/deleted nodes
+      await ensureMindMapSync();
+      if (cancelled) return;
+
+      // 1) Load overrides from DB (may have been updated by ensureMindMapSync)
       const dbOverrides = await loadSettingFromDb('service_overrides');
       if (cancelled) return;
       if (dbOverrides && typeof dbOverrides === 'object' && Object.keys(dbOverrides).length > 0) {
@@ -655,7 +661,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         localStorage.setItem('calmplan_service_overrides', JSON.stringify(dbOverrides));
         console.log('[MindMap] ✅ Overrides reconciled from DB:', Object.keys(dbOverrides).length, 'entries');
       }
-      // 2) Load custom services from DB
+      // 2) Load custom services from DB (may have been cleaned by ensureMindMapSync)
       const dbCustom = await loadSettingFromDb('custom_services');
       if (cancelled) return;
       if (dbCustom && typeof dbCustom === 'object') {

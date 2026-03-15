@@ -656,6 +656,43 @@ export default function ProcessArchitect() {
     updatedTree.branches[branchId] = branch;
     setTree(updatedTree);
 
+    // Collect all service keys from removed node (including nested children)
+    const collectKeys = (node) => {
+      const keys = [node.service_key || node.id];
+      for (const child of (node.children || [])) keys.push(...collectKeys(child));
+      return keys;
+    };
+    const removedKeys = removedNode ? collectKeys(removedNode) : [];
+
+    // Immediately hide removed services in MindMap (custom_services + overrides)
+    try {
+      const customStr = localStorage.getItem('calmplan_custom_services');
+      const customs = customStr ? JSON.parse(customStr) : {};
+      const overridesStr = localStorage.getItem('calmplan_service_overrides');
+      const overridesLocal = overridesStr ? JSON.parse(overridesStr) : {};
+      let changed = false;
+
+      for (const key of removedKeys) {
+        // Remove from custom_services
+        if (customs[key]) {
+          delete customs[key];
+          changed = true;
+        }
+        // Hide in overrides (for template services)
+        if (!overridesLocal[key]?._hidden) {
+          overridesLocal[key] = { ...(overridesLocal[key] || {}), _hidden: true };
+          changed = true;
+        }
+      }
+      if (changed) {
+        localStorage.setItem('calmplan_custom_services', JSON.stringify(customs));
+        localStorage.setItem('calmplan_service_overrides', JSON.stringify(overridesLocal));
+        syncSettingToDb('custom_services', customs);
+        syncSettingToDb('service_overrides', overridesLocal);
+        console.log(`[ProcessArchitect] 🧹 Cleaned ${removedKeys.length} removed services from MindMap`);
+      }
+    } catch (e) { console.warn('[ProcessArchitect] Cleanup after removal failed:', e); }
+
     // AUTO-SAVE: node deletion persists immediately
     try {
       setSaving(true);
