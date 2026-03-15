@@ -67,19 +67,17 @@ const serviceTypeColors = {
     special_reports: 'bg-green-100 text-green-800 border-green-200',
 };
 
-// סדר מיון לפי קבוצת צבעים - אותה קטגוריה באותה שורה
+// סדר מיון לפי קבוצות — 2 קבוצות ראשיות
 const serviceGroupOrder = {
-    // קבוצה 1 (ירוק): הנה"ח ודוחות (כולל מס"ב ספקים)
+    // קבוצה 1 (ירוק): הנה"ח ודוחות (כולל מע"מ, מקדמות, מס"ב ספקים)
     bookkeeping: 1, bookkeeping_full: 1, reconciliation: 1,
     annual_reports: 1, pnl_reports: 1, admin: 1, special_reports: 1,
-    masav_suppliers: 1,
-    // קבוצה 2 (אמרלד): מע"מ ומקדמות
-    vat_reporting: 2, tax_advances: 2,
-    // קבוצה 3 (כחול): שכר (כולל נוספים לשכר + סוציאליות)
-    payroll: 3, social_security: 3, deductions: 3,
-    authorities: 3, authorities_payment: 3, social_benefits: 3, reserve_claims: 3,
-    payslip_sending: 3, masav_employees: 3,
-    masav_social: 3, masav_authorities: 3, operator_reporting: 3, taml_reporting: 3,
+    masav_suppliers: 1, vat_reporting: 1, tax_advances: 1,
+    // קבוצה 2 (כחול): שכר (כולל תלושים, סוציאליות, מס"ב)
+    payroll: 2, social_security: 2, deductions: 2,
+    authorities: 2, authorities_payment: 2, social_benefits: 2, reserve_claims: 2,
+    payslip_sending: 2, masav_employees: 2,
+    masav_social: 2, masav_authorities: 2, operator_reporting: 2, taml_reporting: 2,
 };
 
 const statusUI = {
@@ -94,14 +92,12 @@ const statusUI = {
 // ── Collapsible service group with steps ──
 const serviceGroupLabels = {
   1: 'הנה"ח ודוחות',
-  2: 'מע"מ ומקדמות',
-  3: 'שכר',
+  2: 'שכר',
 };
 
 const serviceGroupIcons = {
   1: 'bg-green-600 text-white border-green-700',
-  2: 'bg-emerald-600 text-white border-emerald-700',
-  3: 'bg-blue-600 text-white border-blue-700',
+  2: 'bg-blue-600 text-white border-blue-700',
 };
 
 function ServiceTreeSection({ services }) {
