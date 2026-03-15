@@ -88,7 +88,7 @@ const BOARD_OPTIONS = [
 const COGNITIVE_LABELS = ['ננו', 'פשוט', 'בינוני', 'מורכב'];
 
 // ── Canvas dimensions (absolute, directive #14) ──
-const VB_W = 1200, VB_H = 800;
+const VB_W = 1800, VB_H = 1100;
 const CX = VB_W / 2, CY = VB_H / 2;
 
 // ── Shape palette definition (directive #5) ──
@@ -316,10 +316,14 @@ function applyForceRepulsion(nodes, iterations = 15) {
     }
     if (!moved) break;
   }
-  // Clamp to viewBox
+  // Soft clamp: only push nodes that are outside the viewBox back gently
+  // (allows user-dragged positions to stay, prevents auto-layout from going too far)
+  const MARGIN = 40;
   for (const n of result) {
-    n.x = Math.max(60, Math.min(VB_W - 60, n.x));
-    n.y = Math.max(60, Math.min(VB_H - 60, n.y));
+    if (n.x < MARGIN) n.x = MARGIN;
+    if (n.x > VB_W - MARGIN) n.x = VB_W - MARGIN;
+    if (n.y < MARGIN) n.y = MARGIN;
+    if (n.y > VB_H - MARGIN) n.y = VB_H - MARGIN;
   }
   return result;
 }
@@ -795,7 +799,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         rootAngles[key] = startAngle + dynIdx * spread;
       }
     });
-    const rootDist = 180;
+    const rootDist = 250;
 
     // P-Root nodes
     Object.entries(DNA).forEach(([key, dna]) => {
@@ -841,7 +845,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       if (!parentNode) return;
 
       // Distance shrinks at deeper levels, spread stays wide
-      const dist = Math.max(60, 110 - depth * 18);
+      const dist = Math.max(65, 120 - depth * 18);
       const spreadAngle = Math.PI * 0.7;
       const count = children.length;
       // Base angle: point away from parent's parent (or use default)
