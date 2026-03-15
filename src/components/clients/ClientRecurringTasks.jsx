@@ -18,6 +18,7 @@ import { he } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
 import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_NAMES } from '@/config/taxCalendar2026';
 import { getScheduledStartForCategory } from '@/config/automationRules';
+import { onTreeChange } from '@/services/processTreeService';
 import { useDesign } from '@/contexts/DesignContext';
 
 // ============================================================
@@ -251,6 +252,15 @@ function getExpandedServices(client) {
   if (expanded.has('full_service')) {
     for (const s of FULL_SERVICE_EXPANSION) expanded.add(s);
   }
+  // Also check process_tree enabled nodes — their service_key maps to serviceTypeKey
+  const processTree = client.process_tree || {};
+  for (const [nodeId, nodeState] of Object.entries(processTree)) {
+    if (nodeState?.enabled) {
+      // Extract service_key from nodeId (e.g., 'P1_payroll' → 'payroll', 'P1_social_security' → 'social_security')
+      const serviceKey = nodeId.replace(/^P\d+_/, '');
+      if (serviceKey) expanded.add(serviceKey);
+    }
+  }
   return expanded;
 }
 
@@ -383,6 +393,15 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [isClearingCache, setIsClearingCache] = useState(false);
 
   useEffect(() => { loadData(); }, []);
+
+  // Re-load when process tree structure changes (node move/add/delete)
+  useEffect(() => {
+    const unsub = onTreeChange(() => {
+      console.log('[RecurringTasks] 📡 Tree changed — reloading data...');
+      loadData();
+    });
+    return unsub;
+  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
