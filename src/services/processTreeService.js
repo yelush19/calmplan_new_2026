@@ -360,6 +360,12 @@ export function broadcastTreeChange(source = 'unknown') {
  */
 export async function saveAndBroadcast(tree, configId, source = 'unknown') {
   const newConfigId = await saveCompanyTree(tree, configId);
+  // Sync tree nodes → MindMap custom_services so the visual map reflects tree changes
+  try {
+    await syncTreeToMindMap(tree);
+  } catch (err) {
+    console.warn('[ProcessTreeService] MindMap sync failed (non-critical):', err);
+  }
   broadcastTreeChange(source);
   return { tree, configId: newConfigId };
 }
@@ -420,6 +426,121 @@ export function cleanStaleClientNodes(clientProcessTree, companyTree) {
   }
 
   return { cleaned, removedKeys };
+}
+
+// ============================================================
+// SYNC TREE → MINDMAP CUSTOM SERVICES
+// ============================================================
+
+/**
+ * Branch-to-dashboard mapping for MindMap integration.
+ */
+const BRANCH_TO_DASHBOARD = {
+  P1: 'payroll',
+  P2: 'tax',
+  P3: 'admin',
+  P4: 'home',
+  P5: 'annual_reports',
+};
+
+function branchToDashboard(branchId) {
+  return BRANCH_TO_DASHBOARD[branchId] || branchId; // P6+ use branchId directly
+}
+
+/**
+ * Sync the process tree to MindMap's custom_services.
+ * For each tree node that does NOT exist in ALL_SERVICES (processTemplates),
+ * creates/updates a custom service entry so it appears on the visual map.
+ *
+ * Also syncs parentId relationships so the MindMap hierarchy matches the tree.
+ *
+ * @param {object} tree - The company process tree
+ */
+export async function syncTreeToMindMap(tree) {
+  if (!tree?.branches) return;
+
+  // Load existing templates to avoid duplicates
+  let ALL_SERVICES = {};
+  try {
+    const templates = await import('@/config/processTemplates');
+    ALL_SERVICES = templates.ALL_SERVICES || {};
+  } catch { /* ok */ }
+
+  // Load existing custom services
+  let customServices = {};
+  try {
+    customServices = JSON.parse(localStorage.getItem('calmplan_custom_services') || '{}');
+  } catch { /* ok */ }
+
+  // Also load overrides to update parentId for template services
+  let overrides = {};
+  try {
+    overrides = JSON.parse(localStorage.getItem('calmplan_service_overrides') || '{}');
+  } catch { /* ok */ }
+
+  let customChanged = false;
+  let overridesChanged = false;
+
+  // Walk tree and sync each node
+  const syncNode = (node, branchId, parentNodeId) => {
+    const dashboard = branchToDashboard(branchId);
+    const serviceKey = node.service_key || node.id;
+
+    if (ALL_SERVICES[serviceKey]) {
+      // Template service — update override with correct parentId
+      const currentParent = overrides[serviceKey]?.parentId;
+      const correctParent = parentNodeId || branchId;
+      if (currentParent !== correctParent) {
+        overrides[serviceKey] = { ...(overrides[serviceKey] || {}), parentId: correctParent };
+        overridesChanged = true;
+      }
+    } else {
+      // Custom/new node — ensure it exists in custom_services
+      const existing = customServices[serviceKey];
+      const svc = {
+        key: serviceKey,
+        label: node.label,
+        dashboard,
+        parentId: parentNodeId || branchId,
+        taskCategories: [serviceKey],
+        createCategory: serviceKey,
+        steps: (node.steps || []).map(s => ({ key: s.key, label: s.label, icon: s.icon || 'circle' })),
+        _source: 'process_tree',
+        ...(existing || {}), // preserve any user customizations (positions, nextStepIds, etc.)
+        // Always update these from tree:
+        label: node.label,
+        dashboard,
+        parentId: parentNodeId || branchId,
+      };
+      if (!existing || existing.label !== svc.label || existing.parentId !== svc.parentId || existing.dashboard !== svc.dashboard) {
+        customServices[serviceKey] = svc;
+        customChanged = true;
+      }
+    }
+
+    // Recurse into children
+    for (const child of (node.children || [])) {
+      syncNode(child, branchId, node.service_key || node.id);
+    }
+  };
+
+  for (const [branchId, branch] of Object.entries(tree.branches)) {
+    for (const node of (branch.children || [])) {
+      syncNode(node, branchId, null);
+    }
+  }
+
+  // Persist changes
+  if (customChanged) {
+    localStorage.setItem('calmplan_custom_services', JSON.stringify(customServices));
+    await syncSettingToDb('custom_services', customServices);
+    console.log('[ProcessTreeService] ✅ Synced tree nodes → MindMap custom_services');
+  }
+  if (overridesChanged) {
+    localStorage.setItem('calmplan_service_overrides', JSON.stringify(overrides));
+    await syncSettingToDb('service_overrides', overrides);
+    console.log('[ProcessTreeService] ✅ Synced tree parentIds → MindMap overrides');
+  }
 }
 
 // ============================================================
