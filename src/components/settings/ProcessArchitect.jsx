@@ -969,25 +969,6 @@ export default function ProcessArchitect() {
     setSaving(false);
   }, [tree, configId]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-        <span className="mr-2 text-sm text-gray-500">טוען עץ תהליכים...</span>
-      </div>
-    );
-  }
-
-  if (!tree) {
-    return (
-      <div className="text-center py-8 text-gray-500 text-sm">
-        לא ניתן לטעון את עץ התהליכים. בדוק חיבור ל-Supabase.
-      </div>
-    );
-  }
-
-  const totalNodes = flattenTree(tree).length;
-
   // Find a node by ID anywhere in the tree (for side panel editor)
   const findNodeInTree = useCallback((nodeId) => {
     if (!tree?.branches) return null;
@@ -1028,7 +1009,26 @@ export default function ProcessArchitect() {
   }, []);
 
   const editingNode = editingNodeId ? findNodeInTree(editingNodeId) : null;
-  const editingBranchColor = editingBranchId ? getColorForBranch(editingBranchId, Object.keys(tree?.branches || {}).indexOf(editingBranchId)) : '#666';
+  const editingBranchColor = editingBranchId && tree ? getColorForBranch(editingBranchId, Object.keys(tree.branches || {}).indexOf(editingBranchId)) : '#666';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <span className="mr-2 text-sm text-gray-500">טוען עץ תהליכים...</span>
+      </div>
+    );
+  }
+
+  if (!tree) {
+    return (
+      <div className="text-center py-8 text-gray-500 text-sm">
+        לא ניתן לטעון את עץ התהליכים. בדוק חיבור ל-Supabase.
+      </div>
+    );
+  }
+
+  const totalNodes = flattenTree(tree).length;
 
   return (
     <div className="space-y-4">

@@ -298,7 +298,7 @@ function saveNodePositions(p) {
 
 // ── Force-directed repulsion (directive #11) ──
 function applyForceRepulsion(nodes, iterations = 15) {
-  const MIN_DIST = 80;
+  const MIN_DIST = 65;
   const result = nodes.map(n => ({ ...n }));
   for (let iter = 0; iter < iterations; iter++) {
     let moved = false;
@@ -802,7 +802,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         rootAngles[key] = startAngle + dynIdx * spread;
       }
     });
-    const rootDist = 220;
+    const rootDist = 180;
 
     // P-Root nodes
     Object.entries(DNA).forEach(([key, dna]) => {
@@ -848,7 +848,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       if (!parentNode) return;
 
       // Distance shrinks at deeper levels, spread stays wide
-      const dist = Math.max(70, 130 - depth * 20);
+      const dist = Math.max(60, 110 - depth * 18);
       const spreadAngle = Math.PI * 0.7;
       const count = children.length;
       // Base angle: point away from parent's parent (or use default)
@@ -897,12 +897,12 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
         // Step nodes — sequential chain layout below the parent service
         if (svc.steps && svc.steps.length > 0) {
-          const stepGap = 50;  // spacing between consecutive steps
+          const stepGap = 40;  // spacing between consecutive steps
           // Chain direction: away from center, same direction as parent angle
           const chainAngle = angle;
           const chainCos = Math.cos(chainAngle);
           const chainSin = Math.sin(chainAngle);
-          const firstDist = 55; // distance from service to first step
+          const firstDist = 45; // distance from service to first step
 
           svc.steps.forEach((step, sti) => {
             const saved = savedPositions[`${svc.key}_step_${sti}`];
@@ -1801,6 +1801,35 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                     {node._isCustom && (
                       <circle cx={node.x + r - 4} cy={node.y - r + 4} r={4} fill="#8BC34A" stroke="white" strokeWidth={1} />
                     )}
+                    {/* Collapse/Expand toggle for services with children */}
+                    {(() => {
+                      const childCount = displayNodes.filter(n => n.parentId === node.id).length;
+                      if (childCount === 0 && !collapsedBranches.has(node.id)) return null;
+                      // Also count hidden children when collapsed
+                      const totalChildren = allNodes.filter(n => n.parentId === node.id).length;
+                      if (totalChildren === 0) return null;
+                      const isCollapsed = collapsedBranches.has(node.id);
+                      return (
+                        <g
+                          onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCollapsedBranches(prev => {
+                              const next = new Set(prev);
+                              if (next.has(node.id)) next.delete(node.id);
+                              else next.add(node.id);
+                              return next;
+                            });
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <circle cx={node.x + r + 5} cy={node.y + r + 5} r={8} fill="white" stroke={node.color} strokeWidth={1.5} />
+                          <text x={node.x + r + 5} y={node.y + r + 5 + 1} textAnchor="middle" fontSize="10" fontWeight="bold" fill={node.color} style={{ pointerEvents: 'none' }}>
+                            {isCollapsed ? '▶' : '▼'}
+                          </text>
+                        </g>
+                      );
+                    })()}
                   </>
                 );
               })()}
