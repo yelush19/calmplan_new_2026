@@ -386,8 +386,94 @@ export async function saveAndBroadcast(tree, configId, source = 'unknown') {
   } catch (err) {
     console.warn('[ProcessTreeService] MindMap sync failed (non-critical):', err);
   }
+  // Sync tree structure changes to all clients (auto-enable new children, clean stale)
+  try {
+    await syncCompanyTreeToClients(tree);
+  } catch (err) {
+    console.warn('[ProcessTreeService] Client tree sync failed (non-critical):', err);
+  }
   broadcastTreeChange(source);
   return { tree, configId: newConfigId };
+}
+
+/**
+ * Sync company tree structure changes to ALL clients.
+ * When the company tree changes (nodes added/moved/deleted):
+ *   - New child nodes under an enabled parent → auto-enabled for client
+ *   - Deleted nodes → removed from client tree
+ *   - Steps changes → inherited automatically (steps live in company tree, not client tree)
+ *
+ * @param {object} companyTree - The current company tree
+ */
+export async function syncCompanyTreeToClients(companyTree) {
+  if (!companyTree?.branches) return;
+
+  // Lazy-import Client entity to avoid circular deps
+  const { Client } = await import('@/api/entities');
+  const clients = await Client.list(null, 5000).catch(() => []);
+  if (!clients || clients.length === 0) return;
+
+  // Build a parent→children map from company tree
+  const parentChildMap = {};  // parentId → [childId, ...]
+  const allNodeIds = new Set();
+  const walkTree = (nodes, parentId) => {
+    for (const n of (nodes || [])) {
+      allNodeIds.add(n.id);
+      if (!parentChildMap[parentId]) parentChildMap[parentId] = [];
+      parentChildMap[parentId].push(n.id);
+      if (n.children?.length) walkTree(n.children, n.id);
+    }
+  };
+  for (const [branchId, branch] of Object.entries(companyTree.branches)) {
+    allNodeIds.add(branchId);
+    walkTree(branch.children, branchId);
+  }
+
+  let updatedCount = 0;
+
+  for (const client of clients) {
+    const clientTree = client.process_tree;
+    if (!clientTree || Object.keys(clientTree).length === 0) continue;
+
+    let updated = { ...clientTree };
+    let changed = false;
+
+    // 1. Auto-enable new children of enabled parents
+    for (const [nodeId, nodeState] of Object.entries(clientTree)) {
+      if (!nodeState?.enabled) continue;
+      // Check if this node has children in company tree that are missing from client tree
+      const children = parentChildMap[nodeId] || [];
+      for (const childId of children) {
+        if (!(childId in updated)) {
+          updated[childId] = { enabled: true };
+          changed = true;
+          console.log(`[syncToClients] "${client.name}": auto-enabled new node "${childId}" (parent "${nodeId}" is enabled)`);
+        }
+      }
+    }
+
+    // 2. Remove stale nodes (exist in client tree but not in company tree)
+    for (const nodeId of Object.keys(updated)) {
+      if (!allNodeIds.has(nodeId)) {
+        delete updated[nodeId];
+        changed = true;
+        console.log(`[syncToClients] "${client.name}": removed stale node "${nodeId}"`);
+      }
+    }
+
+    if (changed) {
+      try {
+        await Client.update(client.id, { process_tree: updated });
+        updatedCount++;
+      } catch (err) {
+        console.warn(`[syncToClients] Failed to update client "${client.name}":`, err);
+      }
+    }
+  }
+
+  if (updatedCount > 0) {
+    console.log(`[ProcessTreeService] ✅ Synced company tree → ${updatedCount} client(s)`);
+  }
 }
 
 /**
