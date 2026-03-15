@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download, Plus, AlertTriangle, X } from 'lucide-react';
+import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download, Plus, AlertTriangle, X, Layers } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   loadCompanyTree,
@@ -32,6 +32,7 @@ import {
   addNodeToCompanyTree,
   findOrphanClientNodes,
 } from '@/services/processTreeService';
+import { getStepsForService } from '@/config/processTemplates';
 import { ClientAccount } from '@/api/entities';
 
 // ── Branch colors ──
@@ -79,8 +80,13 @@ const VAT_REPORTING_METHODS = [
 // ── TreeNode — recursive renderer ──
 function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, onFrequencyChange, onExtraFieldChange, bankAccounts }) {
   const [collapsed, setCollapsed] = useState(depth > 1);
+  const [stepsExpanded, setStepsExpanded] = useState(false);
   const enabled = isNodeEnabled(clientTree, node.id);
   const hasChildren = node.children && node.children.length > 0;
+  // Resolve steps: node.steps from DB tree, fallback to processTemplates via service_key
+  const nodeSteps = (node.steps && node.steps.length > 0)
+    ? node.steps
+    : (node.service_key ? getStepsForService(node.service_key) : []);
   const colors = getBranchColors(branchId);
 
   // Resolve effective frequency
@@ -169,7 +175,32 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
             <GitBranch className="w-3 h-3" />
           </span>
         )}
+
+        {/* Steps count badge */}
+        {nodeSteps.length > 0 && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setStepsExpanded(!stepsExpanded); }}
+            className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded transition-colors ${stepsExpanded ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'}`}
+            title="הצג שלבים"
+          >
+            <Layers className="w-3 h-3" />
+            <span className="font-medium">{nodeSteps.length}</span>
+          </button>
+        )}
       </div>
+
+      {/* Steps list — collapsible */}
+      {stepsExpanded && nodeSteps.length > 0 && (
+        <div className="mr-10 mt-1 mb-1.5 flex flex-wrap gap-1 px-2 py-1.5 bg-amber-50/50 rounded-md border border-amber-100">
+          {nodeSteps.map((step, idx) => (
+            <Badge key={step.key || idx} className="bg-white text-amber-700 text-[9px] px-1.5 py-0.5 border border-amber-200 flex items-center gap-1">
+              <span className="text-amber-400 font-bold">{idx + 1}</span>
+              {step.label}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {/* VAT Reporting Method — extra field inline */}
       {enabled && hasExtraFields && Object.entries(extraFields).map(([fieldKey, fieldDef]) => {
