@@ -382,16 +382,31 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
           <Settings2 className="w-3 h-3" />
         </button>
 
-        {/* Steps toggle */}
+        {/* Steps toggle + inline badges */}
         <button
           type="button"
           onClick={() => setShowSteps(!showSteps)}
-          className="text-[10px] text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
+          className={`text-[10px] flex items-center gap-0.5 transition-colors ${showSteps ? 'text-amber-600' : 'text-gray-400 hover:text-gray-600'}`}
           title="ערוך שלבים"
         >
           <Layers className="w-3 h-3" />
-          {(node.steps || []).length > 0 && <span>{(node.steps || []).length}</span>}
+          {(node.steps || []).length > 0 && <span className="font-medium">{(node.steps || []).length}</span>}
         </button>
+        {/* Inline step labels (always visible when steps exist) */}
+        {!showSteps && (node.steps || []).length > 0 && (
+          <div className="flex flex-wrap gap-0.5 max-w-[200px]">
+            {(node.steps || []).slice(0, 4).map((step, i) => (
+              <Badge key={step.key || i} className="bg-amber-50 text-amber-700 text-[8px] px-1 py-0 border border-amber-200 whitespace-nowrap">
+                {step.label}
+              </Badge>
+            ))}
+            {(node.steps || []).length > 4 && (
+              <Badge className="bg-gray-50 text-gray-500 text-[8px] px-1 py-0 border border-gray-200">
+                +{(node.steps || []).length - 4}
+              </Badge>
+            )}
+          </div>
+        )}
 
         {/* Add child */}
         <button

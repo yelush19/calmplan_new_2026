@@ -632,6 +632,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [syncTimestamp, setSyncTimestamp] = useState(null);
   // Shapes palette hidden by default — logic preserved, toggle reveals it
   const [showShapePalette, setShowShapePalette] = useState(false);
+  // Collapsible branches: Set of branch IDs (P1, P2...) that are collapsed
+  const [collapsedBranches, setCollapsedBranches] = useState(new Set());
 
   // ── Dynamic DNA: merge BASE_DNA with any extra branches from DB (P6+) ──
   const [dbBranches, setDbBranches] = useState({});
@@ -934,8 +936,26 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     });
 
     // Apply force repulsion (directive #11)
-    return applyForceRepulsion(nodes);
-  }, [DNA, liveServices, savedPositions, selectedNodeId, customServices, nodePositionOverrides]);
+    const repulsed = applyForceRepulsion(nodes);
+
+    // Filter out nodes belonging to collapsed branches (keep root nodes always visible)
+    if (collapsedBranches.size > 0) {
+      // Build set of all node IDs that belong to collapsed branches
+      const hiddenNodes = new Set();
+      const markHidden = (nodeId) => {
+        repulsed.forEach(n => {
+          if (n.parentId === nodeId && n.type !== 'root') {
+            hiddenNodes.add(n.id);
+            markHidden(n.id);
+          }
+        });
+      };
+      collapsedBranches.forEach(branchId => markHidden(branchId));
+      return repulsed.filter(n => !hiddenNodes.has(n.id));
+    }
+
+    return repulsed;
+  }, [DNA, liveServices, savedPositions, selectedNodeId, customServices, nodePositionOverrides, collapsedBranches]);
 
   // ── SVG coordinate helper (directive #14: absolute math) ──
   const svgPoint = useCallback((clientX, clientY) => {
@@ -1094,13 +1114,27 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       const newY = pt.y - dragState.offsetY;
 
       setDragState(prev => ({ ...prev, hasMoved: true }));
-      setNodePositionOverrides(prev => ({
-        ...prev,
-        [dragState.nodeId]: { x: newX, y: newY },
-      }));
+
+      // Move this node + its direct children (one level below) as a group
+      const draggedNode = allNodes.find(n => n.id === dragState.nodeId);
+      const deltaX = newX - (draggedNode?.x || dragState.startX);
+      const deltaY = newY - (draggedNode?.y || dragState.startY);
+      const directChildren = allNodes.filter(n => n.parentId === dragState.nodeId);
+
+      setNodePositionOverrides(prev => {
+        const next = { ...prev, [dragState.nodeId]: { x: newX, y: newY } };
+        // Move direct children along with parent
+        for (const child of directChildren) {
+          const childCurrent = prev[child.id] || { x: child.x, y: child.y };
+          next[child.id] = {
+            x: childCurrent.x + deltaX,
+            y: childCurrent.y + deltaY,
+          };
+        }
+        return next;
+      });
 
       // Check magnetic snap for reassignment (directive #6, #9)
-      const draggedNode = allNodes.find(n => n.id === dragState.nodeId);
       if (draggedNode?.type === 'service') {
         let closestRootId = null;
         let closestDist = SNAP_DISTANCE + 30;
@@ -1213,17 +1247,27 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         }
       }
 
-      // Persist position
+      // Persist position (including direct children that moved as a group)
       if (dragState.hasMoved) {
+        const directChildren = allNodes.filter(n => n.parentId === dragState.nodeId);
         setSavedPositions(prev => {
           const next = { ...prev, [dragState.nodeId]: { x: finalPos.x, y: finalPos.y } };
+          for (const child of directChildren) {
+            const childPos = nodePositionOverrides[child.id];
+            if (childPos) {
+              next[child.id] = { x: childPos.x, y: childPos.y };
+            }
+          }
           saveNodePositions(next);
           return next;
         });
-        // Clear the override since it's now saved
+        // Clear overrides since they're now saved
         setNodePositionOverrides(prev => {
           const next = { ...prev };
           delete next[dragState.nodeId];
+          for (const child of directChildren) {
+            delete next[child.id];
+          }
           return next;
         });
       }
@@ -1634,17 +1678,40 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               {renderNodeShape(node.shape, node.x, node.y, r - 2, 'white', 'none', 0)}
 
               {/* Labels */}
-              {node.type === 'root' && (
-                <>
-                  <text x={node.x} y={node.y - 8} textAnchor="middle" fontSize="14" fontWeight="700" fill="#263238">{node.id}</text>
-                  <text x={node.x} y={node.y + 7} textAnchor="middle" fontSize="10" fill={node.color} fontWeight="500">
-                    {node.label.replace(node.id + ' ', '')}
-                  </text>
-                  <text x={node.x} y={node.y + 20} textAnchor="middle" fontSize="8" fill="#90A4AE">
-                    {allNodes.filter(n => n.parentId === node.id).length} שירותים
-                  </text>
-                </>
-              )}
+              {node.type === 'root' && (() => {
+                const isCollapsed = collapsedBranches.has(node.id);
+                const childCount = allNodes.filter(n => n.parentId === node.id).length;
+                return (
+                  <>
+                    <text x={node.x} y={node.y - 8} textAnchor="middle" fontSize="14" fontWeight="700" fill="#263238">{node.id}</text>
+                    <text x={node.x} y={node.y + 7} textAnchor="middle" fontSize="10" fill={node.color} fontWeight="500">
+                      {node.label.replace(node.id + ' ', '')}
+                    </text>
+                    <text x={node.x} y={node.y + 20} textAnchor="middle" fontSize="8" fill="#90A4AE">
+                      {isCollapsed ? `(${childCount} מוסתרים)` : `${childCount} שירותים`}
+                    </text>
+                    {/* Collapse/Expand toggle button */}
+                    <g
+                      onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCollapsedBranches(prev => {
+                          const next = new Set(prev);
+                          if (next.has(node.id)) next.delete(node.id);
+                          else next.add(node.id);
+                          return next;
+                        });
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <circle cx={node.x + r + 6} cy={node.y + r + 6} r={9} fill="white" stroke={node.color} strokeWidth={1.5} />
+                      <text x={node.x + r + 6} y={node.y + r + 6 + 1} textAnchor="middle" fontSize="12" fontWeight="bold" fill={node.color} style={{ pointerEvents: 'none' }}>
+                        {isCollapsed ? '▶' : '▼'}
+                      </text>
+                    </g>
+                  </>
+                );
+              })()}
 
               {node.type === 'service' && (
                 <>
