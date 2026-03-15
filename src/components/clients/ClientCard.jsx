@@ -7,8 +7,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, ChevronLeft, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard, BookUser, FolderOpen, Receipt, Layers, Link2 } from 'lucide-react';
 import TaxInfoDialog from '@/components/clients/TaxInfoDialog';
 import { ALL_SERVICES } from '@/config/processTemplates';
+import { loadCompanyTree } from '@/services/processTreeService';
+import { flattenTree } from '@/config/companyProcessTree';
 
-const serviceTypeLabels = {
+// Fallback labels (used when tree hasn't loaded yet)
+const DEFAULT_SERVICE_LABELS = {
     bookkeeping: 'הנהלת חשבונות',
     bookkeeping_full: 'הנהלת חשבונות מלאה',
     vat_reporting: 'דיווחי מע״מ',
@@ -96,13 +99,27 @@ const serviceGroupLabels = {
 };
 
 const serviceGroupIcons = {
-  1: 'bg-green-600 text-white border-green-700',
-  2: 'bg-blue-600 text-white border-blue-700',
+  1: 'bg-[#1a472a] text-white border-[#143d23]',   // ירוק יער עמוק
+  2: 'bg-[#4a6274] text-white border-[#3d5363]',   // כחול מעושן מושתק
 };
 
 function ServiceTreeSection({ services }) {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [expandedServices, setExpandedServices] = useState(new Set());
+  const [treeLabels, setTreeLabels] = useState(DEFAULT_SERVICE_LABELS);
+
+  // Load labels from company tree (overrides defaults with DB labels)
+  useEffect(() => {
+    loadCompanyTree().then(({ tree }) => {
+      if (!tree?.branches) return;
+      const flat = flattenTree(tree);
+      const labels = { ...DEFAULT_SERVICE_LABELS };
+      for (const node of flat) {
+        if (node.service_key) labels[node.service_key] = node.label;
+      }
+      setTreeLabels(labels);
+    }).catch(() => {});
+  }, []);
 
   // Group services by their group
   const grouped = {};
@@ -173,7 +190,7 @@ function ServiceTreeSection({ services }) {
                         {hasSteps ? (
                           isServiceExpanded ? <ChevronDown className="w-2.5 h-2.5 text-gray-400" /> : <ChevronLeft className="w-2.5 h-2.5 text-gray-400" />
                         ) : <div className="w-2.5" />}
-                        <span className="text-gray-700">{serviceTypeLabels[svcKey] || svcKey.replace(/_/g, ' ')}</span>
+                        <span className="text-gray-700">{treeLabels[svcKey] || svcKey.replace(/_/g, ' ')}</span>
                         {hasSteps && (
                           <span className="text-[9px] text-gray-400 mr-auto flex items-center gap-0.5">
                             <Layers className="w-2.5 h-2.5" />
