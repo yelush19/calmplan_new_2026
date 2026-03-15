@@ -11,7 +11,7 @@
  *   - Changes sync immediately to all client cards
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -267,15 +267,24 @@ function ExtraFieldsEditor({ extraFields, onChange }) {
 }
 
 // ── Single node editor (recursive) ──
-function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, allNodeIds, onMoveNode, allBranchIds }) {
+function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, allNodeIds, onMoveNode, allBranchIds, allNodesFlat }) {
   const [collapsed, setCollapsed] = useState(depth > 0);
   const [showSteps, setShowSteps] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [addingChild, setAddingChild] = useState(false);
   const [newChildName, setNewChildName] = useState('');
   const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [moveSearch, setMoveSearch] = useState('');
   const hasChildren = node.children && node.children.length > 0;
   const hasExtraFields = node.extra_fields && Object.keys(node.extra_fields).length > 0;
+
+  // Build list of all descendants to prevent circular move
+  const getDescendantIds = (n) => {
+    const ids = new Set([n.id]);
+    (n.children || []).forEach(c => { getDescendantIds(c).forEach(id => ids.add(id)); });
+    return ids;
+  };
+  const descendantIds = showMoveMenu ? getDescendantIds(node) : new Set();
 
   const updateField = (field, value) => {
     onUpdate({ ...node, [field]: value });
@@ -417,20 +426,53 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
         </button>
       </div>
 
-      {/* Move menu */}
+      {/* Move menu — supports move to branch root OR under specific parent node */}
       {showMoveMenu && onMoveNode && (
-        <div className="mr-9 mt-1 mb-1 p-2 rounded-lg border-2 border-blue-200 bg-blue-50 space-y-1">
+        <div className="mr-9 mt-1 mb-1 p-2 rounded-lg border-2 border-blue-200 bg-blue-50 space-y-2 max-h-[300px] overflow-y-auto">
           <span className="text-[10px] font-bold text-blue-700">העבר ל:</span>
-          <div className="flex flex-wrap gap-1">
-            {(allBranchIds || []).filter(b => b !== branchId).map(targetBranch => (
-              <Button key={targetBranch} type="button" variant="outline" size="sm"
-                className="h-5 px-2 text-[9px]"
-                onClick={() => { onMoveNode(node, branchId, targetBranch); setShowMoveMenu(false); }}>
-                {targetBranch}
-              </Button>
-            ))}
+          {/* Quick move to branch root */}
+          <div>
+            <span className="text-[9px] text-gray-500">שורש ענף:</span>
+            <div className="flex flex-wrap gap-1 mt-0.5">
+              {(allBranchIds || []).filter(b => b !== branchId).map(targetBranch => (
+                <Button key={targetBranch} type="button" variant="outline" size="sm"
+                  className="h-5 px-2 text-[9px]"
+                  onClick={() => { onMoveNode(node, branchId, targetBranch, null); setShowMoveMenu(false); }}>
+                  {targetBranch}
+                </Button>
+              ))}
+            </div>
           </div>
-          <button onClick={() => setShowMoveMenu(false)} className="text-[9px] text-gray-400 hover:text-gray-600">ביטול</button>
+          {/* Move under specific parent node */}
+          <div>
+            <span className="text-[9px] text-gray-500">תחת צומת אב:</span>
+            <Input
+              value={moveSearch}
+              onChange={(e) => setMoveSearch(e.target.value)}
+              placeholder="חפש צומת..."
+              className="h-5 text-[10px] mt-0.5"
+              autoFocus
+            />
+            <div className="mt-1 space-y-0.5 max-h-[180px] overflow-y-auto">
+              {(allNodesFlat || [])
+                .filter(n => n.id !== node.id && !descendantIds.has(n.id))
+                .filter(n => !moveSearch || n.label.includes(moveSearch) || n.id.includes(moveSearch))
+                .map(target => (
+                  <button
+                    key={target.id}
+                    type="button"
+                    className="w-full text-right text-[10px] px-2 py-1 rounded hover:bg-blue-100 flex items-center gap-1.5 transition-colors"
+                    onClick={() => { onMoveNode(node, branchId, target._branchId, target.id); setShowMoveMenu(false); setMoveSearch(''); }}
+                  >
+                    <Badge className="text-[8px] px-1 py-0 bg-gray-100 text-gray-500 shrink-0">{target._branchId}</Badge>
+                    <span className="truncate">{target.label}</span>
+                    <span className="text-[8px] text-gray-400 shrink-0">{target.id}</span>
+                  </button>
+                ))
+              }
+            </div>
+          </div>
+          <button onClick={() => { setShowMoveMenu(false); setMoveSearch(''); }} className="text-[9px] text-gray-400 hover:text-gray-600">ביטול</button>
         </div>
       )}
 
@@ -518,6 +560,7 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
               allNodeIds={allNodeIds}
               onMoveNode={onMoveNode}
               allBranchIds={allBranchIds}
+              allNodesFlat={allNodesFlat}
             />
           ))}
         </div>
@@ -569,6 +612,22 @@ export default function ProcessArchitect() {
 
   // All node IDs for dependency selection
   const allNodeIds = tree ? flattenTree(tree).map(n => n.id) : [];
+
+  // All nodes flat with branch info (for move-to-parent picker)
+  const allNodesFlat = useMemo(() => {
+    if (!tree?.branches) return [];
+    const result = [];
+    const collect = (nodes, branchId) => {
+      for (const n of (nodes || [])) {
+        result.push({ ...n, _branchId: branchId });
+        if (n.children?.length) collect(n.children, branchId);
+      }
+    };
+    for (const [branchId, branch] of Object.entries(tree.branches)) {
+      collect(branch.children, branchId);
+    }
+    return result;
+  }, [tree]);
 
   const handleUpdateBranch = useCallback((branchId, updatedBranch) => {
     setTree(prev => ({
@@ -710,26 +769,57 @@ export default function ProcessArchitect() {
     setSaving(false);
   }, [tree, configId]);
 
-  const handleMoveNode = useCallback(async (node, fromBranch, toBranch) => {
+  const handleMoveNode = useCallback(async (node, fromBranch, toBranch, targetParentId) => {
     setTree(prev => {
       const updated = { ...prev, branches: { ...prev.branches } };
-      // Remove from source branch (deep search)
+      // Remove from source (deep search across all branches)
       const removeFromChildren = (children) =>
         children.filter(n => n.id !== node.id).map(n =>
           n.children?.length ? { ...n, children: removeFromChildren(n.children) } : n
         );
+      // Remove from source branch
       const sourceBranch = { ...updated.branches[fromBranch] };
       sourceBranch.children = removeFromChildren(sourceBranch.children);
       updated.branches[fromBranch] = sourceBranch;
-      // Add to target branch root
-      const targetBranch = { ...updated.branches[toBranch] };
-      targetBranch.children = [...(targetBranch.children || []), { ...node, depends_on: [] }];
-      updated.branches[toBranch] = targetBranch;
+
+      // Also clean from target branch if different (in case node exists there somehow)
+      if (toBranch !== fromBranch) {
+        const tb = { ...updated.branches[toBranch] };
+        tb.children = removeFromChildren(tb.children);
+        updated.branches[toBranch] = tb;
+      }
+
+      const movedNode = { ...node, depends_on: targetParentId ? [targetParentId] : [] };
+
+      if (targetParentId) {
+        // Add under specific parent node (deep insert)
+        const addToParent = (children) =>
+          children.map(n => {
+            if (n.id === targetParentId) {
+              return { ...n, children: [...(n.children || []), movedNode] };
+            }
+            if (n.children?.length) {
+              return { ...n, children: addToParent(n.children) };
+            }
+            return n;
+          });
+        const tb = { ...updated.branches[toBranch] };
+        tb.children = addToParent(tb.children);
+        updated.branches[toBranch] = tb;
+      } else {
+        // Add to branch root
+        const tb = { ...updated.branches[toBranch] };
+        tb.children = [...(tb.children || []), movedNode];
+        updated.branches[toBranch] = tb;
+      }
       return updated;
     });
     setIsDirty(true);
-    toast({ title: 'צומת הועבר', description: `"${node.label}" הועבר מ-${fromBranch} ל-${toBranch}` });
-  }, []);
+    const targetLabel = targetParentId
+      ? allNodesFlat.find(n => n.id === targetParentId)?.label || targetParentId
+      : toBranch;
+    toast({ title: 'צומת הועבר', description: `"${node.label}" הועבר תחת "${targetLabel}"` });
+  }, [allNodesFlat]);
 
   const handleRenameBranch = useCallback((branchId, newLabel) => {
     setTree(prev => ({
@@ -941,6 +1031,7 @@ export default function ProcessArchitect() {
                       allNodeIds={allNodeIds}
                       onMoveNode={handleMoveNode}
                       allBranchIds={Object.keys(tree.branches)}
+                      allNodesFlat={allNodesFlat}
                     />
                   ))}
                 </div>
