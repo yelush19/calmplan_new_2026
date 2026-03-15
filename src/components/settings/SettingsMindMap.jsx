@@ -885,7 +885,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           steps: svc.steps || [],
           weight,
           cogLoad: weight?.cognitiveLoad || 0,
-          r: Math.max(22, 30 - depth * 3), // slightly smaller at deeper levels
+          r: Math.max(26, Math.min(42, 22 + (svc.label || '').length * 0.8 - depth * 2)), // adaptive to label length
           nextStepIds: svc.nextStepIds || (svc.nextStepId ? [svc.nextStepId] : []),
           isParallel: svc.isParallel || false,
           _isCustom: !!customServices[svc.key],
@@ -895,27 +895,34 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         nodes.push(node);
         nodeMap[svc.key] = node;
 
-        // Step nodes (only if this service is selected)
-        if (selectedNodeId === svc.key && svc.steps) {
-          const stepDist = 75;
-          const stepSpread = Math.PI * 0.5;
-          const stCount = svc.steps.length;
-          svc.steps.forEach((step, sti) => {
-            const stBase = angle - stepSpread / 2;
-            const stAngle = stCount === 1 ? angle : stBase + (stepSpread * sti) / Math.max(1, stCount - 1);
-            const saved = savedPositions[`${svc.key}_step_${sti}`];
+        // Step nodes — sequential chain layout below the parent service
+        if (svc.steps && svc.steps.length > 0) {
+          const stepGap = 50;  // spacing between consecutive steps
+          // Chain direction: away from center, same direction as parent angle
+          const chainAngle = angle;
+          const chainCos = Math.cos(chainAngle);
+          const chainSin = Math.sin(chainAngle);
+          const firstDist = 55; // distance from service to first step
 
+          svc.steps.forEach((step, sti) => {
+            const saved = savedPositions[`${svc.key}_step_${sti}`];
+            const dist = firstDist + sti * stepGap;
+            // Each step links to previous step (chain), first links to service
+            const stepParentId = sti === 0 ? svc.key : `${svc.key}_step_${sti - 1}`;
+
+            const stepLabel = step.label || step.key;
+            const stepR = Math.max(20, Math.min(35, 16 + stepLabel.length * 0.7));
             const stepNode = {
               id: `${svc.key}_step_${sti}`,
               type: 'step',
-              label: step.label || step.key,
+              label: stepLabel,
               shape: 'pill',
               color: DNA[branch]?.color || '#999',
               bg: DNA[branch]?.bg || '#f5f5f5',
-              x: saved?.x ?? node.x + Math.cos(stAngle) * stepDist,
-              y: saved?.y ?? node.y + Math.sin(stAngle) * stepDist,
-              parentId: svc.key,
-              r: 20,
+              x: saved?.x ?? node.x + chainCos * dist,
+              y: saved?.y ?? node.y + chainSin * dist,
+              parentId: stepParentId,
+              r: stepR,
               stepIndex: sti,
             };
             nodes.push(stepNode);
@@ -1750,31 +1757,89 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                 );
               })()}
 
-              {node.type === 'service' && (
-                <>
-                  <text x={node.x} y={node.y - 5} textAnchor="middle" fontSize="9" fontWeight="600" fill="#263238">
-                    {(node.label || '').substring(0, 14)}
-                  </text>
-                  <text x={node.x} y={node.y + 7} textAnchor="middle" fontSize="7" fill={node.color}>
-                    {(node.steps || []).length} שלבים
-                  </text>
-                  <text x={node.x} y={node.y + 16} textAnchor="middle" fontSize="6" fill="#90A4AE">
-                    {COGNITIVE_LABELS[node.cogLoad || 0]} • {node.weight?.duration || 15}ד׳
-                  </text>
-                  {node._isCustom && (
-                    <circle cx={node.x + r - 4} cy={node.y - r + 4} r={4} fill="#8BC34A" stroke="white" strokeWidth={1} />
-                  )}
-                </>
-              )}
+              {node.type === 'service' && (() => {
+                const label = node.label || '';
+                const maxCharsPerLine = Math.max(8, Math.floor(r * 2.2 / 5));
+                // Split label into wrapped lines
+                const lines = [];
+                if (label.length <= maxCharsPerLine) {
+                  lines.push(label);
+                } else {
+                  // Try to split at space boundaries
+                  const words = label.split(/\s+/);
+                  let currentLine = '';
+                  for (const word of words) {
+                    if (currentLine && (currentLine + ' ' + word).length > maxCharsPerLine) {
+                      lines.push(currentLine);
+                      currentLine = word;
+                    } else {
+                      currentLine = currentLine ? currentLine + ' ' + word : word;
+                    }
+                  }
+                  if (currentLine) lines.push(currentLine);
+                  // Cap at 2 lines max
+                  if (lines.length > 2) {
+                    lines.length = 2;
+                    lines[1] = lines[1].substring(0, maxCharsPerLine - 1) + '…';
+                  }
+                }
+                const lineHeight = 11;
+                const labelStartY = node.y - (lines.length - 1) * lineHeight / 2 - 4;
+                return (
+                  <>
+                    {lines.map((line, li) => (
+                      <text key={li} x={node.x} y={labelStartY + li * lineHeight} textAnchor="middle" fontSize="9" fontWeight="600" fill="#263238">
+                        {line}
+                      </text>
+                    ))}
+                    <text x={node.x} y={labelStartY + lines.length * lineHeight} textAnchor="middle" fontSize="7" fill={node.color}>
+                      {(node.steps || []).length} שלבים
+                    </text>
+                    <text x={node.x} y={labelStartY + lines.length * lineHeight + 9} textAnchor="middle" fontSize="6" fill="#90A4AE">
+                      {COGNITIVE_LABELS[node.cogLoad || 0]} • {node.weight?.duration || 15}ד׳
+                    </text>
+                    {node._isCustom && (
+                      <circle cx={node.x + r - 4} cy={node.y - r + 4} r={4} fill="#8BC34A" stroke="white" strokeWidth={1} />
+                    )}
+                  </>
+                );
+              })()}
 
-              {node.type === 'step' && (
-                <>
-                  <text x={node.x} y={node.y - 1} textAnchor="middle" fontSize="7" fontWeight="500" fill="#37474F">
-                    {(node.label || '').substring(0, 10)}
-                  </text>
-                  <text x={node.x} y={node.y + 8} textAnchor="middle" fontSize="6" fill="#90A4AE">{(node.stepIndex || 0) + 1}</text>
-                </>
-              )}
+              {node.type === 'step' && (() => {
+                const label = node.label || '';
+                const maxChars = 12;
+                const lines = [];
+                if (label.length <= maxChars) {
+                  lines.push(label);
+                } else {
+                  const words = label.split(/\s+/);
+                  let currentLine = '';
+                  for (const word of words) {
+                    if (currentLine && (currentLine + ' ' + word).length > maxChars) {
+                      lines.push(currentLine);
+                      currentLine = word;
+                    } else {
+                      currentLine = currentLine ? currentLine + ' ' + word : word;
+                    }
+                  }
+                  if (currentLine) lines.push(currentLine);
+                  if (lines.length > 2) {
+                    lines.length = 2;
+                    lines[1] = lines[1].substring(0, maxChars - 1) + '…';
+                  }
+                }
+                const startY = node.y - (lines.length * 4);
+                return (
+                  <>
+                    {lines.map((line, li) => (
+                      <text key={li} x={node.x} y={startY + li * 9} textAnchor="middle" fontSize="7" fontWeight="500" fill="#37474F">
+                        {line}
+                      </text>
+                    ))}
+                    <text x={node.x} y={startY + lines.length * 9} textAnchor="middle" fontSize="6" fill="#90A4AE">{(node.stepIndex || 0) + 1}</text>
+                  </>
+                );
+              })()}
 
               {/* Quick Spawn "+" button (directive #7) */}
               {(isHovered || isSelected) && !isDragging && node.type !== 'step' && (
