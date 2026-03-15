@@ -31,6 +31,7 @@ import {
   ALL_SERVICES,
   getServiceForTask,
   getStepsForService,
+  isStepComplete,
 } from '@/config/processTemplates';
 import { getScheduledStartForCategory } from '@/config/automationRules';
 
