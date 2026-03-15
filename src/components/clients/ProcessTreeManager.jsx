@@ -83,7 +83,7 @@ const VAT_REPORTING_METHODS = [
 ];
 
 // ── TreeNode — recursive renderer with two-way editing ──
-function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, onFrequencyChange, onExtraFieldChange, onNodeUpdate, onNodeMove, onAddChild, onRefresh, bankAccounts, siblingCount, siblingIndex, allBranchNodes }) {
+function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, onFrequencyChange, onExtraFieldChange, onNodeUpdate, onNodeMove, onAddChild, onRefresh, bankAccounts, siblingCount, siblingIndex, allBranchNodes, isLastSibling }) {
   const [collapsed, setCollapsed] = useState(depth > 1);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [editingLabel, setEditingLabel] = useState(false);
@@ -238,19 +238,39 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
     }
   };
 
+  // Depth-based indentation: each level gets progressively indented
+  const depthIndent = depth === 0 ? '' : `mr-${Math.min(depth * 8, 24)}`;
+
   return (
-    <div className={
-      depth === 0
-        ? 'mb-1'
-        : depth === 1
-          ? 'mr-6 pr-3 border-r-2 border-gray-300 mb-0.5'
-          : 'mr-4 pr-2 border-r border-dashed border-gray-200 mb-0.5'
-    }>
-      <div className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors group/treenode ${
+    <div className={`relative ${depth === 0 ? 'mb-1.5' : 'mb-0.5'}`}>
+      {/* Tree connector lines for child nodes */}
+      {depth > 0 && (
+        <>
+          {/* Vertical line from parent — stops at midpoint for last sibling */}
+          <div
+            className="absolute top-0 border-r-2 border-gray-300"
+            style={{
+              right: `${(depth - 1) * 32 + 14}px`,
+              height: isLastSibling ? '18px' : '100%',
+            }}
+          />
+          {/* Horizontal connector line to this node */}
+          <div
+            className="absolute top-[18px] h-0 border-t-2 border-gray-300"
+            style={{ right: `${(depth - 1) * 32 + 14}px`, width: '18px' }}
+          />
+        </>
+      )}
+      <div
+        className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors group/treenode relative ${
         depth === 0
-          ? (enabled ? `${colors.bg} border ${colors.border} shadow-sm` : 'bg-gray-50 opacity-60 border border-gray-200')
-          : (enabled ? colors.bg : 'bg-gray-50 opacity-60')
-      }`}>
+          ? (enabled ? `${colors.bg} border-2 ${colors.border} shadow-sm` : 'bg-gray-50 opacity-60 border-2 border-gray-200')
+          : depth === 1
+            ? (enabled ? `bg-white border border-gray-200 shadow-[inset_3px_0_0_0] shadow-gray-400` : 'bg-gray-50/50 opacity-50 border border-gray-100')
+            : (enabled ? `bg-gray-50/60 border border-dashed border-gray-200` : 'bg-gray-50/30 opacity-40 border border-dashed border-gray-100')
+      }`}
+        style={depth > 0 ? { marginRight: `${depth * 32}px` } : undefined}
+      >
         {/* Collapse toggle */}
         {hasChildren ? (
           <button
@@ -287,14 +307,15 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           <span
             className={`flex-1 cursor-pointer hover:underline decoration-dashed underline-offset-2 ${
               depth === 0
-                ? `text-sm font-bold ${enabled ? 'text-gray-900' : 'text-gray-400'}`
+                ? `text-sm font-black ${enabled ? 'text-gray-900' : 'text-gray-400'}`
                 : depth === 1
-                  ? `text-[13px] font-medium ${enabled ? 'text-gray-800' : 'text-gray-400'}`
-                  : `text-xs font-normal ${enabled ? 'text-gray-600' : 'text-gray-400'}`
+                  ? `text-[13px] font-semibold ${enabled ? 'text-gray-700' : 'text-gray-400'}`
+                  : `text-xs font-normal ${enabled ? 'text-gray-500' : 'text-gray-300'}`
             }`}
             onClick={() => { setLabelDraft(node.label); setEditingLabel(true); }}
             title="לחץ לשינוי שם"
           >
+            {depth > 1 && <span className="text-gray-300 ml-1">›</span>}
             {node.label}
           </span>
         )}
@@ -562,7 +583,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
 
       {/* Children */}
       {hasChildren && !collapsed && (
-        <div className="mt-0.5">
+        <div className="mt-0.5 relative">
           {node.children.map((child, childIdx) => (
             <TreeNode
               key={child.id}
@@ -582,6 +603,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
               siblingCount={node.children.length}
               siblingIndex={childIdx}
               allBranchNodes={allBranchNodes}
+              isLastSibling={childIdx === node.children.length - 1}
             />
           ))}
         </div>
