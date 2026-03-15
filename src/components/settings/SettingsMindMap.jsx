@@ -119,17 +119,10 @@ async function getSystemConfig() {
 
 // Save to both localStorage AND Supabase for data integrity
 async function syncToSupabase(key, data) {
+  // Use processTreeService's syncSettingToDb which writes directly to
+  // calmplan_system_config table (same table ProcessArchitect uses).
   try {
-    const SC = await getSystemConfig();
-    if (!SC) return;
-    const existing = await SC.list();
-    const record = existing.find(r => r.config_key === key);
-    if (record) {
-      await SC.update(record.id, { config_key: key, config_value: data, updated_at: new Date().toISOString() });
-    } else {
-      await SC.create({ config_key: key, config_value: data, updated_at: new Date().toISOString() });
-    }
-    console.log(`[Supabase] Synced settings: ${key}`);
+    await syncSettingToDb(key, data);
   } catch (err) {
     console.warn(`[Supabase] Failed to sync ${key}:`, err.message);
   }
