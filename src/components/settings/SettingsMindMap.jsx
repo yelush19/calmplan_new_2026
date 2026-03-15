@@ -50,11 +50,11 @@ import { toast } from '@/components/ui/use-toast';
 
 // ── DNA Colors (P-branch identity) — base set, extended dynamically from DB ──
 const BASE_DNA = {
-  P1: { color: '#00A3E0', label: 'P1 שכר', bg: '#00A3E015', glow: '#00A3E040', dashboard: 'payroll' },
-  P2: { color: '#B2AC88', label: 'P2 הנה"ח', bg: '#B2AC8815', glow: '#B2AC8840', dashboard: 'tax' },
-  P3: { color: '#E91E63', label: 'P3 ניהול', bg: '#E91E6315', glow: '#E91E6340', dashboard: 'admin' },
-  P4: { color: '#FFC107', label: 'P4 בית', bg: '#FFC10715', glow: '#FFC10740', dashboard: 'home' },
-  P5: { color: '#2E7D32', label: 'P5 דוחות שנתיים', bg: '#2E7D3215', glow: '#2E7D3240', dashboard: 'annual_reports' },
+  P1: { color: '#0288D1', label: 'P1 שכר', bg: '#E1F5FE', glow: '#0288D140', dashboard: 'payroll' },
+  P2: { color: '#7B1FA2', label: 'P2 הנה"ח', bg: '#F3E5F5', glow: '#7B1FA240', dashboard: 'tax' },
+  P3: { color: '#D81B60', label: 'P3 ניהול', bg: '#FCE4EC', glow: '#D81B6040', dashboard: 'admin' },
+  P4: { color: '#F9A825', label: 'P4 בית', bg: '#FFF8E1', glow: '#F9A82540', dashboard: 'home' },
+  P5: { color: '#2E7D32', label: 'P5 דוחות שנתיים', bg: '#E8F5E9', glow: '#2E7D3240', dashboard: 'annual_reports' },
 };
 
 // Dynamic color palette for user-created branches (P6, P7, ...)
@@ -627,6 +627,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [showTrashGlow, setShowTrashGlow] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [nodePositionOverrides, setNodePositionOverrides] = useState({});
+  const [positionHistory, setPositionHistory] = useState([]); // undo stack
   const [syncStatus, setSyncStatus] = useState(null); // null | 'syncing' | 'success' | 'error'
   const [syncResults, setSyncResults] = useState(null);
   const [syncTimestamp, setSyncTimestamp] = useState(null);
@@ -819,7 +820,6 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         parentId: 'hub',
         dashboard: dna.dashboard,
         r: 48,
-        ...nodePositionOverrides[key],
       });
     });
 
@@ -890,7 +890,6 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           isParallel: svc.isParallel || false,
           _isCustom: !!customServices[svc.key],
           _depth: depth,
-          ...nodePositionOverrides[svc.key],
         };
 
         nodes.push(node);
@@ -918,7 +917,6 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               parentId: svc.key,
               r: 20,
               stepIndex: sti,
-              ...nodePositionOverrides[`${svc.key}_step_${sti}`],
             };
             nodes.push(stepNode);
             nodeMap[stepNode.id] = stepNode;
@@ -955,7 +953,16 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     }
 
     return repulsed;
-  }, [DNA, liveServices, savedPositions, selectedNodeId, customServices, nodePositionOverrides, collapsedBranches]);
+  }, [DNA, liveServices, savedPositions, selectedNodeId, customServices, collapsedBranches]);
+
+  // ── Display nodes: layout positions + drag overrides (no re-layout during drag) ──
+  const displayNodes = useMemo(() => {
+    if (Object.keys(nodePositionOverrides).length === 0) return allNodes;
+    return allNodes.map(n => {
+      const override = nodePositionOverrides[n.id];
+      return override ? { ...n, x: override.x, y: override.y } : n;
+    });
+  }, [allNodes, nodePositionOverrides]);
 
   // ── SVG coordinate helper (directive #14: absolute math) ──
   const svgPoint = useCallback((clientX, clientY) => {
@@ -1062,7 +1069,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const handleNodeMouseDown = useCallback((e, nodeId) => {
     e.stopPropagation();
     e.preventDefault();
-    const node = allNodes.find(n => n.id === nodeId);
+    // Use displayNodes (with overrides) for correct visual position
+    const node = displayNodes.find(n => n.id === nodeId);
     if (!node) return;
     const pt = svgPoint(e.clientX, e.clientY);
     setDragState({
@@ -1073,7 +1081,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       startY: node.y,
       hasMoved: false,
     });
-  }, [allNodes, svgPoint]);
+  }, [displayNodes, svgPoint]);
 
   const handleMouseMove = useCallback((e) => {
     // Save button drag
@@ -1115,13 +1123,16 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
       setDragState(prev => ({ ...prev, hasMoved: true }));
 
-      // Move this node + its direct children (one level below) as a group
+      // Get dragged node info for snap checks (from layout, not overrides)
       const draggedNode = allNodes.find(n => n.id === dragState.nodeId);
-      const deltaX = newX - (draggedNode?.x || dragState.startX);
-      const deltaY = newY - (draggedNode?.y || dragState.startY);
       const directChildren = allNodes.filter(n => n.parentId === dragState.nodeId);
 
       setNodePositionOverrides(prev => {
+        // Use CURRENT override position to calculate child delta (prevents jumping)
+        const currentPos = prev[dragState.nodeId] || { x: draggedNode?.x || dragState.startX, y: draggedNode?.y || dragState.startY };
+        const deltaX = newX - currentPos.x;
+        const deltaY = newY - currentPos.y;
+
         const next = { ...prev, [dragState.nodeId]: { x: newX, y: newY } };
         // Move direct children along with parent
         for (const child of directChildren) {
@@ -1250,7 +1261,10 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       // Persist position (including direct children that moved as a group)
       if (dragState.hasMoved) {
         const directChildren = allNodes.filter(n => n.parentId === dragState.nodeId);
+
+        // Save undo snapshot BEFORE persisting
         setSavedPositions(prev => {
+          setPositionHistory(h => [...h.slice(-19), { ...prev }]); // keep last 20
           const next = { ...prev, [dragState.nodeId]: { x: finalPos.x, y: finalPos.y } };
           for (const child of directChildren) {
             const childPos = nodePositionOverrides[child.id];
@@ -1282,6 +1296,29 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       setShowTrashGlow(false);
     }
   }, [dragState, paletteDrag, allNodes, magnetTarget, svgPoint, createService, moveService, nodePositionOverrides, saveBtnDrag]);
+
+  // ── Undo position changes (Ctrl+Z) ──
+  const handleUndo = useCallback(() => {
+    setPositionHistory(prev => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setSavedPositions(last);
+      saveNodePositions(last);
+      setNodePositionOverrides({});
+      return prev.slice(0, -1);
+    });
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleUndo]);
 
   // ── Quick Spawn "+" (directive #7) — Creates a child task/service under the selected node ──
   // Full feedback chain: loading → DB write → toast → force re-render
@@ -1482,11 +1519,11 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   // ── Build hierarchy edges (solid tapered branches) ──
   const edges = useMemo(() => {
     const result = [];
-    allNodes.forEach(node => {
+    displayNodes.forEach(node => {
       if (node.parentId === 'hub') {
         result.push({ from: { x: CX, y: CY }, to: node, color: node.color, thickness: [8, 3] });
       } else {
-        const parent = allNodes.find(n => n.id === node.parentId);
+        const parent = displayNodes.find(n => n.id === node.parentId);
         if (parent) {
           const thick = node.type === 'step' ? [2.5, 0.8] : [4, 1.5];
           result.push({ from: parent, to: node, color: node.color, thickness: thick });
@@ -1494,15 +1531,15 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       }
     });
     return result;
-  }, [allNodes]);
+  }, [displayNodes]);
 
   // ── Build FLOW edges (dashed directional arrows for nextStepId) ──
   const flowEdges = useMemo(() => {
     const result = [];
-    allNodes.forEach(node => {
+    displayNodes.forEach(node => {
       if (node.nextStepIds?.length > 0) {
         node.nextStepIds.forEach(targetId => {
-          const target = allNodes.find(n => n.id === targetId);
+          const target = displayNodes.find(n => n.id === targetId);
           if (target) {
             result.push({ from: node, to: target, color: '#1565C0' });
           }
@@ -1510,7 +1547,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       }
     });
     return result;
-  }, [allNodes]);
+  }, [displayNodes]);
 
   const totalServices = Object.values(liveServices).length;
 
@@ -1609,7 +1646,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
         {/* ── Magnetic snap preview line (directive #6) ── */}
         {(paletteDrag || dragState) && magnetTarget && (() => {
-          const target = allNodes.find(n => n.id === magnetTarget);
+          const target = displayNodes.find(n => n.id === magnetTarget);
           const pos = paletteDrag || (dragState && nodePositionOverrides[dragState.nodeId]);
           if (!target || !pos) return null;
           return (
@@ -1636,7 +1673,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         <text x={CX} y={CY + 48} textAnchor="middle" fill="#78909C" fontSize="9">{totalServices} שירותים</text>
 
         {/* ── All Nodes (directive #4: draggable) ── */}
-        {allNodes.map(node => {
+        {displayNodes.map(node => {
           const isDragging = dragState?.nodeId === node.id;
           const isMagnetTarget = magnetTarget === node.id;
           const isSelected = selectedNodeId === node.id;
@@ -1680,7 +1717,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               {/* Labels */}
               {node.type === 'root' && (() => {
                 const isCollapsed = collapsedBranches.has(node.id);
-                const childCount = allNodes.filter(n => n.parentId === node.id).length;
+                const childCount = displayNodes.filter(n => n.parentId === node.id).length;
                 return (
                   <>
                     <text x={node.x} y={node.y - 8} textAnchor="middle" fontSize="14" fontWeight="700" fill="#263238">{node.id}</text>
@@ -1826,6 +1863,23 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
             <text x={saveBtnPos.x} y={saveBtnPos.y + 20} textAnchor="middle" fontSize="7" fontWeight="bold"
               fill={mapSaving ? '#F57F17' : '#2E7D32'} style={{ pointerEvents: 'none' }}>
               {mapSaving ? 'שומר...' : 'שמור'}
+            </text>
+          </g>
+        )}
+
+        {/* ── Undo button ── */}
+        {positionHistory.length > 0 && (
+          <g style={{ cursor: 'pointer' }}
+            onClick={(e) => { e.stopPropagation(); handleUndo(); }}>
+            <circle cx={saveBtnPos.x + 55} cy={saveBtnPos.y} r={20}
+              fill="#5C6BC0" stroke="white" strokeWidth={2}
+              filter="url(#drag-shadow)" />
+            <g transform={`translate(${saveBtnPos.x + 55 - 7}, ${saveBtnPos.y - 7})`} style={{ pointerEvents: 'none' }}>
+              <path d="M7 1C4.2 1 2 3.2 2 6h-2l3 3 3-3H4c0-1.7 1.3-3 3-3s3 1.3 3 3-1.3 3-3 3v2c2.8 0 5-2.2 5-5S9.8 1 7 1z" fill="white" />
+            </g>
+            <text x={saveBtnPos.x + 55} y={saveBtnPos.y + 17} textAnchor="middle" fontSize="7" fontWeight="bold"
+              fill="#3949AB" style={{ pointerEvents: 'none' }}>
+              ביטול ({positionHistory.length})
             </text>
           </g>
         )}

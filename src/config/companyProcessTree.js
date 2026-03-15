@@ -104,11 +104,12 @@ const P1_BRANCH = {
               depends_on: ['P1_social_security_report'],
               extra_fields: { ...PAYMENT_METHOD_FIELD },
             }),
-            node('P1_masav_social', 'מס"ב סוציאליות', 'masav_social', {
-              frequency_inherit: true,
-              depends_on: ['P1_social_security'],
-            }),
           ],
+        }),
+        node('P1_masav_social', 'מס"ב סוציאליות', 'masav_social', {
+          frequency_inherit: true,
+          depends_on: ['P1_payroll'],
+          execution: 'sequential',
         }),
         node('P1_deductions', 'ניכויים', 'deductions', {
           default_frequency: 'monthly',
