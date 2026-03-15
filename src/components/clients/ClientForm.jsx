@@ -653,14 +653,14 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="basic" className="space-y-6">
-            <TabsList className="flex flex-wrap gap-1 h-auto p-1 bg-gray-100 rounded-xl">
-              <TabsTrigger value="basic" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">פרטים בסיסיים</TabsTrigger>
-              <TabsTrigger value="process_tree" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">עץ תהליכים</TabsTrigger>
-              <TabsTrigger value="financial" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">כספי</TabsTrigger>
-              <TabsTrigger value="providers" className="data-[state=active]:bg-violet-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">נותני שירותים</TabsTrigger>
-              <TabsTrigger value="tax" className="data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">מס</TabsTrigger>
-              <TabsTrigger value="accounts" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">בנק</TabsTrigger>
-              <TabsTrigger value="integration" className="data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">אינטגרציות</TabsTrigger>
+            <TabsList className="flex flex-wrap gap-1.5 h-auto p-1.5 rounded-xl border-2 border-[#B0BEC5]" style={{ backgroundColor: '#EDF2F7' }}>
+              <TabsTrigger value="basic" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=inactive]:border-[#CBD5E0] data-[state=inactive]:bg-white rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap">פרטים בסיסיים</TabsTrigger>
+              <TabsTrigger value="process_tree" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=inactive]:border-[#CBD5E0] data-[state=inactive]:bg-white rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap">עץ תהליכים</TabsTrigger>
+              <TabsTrigger value="financial" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=inactive]:border-[#CBD5E0] data-[state=inactive]:bg-white rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap">כספי</TabsTrigger>
+              <TabsTrigger value="providers" className="data-[state=active]:bg-violet-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=inactive]:border-[#CBD5E0] data-[state=inactive]:bg-white rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap">נותני שירותים</TabsTrigger>
+              <TabsTrigger value="tax" className="data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=inactive]:border-[#CBD5E0] data-[state=inactive]:bg-white rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap">מס</TabsTrigger>
+              <TabsTrigger value="accounts" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=inactive]:border-[#CBD5E0] data-[state=inactive]:bg-white rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap">בנק</TabsTrigger>
+              <TabsTrigger value="integration" className="data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=inactive]:border-[#CBD5E0] data-[state=inactive]:bg-white rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap">אינטגרציות</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4">
