@@ -17,7 +17,7 @@ const SERVICE_GROUPS = [
     label: 'P2 | הנהלת חשבונות ומיסים',
     color: 'border-blue-200 bg-blue-50/50',
     badge: 'bg-blue-100 text-blue-700',
-    keys: ['vat', 'tax_advances', 'vat_874', 'bookkeeping', 'reconciliation', 'annual_reports', 'consulting'],
+    keys: ['vat', 'tax_advances', 'vat_874', 'bookkeeping', 'expense_collection', 'income_collection', 'reconciliation', 'bank_reconciliation', 'credit_card_reconciliation', 'annual_reports', 'consulting'],
   },
   {
     key: 'payroll',
@@ -25,7 +25,7 @@ const SERVICE_GROUPS = [
     color: 'border-emerald-200 bg-emerald-50/50',
     badge: 'bg-emerald-100 text-emerald-700',
     keys: ['payroll', 'social_security', 'deductions', 'authorities_payment', 'reserve_claims',
-           'social_benefits', 'masav_employees', 'masav_social', 'masav_authorities', 'masav_suppliers',
+           'social_benefits', 'masav_employees', 'masav_social', 'masav_suppliers',
            'payslip_sending'],
   },
   {

@@ -322,33 +322,30 @@ export const exportClientsToExcel = async () => ({ data: { success: false, error
 /**
  * Export active clients with their services and frequencies to CSV.
  * Columns: לקוח | שירות | תדירות
- * One row per client×service combination.
+ * Based on the Process Tree (עץ תהליכים) — only enabled nodes are exported.
+ * Uses the same frequency resolution chain as processTreeService.
  */
 export const exportCustomerServicesCSV = async () => {
-  const allClients = await entities.Client.list();
-  const activeClients = allClients.filter(c => c.status === 'active' && c.is_deleted !== true);
+  // Dynamic imports to avoid circular dependencies
+  const { PROCESS_TREE_SEED, flattenTree, buildNodeMap } = await import('@/config/companyProcessTree');
+  const { loadCompanyTree, resolveFrequency } = await import('@/services/processTreeService');
 
-  const SERVICE_LABELS = {
-    bookkeeping: 'הנהלת חשבונות',
-    bookkeeping_full: 'הנהלת חשבונות מלאה',
-    vat_reporting: 'דיווחי מע״מ',
-    tax_advances: 'מקדמות מס',
-    payroll: 'שכר',
-    social_security: 'ביטוח לאומי',
-    deductions: 'מ״ה ניכויים',
-    reconciliation: 'התאמות חשבונות',
-    annual_reports: 'מאזנים / דוחות שנתיים',
-    pnl_reports: 'דוחות רווח והפסד (PNL)',
-    masav_employees: 'מס״ב עובדים',
-    masav_social: 'מס״ב סוציאליות',
-    masav_suppliers: 'מס״ב ספקים',
-    authorities_payment: 'תשלום רשויות',
-    operator_reporting: 'דיווח למתפעל',
-    taml_reporting: 'דיווח לטמל',
-    payslip_sending: 'משלוח תלושים',
-    reserve_claims: 'תביעות מילואים',
-    admin: 'אדמיניסטרציה',
-  };
+  // Load the company tree (DB version if available, otherwise seed)
+  let companyTree;
+  try {
+    companyTree = await loadCompanyTree();
+  } catch {
+    companyTree = PROCESS_TREE_SEED;
+  }
+
+  const allNodes = flattenTree(companyTree);
+  const nodeMap = buildNodeMap(companyTree);
+
+  // Branch labels for context
+  const branchLabels = {};
+  for (const [branchId, branch] of Object.entries(companyTree.branches)) {
+    branchLabels[branchId] = branch.label;
+  }
 
   const FREQ_LABELS = {
     monthly: 'חודשי',
@@ -356,40 +353,67 @@ export const exportCustomerServicesCSV = async () => {
     quarterly: 'רבעוני',
     semi_annual: 'חצי שנתי',
     yearly: 'שנתי',
+    daily: 'יומי',
+    weekly: 'שבועי',
     not_applicable: 'לא רלוונטי',
   };
 
-  // Map service type to its frequency field in reporting_info
-  const SERVICE_FREQ_FIELD = {
-    vat_reporting: 'vat_reporting_frequency',
-    tax_advances: 'tax_advances_frequency',
-    payroll: 'payroll_frequency',
-    social_security: 'social_security_frequency',
-    deductions: 'deductions_frequency',
-    pnl_reports: 'pnl_frequency',
+  const PAYMENT_METHOD_LABELS = {
+    masav: 'מס״ב',
+    credit_card: 'כרטיס אשראי',
+    bank_standing_order: 'הו״ק בנקאית',
+    standing_order: 'כתב אישור (כ״א)',
+    check: 'המחאה',
   };
+
+  // Skip P4 (home/personal) — only export business services
+  const businessNodes = allNodes.filter(n => n.branch !== 'P4');
+
+  const allClients = await entities.Client.list();
+  const activeClients = allClients.filter(c => c.status === 'active' && c.is_deleted !== true);
 
   const rows = [];
   for (const client of activeClients) {
-    const services = client.service_types || [];
-    if (services.length === 0) {
-      // Client with no services — still include with empty service/frequency
-      rows.push([client.name, '', '']);
-      continue;
-    }
-    for (const svc of services) {
-      const label = SERVICE_LABELS[svc] || svc;
-      const freqField = SERVICE_FREQ_FIELD[svc];
-      let freq = '';
-      if (freqField && client.reporting_info) {
-        const rawFreq = client.reporting_info[freqField];
-        freq = FREQ_LABELS[rawFreq] || rawFreq || '';
-      } else if (['annual_reports'].includes(svc)) {
-        freq = 'שנתי';
-      } else if (['bookkeeping', 'bookkeeping_full', 'masav_employees', 'masav_social', 'masav_suppliers', 'authorities_payment', 'payslip_sending', 'reconciliation', 'operator_reporting', 'taml_reporting'].includes(svc)) {
-        freq = 'חודשי';
+    const clientTree = client.process_tree || {};
+    let hasEnabledNodes = false;
+
+    for (const treeNode of businessNodes) {
+      if (!clientTree[treeNode.id]?.enabled) continue;
+      hasEnabledNodes = true;
+
+      // Build service label — include extra fields info
+      let serviceLabel = treeNode.label;
+
+      // Include extra_fields values in the label (e.g., VAT method, payment method)
+      if (treeNode.extra_fields) {
+        for (const [fieldKey, fieldDef] of Object.entries(treeNode.extra_fields)) {
+          const clientValue = clientTree[treeNode.id]?.[fieldKey];
+          if (clientValue && fieldDef.options) {
+            const opt = fieldDef.options.find(o => o.value === clientValue);
+            if (opt) {
+              serviceLabel += ` (${fieldDef.label}: ${opt.label})`;
+            }
+          }
+        }
       }
-      rows.push([client.name, label, freq]);
+      // Fallback: legacy authorities_payment_method on client object
+      if (treeNode.service_key === 'authorities_payment' && !treeNode.extra_fields?.payment_method) {
+        const paymentMethod = client.authorities_payment_method;
+        if (paymentMethod) {
+          const methodLabel = PAYMENT_METHOD_LABELS[paymentMethod] || paymentMethod;
+          serviceLabel += ` (אמצעי תשלום: ${methodLabel})`;
+        }
+      }
+
+      // Resolve frequency using the full inheritance chain
+      const rawFreq = resolveFrequency(treeNode.id, client, companyTree);
+      const freq = FREQ_LABELS[rawFreq] || rawFreq || '';
+
+      rows.push([client.name, serviceLabel, freq]);
+    }
+
+    if (!hasEnabledNodes) {
+      rows.push([client.name, '', '']);
     }
   }
 
