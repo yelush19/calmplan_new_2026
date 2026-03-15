@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download, Plus, AlertTriangle, X, Layers } from 'lucide-react';
+import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download, Plus, AlertTriangle, X, Layers, ArrowUp, ArrowDown, Pencil, GripVertical, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   loadCompanyTree,
@@ -30,9 +30,12 @@ import {
   onTreeChange,
   cleanStaleClientNodes,
   addNodeToCompanyTree,
+  updateNodeInCompanyTree,
+  moveNodeInCompanyTree,
   findOrphanClientNodes,
 } from '@/services/processTreeService';
 import { getStepsForService } from '@/config/processTemplates';
+import { toast } from '@/components/ui/use-toast';
 import { ClientAccount } from '@/api/entities';
 
 // ── Branch colors ──
@@ -77,10 +80,16 @@ const VAT_REPORTING_METHODS = [
   { value: 'detailed_874', label: 'דיווח מפורט (874)', sla_day: 23 },
 ];
 
-// ── TreeNode — recursive renderer ──
-function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, onFrequencyChange, onExtraFieldChange, bankAccounts }) {
+// ── TreeNode — recursive renderer with two-way editing ──
+function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, onFrequencyChange, onExtraFieldChange, onNodeUpdate, onNodeMove, onAddChild, onRefresh, bankAccounts, siblingCount, siblingIndex }) {
   const [collapsed, setCollapsed] = useState(depth > 1);
   const [stepsExpanded, setStepsExpanded] = useState(false);
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState(node.label);
+  const [addingStep, setAddingStep] = useState(false);
+  const [newStepLabel, setNewStepLabel] = useState('');
+  const [addingChild, setAddingChild] = useState(false);
+  const [newChildName, setNewChildName] = useState('');
   const enabled = isNodeEnabled(clientTree, node.id);
   const hasChildren = node.children && node.children.length > 0;
   // Resolve steps: node.steps from DB tree, fallback to processTemplates via service_key
@@ -107,9 +116,84 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
   const isBankLinked = node.smart_link === 'bank_accounts';
   const activeAccounts = bankAccounts?.filter(a => a.account_status === 'active') || [];
 
+  // ── Save label rename to system settings ──
+  const handleSaveLabel = async () => {
+    if (labelDraft.trim() && labelDraft !== node.label) {
+      try {
+        await updateNodeInCompanyTree(node.id, { label: labelDraft.trim() }, 'ProcessTreeManager');
+        toast({ title: 'שם עודכן', description: `"${node.label}" → "${labelDraft.trim()}"` });
+        onRefresh?.();
+      } catch (err) {
+        toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+      }
+    }
+    setEditingLabel(false);
+  };
+
+  // ── Add step to this node (syncs to system settings) ──
+  const handleAddStep = async () => {
+    if (!newStepLabel.trim()) return;
+    const updatedSteps = [...nodeSteps, { key: `step_${Date.now()}`, label: newStepLabel.trim() }];
+    try {
+      await updateNodeInCompanyTree(node.id, { steps: updatedSteps }, 'ProcessTreeManager');
+      toast({ title: 'שלב נוסף', description: newStepLabel.trim() });
+      setNewStepLabel('');
+      setAddingStep(false);
+      onRefresh?.();
+    } catch (err) {
+      toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  // ── Remove step ──
+  const handleRemoveStep = async (stepIndex) => {
+    const updatedSteps = nodeSteps.filter((_, i) => i !== stepIndex);
+    try {
+      await updateNodeInCompanyTree(node.id, { steps: updatedSteps }, 'ProcessTreeManager');
+      onRefresh?.();
+    } catch (err) {
+      toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  // ── Move node up/down among siblings ──
+  const handleMoveUp = async () => {
+    if (siblingIndex <= 0) return;
+    try {
+      const parentId = node.depends_on?.[0] || branchId;
+      await moveNodeInCompanyTree(node.id, parentId, siblingIndex - 1, 'ProcessTreeManager');
+      onRefresh?.();
+    } catch (err) {
+      toast({ title: 'שגיאה בהזזה', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleMoveDown = async () => {
+    if (siblingIndex >= siblingCount - 1) return;
+    try {
+      const parentId = node.depends_on?.[0] || branchId;
+      await moveNodeInCompanyTree(node.id, parentId, siblingIndex + 1, 'ProcessTreeManager');
+      onRefresh?.();
+    } catch (err) {
+      toast({ title: 'שגיאה בהזזה', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  // ── Add child node ──
+  const handleAddChild = async () => {
+    if (!newChildName.trim()) return;
+    try {
+      await onAddChild(branchId, node.id, newChildName.trim());
+      setNewChildName('');
+      setAddingChild(false);
+    } catch (err) {
+      toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+    }
+  };
+
   return (
     <div className={depth === 0 ? '' : 'mr-5 border-r border-gray-200 pr-3'}>
-      <div className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors ${enabled ? colors.bg : 'bg-gray-50 opacity-60'}`}>
+      <div className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors group/treenode ${enabled ? colors.bg : 'bg-gray-50 opacity-60'}`}>
         {/* Collapse toggle */}
         {hasChildren ? (
           <button
@@ -130,10 +214,27 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           className="data-[state=checked]:bg-emerald-500"
         />
 
-        {/* Node label */}
-        <span className={`text-sm font-medium flex-1 ${enabled ? 'text-gray-800' : 'text-gray-400'}`}>
-          {node.label}
-        </span>
+        {/* Node label — editable */}
+        {editingLabel ? (
+          <div className="flex items-center gap-1 flex-1">
+            <Input
+              value={labelDraft}
+              onChange={(e) => setLabelDraft(e.target.value)}
+              className="h-6 text-sm flex-1"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveLabel(); if (e.key === 'Escape') setEditingLabel(false); }}
+              onBlur={handleSaveLabel}
+            />
+          </div>
+        ) : (
+          <span
+            className={`text-sm font-medium flex-1 cursor-pointer hover:underline decoration-dashed underline-offset-2 ${enabled ? 'text-gray-800' : 'text-gray-400'}`}
+            onClick={() => { setLabelDraft(node.label); setEditingLabel(true); }}
+            title="לחץ לשינוי שם"
+          >
+            {node.label}
+          </span>
+        )}
 
         {/* Parent task badge */}
         {node.is_parent_task && (
@@ -176,29 +277,98 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           </span>
         )}
 
-        {/* Steps count badge */}
-        {nodeSteps.length > 0 && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setStepsExpanded(!stepsExpanded); }}
-            className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded transition-colors ${stepsExpanded ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'}`}
-            title="הצג שלבים"
-          >
-            <Layers className="w-3 h-3" />
-            <span className="font-medium">{nodeSteps.length}</span>
+        {/* Steps count badge — click to expand/edit */}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setStepsExpanded(!stepsExpanded); }}
+          className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded transition-colors ${stepsExpanded ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'}`}
+          title="ערוך שלבים"
+        >
+          <Layers className="w-3 h-3" />
+          <span className="font-medium">{nodeSteps.length}</span>
+        </button>
+
+        {/* Move up/down buttons — visible on hover */}
+        <div className="opacity-0 group-hover/treenode:opacity-100 flex items-center gap-0.5 transition-opacity">
+          {siblingIndex > 0 && (
+            <button type="button" onClick={handleMoveUp} className="text-gray-300 hover:text-blue-500" title="הזז למעלה">
+              <ArrowUp className="w-3 h-3" />
+            </button>
+          )}
+          {siblingIndex < siblingCount - 1 && (
+            <button type="button" onClick={handleMoveDown} className="text-gray-300 hover:text-blue-500" title="הזז למטה">
+              <ArrowDown className="w-3 h-3" />
+            </button>
+          )}
+          <button type="button" onClick={() => setAddingChild(!addingChild)} className="text-gray-300 hover:text-emerald-500" title="הוסף צומת בן">
+            <Plus className="w-3 h-3" />
           </button>
-        )}
+        </div>
       </div>
 
-      {/* Steps list — collapsible */}
-      {stepsExpanded && nodeSteps.length > 0 && (
-        <div className="mr-10 mt-1 mb-1.5 flex flex-wrap gap-1 px-2 py-1.5 bg-amber-50/50 rounded-md border border-amber-100">
+      {/* Steps list — editable */}
+      {stepsExpanded && (
+        <div className="mr-10 mt-1 mb-1.5 px-2 py-1.5 bg-amber-50/50 rounded-md border border-amber-100 space-y-1">
           {nodeSteps.map((step, idx) => (
-            <Badge key={step.key || idx} className="bg-white text-amber-700 text-[9px] px-1.5 py-0.5 border border-amber-200 flex items-center gap-1">
-              <span className="text-amber-400 font-bold">{idx + 1}</span>
-              {step.label}
-            </Badge>
+            <div key={step.key || idx} className="flex items-center gap-1.5 group/step">
+              <Badge className="bg-white text-amber-700 text-[9px] px-1.5 py-0.5 border border-amber-200 flex items-center gap-1">
+                <span className="text-amber-400 font-bold">{idx + 1}</span>
+                {step.label}
+              </Badge>
+              <button
+                type="button"
+                onClick={() => handleRemoveStep(idx)}
+                className="opacity-0 group-hover/step:opacity-100 text-gray-300 hover:text-red-500 transition-opacity"
+                title="הסר שלב"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
           ))}
+          {/* Add step inline */}
+          {addingStep ? (
+            <div className="flex items-center gap-1 mt-1">
+              <Input
+                value={newStepLabel}
+                onChange={(e) => setNewStepLabel(e.target.value)}
+                placeholder="שם שלב חדש..."
+                className="h-5 text-[10px] flex-1"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddStep(); if (e.key === 'Escape') setAddingStep(false); }}
+              />
+              <Button type="button" size="sm" onClick={handleAddStep} disabled={!newStepLabel.trim()} className="h-5 px-2 text-[9px] bg-amber-600 text-white">
+                <Plus className="w-2.5 h-2.5" />
+              </Button>
+              <button type="button" onClick={() => setAddingStep(false)}><X className="w-3 h-3 text-gray-400" /></button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingStep(true)}
+              className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-amber-600 transition-colors mt-1"
+            >
+              <Plus className="w-3 h-3" /> הוסף שלב
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Add child inline form */}
+      {addingChild && (
+        <div className="mr-10 mt-1 mb-1 flex items-center gap-1">
+          <Input
+            value={newChildName}
+            onChange={(e) => setNewChildName(e.target.value)}
+            placeholder="שם צומת בן..."
+            className="h-6 text-xs flex-1"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddChild(); if (e.key === 'Escape') setAddingChild(false); }}
+          />
+          <Button type="button" size="sm" onClick={handleAddChild} disabled={!newChildName.trim()}
+            className="h-6 px-2 text-[10px] bg-emerald-600 text-white">
+            <Plus className="w-3 h-3" /> הוסף
+          </Button>
+          <button type="button" onClick={() => setAddingChild(false)} className="text-gray-400"><X className="w-3.5 h-3.5" /></button>
         </div>
       )}
 
@@ -270,7 +440,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
       {/* Children */}
       {hasChildren && !collapsed && (
         <div className="mt-0.5">
-          {node.children.map(child => (
+          {node.children.map((child, childIdx) => (
             <TreeNode
               key={child.id}
               node={child}
@@ -281,7 +451,13 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
               onToggle={onToggle}
               onFrequencyChange={onFrequencyChange}
               onExtraFieldChange={onExtraFieldChange}
+              onNodeUpdate={onNodeUpdate}
+              onNodeMove={onNodeMove}
+              onAddChild={onAddChild}
+              onRefresh={onRefresh}
               bankAccounts={bankAccounts}
+              siblingCount={node.children.length}
+              siblingIndex={childIdx}
             />
           ))}
         </div>
@@ -584,7 +760,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
             {/* Branch children */}
             {isExpanded && (
               <div className="p-2 space-y-0.5">
-                {(branch.children || []).map(node => (
+                {(branch.children || []).map((node, nodeIdx) => (
                   <TreeNode
                     key={node.id}
                     node={node}
@@ -595,7 +771,11 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
                     onToggle={handleToggle}
                     onFrequencyChange={handleFrequencyChange}
                     onExtraFieldChange={handleExtraFieldChange}
+                    onAddChild={handleAddProcess}
+                    onRefresh={refreshTree}
                     bankAccounts={bankAccounts}
+                    siblingCount={(branch.children || []).length}
+                    siblingIndex={nodeIdx}
                   />
                 ))}
                 <AddProcessButton branchId={branchId} branchColors={colors} onAdd={handleAddProcess} />
@@ -607,13 +787,11 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
 
       {/* Info note */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+        <strong>עריכה דו-כיוונית:</strong> לחצי על שם צומת לשנות אותו • לחצי על מספר השלבים לערוך/להוסיף שלבים • כל שינוי נשמר להגדרות מערכת.
+        <br />
+        <strong>הזזה:</strong> חיצי למעלה/למטה (בריחוף) מזיזים צמתים • + מוסיף צומת בן.
+        <br />
         <strong>Cascade:</strong> סימון צומת בן מפעיל אוטומטית את ההורה. כיבוי הורה מכבה את כל הבנים.
-        <br />
-        <strong>תדירות:</strong> ברירת מחדל עוברת בירושה מההורה. שנה ל-Override ספציפי לפי לקוח.
-        <br />
-        <strong>מע"מ:</strong> שיטת הדיווח קובעת את הדדליין (15 ידני / 19 דיגיטלי / 23 מפורט).
-        <br />
-        <strong>התאמות:</strong> תדירות נגזרת מהגדרת החשבון בטאב "חשבונות בנק".
       </div>
     </div>
   );
