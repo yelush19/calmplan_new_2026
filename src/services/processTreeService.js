@@ -201,6 +201,26 @@ export async function loadCompanyTree() {
 }
 
 /**
+ * Ensure MindMap custom_services / overrides are in sync with the current tree.
+ * Called on page load to clean up stale entries from previous sessions.
+ * Safe to call multiple times — skips if already synced this session.
+ */
+let _mindMapSyncDone = false;
+export async function ensureMindMapSync() {
+  if (_mindMapSyncDone) return;
+  _mindMapSyncDone = true;
+  const { tree } = await loadCompanyTree();
+  if (tree) {
+    try {
+      await syncTreeToMindMap(tree);
+      console.log('[ProcessTreeService] ✅ MindMap sync on load complete');
+    } catch (err) {
+      console.warn('[ProcessTreeService] MindMap sync on load failed:', err);
+    }
+  }
+}
+
+/**
  * Save the company process tree to DB.
  * Updates the existing config record or creates a new one.
  *
@@ -569,19 +589,16 @@ export async function syncTreeToMindMap(tree) {
     }
   }
 
-  // CLEANUP: Hide template services deleted from tree.
-  // A template service should be hidden if:
-  //   1. It's not in the tree (not in treeNodeKeys), AND
-  //   2. Its service_key matches a known tree-managed pattern (has parentId override,
-  //      or its template key appears as a node ID pattern in the tree)
-  for (const [key, tmpl] of Object.entries(ALL_SERVICES)) {
-    if (!treeNodeKeys.has(key) && !overrides[key]?._hidden) {
-      // Hide if it was previously synced by tree (has parentId or dashboard override)
-      if (overrides[key]?.parentId || overrides[key]?.dashboard) {
-        overrides[key] = { ...(overrides[key] || {}), _hidden: true };
-        overridesChanged = true;
-        console.log(`[syncTreeToMindMap] 🧹 Hiding deleted template service "${key}"`);
-      }
+  // CLEANUP: Hide template services that were previously synced by tree but are no longer in it.
+  // Only hides templates that have existing overrides (meaning they were managed by tree sync).
+  for (const [key] of Object.entries(ALL_SERVICES)) {
+    if (treeNodeKeys.has(key)) continue; // still in tree — skip
+    if (overrides[key]?._hidden) continue; // already hidden — skip
+    // Hide if previously managed by tree sync (has parentId or dashboard override)
+    if (overrides[key]?.parentId || overrides[key]?.dashboard) {
+      overrides[key] = { ...(overrides[key] || {}), _hidden: true };
+      overridesChanged = true;
+      console.log(`[syncTreeToMindMap] 🧹 Hiding deleted template service "${key}"`);
     }
   }
 
