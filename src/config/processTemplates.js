@@ -150,6 +150,34 @@ export const ADDITIONAL_SERVICES = {
     ],
   },
 
+  bank_reconciliation: {
+    key: 'bank_reconciliation',
+    label: 'התאמת בנק',
+    dashboard: 'tax',
+    branch: 'P2',
+    taskCategories: ['התאמת בנק', 'work_bank_reconciliation'],
+    createCategory: 'התאמת בנק',
+    steps: [
+      { key: 'bank_statements', label: 'קבלת דפי בנק',     icon: 'file-down' },
+      { key: 'reconcile',       label: 'ביצוע התאמה',       icon: 'check-square' },
+      { key: 'differences',     label: 'טיפול בהפרשים',    icon: 'alert-triangle' },
+    ],
+  },
+
+  credit_card_reconciliation: {
+    key: 'credit_card_reconciliation',
+    label: 'התאמת כ"א',
+    dashboard: 'tax',
+    branch: 'P2',
+    taskCategories: ['התאמת כ"א', 'work_credit_card_reconciliation'],
+    createCategory: 'התאמת כ"א',
+    steps: [
+      { key: 'cc_statements',   label: 'קבלת דפי כרטיס',   icon: 'file-down' },
+      { key: 'reconcile',       label: 'ביצוע התאמה',       icon: 'check-square' },
+      { key: 'differences',     label: 'טיפול בהפרשים',    icon: 'alert-triangle' },
+    ],
+  },
+
   annual_reports: {
     key: 'annual_reports',
     label: 'דוחות שנתיים / מאזנים',

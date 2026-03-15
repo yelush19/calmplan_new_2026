@@ -91,10 +91,23 @@ const P1_BRANCH = {
           depends_on: ['P1_payroll'],
           execution: 'parallel',
         }),
-        node('P1_masav_authorities', 'מס"ב רשויות', 'masav_authorities', {
+        node('P1_authorities_payment', 'תשלום רשויות', 'authorities_payment', {
           frequency_inherit: true,
           depends_on: ['P1_payroll'],
           execution: 'parallel',
+          extra_fields: {
+            payment_method: {
+              type: 'select',
+              label: 'אמצעי תשלום רשויות',
+              options: [
+                { value: 'masav', label: 'מס״ב' },
+                { value: 'credit_card', label: 'כרטיס אשראי' },
+                { value: 'bank_standing_order', label: 'הו״ק אוטומטית' },
+                { value: 'check', label: 'המחאה' },
+              ],
+              default_value: 'masav',
+            },
+          },
         }),
       ],
     }),
@@ -114,6 +127,11 @@ const P2_BRANCH = {
       is_parent_task: true,
       default_frequency: 'monthly',
       children: [
+        node('P2_expense_collection', 'קליטת הוצאות', 'expense_collection', {
+          frequency_inherit: true,
+          depends_on: ['P2_bookkeeping'],
+          execution: 'parallel',
+        }),
         node('P2_vat', 'מע"מ', 'vat', {
           default_frequency: 'bimonthly',
           frequency_field: 'vat_reporting_frequency',
@@ -152,6 +170,18 @@ const P2_BRANCH = {
       depends_on: ['P2_vat'],
       // Smart node: frequency derived from client bank accounts
       smart_link: 'bank_accounts',
+      children: [
+        node('P2_bank_reconciliation', 'התאמת בנק', 'bank_reconciliation', {
+          frequency_inherit: true,
+          depends_on: ['P2_reconciliation'],
+          execution: 'parallel',
+        }),
+        node('P2_credit_reconciliation', 'התאמת כ"א', 'credit_card_reconciliation', {
+          frequency_inherit: true,
+          depends_on: ['P2_reconciliation'],
+          execution: 'parallel',
+        }),
+      ],
     }),
   ],
 };
@@ -328,7 +358,7 @@ const P4_BRANCH = {
 // ============================================================
 
 export const PROCESS_TREE_SEED = {
-  version: '3.2',
+  version: '3.3',
   branches: {
     P1: P1_BRANCH,
     P2: P2_BRANCH,
@@ -348,10 +378,14 @@ export const FULL_SERVICE_NODES = [
   'P1_masav_employees',
   'P1_social_security',
   'P1_deductions',
+  'P1_authorities_payment',
   'P2_bookkeeping',
+  'P2_expense_collection',
   'P2_vat',
   'P2_tax_advances',
   'P2_reconciliation',
+  'P2_bank_reconciliation',
+  'P2_credit_reconciliation',
   'P5_annual_reports',
   'P5_gather_materials',
   'P5_data_entry',

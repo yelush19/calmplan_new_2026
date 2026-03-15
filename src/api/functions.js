@@ -384,25 +384,24 @@ export const exportCustomerServicesCSV = async () => {
       // Build service label — include extra fields info
       let serviceLabel = treeNode.label;
 
-      // Special handling: authorities_payment — append payment method
-      if (treeNode.service_key === 'authorities_payment' || treeNode.id.includes('authorities')) {
-        const paymentMethod = client.authorities_payment_method;
-        if (paymentMethod) {
-          const methodLabel = PAYMENT_METHOD_LABELS[paymentMethod] || paymentMethod;
-          serviceLabel += ` + אמצעי תשלום: ${methodLabel}`;
-        }
-      }
-
-      // Include extra_fields values in the label (e.g., VAT reporting method)
+      // Include extra_fields values in the label (e.g., VAT method, payment method)
       if (treeNode.extra_fields) {
         for (const [fieldKey, fieldDef] of Object.entries(treeNode.extra_fields)) {
           const clientValue = clientTree[treeNode.id]?.[fieldKey];
           if (clientValue && fieldDef.options) {
             const opt = fieldDef.options.find(o => o.value === clientValue);
             if (opt) {
-              serviceLabel += ` (${opt.label})`;
+              serviceLabel += ` (${fieldDef.label}: ${opt.label})`;
             }
           }
+        }
+      }
+      // Fallback: legacy authorities_payment_method on client object
+      if (treeNode.service_key === 'authorities_payment' && !treeNode.extra_fields?.payment_method) {
+        const paymentMethod = client.authorities_payment_method;
+        if (paymentMethod) {
+          const methodLabel = PAYMENT_METHOD_LABELS[paymentMethod] || paymentMethod;
+          serviceLabel += ` (אמצעי תשלום: ${methodLabel})`;
         }
       }
 

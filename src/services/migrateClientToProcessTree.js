@@ -28,7 +28,7 @@ const SERVICE_TO_NODES = {
     'P1_payroll',
     'P1_payslip_sending',
     'P1_masav_employees',
-    'P1_masav_authorities',
+    'P1_authorities_payment',
   ],
   social_security: [
     'P1_social_security',
@@ -43,8 +43,8 @@ const SERVICE_TO_NODES = {
   masav_social: [
     'P1_masav_social',
   ],
-  masav_authorities: [
-    'P1_masav_authorities',
+  authorities_payment: [
+    'P1_authorities_payment',
   ],
 
   // P2 — Bookkeeping & Tax
@@ -62,6 +62,8 @@ const SERVICE_TO_NODES = {
   ],
   reconciliation: [
     'P2_reconciliation',
+    'P2_bank_reconciliation',
+    'P2_credit_reconciliation',
   ],
 
   // P3 — Admin
@@ -160,6 +162,11 @@ export function migrateClientToProcessTree(client) {
       if (freq && freq !== 'not_applicable') {
         entry.frequency = freq;
       }
+    }
+
+    // Copy authorities_payment_method to the tree's extra_field
+    if (nodeId === 'P1_authorities_payment' && client.authorities_payment_method) {
+      entry.payment_method = client.authorities_payment_method;
     }
 
     processTree[nodeId] = entry;
