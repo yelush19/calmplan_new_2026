@@ -44,7 +44,7 @@ import {
 } from 'lucide-react';
 import { Client, Project, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount, Lead } from '@/api/entities';
 // mondayApi removed (Kill Monday directive)
-import { exportClientsToExcel } from '@/api/functions';
+import { exportClientsToExcel, exportCustomerServicesCSV } from '@/api/functions';
 import { importClientsFromExcel } from '@/api/functions';
 import { exportClientAccountsTemplate } from '@/api/functions';
 import { importClientAccounts } from '@/api/functions';
@@ -258,6 +258,20 @@ export default function ClientManagementPage() {
     } catch (error) {
       console.error("Error exporting clients:", error);
       alert('שגיאה בייצוא הלקוחות');
+    }
+    setIsExporting(false);
+  };
+
+  const handleExportCustomerServices = async () => {
+    setIsExporting(true);
+    try {
+      const result = await exportCustomerServicesCSV();
+      if (result.success) {
+        console.log(`Exported ${result.count} rows`);
+      }
+    } catch (error) {
+      console.error("Error exporting customer services:", error);
+      alert('שגיאה בייצוא שירותי לקוחות');
     }
     setIsExporting(false);
   };
@@ -864,6 +878,10 @@ export default function ClientManagementPage() {
               <DropdownMenuItem onClick={handleExport} disabled={isExporting}>
                 <Download className="w-4 h-4 ml-2" />
                 ייצוא לקוחות
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCustomerServices} disabled={isExporting}>
+                <Download className="w-4 h-4 ml-2" />
+                ייצוא שירותי לקוחות (CSV)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

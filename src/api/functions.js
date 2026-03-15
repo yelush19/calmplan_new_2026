@@ -318,6 +318,100 @@ export const syncReconciliationTasks = async () => ({ data: { success: false, er
 export const syncAllBoards = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
 
 export const exportClientsToExcel = async () => ({ data: { success: false, error: 'Export not available' } });
+
+/**
+ * Export active clients with their services and frequencies to CSV.
+ * Columns: לקוח | שירות | תדירות
+ * One row per client×service combination.
+ */
+export const exportCustomerServicesCSV = async () => {
+  const allClients = await entities.Client.list();
+  const activeClients = allClients.filter(c => c.status === 'active' && c.is_deleted !== true);
+
+  const SERVICE_LABELS = {
+    bookkeeping: 'הנהלת חשבונות',
+    bookkeeping_full: 'הנהלת חשבונות מלאה',
+    vat_reporting: 'דיווחי מע״מ',
+    tax_advances: 'מקדמות מס',
+    payroll: 'שכר',
+    social_security: 'ביטוח לאומי',
+    deductions: 'מ״ה ניכויים',
+    reconciliation: 'התאמות חשבונות',
+    annual_reports: 'מאזנים / דוחות שנתיים',
+    pnl_reports: 'דוחות רווח והפסד (PNL)',
+    masav_employees: 'מס״ב עובדים',
+    masav_social: 'מס״ב סוציאליות',
+    masav_suppliers: 'מס״ב ספקים',
+    authorities_payment: 'תשלום רשויות',
+    operator_reporting: 'דיווח למתפעל',
+    taml_reporting: 'דיווח לטמל',
+    payslip_sending: 'משלוח תלושים',
+    reserve_claims: 'תביעות מילואים',
+    admin: 'אדמיניסטרציה',
+  };
+
+  const FREQ_LABELS = {
+    monthly: 'חודשי',
+    bimonthly: 'דו-חודשי',
+    quarterly: 'רבעוני',
+    semi_annual: 'חצי שנתי',
+    yearly: 'שנתי',
+    not_applicable: 'לא רלוונטי',
+  };
+
+  // Map service type to its frequency field in reporting_info
+  const SERVICE_FREQ_FIELD = {
+    vat_reporting: 'vat_reporting_frequency',
+    tax_advances: 'tax_advances_frequency',
+    payroll: 'payroll_frequency',
+    social_security: 'social_security_frequency',
+    deductions: 'deductions_frequency',
+    pnl_reports: 'pnl_frequency',
+  };
+
+  const rows = [];
+  for (const client of activeClients) {
+    const services = client.service_types || [];
+    if (services.length === 0) {
+      // Client with no services — still include with empty service/frequency
+      rows.push([client.name, '', '']);
+      continue;
+    }
+    for (const svc of services) {
+      const label = SERVICE_LABELS[svc] || svc;
+      const freqField = SERVICE_FREQ_FIELD[svc];
+      let freq = '';
+      if (freqField && client.reporting_info) {
+        const rawFreq = client.reporting_info[freqField];
+        freq = FREQ_LABELS[rawFreq] || rawFreq || '';
+      } else if (['annual_reports'].includes(svc)) {
+        freq = 'שנתי';
+      } else if (['bookkeeping', 'bookkeeping_full', 'masav_employees', 'masav_social', 'masav_suppliers', 'authorities_payment', 'payslip_sending', 'reconciliation', 'operator_reporting', 'taml_reporting'].includes(svc)) {
+        freq = 'חודשי';
+      }
+      rows.push([client.name, label, freq]);
+    }
+  }
+
+  // Sort by client name
+  rows.sort((a, b) => a[0].localeCompare(b[0], 'he'));
+
+  const header = 'לקוח,שירות,תדירות';
+  const csvRows = rows.map(r =>
+    r.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',')
+  );
+  const bom = '\uFEFF';
+  const csv = bom + header + '\n' + csvRows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const today = new Date().toISOString().slice(0, 10);
+  a.download = `customer_services_${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  return { success: true, count: rows.length };
+};
 export const importClientsFromExcel = async () => ({ data: { success: false, error: 'Import not available' } });
 export const exportClientAccountsTemplate = async () => ({ data: { success: false, error: 'Export not available' } });
 export const importClientAccounts = async () => ({ data: { success: false, error: 'Import not available' } });
