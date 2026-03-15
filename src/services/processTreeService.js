@@ -682,6 +682,118 @@ export async function addNodeToCompanyTree(branchId, parentNodeId, nodeData, sou
 }
 
 /**
+ * Update a node's properties in the company tree (DB).
+ * Supports updating steps, label, or any other node property.
+ * Changes are saved to DB and broadcasted to all consumers.
+ *
+ * @param {string} nodeId - The node ID to update
+ * @param {object} updates - Properties to merge into the node (e.g., { steps, label })
+ * @param {string} source - Source identifier for broadcast
+ */
+export async function updateNodeInCompanyTree(nodeId, updates, source = 'unknown') {
+  invalidateTreeCache();
+  const { tree, configId } = await loadCompanyTree();
+  if (!tree?.branches) throw new Error('Company tree not found');
+
+  const updatedTree = { ...tree, branches: { ...tree.branches } };
+  let found = false;
+
+  const updateInChildren = (nodes) =>
+    nodes.map(n => {
+      if (n.id === nodeId) {
+        found = true;
+        return { ...n, ...updates };
+      }
+      if (n.children?.length) {
+        return { ...n, children: updateInChildren(n.children) };
+      }
+      return n;
+    });
+
+  for (const [branchId, branch] of Object.entries(updatedTree.branches)) {
+    const updated = updateInChildren(branch.children || []);
+    updatedTree.branches[branchId] = { ...branch, children: updated };
+    if (found) break;
+  }
+
+  if (!found) throw new Error(`Node "${nodeId}" not found in company tree`);
+  return saveAndBroadcast(updatedTree, configId, source);
+}
+
+/**
+ * Move a node within the company tree (reorder or reparent).
+ * Removes from old location and inserts at new location.
+ *
+ * @param {string} nodeId - Node to move
+ * @param {string} newParentId - New parent node ID (or branch ID for root-level)
+ * @param {number|null} insertIndex - Position in parent's children (null = append)
+ * @param {string} source - Source identifier for broadcast
+ */
+export async function moveNodeInCompanyTree(nodeId, newParentId, insertIndex = null, source = 'unknown') {
+  invalidateTreeCache();
+  const { tree, configId } = await loadCompanyTree();
+  if (!tree?.branches) throw new Error('Company tree not found');
+
+  const updatedTree = { ...tree, branches: { ...tree.branches } };
+
+  // Step 1: Extract the node (remove from old location)
+  let extractedNode = null;
+  const removeFromChildren = (nodes) =>
+    nodes.filter(n => {
+      if (n.id === nodeId) { extractedNode = n; return false; }
+      return true;
+    }).map(n => n.children?.length ? { ...n, children: removeFromChildren(n.children) } : n);
+
+  for (const [branchId, branch] of Object.entries(updatedTree.branches)) {
+    updatedTree.branches[branchId] = { ...branch, children: removeFromChildren(branch.children || []) };
+    if (extractedNode) break;
+  }
+
+  if (!extractedNode) throw new Error(`Node "${nodeId}" not found`);
+
+  // Step 2: Insert at new location
+  // Check if newParentId is a branch root
+  if (updatedTree.branches[newParentId]) {
+    const branch = { ...updatedTree.branches[newParentId] };
+    const children = [...(branch.children || [])];
+    if (insertIndex !== null && insertIndex >= 0) {
+      children.splice(insertIndex, 0, extractedNode);
+    } else {
+      children.push(extractedNode);
+    }
+    branch.children = children;
+    updatedTree.branches[newParentId] = branch;
+  } else {
+    // Insert under a specific parent node (deep)
+    let inserted = false;
+    const insertIntoParent = (nodes) =>
+      nodes.map(n => {
+        if (n.id === newParentId && !inserted) {
+          inserted = true;
+          const children = [...(n.children || [])];
+          if (insertIndex !== null && insertIndex >= 0) {
+            children.splice(insertIndex, 0, extractedNode);
+          } else {
+            children.push(extractedNode);
+          }
+          return { ...n, children };
+        }
+        if (n.children?.length) return { ...n, children: insertIntoParent(n.children) };
+        return n;
+      });
+
+    for (const [branchId, branch] of Object.entries(updatedTree.branches)) {
+      updatedTree.branches[branchId] = { ...branch, children: insertIntoParent(branch.children || []) };
+      if (inserted) break;
+    }
+
+    if (!inserted) throw new Error(`Target parent "${newParentId}" not found`);
+  }
+
+  return saveAndBroadcast(updatedTree, configId, source);
+}
+
+/**
  * Check which client tree node IDs don't exist in the company tree.
  * Returns the list of orphan node IDs.
  *

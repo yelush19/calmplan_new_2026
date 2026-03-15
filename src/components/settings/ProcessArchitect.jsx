@@ -34,6 +34,7 @@ import {
   syncSettingToDb,
 } from '@/services/processTreeService';
 import { flattenTree } from '@/config/companyProcessTree';
+import { getStepsForService } from '@/config/processTemplates';
 import { toast } from '@/components/ui/use-toast';
 
 // ── Branch color palette for dynamic branches ──
@@ -278,6 +279,12 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
   const hasChildren = node.children && node.children.length > 0;
   const hasExtraFields = node.extra_fields && Object.keys(node.extra_fields).length > 0;
 
+  // Resolve steps: use node.steps first, fallback to processTemplates via service_key
+  const resolvedSteps = (node.steps && node.steps.length > 0)
+    ? node.steps
+    : (node.service_key ? getStepsForService(node.service_key) : []);
+  const isInheritedSteps = resolvedSteps.length > 0 && (!node.steps || node.steps.length === 0);
+
   // Build list of all descendants to prevent circular move
   const getDescendantIds = (n) => {
     const ids = new Set([n.id]);
@@ -390,19 +397,20 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
           title="ערוך שלבים"
         >
           <Layers className="w-3 h-3" />
-          {(node.steps || []).length > 0 && <span className="font-medium">{(node.steps || []).length}</span>}
+          {resolvedSteps.length > 0 && <span className="font-medium">{resolvedSteps.length}</span>}
+          {isInheritedSteps && <span className="text-[8px] text-blue-400 mr-0.5">T</span>}
         </button>
         {/* Inline step labels (always visible when steps exist) */}
-        {!showSteps && (node.steps || []).length > 0 && (
+        {!showSteps && resolvedSteps.length > 0 && (
           <div className="flex flex-wrap gap-0.5 max-w-[200px]">
-            {(node.steps || []).slice(0, 4).map((step, i) => (
-              <Badge key={step.key || i} className="bg-amber-50 text-amber-700 text-[8px] px-1 py-0 border border-amber-200 whitespace-nowrap">
+            {resolvedSteps.slice(0, 4).map((step, i) => (
+              <Badge key={step.key || i} className={`text-[8px] px-1 py-0 border whitespace-nowrap ${isInheritedSteps ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                 {step.label}
               </Badge>
             ))}
-            {(node.steps || []).length > 4 && (
+            {resolvedSteps.length > 4 && (
               <Badge className="bg-gray-50 text-gray-500 text-[8px] px-1 py-0 border border-gray-200">
-                +{(node.steps || []).length - 4}
+                +{resolvedSteps.length - 4}
               </Badge>
             )}
           </div>
