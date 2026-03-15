@@ -51,6 +51,21 @@ function node(id, label, service_key, overrides = {}) {
 // P1 — PAYROLL BRANCH
 // ============================================================
 
+// Payment method extra_field — shared by all authority services
+const PAYMENT_METHOD_FIELD = {
+  payment_method: {
+    type: 'select',
+    label: 'אמצעי תשלום',
+    options: [
+      { value: 'masav', label: 'מס״ב' },
+      { value: 'credit_card', label: 'כרטיס אשראי' },
+      { value: 'bank_standing_order', label: 'הו״ק אוטומטית' },
+      { value: 'check', label: 'המחאה' },
+    ],
+    default_value: 'masav',
+  },
+};
+
 const P1_BRANCH = {
   id: 'P1',
   label: 'חשבות שכר',
@@ -76,8 +91,17 @@ const P1_BRANCH = {
           frequency_field: 'social_security_frequency',
           frequency_fallback: 'payroll_frequency',
           depends_on: ['P1_payroll'],
-          execution: 'parallel',
+          execution: 'sequential',
           children: [
+            node('P1_social_security_report', 'דיווח ביטוח לאומי', 'social_security_report', {
+              frequency_inherit: true,
+              depends_on: ['P1_social_security'],
+            }),
+            node('P1_social_security_payment', 'תשלום ביטוח לאומי', 'social_security_payment', {
+              frequency_inherit: true,
+              depends_on: ['P1_social_security_report'],
+              extra_fields: { ...PAYMENT_METHOD_FIELD },
+            }),
             node('P1_masav_social', 'מס"ב סוציאליות', 'masav_social', {
               frequency_inherit: true,
               depends_on: ['P1_social_security'],
@@ -89,25 +113,18 @@ const P1_BRANCH = {
           frequency_field: 'deductions_frequency',
           frequency_fallback: 'payroll_frequency',
           depends_on: ['P1_payroll'],
-          execution: 'parallel',
-        }),
-        node('P1_authorities_payment', 'תשלום רשויות', 'authorities_payment', {
-          frequency_inherit: true,
-          depends_on: ['P1_payroll'],
-          execution: 'parallel',
-          extra_fields: {
-            payment_method: {
-              type: 'select',
-              label: 'אמצעי תשלום רשויות',
-              options: [
-                { value: 'masav', label: 'מס״ב' },
-                { value: 'credit_card', label: 'כרטיס אשראי' },
-                { value: 'bank_standing_order', label: 'הו״ק אוטומטית' },
-                { value: 'check', label: 'המחאה' },
-              ],
-              default_value: 'masav',
-            },
-          },
+          execution: 'sequential',
+          children: [
+            node('P1_deductions_report', 'דיווח ניכויים', 'deductions_report', {
+              frequency_inherit: true,
+              depends_on: ['P1_deductions'],
+            }),
+            node('P1_deductions_payment', 'תשלום ניכויים', 'deductions_payment', {
+              frequency_inherit: true,
+              depends_on: ['P1_deductions_report'],
+              extra_fields: { ...PAYMENT_METHOD_FIELD },
+            }),
+          ],
         }),
       ],
     }),
@@ -136,26 +153,47 @@ const P2_BRANCH = {
           default_frequency: 'bimonthly',
           frequency_field: 'vat_reporting_frequency',
           depends_on: ['P2_bookkeeping'],
-          execution: 'parallel',
-          // VAT reporting method determines SLA deadline
-          extra_fields: {
-            vat_reporting_method: {
-              type: 'select',
-              label: 'שיטת דיווח מע"מ',
-              options: [
-                { value: 'periodic_manual', label: 'תקופתי (המחאה/ידני)', sla_day: 15 },
-                { value: 'periodic_digital', label: 'תקופתי (דיגיטלי)', sla_day: 19 },
-                { value: 'detailed_874', label: 'דיווח מפורט (874)', sla_day: 23 },
-              ],
-              default_value: 'periodic_digital',
-            },
-          },
+          execution: 'sequential',
+          children: [
+            node('P2_vat_report', 'דיווח מע"מ', 'vat_report', {
+              frequency_inherit: true,
+              depends_on: ['P2_vat'],
+              extra_fields: {
+                vat_reporting_method: {
+                  type: 'select',
+                  label: 'סוג דיווח',
+                  options: [
+                    { value: 'periodic_manual', label: 'תקופתי (המחאה/ידני)', sla_day: 15 },
+                    { value: 'periodic_digital', label: 'תקופתי (דיגיטלי)', sla_day: 19 },
+                    { value: 'detailed_874', label: 'דיווח מפורט (874)', sla_day: 23 },
+                  ],
+                  default_value: 'periodic_digital',
+                },
+              },
+            }),
+            node('P2_vat_payment', 'תשלום מע"מ', 'vat_payment', {
+              frequency_inherit: true,
+              depends_on: ['P2_vat_report'],
+              extra_fields: { ...PAYMENT_METHOD_FIELD },
+            }),
+          ],
         }),
         node('P2_tax_advances', 'מקדמות מס הכנסה', 'tax_advances', {
           default_frequency: 'bimonthly',
           frequency_field: 'tax_advances_frequency',
           depends_on: ['P2_bookkeeping'],
-          execution: 'parallel',
+          execution: 'sequential',
+          children: [
+            node('P2_tax_advances_report', 'דיווח מקדמות', 'tax_advances_report', {
+              frequency_inherit: true,
+              depends_on: ['P2_tax_advances'],
+            }),
+            node('P2_tax_advances_payment', 'תשלום מקדמות', 'tax_advances_payment', {
+              frequency_inherit: true,
+              depends_on: ['P2_tax_advances_report'],
+              extra_fields: { ...PAYMENT_METHOD_FIELD },
+            }),
+          ],
         }),
         node('P2_pnl', 'דוח רווח והפסד', 'pnl_reports', {
           default_frequency: 'monthly',
@@ -358,7 +396,7 @@ const P4_BRANCH = {
 // ============================================================
 
 export const PROCESS_TREE_SEED = {
-  version: '3.3',
+  version: '3.4',
   branches: {
     P1: P1_BRANCH,
     P2: P2_BRANCH,
@@ -377,8 +415,8 @@ export const FULL_SERVICE_NODES = [
   'P1_payslip_sending',
   'P1_masav_employees',
   'P1_social_security',
+  'P1_masav_social',
   'P1_deductions',
-  'P1_authorities_payment',
   'P2_bookkeeping',
   'P2_expense_collection',
   'P2_vat',

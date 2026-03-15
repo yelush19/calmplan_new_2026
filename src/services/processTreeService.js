@@ -89,6 +89,18 @@ export async function loadCompanyTree() {
         if (dbVersion < seedVersion) {
           console.log(`[ProcessTreeService] Upgrading tree ${dbVersion} → ${seedVersion}`);
           const merged = { ...dbTree, version: seedVersion };
+
+          // v3.4: Remove obsolete nodes (renamed/replaced)
+          const OBSOLETE_NODES = ['P1_masav_authorities', 'P1_authorities_payment'];
+          const removeObsolete = (nodes) => {
+            if (!nodes) return nodes;
+            return nodes
+              .filter(n => !OBSOLETE_NODES.includes(n.id))
+              .map(n => n.children?.length ? { ...n, children: removeObsolete(n.children) } : n);
+          };
+          for (const [branchId, branch] of Object.entries(merged.branches)) {
+            merged.branches[branchId] = { ...branch, children: removeObsolete(branch.children) };
+          }
           // Merge seed branches: add missing branches AND update existing ones with new children
           for (const [branchId, seedBranch] of Object.entries(PROCESS_TREE_SEED.branches)) {
             if (!merged.branches[branchId]) {

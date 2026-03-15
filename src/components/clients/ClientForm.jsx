@@ -657,7 +657,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <TabsTrigger value="basic">פרטים בסיסיים</TabsTrigger>
               <TabsTrigger value="services">שירותים</TabsTrigger>
               <TabsTrigger value="process_tree">עץ תהליכים</TabsTrigger>
-              <TabsTrigger value="reporting">תדירות דיווח</TabsTrigger>
+              <TabsTrigger value="reporting">נותני שירותים</TabsTrigger>
               <TabsTrigger value="tax">פרטי מס</TabsTrigger>
               <TabsTrigger value="accounts">חשבונות בנק</TabsTrigger>
               <TabsTrigger value="integration">מזהים ואינטגרציות</TabsTrigger>
@@ -918,13 +918,15 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 processTree={formData.process_tree}
                 onChange={(updated) => setFormData(prev => ({ ...prev, process_tree: updated }))}
                 clientId={client?.id}
+                clientName={formData.name}
+                reportingInfo={formData.reporting_info}
               />
             </TabsContent>
             <TabsContent value="reporting" className="space-y-5">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                הגדירי תדירות דיווח לכל סוג. הגדרה זו משפיעה על הפקת משימות חוזרות.
+                קישור נותני שירותים (רו"ח, סוכני ביטוח, יועצים) ללקוח.
                 <br />
-                שינוי שכר ל"לא רלוונטי" יעדכן אוטומטית גם את ביטוח לאומי וניכויים.
+                תדירות דיווח מנוהלת כעת דרך טאב עץ תהליכים.
               </div>
 
               {/* שכר - FIRST, because it controls social security and deductions */}

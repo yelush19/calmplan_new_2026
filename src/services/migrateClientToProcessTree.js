@@ -28,14 +28,17 @@ const SERVICE_TO_NODES = {
     'P1_payroll',
     'P1_payslip_sending',
     'P1_masav_employees',
-    'P1_authorities_payment',
   ],
   social_security: [
     'P1_social_security',
+    'P1_social_security_report',
+    'P1_social_security_payment',
     'P1_masav_social',
   ],
   deductions: [
     'P1_deductions',
+    'P1_deductions_report',
+    'P1_deductions_payment',
   ],
   masav_employees: [
     'P1_masav_employees',
@@ -44,7 +47,9 @@ const SERVICE_TO_NODES = {
     'P1_masav_social',
   ],
   authorities_payment: [
-    'P1_authorities_payment',
+    // Legacy: map to all authority sub-tasks
+    'P1_social_security_payment',
+    'P1_deductions_payment',
   ],
 
   // P2 — Bookkeeping & Tax
@@ -53,9 +58,13 @@ const SERVICE_TO_NODES = {
   ],
   vat_reporting: [
     'P2_vat',
+    'P2_vat_report',
+    'P2_vat_payment',
   ],
   tax_advances: [
     'P2_tax_advances',
+    'P2_tax_advances_report',
+    'P2_tax_advances_payment',
   ],
   pnl_reports: [
     'P2_pnl',
@@ -164,8 +173,8 @@ export function migrateClientToProcessTree(client) {
       }
     }
 
-    // Copy authorities_payment_method to the tree's extra_field
-    if (nodeId === 'P1_authorities_payment' && client.authorities_payment_method) {
+    // Copy authorities_payment_method to all payment sub-nodes
+    if (nodeId.endsWith('_payment') && client.authorities_payment_method) {
       entry.payment_method = client.authorities_payment_method;
     }
 

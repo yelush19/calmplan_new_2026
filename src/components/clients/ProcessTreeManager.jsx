@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText } from 'lucide-react';
+import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download } from 'lucide-react';
 import {
   loadCompanyTree,
   resolveFrequency,
@@ -257,7 +257,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
 }
 
 // ── Main Component ──
-export default function ProcessTreeManager({ processTree, onChange, clientId }) {
+export default function ProcessTreeManager({ processTree, onChange, clientId, clientName, reportingInfo }) {
   const [companyTree, setCompanyTree] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bankAccounts, setBankAccounts] = useState([]);
@@ -349,6 +349,16 @@ export default function ProcessTreeManager({ processTree, onChange, clientId }) 
     onChange({});
   }, [onChange]);
 
+  const handleExportTree = useCallback(async () => {
+    const { exportClientProcessTreeCSV } = await import('@/api/functions');
+    const mockClient = {
+      name: clientName || 'לקוח',
+      process_tree: clientTree,
+      reporting_info: reportingInfo || {},
+    };
+    await exportClientProcessTreeCSV(mockClient);
+  }, [clientTree, clientName, reportingInfo]);
+
   const enabledCount = getEnabledNodeIds(clientTree).length;
 
   if (loading) {
@@ -387,6 +397,17 @@ export default function ProcessTreeManager({ processTree, onChange, clientId }) 
             disabled={enabledCount === 0}
           >
             נקה הכל
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportTree}
+            className="text-xs h-7"
+            disabled={enabledCount === 0}
+          >
+            <Download className="w-3.5 h-3.5 ml-1" />
+            ייצוא CSV
           </Button>
           <Button
             type="button"

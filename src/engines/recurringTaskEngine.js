@@ -10,9 +10,9 @@
  *   Level 3 — Sub-tasks / Process Steps: e.g. "קליטת הכנסות", "הכנת תלושים"
  *
  * RULES:
- *   1. ZERO GHOST DATA — A task is created ONLY if the client's service_types
- *      array EXPLICITLY contains the corresponding service key.
- *      No derivation. No auto-linking. If it's not in service_types, it doesn't exist.
+ *   1. ZERO GHOST DATA — A task is created ONLY if the client's process_tree
+ *      has the corresponding node ENABLED. Falls back to service_types[] for
+ *      legacy clients not yet migrated to process tree.
  *   2. DETERMINISTIC — No service subscription = 0 tasks. No exceptions.
  *   3. MANUAL TRIGGER ONLY — generateRecurringTasks() is called by a button.
  *      Nothing auto-generates.
@@ -57,20 +57,22 @@ export const SERVICE_GROUPS = {
       {
         key: 'payroll',
         label: 'שכר',
-        serviceKey: 'payroll',             // Must exist in client.service_types[]
+        serviceKey: 'payroll',
         templateKey: 'payroll',
         category: 'שכר',
         branch: 'P1',
+        treeNodeId: 'P1_payroll',
         frequencyField: 'payroll_frequency',
       },
       {
         key: 'social_security',
         label: 'סוציאליות',
-        serviceKey: 'payroll',             // Tied to payroll subscription — if client has payroll, they get social security
-        templateKey: 'social_security',    // Uses social_security template from processTemplates (3 steps: הכנה, דיווח, תשלום)
+        serviceKey: 'payroll',
+        templateKey: 'social_security',
         category: 'ביטוח לאומי',
         branch: 'P1',
-        frequencyField: 'payroll_frequency',
+        treeNodeId: 'P1_social_security',
+        frequencyField: 'social_security_frequency',
       },
     ],
   },
@@ -82,19 +84,21 @@ export const SERVICE_GROUPS = {
       {
         key: 'vat',
         label: 'מע"מ',
-        serviceKey: 'vat_reporting',       // Must exist in client.service_types[]
-        templateKey: 'vat',                // Key in ALL_SERVICES for process steps
-        category: 'מע"מ',                  // Hebrew category for task entity
+        serviceKey: 'vat_reporting',
+        templateKey: 'vat',
+        category: 'מע"מ',
         branch: 'P2',
+        treeNodeId: 'P2_vat',
         frequencyField: 'vat_reporting_frequency',
       },
       {
         key: 'tax_advances',
         label: 'מקדמות מס',
-        serviceKey: 'tax_advances',        // Must exist in client.service_types[]
+        serviceKey: 'tax_advances',
         templateKey: 'tax_advances',
         category: 'מקדמות מס',
         branch: 'P2',
+        treeNodeId: 'P2_tax_advances',
         frequencyField: 'tax_advances_frequency',
       },
     ],
@@ -175,16 +179,28 @@ export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, 
 
 /**
  * Determines if a client is subscribed to a given service.
- * Checks both direct subscription and derived (auto-linked) services.
+ * PRIMARY: checks process_tree (עץ תהליכים) for enabled nodes.
+ * FALLBACK: checks service_types[] for legacy clients not yet migrated.
  *
  * @param {Object} client - Client entity
  * @param {Object} serviceDef - Service definition from SERVICE_GROUPS
  * @returns {boolean}
  */
 function clientHasService(client, serviceDef) {
-  const types = client.service_types || [];
+  // PRIMARY: Process tree check (if client has process_tree)
+  const processTree = client.process_tree || {};
+  if (Object.keys(processTree).length > 0) {
+    // Map service key to process tree node ID
+    const nodeId = serviceDef.treeNodeId;
+    if (nodeId && processTree[nodeId]?.enabled) {
+      return true;
+    }
+    // If process tree exists but node not found, service is not enabled
+    return false;
+  }
 
-  // Direct check: does client.service_types contain the serviceKey?
+  // FALLBACK: Legacy service_types[] check
+  const types = client.service_types || [];
   if (types.includes(serviceDef.serviceKey)) {
     return true;
   }
