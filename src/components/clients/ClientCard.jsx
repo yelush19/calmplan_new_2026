@@ -328,8 +328,8 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const hasReporting = reportingRow1.length > 0 || reportingRow2.length > 0;
 
   return (
-    <Card className={`w-full transform transition-all duration-300 shadow-sm hover:shadow-lg border flex flex-col group ${isSelected ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50' : 'border-neutral-light/80 bg-white'}`}>
-      <CardHeader className="pb-3 flex-shrink-0">
+    <Card className={`w-full transition-all duration-200 flex flex-col group rounded-xl ${isSelected ? 'border-2 border-blue-500 ring-2 ring-blue-200 bg-blue-50/50 shadow-lg shadow-blue-100' : 'border-2 border-gray-200 bg-white shadow-sm hover:shadow-xl hover:border-gray-300 hover:-translate-y-0.5'}`}>
+      <CardHeader className="pb-3 flex-shrink-0 bg-gradient-to-l from-gray-50 to-white rounded-t-xl border-b border-gray-100">
         <div className="flex justify-between items-start gap-2">
             <div className="flex items-start gap-3 flex-1 min-w-0">
               {/* Selection Checkbox */}
@@ -512,16 +512,16 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         )}
       </CardContent>
       
-      <CardFooter className="grid grid-cols-4 gap-1 p-2 border-t bg-[#F5F5F5] flex-shrink-0">
-          <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
+      <CardFooter className="grid grid-cols-4 gap-1 p-2 border-t-2 border-gray-200 bg-gray-50/80 rounded-b-xl flex-shrink-0">
+          <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
             <Edit className="w-3 h-3 ml-1" />
             עריכה
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectTasks(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectTasks(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
             <CheckSquare className="w-3 h-3 ml-1" />
             משימות
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectFiles?.(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectFiles?.(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
             <FolderOpen className="w-3 h-3 ml-1" />
             קבצים
           </Button>
@@ -529,15 +529,15 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
             <Receipt className="w-3 h-3 ml-1" />
             פרטי מס
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectAccounts(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectAccounts(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
             <Building className="w-3 h-3 ml-1" />
             חשבונות
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectCollections(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectCollections(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
               <DollarSign className="w-3 h-3 ml-1" />
               גבייה
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectContracts(client)} className="h-8 text-xs text-neutral-medium hover:bg-[#F5F5F5] hover:text-litay-accent">
+          <Button variant="ghost" size="sm" onClick={() => onSelectContracts(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
               <FileText className="w-3 h-3 ml-1" />
               חוזים
           </Button>

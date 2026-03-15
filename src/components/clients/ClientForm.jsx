@@ -653,15 +653,14 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="basic" className="space-y-6">
-            <TabsList className="grid grid-cols-8 w-full">
-              <TabsTrigger value="basic">פרטים בסיסיים</TabsTrigger>
-              <TabsTrigger value="services">שירותים</TabsTrigger>
-              <TabsTrigger value="process_tree">עץ תהליכים</TabsTrigger>
-              <TabsTrigger value="financial">נתונים כספיים</TabsTrigger>
-              <TabsTrigger value="providers">נותני שירותים</TabsTrigger>
-              <TabsTrigger value="tax">פרטי מס</TabsTrigger>
-              <TabsTrigger value="accounts">חשבונות בנק</TabsTrigger>
-              <TabsTrigger value="integration">מזהים ואינטגרציות</TabsTrigger>
+            <TabsList className="flex flex-wrap gap-1 h-auto p-1 bg-gray-100 rounded-xl">
+              <TabsTrigger value="basic" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">פרטים בסיסיים</TabsTrigger>
+              <TabsTrigger value="process_tree" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">עץ תהליכים</TabsTrigger>
+              <TabsTrigger value="financial" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">כספי</TabsTrigger>
+              <TabsTrigger value="providers" className="data-[state=active]:bg-violet-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">נותני שירותים</TabsTrigger>
+              <TabsTrigger value="tax" className="data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">מס</TabsTrigger>
+              <TabsTrigger value="accounts" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">בנק</TabsTrigger>
+              <TabsTrigger value="integration" className="data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap">אינטגרציות</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4">
@@ -741,43 +740,6 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                     {contact.notes !== undefined && (<div className="mt-3"><Label>הערות</Label><Input value={contact.notes} onChange={(e) => updateContact(index, 'notes', e.target.value)} placeholder="הערות נוספות..." /></div>)}
                   </div>
                 ))}
-              </div>
-            </TabsContent>
-            <TabsContent value="services" className="space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-center gap-2">
-                <span className="text-amber-600 font-bold">שים לב:</span>
-                טאב זה יוחלף בקרוב על ידי "עץ תהליכים" — מומלץ להגדיר שירותים שם.
-              </div>
-              <div>
-                <Label className="text-lg font-bold">סוגי שירותים</Label>
-                <div className="space-y-4 mt-3">
-                  {serviceTypeGroups.map((group) => (
-                    <div key={group.group} className="border rounded-lg p-3">
-                      <h4 className="font-semibold text-sm text-gray-600 mb-2">{group.group}</h4>
-                      <div className="grid md:grid-cols-3 gap-2">
-                        {group.services.map((service) => (
-                          <div key={service.value} className="flex items-center space-x-2 space-x-reverse">
-                            <Checkbox
-                              id={service.value}
-                              checked={(formData.service_types || []).includes(service.value)}
-                              onCheckedChange={(checked) => handleServiceTypeChange(service.value, checked)}
-                            />
-                            <Label htmlFor={service.value} className="text-sm">{service.label}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex items-center space-x-2 space-x-reverse pt-2 border-t border-gray-200">
-                    <Checkbox id="select-all-services" onCheckedChange={handleSelectAllServices} checked={formData.service_types.length === serviceTypes.length && serviceTypes.length > 0} />
-                    <Label htmlFor="select-all-services" className="font-medium text-blue-600">בחר הכל</Label>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                    סימון "שכר" → אוטומטית מוסיף "ביטוח לאומי" ו"מ״ה ניכויים"
-                    <br />
-                    סימון "הנה״ח" + סוג עסק "חברה" → אוטומטית מוסיף "מאזנים/דוחות שנתיים" ו"התאמות חשבונות"
-                  </div>
-                </div>
               </div>
             </TabsContent>
             <TabsContent value="process_tree" className="space-y-4">
