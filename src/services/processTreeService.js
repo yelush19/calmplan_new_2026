@@ -631,15 +631,51 @@ export async function syncTreeToMindMap(tree) {
  * @returns {{ tree, configId, newNodeId }} — saved state + new node ID
  */
 export async function addNodeToCompanyTree(branchId, parentNodeId, nodeData, source = 'unknown') {
+  invalidateTreeCache();
   const { tree, configId } = await loadCompanyTree();
   if (!tree?.branches?.[branchId]) {
     throw new Error(`Branch "${branchId}" not found in company tree`);
   }
 
+  // VALIDATION: Prevent duplicate labels within same parent
+  const label = (nodeData.label || '').trim();
+  if (!label) throw new Error('שם הצומת לא יכול להיות ריק');
+
+  const checkDuplicateLabel = (nodes) => {
+    for (const n of (nodes || [])) {
+      if (n.label === label) return true;
+      if (n.children?.length && checkDuplicateLabel(n.children)) return true;
+    }
+    return false;
+  };
+
+  if (parentNodeId) {
+    // Check siblings of the target parent
+    const findParentChildren = (nodes) => {
+      for (const n of (nodes || [])) {
+        if (n.id === parentNodeId) return n.children || [];
+        if (n.children?.length) {
+          const found = findParentChildren(n.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    const siblings = findParentChildren(tree.branches[branchId].children || []);
+    if (siblings && siblings.some(s => s.label === label)) {
+      throw new Error(`כבר קיים צומת בשם "${label}" תחת אותו הורה`);
+    }
+  } else {
+    // Check root-level siblings
+    if ((tree.branches[branchId].children || []).some(s => s.label === label)) {
+      throw new Error(`כבר קיים צומת בשם "${label}" בשורש הענף`);
+    }
+  }
+
   const newNodeId = nodeData.id || `${branchId}_custom_${Date.now()}`;
   const newNode = {
     id: newNodeId,
-    label: nodeData.label,
+    label,
     service_key: newNodeId,
     is_parent_task: false,
     default_frequency: nodeData.default_frequency || 'monthly',
@@ -823,6 +859,61 @@ export async function deleteNodeFromCompanyTree(nodeId, source = 'unknown') {
 
   if (!found) throw new Error(`Node "${nodeId}" not found in company tree`);
   return saveAndBroadcast(updatedTree, configId, source);
+}
+
+/**
+ * Remove duplicate nodes from the company tree.
+ * A node is duplicate if another node with the same label exists
+ * at the same level under the same parent.
+ * Also removes nodes that are nested inside themselves (self-referencing).
+ *
+ * @param {string} source - Source identifier for broadcast
+ * @returns {Object} { removedCount, removedIds }
+ */
+export async function deduplicateCompanyTree(source = 'unknown') {
+  invalidateTreeCache();
+  const { tree, configId } = await loadCompanyTree();
+  if (!tree?.branches) throw new Error('Company tree not found');
+
+  const updatedTree = { ...tree, branches: { ...tree.branches } };
+  const removedIds = [];
+
+  const dedup = (nodes, parentId = null) => {
+    const seen = new Set();
+    return nodes.filter(n => {
+      // Self-reference check: node nested under itself
+      if (n.id === parentId) {
+        removedIds.push(n.id);
+        return false;
+      }
+      // Duplicate label check at same level
+      if (seen.has(n.label)) {
+        removedIds.push(n.id);
+        return false;
+      }
+      seen.add(n.label);
+      return true;
+    }).map(n => {
+      if (n.children?.length) {
+        return { ...n, children: dedup(n.children, n.id) };
+      }
+      return n;
+    });
+  };
+
+  for (const [branchId, branch] of Object.entries(updatedTree.branches)) {
+    updatedTree.branches[branchId] = {
+      ...branch,
+      children: dedup(branch.children || []),
+    };
+  }
+
+  if (removedIds.length > 0) {
+    console.log(`[ProcessTreeService] 🧹 Dedup removed ${removedIds.length} nodes:`, removedIds);
+    await saveAndBroadcast(updatedTree, configId, source);
+  }
+
+  return { removedCount: removedIds.length, removedIds };
 }
 
 /**

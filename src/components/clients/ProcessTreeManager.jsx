@@ -33,6 +33,7 @@ import {
   updateNodeInCompanyTree,
   moveNodeInCompanyTree,
   deleteNodeFromCompanyTree,
+  deduplicateCompanyTree,
   findOrphanClientNodes,
 } from '@/services/processTreeService';
 import { getStepsForService } from '@/config/processTemplates';
@@ -698,6 +699,20 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
     await exportClientProcessTreeCSV(mockClient);
   }, [clientTree, clientName, reportingInfo]);
 
+  const handleDedup = useCallback(async () => {
+    try {
+      const { removedCount } = await deduplicateCompanyTree('ProcessTreeManager');
+      if (removedCount > 0) {
+        toast({ title: 'ניקוי כפילויות', description: `הוסרו ${removedCount} צמתים כפולים` });
+        await refreshTree();
+      } else {
+        toast({ title: 'ניקוי כפילויות', description: 'לא נמצאו כפילויות' });
+      }
+    } catch (err) {
+      toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+    }
+  }, [refreshTree]);
+
   const enabledCount = getEnabledNodeIds(clientTree).length;
 
   if (loading) {
@@ -727,6 +742,15 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleDedup}
+            className="text-xs h-7 text-amber-600 border-amber-300 hover:bg-amber-50"
+          >
+            🧹 נקה כפילויות
+          </Button>
           <Button
             type="button"
             variant="outline"
