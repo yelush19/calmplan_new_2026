@@ -646,9 +646,9 @@ export function isStepLocked(task, stepKey) {
   const stepIndex = steps.findIndex(s => s.key === stepKey);
   if (stepIndex <= 0) return false; // First step is never locked
 
-  // Check if ALL previous steps are done
+  // Check if ALL previous steps are complete (done or skipped)
   for (let i = 0; i < stepIndex; i++) {
-    if (!currentSteps[steps[i].key]?.done) return true;
+    if (!isStepComplete(currentSteps[steps[i].key])) return true;
   }
   return false;
 }
@@ -665,21 +665,52 @@ export function toggleStep(currentSteps, stepKey) {
     [stepKey]: {
       ...step,
       done: !step.done,
+      skipped: false, // un-skip when toggling done
       date: !step.done ? now : null, // set date when marking done, clear when unmarking
     },
   };
 }
 
 /**
- * Calculate completion percentage for a task's process steps
+ * Skip a step — marks it as "not relevant" for this task.
+ * Skipped steps count as complete for chain progression.
+ * Calling again un-skips the step.
+ */
+export function skipStep(currentSteps, stepKey) {
+  const step = currentSteps[stepKey] || { done: false, date: null, notes: '' };
+  const now = new Date().toISOString().split('T')[0];
+  const wasSkipped = !!step.skipped;
+
+  return {
+    ...currentSteps,
+    [stepKey]: {
+      ...step,
+      skipped: !wasSkipped,
+      done: false, // skipped is a separate state from done
+      date: !wasSkipped ? now : null,
+    },
+  };
+}
+
+/**
+ * Check if a step is effectively complete (done OR skipped).
+ * Used for chain progression and completion calculations.
+ */
+export function isStepComplete(stepData) {
+  return !!(stepData?.done || stepData?.skipped);
+}
+
+/**
+ * Calculate completion percentage for a task's process steps.
+ * Skipped steps count as complete.
  */
 export function getStepCompletionPercent(task) {
   const templateSteps = getStepsForTask(task);
   if (!templateSteps.length) return 0;
 
   const steps = task.process_steps || {};
-  const doneSteps = templateSteps.filter(s => steps[s.key]?.done).length;
-  return Math.round((doneSteps / templateSteps.length) * 100);
+  const completedSteps = templateSteps.filter(s => isStepComplete(steps[s.key])).length;
+  return Math.round((completedSteps / templateSteps.length) * 100);
 }
 
 // ============================================================

@@ -31,6 +31,7 @@ import {
   ALL_SERVICES,
   getServiceForTask,
   getStepsForService,
+  isStepComplete,
 } from '@/config/processTemplates';
 import { getScheduledStartForCategory } from '@/config/automationRules';
 
@@ -402,11 +403,11 @@ export function evaluateTaxAdvancesStatus(task, updatedSteps, siblingTasks) {
     return s?.key === 'vat' && t.client_name === task.client_name;
   });
 
-  const vatIncomesDone = vatTask?.process_steps?.income_input?.done;
+  const vatIncomesDone = isStepComplete(vatTask?.process_steps?.income_input);
 
   // Authority evaluator handles submission+payment → production_completed
   // Here we only handle pre-submission logic:
-  if (vatIncomesDone && updatedSteps?.calculation?.done && !updatedSteps?.submission?.done) {
+  if (vatIncomesDone && isStepComplete(updatedSteps?.calculation) && !isStepComplete(updatedSteps?.submission)) {
     return { status: 'not_started' };
   }
 
@@ -449,11 +450,11 @@ export function evaluatePayrollStatus(task, updatedSteps) {
   const service = getServiceForTask(task);
   if (!service || service.key !== 'payroll') return null;
 
-  // Count completed steps in order
+  // Count completed steps in order (done OR skipped both count)
   let lastDoneIndex = -1;
   for (let i = 0; i < PAYROLL_STEP_ORDER.length; i++) {
     const stepKey = PAYROLL_STEP_ORDER[i];
-    if (updatedSteps?.[stepKey]?.done) {
+    if (isStepComplete(updatedSteps?.[stepKey])) {
       lastDoneIndex = i;
     } else {
       break; // Stop at first incomplete step (sequential)
@@ -600,7 +601,7 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
   if (!service || service.key !== 'bookkeeping') return null;
 
   const stepKeys = service.steps.map(s => s.key);
-  const doneCount = stepKeys.filter(k => updatedSteps?.[k]?.done).length;
+  const doneCount = stepKeys.filter(k => isStepComplete(updatedSteps?.[k])).length;
   const allDone = doneCount === stepKeys.length;
 
   if (allDone) {
@@ -899,11 +900,11 @@ export function evaluateMasavSocialStatus(task, updatedSteps) {
   const service = getServiceForTask(task);
   if (!service || service.key !== 'masav_social') return null;
 
-  const sendToOperator = updatedSteps?.send_to_operator?.done;
-  const receiveFile = updatedSteps?.receive_file?.done;
-  const filePrep = updatedSteps?.file_prep?.done;
-  const upload = updatedSteps?.upload?.done;
-  const sendReceipts = updatedSteps?.send_receipts?.done;
+  const sendToOperator = isStepComplete(updatedSteps?.send_to_operator);
+  const receiveFile = isStepComplete(updatedSteps?.receive_file);
+  const filePrep = isStepComplete(updatedSteps?.file_prep);
+  const upload = isStepComplete(updatedSteps?.upload);
+  const sendReceipts = isStepComplete(updatedSteps?.send_receipts);
 
   // Full chain complete → production_completed
   if (sendReceipts) {
@@ -1072,9 +1073,9 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = [], option
       break;
 
     default:
-      // Generic: all steps done = production_completed
+      // Generic: all steps complete (done or skipped) = production_completed
       if (service.steps.length > 0) {
-        const allDone = service.steps.every(s => updatedSteps?.[s.key]?.done);
+        const allDone = service.steps.every(s => isStepComplete(updatedSteps?.[s.key]));
         if (allDone) {
           evaluation = { status: 'production_completed' };
         }
@@ -1165,7 +1166,7 @@ export function computeInsights(tasks, clients = []) {
   const vatTasks = byService['vat'] || [];
   const vatReady = vatTasks.filter(t => {
     const steps = t.process_steps || {};
-    return steps.income_input?.done && steps.expense_input?.done && !steps.submission?.done;
+    return isStepComplete(steps.income_input) && isStepComplete(steps.expense_input) && !isStepComplete(steps.submission);
   });
   if (vatReady.length > 0) {
     insights.push({
@@ -1182,7 +1183,7 @@ export function computeInsights(tasks, clients = []) {
 
   const vatPending = vatTasks.filter(t => {
     const steps = t.process_steps || {};
-    return (!steps.income_input?.done || !steps.expense_input?.done) && t.status !== 'completed';
+    return (!isStepComplete(steps.income_input) || !isStepComplete(steps.expense_input)) && t.status !== 'completed';
   });
   if (vatPending.length > 0) {
     insights.push({
