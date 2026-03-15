@@ -465,7 +465,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     'דוח שנתי': 'דוח רו"ה',     // Annual report depends on monthly P&L
   };
 
-  const generateTasksPreview = (overrideMonths) => {
+  const generateTasksPreview = (overrideMonths, branchFilter = null) => {
     const monthsArray = overrideMonths instanceof Set
       ? Array.from(overrideMonths).sort((a, b) => a - b)
       : Array.from(selectedMonths).sort((a, b) => a - b);
@@ -484,6 +484,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
       const expandedServices = getExpandedServices(client);
 
       for (const [categoryKey, categoryDef] of Object.entries(REPORT_CATEGORIES)) {
+        // ── BRANCH FILTER: skip categories not in the selected branch ──
+        if (branchFilter && categoryDef.branch !== branchFilter) continue;
         // ── SERVICE FILTER: strict check against client's actual services ──
         if (!expandedServices.has(categoryDef.serviceTypeKey)) continue;
 
@@ -935,20 +937,47 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             </Button>
           </div>
 
-          {/* Quick inject: one-click current month generation */}
-          <Button
-            onClick={() => {
-              setSelectedMonths(new Set([currentMonth]));
-              generateTasksPreview(new Set([currentMonth]));
-            }}
-            className="w-full h-12 text-base font-bold rounded-2xl bg-rose-500 hover:bg-rose-600 text-white shadow-lg hover:shadow-xl transition-all"
-            size="lg"
-          >
-            <Sparkles className="w-5 h-5 ml-2" />
-            הזרקת משימות {HEBREW_MONTH_NAMES[currentMonth - 1]} {currentYear} — כל הלקוחות
-          </Button>
+          {/* Per-branch injection buttons */}
+          <div className="space-y-3">
+            <p className="text-base font-bold text-gray-700">הזרקה לפי ענף:</p>
+            <div className="grid grid-cols-2 gap-3">
+              {Object.entries(P_BRANCHES)
+                .sort(([, a], [, b]) => a.order - b.order)
+                .map(([branchKey, branch]) => {
+                  const branchCatCount = branch.categories.length;
+                  const branchClientCount = branchSummary.find(b => b.key === branchKey)?.totalClients || 0;
+                  return (
+                    <Button
+                      key={branchKey}
+                      onClick={() => {
+                        if (selectedMonths.size === 0) {
+                          setSelectedMonths(new Set([currentMonth]));
+                          generateTasksPreview(new Set([currentMonth]), branchKey);
+                        } else {
+                          generateTasksPreview(null, branchKey);
+                        }
+                      }}
+                      className={`h-14 text-base font-bold rounded-2xl shadow-md hover:shadow-lg transition-all text-white ${
+                        branchKey === 'P1' ? 'bg-sky-600 hover:bg-sky-700' :
+                        branchKey === 'P2' ? 'bg-purple-600 hover:bg-purple-700' :
+                        branchKey === 'P3' ? 'bg-pink-600 hover:bg-pink-700' :
+                        'bg-green-600 hover:bg-green-700'
+                      }`}
+                      size="lg"
+                    >
+                      <Zap className="w-5 h-5 ml-2" />
+                      <div className="flex flex-col items-start leading-tight">
+                        <span>{branch.label}</span>
+                        <span className="text-xs opacity-80">{branchClientCount} לקוחות · {branchCatCount} קטגוריות</span>
+                      </div>
+                    </Button>
+                  );
+                })
+              }
+            </div>
+          </div>
 
-          {/* Generate button — prominent */}
+          {/* Generate ALL branches button */}
           <Button
             onClick={() => generateTasksPreview()}
             disabled={selectedMonths.size === 0}
@@ -958,7 +987,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             <Eye className="w-6 h-6 ml-3" />
             {selectedMonths.size === 0
               ? 'בחרי לפחות חודש אחד'
-              : `טען משימות ל-${selectedMonths.size} ${selectedMonths.size === 1 ? 'חודש' : 'חודשים'} — להגהה ואישור`
+              : `טען הכל — כל הענפים ל-${selectedMonths.size} ${selectedMonths.size === 1 ? 'חודש' : 'חודשים'}`
             }
           </Button>
 

@@ -794,6 +794,38 @@ export async function moveNodeInCompanyTree(nodeId, newParentId, insertIndex = n
 }
 
 /**
+ * Delete a node from the company tree (DB).
+ * Removes the node and all its children from the tree.
+ * Changes are saved to DB and broadcasted.
+ *
+ * @param {string} nodeId - The node ID to delete
+ * @param {string} source - Source identifier for broadcast
+ */
+export async function deleteNodeFromCompanyTree(nodeId, source = 'unknown') {
+  invalidateTreeCache();
+  const { tree, configId } = await loadCompanyTree();
+  if (!tree?.branches) throw new Error('Company tree not found');
+
+  const updatedTree = { ...tree, branches: { ...tree.branches } };
+  let found = false;
+
+  const removeFromChildren = (nodes) =>
+    nodes.filter(n => {
+      if (n.id === nodeId) { found = true; return false; }
+      return true;
+    }).map(n => n.children?.length ? { ...n, children: removeFromChildren(n.children) } : n);
+
+  for (const [branchId, branch] of Object.entries(updatedTree.branches)) {
+    const updated = removeFromChildren(branch.children || []);
+    updatedTree.branches[branchId] = { ...branch, children: updated };
+    if (found) break;
+  }
+
+  if (!found) throw new Error(`Node "${nodeId}" not found in company tree`);
+  return saveAndBroadcast(updatedTree, configId, source);
+}
+
+/**
  * Check which client tree node IDs don't exist in the company tree.
  * Returns the list of orphan node IDs.
  *

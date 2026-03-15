@@ -32,6 +32,7 @@ import {
   addNodeToCompanyTree,
   updateNodeInCompanyTree,
   moveNodeInCompanyTree,
+  deleteNodeFromCompanyTree,
   findOrphanClientNodes,
 } from '@/services/processTreeService';
 import { getStepsForService } from '@/config/processTemplates';
@@ -179,6 +180,18 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
     }
   };
 
+  // ── Delete node from tree ──
+  const handleDeleteNode = async () => {
+    if (!confirm(`למחוק את "${node.label}" וכל הצמתים שמתחתיו?`)) return;
+    try {
+      await deleteNodeFromCompanyTree(node.id, 'ProcessTreeManager');
+      toast({ title: 'צומת נמחק', description: `"${node.label}" הוסר מהעץ` });
+      onRefresh?.();
+    } catch (err) {
+      toast({ title: 'שגיאה במחיקה', description: err.message, variant: 'destructive' });
+    }
+  };
+
   // ── Add child node ──
   const handleAddChild = async () => {
     if (!newChildName.trim()) return;
@@ -303,53 +316,85 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           <button type="button" onClick={() => setAddingChild(!addingChild)} className="text-gray-300 hover:text-emerald-500" title="הוסף צומת בן">
             <Plus className="w-3 h-3" />
           </button>
+          <button type="button" onClick={handleDeleteNode} className="text-gray-300 hover:text-red-500" title="מחק צומת">
+            <Trash2 className="w-3 h-3" />
+          </button>
         </div>
       </div>
 
-      {/* Steps list — editable */}
+      {/* Steps list — hierarchical flow view */}
       {stepsExpanded && (
-        <div className="mr-10 mt-1 mb-1.5 px-2 py-1.5 bg-amber-50/50 rounded-md border border-amber-100 space-y-1">
-          {nodeSteps.map((step, idx) => (
-            <div key={step.key || idx} className="flex items-center gap-1.5 group/step">
-              <Badge className="bg-white text-amber-700 text-[9px] px-1.5 py-0.5 border border-amber-200 flex items-center gap-1">
-                <span className="text-amber-400 font-bold">{idx + 1}</span>
-                {step.label}
-              </Badge>
+        <div className="mr-10 mt-1.5 mb-2 rounded-lg border border-amber-200 bg-gradient-to-b from-amber-50/80 to-white overflow-hidden">
+          {/* Steps header */}
+          <div className="px-3 py-1.5 bg-amber-100/60 border-b border-amber-200 flex items-center justify-between">
+            <span className="text-[11px] font-bold text-amber-700">שלבי תהליך ({nodeSteps.length})</span>
+            <span className="text-[9px] text-amber-500">סדר ביצוע →</span>
+          </div>
+          <div className="px-2 py-1.5">
+            {nodeSteps.map((step, idx) => (
+              <div key={step.key || idx} className="group/step relative">
+                {/* Connector line */}
+                {idx < nodeSteps.length - 1 && (
+                  <div className="absolute right-[13px] top-[22px] w-px h-[calc(100%-6px)] bg-amber-300/60" />
+                )}
+                <div className="flex items-center gap-2 py-1 px-1 rounded-md hover:bg-amber-50 transition-colors">
+                  {/* Step number circle */}
+                  <div className={`w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-black border-2 z-10 ${
+                    idx === 0 ? 'bg-amber-500 text-white border-amber-600' :
+                    idx === nodeSteps.length - 1 ? 'bg-emerald-500 text-white border-emerald-600' :
+                    'bg-white text-amber-700 border-amber-300'
+                  }`}>
+                    {idx + 1}
+                  </div>
+                  {/* Step label */}
+                  <span className="text-[11px] font-medium text-gray-700 flex-1">{step.label}</span>
+                  {/* Phase indicator for first/last */}
+                  {idx === 0 && (
+                    <span className="text-[8px] text-amber-500 bg-amber-100 px-1.5 py-0.5 rounded-full font-bold">התחלה</span>
+                  )}
+                  {idx === nodeSteps.length - 1 && (
+                    <span className="text-[8px] text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full font-bold">סיום</span>
+                  )}
+                  {/* Delete step button */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveStep(idx)}
+                    className="opacity-0 group-hover/step:opacity-100 text-gray-300 hover:text-red-500 transition-opacity"
+                    title="הסר שלב"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Add step */}
+          <div className="px-3 py-1.5 border-t border-amber-100">
+            {addingStep ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  value={newStepLabel}
+                  onChange={(e) => setNewStepLabel(e.target.value)}
+                  placeholder="שם שלב חדש..."
+                  className="h-6 text-[11px] flex-1"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddStep(); if (e.key === 'Escape') setAddingStep(false); }}
+                />
+                <Button type="button" size="sm" onClick={handleAddStep} disabled={!newStepLabel.trim()} className="h-6 px-2 text-[10px] bg-amber-600 text-white">
+                  <Plus className="w-3 h-3" />
+                </Button>
+                <button type="button" onClick={() => setAddingStep(false)}><X className="w-3 h-3 text-gray-400" /></button>
+              </div>
+            ) : (
               <button
                 type="button"
-                onClick={() => handleRemoveStep(idx)}
-                className="opacity-0 group-hover/step:opacity-100 text-gray-300 hover:text-red-500 transition-opacity"
-                title="הסר שלב"
+                onClick={() => setAddingStep(true)}
+                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-amber-600 transition-colors"
               >
-                <X className="w-3 h-3" />
+                <Plus className="w-3 h-3" /> הוסף שלב
               </button>
-            </div>
-          ))}
-          {/* Add step inline */}
-          {addingStep ? (
-            <div className="flex items-center gap-1 mt-1">
-              <Input
-                value={newStepLabel}
-                onChange={(e) => setNewStepLabel(e.target.value)}
-                placeholder="שם שלב חדש..."
-                className="h-5 text-[10px] flex-1"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddStep(); if (e.key === 'Escape') setAddingStep(false); }}
-              />
-              <Button type="button" size="sm" onClick={handleAddStep} disabled={!newStepLabel.trim()} className="h-5 px-2 text-[9px] bg-amber-600 text-white">
-                <Plus className="w-2.5 h-2.5" />
-              </Button>
-              <button type="button" onClick={() => setAddingStep(false)}><X className="w-3 h-3 text-gray-400" /></button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAddingStep(true)}
-              className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-amber-600 transition-colors mt-1"
-            >
-              <Plus className="w-3 h-3" /> הוסף שלב
-            </button>
-          )}
+            )}
+          </div>
         </div>
       )}
 
