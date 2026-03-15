@@ -423,6 +423,98 @@ export function cleanStaleClientNodes(clientProcessTree, companyTree) {
 }
 
 // ============================================================
+// ADD NODE TO COMPANY TREE — from client card or external source
+// ============================================================
+
+/**
+ * Add a new node to the company tree and save+broadcast.
+ * Used when a client card creates a custom process that needs to exist
+ * in the system-wide tree.
+ *
+ * @param {string} branchId - Target branch (e.g., 'P1', 'P2')
+ * @param {string} parentNodeId - Parent node ID (null = add to branch root)
+ * @param {{ label: string, id?: string }} nodeData - New node definition
+ * @param {string} source - Who triggered the add
+ * @returns {{ tree, configId, newNodeId }} — saved state + new node ID
+ */
+export async function addNodeToCompanyTree(branchId, parentNodeId, nodeData, source = 'unknown') {
+  const { tree, configId } = await loadCompanyTree();
+  if (!tree?.branches?.[branchId]) {
+    throw new Error(`Branch "${branchId}" not found in company tree`);
+  }
+
+  const newNodeId = nodeData.id || `${branchId}_custom_${Date.now()}`;
+  const newNode = {
+    id: newNodeId,
+    label: nodeData.label,
+    service_key: newNodeId,
+    is_parent_task: false,
+    default_frequency: nodeData.default_frequency || 'monthly',
+    frequency_field: null,
+    frequency_fallback: null,
+    frequency_inherit: !!parentNodeId,
+    depends_on: parentNodeId ? [parentNodeId] : [],
+    execution: 'sequential',
+    is_collector: false,
+    children: [],
+    steps: [],
+    ...(nodeData.extra_fields ? { extra_fields: nodeData.extra_fields } : {}),
+  };
+
+  const updatedTree = { ...tree, branches: { ...tree.branches } };
+  const branch = { ...updatedTree.branches[branchId] };
+
+  if (parentNodeId) {
+    // Add as child of specific parent node (deep)
+    const addToParent = (nodes) =>
+      nodes.map(n => {
+        if (n.id === parentNodeId) {
+          return { ...n, children: [...(n.children || []), newNode] };
+        }
+        if (n.children?.length) {
+          return { ...n, children: addToParent(n.children) };
+        }
+        return n;
+      });
+    branch.children = addToParent(branch.children);
+  } else {
+    // Add to branch root
+    branch.children = [...(branch.children || []), newNode];
+  }
+
+  updatedTree.branches[branchId] = branch;
+
+  const result = await saveAndBroadcast(updatedTree, configId, source);
+  return { ...result, newNodeId };
+}
+
+/**
+ * Check which client tree node IDs don't exist in the company tree.
+ * Returns the list of orphan node IDs.
+ *
+ * @param {object} clientProcessTree - client.process_tree map
+ * @param {object} companyTree - The current company tree
+ * @returns {string[]} orphan node IDs
+ */
+export function findOrphanClientNodes(clientProcessTree, companyTree) {
+  if (!clientProcessTree || !companyTree?.branches) return [];
+
+  const validIds = new Set();
+  const collectIds = (nodes) => {
+    for (const n of (nodes || [])) {
+      validIds.add(n.id);
+      if (n.children?.length) collectIds(n.children);
+    }
+  };
+  for (const [branchId, branch] of Object.entries(companyTree.branches)) {
+    validIds.add(branchId);
+    collectIds(branch.children);
+  }
+
+  return Object.keys(clientProcessTree).filter(key => !validIds.has(key));
+}
+
+// ============================================================
 // FREQUENCY RESOLUTION
 // ============================================================
 

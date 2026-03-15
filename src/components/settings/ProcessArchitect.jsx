@@ -23,7 +23,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import {
   Plus, Trash2, Save, ChevronDown, ChevronLeft, GripVertical,
   Pencil, Check, X, Network, Loader2, AlertTriangle, CheckCircle,
-  GitBranch, Calendar, Layers
+  GitBranch, Calendar, Layers, Settings2, ArrowRightLeft, ToggleRight
 } from 'lucide-react';
 import {
   loadCompanyTree,
@@ -159,13 +159,123 @@ function StepsEditor({ steps, onChange }) {
   );
 }
 
+// ── Extra Fields Editor ──
+function ExtraFieldsEditor({ extraFields, onChange }) {
+  const [addingField, setAddingField] = useState(false);
+  const [newFieldLabel, setNewFieldLabel] = useState('');
+  const [newOptionLabel, setNewOptionLabel] = useState('');
+  const [editingFieldKey, setEditingFieldKey] = useState(null);
+
+  const fields = extraFields || {};
+
+  const addField = () => {
+    if (!newFieldLabel.trim()) return;
+    const key = `field_${Date.now()}`;
+    onChange({
+      ...fields,
+      [key]: {
+        type: 'select',
+        label: newFieldLabel.trim(),
+        options: [],
+        default_value: '',
+      },
+    });
+    setNewFieldLabel('');
+    setAddingField(false);
+    setEditingFieldKey(key);
+  };
+
+  const removeField = (key) => {
+    const updated = { ...fields };
+    delete updated[key];
+    onChange(updated);
+  };
+
+  const addOption = (fieldKey) => {
+    if (!newOptionLabel.trim()) return;
+    const field = fields[fieldKey];
+    const value = newOptionLabel.trim().replace(/\s+/g, '_').toLowerCase();
+    const updatedOptions = [...(field.options || []), { value, label: newOptionLabel.trim() }];
+    onChange({ ...fields, [fieldKey]: { ...field, options: updatedOptions } });
+    setNewOptionLabel('');
+  };
+
+  const removeOption = (fieldKey, optIdx) => {
+    const field = fields[fieldKey];
+    const updatedOptions = field.options.filter((_, i) => i !== optIdx);
+    onChange({ ...fields, [fieldKey]: { ...field, options: updatedOptions } });
+  };
+
+  return (
+    <div className="mr-6 mt-1 mb-1 p-2 rounded-lg border border-purple-200 bg-purple-50/50 space-y-2">
+      <div className="flex items-center gap-2">
+        <Settings2 className="w-3.5 h-3.5 text-purple-500" />
+        <span className="text-[10px] font-bold text-purple-700">שדות נוספים ({Object.keys(fields).length})</span>
+      </div>
+      {Object.entries(fields).map(([key, field]) => (
+        <div key={key} className="bg-white rounded p-2 border border-purple-100 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-700 flex-1">{field.label}</span>
+            <button onClick={() => setEditingFieldKey(editingFieldKey === key ? null : key)} className="text-purple-400 hover:text-purple-600">
+              <Pencil className="w-3 h-3" />
+            </button>
+            <button onClick={() => removeField(key)} className="text-gray-300 hover:text-red-500">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+          {editingFieldKey === key && (
+            <div className="space-y-1 mt-1">
+              {(field.options || []).map((opt, i) => (
+                <div key={i} className="flex items-center gap-1 text-[10px]">
+                  <Badge className="bg-purple-100 text-purple-700 text-[9px]">{opt.label}</Badge>
+                  <button onClick={() => removeOption(key, i)} className="text-gray-300 hover:text-red-500">
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              ))}
+              <div className="flex gap-1">
+                <Input
+                  value={newOptionLabel}
+                  onChange={(e) => setNewOptionLabel(e.target.value)}
+                  placeholder="אפשרות חדשה..."
+                  className="h-5 text-[10px] flex-1"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(key); } }}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={() => addOption(key)} disabled={!newOptionLabel.trim()} className="h-5 w-5 p-0">
+                  <Plus className="w-2.5 h-2.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+      {addingField ? (
+        <div className="flex gap-1">
+          <Input value={newFieldLabel} onChange={(e) => setNewFieldLabel(e.target.value)}
+            placeholder="שם השדה..." className="h-6 text-[10px] flex-1" autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') addField(); if (e.key === 'Escape') setAddingField(false); }} />
+          <Button type="button" size="sm" onClick={addField} disabled={!newFieldLabel.trim()} className="h-6 px-2 text-[9px] bg-purple-600 text-white">הוסף</Button>
+          <button onClick={() => setAddingField(false)}><X className="w-3 h-3 text-gray-400" /></button>
+        </div>
+      ) : (
+        <button onClick={() => setAddingField(true)} className="text-[10px] text-purple-500 hover:text-purple-700 flex items-center gap-1">
+          <Plus className="w-3 h-3" /> הוסף שדה
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Single node editor (recursive) ──
-function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, allNodeIds }) {
+function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, allNodeIds, onMoveNode, allBranchIds }) {
   const [collapsed, setCollapsed] = useState(depth > 0);
   const [showSteps, setShowSteps] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [addingChild, setAddingChild] = useState(false);
   const [newChildName, setNewChildName] = useState('');
+  const [showMoveMenu, setShowMoveMenu] = useState(false);
   const hasChildren = node.children && node.children.length > 0;
+  const hasExtraFields = node.extra_fields && Object.keys(node.extra_fields).length > 0;
 
   const updateField = (field, value) => {
     onUpdate({ ...node, [field]: value });
@@ -231,6 +341,16 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
           <Badge className="text-[9px] px-1 py-0 bg-blue-50 text-blue-600 border-blue-200">אב</Badge>
         )}
 
+        {/* Frequency inherit badge */}
+        {node.frequency_inherit && (
+          <Badge className="text-[8px] px-1 py-0 bg-gray-100 text-gray-500">ירושה</Badge>
+        )}
+
+        {/* Extra fields badge */}
+        {hasExtraFields && (
+          <Badge className="text-[8px] px-1 py-0 bg-purple-50 text-purple-500">{Object.keys(node.extra_fields).length} שדות</Badge>
+        )}
+
         {/* Frequency */}
         <Select value={node.default_frequency || 'monthly'} onValueChange={(val) => updateField('default_frequency', val)}>
           <SelectTrigger className="h-5 w-[80px] text-[10px] border-gray-200">
@@ -242,6 +362,16 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
             ))}
           </SelectContent>
         </Select>
+
+        {/* Settings toggle */}
+        <button
+          type="button"
+          onClick={() => setShowSettings(!showSettings)}
+          className={`text-[10px] flex items-center gap-0.5 transition-colors ${showSettings ? 'text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}
+          title="הגדרות מתקדמות"
+        >
+          <Settings2 className="w-3 h-3" />
+        </button>
 
         {/* Steps toggle */}
         <button
@@ -264,6 +394,18 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
           <Plus className="w-3.5 h-3.5" />
         </button>
 
+        {/* Move node */}
+        {onMoveNode && (
+          <button
+            type="button"
+            onClick={() => setShowMoveMenu(!showMoveMenu)}
+            className="opacity-0 group-hover/node:opacity-100 text-gray-300 hover:text-blue-500 transition-all"
+            title="העבר צומת"
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5" />
+          </button>
+        )}
+
         {/* Remove */}
         <button
           type="button"
@@ -274,6 +416,63 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* Move menu */}
+      {showMoveMenu && onMoveNode && (
+        <div className="mr-9 mt-1 mb-1 p-2 rounded-lg border-2 border-blue-200 bg-blue-50 space-y-1">
+          <span className="text-[10px] font-bold text-blue-700">העבר ל:</span>
+          <div className="flex flex-wrap gap-1">
+            {(allBranchIds || []).filter(b => b !== branchId).map(targetBranch => (
+              <Button key={targetBranch} type="button" variant="outline" size="sm"
+                className="h-5 px-2 text-[9px]"
+                onClick={() => { onMoveNode(node, branchId, targetBranch); setShowMoveMenu(false); }}>
+                {targetBranch}
+              </Button>
+            ))}
+          </div>
+          <button onClick={() => setShowMoveMenu(false)} className="text-[9px] text-gray-400 hover:text-gray-600">ביטול</button>
+        </div>
+      )}
+
+      {/* Advanced settings panel */}
+      {showSettings && (
+        <div className="mr-9 mt-1 mb-1 p-2 rounded-lg border border-gray-200 bg-gray-50/50 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2">
+              <Switch checked={!!node.is_parent_task} onCheckedChange={(val) => updateField('is_parent_task', val)} />
+              <span className="text-[10px] text-gray-600">משימת אב</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={!!node.frequency_inherit} onCheckedChange={(val) => updateField('frequency_inherit', val)} />
+              <span className="text-[10px] text-gray-600">ירושת תדירות</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-500 shrink-0">ביצוע:</span>
+            <Select value={node.execution || 'sequential'} onValueChange={(val) => updateField('execution', val)}>
+              <SelectTrigger className="h-5 text-[10px] flex-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sequential" className="text-xs">סדרתי</SelectItem>
+                <SelectItem value="parallel" className="text-xs">מקבילי</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-500 shrink-0">שדה תדירות:</span>
+            <Input
+              value={node.frequency_field || ''}
+              onChange={(e) => updateField('frequency_field', e.target.value || null)}
+              placeholder="לא מוגדר"
+              className="h-5 text-[10px] flex-1"
+            />
+          </div>
+          {/* Extra fields editor */}
+          <ExtraFieldsEditor
+            extraFields={node.extra_fields || {}}
+            onChange={(ef) => updateField('extra_fields', Object.keys(ef).length > 0 ? ef : undefined)}
+          />
+        </div>
+      )}
 
       {/* Steps editor */}
       {showSteps && (
@@ -317,6 +516,8 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
               onUpdate={(updated) => updateChild(idx, updated)}
               onRemove={() => removeChild(idx)}
               allNodeIds={allNodeIds}
+              onMoveNode={onMoveNode}
+              allBranchIds={allBranchIds}
             />
           ))}
         </div>
@@ -508,6 +709,27 @@ export default function ProcessArchitect() {
     }
     setSaving(false);
   }, [tree, configId]);
+
+  const handleMoveNode = useCallback(async (node, fromBranch, toBranch) => {
+    setTree(prev => {
+      const updated = { ...prev, branches: { ...prev.branches } };
+      // Remove from source branch (deep search)
+      const removeFromChildren = (children) =>
+        children.filter(n => n.id !== node.id).map(n =>
+          n.children?.length ? { ...n, children: removeFromChildren(n.children) } : n
+        );
+      const sourceBranch = { ...updated.branches[fromBranch] };
+      sourceBranch.children = removeFromChildren(sourceBranch.children);
+      updated.branches[fromBranch] = sourceBranch;
+      // Add to target branch root
+      const targetBranch = { ...updated.branches[toBranch] };
+      targetBranch.children = [...(targetBranch.children || []), { ...node, depends_on: [] }];
+      updated.branches[toBranch] = targetBranch;
+      return updated;
+    });
+    setIsDirty(true);
+    toast({ title: 'צומת הועבר', description: `"${node.label}" הועבר מ-${fromBranch} ל-${toBranch}` });
+  }, []);
 
   const handleRenameBranch = useCallback((branchId, newLabel) => {
     setTree(prev => ({
@@ -717,6 +939,8 @@ export default function ProcessArchitect() {
                       onUpdate={(updated) => handleUpdateNode(branchId, nodeIdx, updated)}
                       onRemove={() => handleRemoveNode(branchId, nodeIdx)}
                       allNodeIds={allNodeIds}
+                      onMoveNode={handleMoveNode}
+                      allBranchIds={Object.keys(tree.branches)}
                     />
                   ))}
                 </div>

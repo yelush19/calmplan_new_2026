@@ -17,7 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download } from 'lucide-react';
+import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download, Plus, AlertTriangle, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import {
   loadCompanyTree,
   resolveFrequency,
@@ -28,6 +29,8 @@ import {
   invalidateTreeCache,
   onTreeChange,
   cleanStaleClientNodes,
+  addNodeToCompanyTree,
+  findOrphanClientNodes,
 } from '@/services/processTreeService';
 import { ClientAccount } from '@/api/entities';
 
@@ -256,12 +259,58 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
   );
 }
 
+// ── Add Process Button — inline input for adding a new process to a branch ──
+function AddProcessButton({ branchId, branchColors, onAdd }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+
+  const add = () => {
+    if (!name.trim()) return;
+    onAdd(branchId, null, name.trim());
+    setName('');
+    setOpen(false);
+  };
+
+  if (open) {
+    return (
+      <div className="flex items-center gap-1 mr-7 mt-1 mb-1">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="שם תהליך חדש..."
+          className="h-6 text-xs w-[180px]"
+          autoFocus
+          onKeyDown={(e) => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setOpen(false); }}
+        />
+        <Button type="button" size="sm" onClick={add} disabled={!name.trim()}
+          className="h-6 px-2 text-[10px] bg-emerald-600 text-white hover:bg-emerald-700">
+          <Plus className="w-3 h-3 ml-0.5" /> הוסף
+        </Button>
+        <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="flex items-center gap-1 mr-7 mt-1 mb-1 text-[11px] text-gray-400 hover:text-emerald-600 transition-colors"
+    >
+      <Plus className="w-3.5 h-3.5" /> הוסף תהליך חדש
+    </button>
+  );
+}
+
 // ── Main Component ──
 export default function ProcessTreeManager({ processTree, onChange, clientId, clientName, reportingInfo }) {
   const [companyTree, setCompanyTree] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [expandedBranches, setExpandedBranches] = useState({ P1: true, P2: true, P3: false, P5: false });
+  const [orphanNodes, setOrphanNodes] = useState([]);
 
   // Load company tree and clean stale client nodes
   const refreshTree = useCallback(async () => {
@@ -281,13 +330,10 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
           return updated;
         });
       }
-      // INTERSECTION CLEANUP: remove client nodes that reference deleted branches/nodes
+      // ORPHAN DETECTION: find client tree nodes not in system tree
       if (tree && processTree && Object.keys(processTree).length > 0) {
-        const { cleaned, removedKeys } = cleanStaleClientNodes(processTree, tree);
-        if (removedKeys.length > 0) {
-          console.log(`[ProcessTreeManager] 🧹 Auto-cleaned ${removedKeys.length} stale nodes from client tree:`, removedKeys);
-          onChange(cleaned);
-        }
+        const orphans = findOrphanClientNodes(processTree, tree);
+        setOrphanNodes(orphans);
       }
     } catch (err) {
       console.error('[ProcessTreeManager] Failed to load tree:', err);
@@ -348,6 +394,31 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
   const handleClearAll = useCallback(() => {
     onChange({});
   }, [onChange]);
+
+  // Add a new process: creates node in company tree (system settings) AND enables it for this client
+  const handleAddProcess = useCallback(async (branchId, parentNodeId, name) => {
+    try {
+      const { newNodeId } = await addNodeToCompanyTree(branchId, parentNodeId, { label: name }, 'ProcessTreeManager');
+      // Enable the new node for this client
+      const updated = { ...clientTree, [newNodeId]: { enabled: true } };
+      // Also enable parent if specified
+      if (parentNodeId) {
+        updated[parentNodeId] = { ...updated[parentNodeId], enabled: true };
+      }
+      onChange(updated);
+      // Refresh tree to pick up new node
+      await refreshTree();
+    } catch (err) {
+      console.error('[ProcessTreeManager] Failed to add process:', err);
+    }
+  }, [clientTree, onChange, refreshTree]);
+
+  // Dismiss orphan nodes by removing them from client tree
+  const handleDismissOrphans = useCallback(() => {
+    const { cleaned } = cleanStaleClientNodes(clientTree, companyTree);
+    onChange(cleaned);
+    setOrphanNodes([]);
+  }, [clientTree, companyTree, onChange]);
 
   const handleExportTree = useCallback(async () => {
     const { exportClientProcessTreeCSV } = await import('@/api/functions');
@@ -421,6 +492,31 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
         </div>
       </div>
 
+      {/* Orphan nodes warning */}
+      {orphanNodes.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="text-xs font-bold text-amber-800">
+              נמצאו {orphanNodes.length} צמתים שלא קיימים בהגדרות מערכת
+            </p>
+            <p className="text-[10px] text-amber-700 mt-0.5">
+              צמתים אלו קיימים בכרטיס הלקוח אך לא במפת התהליכים. ניתן ליצור אותם בהגדרות מערכת או להסיר אותם.
+            </p>
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {orphanNodes.map(id => (
+                <Badge key={id} className="bg-amber-100 text-amber-800 text-[9px]">{id}</Badge>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <Button type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={handleDismissOrphans}>
+                הסר צמתים מיותרים
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Branch sections */}
       {Object.entries(companyTree.branches).map(([branchId, branch]) => {
         const colors = getBranchColors(branchId);
@@ -471,6 +567,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
                     bankAccounts={bankAccounts}
                   />
                 ))}
+                <AddProcessButton branchId={branchId} branchColors={colors} onAdd={handleAddProcess} />
               </div>
             )}
           </div>
