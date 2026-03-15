@@ -235,6 +235,7 @@ export default function FocusMapView({
 
   return (
     <div className="relative w-full h-full" style={{
+      backgroundColor: 'var(--cp-canvas-bg, #F8F9FA)',
       border: cogLoad.overloaded ? '3px solid #EF4444' : cogLoad.percentage >= 80 ? '2px solid #F59E0B' : 'none',
       borderRadius: cogLoad.percentage >= 80 ? '16px' : undefined,
       transition: 'border 0.4s ease',

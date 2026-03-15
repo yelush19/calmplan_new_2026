@@ -125,9 +125,42 @@ const SHAPE_RENDERERS = {
     }).join(' ');
     return <polygon points={pts} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />;
   },
+
+  heart: (cx, cy, r, fill, stroke, sw) => {
+    const d = `M ${cx} ${cy + r * 0.6}
+      C ${cx - r * 0.1} ${cy + r * 0.45} ${cx - r * 0.65} ${cy + r * 0.2} ${cx - r * 0.65} ${cy - r * 0.15}
+      C ${cx - r * 0.65} ${cy - r * 0.55} ${cx - r * 0.3} ${cy - r * 0.7} ${cx} ${cy - r * 0.35}
+      C ${cx + r * 0.3} ${cy - r * 0.7} ${cx + r * 0.65} ${cy - r * 0.55} ${cx + r * 0.65} ${cy - r * 0.15}
+      C ${cx + r * 0.65} ${cy + r * 0.2} ${cx + r * 0.1} ${cy + r * 0.45} ${cx} ${cy + r * 0.6} Z`;
+    return <path d={d} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />;
+  },
+
+  banner: (cx, cy, r, fill, stroke, sw) => {
+    const w = r * 1.4, h = r * 0.7;
+    const d = `M ${cx - w} ${cy - h}
+      L ${cx + w} ${cy - h}
+      L ${cx + w} ${cy + h * 0.6}
+      L ${cx + w * 0.7} ${cy + h * 0.35}
+      L ${cx} ${cy + h * 0.6}
+      L ${cx - w * 0.7} ${cy + h * 0.35}
+      L ${cx - w} ${cy + h * 0.6} Z`;
+    return <path d={d} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />;
+  },
+
+  crown: (cx, cy, r, fill, stroke, sw) => {
+    const w = r * 0.9, h = r * 0.7;
+    const d = `M ${cx - w} ${cy + h * 0.5}
+      L ${cx - w} ${cy - h * 0.2}
+      L ${cx - w * 0.5} ${cy + h * 0.1}
+      L ${cx} ${cy - h * 0.6}
+      L ${cx + w * 0.5} ${cy + h * 0.1}
+      L ${cx + w} ${cy - h * 0.2}
+      L ${cx + w} ${cy + h * 0.5} Z`;
+    return <path d={d} fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />;
+  },
 };
 
-export const SHAPE_KEYS = ['cloud', 'bubble', 'speech', 'diamond', 'pill', 'star', 'capsule', 'hexagon', 'roundedRect'];
+export const SHAPE_KEYS = ['cloud', 'bubble', 'speech', 'diamond', 'pill', 'star', 'capsule', 'hexagon', 'roundedRect', 'heart', 'banner', 'crown'];
 
 // -- Pulse animation keyframes (injected once) --
 const PULSE_STYLE_ID = 'ayoa-pulse-keyframes';
@@ -169,10 +202,16 @@ export default function AyoaNode({
   overrideFill,
   sticker,
   isActive = false,
+  // Fill/Border toggle: 'filled' = solid fill, 'border' = outline only
+  fillMode = 'filled',
 }) {
   // Apply per-node overrides (resolved by parent view from DesignContext)
   const effectiveShape = overrideShape || shape;
-  const effectiveFill = overrideFill || fill;
+  const baseFill = overrideFill || fill;
+  // Border-only mode: transparent fill, thicker stroke
+  const effectiveFill = fillMode === 'border' ? 'none' : baseFill;
+  const effectiveStrokeWidth = fillMode === 'border' ? Math.max(strokeWidth, 2.5) : strokeWidth;
+  const effectiveStroke = fillMode === 'border' ? (overrideFill || stroke) : stroke;
 
   if (isActive) ensurePulseStyles();
 
@@ -194,7 +233,7 @@ export default function AyoaNode({
         </g>
       )}
       {/* Main shape */}
-      {renderer(cx, cy, size, effectiveFill, stroke, strokeWidth)}
+      {renderer(cx, cy, size, effectiveFill, effectiveStroke, effectiveStrokeWidth)}
       {/* Sticker overlay */}
       {sticker && (
         <text

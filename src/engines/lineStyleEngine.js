@@ -88,6 +88,55 @@ export function buildTaperedPath(sx, sy, ex, ey, startW = 5, endW = 1.5, opts = 
 }
 
 /**
+ * Build a wavy (sinusoidal) path between two points.
+ * Creates an organic wave by alternating control points.
+ */
+export function buildWavyPath(sx, sy, ex, ey, curvature = 0.2) {
+  const dx = ex - sx;
+  const dy = ey - sy;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const waves = Math.max(3, Math.round(len / 40));
+  const segLen = 1 / waves;
+
+  let d = `M ${sx} ${sy}`;
+  for (let i = 0; i < waves; i++) {
+    const t1 = (i + 0.5) * segLen;
+    const t2 = (i + 1) * segLen;
+    const sign = i % 2 === 0 ? 1 : -1;
+    const amp = len * curvature * 0.6;
+    const cpx = sx + dx * t1 + nx * amp * sign;
+    const cpy = sy + dy * t1 + ny * amp * sign;
+    const epx = sx + dx * t2;
+    const epy = sy + dy * t2;
+    d += ` Q ${cpx} ${cpy} ${epx} ${epy}`;
+  }
+  return d;
+}
+
+/**
+ * Build arrowhead points string for an SVG polygon.
+ * Points toward the end of the connection.
+ */
+export function buildArrowHead(sx, sy, ex, ey, arrowSize = 8) {
+  const dx = ex - sx;
+  const dy = ey - sy;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const nx = -uy;
+  const ny = ux;
+  const tipX = ex;
+  const tipY = ey;
+  const baseX1 = ex - ux * arrowSize + nx * arrowSize * 0.5;
+  const baseY1 = ey - uy * arrowSize + ny * arrowSize * 0.5;
+  const baseX2 = ex - ux * arrowSize - nx * arrowSize * 0.5;
+  const baseY2 = ey - uy * arrowSize - ny * arrowSize * 0.5;
+  return `${tipX},${tipY} ${baseX1},${baseY1} ${baseX2},${baseY2}`;
+}
+
+/**
  * Render a connection SVG element between parent and child.
  *
  * DB Bridge: If options.connectionOverrides is provided (from nodeOverrides
@@ -149,6 +198,51 @@ export function getConnectionProps(lineStyle, sx, sy, ex, ey, color, opacity = 0
     return {
       element: 'path',
       props: { d: result, fill: effectiveColor, stroke: 'none', opacity: effectiveOpacity },
+    };
+  }
+
+  // -- Wavy style: sinusoidal curve along the connection --
+  if (effectiveStyle === 'wavy') {
+    const wavyPath = buildWavyPath(sx, sy, ex, ey, curvature);
+    return {
+      element: 'path',
+      props: {
+        d: wavyPath,
+        fill: 'none',
+        stroke: effectiveColor,
+        strokeWidth: strokeWidth * 0.9,
+        opacity: effectiveOpacity,
+        strokeLinecap: 'round',
+      },
+    };
+  }
+
+  // -- Arrow style: Bezier curve with arrowhead at the end --
+  if (effectiveStyle === 'arrow') {
+    const d = buildBezierPath(sx, sy, ex, ey, curvature);
+    const arrowHead = buildArrowHead(sx, sy, ex, ey, 8);
+    return {
+      elements: [
+        {
+          element: 'path',
+          props: {
+            d,
+            fill: 'none',
+            stroke: effectiveColor,
+            strokeWidth,
+            opacity: effectiveOpacity,
+            strokeLinecap: 'round',
+          },
+        },
+        {
+          element: 'polygon',
+          props: {
+            points: arrowHead,
+            fill: effectiveColor,
+            opacity: effectiveOpacity,
+          },
+        },
+      ],
     };
   }
 
@@ -216,6 +310,8 @@ export const LINE_STYLE_OPTIONS = [
   { key: 'dotted',  label: 'מנוקד',       description: 'חיבור עדין / רפאים' },
   { key: 'tapered-dashed', label: 'טפל מקווקו', description: 'עבה→דק עם קווקו' },
   { key: 'tapered-dotted', label: 'טפל מנוקד',  description: 'עבה→דק עם נקודות' },
+  { key: 'wavy',    label: 'גלי',         description: 'קו גלי אורגני' },
+  { key: 'arrow',   label: 'חץ',          description: 'קו עם ראש חץ' },
 ];
 
 export const SHAPE_OPTIONS = [
@@ -228,4 +324,7 @@ export const SHAPE_OPTIONS = [
   { key: 'diamond',     label: 'מעוין' },
   { key: 'pill',        label: 'גלולה' },
   { key: 'roundedRect', label: 'מלבן' },
+  { key: 'heart',       label: 'לב' },
+  { key: 'banner',      label: 'באנר' },
+  { key: 'crown',       label: 'כתר' },
 ];
