@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download, Plus, AlertTriangle, X, Layers, ArrowUp, ArrowDown, Pencil, GripVertical, Trash2 } from 'lucide-react';
+import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download, Plus, AlertTriangle, X, Layers, ArrowUp, ArrowDown, Pencil, GripVertical, Trash2, MoveRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   loadCompanyTree,
@@ -83,7 +83,7 @@ const VAT_REPORTING_METHODS = [
 ];
 
 // ── TreeNode — recursive renderer with two-way editing ──
-function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, onFrequencyChange, onExtraFieldChange, onNodeUpdate, onNodeMove, onAddChild, onRefresh, bankAccounts, siblingCount, siblingIndex }) {
+function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, onFrequencyChange, onExtraFieldChange, onNodeUpdate, onNodeMove, onAddChild, onRefresh, bankAccounts, siblingCount, siblingIndex, allBranchNodes }) {
   const [collapsed, setCollapsed] = useState(depth > 1);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [editingLabel, setEditingLabel] = useState(false);
@@ -92,6 +92,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
   const [newStepLabel, setNewStepLabel] = useState('');
   const [addingChild, setAddingChild] = useState(false);
   const [newChildName, setNewChildName] = useState('');
+  const [showMoveMenu, setShowMoveMenu] = useState(false);
   const enabled = isNodeEnabled(clientTree, node.id);
   const hasChildren = node.children && node.children.length > 0;
   // Resolve steps: node.steps from DB tree, fallback to processTemplates via service_key
@@ -179,6 +180,38 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
     } catch (err) {
       toast({ title: 'שגיאה בהזזה', description: err.message, variant: 'destructive' });
     }
+  };
+
+  // ── Move to different parent (reparent) ──
+  const handleMoveTo = async (newParentId) => {
+    setShowMoveMenu(false);
+    try {
+      await moveNodeInCompanyTree(node.id, newParentId, null, 'ProcessTreeManager');
+      toast({ title: 'צומת הועבר', description: `"${node.label}" הועבר` });
+      onRefresh?.();
+    } catch (err) {
+      toast({ title: 'שגיאה בהעברה', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  // Get potential parent nodes (all nodes in branch except self and own children)
+  const getMovableTargets = () => {
+    if (!allBranchNodes) return [];
+    const selfAndChildren = new Set();
+    const collectIds = (n) => { selfAndChildren.add(n.id); (n.children || []).forEach(collectIds); };
+    collectIds(node);
+    // Include branch root as an option
+    const targets = [{ id: branchId, label: `שורש הענף (${branchId})`, isRoot: true }];
+    const collectTargets = (nodes) => {
+      for (const n of (nodes || [])) {
+        if (!selfAndChildren.has(n.id)) {
+          targets.push({ id: n.id, label: n.label });
+        }
+        if (n.children?.length) collectTargets(n.children);
+      }
+    };
+    collectTargets(allBranchNodes);
+    return targets;
   };
 
   // ── Delete node from tree ──
@@ -318,8 +351,8 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           <span className="font-medium">{nodeSteps.length}</span>
         </button>
 
-        {/* Move up/down buttons — visible on hover */}
-        <div className="opacity-0 group-hover/treenode:opacity-100 flex items-center gap-0.5 transition-opacity">
+        {/* Move up/down/reparent buttons — visible on hover */}
+        <div className="opacity-0 group-hover/treenode:opacity-100 flex items-center gap-0.5 transition-opacity relative">
           {siblingIndex > 0 && (
             <button type="button" onClick={handleMoveUp} className="text-gray-300 hover:text-blue-500" title="הזז למעלה">
               <ArrowUp className="w-3 h-3" />
@@ -330,12 +363,40 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
               <ArrowDown className="w-3 h-3" />
             </button>
           )}
+          <button type="button" onClick={() => setShowMoveMenu(!showMoveMenu)} className="text-gray-300 hover:text-violet-500" title="העבר לצומת אחר">
+            <MoveRight className="w-3 h-3" />
+          </button>
           <button type="button" onClick={() => setAddingChild(!addingChild)} className="text-gray-300 hover:text-emerald-500" title="הוסף צומת בן">
             <Plus className="w-3 h-3" />
           </button>
           <button type="button" onClick={handleDeleteNode} className="text-gray-300 hover:text-red-500" title="מחק צומת">
             <Trash2 className="w-3 h-3" />
           </button>
+
+          {/* Move-to dropdown */}
+          {showMoveMenu && (
+            <div className="absolute top-6 left-0 z-50 bg-white border-2 border-violet-200 rounded-lg shadow-xl p-2 min-w-[200px] max-h-[200px] overflow-y-auto">
+              <div className="text-[10px] font-bold text-gray-500 px-2 py-1 border-b mb-1">העבר "{node.label}" אל:</div>
+              {getMovableTargets().map(target => (
+                <button
+                  key={target.id}
+                  type="button"
+                  onClick={() => handleMoveTo(target.id)}
+                  className="w-full text-right px-2 py-1.5 text-xs rounded hover:bg-violet-50 text-gray-700 hover:text-violet-700 transition-colors flex items-center gap-1.5"
+                >
+                  {target.isRoot ? <GitBranch className="w-3 h-3 text-violet-400" /> : <MoveRight className="w-3 h-3 text-gray-300" />}
+                  {target.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShowMoveMenu(false)}
+                className="w-full text-center text-[10px] text-gray-400 hover:text-gray-600 mt-1 pt-1 border-t"
+              >
+                ביטול
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -520,6 +581,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
               bankAccounts={bankAccounts}
               siblingCount={node.children.length}
               siblingIndex={childIdx}
+              allBranchNodes={allBranchNodes}
             />
           ))}
         </div>
@@ -861,6 +923,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
                     bankAccounts={bankAccounts}
                     siblingCount={(branch.children || []).length}
                     siblingIndex={nodeIdx}
+                    allBranchNodes={branch.children || []}
                   />
                 ))}
                 <AddProcessButton branchId={branchId} branchColors={colors} onAdd={handleAddProcess} />
