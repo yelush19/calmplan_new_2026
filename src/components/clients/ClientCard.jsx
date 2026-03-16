@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Phone, Mail, Edit, Building, User, DollarSign, Trash2, UserCheck, FileText, ChevronDown, ChevronUp, ChevronLeft, CheckSquare, Users, Briefcase, Calendar, MoreVertical, CheckCircle, Clock, Heart, AlertCircle, Banknote, CreditCard, BookUser, FolderOpen, Receipt, Layers, Link2 } from 'lucide-react';
 import TaxInfoDialog from '@/components/clients/TaxInfoDialog';
 import { ALL_SERVICES } from '@/config/processTemplates';
-import { loadCompanyTree } from '@/services/processTreeService';
+import { loadCompanyTree, isNodeEnabled, getEnabledNodeIds } from '@/services/processTreeService';
 import { flattenTree } from '@/config/companyProcessTree';
 
 // Fallback labels (used when tree hasn't loaded yet)
@@ -114,12 +114,125 @@ const serviceGroupIcons = {
   2: 'bg-[#4a6274] text-white border-[#3d5363]',   // כחול מעושן מושתק
 };
 
+/**
+ * ProcessTreeSection — reads from client.process_tree (new V4.x) with company tree labels/steps.
+ * Falls back to ServiceTreeSection (old service_types[]) when process_tree is empty.
+ */
+function ProcessTreeSection({ processTree }) {
+  const [expandedBranches, setExpandedBranches] = useState(new Set());
+  const [expandedNodes, setExpandedNodes] = useState(new Set());
+  const [companyTree, setCompanyTree] = useState(null);
+
+  useEffect(() => {
+    loadCompanyTree().then(({ tree }) => {
+      if (tree?.branches) setCompanyTree(tree);
+    }).catch(() => {});
+  }, []);
+
+  if (!companyTree?.branches) return null;
+
+  const clientTree = processTree || {};
+  const enabledIds = getEnabledNodeIds(clientTree);
+  if (enabledIds.length === 0) return null;
+
+  // Branch group config
+  const branchConfig = {
+    P1: { label: 'שכר', bg: 'bg-sky-700', border: 'border-sky-300' },
+    P2: { label: 'הנה"ח ודוחות', bg: 'bg-emerald-800', border: 'border-emerald-300' },
+    P3: { label: 'ניהול', bg: 'bg-pink-700', border: 'border-pink-300' },
+    P5: { label: 'דוחות שנתיים', bg: 'bg-green-700', border: 'border-green-300' },
+  };
+
+  // Collect enabled nodes per branch
+  const branchGroups = {};
+  for (const [branchId, branch] of Object.entries(companyTree.branches)) {
+    if (branchId === 'P4') continue;
+    const flat = flattenTree({ branches: { [branchId]: branch } });
+    const enabledInBranch = flat.filter(n => isNodeEnabled(clientTree, n.id));
+    if (enabledInBranch.length > 0) {
+      branchGroups[branchId] = enabledInBranch;
+    }
+  }
+
+  if (Object.keys(branchGroups).length === 0) return null;
+
+  return (
+    <div className="border-t border-gray-100 pt-3 mt-2 space-y-1.5">
+      {Object.entries(branchGroups).map(([branchId, nodes]) => {
+        const config = branchConfig[branchId] || { label: branchId, bg: 'bg-gray-600', border: 'border-gray-300' };
+        const isExpanded = expandedBranches.has(branchId);
+        return (
+          <div key={branchId} className="rounded-lg border border-gray-100 overflow-hidden">
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpandedBranches(prev => { const n = new Set(prev); n.has(branchId) ? n.delete(branchId) : n.add(branchId); return n; }); }}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-bold ${config.bg} text-white`}
+            >
+              {isExpanded ? <ChevronDown className="w-4 h-4 text-white/80" /> : <ChevronLeft className="w-4 h-4 text-white/80" />}
+              <span>{config.label}</span>
+              <Badge className="bg-white/20 text-white text-xs px-1.5 py-0 border border-white/30 mr-auto">
+                {nodes.length}
+              </Badge>
+            </button>
+            {isExpanded && (
+              <div className="px-2 pb-1.5 space-y-0.5 bg-white">
+                {nodes.map(node => {
+                  const steps = node.steps || [];
+                  const isNodeExpanded = expandedNodes.has(node.id);
+                  const freq = clientTree[node.id]?.frequency;
+                  const slaDay = node.sla_day;
+                  return (
+                    <div key={node.id} className={`mr-2 border-r-2 pr-2 ${config.border}`}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (steps.length > 0) setExpandedNodes(prev => { const n = new Set(prev); n.has(node.id) ? n.delete(node.id) : n.add(node.id); return n; }); }}
+                        className="w-full flex items-center gap-2 py-1 text-sm hover:text-gray-900"
+                      >
+                        {steps.length > 0 ? (
+                          isNodeExpanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronLeft className="w-3.5 h-3.5 text-gray-400" />
+                        ) : <div className="w-3.5" />}
+                        <span className="text-gray-700 font-medium">{node.label}</span>
+                        {freq && (
+                          <span className="text-[10px] text-gray-400 mr-1">
+                            ({freq === 'monthly' ? 'חודשי' : freq === 'bimonthly' ? 'דו-חודשי' : freq})
+                          </span>
+                        )}
+                        {slaDay && (
+                          <span className="text-[10px] text-red-500 font-bold mr-1">SLA:{slaDay}</span>
+                        )}
+                        {steps.length > 0 && (
+                          <span className="text-xs text-gray-400 mr-auto flex items-center gap-0.5">
+                            <Layers className="w-3 h-3" /> {steps.length}
+                          </span>
+                        )}
+                      </button>
+                      {isNodeExpanded && steps.length > 0 && (
+                        <div className="mr-4 pb-1 space-y-0.5">
+                          {steps.map((step, idx) => (
+                            <div key={step.key || idx} className="flex items-center gap-1.5 text-xs text-gray-600 py-0.5">
+                              <Badge className="bg-amber-50 text-amber-600 text-[10px] px-1.5 py-0 border border-amber-200 font-bold">{idx + 1}</Badge>
+                              <span>{step.label}</span>
+                              {step.sla_day && <span className="text-red-400 text-[9px] font-bold">({step.sla_day})</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Legacy fallback — reads from service_types[] + processTemplates */
 function ServiceTreeSection({ services }) {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [expandedServices, setExpandedServices] = useState(new Set());
   const [treeLabels, setTreeLabels] = useState(DEFAULT_SERVICE_LABELS);
 
-  // Load labels from company tree (overrides defaults with DB labels)
   useEffect(() => {
     loadCompanyTree().then(({ tree }) => {
       if (!tree?.branches) return;
@@ -132,7 +245,6 @@ function ServiceTreeSection({ services }) {
     }).catch(() => {});
   }, []);
 
-  // Group services by their group
   const grouped = {};
   services.forEach(svc => {
     const group = serviceGroupOrder[svc] || 99;
@@ -141,21 +253,10 @@ function ServiceTreeSection({ services }) {
   });
 
   const toggleGroup = (groupId) => {
-    setExpandedGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(groupId)) next.delete(groupId);
-      else next.add(groupId);
-      return next;
-    });
+    setExpandedGroups(prev => { const n = new Set(prev); n.has(groupId) ? n.delete(groupId) : n.add(groupId); return n; });
   };
-
   const toggleService = (svcKey) => {
-    setExpandedServices(prev => {
-      const next = new Set(prev);
-      if (next.has(svcKey)) next.delete(svcKey);
-      else next.add(svcKey);
-      return next;
-    });
+    setExpandedServices(prev => { const n = new Set(prev); n.has(svcKey) ? n.delete(svcKey) : n.add(svcKey); return n; });
   };
 
   return (
@@ -164,54 +265,33 @@ function ServiceTreeSection({ services }) {
         const isGroupExpanded = expandedGroups.has(Number(groupId));
         const groupLabel = serviceGroupLabels[groupId] || `קבוצה ${groupId}`;
         const groupColor = serviceGroupIcons[groupId] || 'bg-gray-100 text-gray-700 border-gray-200';
-
         return (
           <div key={groupId} className="rounded-md border border-gray-100 overflow-hidden">
-            {/* Group header - collapsible */}
             <button
               onClick={(e) => { e.stopPropagation(); toggleGroup(Number(groupId)); }}
               className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-bold transition-colors rounded-t-md ${groupColor}`}
             >
-              {isGroupExpanded ? (
-                <ChevronDown className="w-4 h-4 shrink-0 text-white/80" />
-              ) : (
-                <ChevronLeft className="w-4 h-4 shrink-0 text-white/80" />
-              )}
+              {isGroupExpanded ? <ChevronDown className="w-4 h-4 shrink-0 text-white/80" /> : <ChevronLeft className="w-4 h-4 shrink-0 text-white/80" />}
               <span className="text-white">{groupLabel}</span>
-              <Badge className="bg-white/20 text-white text-xs px-1.5 py-0 border border-white/30 mr-auto">
-                {svcs.length}
-              </Badge>
+              <Badge className="bg-white/20 text-white text-xs px-1.5 py-0 border border-white/30 mr-auto">{svcs.length}</Badge>
             </button>
-
-            {/* Expanded: show services */}
             {isGroupExpanded && (
               <div className="px-2 pb-1.5 space-y-0.5">
                 {svcs.map(svcKey => {
                   const svcTemplate = ALL_SERVICES[svcKey];
                   const steps = svcTemplate?.steps || [];
                   const isServiceExpanded = expandedServices.has(svcKey);
-                  const hasSteps = steps.length > 0;
-
                   return (
-                    <div key={svcKey} className="mr-2 border-r-2 pr-2" style={{ borderColor: groupColor.includes('green') ? '#86efac' : groupColor.includes('blue') ? '#93c5fd' : groupColor.includes('purple') ? '#c4b5fd' : groupColor.includes('amber') ? '#fcd34d' : groupColor.includes('emerald') ? '#6ee7b7' : '#a5b4fc' }}>
+                    <div key={svcKey} className="mr-2 border-r-2 pr-2 border-gray-200">
                       <button
-                        onClick={(e) => { e.stopPropagation(); if (hasSteps) toggleService(svcKey); }}
-                        className="w-full flex items-center gap-2 py-1 text-sm hover:text-gray-900 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); if (steps.length > 0) toggleService(svcKey); }}
+                        className="w-full flex items-center gap-2 py-1 text-sm hover:text-gray-900"
                       >
-                        {hasSteps ? (
-                          isServiceExpanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronLeft className="w-3.5 h-3.5 text-gray-400" />
-                        ) : <div className="w-3.5" />}
+                        {steps.length > 0 ? (isServiceExpanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronLeft className="w-3.5 h-3.5 text-gray-400" />) : <div className="w-3.5" />}
                         <span className="text-gray-700 font-medium">{treeLabels[svcKey] || svcKey.replace(/_/g, ' ')}</span>
-                        {hasSteps && (
-                          <span className="text-xs text-gray-400 mr-auto flex items-center gap-0.5">
-                            <Layers className="w-3 h-3" />
-                            {steps.length}
-                          </span>
-                        )}
+                        {steps.length > 0 && <span className="text-xs text-gray-400 mr-auto flex items-center gap-0.5"><Layers className="w-3 h-3" />{steps.length}</span>}
                       </button>
-
-                      {/* Steps list */}
-                      {isServiceExpanded && hasSteps && (
+                      {isServiceExpanded && steps.length > 0 && (
                         <div className="mr-4 pb-1 space-y-0.5">
                           {steps.map((step, idx) => (
                             <div key={step.key} className="flex items-center gap-1.5 text-xs text-gray-600 py-0.5">
@@ -437,27 +517,40 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
           </div>
         )}
 
-        {/* שירותים עם שלבים - מקופל */}
-        {services.length > 0 && (
+        {/* שירותים — מעץ תהליכים (V4.x) או fallback לשירותים ישנים */}
+        {client.process_tree && Object.keys(client.process_tree).length > 0 ? (
+          <ProcessTreeSection processTree={client.process_tree} />
+        ) : services.length > 0 ? (
           <ServiceTreeSection services={services} />
-        )}
+        ) : null}
 
         {/* Tax IDs - quick reference */}
-        {(client.tax_info?.tax_deduction_file_number || client.tax_info?.annual_tax_ids?.tax_advances_id || client.entity_number) && (
-          <div className="border-t border-gray-100 pt-2 mt-2">
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-              {client.entity_number && (
-                <span><span className="font-bold text-gray-700">ח"פ:</span> {client.entity_number}</span>
-              )}
-              {client.tax_info?.tax_deduction_file_number && (
-                <span><span className="font-bold text-gray-700">פנקס ניכויים:</span> {client.tax_info.tax_deduction_file_number}</span>
-              )}
-              {client.tax_info?.annual_tax_ids?.tax_advances_id && (
-                <span><span className="font-bold text-gray-700">פנקס מקדמות:</span> {client.tax_info.annual_tax_ids.tax_advances_id}</span>
-              )}
-            </div>
+        <div className="border-t border-gray-100 pt-2 mt-2">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+            <span>
+              <span className="font-bold text-gray-700">ח"פ:</span>{' '}
+              {client.entity_number || <span className="text-red-400 text-xs">חסר</span>}
+            </span>
+            <span>
+              <span className="font-bold text-gray-700">תיק ניכויים:</span>{' '}
+              {client.tax_info?.tax_deduction_file_number || <span className="text-red-400 text-xs">חסר</span>}
+            </span>
+            {/* Show deductions ID only for payroll clients */}
+            {(client.service_types?.includes('payroll') || client.process_tree?.P1_payroll?.enabled) && (
+              <span>
+                <span className="font-bold text-gray-700">מזהה ניכויים:</span>{' '}
+                {client.tax_info?.annual_tax_ids?.deductions_id || <span className="text-red-400 text-xs">חסר</span>}
+              </span>
+            )}
+            {/* Show tax_advances ID only for clients with tax advances */}
+            {(client.service_types?.includes('tax_advances') || client.process_tree?.P2_tax_advances?.enabled) && (
+              <span>
+                <span className="font-bold text-gray-700">מזהה מקדמות:</span>{' '}
+                {client.tax_info?.annual_tax_ids?.tax_advances_id || <span className="text-red-400 text-xs">חסר</span>}
+              </span>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Bank accounts summary */}
         {accountsSummary && (
