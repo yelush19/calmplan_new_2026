@@ -749,6 +749,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 clientId={client?.id}
                 clientName={formData.name}
                 reportingInfo={formData.reporting_info}
+                clientData={formData}
               />
             </TabsContent>
             {/* ===== נתונים כספיים TAB ===== */}
