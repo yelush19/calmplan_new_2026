@@ -731,7 +731,8 @@ export function isStepLocked(task, stepKey) {
 }
 
 /**
- * Toggle a step's done state and auto-set date
+ * Toggle a step's done state and auto-set date.
+ * Also supports sub-step keys in the format "parentKey.subKey".
  */
 export function toggleStep(currentSteps, stepKey) {
   const step = currentSteps[stepKey] || { done: false, date: null, notes: '' };
@@ -746,6 +747,32 @@ export function toggleStep(currentSteps, stepKey) {
       date: !step.done ? now : null, // set date when marking done, clear when unmarking
     },
   };
+}
+
+/**
+ * Toggle a sub-step's done state.
+ * Sub-step key format: "parentStepKey.subStepKey"
+ */
+export function toggleSubStep(currentSteps, parentKey, subKey) {
+  const fullKey = `${parentKey}.${subKey}`;
+  return toggleStep(currentSteps, fullKey);
+}
+
+/**
+ * Check if a sub-step is complete
+ */
+export function isSubStepComplete(processSteps, parentKey, subKey) {
+  const fullKey = `${parentKey}.${subKey}`;
+  return isStepComplete(processSteps?.[fullKey]);
+}
+
+/**
+ * Get sub-step completion count for a parent step
+ */
+export function getSubStepProgress(processSteps, parentKey, subSteps = []) {
+  if (!subSteps.length) return { done: 0, total: 0 };
+  const done = subSteps.filter(sub => isSubStepComplete(processSteps, parentKey, sub.key)).length;
+  return { done, total: subSteps.length };
 }
 
 /**
@@ -780,14 +807,28 @@ export function isStepComplete(stepData) {
 /**
  * Calculate completion percentage for a task's process steps.
  * Skipped steps count as complete.
+ * Sub-steps are counted individually when present.
  */
 export function getStepCompletionPercent(task) {
   const templateSteps = getStepsForTask(task);
   if (!templateSteps.length) return 0;
 
   const steps = task.process_steps || {};
-  const completedSteps = templateSteps.filter(s => isStepComplete(steps[s.key])).length;
-  return Math.round((completedSteps / templateSteps.length) * 100);
+  let totalItems = 0;
+  let completedItems = 0;
+
+  for (const s of templateSteps) {
+    const subs = s.sub_steps || [];
+    if (subs.length > 0) {
+      totalItems += subs.length;
+      completedItems += subs.filter(sub => isStepComplete(steps[`${s.key}.${sub.key}`])).length;
+    } else {
+      totalItems += 1;
+      if (isStepComplete(steps[s.key])) completedItems += 1;
+    }
+  }
+
+  return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 }
 
 // ============================================================

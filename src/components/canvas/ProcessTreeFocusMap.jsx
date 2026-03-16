@@ -103,7 +103,7 @@ function countDescendants(node) {
   return count;
 }
 
-export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLabel = 'הפוקוס שלי' }) {
+export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLabel = 'הפוקוס שלי', branch: filterBranch }) {
   const svgRef = useRef(null);
   const [companyTree, setCompanyTree] = useState(null);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -154,15 +154,18 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
     const nodes = [];
     const edges = [];
 
-    const branchKeys = Object.keys(companyTree.branches);
+    const allBranchKeys = Object.keys(companyTree.branches);
+    const branchKeys = filterBranch ? allBranchKeys.filter(k => k === filterBranch) : allBranchKeys;
 
     branchKeys.forEach((branchId, bi) => {
       const branch = companyTree.branches[branchId];
       const dna = BRANCH_DNA[branchId] || BRANCH_DNA.P2;
       const branchColor = getColor(branchId, dna.color);
-      const angle = BRANCH_ANGLES[branchId] ?? (-Math.PI / 2 + bi * (2 * Math.PI / branchKeys.length));
-      const bx = CX + Math.cos(angle) * 230;
-      const by = CY + Math.sin(angle) * 230;
+      const isSingleBranch = branchKeys.length === 1;
+      const angle = isSingleBranch ? -Math.PI / 2 : (BRANCH_ANGLES[branchId] ?? (-Math.PI / 2 + bi * (2 * Math.PI / branchKeys.length)));
+      const branchDist = isSingleBranch ? 160 : 230;
+      const bx = CX + Math.cos(angle) * branchDist;
+      const by = CY + Math.sin(angle) * branchDist;
 
       // Collect tasks for this entire branch
       const allBranchIds = flattenTree({ branches: { [branchId]: branch } }).map(n => n.id);

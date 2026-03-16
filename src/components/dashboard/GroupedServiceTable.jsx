@@ -3,7 +3,7 @@ const fixShortYear = (v) => { if (!v) return v; const m = v.match(/^(\d{1,2})-(\
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar, Zap, FastForward } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar, Zap, FastForward, Paperclip } from 'lucide-react';
 import { differenceInDays, parseISO, isValid, format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ResizableTable from '@/components/ui/ResizableTable';
@@ -333,6 +333,11 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                 {subTasks.filter(s => s.done).length}/{subTasks.length}
               </Badge>
             )}
+            {(task.attachments || []).length > 0 && (
+              <span className="text-gray-400 shrink-0" title={`${task.attachments.length} קבצים`}>
+                <Paperclip className="w-3 h-3" />
+              </span>
+            )}
             {(() => {
               if (!task.due_date) return null;
               const d = parseISO(task.due_date);
@@ -346,16 +351,69 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
           </div>
         </td>
 
-        {/* Step cells */}
+        {/* Step cells (with sub-step support) */}
         {service.steps.map(stepDef => {
+          const subs = stepDef.sub_steps || [];
           const stepData = steps[stepDef.key] || { done: false, date: null };
+
+          if (subs.length === 0) {
+            return (
+              <td key={stepDef.key} className="py-1.5 px-2 text-center">
+                <StepCell
+                  stepData={stepData}
+                  onToggle={() => onToggleStep(task, stepDef.key)}
+                  onDateChange={(date) => onDateChange(task, stepDef.key, date)}
+                />
+              </td>
+            );
+          }
+
+          // Step has sub-steps: show mini progress
+          const subsDone = subs.filter(s => {
+            const sd = steps[`${stepDef.key}.${s.key}`];
+            return sd?.done || sd?.skipped;
+          }).length;
+          const allSubsDone = subsDone === subs.length;
+
           return (
             <td key={stepDef.key} className="py-1.5 px-2 text-center">
-              <StepCell
-                stepData={stepData}
-                onToggle={() => onToggleStep(task, stepDef.key)}
-                onDateChange={(date) => onDateChange(task, stepDef.key, date)}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className={`w-8 h-8 mx-auto rounded-md border-2 flex items-center justify-center text-[9px] font-bold transition-all ${
+                    allSubsDone
+                      ? 'bg-emerald-500 border-emerald-500 text-white'
+                      : subsDone > 0
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                        : 'border-dashed border-gray-200 hover:border-emerald-400 text-gray-400'
+                  }`}>
+                    {allSubsDone ? <Check className="w-4 h-4" /> : `${subsDone}/${subs.length}`}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="center" side="top">
+                  <div className="space-y-1">
+                    <div className="text-xs font-bold text-gray-700 mb-1.5">{stepDef.label}</div>
+                    {subs.map(sub => {
+                      const subData = steps[`${stepDef.key}.${sub.key}`] || { done: false };
+                      return (
+                        <button
+                          key={sub.key}
+                          onClick={() => onToggleStep(task, `${stepDef.key}.${sub.key}`)}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 transition-colors text-right"
+                        >
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
+                            subData.done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'
+                          }`}>
+                            {subData.done && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <span className={`text-xs ${subData.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                            {sub.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </td>
           );
         })}

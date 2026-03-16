@@ -649,7 +649,7 @@ export default function TaxReportsDashboardPage() {
       })()}
 
       {/* Content */}
-      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} isLoading={isLoading} centerLabel="דיווחי מס" centerSub="P2" accentColor="#B2AC88" currentMonth={selectedMonth} onEditTask={setEditingTask}>
+      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} isLoading={isLoading} centerLabel="דיווחי מס" centerSub="P2" branch="P2" accentColor="#B2AC88" currentMonth={selectedMonth} onEditTask={setEditingTask}>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />

@@ -112,6 +112,7 @@ export default function UnifiedAyoaLayout({
                 tasks={tasks}
                 clients={clients}
                 centerLabel={centerLabel}
+                branch={branch}
               />
             </div>
           )}

@@ -175,8 +175,8 @@ const META_FOLDERS = {
     isHome: true,
   },
   'P5 דוחות שנתיים': {
-    icon: '📋', color: '#2E7D32', label: 'P5 | דוחות שנתיים והצהרות',
-    departments: ['דוחות שנתיים', 'הצהרות הון'],
+    icon: '📋', color: '#2E7D32', label: 'P5 | דוחות שנתיים',
+    departments: ['דוחות שנתיים', 'דוחות אישיים'],
     complexitySubFolders: true,
   },
 };
@@ -194,7 +194,7 @@ const BRANCH_CONFIG = {
   'בית-מלאי':         { color: '#FF9800', icon: '📦', label: 'מלאי' },
   'אחר/טיוטות':       { color: '#78909C', icon: '📝', label: 'אחר/טיוטות' },
   'דוחות שנתיים':      { color: '#2E7D32', icon: '📋', label: 'דוחות שנתיים' },
-  'הצהרות הון':       { color: '#2E7D32', icon: '📄', label: 'הצהרות הון' },
+  'דוחות אישיים':     { color: '#2E7D32', icon: '📄', label: 'דוחות אישיים' },
 };
 
 // Diamond Standard: 3 tiers with fixed vivid colors (Zero Gray Policy)
@@ -321,8 +321,10 @@ const CATEGORY_TO_DEPARTMENT = {
   'מאזן': 'דוחות שנתיים',
   'דוח שנתי': 'דוחות שנתיים',     // annual tasks → P5
   'work_annual_reports': 'דוחות שנתיים',
-  'הצהרת הון': 'הצהרות הון',       // capital statements → P5
-  'work_capital_statement': 'הצהרות הון',
+  'הצהרת הון': 'דוחות אישיים',       // capital statements → P5
+  'work_capital_statement': 'דוחות אישיים',
+  'דוחות אישיים': 'דוחות אישיים',
+  'work_personal_reports': 'דוחות אישיים',
   'רווח והפסד': 'התאמות',
   'work_pnl': 'התאמות',
   'תשלום רשויות': 'מע"מ',         // authorities payment → VAT/bookkeeping branch

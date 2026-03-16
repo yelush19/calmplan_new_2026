@@ -16,7 +16,7 @@ export const CATEGORY_GRADIENTS = {
   routines: { from: '#FFD54F', to: '#FFCA28', label: 'שגרות', branch: 'P4' },
   // P5 — Annual Reports
   annual_reports: { from: '#2E7D32', to: '#1B5E20', label: 'דוחות שנתיים', branch: 'P5' },
-  capital_statement: { from: '#388E3C', to: '#2E7D32', label: 'הצהרות הון', branch: 'P5' },
+  personal_reports: { from: '#388E3C', to: '#2E7D32', label: 'דוחות אישיים', branch: 'P5' },
   balance_sheets: { from: '#6D8B74', to: '#4A6741', label: 'דוחות כספיים', branch: 'P5' },
 };
 
