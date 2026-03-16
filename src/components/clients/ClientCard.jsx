@@ -110,8 +110,10 @@ const serviceGroupLabels = {
 };
 
 const serviceGroupIcons = {
-  1: 'bg-[#1a472a] text-white border-[#143d23]',   // ירוק יער עמוק
-  2: 'bg-[#4a6274] text-white border-[#3d5363]',   // כחול מעושן מושתק
+  1: 'bg-emerald-800 border-emerald-600',   // ירוק יער עמוק
+  2: 'bg-sky-700 border-sky-500',           // כחול
+  3: 'bg-green-700 border-green-500',       // ירוק
+  4: 'bg-pink-700 border-pink-500',         // ורוד
 };
 
 /**
@@ -137,10 +139,10 @@ function ProcessTreeSection({ processTree }) {
 
   // Branch group config
   const branchConfig = {
-    P1: { label: 'שכר', bg: 'bg-sky-700', border: 'border-sky-300' },
-    P2: { label: 'הנה"ח ודוחות', bg: 'bg-emerald-800', border: 'border-emerald-300' },
-    P3: { label: 'ניהול', bg: 'bg-pink-700', border: 'border-pink-300' },
-    P5: { label: 'דוחות שנתיים', bg: 'bg-green-700', border: 'border-green-300' },
+    P1: { label: 'שכר', bg: 'bg-sky-700', border: 'border-sky-300', count: 'bg-sky-500' },
+    P2: { label: 'הנה"ח ודוחות', bg: 'bg-emerald-800', border: 'border-emerald-300', count: 'bg-emerald-600' },
+    P3: { label: 'ניהול', bg: 'bg-pink-700', border: 'border-pink-300', count: 'bg-pink-500' },
+    P5: { label: 'דוחות שנתיים', bg: 'bg-green-700', border: 'border-green-300', count: 'bg-green-500' },
   };
 
   // Collect enabled nodes per branch
@@ -165,11 +167,11 @@ function ProcessTreeSection({ processTree }) {
           <div key={branchId} className="rounded-lg border border-gray-100 overflow-hidden">
             <button
               onClick={(e) => { e.stopPropagation(); setExpandedBranches(prev => { const n = new Set(prev); n.has(branchId) ? n.delete(branchId) : n.add(branchId); return n; }); }}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-bold ${config.bg} text-white`}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm ${config.bg} rounded-lg`}
             >
-              {isExpanded ? <ChevronDown className="w-4 h-4 text-white/80" /> : <ChevronLeft className="w-4 h-4 text-white/80" />}
-              <span>{config.label}</span>
-              <Badge className="bg-white/20 text-white text-xs px-1.5 py-0 border border-white/30 mr-auto">
+              {isExpanded ? <ChevronDown className="w-4 h-4 text-white" /> : <ChevronLeft className="w-4 h-4 text-white" />}
+              <span className="text-white font-black text-[15px] tracking-wide">{config.label}</span>
+              <Badge className={`${config.count} text-white text-xs font-black px-2 py-0.5 border border-white/40 mr-auto rounded-full`}>
                 {nodes.length}
               </Badge>
             </button>
@@ -269,11 +271,11 @@ function ServiceTreeSection({ services }) {
           <div key={groupId} className="rounded-md border border-gray-100 overflow-hidden">
             <button
               onClick={(e) => { e.stopPropagation(); toggleGroup(Number(groupId)); }}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-bold transition-colors rounded-t-md ${groupColor}`}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm transition-colors rounded-lg ${groupColor}`}
             >
-              {isGroupExpanded ? <ChevronDown className="w-4 h-4 shrink-0 text-white/80" /> : <ChevronLeft className="w-4 h-4 shrink-0 text-white/80" />}
-              <span className="text-white">{groupLabel}</span>
-              <Badge className="bg-white/20 text-white text-xs px-1.5 py-0 border border-white/30 mr-auto">{svcs.length}</Badge>
+              {isGroupExpanded ? <ChevronDown className="w-4 h-4 shrink-0 text-white" /> : <ChevronLeft className="w-4 h-4 shrink-0 text-white" />}
+              <span className="text-white font-black text-[15px] tracking-wide">{groupLabel}</span>
+              <Badge className="bg-white/30 text-white text-xs font-black px-2 py-0.5 border border-white/40 mr-auto rounded-full">{svcs.length}</Badge>
             </button>
             {isGroupExpanded && (
               <div className="px-2 pb-1.5 space-y-0.5">
@@ -430,7 +432,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const hasReporting = reportingRow1.length > 0 || reportingRow2.length > 0;
 
   return (
-    <Card className={`w-full transition-all duration-300 flex flex-col group rounded-2xl ${isSelected ? 'border-2 border-blue-400 ring-2 ring-blue-100 bg-gradient-to-br from-blue-50/60 to-white shadow-lg shadow-blue-100/50' : 'border-2 border-gray-100 bg-white shadow-sm hover:shadow-xl hover:border-emerald-200 hover:-translate-y-1'}`}>
+    <Card className={`w-full transition-all duration-300 flex flex-col group rounded-2xl ${isSelected ? 'border-[3px] border-blue-400 ring-2 ring-blue-100 bg-gradient-to-br from-blue-50/60 to-white shadow-lg shadow-blue-100/50' : 'border-[3px] border-gray-200 bg-white shadow-sm hover:shadow-xl hover:border-emerald-300 hover:-translate-y-1'}`}>
       <CardHeader className="pb-3 flex-shrink-0 bg-gradient-to-l from-emerald-50/30 via-sky-50/20 to-white rounded-t-2xl border-b border-gray-100">
         <div className="flex justify-between items-start gap-2">
             <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -536,32 +538,49 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         ) : null}
 
         {/* Tax IDs - quick reference */}
-        <div className="border-t border-gray-100 pt-2 mt-2">
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-            <span>
-              <span className="font-bold text-gray-700">ח"פ:</span>{' '}
-              {client.entity_number || <span className="text-red-400 text-xs">חסר</span>}
-            </span>
-            <span>
-              <span className="font-bold text-gray-700">תיק ניכויים:</span>{' '}
-              {client.tax_info?.tax_deduction_file_number || <span className="text-red-400 text-xs">חסר</span>}
-            </span>
-            {/* Show deductions ID only for payroll clients */}
-            {(client.service_types?.includes('payroll') || client.process_tree?.P1_payroll?.enabled) && (
-              <span>
-                <span className="font-bold text-gray-700">מזהה ניכויים:</span>{' '}
-                {client.tax_info?.annual_tax_ids?.deductions_id || <span className="text-red-400 text-xs">חסר</span>}
-              </span>
-            )}
-            {/* Show tax_advances ID only for clients with tax advances */}
-            {(client.service_types?.includes('tax_advances') || client.process_tree?.P2_tax_advances?.enabled) && (
-              <span>
-                <span className="font-bold text-gray-700">מזהה מקדמות:</span>{' '}
-                {client.tax_info?.annual_tax_ids?.tax_advances_id || <span className="text-red-400 text-xs">חסר</span>}
-              </span>
-            )}
-          </div>
-        </div>
+        {(() => {
+          // Smart logic: don't show "חסר" for clients using הו"ק (automatic standing order)
+          const hasPayroll = client.service_types?.includes('payroll') || client.process_tree?.P1_payroll?.enabled;
+          const hasTaxAdvances = client.service_types?.includes('tax_advances') || client.process_tree?.P2_tax_advances?.enabled;
+          const hasDeductions = client.process_tree?.P1_deductions?.enabled;
+          // Check if payment is automatic (הו"ק) — these clients don't need manual tax IDs
+          const deductionsPayment = client.process_tree?.P1_deductions?.extra_fields?.payment_method
+            || client.process_tree?.P1_deductions?.payment_method;
+          const advancesPayment = client.process_tree?.P2_tax_advances?.extra_fields?.payment_method
+            || client.process_tree?.P2_tax_advances?.payment_method;
+          const isAutoDeductionPayment = deductionsPayment === 'bank_standing_order';
+          const isAutoAdvancesPayment = advancesPayment === 'bank_standing_order';
+          // Only show deductions ID if client has the service AND payment isn't automatic
+          const showDeductionsId = hasPayroll && hasDeductions && !isAutoDeductionPayment;
+          const showAdvancesId = hasTaxAdvances && !isAutoAdvancesPayment;
+
+          return (
+            <div className="border-t border-gray-200 pt-2 mt-2">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
+                <span>
+                  <span className="font-bold text-gray-800">ח"פ:</span>{' '}
+                  {client.entity_number || <span className="text-red-500 text-xs font-bold">חסר</span>}
+                </span>
+                <span>
+                  <span className="font-bold text-gray-800">תיק ניכויים:</span>{' '}
+                  {client.tax_info?.tax_deduction_file_number || <span className="text-red-500 text-xs font-bold">חסר</span>}
+                </span>
+                {showDeductionsId && (
+                  <span>
+                    <span className="font-bold text-gray-800">מזהה ניכויים:</span>{' '}
+                    {client.tax_info?.annual_tax_ids?.deductions_id || <span className="text-red-500 text-xs font-bold">חסר</span>}
+                  </span>
+                )}
+                {showAdvancesId && (
+                  <span>
+                    <span className="font-bold text-gray-800">מזהה מקדמות:</span>{' '}
+                    {client.tax_info?.annual_tax_ids?.tax_advances_id || <span className="text-red-500 text-xs font-bold">חסר</span>}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Bank accounts summary */}
         {accountsSummary && (

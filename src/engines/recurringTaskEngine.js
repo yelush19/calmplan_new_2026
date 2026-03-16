@@ -1,54 +1,127 @@
 /**
- * Recurring Task Generation Engine
- * ==================================
- * THE source of truth for deterministic, hierarchy-based task generation.
+ * Recurring Task Generation Engine (V4.3)
+ * ========================================
+ * Generates tasks from the PROCESS TREE — not hardcoded service groups.
  *
- * ARCHITECTURE (Hierarchy is Law):
- *   Level 0 — Client Node (parent)
- *   Level 1 — Service Group: "Tax" or "Payroll" (child)
- *   Level 2 — Main Service: e.g. "VAT", "Payroll" (grandchild of client)
- *   Level 3 — Sub-tasks / Process Steps: e.g. "קליטת הכנסות", "הכנת תלושים"
+ * ARCHITECTURE:
+ *   Company Tree (companyProcessTree.js) defines all nodes + steps + SLA days.
+ *   Client Tree (client.process_tree) marks which nodes are enabled + frequency overrides.
+ *   This engine walks the tree and creates tasks for each enabled leaf node.
  *
  * RULES:
- *   1. ZERO GHOST DATA — A task is created ONLY if the client's process_tree
- *      has the corresponding node ENABLED. Falls back to service_types[] for
- *      legacy clients not yet migrated to process tree.
- *   2. DETERMINISTIC — No service subscription = 0 tasks. No exceptions.
+ *   1. ZERO GHOST DATA — Task created ONLY if client's process_tree has node ENABLED.
+ *   2. DETERMINISTIC — No enabled node = 0 tasks. No exceptions.
  *   3. MANUAL TRIGGER ONLY — generateRecurringTasks() is called by a button.
- *      Nothing auto-generates.
  *   4. FREQUENCY-AWARE — Respects bimonthly/quarterly/semi-annual off-months.
- *      Off-month = 0 tasks for that service. Not "not_relevant". Zero.
- *   5. CROSS-REFERENCE VALIDATION — A service is real only when service_types,
- *      reporting_info frequency, deadlines, and tax IDs all agree.
- *      Deadline "לא רלוונטי" overrules an active frequency.
+ *   5. SLA-AWARE — Due dates derived from tree node sla_day + tax calendar.
+ *   6. STEPS FROM TREE — Process steps come from companyProcessTree, not processTemplates.
  */
 
-import { TAX_SERVICES, PAYROLL_SERVICES, ALL_SERVICES } from '@/config/processTemplates';
-import { getDueDateForCategory, isClient874, isBimonthlyOffMonth } from '@/config/taxCalendar2026';
+import { PROCESS_TREE_SEED, flattenTree, buildNodeMap } from '@/config/companyProcessTree';
+import { getDueDateForCategory, TAX_CALENDAR_2026 } from '@/config/taxCalendar2026';
 import { resolveFrequency, shouldInjectForMonth } from '@/services/processTreeService';
 
+// Legacy import — only used as fallback for unmigrated clients
+import { ALL_SERVICES } from '@/config/processTemplates';
+
 // ============================================================
-// SERVICE GROUP DEFINITIONS
+// CATEGORY → DEADLINE MAPPING
+// Maps tree node categories to tax calendar deadline types.
+// Nodes with sla_day use that directly; others fall back here.
+// ============================================================
+
+const CATEGORY_DEADLINE_MAP = {
+  'שכר': 'שכר',
+  'הכנת שכר ועד לאישור': 'שכר',
+  'משלוח תלושים': 'שכר',
+  'מס"ב עובדים': 'שכר',
+  'סוציאליות': 'שכר',
+  'מתפעל': 'שכר',
+  'טמל + לקוח': 'שכר',
+  'רשויות שכר': 'שכר',
+  'ביטוח לאומי': 'ביטוח לאומי',
+  'ניכויים': 'ניכויים',
+  'קליטה להנה"ח': 'שכר',
+  'קליטת הכנסות': 'מע"מ',
+  'קליטת הוצאות': 'מע"מ',
+  'התאמות חשבונות': 'מע"מ',
+  'מס"ב ספקים': 'מע"מ',
+  'מקדמות מס הכנסה': 'מקדמות מס',
+  'מע"מ': 'מע"מ',
+  'רווח והפסד': 'דוח רו"ה',
+  'מאזנים / דוחות שנתיים': 'דוח שנתי',
+  'דוחות אישיים': 'דוח שנתי',
+};
+
+// ============================================================
+// DYNAMIC SERVICE GROUPS — Built from process tree
 // ============================================================
 
 /**
- * The two top-level service groups that contain all recurring services.
- * Each main service maps to:
- *   - serviceKey: key in client.service_types[]
- *   - templateKey: key in processTemplates (ALL_SERVICES)
- *   - category: Hebrew category name used for task creation
- *   - frequencyField: key in client.reporting_info for frequency lookup
- */
-/**
- * SERVICE_GROUPS — Only services that appear EXPLICITLY in client.service_types[].
+ * Builds service definitions from the company process tree.
+ * Each leaf node (non-parent or parent with steps) becomes a service.
+ * Parent nodes that are pure grouping (no steps, only children) are skipped
+ * as tasks — their children generate the actual tasks.
  *
- * Social Security (ביטוח לאומי) and Deductions (ניכויים) are NOT listed here
- * because they do not appear in any client's service_types array.
- * They are process steps within the Payroll workflow, not standalone tasks.
- *
- * Payroll sub-tasks already include: Social Security filing, Deductions filing,
- * as steps within the payroll process template.
+ * @param {Object} companyTree - The company process tree (PROCESS_TREE_SEED format)
+ * @returns {Object} SERVICE_GROUPS keyed by branch (P1, P2, P3, P4, P5)
  */
+export function buildServiceGroupsFromTree(companyTree) {
+  const tree = companyTree || PROCESS_TREE_SEED;
+  const allNodes = flattenTree(tree);
+  const nodeMap = buildNodeMap(tree);
+  const groups = {};
+
+  for (const node of allNodes) {
+    const branchId = node.branch;
+    if (!branchId) continue;
+
+    // Skip pure grouping nodes (is_parent_task with children but no steps)
+    // These nodes exist only to organize children — not to create tasks.
+    // Exception: nodes with steps ARE tasks even if they have children.
+    const hasSteps = node.steps && node.steps.length > 0;
+    const hasChildren = tree.branches[branchId]?.children?.some(c =>
+      c.id === node.id && c.children?.length > 0
+    ) || allNodes.some(n => n.parent_id === node.id);
+
+    if (!hasSteps && hasChildren) continue;
+
+    // Skip daily/weekly personal tasks (P4) — they use a separate generator
+    if (node.default_frequency === 'daily' || node.default_frequency === 'weekly') continue;
+
+    if (!groups[branchId]) {
+      const branchDef = tree.branches[branchId];
+      groups[branchId] = {
+        key: branchId,
+        label: `${branchId} | ${branchDef?.label || branchId}`,
+        branch: branchId,
+        services: [],
+      };
+    }
+
+    groups[branchId].services.push({
+      key: node.service_key || node.id,
+      label: node.label,
+      serviceKey: node.service_key,
+      treeNodeId: node.id,
+      category: node.label,
+      branch: branchId,
+      frequencyField: node.frequency_field || null,
+      defaultFrequency: node.default_frequency || 'monthly',
+      sla_day: node.sla_day || null,
+      depends_on: node.depends_on || [],
+      steps: node.steps || [],
+    });
+  }
+
+  return groups;
+}
+
+// ============================================================
+// LEGACY SERVICE_GROUPS — kept for backward compatibility
+// Used when companyTree is not passed to generateRecurringTasks
+// ============================================================
+
 export const SERVICE_GROUPS = {
   P1: {
     key: 'P1',
@@ -107,35 +180,81 @@ export const SERVICE_GROUPS = {
 };
 
 // ============================================================
-// TASK MODEL
+// DUE DATE RESOLUTION
 // ============================================================
 
 /**
- * Creates a Task entity conforming to the system's data model.
+ * Resolves the due date for a task from the process tree.
  *
- * @param {Object} params
- * @param {Object} params.client - Client entity
- * @param {Object} params.serviceDef - Service definition from SERVICE_GROUPS
- * @param {number} params.reportMonth - 1-12 reporting period month
- * @param {number} params.reportYear - Reporting year (e.g. 2026)
- * @param {string} params.dueDate - YYYY-MM-DD due date
- * @param {Object} params.processSteps - Initialized process steps from template
- * @returns {Object} Task entity ready for persistence
+ * Resolution chain:
+ *   1. Client's process_tree node extra_fields.sla_override
+ *   2. Tree node's sla_day → day X of the following month
+ *   3. CATEGORY_DEADLINE_MAP → getDueDateForCategory (tax calendar)
+ *   4. Fallback: 19th of following month (online filing default)
+ *
+ * @param {Object} serviceDef - Service definition (from buildServiceGroupsFromTree)
+ * @param {Object} client - Client entity
+ * @param {number} reportMonth - 1-12
+ * @param {number} reportYear - e.g. 2026
+ * @returns {string} YYYY-MM-DD due date
+ */
+function resolveDueDate(serviceDef, client, reportMonth, reportYear) {
+  const pad = (n) => String(n).padStart(2, '0');
+
+  // 1. Client-level SLA override on the specific node
+  const clientNode = client?.process_tree?.[serviceDef.treeNodeId];
+  const clientSla = clientNode?.sla_override || clientNode?.extra_fields?.sla_override;
+
+  // 2. Tree node's sla_day
+  const slaDayRaw = clientSla || serviceDef.sla_day;
+
+  if (slaDayRaw) {
+    const slaDay = parseInt(slaDayRaw, 10);
+    if (!isNaN(slaDay) && slaDay > 0) {
+      // Due dates are in the FOLLOWING month
+      let dueMonth = reportMonth + 1;
+      let dueYear = reportYear;
+      if (dueMonth > 12) { dueMonth = 1; dueYear++; }
+      return `${dueYear}-${pad(dueMonth)}-${pad(Math.min(slaDay, 28))}`;
+    }
+  }
+
+  // 3. Category-based tax calendar lookup
+  const categoryKey = CATEGORY_DEADLINE_MAP[serviceDef.category] || serviceDef.category;
+  const calendarDate = getDueDateForCategory(categoryKey, client, reportMonth);
+  if (calendarDate) return calendarDate;
+
+  // 4. Fallback: 19th of following month
+  let dueMonth = reportMonth + 1;
+  let dueYear = reportYear;
+  if (dueMonth > 12) { dueMonth = 1; dueYear++; }
+  return `${dueYear}-${pad(dueMonth)}-19`;
+}
+
+// ============================================================
+// TASK MODEL
+// ============================================================
+
+const MONTH_NAMES = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+];
+
+/**
+ * Creates a Task entity conforming to the system's data model.
+ * Uses process tree steps (V4.3) with fallback to processTemplates.
  */
 export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, dueDate, processSteps }) {
-  const monthNames = [
-    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
-  ];
+  const monthName = MONTH_NAMES[reportMonth - 1];
 
-  const template = ALL_SERVICES[serviceDef.templateKey];
-  const monthName = monthNames[reportMonth - 1];
+  // Determine dashboard from branch
+  const dashboardMap = { P1: 'payroll', P2: 'tax', P3: 'admin', P4: 'home', P5: 'annual' };
 
   return {
     // Identity
     title: `${serviceDef.label} - ${client.name} - ${monthName} ${reportYear}`,
     category: serviceDef.category,
-    branch: serviceDef.branch || 'P2',   // P1=payroll, P2=bookkeeping/tax
+    branch: serviceDef.branch || 'P2',
     status: 'not_started',
     priority: 'Medium',
 
@@ -144,7 +263,8 @@ export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, 
     client_name: client.name,
     service_group: serviceDef.key,
     service_key: serviceDef.key,
-    parent_service: template?.dashboard || 'tax',
+    tree_node_id: serviceDef.treeNodeId,
+    parent_service: dashboardMap[serviceDef.branch] || 'tax',
 
     // Temporal
     date: dueDate,
@@ -153,14 +273,16 @@ export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, 
     report_year: reportYear,
     report_period: `${reportYear}-${String(reportMonth).padStart(2, '0')}`,
 
-    // Process tracking
+    // SLA tracking
+    sla_day: serviceDef.sla_day || null,
+    depends_on: serviceDef.depends_on || [],
+
+    // Process tracking — steps from tree
     process_steps: processSteps,
     step_count: Object.keys(processSteps).length,
 
     // Master Task Workflow (payroll only)
-    // Payroll tasks are containers with 3 phases:
-    //   Phase A (ייצור שכר) → Phase B (דיווחי רשויות) → Phase C (שירותים נלווים)
-    ...(serviceDef.key === 'payroll' ? {
+    ...(serviceDef.key === 'payroll' || serviceDef.treeNodeId === 'P1_payroll' ? {
       is_master: true,
       workflow_phase: 'phase_a',
       workflow_phase_label: 'שלב א\' | ייצור שכר',
@@ -180,119 +302,113 @@ export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, 
 
 /**
  * Determines if a client is subscribed to a given service.
- * PRIMARY: checks process_tree (עץ תהליכים) for enabled nodes.
- * FALLBACK: checks service_types[] for legacy clients not yet migrated.
- *
- * @param {Object} client - Client entity
- * @param {Object} serviceDef - Service definition from SERVICE_GROUPS
- * @returns {boolean}
+ * PRIMARY: checks process_tree for enabled nodes.
+ * FALLBACK: checks service_types[] for legacy clients.
  */
 function clientHasService(client, serviceDef) {
-  // PRIMARY: Process tree check (if client has process_tree)
   const processTree = client.process_tree || {};
   if (Object.keys(processTree).length > 0) {
-    // Map service key to process tree node ID
     const nodeId = serviceDef.treeNodeId;
     if (nodeId && processTree[nodeId]?.enabled) {
       return true;
     }
-    // If process tree exists but node not found, service is not enabled
     return false;
   }
 
   // FALLBACK: Legacy service_types[] check
   const types = client.service_types || [];
-  if (types.includes(serviceDef.serviceKey)) {
-    return true;
-  }
-
-  return false;
+  return types.includes(serviceDef.serviceKey);
 }
 
 /**
  * Determines if the given month is an off-month for this client+service.
- * Off-month = client's frequency for this service skips this month.
- *
- * Resolution order:
- *   1. Process tree frequency (via resolveFrequency) — checks client override,
- *      reporting_info, fallback, parent inheritance, and tree defaults.
- *   2. Legacy fallback — client.reporting_info[frequencyField] (for clients
- *      without a process tree or when companyTree is not provided).
- *
- * @param {Object} client
- * @param {Object} serviceDef
- * @param {number} reportMonth - 1-indexed month
- * @param {Object} [companyTree] - Company process tree (enables full resolution chain)
- * @returns {boolean} true if this month should be SKIPPED
  */
 function isOffMonth(client, serviceDef, reportMonth, companyTree) {
   let frequency;
 
-  // PRIMARY: Use process tree resolution chain if company tree is available
+  // PRIMARY: Use process tree resolution chain
   if (companyTree && serviceDef.treeNodeId) {
     frequency = resolveFrequency(serviceDef.treeNodeId, client, companyTree);
-    // shouldInjectForMonth returns true if task SHOULD be created
+    return !shouldInjectForMonth(frequency, reportMonth);
+  }
+
+  // Tree node default frequency
+  if (serviceDef.defaultFrequency) {
+    frequency = serviceDef.defaultFrequency;
+    if (frequency === 'not_applicable') return true;
     return !shouldInjectForMonth(frequency, reportMonth);
   }
 
   // FALLBACK: Legacy reporting_info lookup
   frequency = client?.reporting_info?.[serviceDef.frequencyField];
-
   if (!frequency || frequency === 'monthly' || frequency === 'not_applicable') {
     return frequency === 'not_applicable';
   }
 
-  // 0-indexed month for bimonthly check
   const monthIndex = reportMonth - 1;
-
-  if (frequency === 'bimonthly') {
-    return monthIndex % 2 === 0;
-  }
-
-  if (frequency === 'quarterly') {
-    return !([2, 5, 8, 11].includes(monthIndex));
-  }
-
-  if (frequency === 'semi_annual') {
-    return !([5, 11].includes(monthIndex));
-  }
+  if (frequency === 'bimonthly') return monthIndex % 2 === 0;
+  if (frequency === 'quarterly') return !([2, 5, 8, 11].includes(monthIndex));
+  if (frequency === 'semi_annual') return !([5, 11].includes(monthIndex));
 
   return false;
 }
 
 /**
- * Initializes empty process steps from a service template.
- *
- * @param {string} templateKey - Key in ALL_SERVICES
- * @returns {Object} Process steps object with all steps set to undone
+ * Initializes empty process steps from a service definition.
+ * V4.3: Uses tree node steps directly.
+ * Fallback: Uses ALL_SERVICES templateKey.
  */
-function initProcessSteps(templateKey) {
-  const template = ALL_SERVICES[templateKey];
-  if (!template?.steps) return {};
-
-  const steps = {};
-  for (const step of template.steps) {
-    steps[step.key] = { done: false, date: null, notes: '' };
+function initProcessSteps(serviceDef) {
+  // V4.3: Steps from tree definition
+  if (serviceDef.steps && serviceDef.steps.length > 0) {
+    const steps = {};
+    for (const step of serviceDef.steps) {
+      steps[step.key] = {
+        done: false,
+        date: null,
+        notes: '',
+        label: step.label,
+        sla_day: step.sla_day || null,
+      };
+    }
+    return steps;
   }
-  return steps;
+
+  // Fallback: Legacy processTemplates
+  if (serviceDef.templateKey) {
+    const template = ALL_SERVICES[serviceDef.templateKey];
+    if (!template?.steps) return {};
+    const steps = {};
+    for (const step of template.steps) {
+      steps[step.key] = { done: false, date: null, notes: '' };
+    }
+    return steps;
+  }
+
+  return {};
 }
 
 /**
  * MAIN GENERATION FUNCTION — Manual trigger only.
  *
- * Generates recurring tasks for all active clients for a given month/year.
- * Returns a nested structure: Client → Service Group → Tasks with sub-steps.
+ * V4.3: Dynamically builds service groups from the company process tree.
+ * Each enabled client node generates a task with steps, frequency, and SLA deadline.
  *
  * @param {Object} params
- * @param {Array} params.clients - All client entities (will be filtered to active)
+ * @param {Array} params.clients - All client entities
  * @param {number} params.reportMonth - 1-12
  * @param {number} params.reportYear - e.g. 2026
- * @param {Array} [params.existingTasks] - Existing tasks for duplicate detection
+ * @param {Array} [params.existingTasks] - For duplicate detection
+ * @param {Object} [params.companyTree] - Company process tree (uses SEED if null)
  * @returns {Object} { clientBreakdown, flatTasks, totalCount, validationReport }
  */
 export function generateRecurringTasks({ clients, reportMonth, reportYear, existingTasks = [], companyTree = null }) {
-  // GATE 1: Filter to active clients only
   const activeClients = clients.filter(c => c.status === 'active');
+
+  // V4.3: Build service groups from tree (dynamic) or use legacy groups
+  const serviceGroups = companyTree
+    ? buildServiceGroupsFromTree(companyTree)
+    : SERVICE_GROUPS;
 
   const clientBreakdown = [];
   const flatTasks = [];
@@ -300,8 +416,12 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
 
   // Build existing task index for duplicate detection
   const existingIndex = new Set(
-    existingTasks.map(t => `${t.client_name}|${t.category}|${t.report_period}`)
+    existingTasks.map(t => `${t.client_name}|${t.tree_node_id || t.category}|${t.report_period}`)
   );
+  // Also index by legacy key
+  existingTasks.forEach(t => {
+    existingIndex.add(`${t.client_name}|${t.category}|${t.report_period}`);
+  });
 
   for (const client of activeClients) {
     const clientNode = {
@@ -311,7 +431,7 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
       taskCount: 0,
     };
 
-    for (const [groupKey, group] of Object.entries(SERVICE_GROUPS)) {
+    for (const [groupKey, group] of Object.entries(serviceGroups)) {
       const groupNode = {
         label: group.label,
         services: [],
@@ -320,22 +440,22 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
 
       for (const serviceDef of group.services) {
         // RULE 1: Does client have this service?
-        const hasService = clientHasService(client, serviceDef);
-        if (!hasService) continue;
+        if (!clientHasService(client, serviceDef)) continue;
 
-        // RULE 2: Is this an off-month? (uses process tree resolution if available)
+        // RULE 2: Is this an off-month?
         if (isOffMonth(client, serviceDef, reportMonth, companyTree)) continue;
 
-        // RULE 3: Duplicate detection
-        const dedupKey = `${client.name}|${serviceDef.category}|${reportYear}-${String(reportMonth).padStart(2, '0')}`;
-        if (existingIndex.has(dedupKey)) continue;
+        // RULE 3: Duplicate detection (by tree_node_id AND category)
+        const period = `${reportYear}-${String(reportMonth).padStart(2, '0')}`;
+        const dedupKey1 = `${client.name}|${serviceDef.treeNodeId}|${period}`;
+        const dedupKey2 = `${client.name}|${serviceDef.category}|${period}`;
+        if (existingIndex.has(dedupKey1) || existingIndex.has(dedupKey2)) continue;
 
-        // Get due date from tax calendar
-        const dueDate = getDueDateForCategory(serviceDef.category, client, reportMonth);
+        // Resolve due date from tree SLA → tax calendar → default
+        const dueDate = resolveDueDate(serviceDef, client, reportMonth, reportYear);
 
-        // Initialize process steps from template
-        const processSteps = initProcessSteps(serviceDef.templateKey);
-        const template = ALL_SERVICES[serviceDef.templateKey];
+        // Initialize process steps from tree node
+        const processSteps = initProcessSteps(serviceDef);
 
         // Create task entity
         const task = createTaskEntity({
@@ -347,19 +467,21 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
           processSteps,
         });
 
-        // Build service node with sub-tasks visible
         const serviceNode = {
           key: serviceDef.key,
           label: serviceDef.label,
           category: serviceDef.category,
+          treeNodeId: serviceDef.treeNodeId,
           dueDate,
-          subTasks: (template?.steps || []).map(s => s.label),
+          sla_day: serviceDef.sla_day,
+          subTasks: (serviceDef.steps || []).map(s => s.label),
           task,
         };
 
         groupNode.services.push(serviceNode);
         groupNode.taskCount++;
         flatTasks.push(task);
+        existingIndex.add(dedupKey1); // Prevent self-duplication within same run
       }
 
       if (groupNode.taskCount > 0) {
@@ -372,12 +494,12 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
     totalCount += clientNode.taskCount;
   }
 
-  // Validation report
   const validationReport = {
     activeClientCount: activeClients.length,
     totalTasksGenerated: totalCount,
     reportPeriod: `${reportYear}-${String(reportMonth).padStart(2, '0')}`,
-    isValid: totalCount <= 80,
+    isValid: totalCount <= 200,
+    treeVersion: companyTree?.version || (companyTree ? PROCESS_TREE_SEED.version : 'legacy'),
     breakdown: clientBreakdown.map(c => ({
       client: c.client_name,
       tasks: c.taskCount,
@@ -398,23 +520,19 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
 
 /**
  * Builds the Service Matrix Table for display.
- * Rows: Active clients
- * Columns: Main services (VAT, Tax Advances, Payroll, Social Security, Deductions)
- * Cells: List of sub-tasks OR "X" if not subscribed
- *
- * @param {Array} clients - All clients
- * @param {number} reportMonth - 1-12
- * @param {number} reportYear
- * @returns {Object} { headers, rows, totals }
+ * V4.3: Uses dynamic service groups from tree.
  */
 export function buildServiceMatrix(clients, reportMonth, reportYear, companyTree = null) {
   const activeClients = clients.filter(c => c.status === 'active');
 
-  // All main services in column order (P1 first, then P2)
-  const allServices = [
-    ...SERVICE_GROUPS.P1.services,
-    ...SERVICE_GROUPS.P2.services,
-  ];
+  const serviceGroups = companyTree
+    ? buildServiceGroupsFromTree(companyTree)
+    : SERVICE_GROUPS;
+
+  // All services in column order (P1 first, then P2, etc.)
+  const allServices = Object.values(serviceGroups)
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .flatMap(g => g.services);
 
   const headers = ['#', 'Client', ...allServices.map(s => s.label), 'Total'];
 
@@ -439,8 +557,7 @@ export function buildServiceMatrix(clients, reportMonth, reportYear, companyTree
       } else if (offMonth) {
         row.cells.push({ status: 'OFF', subTasks: [], label: '—' });
       } else {
-        const template = ALL_SERVICES[serviceDef.templateKey];
-        const subTasks = (template?.steps || []).map(s => s.label);
+        const subTasks = (serviceDef.steps || []).map(s => s.label);
         row.cells.push({ status: 'V', subTasks, label: 'V' });
         row.rowTotal++;
         columnTotals[colIdx]++;

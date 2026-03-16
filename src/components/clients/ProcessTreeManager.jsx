@@ -106,23 +106,32 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
 
   // Resolve effective frequency — MUST be called before any early return (React hooks rule)
   const effectiveFreq = useMemo(() => {
-    if (!enabled) return null;
-    const mockClient = { process_tree: clientTree, reporting_info: {} };
-    return resolveFrequency(node.id, mockClient, companyTree);
+    try {
+      if (!enabled) return null;
+      if (!companyTree) return null;
+      const mockClient = { process_tree: clientTree, reporting_info: {} };
+      return resolveFrequency(node.id, mockClient, companyTree);
+    } catch {
+      return null;
+    }
   }, [node.id, enabled, clientTree, companyTree]);
 
   const clientOverride = clientTree?.[node.id]?.frequency;
   const hasFrequencyField = !!node.frequency_field || node.frequency_inherit;
 
-  // Hide disabled nodes when hideIfDisabled is active (ADHD-friendly: less clutter)
-  // IMPORTANT: This must be AFTER all hooks to avoid React error #310
-  if (hideIfDisabled && !enabled && !hasChildren) return null;
-  if (hideIfDisabled && !enabled && hasChildren) {
+  // Check if should be hidden — computed AFTER all hooks (React #310 prevention)
+  const shouldHide = useMemo(() => {
+    if (!hideIfDisabled) return false;
+    if (enabled) return false;
+    if (!hasChildren) return true;
+    // Check if any descendant is enabled
     const anyChildEnabled = (nodes) => (nodes || []).some(n =>
       isNodeEnabled(clientTree, n.id) || anyChildEnabled(n.children)
     );
-    if (!anyChildEnabled(node.children)) return null;
-  }
+    return !anyChildEnabled(node.children);
+  }, [hideIfDisabled, enabled, hasChildren, node.children, clientTree]);
+
+  if (shouldHide) return null;
 
   // Check for extra_fields (e.g., VAT reporting method)
   const extraFields = node.extra_fields || {};
@@ -625,6 +634,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
               siblingIndex={childIdx}
               allBranchNodes={allBranchNodes}
               isLastSibling={childIdx === node.children.length - 1}
+              hideIfDisabled={hideIfDisabled}
             />
           ))}
         </div>
