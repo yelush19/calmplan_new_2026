@@ -612,33 +612,55 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
       )}
 
       {/* Children */}
-      {hasChildren && !collapsed && (
-        <div className="mt-0.5 relative">
-          {node.children.map((child, childIdx) => (
-            <TreeNode
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              branchId={branchId}
-              clientTree={clientTree}
-              companyTree={companyTree}
-              onToggle={onToggle}
-              onFrequencyChange={onFrequencyChange}
-              onExtraFieldChange={onExtraFieldChange}
-              onNodeUpdate={onNodeUpdate}
-              onNodeMove={onNodeMove}
-              onAddChild={onAddChild}
-              onRefresh={onRefresh}
-              bankAccounts={bankAccounts}
-              siblingCount={node.children.length}
-              siblingIndex={childIdx}
-              allBranchNodes={allBranchNodes}
-              isLastSibling={childIdx === node.children.length - 1}
-              hideIfDisabled={hideIfDisabled}
-            />
-          ))}
-        </div>
-      )}
+      {hasChildren && !collapsed && (() => {
+        // Detect if children are mutually exclusive (e.g. P1_operator vs P1_taml)
+        const EXCLUSIVE_PAIRS = { P1_operator: 'P1_taml', P1_taml: 'P1_operator' };
+        const childIds = node.children.map(c => c.id);
+        const isMutuallyExclusive = childIds.some(id => EXCLUSIVE_PAIRS[id] && childIds.includes(EXCLUSIVE_PAIRS[id]));
+
+        return (
+          <div className="mt-0.5 relative">
+            {isMutuallyExclusive && (
+              <div className="flex items-center gap-2 mr-8 mb-1">
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                  בחר אחד בלבד
+                </span>
+              </div>
+            )}
+            {node.children.map((child, childIdx) => (
+              <React.Fragment key={child.id}>
+                <TreeNode
+                  node={child}
+                  depth={depth + 1}
+                  branchId={branchId}
+                  clientTree={clientTree}
+                  companyTree={companyTree}
+                  onToggle={onToggle}
+                  onFrequencyChange={onFrequencyChange}
+                  onExtraFieldChange={onExtraFieldChange}
+                  onNodeUpdate={onNodeUpdate}
+                  onNodeMove={onNodeMove}
+                  onAddChild={onAddChild}
+                  onRefresh={onRefresh}
+                  bankAccounts={bankAccounts}
+                  siblingCount={node.children.length}
+                  siblingIndex={childIdx}
+                  allBranchNodes={allBranchNodes}
+                  isLastSibling={childIdx === node.children.length - 1}
+                  hideIfDisabled={hideIfDisabled}
+                />
+                {isMutuallyExclusive && childIdx < node.children.length - 1 && (
+                  <div className="flex items-center gap-2 mr-10 my-0.5">
+                    <div className="flex-1 h-px bg-amber-200" />
+                    <span className="text-[10px] font-bold text-amber-500">או</span>
+                    <div className="flex-1 h-px bg-amber-200" />
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

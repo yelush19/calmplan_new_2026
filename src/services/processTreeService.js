@@ -1358,6 +1358,13 @@ export function applyFullService(currentTree = {}) {
  * @param {object} companyTree - the company tree (for hierarchy lookup)
  * @returns {object} updated process_tree
  */
+// Nodes where only ONE sibling can be active at a time.
+// When enabling one, the other is automatically disabled.
+const MUTUALLY_EXCLUSIVE_SIBLINGS = {
+  P1_operator: 'P1_taml',
+  P1_taml: 'P1_operator',
+};
+
 export function toggleNode(clientTree, nodeId, enabled, companyTree) {
   const result = { ...clientTree };
   const nodeMap = buildNodeMap(companyTree);
@@ -1366,6 +1373,19 @@ export function toggleNode(clientTree, nodeId, enabled, companyTree) {
   result[nodeId] = { ...result[nodeId], enabled };
 
   if (enabled) {
+    // Enforce mutual exclusivity — disable the sibling if exists
+    const rival = MUTUALLY_EXCLUSIVE_SIBLINGS[nodeId];
+    if (rival && result[rival]?.enabled) {
+      result[rival] = { ...result[rival], enabled: false };
+      // Also disable rival's descendants
+      const allNodes = flattenTree(companyTree);
+      for (const n of allNodes) {
+        if (n.parent_id === rival) {
+          result[n.id] = { ...result[n.id], enabled: false };
+        }
+      }
+    }
+
     // Auto-enable all ancestors
     let current = nodeMap[nodeId];
     while (current?.parent_id && nodeMap[current.parent_id]) {
