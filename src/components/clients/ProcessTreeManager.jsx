@@ -84,7 +84,7 @@ const VAT_REPORTING_METHODS = [
 ];
 
 // ── TreeNode — recursive renderer with two-way editing ──
-function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, onFrequencyChange, onExtraFieldChange, onNodeUpdate, onNodeMove, onAddChild, onRefresh, bankAccounts, siblingCount, siblingIndex, allBranchNodes, isLastSibling }) {
+function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, onFrequencyChange, onExtraFieldChange, onNodeUpdate, onNodeMove, onAddChild, onRefresh, bankAccounts, siblingCount, siblingIndex, allBranchNodes, isLastSibling, hideIfDisabled }) {
   const [collapsed, setCollapsed] = useState(depth > 1);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [editingLabel, setEditingLabel] = useState(false);
@@ -96,6 +96,16 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const enabled = isNodeEnabled(clientTree, node.id);
   const hasChildren = node.children && node.children.length > 0;
+
+  // Hide disabled nodes when hideIfDisabled is active (ADHD-friendly: less clutter)
+  if (hideIfDisabled && !enabled && !hasChildren) return null;
+  // For parent nodes: hide only if ALL children are also disabled
+  if (hideIfDisabled && !enabled && hasChildren) {
+    const anyChildEnabled = (nodes) => (nodes || []).some(n =>
+      isNodeEnabled(clientTree, n.id) || anyChildEnabled(n.children)
+    );
+    if (!anyChildEnabled(node.children)) return null;
+  }
   // Resolve steps: node.steps from DB tree, fallback to processTemplates via service_key
   const nodeSteps = (node.steps && node.steps.length > 0)
     ? node.steps
@@ -672,6 +682,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
   const [loading, setLoading] = useState(true);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [expandedBranches, setExpandedBranches] = useState({ P1: true, P2: true, P3: false, P5: false });
+  const [showDisabledBranches, setShowDisabledBranches] = useState({}); // branchId → bool
   const [orphanNodes, setOrphanNodes] = useState([]);
 
   // Load company tree and clean stale client nodes
@@ -917,6 +928,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
       {Object.entries(companyTree.branches).filter(([branchId]) => branchId !== 'P4').map(([branchId, branch]) => {
         const colors = getBranchColors(branchId);
         const isExpanded = expandedBranches[branchId] !== false;
+        const showDisabled = showDisabledBranches[branchId] || false;
         const branchEnabledCount = (branch.children || []).reduce((count, node) => {
           const countEnabled = (n) => {
             let c = isNodeEnabled(clientTree, n.id) ? 1 : 0;
@@ -925,6 +937,11 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
           };
           return count + countEnabled(node);
         }, 0);
+        const branchTotalCount = (branch.children || []).reduce((count, node) => {
+          const countAll = (n) => { let c = 1; (n.children || []).forEach(child => { c += countAll(child); }); return c; };
+          return count + countAll(node);
+        }, 0);
+        const hiddenCount = branchTotalCount - branchEnabledCount;
 
         return (
           <div key={branchId} className={`border-2 rounded-xl overflow-hidden ${colors.border} shadow-sm`}>
@@ -966,9 +983,26 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
                     siblingCount={(branch.children || []).length}
                     siblingIndex={nodeIdx}
                     allBranchNodes={branch.children || []}
+                    hideIfDisabled={!showDisabled}
                   />
                 ))}
-                <AddProcessButton branchId={branchId} branchColors={colors} onAdd={handleAddProcess} />
+
+                {/* Show/hide disabled toggle */}
+                {hiddenCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDisabledBranches(prev => ({ ...prev, [branchId]: !showDisabled }))}
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 mt-1 rounded-lg text-xs font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors border border-dashed border-gray-200"
+                  >
+                    {showDisabled ? (
+                      <><X className="w-3 h-3" /> הסתר {hiddenCount} שירותים כבויים</>
+                    ) : (
+                      <><Plus className="w-3 h-3" /> הצג {hiddenCount} שירותים מוסתרים</>
+                    )}
+                  </button>
+                )}
+
+                {showDisabled && <AddProcessButton branchId={branchId} branchColors={colors} onAdd={handleAddProcess} />}
               </div>
             )}
           </div>
