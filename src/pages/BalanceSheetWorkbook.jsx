@@ -1,34 +1,49 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { BalanceSheet, BalanceSheetWorkbook as WorkbookEntity, Client } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
-  ArrowRight, FileSpreadsheet, FileText, BookOpen, Plus, Save,
-  Trash2, ChevronDown, ChevronUp, Paperclip, MessageSquare,
-  CheckCircle, AlertCircle, Clock, Download, Upload
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter
+} from '@/components/ui/table';
+import {
+  ArrowRight, Save, Plus, ChevronDown, ChevronRight, Paperclip,
+  FileSpreadsheet, FileText, Send, CheckSquare, Upload, X,
+  BookOpen, Circle, Download
 } from 'lucide-react';
-import { createWorkbookFromTemplate } from '@/config/balanceWorkbookTemplates';
+import {
+  createWorkbookFromTemplate,
+  REFERENCE_STATUSES,
+  WORKSHEET_TYPES,
+  DEFAULT_ACCOUNT_GROUPS,
+} from '@/config/balanceWorkbookTemplates';
 import WorksheetEditor from '@/components/balance/WorksheetEditor';
+import { exportToExcel, downloadCSV } from '@/engines/workbookExportEngine';
 
-// ── סטטוס גליון ──
-const STATUS_CONFIG = {
-  draft: { label: 'טיוטה', color: 'bg-gray-200 text-gray-700', icon: Clock },
-  in_review: { label: 'בבדיקה', color: 'bg-blue-200 text-blue-700', icon: AlertCircle },
-  approved: { label: 'מאושר', color: 'bg-green-200 text-green-700', icon: CheckCircle },
-  needs_fix: { label: 'דורש תיקון', color: 'bg-orange-200 text-orange-700', icon: AlertCircle },
-};
-
-// ── סוגי פריטים בסרגל צד ──
-const SIDEBAR_SECTIONS = [
-  { key: 'worksheets', label: 'גליונות עבודה', icon: FileSpreadsheet, color: 'text-green-700' },
-  { key: 'appendices', label: 'נספחים', icon: Paperclip, color: 'text-blue-700' },
-  { key: 'biaurim', label: 'ביאורים', icon: FileText, color: 'text-purple-700' },
+// ── סטטוס קבוצה ──
+const GROUP_STATUSES = [
+  { key: 'not_started', label: 'טרם התחיל', color: 'bg-gray-200 text-gray-700' },
+  { key: 'in_progress', label: 'בעבודה', color: 'bg-yellow-200 text-yellow-800' },
+  { key: 'done', label: 'הושלם', color: 'bg-green-200 text-green-800' },
 ];
+
+function nextGroupStatus(current) {
+  const order = ['not_started', 'in_progress', 'done'];
+  const idx = order.indexOf(current);
+  return order[(idx + 1) % order.length];
+}
+
+// ── פורמט מספרים ──
+function formatNumber(val) {
+  if (val == null || val === '') return '';
+  const num = typeof val === 'string' ? parseFloat(val) : val;
+  if (isNaN(num)) return '';
+  return num.toLocaleString('he-IL');
+}
 
 export default function BalanceSheetWorkbookPage() {
   const [searchParams] = useSearchParams();
@@ -43,9 +58,8 @@ export default function BalanceSheetWorkbookPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-  // ניווט פנימי: { section: 'worksheets'|'appendices'|'biaurim', index: number }
-  const [activeItem, setActiveItem] = useState({ section: 'worksheets', index: 0 });
+  const [activeTab, setActiveTab] = useState('trial_balance');
+  const [collapsedGroups, setCollapsedGroups] = useState({});
 
   // ── טעינת נתונים ──
   useEffect(() => {
@@ -55,21 +69,16 @@ export default function BalanceSheetWorkbookPage() {
   const loadWorkbook = async () => {
     setIsLoading(true);
     try {
-      // טען את ה-BalanceSheet הקיים
       const allBalanceSheets = await BalanceSheet.list(null, 1000);
       const bs = allBalanceSheets.find(b => b.id === balanceSheetId);
       setBalanceSheet(bs || null);
 
-      // חפש חוברת עבודה קיימת
       const allWorkbooks = await WorkbookEntity.list(null, 1000);
-      const existing = allWorkbooks.find(
-        w => w.balance_sheet_id === balanceSheetId
-      );
+      const existing = allWorkbooks.find(w => w.balance_sheet_id === balanceSheetId);
 
       if (existing) {
         setWorkbook(existing);
       } else if (bs) {
-        // צור חוברת חדשה מתבנית
         const newWorkbook = createWorkbookFromTemplate({
           clientId: bs.client_id,
           clientName: bs.client_name,
@@ -90,17 +99,8 @@ export default function BalanceSheetWorkbookPage() {
     if (!workbook?.id) return;
     setIsSaving(true);
     try {
-      await WorkbookEntity.update(workbook.id, {
-        worksheets: workbook.worksheets,
-        appendices: workbook.appendices,
-        notes_biaurim: workbook.notes_biaurim,
-        adjustments: workbook.adjustments,
-        total_assets: workbook.total_assets,
-        total_liabilities: workbook.total_liabilities,
-        equity: workbook.equity,
-        net_income: workbook.net_income,
-        status: workbook.status,
-      });
+      const { id, created_date, updated_date, ...data } = workbook;
+      await WorkbookEntity.update(workbook.id, data);
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error saving workbook:', error);
@@ -108,149 +108,244 @@ export default function BalanceSheetWorkbookPage() {
     setIsSaving(false);
   }, [workbook]);
 
-  // ── עדכון גליון עבודה ──
+  // ── עדכון כללי לחוברת ──
+  const updateWorkbook = useCallback((updater) => {
+    setWorkbook(prev => {
+      if (!prev) return prev;
+      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
+      return next;
+    });
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // ──────────────────────────────────────────
+  // Trial Balance helpers
+  // ──────────────────────────────────────────
+
+  const toggleGroupCollapse = useCallback((groupId) => {
+    setCollapsedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  }, []);
+
+  const toggleGroupStatus = useCallback((groupId) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      trial_balance: {
+        ...prev.trial_balance,
+        groups: prev.trial_balance.groups.map(g =>
+          g.id === groupId ? { ...g, status: nextGroupStatus(g.status) } : g
+        ),
+      },
+    }));
+  }, [updateWorkbook]);
+
+  const addAccountToGroup = useCallback((groupId) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      trial_balance: {
+        ...prev.trial_balance,
+        groups: prev.trial_balance.groups.map(g => {
+          if (g.id !== groupId) return g;
+          const newAccount = {
+            id: `acc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+            account_code: '',
+            account_name: '',
+            debit: 0,
+            credit: 0,
+            difference: 0,
+            reference_status: 'not_started',
+            reference_note: '',
+          };
+          return { ...g, accounts: [...g.accounts, newAccount] };
+        }),
+      },
+    }));
+  }, [updateWorkbook]);
+
+  const updateAccount = useCallback((groupId, accountId, field, value) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      trial_balance: {
+        ...prev.trial_balance,
+        groups: prev.trial_balance.groups.map(g => {
+          if (g.id !== groupId) return g;
+          const accounts = g.accounts.map(acc => {
+            if (acc.id !== accountId) return acc;
+            const updated = { ...acc, [field]: value };
+            // חישוב הפרש אוטומטי
+            if (field === 'debit' || field === 'credit') {
+              updated.difference = (parseFloat(updated.debit) || 0) - (parseFloat(updated.credit) || 0);
+            }
+            return updated;
+          });
+          // חישוב סיכום קבוצה
+          const summary = {
+            debit: accounts.reduce((s, a) => s + (parseFloat(a.debit) || 0), 0),
+            credit: accounts.reduce((s, a) => s + (parseFloat(a.credit) || 0), 0),
+            difference: accounts.reduce((s, a) => s + (parseFloat(a.difference) || 0), 0),
+          };
+          return { ...g, accounts, summary };
+        }),
+      },
+    }));
+  }, [updateWorkbook]);
+
+  const removeAccount = useCallback((groupId, accountId) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      trial_balance: {
+        ...prev.trial_balance,
+        groups: prev.trial_balance.groups.map(g => {
+          if (g.id !== groupId) return g;
+          const accounts = g.accounts.filter(a => a.id !== accountId);
+          const summary = {
+            debit: accounts.reduce((s, a) => s + (parseFloat(a.debit) || 0), 0),
+            credit: accounts.reduce((s, a) => s + (parseFloat(a.credit) || 0), 0),
+            difference: accounts.reduce((s, a) => s + (parseFloat(a.difference) || 0), 0),
+          };
+          return { ...g, accounts, summary };
+        }),
+      },
+    }));
+  }, [updateWorkbook]);
+
+  // ──────────────────────────────────────────
+  // Worksheet helpers
+  // ──────────────────────────────────────────
+
   const updateWorksheet = useCallback((worksheetId, updates) => {
-    setWorkbook(prev => {
-      if (!prev) return prev;
-      const worksheets = prev.worksheets.map(ws =>
+    updateWorkbook(prev => ({
+      ...prev,
+      worksheets: prev.worksheets.map(ws =>
         ws.id === worksheetId ? { ...ws, ...updates } : ws
-      );
-      return { ...prev, worksheets };
-    });
-    setHasUnsavedChanges(true);
-  }, []);
+      ),
+    }));
+  }, [updateWorkbook]);
 
-  // ── עדכון נספח ──
-  const updateAppendix = useCallback((appendixId, updates) => {
-    setWorkbook(prev => {
-      if (!prev) return prev;
-      const appendices = prev.appendices.map(app =>
-        app.id === appendixId ? { ...app, ...updates } : app
-      );
-      return { ...prev, appendices };
-    });
-    setHasUnsavedChanges(true);
-  }, []);
+  const addCustomWorksheet = useCallback(() => {
+    const id = `ws_custom_${Date.now().toString(36)}`;
+    updateWorkbook(prev => ({
+      ...prev,
+      worksheets: [
+        ...prev.worksheets,
+        {
+          id,
+          key: `custom_${id}`,
+          label: 'גליון חדש',
+          type: 'custom',
+          linked_group: null,
+          columns: [
+            { key: 'description', label: 'תיאור', type: 'text' },
+            { key: 'debit', label: 'חובה', type: 'number' },
+            { key: 'credit', label: 'זכות', type: 'number' },
+          ],
+          rows: [],
+          summary: {},
+          attachments: [],
+          notes: '',
+          sort_order: prev.worksheets.length,
+        },
+      ],
+    }));
+    setActiveTab(id);
+  }, [updateWorkbook]);
 
-  // ── עדכון ביאור ──
-  const updateBiur = useCallback((biurId, updates) => {
-    setWorkbook(prev => {
-      if (!prev) return prev;
-      const notes_biaurim = prev.notes_biaurim.map(b =>
-        b.id === biurId ? { ...b, ...updates } : b
-      );
-      return { ...prev, notes_biaurim };
-    });
-    setHasUnsavedChanges(true);
-  }, []);
+  const removeWorksheet = useCallback((worksheetId) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      worksheets: prev.worksheets.filter(ws => ws.id !== worksheetId),
+    }));
+    setActiveTab('trial_balance');
+  }, [updateWorkbook]);
 
-  // ── הוספת פריט חדש ──
-  const addWorksheet = useCallback(() => {
-    setWorkbook(prev => {
-      if (!prev) return prev;
-      const id = `ws_new_${Date.now().toString(36)}`;
-      const newWs = {
-        id,
-        key: 'custom_' + id,
-        title: 'גליון חדש',
-        type: 'custom',
-        account_code: '',
-        columns: [
-          { key: 'description', label: 'תיאור', type: 'text' },
-          { key: 'debit', label: 'חובה', type: 'number' },
-          { key: 'credit', label: 'זכות', type: 'number' },
+  // ──────────────────────────────────────────
+  // PDF appendices helpers
+  // ──────────────────────────────────────────
+
+  const addPdfAppendix = useCallback(() => {
+    const id = `pdf_${Date.now().toString(36)}`;
+    updateWorkbook(prev => ({
+      ...prev,
+      pdf_appendices: [
+        ...(prev.pdf_appendices || []),
+        {
+          id,
+          name: 'מסמך חדש',
+          section: 'כללי',
+          uploaded_date: new Date().toISOString().slice(0, 10),
+          file_url: null,
+        },
+      ],
+    }));
+  }, [updateWorkbook]);
+
+  const removePdfAppendix = useCallback((appendixId) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      pdf_appendices: (prev.pdf_appendices || []).filter(p => p.id !== appendixId),
+    }));
+  }, [updateWorkbook]);
+
+  const updatePdfAppendix = useCallback((appendixId, updates) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      pdf_appendices: (prev.pdf_appendices || []).map(p =>
+        p.id === appendixId ? { ...p, ...updates } : p
+      ),
+    }));
+  }, [updateWorkbook]);
+
+  // ──────────────────────────────────────────
+  // Output helpers
+  // ──────────────────────────────────────────
+
+  const toggleOutputPackageItem = useCallback((key) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      output: {
+        ...prev.output,
+        package: {
+          ...prev.output.package,
+          [key]: !prev.output.package[key],
+        },
+      },
+    }));
+  }, [updateWorkbook]);
+
+  const addRound = useCallback((type) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      output: {
+        ...prev.output,
+        rounds: [
+          ...(prev.output.rounds || []),
+          {
+            id: `round_${Date.now().toString(36)}`,
+            date: new Date().toISOString().slice(0, 10),
+            type,
+            notes: '',
+            attachments: [],
+          },
         ],
-        opening_balance: 0,
-        closing_balance: 0,
-        book_balance: 0,
-        audit_balance: 0,
-        difference: 0,
-        rows: [],
-        status: 'draft',
-        reviewed_by: null,
-        review_date: null,
-        attachments: [],
-        notes: '',
-        sort_order: prev.worksheets.length,
-      };
-      return { ...prev, worksheets: [...prev.worksheets, newWs] };
-    });
-    setHasUnsavedChanges(true);
-  }, []);
+      },
+    }));
+  }, [updateWorkbook]);
 
-  const addAppendix = useCallback(() => {
-    setWorkbook(prev => {
-      if (!prev) return prev;
-      const id = `app_new_${Date.now().toString(36)}`;
-      const nextCode = String.fromCharCode('א'.charCodeAt(0) + prev.appendices.length);
-      const newApp = {
-        id,
-        code: nextCode,
-        title: `נספח ${nextCode}' — חדש`,
-        content_type: 'table',
-        columns: [
-          { key: 'item', label: 'פריט', type: 'text' },
-          { key: 'amount', label: 'סכום', type: 'number' },
-        ],
-        rows: [],
-        attachments: [],
-        sort_order: prev.appendices.length,
-      };
-      return { ...prev, appendices: [...prev.appendices, newApp] };
-    });
-    setHasUnsavedChanges(true);
-  }, []);
+  const updateRoundNotes = useCallback((roundId, notes) => {
+    updateWorkbook(prev => ({
+      ...prev,
+      output: {
+        ...prev.output,
+        rounds: (prev.output.rounds || []).map(r =>
+          r.id === roundId ? { ...r, notes } : r
+        ),
+      },
+    }));
+  }, [updateWorkbook]);
 
-  const addBiur = useCallback(() => {
-    setWorkbook(prev => {
-      if (!prev) return prev;
-      const id = `biur_new_${Date.now().toString(36)}`;
-      const newBiur = {
-        id,
-        number: prev.notes_biaurim.length + 1,
-        title: 'ביאור חדש',
-        content: '',
-        linked_worksheet_id: null,
-        tables: [],
-        prior_year_values: {},
-        current_year_values: {},
-        status: 'draft',
-        sort_order: prev.notes_biaurim.length,
-      };
-      return { ...prev, notes_biaurim: [...prev.notes_biaurim, newBiur] };
-    });
-    setHasUnsavedChanges(true);
-  }, []);
+  // ──────────────────────────────────────────
+  // Render
+  // ──────────────────────────────────────────
 
-  // ── מחיקת פריט ──
-  const removeItem = useCallback((section, id) => {
-    setWorkbook(prev => {
-      if (!prev) return prev;
-      if (section === 'worksheets') {
-        return { ...prev, worksheets: prev.worksheets.filter(ws => ws.id !== id) };
-      }
-      if (section === 'appendices') {
-        return { ...prev, appendices: prev.appendices.filter(app => app.id !== id) };
-      }
-      if (section === 'biaurim') {
-        return { ...prev, notes_biaurim: prev.notes_biaurim.filter(b => b.id !== id) };
-      }
-      return prev;
-    });
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // ── פריט פעיל ──
-  const activeData = useMemo(() => {
-    if (!workbook) return null;
-    const { section, index } = activeItem;
-    if (section === 'worksheets') return workbook.worksheets[index] || null;
-    if (section === 'appendices') return workbook.appendices[index] || null;
-    if (section === 'biaurim') return workbook.notes_biaurim[index] || null;
-    return null;
-  }, [workbook, activeItem]);
-
-  // ── Loading ──
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -273,23 +368,18 @@ export default function BalanceSheetWorkbookPage() {
 
   return (
     <div className="h-full flex flex-col" dir="rtl">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
+      {/* ═══ Header ═══ */}
+      <div className="flex items-center justify-between p-3 border-b bg-white sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate('/BalanceSheets')}>
             <ArrowRight className="w-4 h-4 ml-1" />
-            חזור למאזנים
+            חזור
           </Button>
           <div className="h-6 w-px bg-gray-300" />
           <BookOpen className="w-5 h-5 text-green-700" />
           <h1 className="text-lg font-bold">
             {workbook.client_name} — מאזן {workbook.tax_year}
           </h1>
-          {balanceSheet && (
-            <Badge className="text-xs bg-green-100 text-green-800">
-              {balanceSheet.current_stage?.replace(/_/g, ' ')}
-            </Badge>
-          )}
         </div>
         <div className="flex items-center gap-2">
           {hasUnsavedChanges && (
@@ -309,269 +399,578 @@ export default function BalanceSheetWorkbookPage() {
         </div>
       </div>
 
-      {/* ── Main Layout: Sidebar + Editor ── */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* ═══ Tab bar + Content ═══ */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+        {/* Tab strip — styled like Excel bottom tabs */}
+        <div className="bg-gray-100 border-b px-2 py-1 flex items-center gap-1 overflow-x-auto flex-shrink-0">
+          <TabsList className="bg-transparent border-none rounded-none p-0 h-auto gap-0 flex-wrap">
+            {/* Fixed: Trial Balance */}
+            <TabsTrigger
+              value="trial_balance"
+              className="rounded-t-md rounded-b-none border border-b-0 border-gray-300 px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-green-800 data-[state=active]:border-b-white data-[state=active]:shadow-none bg-gray-200 text-gray-600"
+            >
+              <FileSpreadsheet className="w-4 h-4 ml-1" />
+              בוחן והפניות
+            </TabsTrigger>
 
-        {/* ── Sidebar (ניווט פנימי) ── */}
-        <div className="w-64 border-l bg-gray-50 overflow-y-auto flex-shrink-0">
-          {SIDEBAR_SECTIONS.map(section => {
-            const items = section.key === 'worksheets' ? workbook.worksheets
-              : section.key === 'appendices' ? workbook.appendices
-              : workbook.notes_biaurim;
-            const Icon = section.icon;
-
-            return (
-              <div key={section.key} className="border-b last:border-b-0">
-                <div className="flex items-center justify-between px-3 py-2 bg-gray-100">
-                  <div className="flex items-center gap-2">
-                    <Icon className={`w-4 h-4 ${section.color}`} />
-                    <span className="text-sm font-semibold">{section.label}</span>
-                  </div>
-                  <span className="text-xs text-gray-500">{items.length}</span>
-                </div>
-                <div className="py-1">
-                  {items.map((item, idx) => {
-                    const isActive = activeItem.section === section.key && activeItem.index === idx;
-                    const status = item.status ? STATUS_CONFIG[item.status] : null;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => setActiveItem({ section: section.key, index: idx })}
-                        className={`w-full text-right px-3 py-2 text-sm flex items-center gap-2 transition-colors ${
-                          isActive
-                            ? 'bg-green-100 text-green-900 font-medium border-r-2 border-green-700'
-                            : 'hover:bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {status && (
-                          <div className={`w-2 h-2 rounded-full ${
-                            item.status === 'approved' ? 'bg-green-500' :
-                            item.status === 'in_review' ? 'bg-blue-500' :
-                            item.status === 'needs_fix' ? 'bg-orange-500' :
-                            'bg-gray-400'
-                          }`} />
-                        )}
-                        <span className="truncate flex-1">
-                          {section.key === 'biaurim' ? `${item.number}. ${item.title}` :
-                           section.key === 'appendices' ? item.title :
-                           item.title}
-                        </span>
-                        {item.attachments?.length > 0 && (
-                          <Paperclip className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                <button
-                  onClick={() => {
-                    if (section.key === 'worksheets') addWorksheet();
-                    else if (section.key === 'appendices') addAppendix();
-                    else addBiur();
-                  }}
-                  className="w-full text-right px-3 py-2 text-xs text-green-700 hover:bg-green-50 flex items-center gap-1"
-                >
-                  <Plus className="w-3 h-3" />
-                  הוסף {section.label.replace('גליונות עבודה', 'גליון').replace('נספחים', 'נספח').replace('ביאורים', 'ביאור')}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ── Editor Area ── */}
-        <div className="flex-1 overflow-y-auto p-6 bg-white">
-          {activeData ? (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeData.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
+            {/* Dynamic: Worksheets */}
+            {(workbook.worksheets || []).map(ws => (
+              <TabsTrigger
+                key={ws.id}
+                value={ws.id}
+                className="rounded-t-md rounded-b-none border border-b-0 border-gray-300 px-3 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-blue-800 data-[state=active]:border-b-white data-[state=active]:shadow-none bg-gray-200 text-gray-600"
               >
-                {activeItem.section === 'worksheets' && (
-                  <WorksheetEditor
-                    worksheet={activeData}
-                    onUpdate={(updates) => updateWorksheet(activeData.id, updates)}
-                    onRemove={() => {
-                      removeItem('worksheets', activeData.id);
-                      setActiveItem({ section: 'worksheets', index: 0 });
-                    }}
-                  />
-                )}
-
-                {activeItem.section === 'appendices' && (
-                  <AppendixEditorInline
-                    appendix={activeData}
-                    onUpdate={(updates) => updateAppendix(activeData.id, updates)}
-                    onRemove={() => {
-                      removeItem('appendices', activeData.id);
-                      setActiveItem({ section: 'appendices', index: 0 });
-                    }}
-                  />
-                )}
-
-                {activeItem.section === 'biaurim' && (
-                  <BiurEditorInline
-                    biur={activeData}
-                    onUpdate={(updates) => updateBiur(activeData.id, updates)}
-                    onRemove={() => {
-                      removeItem('biaurim', activeData.id);
-                      setActiveItem({ section: 'biaurim', index: 0 });
-                    }}
-                  />
-                )}
-              </motion.div>
-            </AnimatePresence>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-gray-400">
-              <p>בחר גליון, נספח או ביאור מהתפריט</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Inline Appendix Editor (MVP — טבלה פשוטה) ──
-function AppendixEditorInline({ appendix, onUpdate, onRemove }) {
-  const [editTitle, setEditTitle] = useState(appendix.title);
-
-  useEffect(() => { setEditTitle(appendix.title); }, [appendix.id]);
-
-  const addRow = () => {
-    const newRow = {};
-    (appendix.columns || []).forEach(col => { newRow[col.key] = col.type === 'number' ? 0 : ''; });
-    onUpdate({ rows: [...(appendix.rows || []), newRow] });
-  };
-
-  const updateRow = (rowIdx, key, value) => {
-    const rows = [...(appendix.rows || [])];
-    rows[rowIdx] = { ...rows[rowIdx], [key]: value };
-    onUpdate({ rows });
-  };
-
-  const removeRow = (rowIdx) => {
-    const rows = (appendix.rows || []).filter((_, i) => i !== rowIdx);
-    onUpdate({ rows });
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Paperclip className="w-5 h-5 text-blue-700" />
-          <Input
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onBlur={() => onUpdate({ title: editTitle })}
-            className="text-lg font-bold border-none p-0 h-auto focus-visible:ring-0"
-          />
-        </div>
-        <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500 hover:text-red-700">
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {/* טבלה */}
-      <div className="border rounded-lg overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-right font-medium text-gray-600 w-8">#</th>
-              {(appendix.columns || []).map(col => (
-                <th key={col.key} className="px-3 py-2 text-right font-medium text-gray-600">{col.label}</th>
-              ))}
-              <th className="px-3 py-2 w-10" />
-            </tr>
-          </thead>
-          <tbody>
-            {(appendix.rows || []).map((row, rowIdx) => (
-              <tr key={rowIdx} className="border-t hover:bg-gray-50">
-                <td className="px-3 py-1 text-gray-400 text-xs">{rowIdx + 1}</td>
-                {(appendix.columns || []).map(col => (
-                  <td key={col.key} className="px-1 py-1">
-                    <Input
-                      type={col.type === 'number' ? 'number' : 'text'}
-                      value={row[col.key] ?? ''}
-                      onChange={(e) => updateRow(rowIdx, col.key, col.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
-                      className="h-8 text-sm border-transparent hover:border-gray-300 focus:border-green-500"
-                      dir={col.type === 'number' ? 'ltr' : 'rtl'}
-                    />
-                  </td>
-                ))}
-                <td className="px-1 py-1">
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeRow(rowIdx)}>
-                    <Trash2 className="w-3 h-3 text-gray-400" />
-                  </Button>
-                </td>
-              </tr>
+                {ws.label}
+              </TabsTrigger>
             ))}
-          </tbody>
-        </table>
-      </div>
-      <Button variant="outline" size="sm" onClick={addRow} className="gap-1 text-xs">
-        <Plus className="w-3 h-3" /> הוסף שורה
-      </Button>
-    </div>
-  );
-}
 
-// ── Inline Biur Editor (MVP — textarea + title) ──
-function BiurEditorInline({ biur, onUpdate, onRemove }) {
-  const [editTitle, setEditTitle] = useState(biur.title);
-  const [editContent, setEditContent] = useState(biur.content);
+            {/* Fixed: PDF */}
+            <TabsTrigger
+              value="pdf_appendices"
+              className="rounded-t-md rounded-b-none border border-b-0 border-gray-300 px-3 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-800 data-[state=active]:border-b-white data-[state=active]:shadow-none bg-gray-200 text-gray-600"
+            >
+              <FileText className="w-4 h-4 ml-1" />
+              נספחי PDF
+            </TabsTrigger>
 
-  useEffect(() => {
-    setEditTitle(biur.title);
-    setEditContent(biur.content);
-  }, [biur.id]);
+            {/* Fixed: Output */}
+            <TabsTrigger
+              value="output"
+              className="rounded-t-md rounded-b-none border border-b-0 border-gray-300 px-3 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-orange-800 data-[state=active]:border-b-white data-[state=active]:shadow-none bg-gray-200 text-gray-600"
+            >
+              <Send className="w-4 h-4 ml-1" />
+              פלט לשליחה
+            </TabsTrigger>
+          </TabsList>
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <FileText className="w-5 h-5 text-purple-700" />
-          <span className="text-sm text-gray-500">ביאור {biur.number}</span>
-          <Input
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onBlur={() => onUpdate({ title: editTitle })}
-            className="text-lg font-bold border-none p-0 h-auto focus-visible:ring-0"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className={`text-xs ${STATUS_CONFIG[biur.status]?.color || 'bg-gray-200'}`}>
-            {STATUS_CONFIG[biur.status]?.label || 'טיוטה'}
-          </Badge>
-          <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500 hover:text-red-700">
-            <Trash2 className="w-4 h-4" />
+          {/* Add worksheet button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={addCustomWorksheet}
+            className="h-7 w-7 p-0 rounded-full text-gray-500 hover:text-green-700 hover:bg-green-50 flex-shrink-0"
+            title="הוסף גליון עבודה"
+          >
+            <Plus className="w-4 h-4" />
           </Button>
         </div>
+
+        {/* ═══ Tab Content Area ═══ */}
+        <div className="flex-1 overflow-y-auto bg-white">
+
+          {/* ────── Trial Balance Tab ────── */}
+          <TabsContent value="trial_balance" className="m-0 p-4">
+            <TrialBalanceTab
+              groups={workbook.trial_balance?.groups || []}
+              collapsedGroups={collapsedGroups}
+              onToggleCollapse={toggleGroupCollapse}
+              onToggleStatus={toggleGroupStatus}
+              onAddAccount={addAccountToGroup}
+              onUpdateAccount={updateAccount}
+              onRemoveAccount={removeAccount}
+            />
+          </TabsContent>
+
+          {/* ────── Worksheet Tabs ────── */}
+          {(workbook.worksheets || []).map(ws => (
+            <TabsContent key={ws.id} value={ws.id} className="m-0 p-4">
+              <WorksheetEditor
+                worksheet={ws}
+                onUpdate={(updates) => updateWorksheet(ws.id, updates)}
+                onRemove={() => removeWorksheet(ws.id)}
+              />
+            </TabsContent>
+          ))}
+
+          {/* ────── PDF Appendices Tab ────── */}
+          <TabsContent value="pdf_appendices" className="m-0 p-4">
+            <PdfAppendicesTab
+              appendices={workbook.pdf_appendices || []}
+              onAdd={addPdfAppendix}
+              onRemove={removePdfAppendix}
+              onUpdate={updatePdfAppendix}
+            />
+          </TabsContent>
+
+          {/* ────── Output Tab ────── */}
+          <TabsContent value="output" className="m-0 p-4">
+            <OutputTab
+              workbook={workbook}
+              output={workbook.output || {}}
+              onTogglePackageItem={toggleOutputPackageItem}
+              onAddRound={addRound}
+              onUpdateRoundNotes={updateRoundNotes}
+            />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// Trial Balance Tab Component
+// ══════════════════════════════════════════════════════════════
+
+function TrialBalanceTab({
+  groups,
+  collapsedGroups,
+  onToggleCollapse,
+  onToggleStatus,
+  onAddAccount,
+  onUpdateAccount,
+  onRemoveAccount,
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold text-gray-800">מאזן בוחן והפניות</h2>
+        <div className="flex items-center gap-3 text-xs text-gray-500">
+          {GROUP_STATUSES.map(s => (
+            <span key={s.key} className="flex items-center gap-1">
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${s.color.split(' ')[0]}`} />
+              {s.label}
+            </span>
+          ))}
+        </div>
       </div>
 
-      <Textarea
-        value={editContent}
-        onChange={(e) => setEditContent(e.target.value)}
-        onBlur={() => onUpdate({ content: editContent })}
-        placeholder="תוכן הביאור..."
-        rows={12}
-        className="text-sm leading-relaxed"
-        dir="rtl"
-      />
+      {groups.map(group => (
+        <TrialBalanceGroup
+          key={group.id}
+          group={group}
+          isCollapsed={!!collapsedGroups[group.id]}
+          onToggleCollapse={() => onToggleCollapse(group.id)}
+          onToggleStatus={() => onToggleStatus(group.id)}
+          onAddAccount={() => onAddAccount(group.id)}
+          onUpdateAccount={(accountId, field, value) => onUpdateAccount(group.id, accountId, field, value)}
+          onRemoveAccount={(accountId) => onRemoveAccount(group.id, accountId)}
+        />
+      ))}
+    </div>
+  );
+}
 
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs"
-          onClick={() => onUpdate({ status: biur.status === 'draft' ? 'final' : 'draft' })}
-        >
-          {biur.status === 'final' ? 'החזר לטיוטה' : 'סמן כסופי'}
+
+function TrialBalanceGroup({
+  group,
+  isCollapsed,
+  onToggleCollapse,
+  onToggleStatus,
+  onAddAccount,
+  onUpdateAccount,
+  onRemoveAccount,
+}) {
+  const statusConfig = GROUP_STATUSES.find(s => s.key === group.status) || GROUP_STATUSES[0];
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      {/* ── Group Header (bold, colored) ── */}
+      <div
+        className="flex items-center justify-between px-3 py-2 bg-gray-700 text-white cursor-pointer select-none"
+        onClick={onToggleCollapse}
+      >
+        <div className="flex items-center gap-2">
+          {isCollapsed
+            ? <ChevronRight className="w-4 h-4" />
+            : <ChevronDown className="w-4 h-4" />
+          }
+          <span className="font-bold text-sm">{group.group_code}</span>
+          <span className="font-semibold text-sm">{group.label}</span>
+          {group.accounts.length > 0 && (
+            <span className="text-xs text-gray-300 mr-2">({group.accounts.length} חשבונות)</span>
+          )}
+          {(group.attachments || []).length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-gray-300">
+              <Paperclip className="w-3 h-3" />
+              {group.attachments.length}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+          <Badge
+            className={`text-xs cursor-pointer select-none ${statusConfig.color}`}
+            onClick={onToggleStatus}
+          >
+            {statusConfig.label}
+          </Badge>
+        </div>
+      </div>
+
+      {/* ── Account Rows ── */}
+      {!isCollapsed && (
+        <div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-100 text-gray-600">
+                <th className="px-2 py-1.5 text-right font-medium w-24">חשבון</th>
+                <th className="px-2 py-1.5 text-right font-medium">שם חשבון</th>
+                <th className="px-2 py-1.5 text-left font-medium w-28">חובה</th>
+                <th className="px-2 py-1.5 text-left font-medium w-28">זכות</th>
+                <th className="px-2 py-1.5 text-left font-medium w-28">הפרש</th>
+                <th className="px-2 py-1.5 text-right font-medium w-40">סטטוס הפניה</th>
+                <th className="px-2 py-1.5 text-right font-medium w-48">הערת הפניה</th>
+                <th className="px-2 py-1.5 w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {group.accounts.map(acc => (
+                <tr key={acc.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="px-1 py-0.5">
+                    <Input
+                      value={acc.account_code}
+                      onChange={e => onUpdateAccount(acc.id, 'account_code', e.target.value)}
+                      className="h-7 text-sm border-transparent hover:border-gray-300 focus:border-green-500"
+                      placeholder="קוד"
+                    />
+                  </td>
+                  <td className="px-1 py-0.5">
+                    <Input
+                      value={acc.account_name}
+                      onChange={e => onUpdateAccount(acc.id, 'account_name', e.target.value)}
+                      className="h-7 text-sm border-transparent hover:border-gray-300 focus:border-green-500"
+                      placeholder="שם חשבון"
+                    />
+                  </td>
+                  <td className="px-1 py-0.5">
+                    <Input
+                      type="number"
+                      value={acc.debit || ''}
+                      onChange={e => onUpdateAccount(acc.id, 'debit', parseFloat(e.target.value) || 0)}
+                      className="h-7 text-sm border-transparent hover:border-gray-300 focus:border-green-500 text-left"
+                      dir="ltr"
+                    />
+                  </td>
+                  <td className="px-1 py-0.5">
+                    <Input
+                      type="number"
+                      value={acc.credit || ''}
+                      onChange={e => onUpdateAccount(acc.id, 'credit', parseFloat(e.target.value) || 0)}
+                      className="h-7 text-sm border-transparent hover:border-gray-300 focus:border-green-500 text-left"
+                      dir="ltr"
+                    />
+                  </td>
+                  <td className="px-1 py-0.5">
+                    <span className={`block text-left text-sm px-2 py-1 ${
+                      acc.difference > 0 ? 'text-red-600' : acc.difference < 0 ? 'text-blue-600' : 'text-gray-400'
+                    }`} dir="ltr">
+                      {formatNumber(acc.difference)}
+                    </span>
+                  </td>
+                  <td className="px-1 py-0.5">
+                    <select
+                      value={acc.reference_status || 'not_started'}
+                      onChange={e => onUpdateAccount(acc.id, 'reference_status', e.target.value)}
+                      className="h-7 text-xs rounded border border-transparent hover:border-gray-300 focus:border-green-500 bg-transparent w-full cursor-pointer"
+                      style={{
+                        backgroundColor: (REFERENCE_STATUSES.find(s => s.key === acc.reference_status) || {}).color || '#d1d5db',
+                        color: '#1f2937',
+                      }}
+                    >
+                      {REFERENCE_STATUSES.map(s => (
+                        <option key={s.key} value={s.key}>{s.label}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-1 py-0.5">
+                    <Input
+                      value={acc.reference_note || ''}
+                      onChange={e => onUpdateAccount(acc.id, 'reference_note', e.target.value)}
+                      className="h-7 text-sm border-transparent hover:border-gray-300 focus:border-green-500"
+                      placeholder="הפניה..."
+                    />
+                  </td>
+                  <td className="px-1 py-0.5 text-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => onRemoveAccount(acc.id)}
+                    >
+                      <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* ── Summary Row (cyan/blue bg) ── */}
+          <div className="flex items-center bg-cyan-50 border-t border-cyan-200 px-2 py-1.5 text-sm font-semibold">
+            <span className="w-24 px-2" />
+            <span className="flex-1 px-2 text-cyan-800">סה"כ {group.label}</span>
+            <span className="w-28 text-left px-2 text-cyan-900" dir="ltr">{formatNumber(group.summary?.debit)}</span>
+            <span className="w-28 text-left px-2 text-cyan-900" dir="ltr">{formatNumber(group.summary?.credit)}</span>
+            <span className="w-28 text-left px-2 text-cyan-900" dir="ltr">{formatNumber(group.summary?.difference)}</span>
+            <span className="w-40 px-2" />
+            <span className="w-48 px-2" />
+            <span className="w-10" />
+          </div>
+
+          {/* ── Add row button ── */}
+          <div className="px-3 py-1 border-t border-gray-100">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onAddAccount}
+              className="text-xs text-green-700 hover:text-green-900 gap-1"
+            >
+              <Plus className="w-3 h-3" />
+              הוסף חשבון
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PDF Appendices Tab Component
+// ══════════════════════════════════════════════════════════════
+
+function PdfAppendicesTab({ appendices, onAdd, onRemove, onUpdate }) {
+  // קיבוץ לפי section
+  const grouped = useMemo(() => {
+    const map = {};
+    appendices.forEach(a => {
+      const section = a.section || 'כללי';
+      if (!map[section]) map[section] = [];
+      map[section].push(a);
+    });
+    return map;
+  }, [appendices]);
+
+  const sections = Object.keys(grouped);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-gray-800">נספחי PDF</h2>
+        <Button size="sm" onClick={onAdd} className="gap-1 bg-purple-700 hover:bg-purple-800">
+          <Upload className="w-4 h-4" />
+          העלה מסמך
         </Button>
       </div>
+
+      {appendices.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-48 text-gray-400 border-2 border-dashed rounded-lg">
+          <FileText className="w-10 h-10 mb-2" />
+          <p>אין נספחים עדיין</p>
+          <p className="text-sm">לחץ "העלה מסמך" להוספת קבצים</p>
+        </div>
+      ) : (
+        sections.map(section => (
+          <div key={section} className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-600 border-b pb-1">{section}</h3>
+            {grouped[section].map(doc => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between px-3 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <Input
+                      value={doc.name}
+                      onChange={e => onUpdate(doc.id, { name: e.target.value })}
+                      className="h-7 text-sm font-medium border-transparent hover:border-gray-300 focus:border-purple-500 p-1"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={doc.section || 'כללי'}
+                    onChange={e => onUpdate(doc.id, { section: e.target.value })}
+                    className="h-7 text-xs rounded border border-gray-200 bg-white px-2"
+                  >
+                    <option value="כללי">כללי</option>
+                    <option value="בנקים">בנקים</option>
+                    <option value="לקוחות">לקוחות</option>
+                    <option value="ספקים">ספקים</option>
+                    <option value="רשויות">רשויות</option>
+                    <option value="רכוש קבוע">רכוש קבוע</option>
+                    <option value="שכר">שכר</option>
+                    <option value="הון">הון</option>
+                  </select>
+                  <span className="text-xs text-gray-400">{doc.uploaded_date}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => onRemove(doc.id)}
+                  >
+                    <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// Output Tab Component
+// ══════════════════════════════════════════════════════════════
+
+const PACKAGE_LABELS = {
+  trial_balance: 'מאזן בוחן סופי',
+  financial_statements: 'דוחות כספיים (מאזן + רוו"ה)',
+  tax_reconciliation: 'דוח התאמה למס',
+  worksheets: 'גליונות עבודה',
+  appendices: 'נספחים + קבצי PDF',
+  adjustments_journal: 'פקודות יומן / תיקונים',
+};
+
+const ROUND_TYPE_LABELS = {
+  sent: 'נשלח',
+  questions: 'שאלות מרו"ח',
+  answers: 'תשובות',
+};
+
+function OutputTab({ workbook, output, onTogglePackageItem, onAddRound, onUpdateRoundNotes }) {
+  const pkg = output.package || {};
+  const rounds = output.rounds || [];
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <h2 className="text-lg font-bold text-gray-800">פלט לשליחה לרואה חשבון</h2>
+
+      {/* Package checkboxes */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">מה לכלול בחבילה</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {Object.keys(PACKAGE_LABELS).map(key => (
+            <label key={key} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded px-2 py-1">
+              <input
+                type="checkbox"
+                checked={!!pkg[key]}
+                onChange={() => onTogglePackageItem(key)}
+                className="w-4 h-4 accent-green-700 rounded"
+              />
+              <span className="text-sm">{PACKAGE_LABELS[key]}</span>
+            </label>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Export buttons */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">ייצוא חוברת עבודה</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          <Button
+            size="sm"
+            className="gap-2 bg-green-700 hover:bg-green-800"
+            onClick={() => exportToExcel(workbook)}
+          >
+            <Download className="w-4 h-4" />
+            הורד אקסל (.xlsx)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => downloadCSV(workbook)}
+          >
+            <Download className="w-4 h-4" />
+            הורד בוחן CSV
+          </Button>
+          <p className="text-xs text-gray-500 w-full mt-1">
+            האקסל כולל: בוחן והפניות + כל גליונות העבודה + פקודות יומן.
+            הרו"ח מקבל קובץ שהוא יכול לעבוד עליו.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Status */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">סטטוס שליחה</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3 mb-4">
+            <Badge className={`text-xs ${
+              output.status === 'sent' ? 'bg-green-200 text-green-800' :
+              output.status === 'ready' ? 'bg-blue-200 text-blue-800' :
+              'bg-gray-200 text-gray-700'
+            }`}>
+              {output.status === 'sent' ? 'נשלח' : output.status === 'ready' ? 'מוכן לשליחה' : 'לא מוכן'}
+            </Badge>
+            {output.sent_date && (
+              <span className="text-xs text-gray-500">נשלח ב-{output.sent_date}</span>
+            )}
+          </div>
+
+          <Button
+            size="sm"
+            className="gap-1 bg-orange-600 hover:bg-orange-700"
+            onClick={() => onAddRound('sent')}
+          >
+            <Send className="w-4 h-4" />
+            שלח לרו"ח (placeholder)
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Rounds tracking */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">מעקב סבבים</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {rounds.length === 0 ? (
+            <p className="text-sm text-gray-400">טרם נשלח</p>
+          ) : (
+            rounds.map((round, idx) => (
+              <div key={round.id || idx} className="border rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge className={`text-xs ${
+                      round.type === 'sent' ? 'bg-blue-100 text-blue-800' :
+                      round.type === 'questions' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {ROUND_TYPE_LABELS[round.type] || round.type}
+                    </Badge>
+                    <span className="text-xs text-gray-500">{round.date}</span>
+                  </div>
+                  <span className="text-xs text-gray-400">סבב {idx + 1}</span>
+                </div>
+                <Textarea
+                  value={round.notes || ''}
+                  onChange={e => onUpdateRoundNotes(round.id, e.target.value)}
+                  placeholder="הערות..."
+                  rows={2}
+                  className="text-sm"
+                />
+              </div>
+            ))
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => onAddRound('sent')}>
+              <Send className="w-3 h-3" />
+              סבב שליחה
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => onAddRound('questions')}>
+              שאלות מרו"ח
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => onAddRound('answers')}>
+              תשובות
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

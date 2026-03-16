@@ -1,258 +1,382 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import {
-  FileSpreadsheet, Plus, Trash2, CheckCircle, AlertCircle, Clock, Paperclip
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+} from '@/components/ui/table';
+import {
+  FileSpreadsheet, Plus, Trash2, Paperclip, PlayCircle, CheckCircle2,
 } from 'lucide-react';
 
+// ── סטטוסים ──
 const STATUS_OPTIONS = [
-  { key: 'draft', label: 'טיוטה', color: 'bg-gray-200 text-gray-700' },
-  { key: 'in_review', label: 'בבדיקה', color: 'bg-blue-200 text-blue-700' },
-  { key: 'approved', label: 'מאושר', color: 'bg-green-200 text-green-700' },
-  { key: 'needs_fix', label: 'דורש תיקון', color: 'bg-orange-200 text-orange-700' },
+  { key: 'not_started', label: 'טרם התחיל', color: 'bg-gray-200 text-gray-700', badgeVariant: 'secondary' },
+  { key: 'in_progress', label: 'בעבודה', color: 'bg-blue-200 text-blue-700', badgeVariant: 'default' },
+  { key: 'done', label: 'הושלם', color: 'bg-green-200 text-green-700', badgeVariant: 'default' },
 ];
 
-export default function WorksheetEditor({ worksheet, onUpdate, onRemove }) {
-  const [editTitle, setEditTitle] = useState(worksheet.title);
+// ── פורמט מספרים ──
+const numberFormatter = new Intl.NumberFormat('he-IL');
+function formatNumber(num) {
+  if (num == null || isNaN(num)) return '—';
+  return numberFormatter.format(num);
+}
+
+// ══════════════════════════════════════════════════════════════
+// WorksheetEditor — עורך גליון עבודה
+// ══════════════════════════════════════════════════════════════
+export default function WorksheetEditor({ worksheet, onUpdate, onRemove, onRunReconciliation }) {
+  const [editTitle, setEditTitle] = useState(worksheet.label || '');
   const [editNotes, setEditNotes] = useState(worksheet.notes || '');
 
-  // Reset state when switching worksheets
+  // Reset local state when switching worksheets
   useEffect(() => {
-    setEditTitle(worksheet.title);
+    setEditTitle(worksheet.label || '');
     setEditNotes(worksheet.notes || '');
   }, [worksheet.id]);
 
-  // ── חישוב אוטומטי ──
-  const totals = useMemo(() => {
+  // ── Column totals (auto-calculated) ──
+  const columnTotals = useMemo(() => {
     const rows = worksheet.rows || [];
-    let totalDebit = 0;
-    let totalCredit = 0;
-    rows.forEach(row => {
-      totalDebit += parseFloat(row.debit) || 0;
-      totalCredit += parseFloat(row.credit) || 0;
+    const totals = {};
+    (worksheet.columns || []).forEach(col => {
+      if (col.type === 'number') {
+        totals[col.key] = rows.reduce((sum, r) => sum + (parseFloat(r[col.key]) || 0), 0);
+      }
     });
-    return { totalDebit, totalCredit, balance: totalDebit - totalCredit };
-  }, [worksheet.rows]);
+    return totals;
+  }, [worksheet.rows, worksheet.columns]);
 
-  // ── שורות ──
-  const addRow = () => {
+  // ── Summary bar values (type-dependent, auto-calculated) ──
+  const summaryItems = useMemo(() => {
+    const rows = worksheet.rows || [];
+    const t = columnTotals;
+
+    switch (worksheet.type) {
+      case 'bank_reconciliation': {
+        const bookBalance = (t.debit || 0) - (t.credit || 0);
+        const bankBalance = parseFloat(worksheet.summary?.bank_statement_balance) || 0;
+        return [
+          { label: 'יתרה בהנה"ח', value: bookBalance, auto: true },
+          { label: 'יתרה בדף בנק', value: bankBalance, editable: true, summaryKey: 'bank_statement_balance' },
+          { label: 'הפרש', value: bookBalance - bankBalance, auto: true, highlight: true },
+        ];
+      }
+      case 'credit_card_detail': {
+        const totalCharges = t.total || 0;
+        const cardCount = new Set(rows.map(r => r.card_id).filter(Boolean)).size;
+        return [
+          { label: 'סה"כ חיובים', value: totalCharges, auto: true },
+          { label: 'מספר כרטיסים', value: cardCount, auto: true, isCount: true },
+        ];
+      }
+      case 'fixed_assets_schedule': {
+        return [
+          { label: 'עלות מקורית כוללת', value: t.original_cost || 0, auto: true },
+          { label: 'פחת נצבר', value: t.accum_depreciation || 0, auto: true },
+          { label: 'יתרה נטו', value: t.net_book_value || 0, auto: true, highlight: true },
+        ];
+      }
+      case 'provisions_calc': {
+        return [
+          { label: 'סה"כ הפרשות', value: t.total || 0, auto: true },
+        ];
+      }
+      case 'payroll_reconciliation': {
+        const diff = (t.payroll_system || 0) - (t.form_126 || 0);
+        return [
+          { label: 'הפרש שכר מול 126', value: diff, auto: true, highlight: true },
+        ];
+      }
+      default:
+        return [];
+    }
+  }, [worksheet.type, worksheet.rows, worksheet.summary, columnTotals]);
+
+  // ── Row operations ──
+  const addRow = useCallback(() => {
     const newRow = {};
     (worksheet.columns || []).forEach(col => {
       newRow[col.key] = col.type === 'number' ? 0 : '';
     });
     onUpdate({ rows: [...(worksheet.rows || []), newRow] });
-  };
+  }, [worksheet.columns, worksheet.rows, onUpdate]);
 
-  const updateRow = (rowIdx, key, value) => {
+  const updateRow = useCallback((rowIdx, key, value) => {
     const rows = [...(worksheet.rows || [])];
     rows[rowIdx] = { ...rows[rowIdx], [key]: value };
     onUpdate({ rows });
-  };
+  }, [worksheet.rows, onUpdate]);
 
-  const removeRow = (rowIdx) => {
+  const removeRow = useCallback((rowIdx) => {
     const rows = (worksheet.rows || []).filter((_, i) => i !== rowIdx);
     onUpdate({ rows });
-  };
+  }, [worksheet.rows, onUpdate]);
 
-  // ── פורמט מספרים ──
-  const formatNumber = (num) => {
-    if (num == null || isNaN(num)) return '—';
-    return new Intl.NumberFormat('he-IL').format(num);
-  };
+  // ── Summary editable field update ──
+  const updateSummaryField = useCallback((key, value) => {
+    onUpdate({ summary: { ...(worksheet.summary || {}), [key]: value } });
+  }, [worksheet.summary, onUpdate]);
+
+  // ── Reconciliation info ──
+  const reconInfo = worksheet.summary?.reconciliation;
+  const hasRecon = typeof onRunReconciliation === 'function';
+
+  const attachmentCount = (worksheet.attachments || []).length;
 
   return (
-    <div className="space-y-6">
-      {/* ── כותרת + סטטוס ── */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <FileSpreadsheet className="w-6 h-6 text-green-700" />
-          <div>
-            <Input
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={() => onUpdate({ title: editTitle })}
-              className="text-xl font-bold border-none p-0 h-auto focus-visible:ring-0"
-            />
-            {worksheet.account_code && (
-              <span className="text-xs text-gray-500">חשבון: {worksheet.account_code}</span>
-            )}
-          </div>
+    <div className="space-y-5" dir="rtl">
+
+      {/* ═══ 1. Header ═══ */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <FileSpreadsheet className="w-6 h-6 text-green-700 shrink-0" />
+          <Input
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onBlur={() => {
+              if (editTitle !== worksheet.label) onUpdate({ label: editTitle });
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.target.blur();
+              }
+            }}
+            className="text-xl font-bold border-none p-0 h-auto focus-visible:ring-1 focus-visible:ring-green-400 bg-transparent"
+            dir="rtl"
+          />
+          <Badge variant="outline" className="shrink-0 text-xs">
+            {worksheet.type?.replace(/_/g, ' ') || 'כללי'}
+          </Badge>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            {STATUS_OPTIONS.map(s => (
-              <button
-                key={s.key}
-                onClick={() => onUpdate({ status: s.key })}
-                className={`px-2 py-1 text-xs rounded-full transition-all ${
-                  worksheet.status === s.key ? s.color + ' font-bold ring-2 ring-offset-1' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500 hover:text-red-700 mr-4">
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Status toggles */}
+          {STATUS_OPTIONS.map(s => (
+            <button
+              key={s.key}
+              onClick={() => onUpdate({ status: s.key })}
+              className={`px-3 py-1.5 text-xs rounded-full transition-all border ${
+                worksheet.status === s.key
+                  ? s.color + ' font-bold ring-2 ring-offset-1 ring-current'
+                  : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+
+          {/* Attachments indicator */}
+          {attachmentCount > 0 && (
+            <span className="flex items-center gap-1 text-xs text-gray-500 mr-2">
+              <Paperclip className="w-3.5 h-3.5" />
+              {attachmentCount}
+            </span>
+          )}
+
+          {/* Delete */}
+          <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500 hover:text-red-700 hover:bg-red-50 mr-2">
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* ── כרטיסי סיכום (יתרות) ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <SummaryCard
-          label="יתרת פתיחה"
-          value={worksheet.opening_balance}
-          onChange={(v) => onUpdate({ opening_balance: v })}
-          formatNumber={formatNumber}
-        />
-        <SummaryCard
-          label="יתרה לפי ספרים"
-          value={worksheet.book_balance}
-          onChange={(v) => onUpdate({ book_balance: v })}
-          formatNumber={formatNumber}
-        />
-        <SummaryCard
-          label="יתרה לביקורת"
-          value={worksheet.audit_balance}
-          onChange={(v) => onUpdate({ audit_balance: v })}
-          formatNumber={formatNumber}
-        />
-        <div className="p-3 rounded-lg bg-gray-50 border">
-          <span className="text-xs text-gray-500">הפרש</span>
-          <p className={`text-lg font-bold ${
-            (worksheet.book_balance - worksheet.audit_balance) === 0
-              ? 'text-green-700'
-              : 'text-red-600'
-          }`}>
-            {formatNumber(worksheet.book_balance - worksheet.audit_balance)}
-          </p>
+      {/* ═══ 2. Summary bar ═══ */}
+      {summaryItems.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          {summaryItems.map((item, idx) => (
+            <Card
+              key={idx}
+              className={`flex-1 min-w-[160px] ${
+                item.highlight
+                  ? item.value === 0
+                    ? 'border-green-300 bg-green-50'
+                    : 'border-red-300 bg-red-50'
+                  : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <CardContent className="p-3">
+                <span className="text-xs text-gray-500 block mb-1">{item.label}</span>
+                {item.editable ? (
+                  <SummaryEditableValue
+                    value={item.value}
+                    onChange={(v) => updateSummaryField(item.summaryKey, v)}
+                  />
+                ) : (
+                  <span className={`text-lg font-bold block ${
+                    item.highlight
+                      ? item.value === 0 ? 'text-green-700' : 'text-red-600'
+                      : 'text-gray-800'
+                  }`} dir="ltr">
+                    {item.isCount ? item.value : formatNumber(item.value)}
+                  </span>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      </div>
+      )}
 
-      {/* ── טבלת שורות (כמו אקסל) ── */}
+      {/* ═══ 3. Interactive table ═══ */}
       <div className="border rounded-lg overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 sticky top-0">
-            <tr>
-              <th className="px-3 py-2 text-right font-medium text-gray-600 w-10">#</th>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gray-50">
+              <TableHead className="text-right font-medium text-gray-600 w-10 px-3">#</TableHead>
               {(worksheet.columns || []).map(col => (
-                <th key={col.key} className="px-3 py-2 text-right font-medium text-gray-600 min-w-[100px]">
+                <TableHead
+                  key={col.key}
+                  className="text-right font-medium text-gray-600 min-w-[100px] px-3"
+                >
                   {col.label}
-                </th>
+                </TableHead>
               ))}
-              <th className="px-3 py-2 w-10" />
-            </tr>
-          </thead>
-          <tbody>
+              <TableHead className="w-10 px-2" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {(worksheet.rows || []).map((row, rowIdx) => (
-              <tr key={rowIdx} className="border-t hover:bg-green-50/30 transition-colors">
-                <td className="px-3 py-1 text-gray-400 text-xs text-center">{rowIdx + 1}</td>
+              <TableRow key={rowIdx} className="hover:bg-green-50/30 transition-colors">
+                <TableCell className="text-gray-400 text-xs text-center px-3">{rowIdx + 1}</TableCell>
                 {(worksheet.columns || []).map(col => (
-                  <td key={col.key} className="px-1 py-1">
+                  <TableCell key={col.key} className="px-1 py-1">
                     <Input
                       type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
                       value={row[col.key] ?? ''}
                       onChange={(e) => updateRow(
                         rowIdx,
                         col.key,
-                        col.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value
+                        col.type === 'number' ? (parseFloat(e.target.value) || 0) : e.target.value,
                       )}
                       className="h-8 text-sm border-transparent hover:border-gray-300 focus:border-green-500 rounded"
                       dir={col.type === 'number' || col.type === 'date' ? 'ltr' : 'rtl'}
                     />
-                  </td>
+                  </TableCell>
                 ))}
-                <td className="px-1 py-1 text-center">
+                <TableCell className="px-1 py-1 text-center">
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeRow(rowIdx)}>
                     <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
                   </Button>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
 
-            {/* ── שורת סיכום ── */}
+            {/* ── Auto-totals row ── */}
             {(worksheet.rows || []).length > 0 && (
-              <tr className="border-t-2 border-green-200 bg-green-50 font-bold">
-                <td className="px-3 py-2 text-gray-500 text-xs">סה"כ</td>
+              <TableRow className="border-t-2 border-green-300 bg-green-100 font-bold">
+                <TableCell className="text-gray-600 text-xs px-3">סה"כ</TableCell>
                 {(worksheet.columns || []).map(col => (
-                  <td key={col.key} className="px-3 py-2 text-left" dir="ltr">
+                  <TableCell key={col.key} className="px-3 py-2" dir="ltr">
                     {col.type === 'number' ? (
-                      <span className="text-green-800">
-                        {formatNumber(
-                          (worksheet.rows || []).reduce(
-                            (sum, r) => sum + (parseFloat(r[col.key]) || 0), 0
-                          )
-                        )}
-                      </span>
+                      <span className="text-green-800">{formatNumber(columnTotals[col.key])}</span>
                     ) : ''}
-                  </td>
+                  </TableCell>
                 ))}
-                <td />
-              </tr>
+                <TableCell />
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <Button variant="outline" size="sm" onClick={addRow} className="gap-1 text-xs">
         <Plus className="w-3 h-3" /> הוסף שורה
       </Button>
 
-      {/* ── הערות ── */}
+      {/* ═══ 4. Reconciliation helper ═══ */}
+      {hasRecon && (
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardContent className="p-4 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => onRunReconciliation(worksheet.id)}
+              >
+                <PlayCircle className="w-4 h-4" />
+                הרץ התאמה
+              </Button>
+              {reconInfo && (
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="flex items-center gap-1 text-green-700">
+                    <CheckCircle2 className="w-4 h-4" />
+                    מותאמים: {reconInfo.matched ?? 0}
+                  </span>
+                  <span className="flex items-center gap-1 text-orange-600">
+                    לא מותאמים: {reconInfo.unmatched ?? 0}
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ 5. Notes section ═══ */}
       <div>
         <span className="text-sm font-medium text-gray-600 mb-1 block">הערות</span>
         <Textarea
           value={editNotes}
           onChange={(e) => setEditNotes(e.target.value)}
-          onBlur={() => onUpdate({ notes: editNotes })}
+          onBlur={() => {
+            if (editNotes !== worksheet.notes) onUpdate({ notes: editNotes });
+          }}
           placeholder="הערות לגליון עבודה..."
           rows={3}
           className="text-sm"
           dir="rtl"
         />
       </div>
+
+      {/* ═══ 6. Attachments count (bottom indicator) ═══ */}
+      {attachmentCount > 0 && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 border-t pt-3">
+          <Paperclip className="w-4 h-4" />
+          <span>{attachmentCount} קבצים מצורפים</span>
+        </div>
+      )}
     </div>
   );
 }
 
-// ── כרטיס סיכום (יתרה) ──
-function SummaryCard({ label, value, onChange, formatNumber }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value || 0);
+// ── Editable summary value (click to edit) ──
+function SummaryEditableValue({ value, onChange }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value || 0);
 
-  useEffect(() => { setEditValue(value || 0); }, [value]);
+  useEffect(() => { setDraft(value || 0); }, [value]);
+
+  const commit = () => {
+    onChange(draft);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <Input
+        type="number"
+        value={draft}
+        onChange={(e) => setDraft(parseFloat(e.target.value) || 0)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') commit(); }}
+        autoFocus
+        className="h-8 text-lg font-bold p-1 w-full"
+        dir="ltr"
+      />
+    );
+  }
 
   return (
-    <div
-      className="p-3 rounded-lg bg-gray-50 border cursor-pointer hover:border-green-300 transition-colors"
-      onClick={() => setIsEditing(true)}
+    <span
+      className="text-lg font-bold text-gray-800 block cursor-pointer hover:text-blue-700 transition-colors"
+      dir="ltr"
+      onClick={() => setEditing(true)}
+      title="לחץ לעריכה"
     >
-      <span className="text-xs text-gray-500">{label}</span>
-      {isEditing ? (
-        <Input
-          type="number"
-          value={editValue}
-          onChange={(e) => setEditValue(parseFloat(e.target.value) || 0)}
-          onBlur={() => {
-            onChange(editValue);
-            setIsEditing(false);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onChange(editValue);
-              setIsEditing(false);
-            }
-          }}
-          autoFocus
-          className="h-8 text-lg font-bold mt-1 p-1"
-          dir="ltr"
-        />
-      ) : (
-        <p className="text-lg font-bold text-gray-800">{formatNumber(value)}</p>
-      )}
-    </div>
+      {formatNumber(value)}
+    </span>
   );
 }
