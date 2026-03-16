@@ -88,7 +88,7 @@ export default function RealityCheck() {
       try {
         await Task.update(activeTask.id, {
           status: 'in_progress',
-          notes: (activeTask.notes || '') + '\n[Reality Check: הופסק באמצע - ' + new Date().toLocaleDateString('he-IL') + ']'
+          notes: (activeTask.notes || '') + '\n[בדיקת מציאות: הופסק באמצע - ' + new Date().toLocaleDateString('he-IL') + ']'
         });
       } catch { /* ignore */ }
     }
@@ -116,7 +116,7 @@ export default function RealityCheck() {
               <Hourglass className="w-6 h-6" style={{ color: PURPLE }} />
             </div>
             <div className="flex-1">
-              <h3 className="font-bold text-sm" style={{ color: PURPLE }}>Reality Check</h3>
+              <h3 className="font-bold text-sm" style={{ color: PURPLE }}>בדיקת מציאות</h3>
               <p className="text-xs text-gray-600 mt-1">
                 את עובדת על <strong>"{activeTask.title}"</strong> כבר {elapsedMinutes} דקות.
                 הזמן המוערך חלף.

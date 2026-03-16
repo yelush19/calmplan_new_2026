@@ -551,7 +551,7 @@ export default function QuickAddTaskDialog({ open, onOpenChange, onCreated, defa
           {/* Submit As-Is toggle */}
           <div className="flex items-center justify-between px-1">
             <Label className="text-xs flex items-center gap-1.5">
-              הגש כמות שיש (Submit As-Is)
+              הגש כמות שהיא
             </Label>
             <Switch checked={submitAsIs} onCheckedChange={setSubmitAsIs} className="data-[state=unchecked]:bg-emerald-200" />
           </div>
