@@ -107,7 +107,7 @@ export default function TaskForm({ task, context, onSubmit, onCancel }) {
     { value: "work_bookkeeping", label: "הנהלת חשבונות" },
     { value: "work_annual_reports", label: "דוחות שנתיים" },
     { value: "work_reserve_claims", label: "תביעות מילואים" },
-    { value: "work_social_benefits", label: "סוציאליות" },
+    { value: "work_social_benefits", label: "פנסיות וקרנות" },
     { value: "work_masav", label: "מס\"ב עובדים" },
     { value: "work_consulting", label: "ייעוץ" },
     { value: "work_client_management", label: "ניהול לקוח" },

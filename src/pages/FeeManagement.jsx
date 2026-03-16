@@ -32,7 +32,7 @@ const serviceTypeLabels = {
   operator_reporting: 'דיווח למתפעל',
   taml_reporting: 'דיווח לטמל',
   payslip_sending: 'משלוח תלושים',
-  social_benefits: 'סוציאליות',
+  social_benefits: 'פנסיות וקרנות',
   reserve_claims: 'תביעות מילואים',
   pnl_reports: 'דוחות רווח והפסד',
   admin: 'אדמיניסטרציה',

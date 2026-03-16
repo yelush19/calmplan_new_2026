@@ -344,7 +344,7 @@ export const ADDITIONAL_SERVICES = {
     key: 'social_benefits',
     label: 'הנחיות מס"ב ממתפעל',
     dashboard: 'payroll',
-    taskCategories: ['הנחיות מס"ב ממתפעל', 'סוציאליות', 'work_social_benefits'],
+    taskCategories: ['הנחיות מס"ב ממתפעל', 'פנסיות וקרנות', 'work_social_benefits'],
     createCategory: 'הנחיות מס"ב ממתפעל',
     steps: [
       { key: 'receive_instructions', label: 'קבלת הנחיות',  icon: 'inbox' },

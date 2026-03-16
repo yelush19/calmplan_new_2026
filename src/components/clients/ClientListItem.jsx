@@ -47,7 +47,7 @@ const serviceTypeLabels = {
   authorities_payment: 'תשלום רשויות',
   operator_reporting: 'דיווח למתפעל',
   taml_reporting: 'דיווח לטמל',
-  social_benefits: 'סוציאליות',
+  social_benefits: 'פנסיות וקרנות',
   reserve_claims: 'מילואים',
   special_reports: 'דוחות מיוחדים',
   consulting: 'ייעוץ',

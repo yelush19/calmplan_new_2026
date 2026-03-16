@@ -112,9 +112,10 @@ function getTaskBranch(task) {
   // P5 Annual
   if (cat.includes('annual') || cat.includes('שנתי') || cat.includes('הצהרת')) return 'P5';
   // P1 Payroll
-  if (['שכר', 'work_payroll', 'ביטוח לאומי', 'work_social_security', 'ניכויים', 'work_deductions',
-       'מס"ב עובדים', 'work_masav', 'מס"ב סוציאליות', 'work_masav_social', 'סוציאליות',
-       'work_social_benefits', 'משלוח תלושים', 'work_payslip_sending', 'מילואים', 'work_reserve_claims',
+  if (['שכר', 'work_payroll', 'ביטוח לאומי', 'ביטוח לאומי — דיווח', 'work_social_security', 'ניכויים', 'ניכויים — דיווח', 'work_deductions',
+       'מס"ב עובדים', 'work_masav', 'מס"ב סוציאליות', 'work_masav_social', 'פנסיות וקרנות', 'סוציאליות',
+       'work_social_benefits', 'פנסיות — מתפעל', 'work_social_operator', 'פנסיות — טמל', 'work_social_taml',
+       'משלוח תלושים', 'work_payslip_sending', 'מילואים', 'work_reserve_claims',
        'הנחיות מס"ב ממתפעל'].includes(cat)) return 'P1';
   // P2 Bookkeeping
   if (['מע"מ', 'work_vat_reporting', 'מע"מ 874', 'work_vat_874', 'מקדמות מס', 'work_tax_advances',

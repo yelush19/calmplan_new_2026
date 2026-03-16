@@ -122,7 +122,7 @@ const P1_BRANCH = {
     // סוציאליות — צומת with 2 mutually-exclusive child paths
     // מתפעל (external operator) OR טמל (client self-service)
     // ══════════════════════════════════════════════════════
-    node('P1_social_benefits', 'סוציאליות', 'social_benefits', {
+    node('P1_social_benefits', 'פנסיות וקרנות', 'social_benefits', {
       is_parent_task: true,
       depends_on: ['P1_payroll'],
       children: [
