@@ -195,6 +195,53 @@ export default function TasksPage() {
   const [listSubTaskParent, setListSubTaskParent] = useState(null);
   const [collapsedParents, setCollapsedParents] = useState({});
 
+  // ── Bulk Update Mode ──
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
+
+  const toggleTaskSelection = (taskId) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const toggleGroupSelection = (taskIds) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      const allSelected = taskIds.every(id => next.has(id));
+      if (allSelected) {
+        taskIds.forEach(id => next.delete(id));
+      } else {
+        taskIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkStatusChange = async (newStatus) => {
+    if (selectedTaskIds.size === 0) return;
+    try {
+      const promises = [...selectedTaskIds].map(id =>
+        updateTaskWithCascade(id, { status: newStatus })
+      );
+      await Promise.all(promises);
+      selectedTaskIds.forEach(id => syncNotesWithTaskStatus(id, newStatus));
+      setSelectedTaskIds(new Set());
+      setBulkMode(false);
+    } catch (error) {
+      console.error("Bulk status update error:", error);
+      loadTasks();
+    }
+  };
+
+  const exitBulkMode = () => {
+    setBulkMode(false);
+    setSelectedTaskIds(new Set());
+  };
+
   // ── Cascade Engine Hook — ensures status changes trigger Phase B/C task creation ──
   const { updateTaskWithCascade, updateStepWithCascade } = useTaskCascade(tasks, setTasks, clientsList);
 
@@ -826,9 +873,54 @@ export default function TasksPage() {
             <button onClick={collapseAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
               כווץ הכל
             </button>
+          <button
+            onClick={() => bulkMode ? exitBulkMode() : setBulkMode(true)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 mr-auto ${
+              bulkMode
+                ? 'bg-violet-100 text-violet-700 border-violet-400'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
+            }`}
+          >
+            {bulkMode ? `ביטול (${selectedTaskIds.size} נבחרו)` : 'עדכון מרובה'}
+          </button>
           </div>
         </div>
       )}
+
+      {/* Bulk action floating bar */}
+      <AnimatePresence>
+        {bulkMode && selectedTaskIds.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border-2 border-violet-300"
+            style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)' }}
+          >
+            <span className="text-sm font-black text-violet-700">{selectedTaskIds.size} נבחרו</span>
+            <span className="text-gray-300">|</span>
+            <span className="text-xs font-bold text-gray-500">שנה סטטוס:</span>
+            {Object.entries(statusConfig).map(([key, { text, dot }]) => (
+              <button
+                key={key}
+                onClick={() => handleBulkStatusChange(key)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-transparent hover:border-violet-300 transition-all hover:shadow-sm"
+                style={{ background: 'rgba(255,255,255,0.8)' }}
+              >
+                <div className={`w-2.5 h-2.5 rounded-full ${dot}`} />
+                {text}
+              </button>
+            ))}
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={exitBulkMode}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Content */}
       <ViewErrorBoundary>
@@ -850,6 +942,9 @@ export default function TasksPage() {
             >
               <thead>
                 <tr className="border-b border-gray-200">
+                  {bulkMode && (
+                    <th className="px-2 py-2.5 bg-[#FAFBFC] w-8" />
+                  )}
                   <SortHeader field="client_name">לקוח</SortHeader>
                   <SortHeader field="category">סוג דיווח</SortHeader>
                   <th className="px-3 py-2.5 text-right text-xs font-bold text-[#37474F] bg-[#FAFBFC]">תיאור</th>
@@ -869,8 +964,17 @@ export default function TasksPage() {
                         className="cursor-pointer select-none hover:bg-[#F0F0F0] transition-colors bg-[#FAFBFC]"
                         onClick={() => toggleStatusGroup(groupKey)}
                       >
-                        <td colSpan={7} className="py-2 px-3 border-b border-gray-100">
+                        <td colSpan={bulkMode ? 8 : 7} className="py-2 px-3 border-b border-gray-100">
                           <div className="flex items-center gap-2.5">
+                            {bulkMode && (
+                              <input
+                                type="checkbox"
+                                checked={groupTasks.length > 0 && groupTasks.every(t => selectedTaskIds.has(t.id))}
+                                onChange={(e) => { e.stopPropagation(); toggleGroupSelection(groupTasks.map(t => t.id)); }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-4 h-4 rounded border-violet-300 text-violet-600 accent-violet-600 shrink-0"
+                              />
+                            )}
                             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isGroupCollapsed ? 'rotate-[-90deg]' : ''}`} />
                             <div className={`w-2.5 h-2.5 rounded-full ${groupDotStyle ? '' : groupDot} shrink-0`} style={groupDotStyle || undefined} />
                             <span className="font-semibold text-gray-700 text-xs">{groupLabel}</span>
@@ -927,8 +1031,19 @@ export default function TasksPage() {
                       return (
                         <React.Fragment key={task.id}>
                           <tr
-                            className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isCompleted ? 'opacity-50' : ''}`}
+                            className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isCompleted ? 'opacity-50' : ''} ${bulkMode && selectedTaskIds.has(task.id) ? 'bg-violet-50' : ''}`}
                           >
+                            {/* Bulk checkbox */}
+                            {bulkMode && (
+                              <td className="px-2 py-2 w-8">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedTaskIds.has(task.id)}
+                                  onChange={() => toggleTaskSelection(task.id)}
+                                  className="w-4 h-4 rounded border-violet-300 text-violet-600 accent-violet-600"
+                                />
+                              </td>
+                            )}
                             {/* Client */}
                             <td className="px-3 py-2">
                               <div className="flex items-center gap-1.5" style={{ paddingRight: `${indentPx}px` }}>
