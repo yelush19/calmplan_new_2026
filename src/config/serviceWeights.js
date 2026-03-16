@@ -20,17 +20,17 @@ export const SERVICE_WEIGHTS = {
   'ניכויים':           { duration: 15, cognitiveLoad: 1, label: 'ניכויים' },
   'work_deductions':    { duration: 15, cognitiveLoad: 1, label: 'Deductions' },
 
-  // MASAV services — all fast (ננו)
-  'מס"ב עובדים':       { duration: 15, cognitiveLoad: 0, label: 'מס"ב עובדים' },
-  'work_masav':         { duration: 15, cognitiveLoad: 0, label: 'MASAV' },
-  'מס"ב סוציאליות':    { duration: 15, cognitiveLoad: 0, label: 'מס"ב סוציאליות' },
-  'work_masav_social':  { duration: 15, cognitiveLoad: 0, label: 'MASAV Social' },
-  'מס"ב ספקים':        { duration: 15, cognitiveLoad: 0, label: 'מס"ב ספקים' },
-  'work_masav_suppliers': { duration: 15, cognitiveLoad: 0, label: 'MASAV Suppliers' },
-  'מס"ב רשויות':       { duration: 15, cognitiveLoad: 0, label: 'מס"ב רשויות' },
-  'work_masav_authorities': { duration: 15, cognitiveLoad: 0, label: 'MASAV Authorities' },
-  'משלוח תלושים':      { duration: 15, cognitiveLoad: 0, label: 'משלוח תלושים' },
-  'work_payslip_sending': { duration: 15, cognitiveLoad: 0, label: 'Payslip Sending' },
+  // MASAV services — real-world timings
+  'מס"ב עובדים':       { duration: 10, cognitiveLoad: 0, label: 'מס"ב עובדים' },       // 5-10 דק' כולל הודעת ווטסאפ לחותמים
+  'work_masav':         { duration: 10, cognitiveLoad: 0, label: 'MASAV' },
+  'מס"ב סוציאליות':    { duration: 5,  cognitiveLoad: 0, label: 'מס"ב סוציאליות' },    // 5 דק' לכל שלב
+  'work_masav_social':  { duration: 5,  cognitiveLoad: 0, label: 'MASAV Social' },
+  'מס"ב ספקים':        { duration: 30, cognitiveLoad: 2, label: 'מס"ב ספקים' },         // 15-45 דק' הכנה תלוי לקוח
+  'work_masav_suppliers': { duration: 30, cognitiveLoad: 2, label: 'MASAV Suppliers' },
+  'מס"ב רשויות':       { duration: 5,  cognitiveLoad: 0, label: 'מס"ב רשויות' },       // דיווח+תשלום = 3+2 דק'
+  'work_masav_authorities': { duration: 5, cognitiveLoad: 0, label: 'MASAV Authorities' },
+  'משלוח תלושים':      { duration: 5,  cognitiveLoad: 0, label: 'משלוח תלושים' },       // 5 דק'
+  'work_payslip_sending': { duration: 5, cognitiveLoad: 0, label: 'Payslip Sending' },
   'פנסיות וקרנות':     { duration: 15, cognitiveLoad: 0, label: 'פנסיות וקרנות' },
   'work_social_benefits': { duration: 15, cognitiveLoad: 0, label: 'Social Benefits' },
 
@@ -45,8 +45,8 @@ export const SERVICE_WEIGHTS = {
   'work_bookkeeping':   { duration: 30, cognitiveLoad: 2, label: 'Bookkeeping' },
   'התאמות':            { duration: 30, cognitiveLoad: 2, label: 'התאמות' },
   'work_reconciliation': { duration: 30, cognitiveLoad: 2, label: 'Reconciliation' },
-  'תשלום רשויות':      { duration: 15, cognitiveLoad: 1, label: 'תשלום רשויות' },
-  'work_authorities_payment': { duration: 15, cognitiveLoad: 1, label: 'Authorities Payment' },
+  'תשלום רשויות':      { duration: 5,  cognitiveLoad: 0, label: 'תשלום רשויות' },       // דיווח שובר 3 דק' + תשלום 2 דק'
+  'work_authorities_payment': { duration: 5, cognitiveLoad: 0, label: 'Authorities Payment' },
 
   // Annual / Complex
   'מאזנים':            { duration: 45, cognitiveLoad: 3, label: 'מאזנים' },
