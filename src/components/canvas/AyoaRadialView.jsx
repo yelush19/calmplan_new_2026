@@ -35,7 +35,7 @@ const RINGS = {
 
 // Default DNA — overridden by Design Engine branchColors
 const DNA_DEFAULTS = {
-  P1: '#00A3E0', P2: '#4682B4', P3: '#F59E0B', P4: '#FFC107', P5: '#2E7D32',
+  P1: '#00A3E0', P2: '#4682B4', P3: '#F59E0B', P4: '#FACC15', P5: '#2E7D32',
 };
 
 function getCategoryColor(category, branchColors) {

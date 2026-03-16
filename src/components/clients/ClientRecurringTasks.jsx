@@ -85,7 +85,7 @@ const REPORT_CATEGORIES = {
   'שכר': {
     label: 'שכר',
     emoji: '💰',
-    cardColor: '#0EA5E9',
+    cardColor: '#0EA5E9', // P1-שכר core group
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -101,12 +101,12 @@ const REPORT_CATEGORIES = {
   'ביטוח לאומי': {
     label: 'ביטוח לאומי — דיווח',
     emoji: '🏛️',
-    cardColor: '#F43F5E',
+    cardColor: '#0284C7', // P1-דיווחים group
     icon: Building,
-    color: 'bg-rose-100 text-rose-800',
-    accent: 'border-rose-400',
-    bgSoft: 'bg-rose-50',
-    dot: 'bg-rose-500',
+    color: 'bg-sky-100 text-sky-800',
+    accent: 'border-sky-400',
+    bgSoft: 'bg-sky-50',
+    dot: 'bg-sky-600',
     frequencyField: 'social_security_frequency',
     serviceTypeKey: 'social_security',
     treeNodeId: 'P1_social_security',
@@ -118,12 +118,12 @@ const REPORT_CATEGORIES = {
   'ניכויים': {
     label: 'ניכויים — דיווח',
     emoji: '📋',
-    cardColor: '#F59E0B',
+    cardColor: '#0284C7', // P1-דיווחים group
     icon: FileText,
-    color: 'bg-amber-100 text-amber-800',
-    accent: 'border-amber-400',
-    bgSoft: 'bg-amber-50',
-    dot: 'bg-amber-500',
+    color: 'bg-sky-100 text-sky-800',
+    accent: 'border-sky-400',
+    bgSoft: 'bg-sky-50',
+    dot: 'bg-sky-600',
     frequencyField: 'deductions_frequency',
     serviceTypeKey: 'deductions',
     treeNodeId: 'P1_deductions',
@@ -135,12 +135,12 @@ const REPORT_CATEGORIES = {
   'מע"מ': {
     label: 'מע"מ',
     emoji: '🧾',
-    cardColor: '#8B5CF6',
+    cardColor: '#4682B4', // P2 group
     icon: Calculator,
-    color: 'bg-purple-100 text-purple-800',
-    accent: 'border-purple-400',
-    bgSoft: 'bg-purple-50',
-    dot: 'bg-purple-500',
+    color: 'bg-slate-100 text-slate-800',
+    accent: 'border-slate-400',
+    bgSoft: 'bg-slate-50',
+    dot: 'bg-[#4682B4]',
     frequencyField: 'vat_reporting_frequency',
     serviceTypeKey: 'vat_reporting',
     treeNodeId: 'P2_vat',
@@ -151,12 +151,12 @@ const REPORT_CATEGORIES = {
   'מקדמות מס': {
     label: 'מקדמות מס',
     emoji: '📊',
-    cardColor: '#14B8A6',
+    cardColor: '#4682B4', // P2 group
     icon: Building,
-    color: 'bg-teal-100 text-teal-800',
-    accent: 'border-teal-400',
-    bgSoft: 'bg-teal-50',
-    dot: 'bg-teal-500',
+    color: 'bg-slate-100 text-slate-800',
+    accent: 'border-slate-400',
+    bgSoft: 'bg-slate-50',
+    dot: 'bg-[#4682B4]',
     frequencyField: 'tax_advances_frequency',
     serviceTypeKey: 'tax_advances',
     treeNodeId: 'P2_tax_advances',
@@ -167,12 +167,12 @@ const REPORT_CATEGORIES = {
   'דוח רו"ה': {
     label: 'דוח רו"ה חודשי',
     emoji: '📈',
-    cardColor: '#6366F1',
+    cardColor: '#4682B4', // P2 group
     icon: FileText,
-    color: 'bg-indigo-100 text-indigo-800',
-    accent: 'border-indigo-400',
-    bgSoft: 'bg-indigo-50',
-    dot: 'bg-indigo-500',
+    color: 'bg-slate-100 text-slate-800',
+    accent: 'border-slate-400',
+    bgSoft: 'bg-slate-50',
+    dot: 'bg-[#4682B4]',
     frequencyField: 'pnl_frequency',
     serviceTypeKey: 'pnl_reports',
     treeNodeId: 'P2_pnl',
@@ -202,12 +202,12 @@ const REPORT_CATEGORIES = {
   'דוח שנתי': {
     label: 'דוח שנתי / מאזן',
     emoji: '📑',
-    cardColor: '#10B981',
+    cardColor: '#2E7D32', // P5 group
     icon: FileText,
     color: 'bg-green-100 text-green-800',
     accent: 'border-green-400',
     bgSoft: 'bg-green-50',
-    dot: 'bg-green-500',
+    dot: 'bg-green-600',
     frequencyField: null,
     serviceTypeKey: 'annual_reports',
     treeNodeId: 'P5_annual_reports',
@@ -225,7 +225,7 @@ const REPORT_CATEGORIES = {
   'משלוח תלושים': {
     label: 'משלוח תלושים',
     emoji: '📨',
-    cardColor: '#06B6D4',
+    cardColor: '#0EA5E9', // P1-שכר core group
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -241,7 +241,7 @@ const REPORT_CATEGORIES = {
   'מס"ב עובדים': {
     label: 'מס"ב עובדים',
     emoji: '🏦',
-    cardColor: '#3B82F6',
+    cardColor: '#0EA5E9', // P1-שכר core group
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -257,12 +257,12 @@ const REPORT_CATEGORIES = {
   'מתפעל': {
     label: 'פנסיות — מתפעל',
     emoji: '🤝',
-    cardColor: '#0891B2',
+    cardColor: '#0891B2', // P1-פנסיות group
     icon: FileText,
-    color: 'bg-sky-100 text-sky-800',
-    accent: 'border-sky-400',
-    bgSoft: 'bg-sky-50',
-    dot: 'bg-sky-500',
+    color: 'bg-cyan-100 text-cyan-800',
+    accent: 'border-cyan-400',
+    bgSoft: 'bg-cyan-50',
+    dot: 'bg-cyan-600',
     frequencyField: 'payroll_frequency',
     serviceTypeKey: 'social_operator',
     treeNodeId: 'P1_operator',
@@ -273,12 +273,12 @@ const REPORT_CATEGORIES = {
   'טמל + לקוח': {
     label: 'פנסיות — טמל',
     emoji: '📤',
-    cardColor: '#0E7490',
+    cardColor: '#0891B2', // P1-פנסיות group
     icon: FileText,
-    color: 'bg-sky-100 text-sky-800',
-    accent: 'border-sky-400',
-    bgSoft: 'bg-sky-50',
-    dot: 'bg-sky-500',
+    color: 'bg-cyan-100 text-cyan-800',
+    accent: 'border-cyan-400',
+    bgSoft: 'bg-cyan-50',
+    dot: 'bg-cyan-600',
     frequencyField: 'payroll_frequency',
     serviceTypeKey: 'social_taml',
     treeNodeId: 'P1_taml',
@@ -289,7 +289,7 @@ const REPORT_CATEGORIES = {
   'קליטה להנה"ח': {
     label: 'קליטה להנה"ח',
     emoji: '📥',
-    cardColor: '#2563EB',
+    cardColor: '#0EA5E9', // P1-שכר core group
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -307,12 +307,12 @@ const REPORT_CATEGORIES = {
   'קליטת הכנסות': {
     label: 'קליטת הכנסות',
     emoji: '💵',
-    cardColor: '#7C3AED',
+    cardColor: '#4682B4', // P2 group
     icon: Calculator,
-    color: 'bg-purple-100 text-purple-800',
-    accent: 'border-purple-400',
-    bgSoft: 'bg-purple-50',
-    dot: 'bg-purple-500',
+    color: 'bg-slate-100 text-slate-800',
+    accent: 'border-slate-400',
+    bgSoft: 'bg-slate-50',
+    dot: 'bg-[#4682B4]',
     frequencyField: null,
     serviceTypeKey: 'income_entry',
     treeNodeId: 'P2_income',
@@ -323,12 +323,12 @@ const REPORT_CATEGORIES = {
   'קליטת הוצאות': {
     label: 'קליטת הוצאות',
     emoji: '💳',
-    cardColor: '#9333EA',
+    cardColor: '#4682B4', // P2 group
     icon: Calculator,
-    color: 'bg-purple-100 text-purple-800',
-    accent: 'border-purple-400',
-    bgSoft: 'bg-purple-50',
-    dot: 'bg-purple-500',
+    color: 'bg-slate-100 text-slate-800',
+    accent: 'border-slate-400',
+    bgSoft: 'bg-slate-50',
+    dot: 'bg-[#4682B4]',
     frequencyField: null,
     serviceTypeKey: 'expense_entry',
     treeNodeId: 'P2_expenses',
@@ -339,11 +339,11 @@ const REPORT_CATEGORIES = {
   'מס"ב ספקים': {
     label: 'מס"ב ספקים',
     emoji: '🏧',
-    cardColor: '#A855F7',
+    cardColor: '#4682B4', // P2 group
     icon: Calculator,
-    color: 'bg-purple-100 text-purple-800',
-    accent: 'border-purple-400',
-    bgSoft: 'bg-purple-50',
+    color: 'bg-slate-100 text-slate-800',
+    accent: 'border-slate-400',
+    bgSoft: 'bg-slate-50',
     dot: 'bg-purple-500',
     frequencyField: null,
     serviceTypeKey: 'masav_suppliers',
@@ -391,12 +391,12 @@ const REPORT_CATEGORIES = {
   'דוחות אישיים': {
     label: 'דוחות אישיים',
     emoji: '👤',
-    cardColor: '#059669',
+    cardColor: '#2E7D32', // P5 group
     icon: FileText,
     color: 'bg-green-100 text-green-800',
     accent: 'border-green-400',
     bgSoft: 'bg-green-50',
-    dot: 'bg-green-500',
+    dot: 'bg-green-600',
     frequencyField: null,
     serviceTypeKey: 'personal_reports',
     treeNodeId: 'P5_personal_reports',
@@ -1031,7 +1031,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-lg">
+      <Card className="border">
         <CardContent className="p-12 text-center">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 flex items-center justify-center mb-4">
             <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
@@ -1045,10 +1045,10 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   return (
     <div className="space-y-6">
       {/* Main Card — Clean & Calm */}
-      <Card className="border-0 shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-l from-emerald-50 to-emerald-100 pb-6">
+      <Card className="border overflow-hidden">
+        <CardHeader className="bg-emerald-50 pb-6">
           <CardTitle className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center">
+            <div className="w-14 h-14 bg-white rounded-2xl border border-emerald-200 flex items-center justify-center">
               <Sparkles className="w-7 h-7 text-emerald-600" />
             </div>
             <div>
@@ -1109,13 +1109,12 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: catIdx * 0.05 }}
-                        className={`rounded-2xl transition-all cursor-pointer border-2 ${
-                          isExpanded ? 'shadow-lg col-span-1 md:col-span-2' : 'hover:shadow-md hover:scale-[1.01]'
+                        className={`rounded-xl transition-all cursor-pointer border-2 ${
+                          isExpanded ? 'col-span-1 md:col-span-2' : 'hover:scale-[1.01]'
                         }`}
                         style={{
-                          background: `linear-gradient(135deg, ${(cat.cardColor || branchColor)}10, rgba(255,255,255,0.85))`,
-                          backdropFilter: 'blur(12px)',
-                          borderColor: isExpanded ? (cat.cardColor || branchColor) : `${cat.cardColor || branchColor}40`,
+                          background: `${(cat.cardColor || branchColor)}0A`,
+                          borderColor: isExpanded ? (cat.cardColor || branchColor) : `${cat.cardColor || branchColor}30`,
                         }}
                         onClick={() => setExpandedCard(isExpanded ? null : cat.key)}
                       >
@@ -1144,7 +1143,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                                 .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
                                 .map((mc, idx) => (
                                 <div key={mc.id || idx} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-sm"
-                                  style={{ background: 'rgba(255,255,255,0.8)', borderColor: `${cat.cardColor || branchColor}20` }}>
+                                  style={{ background: 'white', borderColor: `${cat.cardColor || branchColor}25` }}>
                                   <span className="font-medium text-gray-800 truncate flex-1">{mc.name}</span>
                                   <span className="text-[10px] font-bold flex-shrink-0" style={{ color: `${cat.cardColor || branchColor}99` }}>
                                     {FREQUENCY_LABELS[mc.frequency] || mc.frequency}
@@ -1202,12 +1201,11 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                     onClick={() => toggleMonth(month)}
                     className={`rounded-xl h-11 text-sm font-bold transition-all border-2 ${
                       isSelected
-                        ? 'border-emerald-500 text-emerald-700 shadow-sm'
+                        ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
                         : isCurrent
                           ? 'border-emerald-300 text-emerald-600 font-black'
                           : 'border-gray-200 text-gray-600 hover:border-emerald-300'
                     }`}
-                    style={isSelected ? { background: 'rgba(236,253,245,0.8)', backdropFilter: 'blur(6px)' } : {}}
                   >
                     {name}
                   </Button>
@@ -1339,10 +1337,10 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                       }}
                       className="h-14 text-base font-bold rounded-2xl transition-all hover:scale-[1.02] border-2"
                       style={
-                        branchKey === 'P1' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#0369A1', borderColor: '#0EA5E9' } :
-                        branchKey === 'P2' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#7E22CE', borderColor: '#A855F7' } :
-                        branchKey === 'P3' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#92400E', borderColor: '#F59E0B' } :
-                                             { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#047857', borderColor: '#10B981' }
+                        branchKey === 'P1' ? { background: 'white', color: '#0369A1', borderColor: '#0EA5E9' } :
+                        branchKey === 'P2' ? { background: 'white', color: '#2C5F8A', borderColor: '#4682B4' } :
+                        branchKey === 'P3' ? { background: 'white', color: '#92400E', borderColor: '#F59E0B' } :
+                                             { background: 'white', color: '#166534', borderColor: '#2E7D32' }
                       }
                       size="lg"
                     >
@@ -1362,8 +1360,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           <Button
             onClick={() => generateTasksPreview()}
             disabled={selectedMonths.size === 0}
-            className="w-full h-14 text-lg font-bold rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all disabled:opacity-40 border-2"
-            style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)', color: '#047857', borderColor: '#10B981' }}
+            className="w-full h-14 text-lg font-bold rounded-2xl hover:scale-[1.01] transition-all disabled:opacity-40 border-2"
+            style={{ background: 'white', color: '#047857', borderColor: '#10B981' }}
             size="lg"
           >
             <Eye className="w-6 h-6 ml-3" />
@@ -1410,7 +1408,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
           {/* Header — clean, with progress */}
-          <div className="px-6 pt-6 pb-4 bg-gradient-to-l from-emerald-50 to-emerald-100">
+          <div className="px-6 pt-6 pb-4 bg-emerald-50">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-gray-800">
                 {previewTasks.length > 0
@@ -1531,7 +1529,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                             initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: (branchIdx * 0.05) + (groupIdx * 0.03) }}
-                            className={`rounded-2xl overflow-hidden border-2 ${group.accent} bg-white shadow-sm mr-4`}
+                            className={`rounded-xl overflow-hidden border-2 ${group.accent} bg-white mr-4`}
                           >
                             {/* Category header */}
                             <div
@@ -1585,7 +1583,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                                           transition={{ delay: taskIdx * 0.02 }}
                                           className={`flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer ${
                                             isSelected
-                                              ? 'bg-white border-2 border-gray-200 shadow-sm'
+                                              ? 'bg-white border-2 border-gray-200'
                                               : 'bg-gray-50 border-2 border-transparent opacity-40'
                                           }`}
                                           onClick={() => toggleTask(task._previewId)}
@@ -1646,7 +1644,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                   <Button
                     onClick={createTasks}
                     disabled={isGenerating || selectedCount === 0}
-                    className="flex-1 h-14 text-lg font-bold rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg disabled:opacity-40"
+                    className="flex-1 h-14 text-lg font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40"
                   >
                     {isGenerating ? (
                       <>

@@ -30,7 +30,7 @@ export const TIME_ZONES = {
     startMinutes: 420,   // 7 * 60
     endMinutes: 495,     // 8 * 60 + 15
     activeBranches: ['P4'],
-    color: '#FFC107',
+    color: '#FACC15',
     description: 'אישי / חיות מחמד / בית',
   },
   work: {

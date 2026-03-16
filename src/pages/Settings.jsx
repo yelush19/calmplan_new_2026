@@ -45,7 +45,7 @@ const P_BRANCHES = [
   { key: 'P1', label: 'P1 | חשבות שכר', color: '#00A3E0', icon: '💰', dashboards: ['payroll'] },
   { key: 'P2', label: 'P2 | הנהלת חשבונות ומיסים', color: '#4682B4', icon: '📊', dashboards: ['tax'] },
   { key: 'P3', label: 'P3 | ניהול ותכנון', color: '#F59E0B', icon: '📋', dashboards: ['admin', 'additional'] },
-  { key: 'P4', label: 'P4 | בית ואישי', color: '#FFC107', icon: '🏠', dashboards: ['home'] },
+  { key: 'P4', label: 'P4 | בית ואישי', color: '#FACC15', icon: '🏠', dashboards: ['home'] },
   { key: 'P5', label: 'P5 | דוחות שנתיים', color: '#2E7D32', icon: '📈', dashboards: ['annual_reports'] },
 ];
 

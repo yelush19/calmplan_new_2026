@@ -11,7 +11,7 @@ export const CATEGORY_GRADIENTS = {
   additional_services: { from: '#4682B4', to: '#3B5998', label: 'שירותים נוספים', branch: 'P2' },
   consulting: { from: '#64748b', to: '#475569', label: 'ייעוץ', branch: 'P2' },
   // P4 — Home/Personal
-  home_personal: { from: '#FFC107', to: '#FF9800', label: 'בית / אישי', branch: 'P4' },
+  home_personal: { from: '#FACC15', to: '#EAB308', label: 'בית / אישי', branch: 'P4' },
   meals: { from: '#FFB74D', to: '#FFA726', label: 'ארוחות', branch: 'P4' },
   routines: { from: '#FFD54F', to: '#FFCA28', label: 'שגרות', branch: 'P4' },
   // P5 — Annual Reports
@@ -154,9 +154,9 @@ export const BRANCH_PATH_COLORS = {
   'P3':                  { color: '#F59E0B', light: '#FDE68A', label: 'P3 ניהול' },
   'P3 ניהול ותכנון':    { color: '#F59E0B', light: '#FDE68A', label: 'P3 ניהול' },
   'P3 ניהול משרד':      { color: '#F59E0B', light: '#FDE68A', label: 'P3 ניהול' },
-  'P4':                  { color: '#FFC107', light: '#FFF9C4', label: 'P4 בית' },
-  'P4 בית':             { color: '#FFC107', light: '#FFF9C4', label: 'P4 בית' },
-  'P4 בית / אישי':     { color: '#FFC107', light: '#FFF9C4', label: 'P4 בית' },
+  'P4':                  { color: '#FACC15', light: '#FEF9C3', label: 'P4 בית' },
+  'P4 בית':             { color: '#FACC15', light: '#FEF9C3', label: 'P4 בית' },
+  'P4 בית / אישי':     { color: '#FACC15', light: '#FEF9C3', label: 'P4 בית' },
   'P5':                  { color: '#2E7D32', light: '#C8E6C9', label: 'P5 דוחות' },
   'P5 דוחות שנתיים':    { color: '#2E7D32', light: '#C8E6C9', label: 'P5 דוחות' },
 };
