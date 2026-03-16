@@ -1122,13 +1122,14 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                     key={month}
                     variant={isSelected ? 'default' : 'outline'}
                     onClick={() => toggleMonth(month)}
-                    className={`rounded-xl h-11 text-sm font-bold transition-all ${
+                    className={`rounded-xl h-11 text-sm font-bold transition-all border-2 ${
                       isSelected
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'
+                        ? 'border-emerald-500 text-emerald-700 shadow-sm'
                         : isCurrent
-                          ? 'border-2 border-emerald-600/50 hover:border-emerald-600 text-emerald-600 font-black'
-                          : 'border-2 hover:border-emerald-600/30'
+                          ? 'border-emerald-300 text-emerald-600 font-black'
+                          : 'border-gray-200 text-gray-600 hover:border-emerald-300'
                     }`}
+                    style={isSelected ? { background: 'rgba(236,253,245,0.8)', backdropFilter: 'blur(6px)' } : {}}
                   >
                     {name}
                   </Button>
@@ -1226,12 +1227,13 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                           generateTasksPreview(null, branchKey);
                         }
                       }}
-                      className={`h-14 text-base font-bold rounded-2xl shadow-md hover:shadow-lg transition-all text-white ${
-                        branchKey === 'P1' ? 'bg-sky-600 hover:bg-sky-700' :
-                        branchKey === 'P2' ? 'bg-purple-600 hover:bg-purple-700' :
-                        branchKey === 'P3' ? 'bg-pink-600 hover:bg-pink-700' :
-                        'bg-green-600 hover:bg-green-700'
-                      }`}
+                      className="h-14 text-base font-bold rounded-2xl transition-all hover:scale-[1.02] border-2"
+                      style={
+                        branchKey === 'P1' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#0369A1', borderColor: '#0EA5E9' } :
+                        branchKey === 'P2' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#7E22CE', borderColor: '#A855F7' } :
+                        branchKey === 'P3' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#BE185D', borderColor: '#EC4899' } :
+                                             { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#047857', borderColor: '#10B981' }
+                      }
                       size="lg"
                     >
                       <Zap className="w-5 h-5 ml-2" />
@@ -1250,7 +1252,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           <Button
             onClick={() => generateTasksPreview()}
             disabled={selectedMonths.size === 0}
-            className="w-full h-14 text-lg font-bold rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-40"
+            className="w-full h-14 text-lg font-bold rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all disabled:opacity-40 border-2"
+            style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)', color: '#047857', borderColor: '#10B981' }}
             size="lg"
           >
             <Eye className="w-6 h-6 ml-3" />
