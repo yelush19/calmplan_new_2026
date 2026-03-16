@@ -34,6 +34,7 @@ import {
   onTreeChange,
   syncSettingToDb,
   getLastSyncResult,
+  applyFullServiceToAllClients,
 } from '@/services/processTreeService';
 import { flattenTree } from '@/config/companyProcessTree';
 import { getStepsForService } from '@/config/processTemplates';
@@ -619,6 +620,7 @@ export default function ProcessArchitect() {
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState(null); // 'success' | 'error' | null
   const [isDirty, setIsDirty] = useState(false);
+  const [applyingFullService, setApplyingFullService] = useState(false);
 
   // Add branch state
   const [addingBranch, setAddingBranch] = useState(false);
@@ -1191,6 +1193,28 @@ export default function ProcessArchitect() {
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? 'שומר...' : 'שמור לDB'}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={async () => {
+              setApplyingFullService(true);
+              try {
+                const result = await applyFullServiceToAllClients();
+                toast({
+                  title: 'FULL SERVICE הופעל',
+                  description: `עודכנו ${result.updatedCount} לקוחות עם P1+P2+P5 מלא`,
+                });
+              } catch (err) {
+                toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+              }
+              setApplyingFullService(false);
+            }}
+            disabled={applyingFullService}
+            className="text-sm h-10 gap-1.5 px-5 font-bold bg-[#0288D1] text-white hover:bg-[#01579B]"
+          >
+            {applyingFullService ? <Loader2 className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
+            {applyingFullService ? 'מפעיל...' : 'FULL SERVICE לכולם'}
           </Button>
         </div>
       </div>
