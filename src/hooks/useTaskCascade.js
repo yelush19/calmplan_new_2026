@@ -29,6 +29,12 @@ function notifyChange(collection = 'tasks') {
   }));
 }
 
+function notifyTaskStarted(task) {
+  window.dispatchEvent(new CustomEvent('calmplan:task-started', {
+    detail: { task },
+  }));
+}
+
 export default function useTaskCascade(tasks, setTasks, clients = []) {
 
   const updateTaskWithCascade = useCallback(async (taskId, updates) => {
@@ -69,6 +75,11 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
     setTasks(prev => prev.map(t =>
       t.id === taskId ? { ...t, ...finalUpdates } : t
     ));
+
+    // Dispatch task-started event for RealityCheck timer
+    if (finalUpdates.status === 'in_progress' && task.status !== 'in_progress') {
+      notifyTaskStarted({ ...task, ...finalUpdates });
+    }
 
     try {
       await Task.update(taskId, { ...task, ...finalUpdates });
