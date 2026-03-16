@@ -12,75 +12,84 @@ import { flattenTree } from '@/config/companyProcessTree';
 
 // Fallback labels (used when tree hasn't loaded yet)
 const DEFAULT_SERVICE_LABELS = {
-    bookkeeping: 'הנהלת חשבונות',
-    bookkeeping_full: 'הנהלת חשבונות מלאה',
-    vat_reporting: 'דיווחי מע״מ',
-    tax_advances: 'מקדמות מס',
+    // V4.0 node keys
+    bookkeeping: 'הנה"ח',
+    vat: 'מע"מ',
+    tax_advances: 'מקדמות',
     payroll: 'שכר',
+    payroll_ancillary: 'נלווים לשכר',
+    payroll_authorities: 'רשויות שכר',
     social_security: 'ביטוח לאומי',
-    deductions: 'מ״ה ניכויים',
+    deductions: 'ניכויים',
     annual_reports: 'מאזנים / דוחות שנתיים',
-    reconciliation: 'התאמות חשבונות',
-    special_reports: 'דוחות מיוחדים',
-    masav_employees: 'מס״ב עובדים',
-    masav_social: 'מס״ב סוציאליות',
-    masav_authorities: 'מס״ב רשויות',
-    masav_suppliers: 'מס״ב ספקים',
-    authorities: 'דיווח רשויות',
-    authorities_payment: 'תשלום רשויות',
-    operator_reporting: 'דיווח למתפעל',
-    taml_reporting: 'דיווח לטמל',
-    payslip_sending: 'משלוח תלושים',
-    social_benefits: 'סוציאליות',
-    reserve_claims: 'תביעות מילואים',
-    pnl_reports: 'דוחות רווח והפסד',
+    personal_reports: 'דוחות אישיים',
+    reconciliation: 'התאמות',
+    masav_suppliers: 'מס"ב ספקים',
+    pnl_reports: 'רוו"ה',
     admin: 'אדמיניסטרציה',
+    office: 'משרד',
+    bookkeeping_production: 'ייצור',
+    bookkeeping_reporting: 'דיווחים',
+    bookkeeping_closing: 'סגירה',
+    // Legacy keys (backward compat)
+    bookkeeping_full: 'הנה"ח מלאה',
+    vat_reporting: 'מע"מ',
+    masav_employees: 'מס"ב עובדים',
+    masav_social: 'מס"ב סוציאליות',
+    payslip_sending: 'משלוח תלושים',
+    authorities: 'רשויות',
+    authorities_payment: 'תשלום רשויות',
+    special_reports: 'דוחות מיוחדים',
 };
 
 const serviceTypeColors = {
-    // קבוצה 1 (ירוק): הנה"ח, התאמות, מאזנים, PNL
-    bookkeeping: 'bg-green-100 text-green-800 border-green-200',
-    bookkeeping_full: 'bg-green-100 text-green-800 border-green-200',
-    reconciliation: 'bg-green-100 text-green-800 border-green-200',
-    annual_reports: 'bg-green-100 text-green-800 border-green-200',
-    pnl_reports: 'bg-green-100 text-green-800 border-green-200',
-    // מע"מ ומקדמות
-    vat_reporting: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    tax_advances: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    // קבוצה 2 (כחול): שכר, ביטוח לאומי, ניכויים
-    payroll: 'bg-blue-100 text-blue-800 border-blue-200',
+    // P2 הנה"ח (סגול)
+    bookkeeping: 'bg-purple-100 text-purple-800 border-purple-200',
+    bookkeeping_production: 'bg-purple-100 text-purple-800 border-purple-200',
+    bookkeeping_reporting: 'bg-purple-100 text-purple-800 border-purple-200',
+    bookkeeping_closing: 'bg-purple-100 text-purple-800 border-purple-200',
+    reconciliation: 'bg-purple-100 text-purple-800 border-purple-200',
+    pnl_reports: 'bg-purple-100 text-purple-800 border-purple-200',
+    masav_suppliers: 'bg-purple-100 text-purple-800 border-purple-200',
+    vat: 'bg-violet-100 text-violet-800 border-violet-200',
+    vat_reporting: 'bg-violet-100 text-violet-800 border-violet-200',
+    tax_advances: 'bg-violet-100 text-violet-800 border-violet-200',
+    // P1 שכר (כחול)
+    payroll: 'bg-sky-100 text-sky-800 border-sky-200',
+    payroll_ancillary: 'bg-sky-100 text-sky-800 border-sky-200',
+    payroll_authorities: 'bg-sky-100 text-sky-800 border-sky-200',
     social_security: 'bg-blue-100 text-blue-800 border-blue-200',
     deductions: 'bg-blue-100 text-blue-800 border-blue-200',
+    // P5 שנתי (ירוק)
+    annual_reports: 'bg-green-100 text-green-800 border-green-200',
+    personal_reports: 'bg-green-100 text-green-800 border-green-200',
+    // P3 ניהול (ורוד)
+    admin: 'bg-pink-100 text-pink-800 border-pink-200',
+    office: 'bg-pink-100 text-pink-800 border-pink-200',
+    // Legacy
+    bookkeeping_full: 'bg-purple-100 text-purple-800 border-purple-200',
+    masav_employees: 'bg-sky-100 text-sky-800 border-sky-200',
+    masav_social: 'bg-sky-100 text-sky-800 border-sky-200',
+    payslip_sending: 'bg-sky-100 text-sky-800 border-sky-200',
     authorities: 'bg-blue-100 text-blue-800 border-blue-200',
     authorities_payment: 'bg-blue-100 text-blue-800 border-blue-200',
-    social_benefits: 'bg-blue-100 text-blue-800 border-blue-200',
-    // קבוצה 3 (סגול): תלושים, מס"ב עובדים
-    payslip_sending: 'bg-purple-100 text-purple-800 border-purple-200',
-    masav_employees: 'bg-purple-100 text-purple-800 border-purple-200',
-    // קבוצה 4 (כתום): מס"ב סוציאליות, מתפעל, טמל
-    masav_social: 'bg-amber-100 text-amber-800 border-amber-200',
-    masav_authorities: 'bg-amber-100 text-amber-800 border-amber-200',
-    operator_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
-    taml_reporting: 'bg-amber-100 text-amber-800 border-amber-200',
-    // קבוצה 5 (אינדיגו): מס"ב ספקים
-    masav_suppliers: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    // שייכויות נוספות
-    reserve_claims: 'bg-blue-100 text-blue-800 border-blue-200',
-    admin: 'bg-green-100 text-green-800 border-green-200',
-    special_reports: 'bg-green-100 text-green-800 border-green-200',
 };
 
 // סדר מיון לפי קבוצות — 2 קבוצות ראשיות
 const serviceGroupOrder = {
-    // קבוצה 1 (ירוק): הנה"ח ודוחות (כולל מע"מ, מקדמות, מס"ב ספקים)
-    bookkeeping: 1, bookkeeping_full: 1, reconciliation: 1,
-    annual_reports: 1, pnl_reports: 1, admin: 1, special_reports: 1,
-    masav_suppliers: 1, vat_reporting: 1, tax_advances: 1,
-    // קבוצה 2 (כחול): שכר (כולל תלושים, סוציאליות, מס"ב)
-    payroll: 2, social_security: 2, deductions: 2,
-    authorities: 2, authorities_payment: 2, social_benefits: 2, reserve_claims: 2,
-    payslip_sending: 2, masav_employees: 2,
-    masav_social: 2, masav_authorities: 2, operator_reporting: 2, taml_reporting: 2,
+    // P2 הנה"ח (group 1)
+    bookkeeping: 1, bookkeeping_production: 1, bookkeeping_reporting: 1, bookkeeping_closing: 1,
+    reconciliation: 1, pnl_reports: 1, masav_suppliers: 1,
+    vat: 1, vat_reporting: 1, tax_advances: 1, bookkeeping_full: 1,
+    // P1 שכר (group 2)
+    payroll: 2, payroll_ancillary: 2, payroll_authorities: 2,
+    social_security: 2, deductions: 2,
+    masav_employees: 2, masav_social: 2, payslip_sending: 2,
+    authorities: 2, authorities_payment: 2,
+    // P5 שנתי (group 3)
+    annual_reports: 3, personal_reports: 3,
+    // P3 ניהול (group 4)
+    admin: 4, office: 4,
 };
 
 const statusUI = {
@@ -96,6 +105,8 @@ const statusUI = {
 const serviceGroupLabels = {
   1: 'הנה"ח ודוחות',
   2: 'שכר',
+  3: 'דוחות שנתיים',
+  4: 'ניהול',
 };
 
 const serviceGroupIcons = {

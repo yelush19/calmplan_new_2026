@@ -89,75 +89,35 @@ export async function loadCompanyTree() {
         const dbVersion = dbTree.version || '1.0';
         const seedVersion = PROCESS_TREE_SEED.version || '2.0';
 
-        // If DB version is behind the seed, merge new branches/nodes into existing tree
+        // If DB version is behind the seed, upgrade
         if (dbVersion < seedVersion) {
           console.log(`[ProcessTreeService] Upgrading tree ${dbVersion} → ${seedVersion}`);
-          const merged = { ...dbTree, version: seedVersion };
 
-          // v3.4: Remove obsolete nodes (renamed/replaced)
-          const OBSOLETE_NODES = ['P1_masav_authorities', 'P1_authorities_payment'];
-          const removeObsolete = (nodes) => {
-            if (!nodes) return nodes;
-            return nodes
-              .filter(n => !OBSOLETE_NODES.includes(n.id))
-              .map(n => n.children?.length ? { ...n, children: removeObsolete(n.children) } : n);
-          };
-          for (const [branchId, branch] of Object.entries(merged.branches)) {
-            merged.branches[branchId] = { ...branch, children: removeObsolete(branch.children) };
-          }
-          // Merge seed branches: add missing branches AND update existing ones with new children
-          for (const [branchId, seedBranch] of Object.entries(PROCESS_TREE_SEED.branches)) {
-            if (!merged.branches[branchId]) {
-              // Brand new branch — add it whole
-              merged.branches[branchId] = seedBranch;
-            } else {
-              // Existing branch — merge new children that don't exist yet
-              const existingIds = new Set();
-              const collectIds = (nodes) => {
-                for (const n of (nodes || [])) {
-                  existingIds.add(n.id);
-                  if (n.children?.length) collectIds(n.children);
-                }
-              };
-              collectIds(merged.branches[branchId].children);
+          // V4.0 is a FULL RESTRUCTURE — nodes became steps, hierarchy changed.
+          // Merging would create duplicates (old V3.5 nodes + new V4.0 nodes).
+          // Force-replace with the clean V4.0 SEED.
+          // Any user-created branches (P6+) that don't exist in seed are preserved.
+          const upgraded = JSON.parse(JSON.stringify(PROCESS_TREE_SEED));
 
-              // Deep-merge: add missing children from seed into existing branch
-              const mergeChildren = (existing, seedChildren) => {
-                const result = [...existing];
-                for (const seedChild of seedChildren) {
-                  if (!existingIds.has(seedChild.id)) {
-                    result.push(seedChild);
-                  } else {
-                    // Node exists — check if seed has new children to merge
-                    const idx = result.findIndex(n => n.id === seedChild.id);
-                    if (idx >= 0 && seedChild.children?.length) {
-                      result[idx] = {
-                        ...result[idx],
-                        children: mergeChildren(result[idx].children || [], seedChild.children),
-                      };
-                    }
-                  }
-                }
-                return result;
-              };
-
-              merged.branches[branchId] = {
-                ...merged.branches[branchId],
-                children: mergeChildren(
-                  merged.branches[branchId].children || [],
-                  seedBranch.children || []
-                ),
-              };
+          // Preserve user-created dynamic branches (P6, P7, ...) from old tree
+          if (dbTree.branches) {
+            for (const [branchId, branch] of Object.entries(dbTree.branches)) {
+              if (!upgraded.branches[branchId]) {
+                upgraded.branches[branchId] = branch;
+                console.log(`[ProcessTreeService] Preserved user branch: ${branchId}`);
+              }
             }
           }
+
           // Persist the upgrade
           const { error: upErr } = await supabase
             .from(TABLE)
-            .update({ data: { tree: merged }, updated_date: new Date().toISOString() })
+            .update({ data: { tree: upgraded }, updated_date: new Date().toISOString() })
             .eq('id', rows[0].id);
           if (upErr) console.warn('[ProcessTreeService] Version upgrade write failed:', upErr);
+          else console.log('[ProcessTreeService] V4.0 tree written to DB (full replace)');
 
-          _cachedTree = merged;
+          _cachedTree = upgraded;
           _cachedConfigId = rows[0].id;
           return { tree: _cachedTree, configId: _cachedConfigId };
         }
@@ -558,6 +518,74 @@ export function cleanStaleClientNodes(clientProcessTree, companyTree) {
   }
 
   return { cleaned, removedKeys };
+}
+
+// ============================================================
+// FULL SERVICE — Enable P1+P2+P5 for ALL clients
+// ============================================================
+
+/**
+ * Apply FULL_SERVICE to all clients — enables all P1, P2, P5 nodes.
+ * Includes parent grouping nodes for proper hierarchy.
+ * User can then manually disable what's not needed per client.
+ *
+ * @returns {{ updatedCount: number, errors: string[] }}
+ */
+export async function applyFullServiceToAllClients() {
+  const { tree } = await loadCompanyTree();
+  if (!tree?.branches) return { updatedCount: 0, errors: ['No tree loaded'] };
+
+  // Collect ALL node IDs from P1, P2, P5 branches (including parent grouping nodes)
+  const fullServiceNodes = new Set();
+  const walkBranch = (nodes) => {
+    for (const n of (nodes || [])) {
+      fullServiceNodes.add(n.id);
+      if (n.children?.length) walkBranch(n.children);
+    }
+  };
+  for (const branchId of ['P1', 'P2', 'P5']) {
+    if (tree.branches[branchId]) {
+      walkBranch(tree.branches[branchId].children);
+    }
+  }
+
+  console.log(`[applyFullService] Enabling ${fullServiceNodes.size} nodes:`, [...fullServiceNodes]);
+
+  const { Client } = await import('@/api/entities');
+  const clients = await Client.list(null, 5000).catch(() => []);
+  if (!clients || clients.length === 0) return { updatedCount: 0, errors: ['No clients found'] };
+
+  let updatedCount = 0;
+  const errors = [];
+
+  for (const client of clients) {
+    const existing = client.process_tree || {};
+    const updated = { ...existing };
+    let changed = false;
+
+    for (const nodeId of fullServiceNodes) {
+      if (!updated[nodeId]?.enabled) {
+        updated[nodeId] = { ...(updated[nodeId] || {}), enabled: true };
+        changed = true;
+      }
+    }
+
+    // Also clean stale nodes
+    const { cleaned, removedKeys } = cleanStaleClientNodes(updated, tree);
+    if (removedKeys.length > 0) changed = true;
+
+    if (changed) {
+      try {
+        await Client.update(client.id, { process_tree: cleaned });
+        updatedCount++;
+      } catch (err) {
+        errors.push(client.name);
+      }
+    }
+  }
+
+  console.log(`[applyFullService] Updated ${updatedCount}/${clients.length} clients`);
+  return { updatedCount, errors };
 }
 
 // ============================================================
