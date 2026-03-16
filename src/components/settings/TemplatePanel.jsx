@@ -233,12 +233,12 @@ export default function TemplatePanel({ service, onClose }) {
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ x: 320, opacity: 0 }}
+        initial={{ x: -320, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        exit={{ x: 320, opacity: 0 }}
+        exit={{ x: -320, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 250 }}
-        className="fixed top-0 left-0 bottom-0 w-[360px] bg-white shadow-2xl z-50 overflow-y-auto"
-        style={{ borderRight: `4px solid ${pColor}` }}
+        className="fixed top-0 right-0 bottom-0 w-[360px] bg-white shadow-2xl z-50 overflow-y-auto"
+        style={{ borderLeft: `4px solid ${pColor}` }}
         dir="rtl"
       >
         {/* Header */}
