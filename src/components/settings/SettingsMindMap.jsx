@@ -201,8 +201,6 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [mapSaving, setMapSaving] = useState(false);
 
   // ── EXPAND/COLLAPSE STATE ──
-  // Set of node IDs that are expanded (showing children)
-  // By default: branches start expanded, group nodes start collapsed
   const [expandedSet, setExpandedSet] = useState(new Set(['P1', 'P2', 'P3', 'P4', 'P5']));
 
   const toggleExpand = useCallback((nodeId) => {
@@ -212,6 +210,52 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       else next.add(nodeId);
       return next;
     });
+  }, []);
+
+  // ── DRAG STATE ──
+  const [posOverrides, setPosOverrides] = useState({}); // nodeId → {dx, dy}
+  const dragRef = useRef(null); // { nodeId, startX, startY, origDx, origDy, moved }
+  const didDragRef = useRef(false); // suppress click after drag
+
+  const svgPointFromEvent = useCallback((e) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const inv = ctm.inverse();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: inv.a * clientX + inv.c * clientY + inv.e,
+      y: inv.b * clientX + inv.d * clientY + inv.f,
+    };
+  }, []);
+
+  const onDragStart = useCallback((e, nodeId) => {
+    e.stopPropagation();
+    const pt = svgPointFromEvent(e);
+    const cur = posOverrides[nodeId] || { dx: 0, dy: 0 };
+    dragRef.current = { nodeId, startX: pt.x, startY: pt.y, origDx: cur.dx, origDy: cur.dy, moved: false };
+    didDragRef.current = false;
+  }, [svgPointFromEvent, posOverrides]);
+
+  const onDragMove = useCallback((e) => {
+    if (!dragRef.current) return;
+    e.preventDefault();
+    const pt = svgPointFromEvent(e);
+    const { nodeId, startX, startY, origDx, origDy } = dragRef.current;
+    const totalMove = Math.abs(pt.x - startX) + Math.abs(pt.y - startY);
+    if (totalMove < 5) return; // deadzone to avoid accidental drag
+    dragRef.current.moved = true;
+    didDragRef.current = true;
+    setPosOverrides(prev => ({
+      ...prev,
+      [nodeId]: { dx: origDx + pt.x - startX, dy: origDy + pt.y - startY },
+    }));
+  }, [svgPointFromEvent]);
+
+  const onDragEnd = useCallback(() => {
+    dragRef.current = null;
   }, []);
 
   // ── Load tree from DB ──
@@ -290,7 +334,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         isExpanded,
         totalDescendants: (branch.children || []).reduce((sum, c) => sum + 1 + countDescendants(c), 0),
       });
-      allEdges.push({ from: { x: CX, y: CY }, to: { x: bx, y: by }, color: dna.color, w1: 8, w2: 3 });
+      allEdges.push({ fromId: 'hub', toId: branchId, from: { x: CX, y: CY }, to: { x: bx, y: by }, color: dna.color, w1: 8, w2: 3 });
 
       // Only layout children if expanded
       if (!isExpanded) return;
@@ -300,7 +344,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
       const childDist = 160;
 
-      const layoutNode = (node, parentX, parentY, parentAngle, depth, indexInSiblings, siblingCount) => {
+      const layoutNode = (node, parentX, parentY, parentAngle, depth, indexInSiblings, siblingCount, parentId) => {
         const dist = depth === 1 ? childDist : 120;
         let nodeAngle;
         if (siblingCount === 1) {
@@ -343,6 +387,8 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         });
 
         allEdges.push({
+          fromId: parentId,
+          toId: node.id,
           from: { x: parentX, y: parentY },
           to: { x: nx, y: ny },
           color: node._mindmap_color || dna.color,
@@ -353,24 +399,46 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         // Recurse into children ONLY if expanded
         if (hasChildren && nodeIsExpanded) {
           node.children.forEach((child, ci) => {
-            layoutNode(child, nx, ny, nodeAngle, depth + 1, ci, node.children.length);
+            layoutNode(child, nx, ny, nodeAngle, depth + 1, ci, node.children.length, node.id);
           });
         }
       };
 
       children.forEach((child, ci) => {
-        layoutNode(child, bx, by, angle, 1, ci, children.length);
+        layoutNode(child, bx, by, angle, 1, ci, children.length, branchId);
       });
     });
 
     return { nodes: allNodes, edges: allEdges };
   }, [dbTreeRef.tree, DNA, expandedSet]);
 
+  // Apply drag position overrides
+  const displayNodes = useMemo(() => {
+    if (Object.keys(posOverrides).length === 0) return nodes;
+    return nodes.map(n => {
+      const ov = posOverrides[n.id];
+      if (!ov) return n;
+      return { ...n, x: n.x + ov.dx, y: n.y + ov.dy };
+    });
+  }, [nodes, posOverrides]);
+
+  // Rebuild edges to follow dragged nodes
+  const displayEdges = useMemo(() => {
+    if (Object.keys(posOverrides).length === 0) return edges;
+    const posMap = {};
+    for (const n of displayNodes) posMap[n.id] = { x: n.x, y: n.y };
+    return edges.map(edge => ({
+      ...edge,
+      from: posMap[edge.fromId] || edge.from,
+      to: posMap[edge.toId] || edge.to,
+    }));
+  }, [edges, displayNodes, posOverrides]);
+
   // Find selected node data
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) return null;
-    return nodes.find(n => n.id === selectedNodeId) || null;
-  }, [selectedNodeId, nodes]);
+    return displayNodes.find(n => n.id === selectedNodeId) || null;
+  }, [selectedNodeId, displayNodes]);
 
   // ── CRUD ──
   const updateService = useCallback((serviceKey, updates) => {
@@ -423,8 +491,13 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         ref={svgRef}
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         className="w-full h-full"
-        style={{ maxHeight: 'calc(100vh - 140px)', minHeight: '680px', userSelect: 'none' }}
+        style={{ maxHeight: 'calc(100vh - 140px)', minHeight: '680px', userSelect: 'none', cursor: dragRef.current ? 'grabbing' : 'default' }}
         dir="ltr"
+        onMouseMove={onDragMove}
+        onMouseUp={onDragEnd}
+        onMouseLeave={onDragEnd}
+        onTouchMove={onDragMove}
+        onTouchEnd={onDragEnd}
       >
         <defs>
           <filter id="node-shadow" x="-30%" y="-30%" width="160%" height="160%">
@@ -446,7 +519,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         <rect width={VB_W} height={VB_H} fill="url(#dot-grid)" rx="12" />
 
         {/* ── Tapered connections ── */}
-        {edges.map((edge, i) => (
+        {displayEdges.map((edge, i) => (
           <path
             key={`edge-${i}`}
             d={taperedPath(edge.from.x, edge.from.y, edge.to.x, edge.to.y, edge.w1, edge.w2)}
@@ -468,7 +541,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         <text x={CX} y={CY + 42} textAnchor="middle" fill="#78909C" fontSize="10" fontWeight="600">{totalServices} שירותים</text>
 
         {/* ── Nodes ── */}
-        {nodes.map(node => {
+        {displayNodes.map(node => {
           if (node.type === 'hub') return null;
           const isSelected = selectedNodeId === node.id;
           const isHovered = hoveredNodeId === node.id;
@@ -479,10 +552,14 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           return (
             <g
               key={node.id}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: dragRef.current?.nodeId === node.id ? 'grabbing' : 'grab' }}
               filter={isSelected ? 'url(#glow-select)' : isHovered ? 'url(#glow-hover)' : 'url(#node-shadow)'}
+              onMouseDown={(e) => onDragStart(e, node.id)}
+              onTouchStart={(e) => onDragStart(e, node.id)}
               onClick={(e) => {
                 e.stopPropagation();
+                // Suppress click if we just dragged
+                if (didDragRef.current) { didDragRef.current = false; return; }
                 if (canExpand) {
                   toggleExpand(node.id);
                 }

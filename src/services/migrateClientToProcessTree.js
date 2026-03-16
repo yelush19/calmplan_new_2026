@@ -34,9 +34,12 @@ const SERVICE_TO_NODES = {
   payroll_ancillary: ['P1_payslip_sending', 'P1_masav_employees'],  // V4.0 → V4.1
   authorities_payment: ['P1_social_security', 'P1_deductions'],
 
-  // P2 — Bookkeeping & Tax (V4.0 structure)
-  bookkeeping: ['P2_bookkeeping'],
-  bookkeeping_full: ['P2_bookkeeping'],
+  // P2 — Bookkeeping & Tax (V4.1 structure — flat, no grouping nodes)
+  bookkeeping: ['P2_income', 'P2_expenses', 'P2_reconciliation'],
+  bookkeeping_full: ['P2_income', 'P2_expenses', 'P2_reconciliation', 'P2_masav_suppliers'],
+  bookkeeping_production: ['P2_income', 'P2_expenses'],  // V4.0 → V4.1
+  income_entry: ['P2_income'],
+  expense_entry: ['P2_expenses'],
   vat_reporting: ['P2_vat'],
   tax_advances: ['P2_tax_advances'],
   pnl_reports: ['P2_pnl'],
@@ -122,17 +125,19 @@ export function migrateClientToProcessTree(client) {
     enabledNodes.add('P1_closing');
   }
 
-  // P2: production → bookkeeping, masav_suppliers; reporting → vat, tax_advances; closing → reconciliation, pnl
-  if (enabledNodes.has('P2_bookkeeping') || enabledNodes.has('P2_masav_suppliers')) enabledNodes.add('P2_production');
-  if (enabledNodes.has('P2_vat') || enabledNodes.has('P2_tax_advances')) {
-    enabledNodes.add('P2_reporting');
-    enabledNodes.add('P2_bookkeeping');
-    enabledNodes.add('P2_production');
+  // P2 (V4.1 flat structure — no grouping nodes):
+  // VAT depends on income+expenses, tax_advances depends on income, PNL depends on all 3
+  if (enabledNodes.has('P2_vat')) {
+    enabledNodes.add('P2_income');
+    enabledNodes.add('P2_expenses');
   }
-  if (enabledNodes.has('P2_reconciliation') || enabledNodes.has('P2_pnl')) {
-    enabledNodes.add('P2_closing');
-    enabledNodes.add('P2_bookkeeping');
-    enabledNodes.add('P2_production');
+  if (enabledNodes.has('P2_tax_advances')) {
+    enabledNodes.add('P2_income');
+  }
+  if (enabledNodes.has('P2_pnl')) {
+    enabledNodes.add('P2_income');
+    enabledNodes.add('P2_expenses');
+    enabledNodes.add('P2_reconciliation');
   }
 
   // Step 4: Build the process_tree map

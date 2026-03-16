@@ -213,112 +213,130 @@ const P2_BRANCH = {
   label: 'הנהלת חשבונות ומיסים',
   color_var: '--cp-p2',
   children: [
-    // ── ייצור ──
-    node('P2_production', 'ייצור', 'bookkeeping_production', {
-      is_parent_task: true,
+    // ══════════════════════════════════════════════════════
+    // 3 תהליכים מקבילים — שוטפים על פני החודש, ללא תלות
+    // ══════════════════════════════════════════════════════
+
+    // ── קליטת הכנסות ──
+    node('P2_income', 'קליטת הכנסות', 'income_entry', {
       default_frequency: 'monthly',
-      children: [
-        node('P2_bookkeeping', 'הנהלת חשבונות', 'bookkeeping', {
-          default_frequency: 'monthly',
-          depends_on: ['P2_production'],
-          steps: [
-            { key: 'income_input',  label: 'קליטת הכנסות' },
-            { key: 'expense_input', label: 'קליטת הוצאות' },
-          ],
-        }),
-        node('P2_masav_suppliers', 'מס"ב ספקים', 'masav_suppliers', {
-          default_frequency: 'monthly',
-          depends_on: ['P2_bookkeeping'],
-          execution: 'sequential',
-          extra_fields: {
-            masav_cycles: {
-              type: 'select',
-              label: 'מספר סייקלים בחודש',
-              options: [
-                { value: '1', label: 'סייקל 1 (אמצע חודש - 15)' },
-                { value: '2', label: '2 סייקלים (אמצע + סוף חודש - 15, 30)' },
-              ],
-              default_value: '1',
-            },
-          },
-          cycle_dates: [15, 30],
-          steps: [
-            { key: 'file_prep',    label: 'הכנת קובץ' },
-            { key: 'upload',       label: 'העלאה' },
-            { key: 'confirmation', label: 'אישור ביצוע' },
-          ],
-        }),
+      steps: [
+        { key: 'receive_data', label: 'קבלת נתונים' },
+        { key: 'entry',        label: 'קליטה' },
       ],
     }),
 
-    // ── דיווחים ──
-    node('P2_reporting', 'דיווחים', 'bookkeeping_reporting', {
-      is_parent_task: true,
+    // ── קליטת הוצאות (שוטף — לקוחות שולחים למערכת דיגיטלית) ──
+    node('P2_expenses', 'קליטת הוצאות', 'expense_entry', {
       default_frequency: 'monthly',
-      depends_on: ['P2_bookkeeping'],
-      children: [
-        node('P2_vat', 'מע"מ', 'vat', {
-          default_frequency: 'bimonthly',
-          frequency_field: 'vat_reporting_frequency',
-          depends_on: ['P2_reporting'],
-          extra_fields: {
-            vat_reporting_method: {
-              type: 'select',
-              label: 'סוג דיווח',
-              options: [
-                { value: 'periodic_manual', label: 'תקופתי (המחאה/ידני)', sla_day: 15 },
-                { value: 'periodic_digital', label: 'תקופתי (דיגיטלי)', sla_day: 19 },
-                { value: 'detailed_874', label: 'דיווח מפורט (874)', sla_day: 23 },
-              ],
-              default_value: 'periodic_digital',
-            },
-            ...PAYMENT_METHOD_FIELD,
-          },
-          steps: [
-            { key: 'report_prep', label: 'הפקת דוח' },
-            { key: 'submission',  label: 'דיווח' },
-            { key: 'payment',     label: 'תשלום' },
-          ],
-        }),
-        node('P2_tax_advances', 'מקדמות מס הכנסה', 'tax_advances', {
-          default_frequency: 'bimonthly',
-          frequency_field: 'tax_advances_frequency',
-          depends_on: ['P2_reporting'],
-          extra_fields: { ...PAYMENT_METHOD_FIELD },
-          steps: [
-            { key: 'report_prep', label: 'הפקת דוח' },
-            { key: 'submission',  label: 'דיווח' },
-            { key: 'payment',     label: 'תשלום' },
-          ],
-        }),
+      steps: [
+        { key: 'receive_data', label: 'קבלת נתונים' },
+        { key: 'entry',        label: 'קליטה' },
       ],
     }),
 
-    // ── סגירה ──
-    node('P2_closing', 'סגירה', 'bookkeeping_closing', {
-      is_parent_task: true,
+    // ── התאמות חשבונות (שוטף — על פני החודש) ──
+    node('P2_reconciliation', 'התאמות חשבונות', 'reconciliation', {
       default_frequency: 'monthly',
-      depends_on: ['P2_vat'],
-      children: [
-        node('P2_reconciliation', 'התאמות חשבונות', 'reconciliation', {
-          default_frequency: 'monthly',
-          depends_on: ['P2_closing'],
-          smart_link: 'bank_accounts',
-          steps: [
-            { key: 'bank_statements',    label: 'קבלת דפי בנק' },
-            { key: 'bank_reconciliation', label: 'התאמת בנק' },
-            { key: 'cc_reconciliation',   label: 'התאמת כרטיסי אשראי' },
-            { key: 'differences',         label: 'טיפול בהפרשים' },
+      smart_link: 'bank_accounts',
+      steps: [
+        { key: 'bank_statements',    label: 'קבלת דפי בנק' },
+        { key: 'bank_reconciliation', label: 'התאמת בנק' },
+        { key: 'cc_reconciliation',   label: 'התאמת כרטיסי אשראי' },
+        { key: 'differences',         label: 'טיפול בהפרשים' },
+      ],
+    }),
+
+    // ══════════════════════════════════════════════════════
+    // מקבילי — ללא תלות בקליטה
+    // ══════════════════════════════════════════════════════
+
+    // ── מס"ב ספקים (2 סייקלים: SLA 15 + סוף חודש) ──
+    node('P2_masav_suppliers', 'מס"ב ספקים', 'masav_suppliers', {
+      default_frequency: 'monthly',
+      execution: 'sequential',
+      extra_fields: {
+        masav_cycles: {
+          type: 'select',
+          label: 'מספר סייקלים בחודש',
+          options: [
+            { value: '1', label: 'סייקל 1 (אמצע חודש - 15)' },
+            { value: '2', label: '2 סייקלים (אמצע + סוף חודש - 15, 30)' },
           ],
-        }),
-        node('P2_pnl', 'רווח והפסד', 'pnl_reports', {
-          default_frequency: 'monthly',
-          frequency_field: 'pnl_frequency',
-          depends_on: ['P2_reconciliation'],
-          steps: [
-            { key: 'report_generation', label: 'הפקת דוח' },
+          default_value: '2',
+        },
+      },
+      cycle_dates: [15, 30],
+      sla_day: 15,
+      steps: [
+        { key: 'file_prep',    label: 'הכנת קובץ' },
+        { key: 'upload',       label: 'העלאה' },
+        { key: 'confirmation', label: 'אישור ביצוע' },
+      ],
+    }),
+
+    // ══════════════════════════════════════════════════════
+    // תלויים — רק אחרי קליטת נתונים
+    // ══════════════════════════════════════════════════════
+
+    // ── מקדמות מס הכנסה (תלוי: הכנסות בלבד) ──
+    // SLA: 16 המחאה / 19 דיגיטלי
+    node('P2_tax_advances', 'מקדמות מס הכנסה', 'tax_advances', {
+      default_frequency: 'bimonthly',
+      frequency_field: 'tax_advances_frequency',
+      depends_on: ['P2_income'],
+      sla_day: 19,
+      extra_fields: { ...PAYMENT_METHOD_FIELD },
+      steps: [
+        { key: 'report_prep', label: 'הפקת דוח' },
+        { key: 'submission',  label: 'דיווח' },
+        { key: 'payment',     label: 'תשלום' },
+      ],
+    }),
+
+    // ── מע"מ (תלוי: הכנסות + הוצאות — שניהם) ──
+    // SLA: 19 תקופתי / 23 דוח 874 (+ אפשרות דחייה)
+    node('P2_vat', 'מע"מ', 'vat', {
+      default_frequency: 'bimonthly',
+      frequency_field: 'vat_reporting_frequency',
+      depends_on: ['P2_income', 'P2_expenses'],
+      sla_day: 19,
+      extra_fields: {
+        vat_reporting_method: {
+          type: 'select',
+          label: 'סוג דיווח',
+          options: [
+            { value: 'periodic_manual', label: 'תקופתי (המחאה/ידני)', sla_day: 15 },
+            { value: 'periodic_digital', label: 'תקופתי (דיגיטלי)', sla_day: 19 },
+            { value: 'detailed_874', label: 'דיווח מפורט (874)', sla_day: 23 },
           ],
-        }),
+          default_value: 'periodic_digital',
+        },
+        sla_override: {
+          type: 'number',
+          label: 'דחיית דד ליין (יום בחודש)',
+          default_value: null,
+        },
+        ...PAYMENT_METHOD_FIELD,
+      },
+      steps: [
+        { key: 'report_prep', label: 'הפקת דוח' },
+        { key: 'submission',  label: 'שידור' },
+        { key: 'payment',     label: 'תשלום' },
+      ],
+    }),
+
+    // ══════════════════════════════════════════════════════
+    // רו"ה חודשי — תלוי ב-3: הכנסות + הוצאות + התאמות
+    // SLA: 25 לחודש
+    // ══════════════════════════════════════════════════════
+    node('P2_pnl', 'רווח והפסד', 'pnl_reports', {
+      default_frequency: 'monthly',
+      frequency_field: 'pnl_frequency',
+      depends_on: ['P2_income', 'P2_expenses', 'P2_reconciliation'],
+      sla_day: 25,
+      steps: [
+        { key: 'report_generation', label: 'הפקת דוח' },
       ],
     }),
   ],
@@ -446,7 +464,7 @@ const P4_BRANCH = {
 // ============================================================
 
 export const PROCESS_TREE_SEED = {
-  version: '4.1',
+  version: '4.2',
   branches: {
     P1: P1_BRANCH,
     P2: P2_BRANCH,
@@ -472,11 +490,12 @@ export const FULL_SERVICE_NODES = [
   'P1_deductions',
   'P1_closing',
   // P2 Bookkeeping
-  'P2_bookkeeping',
-  'P2_masav_suppliers',
-  'P2_vat',
-  'P2_tax_advances',
+  'P2_income',
+  'P2_expenses',
   'P2_reconciliation',
+  'P2_masav_suppliers',
+  'P2_tax_advances',
+  'P2_vat',
   'P2_pnl',
   // P5 Annual
   'P5_annual_reports',
@@ -496,10 +515,15 @@ export const LEGACY_NODE_MAP = {
   P1_social_security_payment: 'P1_social_security',  // step of social_security
   P1_deductions_report: 'P1_deductions',     // step of deductions
   P1_deductions_payment: 'P1_deductions',    // step of deductions
+  // P2 — V4.0 grouping nodes removed in V4.1
+  P2_production: 'P2_income',               // production → income (primary)
+  P2_bookkeeping: 'P2_income',              // bookkeeping → income
+  P2_reporting: 'P2_vat',                   // reporting → vat (primary)
+  P2_closing: 'P2_reconciliation',          // closing → reconciliation
   // P2 — removed sub-nodes (became steps)
-  P2_expense_collection: 'P2_bookkeeping',   // step of bookkeeping
-  P2_vat_report: 'P2_vat',                   // step of vat
-  P2_vat_payment: 'P2_vat',                  // step of vat
+  P2_expense_collection: 'P2_expenses',     // → expense entry node
+  P2_vat_report: 'P2_vat',                  // step of vat
+  P2_vat_payment: 'P2_vat',                 // step of vat
   P2_tax_advances_report: 'P2_tax_advances', // step of tax_advances
   P2_tax_advances_payment: 'P2_tax_advances',// step of tax_advances
   P2_bank_reconciliation: 'P2_reconciliation',   // step of reconciliation

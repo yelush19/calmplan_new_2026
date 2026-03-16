@@ -143,7 +143,7 @@ export async function testProcessTree() {
       clientTree = toggleNode(clientTree, 'P2_vat', true, tree);
       const enabled4b = getEnabledNodeIds(clientTree);
       console.log('    enabled:', enabled4b);
-      console.log('    P2_bookkeeping auto-enabled?', isNodeEnabled(clientTree, 'P2_bookkeeping') ? '✅ YES' : '❌ NO');
+      console.log('    P2_income auto-enabled?', isNodeEnabled(clientTree, 'P2_income') ? '✅ YES' : '❌ NO');
 
       console.log('\n  4c. Disable P1_payroll (parent) → should auto-disable ALL P1 children');
       clientTree = toggleNode(clientTree, 'P1_payroll', false, tree);
