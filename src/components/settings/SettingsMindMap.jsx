@@ -29,7 +29,7 @@ const BASE_DNA = {
   P1: { color: '#0288D1', label: 'חשבות שכר', bg: '#E1F5FE', lightBg: '#E1F5FE90' },
   P2: { color: '#7B1FA2', label: 'הנה"ח ומיסים', bg: '#F3E5F5', lightBg: '#F3E5F590' },
   P3: { color: '#D97706', label: 'ניהול', bg: '#FEF3C7', lightBg: '#FEF3C790' },
-  P4: { color: '#F9A825', label: 'בית ואישי', bg: '#FFF8E1', lightBg: '#FFF8E190' },
+  P4: { color: '#FACC15', label: 'בית ואישי', bg: '#FEF9C3', lightBg: '#FEF9C390' },
   P5: { color: '#2E7D32', label: 'דוחות שנתיים', bg: '#E8F5E9', lightBg: '#E8F5E990' },
 };
 
