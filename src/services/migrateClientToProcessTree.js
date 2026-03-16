@@ -23,71 +23,31 @@ import { FULL_SERVICE_NODES } from '@/config/companyProcessTree';
  * Some services map to a parent + its children (e.g., payroll enables the whole P1 chain).
  */
 const SERVICE_TO_NODES = {
-  // P1 — Payroll chain
-  payroll: [
-    'P1_payroll',
-    'P1_payslip_sending',
-    'P1_masav_employees',
-  ],
-  social_security: [
-    'P1_social_security',
-    'P1_social_security_report',
-    'P1_social_security_payment',
-    'P1_masav_social',
-  ],
-  deductions: [
-    'P1_deductions',
-    'P1_deductions_report',
-    'P1_deductions_payment',
-  ],
-  masav_employees: [
-    'P1_masav_employees',
-  ],
-  masav_social: [
-    'P1_masav_social',
-  ],
-  authorities_payment: [
-    // Legacy: map to all authority sub-tasks
-    'P1_social_security_payment',
-    'P1_deductions_payment',
-  ],
+  // P1 — Payroll (V4.0 structure)
+  payroll: ['P1_payroll', 'P1_ancillary', 'P1_authorities'],
+  social_security: ['P1_social_security'],
+  deductions: ['P1_deductions'],
+  // Legacy keys → map to new parent
+  masav_employees: ['P1_ancillary'],
+  masav_social: ['P1_ancillary'],
+  payslip_sending: ['P1_ancillary'],
+  authorities_payment: ['P1_social_security', 'P1_deductions'],
 
-  // P2 — Bookkeeping & Tax
-  bookkeeping: [
-    'P2_bookkeeping',
-  ],
-  vat_reporting: [
-    'P2_vat',
-    'P2_vat_report',
-    'P2_vat_payment',
-  ],
-  tax_advances: [
-    'P2_tax_advances',
-    'P2_tax_advances_report',
-    'P2_tax_advances_payment',
-  ],
-  pnl_reports: [
-    'P2_pnl',
-  ],
-  reconciliation: [
-    'P2_reconciliation',
-    'P2_bank_reconciliation',
-    'P2_credit_reconciliation',
-  ],
+  // P2 — Bookkeeping & Tax (V4.0 structure)
+  bookkeeping: ['P2_bookkeeping'],
+  bookkeeping_full: ['P2_bookkeeping'],
+  vat_reporting: ['P2_vat'],
+  tax_advances: ['P2_tax_advances'],
+  pnl_reports: ['P2_pnl'],
+  reconciliation: ['P2_reconciliation'],
+  masav_suppliers: ['P2_masav_suppliers'],
 
   // P3 — Admin
-  admin: [
-    'P3_admin',
-  ],
-  consulting: [
-    'P3_consulting',
-  ],
+  admin: ['P3_admin'],
+  consulting: ['P3_office'],  // renamed
 
   // P5 — Annual
-  annual_reports: [
-    'P5_annual_reports',
-    'P5_capital_statement',
-  ],
+  annual_reports: ['P5_annual_reports'],
 };
 
 /**
@@ -145,17 +105,26 @@ export function migrateClientToProcessTree(client) {
     }
   }
 
-  // Step 3: Auto-enable parent nodes (a child can't exist without its parent)
-  // If any P1_* is enabled → P1_payroll must be enabled
-  // If any P2_* is enabled → P2_bookkeeping must be enabled
-  const hasP1Child = [...enabledNodes].some(id => id.startsWith('P1_') && id !== 'P1_payroll');
-  if (hasP1Child) enabledNodes.add('P1_payroll');
+  // Step 3: Auto-enable parent nodes (V4.0 hierarchy)
+  // P1: payroll → ancillary, authorities; authorities → social_security, deductions
+  if (enabledNodes.has('P1_ancillary') || enabledNodes.has('P1_authorities')) enabledNodes.add('P1_payroll');
+  if (enabledNodes.has('P1_social_security') || enabledNodes.has('P1_deductions')) {
+    enabledNodes.add('P1_authorities');
+    enabledNodes.add('P1_payroll');
+  }
 
-  const hasP2Child = [...enabledNodes].some(id => id.startsWith('P2_') && id !== 'P2_bookkeeping');
-  if (hasP2Child) enabledNodes.add('P2_bookkeeping');
-
-  if (enabledNodes.has('P5_capital_statement')) enabledNodes.add('P5_annual_reports');
-  if (enabledNodes.has('P1_masav_social')) enabledNodes.add('P1_social_security');
+  // P2: production → bookkeeping, masav_suppliers; reporting → vat, tax_advances; closing → reconciliation, pnl
+  if (enabledNodes.has('P2_bookkeeping') || enabledNodes.has('P2_masav_suppliers')) enabledNodes.add('P2_production');
+  if (enabledNodes.has('P2_vat') || enabledNodes.has('P2_tax_advances')) {
+    enabledNodes.add('P2_reporting');
+    enabledNodes.add('P2_bookkeeping');
+    enabledNodes.add('P2_production');
+  }
+  if (enabledNodes.has('P2_reconciliation') || enabledNodes.has('P2_pnl')) {
+    enabledNodes.add('P2_closing');
+    enabledNodes.add('P2_bookkeeping');
+    enabledNodes.add('P2_production');
+  }
 
   // Step 4: Build the process_tree map
   const reportingInfo = client.reporting_info || {};

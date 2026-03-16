@@ -14,42 +14,61 @@ const statusUI = {
 };
 
 const serviceTypeLabels = {
-  bookkeeping: 'הנה"ח',
-  bookkeeping_full: 'הנה"ח מלאה',
-  vat_reporting: 'מע״מ',
-  tax_advances: 'מקדמות',
+  // P1
   payroll: 'שכר',
+  payroll_ancillary: 'נלווים לשכר',
+  payroll_authorities: 'רשויות שכר',
   social_security: 'בל',
   deductions: 'ניכויים',
-  annual_reports: 'מאזנים',
+  // P2
+  bookkeeping: 'הנה"ח',
+  bookkeeping_full: 'הנה"ח מלאה',
+  bookkeeping_production: 'ייצור',
+  bookkeeping_reporting: 'דיווחים',
+  bookkeeping_closing: 'סגירה',
+  vat_reporting: 'מע״מ',
+  vat: 'מע״מ',
+  tax_advances: 'מקדמות',
   reconciliation: 'התאמות',
-  special_reports: 'דוחות מיוחדים',
+  pnl_reports: 'רוו"ה',
+  masav_suppliers: 'מס״ב ספקים',
+  // P3
+  admin: 'אדמין',
+  office: 'משרד',
+  // P5
+  annual_reports: 'מאזנים',
+  personal_reports: 'דוחות אישיים',
+  // Legacy
   masav_employees: 'מס״ב עובדים',
   masav_social: 'מס״ב סוציאליות',
   masav_authorities: 'מס״ב רשויות',
-  masav_suppliers: 'מס״ב ספקים',
+  payslip_sending: 'משלוח תלושים',
   authorities: 'דיווח רשויות',
   authorities_payment: 'תשלום רשויות',
   operator_reporting: 'דיווח למתפעל',
   taml_reporting: 'דיווח לטמל',
-  payslip_sending: 'משלוח תלושים',
   social_benefits: 'סוציאליות',
   reserve_claims: 'מילואים',
-  pnl_reports: 'רוו"ה',
-  admin: 'אדמין',
+  special_reports: 'דוחות מיוחדים',
+  consulting: 'ייעוץ',
 };
 
-// Branch grouping — matches ClientCard exactly
+// Branch grouping — V4.0
 const SERVICE_TO_BRANCH = {
-  // P2 הנה"ח ודוחות
-  bookkeeping: 'P2', bookkeeping_full: 'P2', reconciliation: 'P2',
-  annual_reports: 'P2', pnl_reports: 'P2', admin: 'P2', special_reports: 'P2',
-  masav_suppliers: 'P2', vat_reporting: 'P2', tax_advances: 'P2',
+  // P2 הנה"ח
+  bookkeeping: 'P2', bookkeeping_full: 'P2', bookkeeping_production: 'P2',
+  bookkeeping_reporting: 'P2', bookkeeping_closing: 'P2',
+  vat_reporting: 'P2', vat: 'P2', tax_advances: 'P2',
+  reconciliation: 'P2', pnl_reports: 'P2', masav_suppliers: 'P2',
+  annual_reports: 'P2', personal_reports: 'P2', special_reports: 'P2',
+  admin: 'P2', office: 'P2',
   // P1 שכר
-  payroll: 'P1', social_security: 'P1', deductions: 'P1',
+  payroll: 'P1', payroll_ancillary: 'P1', payroll_authorities: 'P1',
+  social_security: 'P1', deductions: 'P1',
   authorities: 'P1', authorities_payment: 'P1', social_benefits: 'P1', reserve_claims: 'P1',
   payslip_sending: 'P1', masav_employees: 'P1',
   masav_social: 'P1', masav_authorities: 'P1', operator_reporting: 'P1', taml_reporting: 'P1',
+  consulting: 'P1',
 };
 
 const BRANCH_DISPLAY = {
