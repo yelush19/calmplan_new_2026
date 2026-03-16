@@ -390,6 +390,8 @@ const FREQUENCY_LABELS = {
   bimonthly: 'דו-חודשי',
   quarterly: 'רבעוני',
   semi_annual: 'חצי שנתי',
+  yearly: 'שנתי',
+  not_applicable: 'לא רלוונטי',
 };
 
 function getClientFrequency(categoryKey, client) {
