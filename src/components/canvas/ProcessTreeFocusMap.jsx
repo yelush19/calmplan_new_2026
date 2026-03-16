@@ -321,7 +321,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
         />
         <circle cx={CX} cy={CY} r={58} fill="none" stroke="#66BB6A" strokeWidth={1.5} strokeDasharray="4 3" />
         <text x={CX} y={CY + 48} textAnchor="middle" fill="#F57C00" fontSize="12" fontWeight="800">
-          {totalTasks} \u05DE\u05E9\u05D9\u05DE\u05D5\u05EA
+          {totalTasks} {'משימות'}
         </text>
         <text x={CX} y={CY + 62} textAnchor="middle" fill="#78909C" fontSize="9" fontWeight="600">{today}</text>
 
@@ -349,7 +349,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
               </text>
               {/* Counts */}
               <text x={node.x + 8} y={node.y + 10} textAnchor="middle" fill="white" fontSize="10" fontWeight="700" opacity="0.85">
-                {node.taskCount} \u05DE\u05E9\u05D9\u05DE\u05D5\u05EA \u00B7 {node.clientCount} \u05DC\u05E7\u05D5\u05D7\u05D5\u05EA
+                {node.taskCount} {'משימות'} {' · '} {node.clientCount} {'לקוחות'}
               </text>
               {/* Expand badge */}
               <circle cx={node.x + cardW/2 - 2} cy={node.y - cardH/2 + 2} r={10}
@@ -492,12 +492,12 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
       {showEditor && (
         <div className="absolute top-12 right-3 w-72 bg-white rounded-2xl shadow-2xl border overflow-hidden" style={{ zIndex: 30 }} dir="rtl">
           <div className="px-4 py-2.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-black text-sm">
-            \u05E2\u05D5\u05E8\u05DA \u05E2\u05D9\u05E6\u05D5\u05D1
+            עורך עיצוב
           </div>
           <div className="p-3 space-y-3 max-h-80 overflow-y-auto">
             {/* Branch colors */}
             <div>
-              <div className="text-[11px] font-bold text-gray-600 mb-1.5">\u05E6\u05D1\u05E2\u05D9 \u05E2\u05E0\u05E4\u05D9\u05DD</div>
+              <div className="text-[11px] font-bold text-gray-600 mb-1.5">צבעי ענפים</div>
               {Object.entries(BRANCH_DNA).map(([id, dna]) => (
                 <div key={id} className="flex items-center gap-2 mb-1.5">
                   <span className="text-[11px] font-bold w-24" style={{ color: getColor(id, dna.color) }}>{id} {dna.label}</span>
@@ -506,7 +506,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
                     className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
                   {customColors[id] && (
                     <button onClick={() => setCustomColors(prev => { const n = { ...prev }; delete n[id]; return n; })}
-                      className="text-[9px] text-gray-400 hover:text-red-500">\u05D0\u05D9\u05E4\u05D5\u05E1</button>
+                      className="text-[9px] text-gray-400 hover:text-red-500">איפוס</button>
                   )}
                 </div>
               ))}
@@ -514,7 +514,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
 
             {/* Node color overrides */}
             <div>
-              <div className="text-[11px] font-bold text-gray-600 mb-1.5">\u05E6\u05D1\u05E2 \u05E6\u05D5\u05DE\u05EA</div>
+              <div className="text-[11px] font-bold text-gray-600 mb-1.5">צבע צומת</div>
               <div className="flex gap-1 flex-wrap">
                 {Object.keys(nodeMap).slice(0, 20).map(nid => {
                   const node = nodeMap[nid];
@@ -543,7 +543,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
 
             {/* Custom connections */}
             <div>
-              <div className="text-[11px] font-bold text-gray-600 mb-1.5">\u05D7\u05D9\u05D1\u05D5\u05E8\u05D9\u05DD \u05DE\u05D5\u05EA\u05D0\u05DE\u05D9\u05DD</div>
+              <div className="text-[11px] font-bold text-gray-600 mb-1.5">חיבורים מותאמים</div>
               {customConnections.map(cc => (
                 <div key={cc.id} className="flex items-center gap-2 mb-1 text-[10px]">
                   <span className="text-gray-600">{nodeMap[cc.from]?.label || cc.from} \u2190 {nodeMap[cc.to]?.label || cc.to}</span>
@@ -553,11 +553,11 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
               ))}
               <div className="flex gap-1 mt-1">
                 <select id="ptf-cc-from" className="text-[10px] border rounded px-1 py-0.5 flex-1">
-                  <option value="">\u05DE...</option>
+                  <option value="">מ...</option>
                   {Object.keys(nodeMap).map(nid => <option key={nid} value={nid}>{nodeMap[nid].label}</option>)}
                 </select>
                 <select id="ptf-cc-to" className="text-[10px] border rounded px-1 py-0.5 flex-1">
-                  <option value="">\u05D0\u05DC...</option>
+                  <option value="">אל...</option>
                   {Object.keys(nodeMap).map(nid => <option key={nid} value={nid}>{nodeMap[nid].label}</option>)}
                 </select>
                 <button onClick={() => {
