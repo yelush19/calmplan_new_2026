@@ -48,10 +48,10 @@ const P_BRANCHES = {
   P3: {
     key: 'P3',
     label: 'P3 | ניהול ותכנון',
-    color: 'bg-pink-100 text-pink-800',
-    accent: 'border-pink-400',
-    bgSoft: 'bg-pink-50',
-    dot: 'bg-pink-500',
+    color: 'bg-amber-100 text-amber-800',
+    accent: 'border-amber-400',
+    bgSoft: 'bg-amber-50',
+    dot: 'bg-amber-500',
     order: 3,
     categories: ['התאמות חשבונות', 'אדמיניסטרציה', 'משרד'],
   },
@@ -184,12 +184,12 @@ const REPORT_CATEGORIES = {
   'התאמות חשבונות': {
     label: 'התאמות חשבונות',
     emoji: '🔍',
-    cardColor: '#EC4899',
+    cardColor: '#F59E0B',
     icon: FileText,
-    color: 'bg-pink-100 text-pink-800',
-    accent: 'border-pink-400',
-    bgSoft: 'bg-pink-50',
-    dot: 'bg-pink-500',
+    color: 'bg-amber-100 text-amber-800',
+    accent: 'border-amber-400',
+    bgSoft: 'bg-amber-50',
+    dot: 'bg-amber-500',
     frequencyField: 'pnl_frequency',
     serviceTypeKey: 'reconciliation',
     treeNodeId: 'P2_reconciliation',
@@ -360,9 +360,9 @@ const REPORT_CATEGORIES = {
     cardColor: '#F97316',
     icon: FileText,
     color: 'bg-orange-100 text-orange-800',
-    accent: 'border-pink-400',
-    bgSoft: 'bg-pink-50',
-    dot: 'bg-pink-500',
+    accent: 'border-amber-400',
+    bgSoft: 'bg-amber-50',
+    dot: 'bg-amber-500',
     frequencyField: null,
     serviceTypeKey: 'admin',
     treeNodeId: 'P3_admin',
@@ -376,9 +376,9 @@ const REPORT_CATEGORIES = {
     cardColor: '#EA580C',
     icon: FileText,
     color: 'bg-orange-100 text-orange-800',
-    accent: 'border-pink-400',
-    bgSoft: 'bg-pink-50',
-    dot: 'bg-pink-500',
+    accent: 'border-amber-400',
+    bgSoft: 'bg-amber-50',
+    dot: 'bg-amber-500',
     frequencyField: null,
     serviceTypeKey: 'office',
     treeNodeId: 'P3_office',
@@ -1341,7 +1341,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                       style={
                         branchKey === 'P1' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#0369A1', borderColor: '#0EA5E9' } :
                         branchKey === 'P2' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#7E22CE', borderColor: '#A855F7' } :
-                        branchKey === 'P3' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#BE185D', borderColor: '#EC4899' } :
+                        branchKey === 'P3' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#92400E', borderColor: '#F59E0B' } :
                                              { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#047857', borderColor: '#10B981' }
                       }
                       size="lg"

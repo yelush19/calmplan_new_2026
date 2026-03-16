@@ -37,7 +37,7 @@ const DEFAULTS = {
   branchColors: {
     P1: '#00A3E0',   // Sky Blue
     P2: '#4682B4',   // Steel Blue
-    P3: '#E91E63',   // Magenta
+    P3: '#F59E0B',   // Amber Orange
     P4: '#FFC107',   // Warm Amber (hard default)
     P5: '#2E7D32',   // Forest Green
   },

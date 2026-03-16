@@ -30,7 +30,7 @@ const BRANCH_ANGLES = {
 const BRANCH_DNA = {
   P1: { color: '#0288D1', bg: '#E1F5FE', label: 'חשבות שכר', emoji: '\uD83D\uDCB0' },
   P2: { color: '#7B1FA2', bg: '#F3E5F5', label: 'הנה"ח ומיסים', emoji: '\uD83D\uDCCA' },
-  P3: { color: '#D81B60', bg: '#FCE4EC', label: 'ניהול', emoji: '\uD83D\uDCC1' },
+  P3: { color: '#D97706', bg: '#FEF3C7', label: 'ניהול', emoji: '\uD83D\uDCC1' },
   P4: { color: '#F9A825', bg: '#FFF8E1', label: 'בית ואישי', emoji: '\uD83C\uDFE0' },
   P5: { color: '#2E7D32', bg: '#E8F5E9', label: 'דוחות שנתיים', emoji: '\uD83D\uDCCB' },
 };

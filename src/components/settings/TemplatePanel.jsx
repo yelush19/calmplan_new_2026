@@ -27,7 +27,7 @@ import { toast } from '@/components/ui/use-toast';
 const DNA_COLORS = {
   P1: '#00A3E0',
   P2: '#B2AC88',
-  P3: '#E91E63',
+  P3: '#F59E0B',
   P4: '#FFC107',
   P5: '#2E7D32',
 };
@@ -35,7 +35,7 @@ const DNA_COLORS = {
 const DNA = {
   P1: { color: '#00A3E0', dashboard: 'payroll' },
   P2: { color: '#B2AC88', dashboard: 'tax' },
-  P3: { color: '#E91E63', dashboard: 'admin' },
+  P3: { color: '#F59E0B', dashboard: 'admin' },
   P4: { color: '#FFC107', dashboard: 'home' },
   P5: { color: '#2E7D32', dashboard: 'annual_reports' },
 };
@@ -350,7 +350,7 @@ export default function TemplatePanel({ service, onClose }) {
           const boardChoices = [
             { key: 'payroll', label: 'שכר (P1)', color: '#00A3E0' },
             { key: 'tax', label: 'הנה"ח (P2)', color: '#B2AC88' },
-            { key: 'admin', label: 'ניהול (P3)', color: '#E91E63' },
+            { key: 'admin', label: 'ניהול (P3)', color: '#F59E0B' },
             { key: 'home', label: 'בית (P4)', color: '#FFC107' },
             { key: 'annual_reports', label: 'דוחות שנתיים (P5)', color: '#2E7D32' },
           ];
