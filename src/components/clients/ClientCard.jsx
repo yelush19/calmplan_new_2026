@@ -328,8 +328,8 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const hasReporting = reportingRow1.length > 0 || reportingRow2.length > 0;
 
   return (
-    <Card className={`w-full transition-all duration-200 flex flex-col group rounded-xl ${isSelected ? 'border-2 border-blue-500 ring-2 ring-blue-200 bg-blue-50/50 shadow-lg shadow-blue-100' : 'border-2 border-gray-200 bg-white shadow-sm hover:shadow-xl hover:border-gray-300 hover:-translate-y-0.5'}`}>
-      <CardHeader className="pb-3 flex-shrink-0 bg-gradient-to-l from-gray-50 to-white rounded-t-xl border-b border-gray-100">
+    <Card className={`w-full transition-all duration-300 flex flex-col group rounded-2xl ${isSelected ? 'border-2 border-blue-400 ring-2 ring-blue-100 bg-gradient-to-br from-blue-50/60 to-white shadow-lg shadow-blue-100/50' : 'border-2 border-gray-100 bg-white shadow-sm hover:shadow-xl hover:border-emerald-200 hover:-translate-y-1'}`}>
+      <CardHeader className="pb-3 flex-shrink-0 bg-gradient-to-l from-emerald-50/30 via-sky-50/20 to-white rounded-t-2xl border-b border-gray-100">
         <div className="flex justify-between items-start gap-2">
             <div className="flex items-start gap-3 flex-1 min-w-0">
               {/* Selection Checkbox */}
@@ -512,7 +512,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         )}
       </CardContent>
       
-      <CardFooter className="grid grid-cols-4 gap-1.5 p-2.5 border-t-2 border-gray-200 bg-gray-50/80 rounded-b-xl flex-shrink-0">
+      <CardFooter className="grid grid-cols-4 gap-1.5 p-2.5 border-t-2 border-gray-100 bg-gradient-to-l from-gray-50/80 to-white rounded-b-2xl flex-shrink-0">
           <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
             <Edit className="w-4 h-4 ml-1" />
             עריכה

@@ -846,12 +846,14 @@ export default function ClientManagementPage() {
 
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <img
-            src="/logo-litay.png"
-            alt="Litay LTD"
-            className="w-14 h-14 rounded-xl object-contain border border-gray-200 shadow-sm bg-white p-1"
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-50 to-sky-50 border-2 border-emerald-200 shadow-md flex items-center justify-center overflow-hidden p-1.5">
+            <img
+              src="/logo-litay.png"
+              alt="Litay LTD"
+              className="w-full h-full object-contain"
+              onError={(e) => { e.target.parentElement.innerHTML = '<span class="text-2xl font-black text-emerald-600">L</span>'; }}
+            />
+          </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
               ניהול לקוחות ({filteredClients.length} מתוך {clients.length})
@@ -1286,7 +1288,7 @@ export default function ClientManagementPage() {
           setShowClientForm(false);
         }
       }}>
-        <DialogContent className="sm:max-w-[900px] lg:max-w-[1050px] h-[92vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[950px] lg:max-w-[1100px] h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">{selectedClient?.id ? `עריכת לקוח: ${selectedClient.name}` : 'יצירת לקוח חדש'}</DialogTitle>
             <DialogDescription className="text-sm">

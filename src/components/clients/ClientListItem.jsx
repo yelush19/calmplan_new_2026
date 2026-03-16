@@ -86,7 +86,7 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
     });
 
     return (
-        <div className={`group flex flex-col md:flex-row items-start md:items-center justify-between px-5 py-4 transition-all duration-200 border-b-2 border-gray-100 hover:bg-blue-50/40 ${isSelected ? 'bg-blue-50/60 border-r-4 border-r-blue-500' : 'hover:border-r-4 hover:border-r-emerald-400'}`}>
+        <div className={`group flex flex-col md:flex-row items-start md:items-center justify-between px-5 py-4 transition-all duration-300 border-b border-gray-100 rounded-xl mx-1 my-0.5 ${isSelected ? 'bg-gradient-to-l from-blue-50/80 to-sky-50/40 border-r-4 border-r-blue-500 shadow-sm' : 'hover:bg-gradient-to-l hover:from-emerald-50/30 hover:to-white hover:border-r-4 hover:border-r-emerald-400 hover:shadow-sm'}`}>
             <div className="flex items-center gap-4 flex-1 min-w-0">
                 {/* Selection Checkbox */}
                 <div onClick={(e) => e.stopPropagation()}>
