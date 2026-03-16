@@ -43,8 +43,12 @@ export const SERVICE_WEIGHTS = {
   'work_social_benefits': { duration: 15, cognitiveLoad: 0, label: 'Social Benefits' },
 
   // P2 — Bookkeeping & VAT
-  'מע"מ':              { duration: 5,  cognitiveLoad: 0, label: 'מע"מ' },                // דיווח 3 + תשלום 2 דק'
-  'work_vat_reporting': { duration: 5,  cognitiveLoad: 0, label: 'VAT Reporting' },
+  'מע"מ — הכנה':       { duration: 30, cognitiveLoad: 2, label: 'מע"מ — הכנה' },        // לקוח שצריך הכנת דוח
+  'work_vat_prep':      { duration: 30, cognitiveLoad: 2, label: 'VAT Prep' },
+  'מע"מ — העלאה':      { duration: 10, cognitiveLoad: 0, label: 'מע"מ — העלאה' },       // העלאה + העברה לחותמים
+  'work_vat_upload':    { duration: 10, cognitiveLoad: 0, label: 'VAT Upload' },
+  'מע"מ':              { duration: 10, cognitiveLoad: 0, label: 'מע"מ' },               // ברירת מחדל — לקוח מנהל, רק העלאה
+  'work_vat_reporting': { duration: 10, cognitiveLoad: 0, label: 'VAT Reporting' },
   'מע"מ 874':          { duration: 5,  cognitiveLoad: 0, label: 'מע"מ 874' },           // דיווח 3 + תשלום 2 דק'
   'work_vat_874':       { duration: 5,  cognitiveLoad: 0, label: 'VAT 874' },
   'מקדמות מס':         { duration: 5,  cognitiveLoad: 0, label: 'מקדמות מס' },          // דיווח 3 + תשלום 2 דק'
