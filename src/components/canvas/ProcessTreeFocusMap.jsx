@@ -1,12 +1,14 @@
 /**
- * ProcessTreeFocusMap — Ayoa-Style Process Tree Mind Map (V4.3)
+ * ProcessTreeFocusMap — Ayoa-Style Mind Map from Logo Hub (V4.3)
  *
- * Premium radial mind map for the Focus page:
- *   - Filled branch cards with DNA colors (P1-P5)
- *   - Organic tapered connections
- *   - Service nodes as structured white cards with color accents
- *   - Task matching, expand/collapse, interactive detail panel
- *   - Built from the company process tree dynamically
+ * Same architecture as SettingsMindMap (logo center, radial branches)
+ * but adapted for Focus page with:
+ *   - Live task counts per node
+ *   - Ayoa rectangular card nodes (not circles)
+ *   - Status distribution bars
+ *   - SLA/deadline badges
+ *   - Design editor (colors, connections)
+ *   - Dynamic from DB tree
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -17,52 +19,47 @@ import { resolveCategoryLabel } from '@/utils/categoryLabels';
 const VB_W = 1600, VB_H = 1000;
 const CX = VB_W / 2, CY = VB_H / 2;
 
-// Branch radial positions — spread around center
-const BRANCH_LAYOUT = {
-  P1: { angle: -Math.PI * 0.6, dist: 240, emoji: '\uD83D\uDCB0' },
-  P2: { angle: -Math.PI * 0.1, dist: 250, emoji: '\uD83D\uDCCA' },
-  P5: { angle: Math.PI * 0.25, dist: 240, emoji: '\uD83D\uDCCB' },
-  P3: { angle: Math.PI * 0.55, dist: 220, emoji: '\uD83D\uDCC1' },
-  P4: { angle: Math.PI * 0.85, dist: 230, emoji: '\uD83C\uDFE0' },
+const BRANCH_ANGLES = {
+  P1: -Math.PI * 0.75,
+  P2: -Math.PI * 0.25,
+  P3: Math.PI * 0.05,
+  P4: Math.PI * 0.55,
+  P5: Math.PI * 0.95,
 };
 
-// Branch DNA colors — filled card backgrounds
 const BRANCH_DNA = {
-  P1: { color: '#0288D1', dark: '#01579B', label: 'חשבות שכר', bg: '#E1F5FE', grad: ['#039BE5', '#0277BD'] },
-  P2: { color: '#7B1FA2', dark: '#4A148C', label: 'הנהלת חשבונות', bg: '#F3E5F5', grad: ['#9C27B0', '#6A1B9A'] },
-  P3: { color: '#D81B60', dark: '#880E4F', label: 'ניהול משרד', bg: '#FCE4EC', grad: ['#E91E63', '#C2185B'] },
-  P4: { color: '#F9A825', dark: '#F57F17', label: 'בית ואישי', bg: '#FFF8E1', grad: ['#FFB300', '#FF8F00'] },
-  P5: { color: '#2E7D32', dark: '#1B5E20', label: 'דוחות שנתיים', bg: '#E8F5E9', grad: ['#43A047', '#2E7D32'] },
+  P1: { color: '#0288D1', bg: '#E1F5FE', label: 'חשבות שכר', emoji: '\uD83D\uDCB0' },
+  P2: { color: '#7B1FA2', bg: '#F3E5F5', label: 'הנה"ח ומיסים', emoji: '\uD83D\uDCCA' },
+  P3: { color: '#D81B60', bg: '#FCE4EC', label: 'ניהול', emoji: '\uD83D\uDCC1' },
+  P4: { color: '#F9A825', bg: '#FFF8E1', label: 'בית ואישי', emoji: '\uD83C\uDFE0' },
+  P5: { color: '#2E7D32', bg: '#E8F5E9', label: 'דוחות שנתיים', emoji: '\uD83D\uDCCB' },
 };
 
 const STATUS_COLORS = {
-  not_started: '#1565C0',
-  in_progress: '#F57C00',
-  waiting_for_materials: '#FF8F00',
-  sent_for_review: '#7B1FA2',
-  needs_corrections: '#E65100',
-  production_completed: '#2E7D32',
-  completed: '#1B5E20',
+  not_started: '#1565C0', in_progress: '#F57C00', waiting_for_materials: '#FF8F00',
+  sent_for_review: '#7B1FA2', needs_corrections: '#E65100', production_completed: '#2E7D32',
 };
 
 const STATUS_LABELS = {
-  not_started: 'לא התחיל',
-  in_progress: 'בתהליך',
-  waiting_for_materials: 'ממתין לחומרים',
-  sent_for_review: 'נשלח לבדיקה',
-  needs_corrections: 'דרוש תיקון',
-  production_completed: 'הושלם',
+  not_started: 'לא התחיל', in_progress: 'בתהליך', waiting_for_materials: 'ממתין',
+  sent_for_review: 'בבדיקה', needs_corrections: 'תיקון', production_completed: 'הושלם',
 };
 
-// Organic bezier path between nodes
-function organicPath(x1, y1, x2, y2, w1 = 8, w2 = 3) {
+const COLOR_PALETTE = [
+  '#0288D1', '#7B1FA2', '#D81B60', '#F9A825', '#2E7D32',
+  '#E53935', '#FF5722', '#00BCD4', '#795548', '#607D8B',
+  '#9C27B0', '#1565C0', '#00695C', '#EF6C00', '#AD1457', '#FF9800',
+];
+
+// Tapered connection path (from SettingsMindMap)
+function taperedPath(x1, y1, x2, y2, w1 = 6, w2 = 2) {
   const dx = x2 - x1, dy = y2 - y1;
   const len = Math.sqrt(dx * dx + dy * dy) || 1;
   const nx = -dy / len, ny = dx / len;
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-  const curve = Math.min(40, len * 0.15);
-  const cpx = mx + nx * curve * 1.5;
-  const cpy = my - ny * curve * 1.5;
+  const curvature = Math.min(30, len * 0.12);
+  const cpx = mx - nx * curvature * 2;
+  const cpy = my + ny * curvature * 2;
   const hw1 = w1 / 2, hw2 = w2 / 2;
   return `M${x1 + nx * hw1},${y1 + ny * hw1}
     Q${cpx + nx * (hw1 + hw2) / 2},${cpy + ny * (hw1 + hw2) / 2} ${x2 + nx * hw2},${y2 + ny * hw2}
@@ -71,26 +68,25 @@ function organicPath(x1, y1, x2, y2, w1 = 8, w2 = 3) {
     Z`;
 }
 
-// Match task to tree node
 function matchTaskToNode(task, nodeMap) {
   if (task.tree_node_id && nodeMap[task.tree_node_id]) return task.tree_node_id;
   if (task.service_key) {
-    for (const [nodeId, node] of Object.entries(nodeMap)) {
-      if (node.service_key === task.service_key) return nodeId;
+    for (const [nid, n] of Object.entries(nodeMap)) {
+      if (n.service_key === task.service_key) return nid;
     }
   }
   const cat = resolveCategoryLabel(task.category || '').toLowerCase();
-  for (const [nodeId, node] of Object.entries(nodeMap)) {
-    const nodeLabel = (node.label || '').toLowerCase();
-    if (cat && nodeLabel && (cat.includes(nodeLabel) || nodeLabel.includes(cat))) return nodeId;
+  for (const [nid, n] of Object.entries(nodeMap)) {
+    const nl = (n.label || '').toLowerCase();
+    if (cat && nl && (cat.includes(nl) || nl.includes(cat))) return nid;
   }
   const catMap = {
     'שכר': 'P1_payroll', 'payroll': 'P1_payroll', 'work_payroll': 'P1_payroll',
-    'מע"מ': 'P2_vat', 'vat': 'P2_vat', 'work_vat': 'P2_vat', 'work_vat_reporting': 'P2_vat',
-    'מקדמות': 'P2_tax_advances', 'tax_advances': 'P2_tax_advances', 'work_tax_advances': 'P2_tax_advances',
+    'מע"מ': 'P2_vat', 'vat': 'P2_vat', 'work_vat_reporting': 'P2_vat',
+    'מקדמות': 'P2_tax_advances', 'work_tax_advances': 'P2_tax_advances',
     'ביטוח לאומי': 'P1_social_security', 'social_security': 'P1_social_security',
     'ניכויים': 'P1_deductions', 'deductions': 'P1_deductions',
-    'התאמות': 'P2_reconciliation', 'reconciliation': 'P2_reconciliation', 'work_reconciliation': 'P2_reconciliation',
+    'התאמות': 'P2_reconciliation', 'work_reconciliation': 'P2_reconciliation',
     'הכנסות': 'P2_income', 'הוצאות': 'P2_expenses',
     'רוו"ה': 'P2_pnl', 'pnl': 'P2_pnl',
   };
@@ -101,12 +97,22 @@ function matchTaskToNode(task, nodeMap) {
   return null;
 }
 
+function countDescendants(node) {
+  let count = 0;
+  if (node.children) { for (const c of node.children) { count += 1 + countDescendants(c); } }
+  return count;
+}
+
 export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLabel = 'הפוקוס שלי' }) {
   const svgRef = useRef(null);
   const [companyTree, setCompanyTree] = useState(null);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
-  const [expandedBranches, setExpandedBranches] = useState(new Set(['P1', 'P2', 'P3', 'P4', 'P5']));
+  const [expandedSet, setExpandedSet] = useState(new Set(['P1', 'P2', 'P3', 'P4', 'P5']));
+  const [showEditor, setShowEditor] = useState(false);
+  const [customColors, setCustomColors] = useState({});
+  const [customConnections, setCustomConnections] = useState([]);
+  const [editingNodeColor, setEditingNodeColor] = useState(null);
 
   useEffect(() => {
     loadCompanyTree().then(({ tree }) => setCompanyTree(tree)).catch(() => setCompanyTree(PROCESS_TREE_SEED));
@@ -114,9 +120,8 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
 
   const nodeMap = useMemo(() => {
     if (!companyTree) return {};
-    const flat = flattenTree(companyTree);
     const map = {};
-    for (const n of flat) map[n.id] = n;
+    for (const n of flattenTree(companyTree)) map[n.id] = n;
     return map;
   }, [companyTree]);
 
@@ -124,402 +129,319 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
     const map = {};
     for (const task of tasks) {
       if (task.status === 'production_completed' || task.status === 'completed') continue;
-      const nodeId = matchTaskToNode(task, nodeMap);
-      if (nodeId) {
-        if (!map[nodeId]) map[nodeId] = [];
-        map[nodeId].push(task);
-      }
+      const nid = matchTaskToNode(task, nodeMap);
+      if (nid) { if (!map[nid]) map[nid] = []; map[nid].push(task); }
     }
     return map;
   }, [tasks, nodeMap]);
 
-  const today = useMemo(() => {
-    const d = new Date();
-    const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-    return `יום ${days[d.getDay()]}, ${d.getDate()}/${d.getMonth() + 1}`;
+  const getColor = (id, fallback) => customColors[id] || fallback;
+
+  const toggleExpand = useCallback((id) => {
+    setExpandedSet(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }, []);
 
-  // Build all display nodes and edges
+  const totalTasks = tasks.filter(t => t.status !== 'production_completed' && t.status !== 'completed').length;
+  const today = useMemo(() => {
+    const d = new Date();
+    const days = ['\u05E8\u05D0\u05E9\u05D5\u05DF', '\u05E9\u05E0\u05D9', '\u05E9\u05DC\u05D9\u05E9\u05D9', '\u05E8\u05D1\u05D9\u05E2\u05D9', '\u05D7\u05DE\u05D9\u05E9\u05D9', '\u05E9\u05D9\u05E9\u05D9', '\u05E9\u05D1\u05EA'];
+    return `\u05D9\u05D5\u05DD ${days[d.getDay()]}, ${d.getDate()}/${d.getMonth() + 1}`;
+  }, []);
+
+  // Build layout: nodes + edges
   const { displayNodes, displayEdges } = useMemo(() => {
     if (!companyTree?.branches) return { displayNodes: [], displayEdges: [] };
     const nodes = [];
     const edges = [];
 
-    // All branches including P4
-    const branchEntries = Object.entries(companyTree.branches);
+    const branchKeys = Object.keys(companyTree.branches);
 
-    branchEntries.forEach(([branchId, branch]) => {
-      const dna = BRANCH_DNA[branchId] || { color: '#607D8B', dark: '#455A64', label: branchId, bg: '#ECEFF1', grad: ['#607D8B', '#455A64'] };
-      const layout = BRANCH_LAYOUT[branchId] || { angle: 0, dist: 220, emoji: '' };
-      const bx = CX + Math.cos(layout.angle) * layout.dist;
-      const by = CY + Math.sin(layout.angle) * layout.dist;
+    branchKeys.forEach((branchId, bi) => {
+      const branch = companyTree.branches[branchId];
+      const dna = BRANCH_DNA[branchId] || BRANCH_DNA.P2;
+      const branchColor = getColor(branchId, dna.color);
+      const angle = BRANCH_ANGLES[branchId] ?? (-Math.PI / 2 + bi * (2 * Math.PI / branchKeys.length));
+      const bx = CX + Math.cos(angle) * 230;
+      const by = CY + Math.sin(angle) * 230;
 
-      const branchChildren = branch.children || [];
-      const allBranchNodeIds = flattenTree({ branches: { [branchId]: branch } }).map(n => n.id);
-      const branchTaskCount = allBranchNodeIds.reduce((sum, nid) => sum + (tasksByNode[nid]?.length || 0), 0);
+      // Collect tasks for this entire branch
+      const allBranchIds = flattenTree({ branches: { [branchId]: branch } }).map(n => n.id);
+      const branchTaskCount = allBranchIds.reduce((s, nid) => s + (tasksByNode[nid]?.length || 0), 0);
       const branchClients = new Set();
-      allBranchNodeIds.forEach(nid => {
-        (tasksByNode[nid] || []).forEach(t => { if (t.client_name) branchClients.add(t.client_name); });
-      });
+      allBranchIds.forEach(nid => (tasksByNode[nid] || []).forEach(t => { if (t.client_name) branchClients.add(t.client_name); }));
 
       nodes.push({
         id: branchId, type: 'branch',
         x: bx, y: by,
-        label: dna.label,
-        branchId, color: dna.color, dark: dna.dark, bg: dna.bg, grad: dna.grad,
-        emoji: layout.emoji,
+        label: dna.label, branchId,
+        color: branchColor, bg: dna.bg, emoji: dna.emoji,
         taskCount: branchTaskCount,
         clientCount: branchClients.size,
-        angle: layout.angle,
+        isExpanded: expandedSet.has(branchId),
+        totalDescendants: (branch.children || []).reduce((s, c) => s + 1 + countDescendants(c), 0),
       });
+      edges.push({ from: { x: CX, y: CY }, to: { x: bx, y: by }, color: branchColor, w1: 9, w2: 3.5 });
 
-      edges.push({ from: { x: CX, y: CY }, to: { x: bx, y: by }, color: dna.color, w1: 10, w2: 4 });
+      if (!expandedSet.has(branchId)) return;
 
-      // Child nodes (services)
-      if (expandedBranches.has(branchId)) {
-        const childDist = 180;
-        const childCount = branchChildren.length;
-        const spread = Math.min(Math.PI * 0.9, Math.PI * 0.18 + childCount * Math.PI * 0.13);
+      const children = branch.children || [];
+      const childDist = 165;
 
-        branchChildren.forEach((child, ci) => {
-          let childAngle;
-          if (childCount === 1) {
-            childAngle = layout.angle;
-          } else {
-            const start = layout.angle - spread / 2;
-            childAngle = start + (spread * ci) / Math.max(1, childCount - 1);
-          }
-          const cx_ = bx + Math.cos(childAngle) * childDist;
-          const cy_ = by + Math.sin(childAngle) * childDist;
+      const layoutNode = (node, px, py, pAngle, depth, idx, sibCount, parentId) => {
+        const dist = depth === 1 ? childDist : 125;
+        let nodeAngle;
+        if (sibCount === 1) { nodeAngle = pAngle; }
+        else {
+          const spread = Math.min(Math.PI * 0.85, Math.PI * 0.15 + sibCount * Math.PI * 0.11);
+          nodeAngle = pAngle - spread / 2 + (spread * idx) / Math.max(1, sibCount - 1);
+        }
+        const nx = px + Math.cos(nodeAngle) * dist;
+        const ny = py + Math.sin(nodeAngle) * dist;
+        const hasChildren = node.children && node.children.length > 0;
+        const isExpanded = expandedSet.has(node.id);
+        const nodeTasks = tasksByNode[node.id] || [];
+        const nodeColor = getColor(node.id, branchColor);
 
-          const nodeTasks = tasksByNode[child.id] || [];
-          const hasSubNodes = child.children && child.children.length > 0;
+        // Count total tasks including children
+        let totalNodeTasks = nodeTasks.length;
+        if (hasChildren) {
+          const walkCount = (ch) => { for (const c of ch) { totalNodeTasks += (tasksByNode[c.id]?.length || 0); if (c.children) walkCount(c.children); } };
+          walkCount(node.children);
+        }
 
-          let subTaskCount = nodeTasks.length;
-          if (hasSubNodes) {
-            const walkChildren = (ch) => { for (const c of ch) { subTaskCount += (tasksByNode[c.id]?.length || 0); if (c.children) walkChildren(c.children); } };
-            walkChildren(child.children);
-          }
+        const statusDist = {};
+        nodeTasks.forEach(t => { const s = t.status || 'not_started'; statusDist[s] = (statusDist[s] || 0) + 1; });
 
-          const nodeClients = new Set();
-          nodeTasks.forEach(t => { if (t.client_name) nodeClients.add(t.client_name); });
-
-          const statusDist = {};
-          nodeTasks.forEach(t => { const s = t.status || 'not_started'; statusDist[s] = (statusDist[s] || 0) + 1; });
-
-          nodes.push({
-            id: child.id, type: 'service',
-            x: cx_, y: cy_,
-            label: child.label,
-            branchId, color: dna.color, dark: dna.dark, bg: dna.bg,
-            taskCount: subTaskCount,
-            clientCount: nodeClients.size,
-            stepCount: (child.steps || []).length,
-            statusDist,
-            sla_day: child.sla_day,
-            angle: childAngle,
-            tasks: nodeTasks,
-            hasSubNodes,
-          });
-
-          edges.push({ from: { x: bx, y: by }, to: { x: cx_, y: cy_ }, color: dna.color, w1: 5, w2: 2 });
-
-          // Sub-nodes
-          if (hasSubNodes && expandedBranches.has(child.id)) {
-            const subDist = 120;
-            const subCount = child.children.length;
-            const subSpread = Math.min(Math.PI * 0.5, Math.PI * 0.12 + subCount * Math.PI * 0.1);
-
-            child.children.forEach((sub, si) => {
-              const subAngle = subCount === 1 ? childAngle :
-                childAngle - subSpread / 2 + (subSpread * si) / Math.max(1, subCount - 1);
-              const sx = cx_ + Math.cos(subAngle) * subDist;
-              const sy = cy_ + Math.sin(subAngle) * subDist;
-              const subTasks = tasksByNode[sub.id] || [];
-
-              nodes.push({
-                id: sub.id, type: 'sub',
-                x: sx, y: sy,
-                label: sub.label,
-                branchId, color: dna.color, bg: dna.bg,
-                taskCount: subTasks.length,
-                stepCount: (sub.steps || []).length,
-                sla_day: sub.sla_day,
-                tasks: subTasks,
-              });
-
-              edges.push({ from: { x: cx_, y: cy_ }, to: { x: sx, y: sy }, color: dna.color, w1: 3, w2: 1.2 });
-            });
-          }
+        nodes.push({
+          id: node.id, type: hasChildren ? 'group' : 'service',
+          x: nx, y: ny,
+          label: node.label, branchId,
+          color: nodeColor, bg: dna.bg,
+          taskCount: totalNodeTasks,
+          directTasks: nodeTasks.length,
+          tasks: nodeTasks,
+          statusDist,
+          stepCount: node.steps?.length || 0,
+          sla_day: node.sla_day,
+          hasChildren, isExpanded,
+          totalDescendants: countDescendants(node),
+          depends_on: node.depends_on,
         });
+        edges.push({
+          from: { x: px, y: py }, to: { x: nx, y: ny },
+          color: nodeColor,
+          w1: depth === 1 ? 5 : 3, w2: depth === 1 ? 2 : 1.2,
+          dashed: node.depends_on && node.depends_on.length > 0,
+        });
+
+        if (hasChildren && isExpanded) {
+          node.children.forEach((child, ci) => {
+            layoutNode(child, nx, ny, nodeAngle, depth + 1, ci, node.children.length, node.id);
+          });
+        }
+      };
+
+      children.forEach((child, ci) => {
+        layoutNode(child, bx, by, angle, 1, ci, children.length, branchId);
+      });
+    });
+
+    // Custom connections
+    customConnections.forEach(cc => {
+      const fromNode = nodes.find(n => n.id === cc.from);
+      const toNode = nodes.find(n => n.id === cc.to);
+      if (fromNode && toNode) {
+        edges.push({ from: { x: fromNode.x, y: fromNode.y }, to: { x: toNode.x, y: toNode.y }, color: '#FF9800', w1: 3, w2: 1.5, custom: true, connId: cc.id });
       }
     });
 
     return { displayNodes: nodes, displayEdges: edges };
-  }, [companyTree, tasksByNode, expandedBranches]);
-
-  const toggleBranch = useCallback((branchId) => {
-    setExpandedBranches(prev => {
-      const next = new Set(prev);
-      if (next.has(branchId)) next.delete(branchId); else next.add(branchId);
-      return next;
-    });
-  }, []);
+  }, [companyTree, tasksByNode, expandedSet, customColors, customConnections]);
 
   const selectedNode = displayNodes.find(n => n.id === selectedNodeId);
-  const totalTasks = tasks.filter(t => t.status !== 'production_completed' && t.status !== 'completed').length;
 
   if (!companyTree) {
     return (
       <div className="flex items-center justify-center w-full h-full min-h-[400px]">
-        <div className="text-center">
-          <div className="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <div className="text-sm font-bold text-gray-500">טוען מפת תהליכים...</div>
-        </div>
+        <div className="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" />
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-full" style={{ minHeight: '500px', background: 'linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 50%, #FAFBFC 100%)' }}>
+    <div className="relative w-full" style={{ minHeight: '500px' }}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         className="w-full h-full"
-        style={{ maxHeight: 'calc(100vh - 160px)' }}
+        style={{ maxHeight: 'calc(100vh - 160px)', minHeight: '480px', userSelect: 'none' }}
+        dir="ltr"
         onClick={() => setSelectedNodeId(null)}
       >
         <defs>
           <filter id="ptf-shadow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="3" stdDeviation="6" floodColor="#000" floodOpacity="0.12" />
-          </filter>
-          <filter id="ptf-shadow-lg" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="0" dy="4" stdDeviation="10" floodColor="#000" floodOpacity="0.18" />
+            <feDropShadow dx="0" dy="3" stdDeviation="5" floodColor="#000" floodOpacity="0.12" />
           </filter>
           <filter id="ptf-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="10" floodColor="#1E3A5F" floodOpacity="0.35" />
+            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#4682B4" floodOpacity="0.35" />
           </filter>
-          <radialGradient id="ptf-center-grad">
-            <stop offset="0%" stopColor="#1E3A5F" />
-            <stop offset="60%" stopColor="#0D2137" />
-            <stop offset="100%" stopColor="#091520" />
-          </radialGradient>
-          <radialGradient id="ptf-center-ring">
-            <stop offset="70%" stopColor="transparent" />
-            <stop offset="100%" stopColor="#FFC10715" />
-          </radialGradient>
-          {/* Branch gradients */}
-          {Object.entries(BRANCH_DNA).map(([id, dna]) => (
-            <linearGradient key={id} id={`ptf-grad-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={dna.grad[0]} />
-              <stop offset="100%" stopColor={dna.grad[1]} />
-            </linearGradient>
-          ))}
+          <filter id="ptf-hover" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#999" floodOpacity="0.25" />
+          </filter>
+          <pattern id="ptf-dots" width="30" height="30" patternUnits="userSpaceOnUse">
+            <circle cx="15" cy="15" r="0.5" fill="#ddd" />
+          </pattern>
+          <clipPath id="ptf-hub-clip"><circle cx={CX} cy={CY} r={52} /></clipPath>
         </defs>
 
-        {/* Background subtle rings */}
-        <circle cx={CX} cy={CY} r={180} fill="none" stroke="#E0E0E0" strokeWidth={0.5} strokeDasharray="4 8" opacity={0.4} />
-        <circle cx={CX} cy={CY} r={380} fill="none" stroke="#E0E0E0" strokeWidth={0.5} strokeDasharray="4 8" opacity={0.3} />
+        {/* Background */}
+        <rect width={VB_W} height={VB_H} fill="url(#ptf-dots)" rx="12" />
 
-        {/* Organic connections */}
+        {/* Tapered connections */}
         {displayEdges.map((edge, i) => (
-          <path key={`edge-${i}`}
-            d={organicPath(edge.from.x, edge.from.y, edge.to.x, edge.to.y, edge.w1, edge.w2)}
+          <path key={`e-${i}`}
+            d={taperedPath(edge.from.x, edge.from.y, edge.to.x, edge.to.y, edge.w1, edge.w2)}
             fill={edge.color}
-            opacity={0.35}
+            opacity={edge.dashed ? 0.2 : 0.35}
+            strokeDasharray={edge.dashed ? '6 3' : 'none'}
           />
         ))}
 
-        {/* ═══ Center Hub ═══ */}
-        <circle cx={CX} cy={CY} r={72} fill="url(#ptf-center-ring)" />
-        <circle cx={CX} cy={CY} r={62} fill="url(#ptf-center-grad)" filter="url(#ptf-glow)" />
-        <circle cx={CX} cy={CY} r={62} fill="none" stroke="#FFC107" strokeWidth={2} opacity={0.4} />
-        <text x={CX} y={CY - 18} textAnchor="middle" fill="white" fontSize="18" fontWeight="900" fontFamily="system-ui">{centerLabel}</text>
-        <text x={CX} y={CY + 2} textAnchor="middle" fill="#FFC107" fontSize="14" fontWeight="800">{totalTasks} משימות להיום</text>
-        <text x={CX} y={CY + 20} textAnchor="middle" fill="white" fontSize="11" fontWeight="600" opacity="0.5">{today}</text>
+        {/* ═══ Logo Hub (center) ═══ */}
+        <circle cx={CX} cy={CY} r={58} fill="white" filter="url(#ptf-shadow)" />
+        <image
+          href={`${window.location.origin}/logo-litay.png`}
+          x={CX - 50} y={CY - 50} width={100} height={100}
+          clipPath="url(#ptf-hub-clip)"
+          preserveAspectRatio="xMidYMid slice"
+          onError={(e) => { e.target.style.display = 'none'; }}
+        />
+        <circle cx={CX} cy={CY} r={58} fill="none" stroke="#66BB6A" strokeWidth={1.5} strokeDasharray="4 3" />
+        <text x={CX} y={CY + 48} textAnchor="middle" fill="#F57C00" fontSize="12" fontWeight="800">
+          {totalTasks} \u05DE\u05E9\u05D9\u05DE\u05D5\u05EA
+        </text>
+        <text x={CX} y={CY + 62} textAnchor="middle" fill="#78909C" fontSize="9" fontWeight="600">{today}</text>
 
-        {/* ═══ Branch Cards (Filled with DNA color) ═══ */}
+        {/* ═══ Branch Cards (Ayoa-style filled rectangles) ═══ */}
         {displayNodes.filter(n => n.type === 'branch').map(node => {
           const isHovered = hoveredNodeId === node.id;
           const isSelected = selectedNodeId === node.id;
-          const isExpanded = expandedBranches.has(node.id);
-          const cardW = 155, cardH = 65;
+          const cardW = 150, cardH = 58;
           return (
             <g key={node.id}
-              onClick={(e) => { e.stopPropagation(); toggleBranch(node.id); setSelectedNodeId(node.id); }}
+              onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); setSelectedNodeId(node.id); }}
               onMouseEnter={() => setHoveredNodeId(node.id)}
               onMouseLeave={() => setHoveredNodeId(null)}
               style={{ cursor: 'pointer' }}
+              filter={isSelected ? 'url(#ptf-glow)' : isHovered ? 'url(#ptf-hover)' : 'url(#ptf-shadow)'}
             >
-              {/* Selection ring */}
-              {isSelected && (
-                <rect x={node.x - cardW/2 - 5} y={node.y - cardH/2 - 5} width={cardW + 10} height={cardH + 10} rx={18}
-                  fill="none" stroke={node.color} strokeWidth={2.5} opacity={0.5} strokeDasharray="6 4">
-                  <animate attributeName="stroke-dashoffset" from="0" to="20" dur="3s" repeatCount="indefinite" />
-                </rect>
-              )}
-              {/* Card body — FILLED with branch gradient */}
+              {/* Filled rectangle card */}
               <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={cardH} rx={14}
-                fill={`url(#ptf-grad-${node.branchId})`}
-                filter={isHovered ? 'url(#ptf-shadow-lg)' : 'url(#ptf-shadow)'}
-                stroke="white" strokeWidth={isHovered ? 2.5 : 1}
-                style={{ transition: 'all 0.2s' }}
-              />
-              {/* Branch emoji */}
-              <text x={node.x - cardW/2 + 20} y={node.y - 6} textAnchor="middle" fontSize="20">{node.emoji}</text>
-              {/* Branch label */}
-              <text x={node.x + 6} y={node.y - 10} textAnchor="middle" fill="white" fontSize="14" fontWeight="900" fontFamily="system-ui">
+                fill={node.color} stroke="white" strokeWidth={2} />
+              {/* Emoji */}
+              <text x={node.x - cardW/2 + 22} y={node.y + 1} textAnchor="middle" fontSize="16">{node.emoji}</text>
+              {/* Label */}
+              <text x={node.x + 8} y={node.y - 8} textAnchor="middle" fill="white" fontSize="14" fontWeight="900">
                 {node.branchId} {node.label}
               </text>
-              {/* Task + client count */}
-              <text x={node.x + 6} y={node.y + 10} textAnchor="middle" fill="white" fontSize="11" fontWeight="700" opacity="0.9">
-                {node.taskCount} משימות · {node.clientCount} לקוחות
+              {/* Counts */}
+              <text x={node.x + 8} y={node.y + 10} textAnchor="middle" fill="white" fontSize="10" fontWeight="700" opacity="0.85">
+                {node.taskCount} \u05DE\u05E9\u05D9\u05DE\u05D5\u05EA \u00B7 {node.clientCount} \u05DC\u05E7\u05D5\u05D7\u05D5\u05EA
               </text>
-              {/* Expand/collapse badge */}
-              <circle cx={node.x + cardW/2 - 2} cy={node.y - cardH/2 + 2} r={11}
-                fill={isExpanded ? 'white' : 'rgba(255,255,255,0.3)'} stroke="white" strokeWidth={1.5} />
+              {/* Expand badge */}
+              <circle cx={node.x + cardW/2 - 2} cy={node.y - cardH/2 + 2} r={10}
+                fill={node.isExpanded ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)'} />
               <text x={node.x + cardW/2 - 2} y={node.y - cardH/2 + 6} textAnchor="middle"
-                fontSize="14" fontWeight="900" fill={isExpanded ? node.color : 'white'}>
-                {isExpanded ? '\u2212' : '+'}
+                fill="white" fontSize="12" fontWeight="900">
+                {node.isExpanded ? '\u2212' : '+'}
               </text>
+              {/* Collapsed total badge */}
+              {!node.isExpanded && node.totalDescendants > 0 && (
+                <>
+                  <circle cx={node.x + cardW/2 + 4} cy={node.y} r={12} fill="white" stroke={node.color} strokeWidth={2} />
+                  <text x={node.x + cardW/2 + 4} y={node.y + 4} textAnchor="middle" fill={node.color} fontSize="9" fontWeight="900">
+                    +{node.totalDescendants}
+                  </text>
+                </>
+              )}
             </g>
           );
         })}
 
-        {/* ═══ Service Cards (White with color accent) ═══ */}
-        {displayNodes.filter(n => n.type === 'service').map(node => {
+        {/* ═══ Service/Group Cards (Ayoa rectangular pills) ═══ */}
+        {displayNodes.filter(n => n.type === 'service' || n.type === 'group').map(node => {
           const isHovered = hoveredNodeId === node.id;
           const isSelected = selectedNodeId === node.id;
           const hasTasks = node.taskCount > 0;
-          const cardW = 140, cardH = hasTasks ? 76 : 56;
-          const label = node.label;
+          const cardW = 130, cardH = hasTasks ? 52 : 40;
 
           return (
             <g key={node.id}
               onClick={(e) => {
                 e.stopPropagation();
-                if (node.hasSubNodes) toggleBranch(node.id);
+                if (node.hasChildren) toggleExpand(node.id);
                 setSelectedNodeId(node.id);
               }}
               onMouseEnter={() => setHoveredNodeId(node.id)}
               onMouseLeave={() => setHoveredNodeId(null)}
               style={{ cursor: 'pointer' }}
+              filter={isSelected ? 'url(#ptf-glow)' : isHovered ? 'url(#ptf-hover)' : 'url(#ptf-shadow)'}
             >
-              {isSelected && (
-                <rect x={node.x - cardW/2 - 4} y={node.y - cardH/2 - 4} width={cardW + 8} height={cardH + 8} rx={14}
-                  fill="none" stroke={node.color} strokeWidth={2} opacity={0.4} strokeDasharray="5 3" />
-              )}
               {/* Card body */}
-              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={cardH} rx={12}
-                fill="white" stroke={hasTasks ? node.color : '#D0D5DD'}
-                strokeWidth={isHovered || isSelected ? 2.5 : 1.5}
-                filter="url(#ptf-shadow)"
-                style={{ transition: 'all 0.15s' }}
-              />
-              {/* Color accent — top bar */}
-              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={6} rx={3}
+              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={cardH} rx={cardH/2}
+                fill={node.bg} stroke={node.color} strokeWidth={isSelected ? 3 : 1.5} />
+              {/* Color accent left bar */}
+              <rect x={node.x - cardW/2 + 3} y={node.y - cardH/2 + 6} width={4} height={cardH - 12} rx={2}
                 fill={node.color} />
               {/* Label */}
-              <text x={node.x} y={node.y - cardH/2 + 24} textAnchor="middle" fontSize="12" fontWeight="800" fill="#1E293B">
-                {label.length > 16 ? label.substring(0, 15) + '...' : label}
+              <text x={node.x + 4} y={node.y - (hasTasks ? 6 : 1)} textAnchor="middle" fill="#333" fontSize="11" fontWeight="800">
+                {node.label.length > 15 ? node.label.substring(0, 14) + '\u2026' : node.label}
               </text>
-              {/* Step count + SLA */}
+              {/* Meta line: steps + SLA */}
               {(node.stepCount > 0 || node.sla_day) && (
-                <text x={node.x} y={node.y - cardH/2 + 38} textAnchor="middle" fontSize="9" fontWeight="600" fill="#90A4AE">
-                  {node.stepCount > 0 ? `${node.stepCount} שלבים` : ''}
-                  {node.stepCount > 0 && node.sla_day ? ' · ' : ''}
+                <text x={node.x + 4} y={node.y + (hasTasks ? 5 : 10)} textAnchor="middle" fill="#999" fontSize="8" fontWeight="600">
+                  {node.stepCount > 0 ? `${node.stepCount} \u05E9\u05DC\u05D1\u05D9\u05DD` : ''}
+                  {node.stepCount > 0 && node.sla_day ? ' \u00B7 ' : ''}
                   {node.sla_day ? `SLA: ${node.sla_day}` : ''}
                 </text>
               )}
               {/* Task count badge */}
               {hasTasks && (
                 <>
-                  <circle cx={node.x + cardW/2 - 4} cy={node.y - cardH/2 + 4} r={12}
+                  <circle cx={node.x + cardW/2 - 2} cy={node.y - cardH/2 + 2} r={11}
                     fill={node.color} stroke="white" strokeWidth={2} />
-                  <text x={node.x + cardW/2 - 4} y={node.y - cardH/2 + 8}
-                    textAnchor="middle" fontSize="10" fontWeight="900" fill="white">
+                  <text x={node.x + cardW/2 - 2} y={node.y - cardH/2 + 6}
+                    textAnchor="middle" fill="white" fontSize="9" fontWeight="900">
                     {node.taskCount}
                   </text>
                 </>
               )}
-              {/* Status bar */}
-              {hasTasks && node.statusDist && (
+              {/* Status mini-bar */}
+              {hasTasks && node.statusDist && Object.keys(node.statusDist).length > 0 && (
                 <g>
                   {(() => {
                     const statuses = Object.entries(node.statusDist);
                     const total = statuses.reduce((s, [, c]) => s + c, 0);
-                    const barW = cardW - 24;
-                    const barY = node.y + cardH/2 - 16;
+                    const barW = cardW - 28;
+                    const barY = node.y + cardH/2 - 10;
                     let offset = 0;
-                    return statuses.map(([status, count], si) => {
+                    return statuses.map(([st, count], si) => {
                       const w = (count / total) * barW;
-                      const x = node.x - cardW/2 + 12 + offset;
+                      const x = node.x - cardW/2 + 14 + offset;
                       offset += w;
-                      return (
-                        <rect key={si} x={x} y={barY} width={Math.max(3, w)} height={6} rx={3}
-                          fill={STATUS_COLORS[status] || '#90A4AE'} />
-                      );
+                      return <rect key={si} x={x} y={barY} width={Math.max(3, w)} height={4} rx={2} fill={STATUS_COLORS[st] || '#90A4AE'} />;
                     });
                   })()}
                 </g>
               )}
-              {/* Expand indicator for sub-nodes */}
-              {node.hasSubNodes && (
+              {/* Expand indicator for groups */}
+              {node.hasChildren && (
                 <>
-                  <circle cx={node.x + cardW/2 - 6} cy={node.y + cardH/2 - 6} r={8}
-                    fill={expandedBranches.has(node.id) ? node.color : '#E8E8E8'} stroke="white" strokeWidth={1} />
-                  <text x={node.x + cardW/2 - 6} y={node.y + cardH/2 - 3}
-                    textAnchor="middle" fontSize="11" fontWeight="900"
-                    fill={expandedBranches.has(node.id) ? 'white' : '#666'}>
-                    {expandedBranches.has(node.id) ? '\u25BC' : '\u25B6'}
-                  </text>
-                </>
-              )}
-            </g>
-          );
-        })}
-
-        {/* ═══ Sub-nodes (compact cards) ═══ */}
-        {displayNodes.filter(n => n.type === 'sub').map(node => {
-          const isHovered = hoveredNodeId === node.id;
-          const isSelected = selectedNodeId === node.id;
-          const hasTasks = node.taskCount > 0;
-          const cardW = 110, cardH = 42;
-
-          return (
-            <g key={node.id}
-              onClick={(e) => { e.stopPropagation(); setSelectedNodeId(node.id); }}
-              onMouseEnter={() => setHoveredNodeId(node.id)}
-              onMouseLeave={() => setHoveredNodeId(null)}
-              style={{ cursor: 'pointer' }}
-            >
-              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={cardH} rx={10}
-                fill={isSelected ? node.bg : 'white'} stroke={hasTasks ? node.color : '#DDD'}
-                strokeWidth={isHovered || isSelected ? 2 : 1}
-                filter="url(#ptf-shadow)" />
-              {/* Color accent left */}
-              <rect x={node.x - cardW/2} y={node.y - cardH/2 + 4} width={4} height={cardH - 8} rx={2}
-                fill={node.color} />
-              <text x={node.x + 2} y={node.y + 1} textAnchor="middle" fontSize="10" fontWeight="700" fill="#333">
-                {node.label.length > 14 ? node.label.substring(0, 13) + '...' : node.label}
-              </text>
-              {hasTasks && (
-                <>
-                  <circle cx={node.x + cardW/2 - 4} cy={node.y - cardH/2 + 4} r={8}
-                    fill={node.color} stroke="white" strokeWidth={1.5} />
-                  <text x={node.x + cardW/2 - 4} y={node.y - cardH/2 + 8}
-                    textAnchor="middle" fontSize="8" fontWeight="900" fill="white">
-                    {node.taskCount}
-                  </text>
-                </>
-              )}
-              {node.sla_day && (
-                <>
-                  <rect x={node.x - cardW/2 + 8} y={node.y + cardH/2 - 18} width={30} height={13} rx={4}
-                    fill="#FFF3E0" stroke="#FF9800" strokeWidth={0.5} />
-                  <text x={node.x - cardW/2 + 23} y={node.y + cardH/2 - 9}
-                    textAnchor="middle" fontSize="7" fontWeight="800" fill="#E65100">
-                    SLA:{node.sla_day}
+                  <circle cx={node.x + cardW/2 - 4} cy={node.y + cardH/2 - 4} r={7}
+                    fill={node.isExpanded ? node.color : '#E0E0E0'} />
+                  <text x={node.x + cardW/2 - 4} y={node.y + cardH/2 - 1} textAnchor="middle"
+                    fill={node.isExpanded ? 'white' : '#666'} fontSize="9" fontWeight="900">
+                    {node.isExpanded ? '\u25BC' : '\u25B6'}
                   </text>
                 </>
               )}
@@ -530,34 +452,26 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
 
       {/* ═══ Selected Node Detail Panel ═══ */}
       {selectedNode && selectedNode.tasks && selectedNode.tasks.length > 0 && (
-        <div className="absolute top-4 left-4 w-80 bg-white rounded-2xl shadow-2xl border overflow-hidden z-20"
-          style={{ borderColor: selectedNode.color, borderWidth: '2px' }}>
-          <div className="px-4 py-3 text-white font-black text-sm flex items-center justify-between"
-            style={{ background: `linear-gradient(135deg, ${selectedNode.color}, ${selectedNode.dark || selectedNode.color})` }}>
+        <div className="absolute top-3 left-3 w-80 bg-white rounded-2xl shadow-2xl border-2 overflow-hidden" style={{ zIndex: 20, borderColor: selectedNode.color }}>
+          <div className="px-4 py-2.5 text-white font-black text-sm flex items-center justify-between"
+            style={{ backgroundColor: selectedNode.color }}>
             <span>{selectedNode.label}</span>
-            <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs">{selectedNode.tasks.length} משימות</span>
+            <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs">{selectedNode.tasks.length}</span>
           </div>
-          <div className="max-h-56 overflow-y-auto divide-y divide-gray-50">
+          <div className="max-h-52 overflow-y-auto divide-y divide-gray-50">
             {selectedNode.tasks.map(task => (
-              <div key={task.id} className="px-4 py-2.5 hover:bg-gray-50 transition-colors">
+              <div key={task.id} className="px-3 py-2 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white"
-                    style={{ backgroundColor: STATUS_COLORS[task.status] || '#90A4AE' }} />
-                  <span className="text-xs font-bold text-gray-800 truncate flex-1">{task.title}</span>
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_COLORS[task.status] || '#90A4AE' }} />
+                  <span className="text-[11px] font-bold text-gray-800 truncate flex-1">{task.title}</span>
                 </div>
-                <div className="flex items-center gap-3 mr-4 mt-1">
-                  {task.client_name && (
-                    <span className="text-[10px] text-gray-500">{task.client_name}</span>
-                  )}
-                  {task.due_date && (
-                    <span className="text-[10px] text-orange-500 font-medium">{task.due_date}</span>
-                  )}
-                  {task.status && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold"
-                      style={{ backgroundColor: (STATUS_COLORS[task.status] || '#90A4AE') + '15', color: STATUS_COLORS[task.status] }}>
-                      {STATUS_LABELS[task.status] || task.status}
-                    </span>
-                  )}
+                <div className="flex items-center gap-2 mr-3 mt-0.5">
+                  {task.client_name && <span className="text-[10px] text-gray-500">{task.client_name}</span>}
+                  {task.due_date && <span className="text-[10px] text-orange-500 font-medium">{task.due_date}</span>}
+                  <span className="text-[9px] px-1.5 py-0.5 rounded font-bold"
+                    style={{ backgroundColor: (STATUS_COLORS[task.status] || '#90A4AE') + '15', color: STATUS_COLORS[task.status] }}>
+                    {STATUS_LABELS[task.status] || task.status}
+                  </span>
                 </div>
               </div>
             ))}
@@ -565,15 +479,104 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
         </div>
       )}
 
-      {/* Legend */}
-      <div className="absolute bottom-3 right-3 flex items-center gap-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border">
-        <span className="text-[10px] font-bold text-gray-500">V4.3</span>
+      {/* ═══ Design Editor ═══ */}
+      <button onClick={() => setShowEditor(!showEditor)}
+        className="absolute top-3 right-3 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all z-20"
+        style={{ backgroundColor: showEditor ? '#E91E63' : 'white', color: showEditor ? 'white' : '#666', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        {showEditor ? 'X \u05E1\u05D2\u05D5\u05E8' : '\u270F\uFE0F \u05E2\u05D5\u05E8\u05DA \u05E2\u05D9\u05E6\u05D5\u05D1'}
+      </button>
+
+      {showEditor && (
+        <div className="absolute top-12 right-3 w-72 bg-white rounded-2xl shadow-2xl border overflow-hidden" style={{ zIndex: 30 }} dir="rtl">
+          <div className="px-4 py-2.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-black text-sm">
+            \u05E2\u05D5\u05E8\u05DA \u05E2\u05D9\u05E6\u05D5\u05D1
+          </div>
+          <div className="p-3 space-y-3 max-h-80 overflow-y-auto">
+            {/* Branch colors */}
+            <div>
+              <div className="text-[11px] font-bold text-gray-600 mb-1.5">\u05E6\u05D1\u05E2\u05D9 \u05E2\u05E0\u05E4\u05D9\u05DD</div>
+              {Object.entries(BRANCH_DNA).map(([id, dna]) => (
+                <div key={id} className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[11px] font-bold w-24" style={{ color: getColor(id, dna.color) }}>{id} {dna.label}</span>
+                  <input type="color" value={customColors[id] || dna.color}
+                    onChange={(e) => setCustomColors(prev => ({ ...prev, [id]: e.target.value }))}
+                    className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
+                  {customColors[id] && (
+                    <button onClick={() => setCustomColors(prev => { const n = { ...prev }; delete n[id]; return n; })}
+                      className="text-[9px] text-gray-400 hover:text-red-500">\u05D0\u05D9\u05E4\u05D5\u05E1</button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Node color overrides */}
+            <div>
+              <div className="text-[11px] font-bold text-gray-600 mb-1.5">\u05E6\u05D1\u05E2 \u05E6\u05D5\u05DE\u05EA</div>
+              <div className="flex gap-1 flex-wrap">
+                {Object.keys(nodeMap).slice(0, 20).map(nid => {
+                  const node = nodeMap[nid];
+                  const dna = BRANCH_DNA[node.branch] || BRANCH_DNA.P2;
+                  return (
+                    <button key={nid}
+                      onClick={() => setEditingNodeColor(editingNodeColor === nid ? null : nid)}
+                      className="px-2 py-0.5 rounded-lg text-[8px] font-bold"
+                      style={{ backgroundColor: editingNodeColor === nid ? getColor(nid, dna.color) : dna.bg, color: editingNodeColor === nid ? 'white' : dna.color }}>
+                      {node.label?.substring(0, 6)}
+                    </button>
+                  );
+                })}
+              </div>
+              {editingNodeColor && (
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] text-gray-500">{nodeMap[editingNodeColor]?.label}:</span>
+                  {COLOR_PALETTE.map(c => (
+                    <button key={c} onClick={() => setCustomColors(prev => ({ ...prev, [editingNodeColor]: c }))}
+                      className="w-5 h-5 rounded-full border-2"
+                      style={{ backgroundColor: c, borderColor: customColors[editingNodeColor] === c ? '#333' : 'transparent' }} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Custom connections */}
+            <div>
+              <div className="text-[11px] font-bold text-gray-600 mb-1.5">\u05D7\u05D9\u05D1\u05D5\u05E8\u05D9\u05DD \u05DE\u05D5\u05EA\u05D0\u05DE\u05D9\u05DD</div>
+              {customConnections.map(cc => (
+                <div key={cc.id} className="flex items-center gap-2 mb-1 text-[10px]">
+                  <span className="text-gray-600">{nodeMap[cc.from]?.label || cc.from} \u2190 {nodeMap[cc.to]?.label || cc.to}</span>
+                  <button onClick={() => setCustomConnections(prev => prev.filter(c => c.id !== cc.id))}
+                    className="text-red-400 hover:text-red-600 font-bold">X</button>
+                </div>
+              ))}
+              <div className="flex gap-1 mt-1">
+                <select id="ptf-cc-from" className="text-[10px] border rounded px-1 py-0.5 flex-1">
+                  <option value="">\u05DE...</option>
+                  {Object.keys(nodeMap).map(nid => <option key={nid} value={nid}>{nodeMap[nid].label}</option>)}
+                </select>
+                <select id="ptf-cc-to" className="text-[10px] border rounded px-1 py-0.5 flex-1">
+                  <option value="">\u05D0\u05DC...</option>
+                  {Object.keys(nodeMap).map(nid => <option key={nid} value={nid}>{nodeMap[nid].label}</option>)}
+                </select>
+                <button onClick={() => {
+                  const f = document.getElementById('ptf-cc-from')?.value;
+                  const t = document.getElementById('ptf-cc-to')?.value;
+                  if (f && t && f !== t) setCustomConnections(prev => [...prev, { from: f, to: t, id: `cc-${Date.now()}` }]);
+                }} className="px-2 py-0.5 bg-purple-500 text-white rounded text-[10px] font-bold">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Legend bar */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white/95 backdrop-blur-sm rounded-xl px-4 py-2 shadow-sm border" style={{ zIndex: 10 }}>
         {Object.entries(BRANCH_DNA).map(([id, dna]) => (
           <div key={id} className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ background: `linear-gradient(135deg, ${dna.grad[0]}, ${dna.grad[1]})` }} />
-            <span className="text-[9px] font-bold" style={{ color: dna.color }}>{id}</span>
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: getColor(id, dna.color) }} />
+            <span className="text-[9px] font-bold" style={{ color: getColor(id, dna.color) }}>{id}</span>
           </div>
         ))}
+        <span className="text-[10px] text-gray-400">V4.3</span>
       </div>
     </div>
   );

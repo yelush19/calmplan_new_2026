@@ -252,7 +252,22 @@ export default function ClientsDashboardPage() {
     let result = clients;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(c => c.name?.toLowerCase().includes(term));
+      result = result.filter(c => {
+        if (c.name?.toLowerCase().includes(term)) return true;
+        if (c.entity_number && String(c.entity_number).toLowerCase().includes(term)) return true;
+        // Tax info fields
+        const ti = c.tax_info || {};
+        const taxFields = [
+          ti.tax_id, ti.vat_file_number, ti.tax_deduction_file_number,
+          ti.social_security_file_number, ti.income_tax_file_number,
+          ti.annual_tax_ids?.deductions_id, ti.annual_tax_ids?.social_security_id,
+          ti.annual_tax_ids?.tax_advances_id,
+        ];
+        if (taxFields.some(v => v && String(v).toLowerCase().includes(term))) return true;
+        // Contacts
+        if (c.contacts?.some(ct => ct.name?.toLowerCase().includes(term) || ct.email?.toLowerCase().includes(term) || ct.phone?.toLowerCase().includes(term))) return true;
+        return false;
+      });
     }
     if (statusFilter.length > 0) {
       result = result.filter(client => {
