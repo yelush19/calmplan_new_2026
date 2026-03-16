@@ -123,7 +123,97 @@ export const ADDITIONAL_SERVICES = {
     steps: [
       { key: 'income_input',   label: 'קליטת הכנסות',  icon: 'download' },
       { key: 'expense_input',  label: 'קליטת הוצאות',  icon: 'download', allowMultiple: true },
-      { key: 'reconciliation', label: 'התאמות',         icon: 'check-square' },
+    ],
+  },
+
+  // V4.0 parent grouping nodes
+  bookkeeping_production: {
+    key: 'bookkeeping_production',
+    label: 'ייצור',
+    dashboard: 'tax',
+    taskCategories: ['ייצור הנה"ח', 'work_bookkeeping_production'],
+    createCategory: 'ייצור הנה"ח',
+    steps: [],
+  },
+
+  bookkeeping_reporting: {
+    key: 'bookkeeping_reporting',
+    label: 'דיווחים',
+    dashboard: 'tax',
+    taskCategories: ['דיווחים', 'work_bookkeeping_reporting'],
+    createCategory: 'דיווחים',
+    steps: [],
+  },
+
+  bookkeeping_closing: {
+    key: 'bookkeeping_closing',
+    label: 'סגירה',
+    dashboard: 'tax',
+    taskCategories: ['סגירה', 'work_bookkeeping_closing'],
+    createCategory: 'סגירה',
+    steps: [],
+  },
+
+  payroll_ancillary: {
+    key: 'payroll_ancillary',
+    label: 'שירותים נלווים לשכר',
+    dashboard: 'payroll',
+    taskType: 'linear',
+    taskCategories: ['שירותים נלווים לשכר', 'work_payroll_ancillary'],
+    createCategory: 'שירותים נלווים לשכר',
+    steps: [
+      { key: 'payslip_sending', label: 'משלוח תלושים',     icon: 'send' },
+      { key: 'masav_employees', label: 'מס"ב עובדים',      icon: 'upload' },
+      { key: 'masav_social',    label: 'מס"ב סוציאליות',   icon: 'upload' },
+    ],
+  },
+
+  payroll_authorities: {
+    key: 'payroll_authorities',
+    label: 'רשויות שכר',
+    dashboard: 'payroll',
+    taskCategories: ['רשויות שכר', 'work_payroll_authorities'],
+    createCategory: 'רשויות שכר',
+    steps: [],
+  },
+
+  pnl_reports: {
+    key: 'pnl_reports',
+    label: 'רווח והפסד',
+    dashboard: 'tax',
+    taskCategories: ['רווח והפסד', 'רוו"ה', 'work_pnl'],
+    createCategory: 'רווח והפסד',
+    steps: [
+      { key: 'report_generation', label: 'הפקת דוח', icon: 'file-text' },
+    ],
+  },
+
+  office: {
+    key: 'office',
+    label: 'משרד',
+    dashboard: 'admin',
+    taskCategories: ['משרד', 'work_office'],
+    createCategory: 'משרד',
+    steps: [
+      { key: 'task', label: 'ביצוע', icon: 'check-circle' },
+    ],
+  },
+
+  personal_reports: {
+    key: 'personal_reports',
+    label: 'דוחות אישיים',
+    dashboard: 'annual_reports',
+    branch: 'P5',
+    taskCategories: ['דוחות אישיים', 'work_personal_reports'],
+    createCategory: 'דוחות אישיים',
+    steps: [
+      { key: 'gather_materials',    label: 'איסוף חומרים',     icon: 'inbox' },
+      { key: 'data_entry',          label: 'קליטת נתונים',     icon: 'download' },
+      { key: 'base_reconciliation', label: 'התאמות יסוד',     icon: 'check-square' },
+      { key: 'sanity_check',        label: 'בדיקת סבירות',    icon: 'eye' },
+      { key: 'review',              label: 'סקירה',           icon: 'eye' },
+      { key: 'final_close',         label: 'סגירה',           icon: 'check-circle' },
+      { key: 'submission',          label: 'הגשה',            icon: 'send' },
     ],
   },
 
@@ -185,28 +275,15 @@ export const ADDITIONAL_SERVICES = {
     branch: 'P5',
     taskCategories: ['דוח שנתי', 'work_annual_reports'],
     createCategory: 'דוח שנתי',
-    supportsComplexity: true,
-    steps: [],
-    // Extended steps for High complexity balance sheets
-    highComplexitySteps: [
-      { key: 'gather_materials',   label: 'איסוף חומרים',         icon: 'inbox' },
-      { key: 'data_entry',         label: 'קליטת נתונים',         icon: 'download' },
-      { key: 'base_reconciliation', label: 'התאמות יסוד',         icon: 'check-square' },
-      { key: 'sanity_check',       label: 'בדיקת סבירות',        icon: 'eye' },
-      { key: 'review',             label: 'סקירה',               icon: 'eye' },
-      { key: 'final_close',        label: 'סגירה',               icon: 'check-circle' },
-      { key: 'submission',         label: 'הגשה',                icon: 'send' },
+    steps: [
+      { key: 'gather_materials',   label: 'איסוף חומרים',    icon: 'inbox' },
+      { key: 'data_entry',         label: 'קליטת נתונים',    icon: 'download' },
+      { key: 'base_reconciliation', label: 'התאמות יסוד',    icon: 'check-square' },
+      { key: 'sanity_check',       label: 'בדיקת סבירות',   icon: 'eye' },
+      { key: 'review',             label: 'סקירה',          icon: 'eye' },
+      { key: 'final_close',        label: 'סגירה',          icon: 'check-circle' },
+      { key: 'submission',         label: 'הגשה',           icon: 'send' },
     ],
-  },
-
-  capital_statement: {
-    key: 'capital_statement',
-    label: 'הצהרת הון',
-    dashboard: 'annual_reports',
-    branch: 'P5',
-    taskCategories: ['הצהרת הון', 'work_capital_statement'],
-    createCategory: 'הצהרת הון',
-    steps: [],
   },
 
   income_collection: {
