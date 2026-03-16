@@ -952,6 +952,14 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     return result;
   }, [clients]);
 
+  // Detect clients with BOTH P1_operator AND P1_taml enabled (should be mutually exclusive)
+  const duplicateClients = useMemo(() => {
+    return clients.filter(c => {
+      const tree = c.process_tree || {};
+      return tree.P1_operator?.enabled && tree.P1_taml?.enabled;
+    });
+  }, [clients]);
+
   if (isLoading) {
     return (
       <Card className="border-0 shadow-lg">
@@ -983,6 +991,28 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
+          {/* Duplicate alert — clients with both מתפעל AND טמל enabled */}
+          {duplicateClients.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-red-700">
+                  כפילות: {duplicateClients.length} לקוחות עם גם מתפעל וגם טמל פעילים
+                </p>
+                <p className="text-xs text-red-600 mt-1">
+                  פנסיות וקרנות — יש לבחור נתיב אחד בלבד (מתפעל או טמל). כנסי לכרטיס לקוח ובטלי את הנתיב שלא רלוונטי.
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {duplicateClients.map(c => (
+                    <span key={c.id} className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">
+                      {c.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Branch summary — grouped under P1/P2 headers */}
           <div className="space-y-4">
             {branchSummary.map((branch) => (
