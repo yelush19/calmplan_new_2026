@@ -26,7 +26,7 @@ import { Table, Loader2 } from 'lucide-react';
 const DNA_ACCENTS = {
   P1: '#00A3E0',
   P2: '#B2AC88',
-  P3: '#E91E63',
+  P3: '#F59E0B',
   P4: '#FFC107',
 };
 

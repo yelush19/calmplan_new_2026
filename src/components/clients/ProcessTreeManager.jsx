@@ -46,7 +46,7 @@ import { inferClientServices, mergeInferredNodes } from '@/services/inferClientS
 const BRANCH_COLORS = {
   P1: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800', dot: 'bg-blue-500' },
   P2: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
-  P3: { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-700', badge: 'bg-pink-100 text-pink-800', dot: 'bg-pink-500' },
+  P3: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
   P5: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-100 text-green-800', dot: 'bg-green-500' },
 };
 
@@ -267,7 +267,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
   const depthAccentColors = {
     P1: { line: 'border-blue-300', inset: 'shadow-blue-400', dashedBorder: 'border-blue-200' },
     P2: { line: 'border-amber-300', inset: 'shadow-amber-400', dashedBorder: 'border-amber-200' },
-    P3: { line: 'border-pink-300', inset: 'shadow-pink-400', dashedBorder: 'border-pink-200' },
+    P3: { line: 'border-amber-300', inset: 'shadow-amber-400', dashedBorder: 'border-amber-200' },
     P5: { line: 'border-green-300', inset: 'shadow-green-400', dashedBorder: 'border-green-200' },
   };
   const accent = depthAccentColors[branchId] || { line: 'border-gray-300', inset: 'shadow-gray-400', dashedBorder: 'border-gray-200' };
@@ -539,7 +539,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddChild(); if (e.key === 'Escape') setAddingChild(false); }}
           />
           <Button type="button" size="sm" onClick={handleAddChild} disabled={!newChildName.trim()}
-            className={`h-6 px-2 text-[10px] text-white ${branchId === 'P1' ? 'bg-blue-600' : branchId === 'P2' ? 'bg-amber-600' : branchId === 'P3' ? 'bg-pink-600' : branchId === 'P5' ? 'bg-green-600' : 'bg-purple-600'}`}>
+            className={`h-6 px-2 text-[10px] text-white ${branchId === 'P1' ? 'bg-blue-600' : branchId === 'P2' ? 'bg-amber-600' : branchId === 'P3' ? 'bg-amber-600' : branchId === 'P5' ? 'bg-green-600' : 'bg-purple-600'}`}>
             <Plus className="w-3 h-3" /> הוסף
           </Button>
           <button type="button" onClick={() => setAddingChild(false)} className="text-gray-400"><X className="w-3.5 h-3.5" /></button>
@@ -974,7 +974,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
             type="button"
             size="sm"
             onClick={handleInferServices}
-            className="text-xs h-7 bg-gradient-to-l from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
+            className="text-xs h-7 bg-gradient-to-l from-purple-500 to-amber-500 text-white hover:from-purple-600 hover:to-amber-600"
             disabled={!clientData}
             title="הסק שירותים אוטומטית מנתוני הלקוח"
           >

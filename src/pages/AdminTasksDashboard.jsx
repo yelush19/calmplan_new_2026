@@ -369,7 +369,7 @@ export default function AdminTasksDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : (
-        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="ניהול" centerSub="P3" accentColor="#E91E63" onEditTask={setEditingTask}>
+        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="ניהול" centerSub="P3" accentColor="#F59E0B" onEditTask={setEditingTask}>
         {Object.keys(serviceData).length > 0 ? (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {

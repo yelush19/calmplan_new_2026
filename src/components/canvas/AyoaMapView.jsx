@@ -26,7 +26,7 @@ const VB_W = 1400, VB_H = 900;
 const CX = VB_W / 2, CY = VB_H / 2;
 
 const DNA_DEFAULTS = {
-  P1: '#00A3E0', P2: '#4682B4', P3: '#E91E63', P4: '#FFC107', P5: '#2E7D32',
+  P1: '#00A3E0', P2: '#4682B4', P3: '#F59E0B', P4: '#FFC107', P5: '#2E7D32',
 };
 
 function getCategoryColor(category, branchColors) {

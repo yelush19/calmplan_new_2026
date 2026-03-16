@@ -44,7 +44,7 @@ import { toast } from '@/components/ui/use-toast';
 const BRANCH_PALETTE = [
   { color: '#00A3E0', icon: '💰' }, // P1 blue
   { color: '#4682B4', icon: '📊' }, // P2 steel blue
-  { color: '#E91E63', icon: '📋' }, // P3 pink
+  { color: '#F59E0B', icon: '📋' }, // P3 amber
   { color: '#2E7D32', icon: '📈' }, // P5 green
   { color: '#9C27B0', icon: '🔮' }, // P6 purple
   { color: '#FF5722', icon: '🔥' }, // P7 deep orange
@@ -53,7 +53,7 @@ const BRANCH_PALETTE = [
 ];
 
 function getColorForBranch(branchId, index) {
-  const knownColors = { P1: '#00A3E0', P2: '#4682B4', P3: '#E91E63', P5: '#2E7D32' };
+  const knownColors = { P1: '#00A3E0', P2: '#4682B4', P3: '#F59E0B', P5: '#2E7D32' };
   if (knownColors[branchId]) return knownColors[branchId];
   return BRANCH_PALETTE[(index || 0) % BRANCH_PALETTE.length].color;
 }

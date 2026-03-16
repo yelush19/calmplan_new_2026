@@ -48,10 +48,10 @@ const P_BRANCHES = {
   P3: {
     key: 'P3',
     label: 'P3 | ניהול ותכנון',
-    color: 'bg-pink-100 text-pink-800',
-    accent: 'border-pink-400',
-    bgSoft: 'bg-pink-50',
-    dot: 'bg-pink-500',
+    color: 'bg-amber-100 text-amber-800',
+    accent: 'border-amber-400',
+    bgSoft: 'bg-amber-50',
+    dot: 'bg-amber-500',
     order: 3,
     categories: ['התאמות חשבונות', 'אדמיניסטרציה', 'משרד'],
   },
@@ -84,6 +84,8 @@ const P_BRANCHES = {
 const REPORT_CATEGORIES = {
   'שכר': {
     label: 'שכר',
+    emoji: '💰',
+    cardColor: '#0EA5E9',
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -98,6 +100,8 @@ const REPORT_CATEGORIES = {
   },
   'ביטוח לאומי': {
     label: 'ביטוח לאומי — דיווח',
+    emoji: '🏛️',
+    cardColor: '#F43F5E',
     icon: Building,
     color: 'bg-rose-100 text-rose-800',
     accent: 'border-rose-400',
@@ -113,6 +117,8 @@ const REPORT_CATEGORIES = {
   },
   'ניכויים': {
     label: 'ניכויים — דיווח',
+    emoji: '📋',
+    cardColor: '#F59E0B',
     icon: FileText,
     color: 'bg-amber-100 text-amber-800',
     accent: 'border-amber-400',
@@ -128,6 +134,8 @@ const REPORT_CATEGORIES = {
   },
   'מע"מ': {
     label: 'מע"מ',
+    emoji: '🧾',
+    cardColor: '#8B5CF6',
     icon: Calculator,
     color: 'bg-purple-100 text-purple-800',
     accent: 'border-purple-400',
@@ -142,6 +150,8 @@ const REPORT_CATEGORIES = {
   },
   'מקדמות מס': {
     label: 'מקדמות מס',
+    emoji: '📊',
+    cardColor: '#14B8A6',
     icon: Building,
     color: 'bg-teal-100 text-teal-800',
     accent: 'border-teal-400',
@@ -156,6 +166,8 @@ const REPORT_CATEGORIES = {
   },
   'דוח רו"ה': {
     label: 'דוח רו"ה חודשי',
+    emoji: '📈',
+    cardColor: '#6366F1',
     icon: FileText,
     color: 'bg-indigo-100 text-indigo-800',
     accent: 'border-indigo-400',
@@ -171,11 +183,13 @@ const REPORT_CATEGORIES = {
   // ── P3: Account Reconciliation (depends on P2 completion) ──
   'התאמות חשבונות': {
     label: 'התאמות חשבונות',
+    emoji: '🔍',
+    cardColor: '#F59E0B',
     icon: FileText,
-    color: 'bg-pink-100 text-pink-800',
-    accent: 'border-pink-400',
-    bgSoft: 'bg-pink-50',
-    dot: 'bg-pink-500',
+    color: 'bg-amber-100 text-amber-800',
+    accent: 'border-amber-400',
+    bgSoft: 'bg-amber-50',
+    dot: 'bg-amber-500',
     frequencyField: 'pnl_frequency',
     serviceTypeKey: 'reconciliation',
     treeNodeId: 'P2_reconciliation',
@@ -187,6 +201,8 @@ const REPORT_CATEGORIES = {
   // ── P5: Annual Reports (yearly — May 31 deadline) ──
   'דוח שנתי': {
     label: 'דוח שנתי / מאזן',
+    emoji: '📑',
+    cardColor: '#10B981',
     icon: FileText,
     color: 'bg-green-100 text-green-800',
     accent: 'border-green-400',
@@ -208,6 +224,8 @@ const REPORT_CATEGORIES = {
   // ── P1: Additional payroll nodes ──
   'משלוח תלושים': {
     label: 'משלוח תלושים',
+    emoji: '📨',
+    cardColor: '#06B6D4',
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -222,6 +240,8 @@ const REPORT_CATEGORIES = {
   },
   'מס"ב עובדים': {
     label: 'מס"ב עובדים',
+    emoji: '🏦',
+    cardColor: '#3B82F6',
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -236,6 +256,8 @@ const REPORT_CATEGORIES = {
   },
   'מתפעל': {
     label: 'פנסיות — מתפעל',
+    emoji: '🤝',
+    cardColor: '#0891B2',
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -250,6 +272,8 @@ const REPORT_CATEGORIES = {
   },
   'טמל + לקוח': {
     label: 'פנסיות — טמל',
+    emoji: '📤',
+    cardColor: '#0E7490',
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -264,6 +288,8 @@ const REPORT_CATEGORIES = {
   },
   'קליטה להנה"ח': {
     label: 'קליטה להנה"ח',
+    emoji: '📥',
+    cardColor: '#2563EB',
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -280,6 +306,8 @@ const REPORT_CATEGORIES = {
   // ── P2: Additional bookkeeping nodes ──
   'קליטת הכנסות': {
     label: 'קליטת הכנסות',
+    emoji: '💵',
+    cardColor: '#7C3AED',
     icon: Calculator,
     color: 'bg-purple-100 text-purple-800',
     accent: 'border-purple-400',
@@ -294,6 +322,8 @@ const REPORT_CATEGORIES = {
   },
   'קליטת הוצאות': {
     label: 'קליטת הוצאות',
+    emoji: '💳',
+    cardColor: '#9333EA',
     icon: Calculator,
     color: 'bg-purple-100 text-purple-800',
     accent: 'border-purple-400',
@@ -308,6 +338,8 @@ const REPORT_CATEGORIES = {
   },
   'מס"ב ספקים': {
     label: 'מס"ב ספקים',
+    emoji: '🏧',
+    cardColor: '#A855F7',
     icon: Calculator,
     color: 'bg-purple-100 text-purple-800',
     accent: 'border-purple-400',
@@ -324,11 +356,13 @@ const REPORT_CATEGORIES = {
   // ── P3: Admin nodes ──
   'אדמיניסטרציה': {
     label: 'אדמיניסטרציה',
+    emoji: '📁',
+    cardColor: '#F97316',
     icon: FileText,
-    color: 'bg-pink-100 text-pink-800',
-    accent: 'border-pink-400',
-    bgSoft: 'bg-pink-50',
-    dot: 'bg-pink-500',
+    color: 'bg-orange-100 text-orange-800',
+    accent: 'border-amber-400',
+    bgSoft: 'bg-amber-50',
+    dot: 'bg-amber-500',
     frequencyField: null,
     serviceTypeKey: 'admin',
     treeNodeId: 'P3_admin',
@@ -338,11 +372,13 @@ const REPORT_CATEGORIES = {
   },
   'משרד': {
     label: 'ניהול משרד',
+    emoji: '🏢',
+    cardColor: '#EA580C',
     icon: FileText,
-    color: 'bg-pink-100 text-pink-800',
-    accent: 'border-pink-400',
-    bgSoft: 'bg-pink-50',
-    dot: 'bg-pink-500',
+    color: 'bg-orange-100 text-orange-800',
+    accent: 'border-amber-400',
+    bgSoft: 'bg-amber-50',
+    dot: 'bg-amber-500',
     frequencyField: null,
     serviceTypeKey: 'office',
     treeNodeId: 'P3_office',
@@ -354,6 +390,8 @@ const REPORT_CATEGORIES = {
   // ── P5: Additional annual nodes ──
   'דוחות אישיים': {
     label: 'דוחות אישיים',
+    emoji: '👤',
+    cardColor: '#059669',
     icon: FileText,
     color: 'bg-green-100 text-green-800',
     accent: 'border-green-400',
@@ -486,7 +524,7 @@ function clientHasService(categoryKey, client) {
  *   quarterly   → report months 3, 6, 9, 12
  *   yearly      → single task per year (e.g., annual report — May 31)
  */
-function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
+function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadlineOverrides = {}) {
   const frequency = getClientFrequency(categoryKey, client);
   if (frequency === 'not_applicable') return [];
 
@@ -534,8 +572,29 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year) {
       if (![3, 6, 9, 12].includes(reportMonth)) continue;
     }
 
-    const dueDateStr = getDueDateForCategory(categoryKey, client, reportMonth);
-    const dueDate = dueDateStr ? new Date(dueDateStr) : new Date(year, reportMonth, 19);
+    // Map categories to deadline override keys
+    const CAT_TO_OVERRIDE = {
+      'שכר': 'payroll', 'מס"ב עובדים': 'payroll', 'משלוח תלושים': 'payroll',
+      'מתפעל': 'social_operator', 'טמל + לקוח': 'social_operator',
+      'ביטוח לאומי': 'social_security',
+      'ניכויים': 'deductions',
+      'מע"מ': 'vat', 'מע"מ 874': 'vat',
+      'מקדמות מס': 'tax_advances',
+    };
+    const overrideKey = CAT_TO_OVERRIDE[categoryKey];
+    const overrideDay = overrideKey && deadlineOverrides[overrideKey];
+
+    let dueDateStr = getDueDateForCategory(categoryKey, client, reportMonth);
+    let dueDate;
+    if (overrideDay) {
+      // Override: use the specified day in the due month (month after report month)
+      const dueMonth = reportMonth === 12 ? 1 : reportMonth + 1;
+      const dueYear = reportMonth === 12 ? year + 1 : year;
+      const pad = n => String(n).padStart(2, '0');
+      dueDate = new Date(`${dueYear}-${pad(dueMonth)}-${pad(overrideDay)}`);
+    } else {
+      dueDate = dueDateStr ? new Date(dueDateStr) : new Date(year, reportMonth, 19);
+    }
 
     let period;
     if (frequency === 'bimonthly') {
@@ -586,6 +645,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [forceInject, setForceInject] = useState(false);
   const [expandedCard, setExpandedCard] = useState(null); // catKey of expanded card
   const [isClearingCache, setIsClearingCache] = useState(false);
+  const [deadlineOverrides, setDeadlineOverrides] = useState({});
 
   useEffect(() => { loadData(); }, []);
 
@@ -711,7 +771,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
         }
         coverage[categoryKey].eligible++;
 
-        const dueDates = generateTasksForMonths(categoryKey, client, monthsArray, selectedYear);
+        const dueDates = generateTasksForMonths(categoryKey, client, monthsArray, selectedYear, deadlineOverrides);
         // Track frequency mismatch: client is eligible but no tasks generated for selected months
         if (dueDates.length === 0 && monthsArray.length > 0) {
           coverage[categoryKey].freqMismatch++;
@@ -752,6 +812,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             _categoryOrder: categoryDef.order, _categoryLabel: categoryDef.label,
             _categoryColor: categoryDef.color, _categoryAccent: categoryDef.accent,
             _categoryBgSoft: categoryDef.bgSoft, _categoryDot: categoryDef.dot,
+            _categoryEmoji: categoryDef.emoji, _categoryCardColor: categoryDef.cardColor,
             _branchKey: branchKey, _branchLabel: P_BRANCHES[branchKey].label,
             _frequency: freq, _is874: clientIs874, period,
             _reportMonth: reportMonth,
@@ -858,6 +919,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
         branches[bKey].categories[catKey] = {
           categoryKey: catKey, label: task._categoryLabel, color: task._categoryColor,
           accent: task._categoryAccent, bgSoft: task._categoryBgSoft, dot: task._categoryDot,
+          emoji: task._categoryEmoji, cardColor: task._categoryCardColor,
           order: task._categoryOrder, tasks: [],
         };
       }
@@ -882,8 +944,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
       try {
         const {
           _previewId, _categoryOrder, _categoryLabel, _categoryColor,
-          _categoryAccent, _categoryBgSoft, _categoryDot, _frequency,
-          _is874, _reportMonth, _branchKey, _branchLabel, period, ...taskFields
+          _categoryAccent, _categoryBgSoft, _categoryDot, _categoryEmoji, _categoryCardColor,
+          _frequency, _is874, _reportMonth, _branchKey, _branchLabel, period, ...taskFields
         } = taskData;
         await Task.create(taskFields);
         created++;
@@ -948,7 +1010,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           matchedClients.push({ id: client.id, name: client.name, frequency: freq });
         }
         if (clientCount > 0) {
-          branchCategories.push({ key: catKey, label: categoryDef.label, icon: categoryDef.icon, dot: categoryDef.dot, clientCount, frequencies, matchedClients });
+          branchCategories.push({ key: catKey, label: categoryDef.label, icon: categoryDef.icon, dot: categoryDef.dot, emoji: categoryDef.emoji, cardColor: categoryDef.cardColor, clientCount, frequencies, matchedClients });
           totalServices += clientCount;
         }
       }
@@ -1051,23 +1113,23 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                           isExpanded ? 'shadow-lg col-span-1 md:col-span-2' : 'hover:shadow-md hover:scale-[1.01]'
                         }`}
                         style={{
-                          background: `linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.65))`,
+                          background: `linear-gradient(135deg, ${(cat.cardColor || branchColor)}10, rgba(255,255,255,0.85))`,
                           backdropFilter: 'blur(12px)',
-                          borderColor: isExpanded ? branchColor : `${branchColor}40`,
+                          borderColor: isExpanded ? (cat.cardColor || branchColor) : `${cat.cardColor || branchColor}40`,
                         }}
                         onClick={() => setExpandedCard(isExpanded ? null : cat.key)}
                       >
                         <div className="p-4">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: branchColor }} />
-                            <span className="text-base font-black text-gray-800">{cat.label}</span>
-                            <ChevronDown className={`w-4 h-4 mr-auto transition-transform ${isExpanded ? 'rotate-180' : ''}`} style={{ color: branchColor }} />
+                            <span className="text-xl">{cat.emoji || '📄'}</span>
+                            <span className="text-base font-black" style={{ color: cat.cardColor || branchColor }}>{cat.label}</span>
+                            <ChevronDown className={`w-4 h-4 mr-auto transition-transform ${isExpanded ? 'rotate-180' : ''}`} style={{ color: cat.cardColor || branchColor }} />
                           </div>
-                          <p className="text-4xl font-black mb-2" style={{ color: branchColor }}>{cat.clientCount}</p>
+                          <p className="text-4xl font-black mb-2" style={{ color: cat.cardColor || branchColor }}>{cat.clientCount}</p>
                           <div className="flex flex-wrap gap-2">
                             {Object.entries(cat.frequencies).map(([freq, count]) => (
                               <span key={freq} className="text-xs px-2.5 py-1 rounded-full font-bold"
-                                style={{ backgroundColor: `${branchColor}15`, color: branchColor }}>
+                                style={{ backgroundColor: `${cat.cardColor || branchColor}15`, color: cat.cardColor || branchColor }}>
                                 {FREQUENCY_LABELS[freq] || freq} ({count})
                               </span>
                             ))}
@@ -1075,16 +1137,16 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                         </div>
                         {/* ── Expanded Client List ── */}
                         {isExpanded && cat.matchedClients && (
-                          <div className="border-t px-4 py-3 max-h-64 overflow-y-auto" style={{ borderColor: `${branchColor}20`, background: `${branchColor}08` }}>
-                            <div className="text-xs font-bold mb-2" style={{ color: branchColor }}>{cat.clientCount} לקוחות:</div>
+                          <div className="border-t px-4 py-3 max-h-64 overflow-y-auto" style={{ borderColor: `${cat.cardColor || branchColor}20`, background: `${cat.cardColor || branchColor}08` }}>
+                            <div className="text-xs font-bold mb-2" style={{ color: cat.cardColor || branchColor }}>{cat.clientCount} לקוחות:</div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
                               {cat.matchedClients
                                 .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
                                 .map((mc, idx) => (
                                 <div key={mc.id || idx} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-sm"
-                                  style={{ background: 'rgba(255,255,255,0.8)', borderColor: `${branchColor}20` }}>
+                                  style={{ background: 'rgba(255,255,255,0.8)', borderColor: `${cat.cardColor || branchColor}20` }}>
                                   <span className="font-medium text-gray-800 truncate flex-1">{mc.name}</span>
-                                  <span className="text-[10px] font-bold flex-shrink-0" style={{ color: `${branchColor}99` }}>
+                                  <span className="text-[10px] font-bold flex-shrink-0" style={{ color: `${cat.cardColor || branchColor}99` }}>
                                     {FREQUENCY_LABELS[mc.frequency] || mc.frequency}
                                   </span>
                                 </div>
@@ -1182,6 +1244,38 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             </div>
           </div>
 
+          {/* ── Deadline Overrides — for holidays/special situations ── */}
+          <div className="p-4 rounded-2xl border-2 border-blue-200 bg-blue-50/50 space-y-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-bold text-gray-800">דדליינים — דריסה זמנית</span>
+              <span className="text-[10px] text-blue-500 font-medium">(חגים / מצב מיוחד)</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {[
+                { key: 'payroll', label: 'שכר + תלושים + מס"ב', defaultDay: 9 },
+                { key: 'social_operator', label: 'פנסיות', defaultDay: 14 },
+                { key: 'social_security', label: 'ביטוח לאומי', defaultDay: 15 },
+                { key: 'deductions', label: 'ניכויים', defaultDay: 19 },
+                { key: 'vat', label: 'מע"מ', defaultDay: 19 },
+                { key: 'tax_advances', label: 'מקדמות', defaultDay: 19 },
+              ].map(dl => (
+                <div key={dl.key} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-blue-100">
+                  <span className="text-xs font-bold text-gray-700 flex-1">{dl.label}</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={deadlineOverrides[dl.key] ?? dl.defaultDay}
+                    onChange={(e) => setDeadlineOverrides(prev => ({ ...prev, [dl.key]: parseInt(e.target.value) || dl.defaultDay }))}
+                    className="w-12 h-7 text-center text-sm font-bold border rounded-lg border-blue-200 focus:border-blue-400 focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-blue-400">שנה את היום בחודש אם הדדליין הוזז בגלל חג/שבת. שינוי זה חל רק על ההזרקה הנוכחית.</p>
+          </div>
+
           {/* ── Force Inject Mode + Clear Cache ── */}
           <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-50 border-2 border-amber-200">
             <div className="flex-1 space-y-2">
@@ -1247,7 +1341,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                       style={
                         branchKey === 'P1' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#0369A1', borderColor: '#0EA5E9' } :
                         branchKey === 'P2' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#7E22CE', borderColor: '#A855F7' } :
-                        branchKey === 'P3' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#BE185D', borderColor: '#EC4899' } :
+                        branchKey === 'P3' ? { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#92400E', borderColor: '#F59E0B' } :
                                              { background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', color: '#047857', borderColor: '#10B981' }
                       }
                       size="lg"
@@ -1454,9 +1548,9 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                                 />
                               </div>
 
-                              <div className={`w-4 h-4 rounded-full ${group.dot} flex-shrink-0`} />
+                              <span className="text-xl flex-shrink-0">{group.emoji || '📄'}</span>
 
-                              <span className="text-lg font-black text-gray-800 flex-1">
+                              <span className="text-lg font-black flex-1" style={{ color: group.cardColor || '#1E293B' }}>
                                 {group.label}
                               </span>
 
@@ -1503,6 +1597,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                                             onCheckedChange={() => toggleTask(task._previewId)}
                                           />
 
+                                          <span className="text-lg flex-shrink-0">{task._categoryEmoji || '📄'}</span>
                                           <div className="flex-1 min-w-0">
                                             <p className="text-base font-bold text-gray-800 truncate">
                                               {task.client_name}
