@@ -1,24 +1,33 @@
 /**
- * Company Process Tree — SEED Definition (V4.0)
+ * Company Process Tree — SEED Definition (V4.1)
+ *
+ * V4.1 RESTRUCTURE (P1):
+ *   - P1_ancillary REMOVED — split into separate nodes:
+ *     • P1_payslip_sending (משלוח תלושים) — closing step
+ *     • P1_masav_employees (מס"ב עובדים) — SLA day 8
+ *   - NEW: P1_social_benefits (סוציאליות) — צומת with 2 child paths:
+ *     • P1_operator (מתפעל) — הפקה, שליחה, הנחיות(12), מס"ב(14), אסמכתאות
+ *     • P1_taml (טמל) — הפקה, העלאה/שליחה, עדכון+שידור
+ *   - NEW: P1_closing (קליטה להנה"ח) — bridges P1 → P2
+ *   - SLA deadlines: מס"ב עובדים=8, הנחיות=12, מס"ב סוציאליות=14, בל=15, ניכויים=19
+ *   - All P1 processes depend on P1_payroll, then run in parallel
  *
  * V4.0 RESTRUCTURE:
  *   - Nodes = services that can be toggled per client
  *   - Steps = workflow actions WITHIN a node (not separate nodes)
  *   - Removed: sub-nodes that were really steps (report/payment/collection children)
  *   - Added: parent grouping nodes (ייצור, דיווחים, סגירה, שירותים נלווים, רשויות)
- *   - P5: children converted to steps (7 steps instead of 7 nodes)
- *   - P4: children converted to steps (already defined in processTemplates)
- *   - P3: ייעוץ renamed to משרד
- *   - Removed: הצהרת הון (not needed)
  *
- * Structure:
- *   Branch (P1–P5) → Parent Tasks → Child Tasks → ...
+ * Architecture:
+ *   צומת (Node) = process that opens to reveal more (can be toggled, has children)
+ *   שלב (Step) = atomic final action that closes (no children, no continuation)
+ *   Tree = cascade of closers — each level closes the level above it
  *
  * Each node has:
  *   - id, label, service_key, is_parent_task, default_frequency
  *   - frequency_field, frequency_fallback, frequency_inherit
- *   - depends_on, execution, is_collector
- *   - steps: array of { key, label } — workflow steps within this node
+ *   - depends_on, execution, is_collector, sla_day
+ *   - steps: array of { key, label, sla_day? } — workflow steps within this node
  *   - children: array of child nodes (recursive)
  *   - extra_fields, smart_link (optional)
  */
@@ -75,35 +84,75 @@ const P1_BRANCH = {
   label: 'חשבות שכר',
   color_var: '--cp-p1',
   children: [
-    // ── הכנת שכר ועד לאישור ──
+    // ══════════════════════════════════════════════════════
+    // הכנת שכר — FOUNDATION. All other P1 nodes depend on this.
+    // After approval, everything runs in parallel with SLA deadlines.
+    // ══════════════════════════════════════════════════════
     node('P1_payroll', 'הכנת שכר ועד לאישור', 'payroll', {
       is_parent_task: true,
       default_frequency: 'monthly',
       frequency_field: 'payroll_frequency',
       steps: [
-        { key: 'receive_data',       label: 'קבלת נתונים' },
-        { key: 'prepare_payslips',   label: 'הכנת תלושים' },
-        { key: 'proofreading',       label: 'הגהה' },
-        { key: 'salary_entry',       label: 'קליטת פקודת שכר' },
-        { key: 'employee_payments',  label: 'רישום תשלומי עובדים' },
-        { key: 'authority_payments', label: 'רישום תשלומי רשויות שכר' },
+        { key: 'receive_data',     label: 'קבלת נתונים' },
+        { key: 'prepare_payslips', label: 'הכנת תלושים' },
+        { key: 'proofreading',     label: 'הגהה' },
       ],
     }),
 
-    // ── שירותים נלווים לשכר ──
-    node('P1_ancillary', 'שירותים נלווים לשכר', 'payroll_ancillary', {
-      is_parent_task: true,
-      frequency_inherit: true,
+    // ── משלוח תלושים — שלב סוגר (immediately after payroll approval) ──
+    node('P1_payslip_sending', 'משלוח תלושים', 'payslip_sending', {
       depends_on: ['P1_payroll'],
-      execution: 'parallel',
       steps: [
-        { key: 'payslip_sending',  label: 'משלוח תלושים' },
-        { key: 'masav_employees',  label: 'מס"ב עובדים' },
-        { key: 'masav_social',     label: 'מס"ב סוציאליות' },
+        { key: 'send', label: 'שליחת תלושים' },
       ],
     }),
 
-    // ── רשויות שכר ──
+    // ── מס"ב עובדים — SLA: 8 לחודש ──
+    node('P1_masav_employees', 'מס"ב עובדים', 'masav_employees', {
+      depends_on: ['P1_payroll'],
+      sla_day: 8,
+      steps: [
+        { key: 'file_prep',   label: 'הכנת קובץ' },
+        { key: 'upload',      label: 'העלאה לבנק' },
+        { key: 'absorption',  label: 'קליטת מס"ב עובדים' },
+      ],
+    }),
+
+    // ══════════════════════════════════════════════════════
+    // סוציאליות — צומת with 2 mutually-exclusive child paths
+    // מתפעל (external operator) OR טמל (client self-service)
+    // ══════════════════════════════════════════════════════
+    node('P1_social_benefits', 'סוציאליות', 'social_benefits', {
+      is_parent_task: true,
+      depends_on: ['P1_payroll'],
+      children: [
+        // ── מתפעל: SLA הנחיות=12, מס"ב סוציאליות=14 ──
+        node('P1_operator', 'מתפעל', 'social_operator', {
+          depends_on: ['P1_social_benefits'],
+          steps: [
+            { key: 'file_generation',    label: 'הפקת קובץ' },
+            { key: 'send_to_operator',   label: 'שליחה למתפעל' },
+            { key: 'instructions_check', label: 'קבלת הנחיות + בדיקת תקינות', sla_day: 12 },
+            { key: 'masav_social',       label: 'מס"ב סוציאליות + קליטה', sla_day: 14 },
+            { key: 'send_confirmations', label: 'שליחת אסמכתאות למתפעל' },
+          ],
+        }),
+        // ── טמל: client handles payments directly ──
+        node('P1_taml', 'טמל', 'social_taml', {
+          depends_on: ['P1_social_benefits'],
+          steps: [
+            { key: 'file_generation',     label: 'הפקת קובץ תשלומים' },
+            { key: 'upload_or_send',      label: 'העלאה לבנק / שליחה ללקוח' },
+            { key: 'update_and_transmit', label: 'עדכון תאריכים + אסמכתאות + שידור' },
+          ],
+        }),
+      ],
+    }),
+
+    // ══════════════════════════════════════════════════════
+    // רשויות שכר — צומת
+    // ביטוח לאומי SLA=15, ניכויים SLA=19 (דיגיטלי) / 16 (המחאה)
+    // ══════════════════════════════════════════════════════
     node('P1_authorities', 'רשויות שכר', 'payroll_authorities', {
       is_parent_task: true,
       default_frequency: 'monthly',
@@ -115,6 +164,7 @@ const P1_BRANCH = {
           frequency_fallback: 'payroll_frequency',
           frequency_inherit: true,
           depends_on: ['P1_authorities'],
+          sla_day: 15,
           extra_fields: { ...PAYMENT_METHOD_FIELD },
           steps: [
             { key: 'report_prep', label: 'הפקת דוח' },
@@ -127,6 +177,7 @@ const P1_BRANCH = {
           frequency_field: 'deductions_frequency',
           frequency_fallback: 'payroll_frequency',
           depends_on: ['P1_authorities'],
+          sla_day: 19,
           extra_fields: { ...PAYMENT_METHOD_FIELD },
           steps: [
             { key: 'report_prep', label: 'הפקת דוח' },
@@ -134,6 +185,20 @@ const P1_BRANCH = {
             { key: 'payment',     label: 'תשלום' },
           ],
         }),
+      ],
+    }),
+
+    // ══════════════════════════════════════════════════════
+    // קליטה להנה"ח — closing steps that bridge P1 → P2
+    // These close payroll and feed into bookkeeping
+    // ══════════════════════════════════════════════════════
+    node('P1_closing', 'קליטה להנה"ח', 'payroll_closing', {
+      is_parent_task: true,
+      depends_on: ['P1_payslip_sending', 'P1_authorities'],
+      steps: [
+        { key: 'salary_entry',           label: 'קליטת פקודת משכורת' },
+        { key: 'social_security_entry',  label: 'קליטת תשלומי רשויות - ביטוח לאומי' },
+        { key: 'deductions_entry',       label: 'קליטת תשלומי רשויות - ניכויים' },
       ],
     }),
   ],
@@ -381,7 +446,7 @@ const P4_BRANCH = {
 // ============================================================
 
 export const PROCESS_TREE_SEED = {
-  version: '4.0',
+  version: '4.1',
   branches: {
     P1: P1_BRANCH,
     P2: P2_BRANCH,
@@ -399,9 +464,13 @@ export const PROCESS_TREE_SEED = {
 export const FULL_SERVICE_NODES = [
   // P1 Payroll
   'P1_payroll',
-  'P1_ancillary',
+  'P1_payslip_sending',
+  'P1_masav_employees',
+  'P1_social_benefits',
+  'P1_operator',          // default: מתפעל path
   'P1_social_security',
   'P1_deductions',
+  'P1_closing',
   // P2 Bookkeeping
   'P2_bookkeeping',
   'P2_masav_suppliers',
@@ -419,10 +488,10 @@ export const FULL_SERVICE_NODES = [
 // ============================================================
 
 export const LEGACY_NODE_MAP = {
+  // P1 — V4.0 ancillary split into separate nodes in V4.1
+  P1_ancillary: 'P1_payslip_sending',        // ancillary → payslip_sending (primary)
+  P1_masav_social: 'P1_social_benefits',      // masav_social → social_benefits node
   // P1 — removed sub-nodes (became steps)
-  P1_payslip_sending: 'P1_ancillary',       // step of ancillary
-  P1_masav_employees: 'P1_ancillary',        // step of ancillary
-  P1_masav_social: 'P1_ancillary',           // step of ancillary
   P1_social_security_report: 'P1_social_security',  // step of social_security
   P1_social_security_payment: 'P1_social_security',  // step of social_security
   P1_deductions_report: 'P1_deductions',     // step of deductions
@@ -473,9 +542,10 @@ export const LEGACY_NODE_MAP = {
 // ============================================================
 
 export const LEGACY_SERVICE_KEY_MAP = {
-  payslip_sending: 'payroll_ancillary',
-  masav_employees: 'payroll_ancillary',
-  masav_social: 'payroll_ancillary',
+  payslip_sending: 'payslip_sending',
+  masav_employees: 'masav_employees',
+  masav_social: 'social_benefits',
+  payroll_ancillary: 'payslip_sending',  // V4.0 → V4.1
   consulting: 'office',
   expense_collection: 'bookkeeping',
   vat_report: 'vat',

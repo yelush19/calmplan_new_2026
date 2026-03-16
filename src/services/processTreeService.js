@@ -93,9 +93,8 @@ export async function loadCompanyTree() {
         if (dbVersion < seedVersion) {
           console.log(`[ProcessTreeService] Upgrading tree ${dbVersion} → ${seedVersion}`);
 
-          // V4.0 is a FULL RESTRUCTURE — nodes became steps, hierarchy changed.
-          // Merging would create duplicates (old V3.5 nodes + new V4.0 nodes).
-          // Force-replace with the clean V4.0 SEED.
+          // V4.0+ is a FULL RESTRUCTURE — force-replace to avoid duplicates.
+          // V4.1: P1 split (ancillary→separate nodes, social_benefits, closing).
           // Any user-created branches (P6+) that don't exist in seed are preserved.
           const upgraded = JSON.parse(JSON.stringify(PROCESS_TREE_SEED));
 
@@ -115,7 +114,7 @@ export async function loadCompanyTree() {
             .update({ data: { tree: upgraded }, updated_date: new Date().toISOString() })
             .eq('id', rows[0].id);
           if (upErr) console.warn('[ProcessTreeService] Version upgrade write failed:', upErr);
-          else console.log('[ProcessTreeService] V4.0 tree written to DB (full replace)');
+          else console.log(`[ProcessTreeService] V${seedVersion} tree written to DB (full replace)`);
 
           _cachedTree = upgraded;
           _cachedConfigId = rows[0].id;

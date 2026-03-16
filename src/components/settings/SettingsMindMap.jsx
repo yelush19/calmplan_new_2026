@@ -1,32 +1,26 @@
 /**
- * SettingsMindMap — AYOA-Style Visual Mind Map (V4.0)
+ * SettingsMindMap — AYOA-Style Visual Mind Map (V4.1)
  *
- * Clean radial SVG mind map:
+ * Interactive radial SVG mind map:
  * - Hub logo in center
  * - P1–P5 branches radiating outward as colored bubbles
- * - Child nodes in organized arcs around parent
- * - Steps shown as small chips ON the node (not separate bubbles)
- * - Clean bezier curve connections
- * - Sidebar editor for node details
+ * - EXPAND/COLLAPSE: click any branch or group node to toggle children
+ * - Steps shown as count badge (not separate bubbles)
+ * - Clean tapered bezier connections
+ * - Sidebar editor with color picker, shape, steps editor
  * - Reads ONLY from DB tree (no processTemplates ghost nodes)
  */
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ALL_SERVICES,
-} from '@/config/processTemplates';
 import { useDesign } from '@/contexts/DesignContext';
 import {
   Trash2, Plus, GripVertical, X, ListOrdered,
-  Save, Loader2,
+  Save, Loader2, ChevronDown, ChevronRight, Palette, Shapes,
 } from 'lucide-react';
-import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import {
   loadCompanyTree, invalidateTreeCache,
   saveAndBroadcast, onTreeChange,
-  loadSettingFromDb, syncSettingToDb,
-  ensureMindMapSync,
 } from '@/services/processTreeService';
 import { toast } from '@/components/ui/use-toast';
 
@@ -44,31 +38,33 @@ const DYNAMIC_COLORS = [
   { color: '#795548' }, { color: '#607D8B' },
 ];
 
+// Color palette for node editor
+const COLOR_PALETTE = [
+  '#0288D1', '#7B1FA2', '#D81B60', '#F9A825', '#2E7D32',
+  '#E53935', '#FF5722', '#00BCD4', '#795548', '#607D8B',
+  '#9C27B0', '#1565C0', '#00695C', '#EF6C00', '#AD1457',
+];
+
+// Shape options for node editor
+const SHAPE_OPTIONS = [
+  { key: 'circle', label: 'עיגול' },
+  { key: 'rounded_rect', label: 'מלבן מעוגל' },
+  { key: 'diamond', label: 'מעוין' },
+  { key: 'hexagon', label: 'משושה' },
+];
+
 // ── Canvas ──
 const VB_W = 1600, VB_H = 1000;
 const CX = VB_W / 2, CY = VB_H / 2;
 
 // ── Branch angles (radial layout) ──
 const BRANCH_ANGLES = {
-  P1: -Math.PI * 0.75,   // top-left
-  P2: -Math.PI * 0.25,   // top-right
-  P3: Math.PI * 0.05,    // right
-  P4: Math.PI * 0.55,    // bottom-right
-  P5: Math.PI * 0.95,    // bottom-left
+  P1: -Math.PI * 0.75,
+  P2: -Math.PI * 0.25,
+  P3: Math.PI * 0.05,
+  P4: Math.PI * 0.55,
+  P5: Math.PI * 0.95,
 };
-
-// ── Bezier curve between two points ──
-function bezierPath(x1, y1, x2, y2) {
-  const mx = (x1 + x2) / 2;
-  const my = (y1 + y2) / 2;
-  // Control point offset perpendicular to midpoint
-  const dx = x2 - x1, dy = y2 - y1;
-  const len = Math.sqrt(dx * dx + dy * dy) || 1;
-  const curvature = Math.min(40, len * 0.15);
-  const cpx = mx - (dy / len) * curvature;
-  const cpy = my + (dx / len) * curvature;
-  return `M${x1},${y1} Q${cpx},${cpy} ${x2},${y2}`;
-}
 
 // ── Tapered connection (thick at start, thin at end) ──
 function taperedPath(x1, y1, x2, y2, w1 = 6, w2 = 2) {
@@ -79,7 +75,6 @@ function taperedPath(x1, y1, x2, y2, w1 = 6, w2 = 2) {
   const curvature = Math.min(30, len * 0.12);
   const cpx = mx - nx * curvature * 2;
   const cpy = my + ny * curvature * 2;
-  // Build a tapered shape using two quadratic curves
   const hw1 = w1 / 2, hw2 = w2 / 2;
   return `M${x1 + nx * hw1},${y1 + ny * hw1}
     Q${cpx + nx * (hw1 + hw2) / 2},${cpy + ny * (hw1 + hw2) / 2} ${x2 + nx * hw2},${y2 + ny * hw2}
@@ -103,14 +98,47 @@ function wrapText(text, maxChars) {
     }
   }
   if (current) lines.push(current);
-  return lines.slice(0, 2); // max 2 lines
+  return lines.slice(0, 2);
+}
+
+// ── Count all descendant nodes recursively ──
+function countDescendants(node) {
+  let count = 0;
+  if (node.children) {
+    for (const child of node.children) {
+      count += 1 + countDescendants(child);
+    }
+  }
+  return count;
+}
+
+// ── SVG shape renderer ──
+function NodeShape({ x, y, r, shape, fill, stroke, strokeWidth, opacity }) {
+  switch (shape) {
+    case 'rounded_rect':
+      return <rect x={x - r} y={y - r * 0.75} width={r * 2} height={r * 1.5}
+        rx={r * 0.3} fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} />;
+    case 'diamond': {
+      const pts = `${x},${y - r} ${x + r},${y} ${x},${y + r} ${x - r},${y}`;
+      return <polygon points={pts} fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} />;
+    }
+    case 'hexagon': {
+      const pts = Array.from({ length: 6 }, (_, i) => {
+        const a = (Math.PI / 3) * i - Math.PI / 6;
+        return `${x + r * Math.cos(a)},${y + r * Math.sin(a)}`;
+      }).join(' ');
+      return <polygon points={pts} fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} />;
+    }
+    default: // circle
+      return <circle cx={x} cy={y} r={r} fill={fill} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} />;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
 // SortableStepsManager — for sidebar editor
 // ══════════════════════════════════════════════════════════════
 
-function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
+function SortableStepsManager({ steps, serviceKey, updateService, color }) {
   const commitSteps = useCallback((newSteps) => {
     updateService(serviceKey, { steps: newSteps });
   }, [serviceKey, updateService]);
@@ -167,10 +195,24 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [dbTreeRef, setDbTreeRef] = useState({ tree: null, configId: null });
+  const latestTreeRef = useRef(dbTreeRef); // stable ref for save callback
+  latestTreeRef.current = dbTreeRef;
   const [dbBranches, setDbBranches] = useState({});
   const [mapSaving, setMapSaving] = useState(false);
-  const [overrides, setOverrides] = useState({});
-  const [customServices, setCustomServices] = useState({});
+
+  // ── EXPAND/COLLAPSE STATE ──
+  // Set of node IDs that are expanded (showing children)
+  // By default: branches start expanded, group nodes start collapsed
+  const [expandedSet, setExpandedSet] = useState(new Set(['P1', 'P2', 'P3', 'P4', 'P5']));
+
+  const toggleExpand = useCallback((nodeId) => {
+    setExpandedSet(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+  }, []);
 
   // ── Load tree from DB ──
   const refreshFromDb = useCallback(async () => {
@@ -179,7 +221,6 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       const { tree, configId } = await loadCompanyTree();
       if (!tree?.branches) return;
       setDbTreeRef({ tree, configId });
-      // Detect dynamic branches
       const extra = {};
       let dynIdx = 0;
       for (const [branchId] of Object.entries(tree.branches)) {
@@ -190,14 +231,20 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         }
       }
       setDbBranches(extra);
+      // Auto-expand dynamic branches
+      setExpandedSet(prev => {
+        const next = new Set(prev);
+        for (const branchId of Object.keys(tree.branches)) {
+          next.add(branchId);
+        }
+        return next;
+      });
     } catch (err) {
       console.warn('[MindMap] Load failed:', err);
     }
   }, []);
 
   useEffect(() => { refreshFromDb(); }, [refreshFromDb]);
-
-  // Listen for tree changes
   useEffect(() => {
     const unsub = onTreeChange(() => { refreshFromDb(); });
     return unsub;
@@ -205,32 +252,32 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
   const DNA = useMemo(() => ({ ...BASE_DNA, ...dbBranches }), [dbBranches]);
 
-  // ── Build ALL nodes for the SVG map from DB tree ONLY ──
+  // ── Build nodes & edges — respecting expand/collapse ──
   const { nodes, edges } = useMemo(() => {
     const tree = dbTreeRef.tree;
     if (!tree?.branches) return { nodes: [], edges: [] };
 
     const allNodes = [];
     const allEdges = [];
-    const branchKeys = Object.keys(tree.branches);
 
-    // Hub node
+    // Hub
     allNodes.push({ id: 'hub', type: 'hub', x: CX, y: CY, r: 50, label: '', color: '#2C3E50' });
 
-    // Position each branch
+    const branchKeys = Object.keys(tree.branches);
+
     branchKeys.forEach((branchId, branchIdx) => {
       const branch = tree.branches[branchId];
       const dna = DNA[branchId];
       if (!dna) return;
 
-      // Branch angle
-      const angle = BRANCH_ANGLES[branchId] ??
-        (Math.PI * 0.9 + branchIdx * Math.PI * 0.4);
+      const angle = BRANCH_ANGLES[branchId] ?? (Math.PI * 0.9 + branchIdx * Math.PI * 0.4);
       const branchDist = 220;
       const bx = CX + Math.cos(angle) * branchDist;
       const by = CY + Math.sin(angle) * branchDist;
 
-      // Branch root node
+      const branchChildCount = (branch.children || []).length;
+      const isExpanded = expandedSet.has(branchId);
+
       allNodes.push({
         id: branchId,
         type: 'branch',
@@ -239,16 +286,19 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         color: dna.color,
         bg: dna.bg,
         branchId,
+        childCount: branchChildCount,
+        isExpanded,
+        totalDescendants: (branch.children || []).reduce((sum, c) => sum + 1 + countDescendants(c), 0),
       });
       allEdges.push({ from: { x: CX, y: CY }, to: { x: bx, y: by }, color: dna.color, w1: 8, w2: 3 });
 
-      // Layout children in a fan around the branch
+      // Only layout children if expanded
+      if (!isExpanded) return;
+
       const children = branch.children || [];
       if (children.length === 0) return;
 
       const childDist = 160;
-      const fanAngle = Math.min(Math.PI * 0.9, Math.PI * 0.2 + children.length * Math.PI * 0.12);
-      const startAngle = angle - fanAngle / 2;
 
       const layoutNode = (node, parentX, parentY, parentAngle, depth, indexInSiblings, siblingCount) => {
         const dist = depth === 1 ? childDist : 120;
@@ -264,16 +314,18 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         const nx = parentX + Math.cos(nodeAngle) * dist;
         const ny = parentY + Math.sin(nodeAngle) * dist;
         const hasChildren = node.children && node.children.length > 0;
+        const nodeIsExpanded = expandedSet.has(node.id);
         const stepCount = node.steps?.length || 0;
         const labelLen = (node.label || '').length;
         const r = hasChildren ? 44 : Math.max(34, Math.min(44, 28 + labelLen * 0.6));
+        const nodeShape = node._mindmap_shape || 'circle';
 
         allNodes.push({
           id: node.id,
           type: hasChildren ? 'group' : 'service',
           label: node.label,
           x: nx, y: ny, r,
-          color: dna.color,
+          color: node._mindmap_color || dna.color,
           bg: dna.bg,
           branchId,
           steps: node.steps || [],
@@ -282,18 +334,24 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           serviceKey: node.service_key,
           isParent: node.is_parent_task,
           nodeData: node,
+          hasChildren,
+          isExpanded: nodeIsExpanded,
+          childCount: hasChildren ? node.children.length : 0,
+          totalDescendants: countDescendants(node),
+          shape: nodeShape,
+          slaDay: node.sla_day,
         });
 
         allEdges.push({
           from: { x: parentX, y: parentY },
           to: { x: nx, y: ny },
-          color: dna.color,
+          color: node._mindmap_color || dna.color,
           w1: depth === 1 ? 5 : 3,
           w2: depth === 1 ? 2 : 1.2,
         });
 
-        // Recurse into children
-        if (hasChildren) {
+        // Recurse into children ONLY if expanded
+        if (hasChildren && nodeIsExpanded) {
           node.children.forEach((child, ci) => {
             layoutNode(child, nx, ny, nodeAngle, depth + 1, ci, node.children.length);
           });
@@ -306,7 +364,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
     });
 
     return { nodes: allNodes, edges: allEdges };
-  }, [dbTreeRef.tree, DNA]);
+  }, [dbTreeRef.tree, DNA, expandedSet]);
 
   // Find selected node data
   const selectedNode = useMemo(() => {
@@ -316,7 +374,6 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
   // ── CRUD ──
   const updateService = useCallback((serviceKey, updates) => {
-    // Update in DB tree
     if (!dbTreeRef.tree) return;
     const updateInTree = (nodes) => nodes.map(n => {
       if (n.id === serviceKey || n.service_key === serviceKey) {
@@ -336,27 +393,27 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
   // ── Save ──
   const handleSave = useCallback(async () => {
+    const current = latestTreeRef.current;
+    if (!current.tree) {
+      toast({ title: 'שגיאה', description: 'אין עץ לשמירה', variant: 'destructive' });
+      return;
+    }
     setMapSaving(true);
     try {
-      await saveAndBroadcast(dbTreeRef.tree, dbTreeRef.configId, 'MindMap:Save');
-      toast({ title: 'נשמר', description: 'המפה נשמרה בהצלחה' });
+      console.log('[MindMap] Saving tree to DB, configId:', current.configId);
+      const result = await saveAndBroadcast(current.tree, current.configId, 'MindMap:Save');
+      // Update configId if it was created for the first time
+      if (result?.configId && result.configId !== current.configId) {
+        setDbTreeRef(prev => ({ ...prev, configId: result.configId }));
+      }
+      toast({ title: 'נשמר', description: 'המפה נשמרה בהצלחה ל-DB' });
     } catch (err) {
-      toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
+      console.error('[MindMap] Save failed:', err);
+      toast({ title: 'שגיאה בשמירה', description: err.message, variant: 'destructive' });
     }
     setMapSaving(false);
-  }, [dbTreeRef]);
-
-  // ── SVG coordinate helper ──
-  const svgPoint = useCallback((clientX, clientY) => {
-    const svg = svgRef.current;
-    if (!svg) return { x: clientX, y: clientY };
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return { x: clientX, y: clientY };
-    const inv = ctm.inverse();
-    return { x: inv.a * clientX + inv.c * clientY + inv.e, y: inv.b * clientX + inv.d * clientY + inv.f };
   }, []);
 
-  // Count services
   const totalServices = nodes.filter(n => n.type === 'service' || n.type === 'group').length;
 
   return (
@@ -379,7 +436,6 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           <filter id="glow-hover" x="-40%" y="-40%" width="180%" height="180%">
             <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#999" floodOpacity="0.3" />
           </filter>
-          {/* Dot grid */}
           <pattern id="dot-grid" width="30" height="30" patternUnits="userSpaceOnUse">
             <circle cx="15" cy="15" r="0.5" fill="#ddd" />
           </pattern>
@@ -417,13 +473,19 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           const isSelected = selectedNodeId === node.id;
           const isHovered = hoveredNodeId === node.id;
           const r = isSelected ? node.r + 3 : isHovered ? node.r + 1 : node.r;
+          const canExpand = node.type === 'branch' || node.hasChildren;
+          const isCollapsed = canExpand && !node.isExpanded;
 
           return (
             <g
               key={node.id}
               style={{ cursor: 'pointer' }}
               filter={isSelected ? 'url(#glow-select)' : isHovered ? 'url(#glow-hover)' : 'url(#node-shadow)'}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
+                if (canExpand) {
+                  toggleExpand(node.id);
+                }
                 if (node.type !== 'branch') {
                   setSelectedNodeId(node.id);
                   onSelectService?.(node.serviceKey || node.id);
@@ -443,36 +505,47 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                 </circle>
               )}
 
-              {/* Node shape — AYOA cloud/bubble style */}
+              {/* ── BRANCH NODE ── */}
               {node.type === 'branch' ? (
                 <>
-                  {/* Branch root: cloud shape */}
                   <ellipse cx={node.x} cy={node.y} rx={r + 5} ry={r - 5}
                     fill={node.color} opacity={0.15} />
                   <ellipse cx={node.x} cy={node.y} rx={r} ry={r - 8}
                     fill="white" stroke={node.color} strokeWidth={2.5} />
-                  {/* Branch ID */}
                   <text x={node.x} y={node.y - 8} textAnchor="middle"
                     fill={node.color} fontSize="18" fontWeight="900" fontFamily="system-ui">
                     {node.branchId}
                   </text>
-                  {/* Branch label */}
                   <text x={node.x} y={node.y + 10} textAnchor="middle"
                     fill={node.color} fontSize="11" fontWeight="700" fontFamily="system-ui">
                     {dbTreeRef.tree?.branches[node.branchId]?.label || ''}
                   </text>
-                  {/* Child count */}
+                  {/* Expand/collapse indicator */}
                   <text x={node.x} y={node.y + 24} textAnchor="middle"
-                    fill={node.color} fontSize="9" fontWeight="500" opacity={0.6}>
-                    {(dbTreeRef.tree?.branches[node.branchId]?.children || []).length} שירותים
+                    fill={node.color} fontSize="9" fontWeight="600" opacity={0.7}>
+                    {node.isExpanded ? '▼' : `▶ ${node.totalDescendants}`}
                   </text>
+                  {/* Collapsed count badge */}
+                  {isCollapsed && (
+                    <>
+                      <circle cx={node.x + r * 0.7} cy={node.y - r * 0.5} r={12}
+                        fill={node.color} />
+                      <text x={node.x + r * 0.7} y={node.y - r * 0.5 + 4}
+                        textAnchor="middle" fill="white" fontSize="9" fontWeight="800">
+                        +{node.totalDescendants}
+                      </text>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
-                  {/* Service / group node: rounded bubble */}
-                  <circle cx={node.x} cy={node.y} r={r}
+                  {/* ── SERVICE / GROUP NODE ── */}
+                  <NodeShape
+                    x={node.x} y={node.y} r={r}
+                    shape={node.shape || 'circle'}
                     fill="white" stroke={node.color}
-                    strokeWidth={node.type === 'group' ? 3 : 2} />
+                    strokeWidth={node.type === 'group' ? 3 : 2}
+                  />
 
                   {/* Colored accent arc on top */}
                   <path
@@ -506,6 +579,30 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                     </>
                   )}
 
+                  {/* SLA day badge */}
+                  {node.slaDay && (
+                    <>
+                      <circle cx={node.x - r * 0.65} cy={node.y + r * 0.65} r={10}
+                        fill="#EF5350" />
+                      <text x={node.x - r * 0.65} y={node.y + r * 0.65 + 3.5}
+                        textAnchor="middle" fill="white" fontSize="7" fontWeight="800">
+                        {node.slaDay}
+                      </text>
+                    </>
+                  )}
+
+                  {/* Expand/collapse indicator for group nodes */}
+                  {canExpand && (
+                    <g>
+                      <circle cx={node.x} cy={node.y + r + 10} r={8}
+                        fill={node.color} opacity={0.9} />
+                      <text x={node.x} y={node.y + r + 13}
+                        textAnchor="middle" fill="white" fontSize="8" fontWeight="800">
+                        {node.isExpanded ? '−' : `+${node.totalDescendants}`}
+                      </text>
+                    </g>
+                  )}
+
                   {/* Frequency label */}
                   {node.frequency && node.frequency !== 'monthly' && (
                     <text x={node.x} y={node.y + r - 4} textAnchor="middle"
@@ -515,14 +612,6 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                        node.frequency === 'daily' ? 'יומי' :
                        node.frequency === 'weekly' ? 'שבועי' : ''}
                     </text>
-                  )}
-
-                  {/* Parent indicator (small diamond) */}
-                  {node.isParent && node.type === 'group' && (
-                    <polygon
-                      points={`${node.x},${node.y - r - 6} ${node.x + 5},${node.y - r - 1} ${node.x},${node.y - r + 4} ${node.x - 5},${node.y - r - 1}`}
-                      fill={node.color} opacity={0.8}
-                    />
                   )}
                 </>
               )}
@@ -550,6 +639,40 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         ))}
       </div>
 
+      {/* ── Expand All / Collapse All buttons ── */}
+      <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+        <button
+          onClick={() => {
+            // Expand all: collect all node IDs that have children
+            const allExpandable = new Set();
+            const tree = dbTreeRef.tree;
+            if (!tree?.branches) return;
+            for (const [branchId, branch] of Object.entries(tree.branches)) {
+              allExpandable.add(branchId);
+              const walk = (nodes) => {
+                for (const n of nodes) {
+                  if (n.children?.length) {
+                    allExpandable.add(n.id);
+                    walk(n.children);
+                  }
+                }
+              };
+              walk(branch.children || []);
+            }
+            setExpandedSet(allExpandable);
+          }}
+          className="px-3 py-1.5 rounded-full bg-white/95 border border-gray-200 text-xs font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 shadow-sm transition-all"
+        >
+          פתח הכל
+        </button>
+        <button
+          onClick={() => setExpandedSet(new Set(Object.keys(dbTreeRef.tree?.branches || {})))}
+          className="px-3 py-1.5 rounded-full bg-white/95 border border-gray-200 text-xs font-bold text-gray-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300 shadow-sm transition-all"
+        >
+          כווץ הכל
+        </button>
+      </div>
+
       {/* ══════ Sidebar Editor ══════ */}
       <AnimatePresence>
         {selectedNode && selectedNode.type !== 'branch' && (
@@ -558,7 +681,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute top-3 left-3 w-80 bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-20"
+            className="absolute top-14 left-3 w-80 bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-20"
           >
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between"
@@ -573,13 +696,58 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               </button>
             </div>
 
-            <div className="p-4 space-y-4 max-h-[calc(100vh-260px)] overflow-y-auto">
+            <div className="p-4 space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
               {/* Name edit */}
               <div>
                 <label className="text-xs font-bold text-gray-500 block mb-1">שם שירות</label>
                 <input type="text" value={selectedNode.label || ''} dir="rtl"
                   onChange={(e) => updateService(selectedNodeId, { label: e.target.value })}
                   className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-300 focus:outline-none font-medium" />
+              </div>
+
+              {/* ── Color Picker ── */}
+              <div>
+                <label className="text-xs font-bold text-gray-500 flex items-center gap-1.5 mb-2">
+                  <Palette className="w-3.5 h-3.5" />
+                  צבע
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {COLOR_PALETTE.map((c) => (
+                    <button key={c}
+                      onClick={() => updateService(selectedNodeId, { _mindmap_color: c })}
+                      className="w-6 h-6 rounded-full border-2 transition-all hover:scale-110"
+                      style={{
+                        backgroundColor: c,
+                        borderColor: selectedNode.color === c ? '#333' : 'transparent',
+                        boxShadow: selectedNode.color === c ? '0 0 0 2px white, 0 0 0 4px ' + c : 'none',
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Shape Selector ── */}
+              <div>
+                <label className="text-xs font-bold text-gray-500 flex items-center gap-1.5 mb-2">
+                  <Shapes className="w-3.5 h-3.5" />
+                  צורה
+                </label>
+                <div className="flex gap-2">
+                  {SHAPE_OPTIONS.map(({ key, label }) => {
+                    const isActive = (selectedNode.shape || 'circle') === key;
+                    return (
+                      <button key={key}
+                        onClick={() => updateService(selectedNodeId, { _mindmap_shape: key })}
+                        className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold border-2 transition-all ${
+                          isActive
+                            ? 'border-blue-400 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'
+                        }`}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Steps display as badges */}
@@ -596,6 +764,9 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                           {i + 1}
                         </span>
                         {step.label}
+                        {step.sla_day && (
+                          <span className="text-[9px] text-red-500 font-bold mr-1">({step.sla_day})</span>
+                        )}
                       </span>
                     ))}
                   </div>
@@ -608,8 +779,15 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                 serviceKey={selectedNodeId}
                 updateService={updateService}
                 color={selectedNode.color}
-                bg={selectedNode.bg}
               />
+
+              {/* SLA info */}
+              {selectedNode.slaDay && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 border border-red-200">
+                  <span className="w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold">{selectedNode.slaDay}</span>
+                  <span className="text-xs font-bold text-red-700">דד ליין: {selectedNode.slaDay} לחודש</span>
+                </div>
+              )}
 
               {/* Info */}
               <div className="flex items-center gap-3 text-xs text-gray-400 pt-2 border-t border-gray-100">
@@ -631,7 +809,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
       {/* Instructions */}
       <div className="absolute bottom-3 right-3 text-xs text-gray-400 bg-white/90 rounded-xl px-3 py-1.5 border border-gray-200 shadow-sm z-10 font-medium">
-        לחץ על בועה כדי לערוך
+        לחץ על ענף כדי לפתוח/לסגור | לחץ על בועה כדי לערוך
       </div>
     </div>
   );
