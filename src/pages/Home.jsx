@@ -32,6 +32,8 @@ import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
 import useTaskCascade from "@/hooks/useTaskCascade";
 import { useApp } from "@/contexts/AppContext";
 import { useDesign } from "@/contexts/DesignContext";
+import OverdueAlert from "@/components/tasks/OverdueAlert";
+import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
 
 // ─── Draggable panel wrapper (localStorage persist) ─────────
 function DraggablePanel({ storageKey, children, className = '', style = {} }) {
@@ -602,6 +604,12 @@ export default function HomePage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ═══ ALERTS — overdue + upcoming deadlines ═══ */}
+      <div className="px-4 space-y-3">
+        <OverdueAlert tasks={allFocusTasks} />
+        <AdvanceWarningPanel />
       </div>
 
       {/* ═══ VIEW CONTENT ═══ */}
