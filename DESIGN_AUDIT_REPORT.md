@@ -24,8 +24,22 @@
 | blur-sm/md | 6 | קריטי |
 | **סה"כ** | **395** | |
 
+**הערה:** קיים override גלובלי ב-`index.css` (שורות 327-330) שמנסה לבטל צללים, אך לא עובד בגלל specificity issues.
+
+**צללים ברכיבי בסיס (ui/) — תיקון ברמת המערכת:**
+- `button.jsx` שורה 13: `shadow`, `hover:shadow-md`
+- `card.jsx` שורה 8: `shadow-sm`
+- `badge.jsx` שורה 12: `shadow-sm`
+- `sheet.jsx` שורה 29: `shadow-2xl`
+- `drawer.jsx` שורה 36: `shadow-2xl`
+- `dropdown-menu.jsx` שורות 39, 53: `shadow-lg`
+- `alert-dialog.jsx` שורה 30: `shadow-xl`
+- `popover.jsx` שורה 19: `shadow-lg`
+
+**טשטוש (blur):** Settings.jsx, FocusMapView.jsx, AyoaRadialView.jsx, ProcessTreeFocusMap.jsx, SettingsMindMap.jsx.
+
 **פעולה נדרשת:** להחליף את כל הצללים ב-`border` חד (למשל `border border-gray-200`).
-הטשטוש (blur) בקבצים: Settings.jsx, FocusMapView.jsx, AyoaRadialView.jsx, ProcessTreeFocusMap.jsx, SettingsMindMap.jsx.
+**עדיפות:** לתקן קודם את רכיבי הבסיס (button, card, badge) — זה ישפיע על כל המערכת.
 
 ---
 
@@ -64,6 +78,22 @@
 | stickerMap | חלקי | רק ב-MindMap |
 
 **פעולה נדרשת:** branchColors צריך להשפיע על כל הקומפוננטות (Kanban, טבלאות, Badge-ים).
+
+### 2.4 צבעים קשיחים ברכיבי בסיס (ui/)
+
+רכיבי UI בסיסיים משתמשים בצבעים hardcoded במקום CSS variables:
+
+| קובץ | צבע | הערה |
+|------|------|------|
+| `input.jsx` שורה 10 | #E0E0E0 border, #4682B4 focus | למה P2 צבע ב-focus?! |
+| `card.jsx` שורה 8 | #B0BEC5 border | לא חלק מהפלטה |
+| `sheet.jsx` שורות 29, 36, 38 | #B0BEC5 | חוזר |
+| `badge.jsx` שורות 14, 17 | #E0E0E0, #EEEEEE | לא חלק מהפלטה |
+| `button.jsx` שורות 17, 20 | #E0E0E0, #EEEEEE | לא חלק מהפלטה |
+| `command.jsx` | #FFFFFF, #333333 | hardcoded |
+| `dialog.jsx` | #FFFFFF, #000000 | hardcoded |
+
+**המלצה:** להגדיר CSS variables גלובליים (`--border-primary`, `--bg-card`, וכו') ולייבא.
 
 ---
 
@@ -105,33 +135,55 @@
 
 ---
 
-## 4. מצב הסטטוסים — 5 סטטוסים מוזהבים
+## 4. מצב הסטטוסים — 3 מערכות צבע סותרות!
 
-| סטטוס | צבע | שם בעברית | מצב |
-|-------|------|-----------|-----|
-| waiting_for_materials | amber-100 | ממתין לחומרים | תקין |
-| not_started | slate-200 | לבצע | תקין |
-| sent_for_review | purple-200 | הועבר לעיון | תקין |
-| needs_corrections | orange-200 | לבצע תיקונים | תקין |
-| production_completed | emerald-400 | הושלם ייצור | תקין |
+**בעיה קריטית:** 5 הסטטוסים המוזהבים מוגדרים ב-3 קבצים שונים עם צבעים שונים:
 
-הסטטוסים מוגדרים נכון ב-`processTemplates.js` ו-`theme-constants.js`.
+| סטטוס | processTemplates.js | theme-constants.js | MindMapView.jsx |
+|-------|--------------------|--------------------|-----------------|
+| waiting_for_materials | bg-amber-100 | #f59e0b | #FF8F00 |
+| not_started | bg-slate-200 | #94a3b8 | #1565C0 (כחול!) |
+| sent_for_review | bg-purple-200 | #a855f7 | #AB47BC |
+| needs_corrections | bg-orange-200 | #f97316 | #F97316 |
+| production_completed | bg-emerald-400 | #22c55e | #2E7D32 |
+
+**בעיה חמורה:** `not_started` מוצג כ-slate בטבלאות, אפור ב-KPI, וכחול ב-MindMap!
+
+**פעולה נדרשת:** מקור אמת אחד — `processTemplates.js`, וכל השאר צריכים לייבא משם.
 
 ---
 
-## 5. RTL — בעיות פוטנציאליות
+## 5. RTL — בעיות ספציפיות
 
-- שימוש ב-`ml-*` ו-`mr-*` במקום `ms-*` / `me-*` — עלול לגרום לבעיות ב-RTL
-- `text-left` במקום `text-start` בכמה מקומות
-- `dir="rtl"` מוגדר ב-Layout — טוב
+`dir="rtl"` מוגדר ב-Layout — טוב. אבל יש שימוש ב-`ml-*`/`mr-*`/`pl-*`/`pr-*` שצריך להפוך ל-logical properties:
+
+| קובץ | שורה | הבעיה |
+|------|------|-------|
+| `dropdown-menu.jsx` | 24, 67, 78, 98, 115 | `pl-8`, `pr-2` — צריך `ps-8`, `pe-2` |
+| `dropdown-menu.jsx` | 134 | `ml-auto` — צריך `ms-auto` |
+| `TreatmentInput.jsx` | 452, 466, 667 | `mr-2`, `ml-2` — צריך `me-2`, `ms-2` |
+| `WeeklyPlanner.jsx` | 196 | `pr-10` — צריך `pe-10` |
+| `MultiStatusFilter.jsx` | 54, 66 | `mr-auto`, `ml-1` — צריך `me-auto`, `ms-1` |
+| `sidebar.jsx` | 277, 421 | ml-/mr- מרובים |
+| `carousel.jsx` | 124, 143 | `-ml-4`, `pl-4` — צריך `-ms-4`, `ps-4` |
+| `toast.jsx` | 25 | `pr-8` — צריך `pe-8` |
+
+**הערה חיובית:** MindMapView ו-SheetContent משתמשים נכון ב-`dir="rtl"`.
 
 ---
 
 ## 6. רספונסיביות
 
-- רוב הדפים משתמשים ב-`sm:` ו-`md:` breakpoints
-- כמה רכיבים עם רוחב קבוע (`w-[400px]`, `max-w-[1100px]`) — עלולים להיחתך
-- הסיידבר של Layout מתכווץ ב-mobile — תקין
+רוב הדפים משתמשים ב-`sm:` ו-`md:` breakpoints. בעיות ספציפיות:
+
+| קובץ | שורה | בעיה |
+|------|------|------|
+| `WeeklyPlanner.jsx` | 214 | `min-w-[800px]` — לא מתאים למובייל |
+| `TimeAwareness.jsx` | 83 | `min-w-[280px]` — עלול לגלוש |
+| `drawer.jsx` | 41 | `w-[100px]` — רוחב קבוע |
+| `sheet.jsx` | 36-38 | `w-3/4` — רחב מדי בטאבלט |
+
+**סיידבר Layout:** מתכווץ נכון ב-mobile.
 
 ---
 
