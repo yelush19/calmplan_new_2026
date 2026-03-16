@@ -22,8 +22,40 @@ const ENTITY_CONFIGS = [
     color: 'text-emerald-600',
     entity: Client,
     searchFields: ['name', 'entity_number', 'contact_person', 'email', 'phone'],
+    // Deep search: also check nested tax_info, reporting_info, contacts, process_tree fields
+    deepSearch: (item, q) => {
+      // tax_info fields (תיק ניכויים, תיק מע"מ, תיק ביטוח לאומי, etc.)
+      const ti = item.tax_info || {};
+      const annualIds = ti.annual_tax_ids || {};
+      const prevIds = ti.prev_year_ids || {};
+      const taxFields = [
+        ti.tax_id, ti.vat_file_number, ti.tax_deduction_file_number,
+        ti.social_security_file_number, ti.income_tax_file_number,
+        annualIds.social_security_id, annualIds.deductions_id,
+        annualIds.tax_advances_id, annualIds.tax_advances_percentage,
+        prevIds.social_security_id, prevIds.deductions_id,
+        prevIds.tax_advances_id, prevIds.tax_advances_percentage,
+      ];
+      if (taxFields.some(v => v && String(v).toLowerCase().includes(q))) return true;
+      // reporting_info
+      const ri = item.reporting_info || {};
+      if (Object.values(ri).some(v => v && String(v).toLowerCase().includes(q))) return true;
+      // contacts array
+      const contacts = item.contacts || [];
+      if (contacts.some(c => [c.name, c.email, c.phone, c.role].some(v => v && String(v).toLowerCase().includes(q)))) return true;
+      // notes
+      if (item.notes && String(item.notes).toLowerCase().includes(q)) return true;
+      return false;
+    },
     getUrl: (item) => `${createPageUrl('ClientManagement')}?clientId=${item.id}`,
-    getSubtitle: (item) => [item.entity_number, item.contact_person, item.email].filter(Boolean).join(' | '),
+    getSubtitle: (item) => {
+      const parts = [item.entity_number, item.contact_person, item.email].filter(Boolean);
+      const ti = item.tax_info || {};
+      if (ti.tax_deduction_file_number) parts.push(`ניכויים: ${ti.tax_deduction_file_number}`);
+      if (ti.vat_file_number) parts.push(`מע"מ: ${ti.vat_file_number}`);
+      if (ti.social_security_file_number) parts.push(`ב"ל: ${ti.social_security_file_number}`);
+      return parts.slice(0, 4).join(' | ');
+    },
   },
   {
     key: 'tasks',
@@ -206,12 +238,17 @@ export default function GlobalSearch() {
 
     for (const config of ENTITY_CONFIGS) {
       const items = allData[config.key] || [];
-      let matches = items.filter(item =>
-        config.searchFields.some(field => {
+      let matches = items.filter(item => {
+        // Standard top-level field search
+        const topMatch = config.searchFields.some(field => {
           const val = item[field];
           return val && String(val).toLowerCase().includes(q);
-        })
-      );
+        });
+        if (topMatch) return true;
+        // Deep nested field search (for clients: tax_info, contacts, etc.)
+        if (config.deepSearch) return config.deepSearch(item, q);
+        return false;
+      });
 
       // Context boosting
       if (currentPage === 'TaxReportsDashboard' && config.key === 'tasks') {

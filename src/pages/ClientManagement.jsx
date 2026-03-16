@@ -170,14 +170,28 @@ export default function ClientManagementPage() {
     }
 
     if (searchTerm) {
-      tempClients = tempClients.filter(client =>
-        client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.contacts && client.contacts.some(contact =>
-          contact.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          contact.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-        ))
-      );
+      const q = searchTerm.toLowerCase();
+      tempClients = tempClients.filter(client => {
+        // Name + entity number
+        if (client.name?.toLowerCase().includes(q)) return true;
+        if (client.entity_number && String(client.entity_number).toLowerCase().includes(q)) return true;
+        // Contacts
+        if (client.contacts?.some(c =>
+          c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q)
+        )) return true;
+        // Tax info fields (תיק ניכויים, מע"מ, ביטוח לאומי, etc.)
+        const ti = client.tax_info || {};
+        const taxFields = [
+          ti.tax_id, ti.vat_file_number, ti.tax_deduction_file_number,
+          ti.social_security_file_number, ti.income_tax_file_number,
+          ti.annual_tax_ids?.deductions_id, ti.annual_tax_ids?.social_security_id,
+          ti.annual_tax_ids?.tax_advances_id,
+        ];
+        if (taxFields.some(v => v && String(v).toLowerCase().includes(q))) return true;
+        // Notes
+        if (client.notes && String(client.notes).toLowerCase().includes(q)) return true;
+        return false;
+      });
     }
     
     tempClients.sort((a, b) => a.name.localeCompare(b.name, 'he'));
