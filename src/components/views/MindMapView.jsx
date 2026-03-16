@@ -1851,30 +1851,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     );
   }
 
-  // LAW 3: LOGICAL AUDIT — HARD ABORT if >70 tasks
-  if (activeTaskCount > 70) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" dir="rtl">
-        <div className="p-8 rounded-3xl bg-red-50 border border-red-200 shadow-xl flex flex-col items-center gap-4 max-w-md">
-          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-3xl">⛔</div>
-          <p className="text-lg font-bold text-red-700">שגיאת נתונים — {activeTaskCount} משימות</p>
-          <p className="text-sm text-red-600 text-center">המערכת מותרת עד 70 משימות לחודש. נמצאו {activeTaskCount}.</p>
-          <p className="text-xs text-red-500">יש לבצע איפוס משימות.</p>
-          <button
-            onClick={async () => {
-              try {
-                localStorage.removeItem('calmplan-nuclear-v10-clean-physics');
-                window.location.reload();
-              } catch { window.location.reload(); }
-            }}
-            className="px-6 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-medium text-sm shadow-md flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" /> איפוס ורענון
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (tasks.length === 0 && inboxItems.length === 0) {
     return (
