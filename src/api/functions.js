@@ -212,8 +212,8 @@ function getClientTemplates(client) {
     templateKeys.push('payroll');
   }
 
-  // Social security: explicit service check, frequency inherits from payroll if not set
-  if (expanded.has('social_security')) {
+  // Social security: requires BOTH explicit service AND payroll service
+  if (expanded.has('social_security') && clientHasPayroll(client)) {
     const ssFreq = reporting.social_security_frequency;
     const payrollFreq = reporting.payroll_frequency;
     if (freqIsActive(ssFreq) || freqIsActive(payrollFreq)) {
@@ -221,8 +221,8 @@ function getClientTemplates(client) {
     }
   }
 
-  // Deductions: explicit service check, frequency inherits from payroll if not set
-  if (expanded.has('deductions')) {
+  // Deductions: requires BOTH explicit service AND payroll service
+  if (expanded.has('deductions') && clientHasPayroll(client)) {
     const dedFreq = reporting.deductions_frequency;
     const payrollFreq = reporting.payroll_frequency;
     if (freqIsActive(dedFreq) || freqIsActive(payrollFreq)) {
