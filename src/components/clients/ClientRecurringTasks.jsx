@@ -17,8 +17,10 @@ import { format, addMonths, setDate, startOfMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
 import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_NAMES } from '@/config/taxCalendar2026';
-import { getScheduledStartForCategory } from '@/config/automationRules';
+import { getScheduledStartForCategory, loadServiceDueDates, getDueDayForCategory, loadExecutionPeriods } from '@/config/automationRules';
 import { getServiceWeight } from '@/config/serviceWeights';
+import { computeComplexityTier } from '@/lib/complexity';
+import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 import { onTreeChange } from '@/services/processTreeService';
 import { useDesign } from '@/contexts/DesignContext';
 
@@ -543,7 +545,7 @@ function clientHasService(categoryKey, client) {
  *   quarterly   → report months 3, 6, 9, 12
  *   yearly      → single task per year (e.g., annual report — May 31)
  */
-function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadlineOverrides = {}) {
+function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadlineOverrides = {}, systemDueDates = null) {
   const frequency = getClientFrequency(categoryKey, client);
   if (frequency === 'not_applicable') return [];
 
@@ -603,15 +605,25 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadl
     const overrideKey = CAT_TO_OVERRIDE[categoryKey];
     const overrideDay = overrideKey && deadlineOverrides[overrideKey];
 
-    let dueDateStr = getDueDateForCategory(categoryKey, client, reportMonth);
+    // Priority: 1) manual deadline override, 2) system due dates from DB, 3) tax calendar
+    const dueMonth = reportMonth === 12 ? 1 : reportMonth + 1;
+    const dueYear = reportMonth === 12 ? year + 1 : year;
+    const pad = n => String(n).padStart(2, '0');
+
     let dueDate;
     if (overrideDay) {
-      // Override: use the specified day in the due month (month after report month)
-      const dueMonth = reportMonth === 12 ? 1 : reportMonth + 1;
-      const dueYear = reportMonth === 12 ? year + 1 : year;
-      const pad = n => String(n).padStart(2, '0');
+      // Manual override from injection panel
       dueDate = new Date(`${dueYear}-${pad(dueMonth)}-${pad(overrideDay)}`);
-    } else {
+    } else if (systemDueDates) {
+      // System-level due dates from AutomationRules settings (Supabase)
+      const sysDay = getDueDayForCategory(systemDueDates, categoryKey);
+      if (sysDay) {
+        dueDate = new Date(`${dueYear}-${pad(dueMonth)}-${pad(sysDay)}`);
+      }
+    }
+    if (!dueDate) {
+      // Fallback: tax calendar with rest-day adjustments
+      const dueDateStr = getDueDateForCategory(categoryKey, client, reportMonth);
       dueDate = dueDateStr ? new Date(dueDateStr) : new Date(year, reportMonth, 19);
     }
 
@@ -665,6 +677,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [expandedCard, setExpandedCard] = useState(null); // catKey of expanded card
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [deadlineOverrides, setDeadlineOverrides] = useState({});
+  const [systemDueDates, setSystemDueDates] = useState(null);
+  const [systemExecutionPeriods, setSystemExecutionPeriods] = useState(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -680,18 +694,24 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [clientsData, tasksData] = await Promise.all([
+      const [clientsData, tasksData, dueDatesResult, periodsResult] = await Promise.all([
         Client.list(null, 500).catch(() => []),
-        Task.list(null, 5000).catch(() => [])
+        Task.list(null, 5000).catch(() => []),
+        loadServiceDueDates().catch(() => ({ dueDates: null })),
+        loadExecutionPeriods().catch(() => ({ periods: null })),
       ]);
       const activeClients = (clientsData || []).filter(c => c.status === 'active');
       console.log('[RecurringTasks] Data loaded:', {
         totalClients: (clientsData || []).length,
         activeClients: activeClients.length,
         existingTasks: (tasksData || []).length,
+        hasSystemDueDates: !!dueDatesResult.dueDates,
+        hasSystemPeriods: !!periodsResult.periods,
       });
       setClients(activeClients);
       setExistingTasks(tasksData || []);
+      if (dueDatesResult.dueDates) setSystemDueDates(dueDatesResult.dueDates);
+      if (periodsResult.periods) setSystemExecutionPeriods(periodsResult.periods);
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -795,7 +815,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
         }
         coverage[categoryKey].eligible++;
 
-        const dueDates = generateTasksForMonths(categoryKey, client, monthsArray, selectedYear, deadlineOverrides);
+        const dueDates = generateTasksForMonths(categoryKey, client, monthsArray, selectedYear, deadlineOverrides, systemDueDates);
         // Track frequency mismatch: client is eligible but no tasks generated for selected months
         if (dueDates.length === 0 && monthsArray.length > 0) {
           coverage[categoryKey].freqMismatch++;
@@ -816,7 +836,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           }
 
           const taskId = `${client.id}_${categoryKey}_${dueDateStr}`;
-          const scheduledStart = getScheduledStartForCategory(categoryKey, dueDateStr);
+          const scheduledStart = getScheduledStartForCategory(categoryKey, dueDateStr, systemExecutionPeriods);
           const branchKey = categoryDef.branch;
           if (!branchKey || !P_BRANCHES[branchKey]) continue;
 
@@ -824,8 +844,14 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           const parentCategory = TASK_DEPENDENCIES[categoryKey];
           const parentTaskId = parentCategory ? `${client.id}_${parentCategory}_${dueDateStr}` : null;
 
-          // ── Cognitive load from serviceWeights ──
+          // ── Cognitive load: service weight × client complexity tier ──
           const sw = getServiceWeight(categoryKey);
+          const clientTier = computeComplexityTier(client);
+          const tierInfo = COMPLEXITY_TIERS[clientTier] || COMPLEXITY_TIERS[0];
+          // Scale duration: use tier's maxMinutes if greater than service default
+          const scaledDuration = Math.max(sw.duration, tierInfo.maxMinutes || sw.duration);
+          // Cognitive load: max of service base and client tier
+          const scaledCognitiveLoad = Math.max(sw.cognitiveLoad, clientTier);
 
           const task = {
             _previewId: taskId, title: taskTitle,
@@ -835,8 +861,9 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             category: categoryKey, branch: branchKey,
             context: 'work', priority: 'high', status: 'not_started',
             is_recurring: true, source: 'recurring_tasks',
-            estimated_duration: sw.duration,
-            cognitive_load: sw.cognitiveLoad,
+            estimated_duration: scaledDuration,
+            cognitive_load: scaledCognitiveLoad,
+            complexity_tier: clientTier,
             _categoryOrder: categoryDef.order, _categoryLabel: categoryDef.label,
             _categoryColor: categoryDef.color, _categoryAccent: categoryDef.accent,
             _categoryBgSoft: categoryDef.bgSoft, _categoryDot: categoryDef.dot,

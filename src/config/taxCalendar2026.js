@@ -67,6 +67,19 @@ function generateTaxCalendar2026() {
     // Online filing is always 19th (fixed)
     const onlineFilingDay = 19;
 
+    // Payroll & related — 9th of following month
+    const payrollDay = 9;
+    // מס"ב סוציאליות — 12th
+    const masavSocialDay = 12;
+    // מס"ב רשויות / תשלום רשויות — 15th
+    const masavAuthoritiesDay = 15;
+    // מס"ב ספקים — 10th
+    const masavSuppliersDay = 10;
+    // דיווח למתפעל/טמל — 5th
+    const operatorReportDay = 5;
+    // הנחיות מס"ב ממתפעל — 1st
+    const operatorInstructionsDay = 1;
+
     // Format as YYYY-MM-DD
     const pad = (n) => String(n).padStart(2, '0');
     const formatDate = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
@@ -91,6 +104,24 @@ function generateTaxCalendar2026() {
       // ביטוח לאומי
       nationalInsurance: formatDate(dueYear, dueMonth, nationalInsuranceDay),
       nationalInsuranceDay,
+      // שכר / מס"ב עובדים / משלוח תלושים
+      payroll: formatDate(dueYear, dueMonth, payrollDay),
+      payrollDay,
+      // מס"ב סוציאליות
+      masavSocial: formatDate(dueYear, dueMonth, masavSocialDay),
+      masavSocialDay,
+      // מס"ב רשויות / תשלום רשויות
+      masavAuthorities: formatDate(dueYear, dueMonth, masavAuthoritiesDay),
+      masavAuthoritiesDay,
+      // מס"ב ספקים
+      masavSuppliers: formatDate(dueYear, dueMonth, masavSuppliersDay),
+      masavSuppliersDay,
+      // דיווח למתפעל/טמל
+      operatorReport: formatDate(dueYear, dueMonth, operatorReportDay),
+      operatorReportDay,
+      // הנחיות מס"ב ממתפעל
+      operatorInstructions: formatDate(dueYear, dueMonth, operatorInstructionsDay),
+      operatorInstructionsDay,
     };
   }
 
@@ -125,34 +156,61 @@ export function getDueDateForCategory(category, client, reportMonth) {
   const isDetailedVat = isClient874(client);
 
   switch (category) {
-    case 'מע"מ':
-      // 874 clients have the detailed VAT deadline (23rd)
-      if (isDetailedVat) return entry.detailedVat;
-      // Regular clients use online filing deadline (19th) - most file online
-      return entry.onlineFiling;
+    // ── שכר ומשכורות — 9 לחודש ──
+    case 'שכר':
+    case 'מס"ב עובדים':
+    case 'משלוח תלושים':
+      return entry.payroll;
 
-    case 'מקדמות מס':
-      // Tax advances follow VAT schedule for online filers
-      return entry.onlineFiling;
+    // ── מתפעל/טמל — 5 לחודש ──
+    case 'מתפעל':
+    case 'טמל + לקוח':
+    case 'דיווח למתפעל':
+    case 'דיווח לטמל':
+    case 'מילואים':
+      return entry.operatorReport;
 
-    case 'ניכויים':
-      // Online filers get until the 19th
-      return entry.onlineFiling;
+    // ── הנחיות מס"ב ממתפעל — 1 לחודש ──
+    case 'הנחיות מס"ב ממתפעל':
+      return entry.operatorInstructions;
 
+    // ── מס"ב סוציאליות — 12 לחודש ──
+    case 'מס"ב סוציאליות':
+      return entry.masavSocial;
+
+    // ── מס"ב ספקים — 10 לחודש ──
+    case 'מס"ב ספקים':
+      return entry.masavSuppliers;
+
+    // ── מס"ב רשויות / תשלום רשויות — 15 לחודש ──
+    case 'מס"ב רשויות':
+    case 'תשלום רשויות':
+      return entry.masavAuthorities;
+
+    // ── ביטוח לאומי — 15 לחודש ──
     case 'ביטוח לאומי':
-      // National insurance: 15th, 16th if Saturday
       return entry.nationalInsurance;
 
-    case 'שכר':
-      // Payroll follows the online filing deadline
+    // ── מע"מ — 19 רגיל, 23 ל-874 ──
+    case 'מע"מ':
+      if (isDetailedVat) return entry.detailedVat;
       return entry.onlineFiling;
 
+    // ── מע"מ 874 — תמיד 23 ──
+    case 'מע"מ 874':
+      return entry.detailedVat;
+
+    // ── ניכויים / מקדמות — 19 לחודש (דיגיטלי) ──
+    case 'ניכויים':
+    case 'מקדמות מס':
+      return entry.onlineFiling;
+
+    // ── דוח רו"ה — 19 לחודש ──
     case 'דוח רו"ה':
-      // Monthly P&L report — due by end of following month
       return entry.onlineFiling;
 
+    // ── דוח שנתי — 31 למאי ──
     case 'דוח שנתי':
-      // Annual report has its own deadline (May 31)
       return `${entry.dueYear}-05-31`;
 
     default:

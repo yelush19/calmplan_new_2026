@@ -34,6 +34,7 @@ import {
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+import { useAyoaView } from '@/contexts/AyoaViewContext';
 
 // Admin dashboard services (dashboard: 'admin')
 const adminDashboardServices = Object.fromEntries(
