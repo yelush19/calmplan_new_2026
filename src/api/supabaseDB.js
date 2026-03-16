@@ -308,6 +308,7 @@ export const entities = {
   TaxReport2024: createEntity('tax_reports_2024'),
   WeeklyTask: createEntity('weekly_tasks'),
   BalanceSheet: createEntity('balance_sheets'),
+  BalanceSheetWorkbook: createEntity('balance_sheet_workbooks'),
   StickyNote: createEntity('sticky_notes'),
   Project: createEntity('projects'),
   SystemConfig: createEntity('system_config'),
