@@ -23,14 +23,15 @@ import { FULL_SERVICE_NODES } from '@/config/companyProcessTree';
  * Some services map to a parent + its children (e.g., payroll enables the whole P1 chain).
  */
 const SERVICE_TO_NODES = {
-  // P1 — Payroll (V4.0 structure)
-  payroll: ['P1_payroll', 'P1_ancillary', 'P1_authorities'],
+  // P1 — Payroll (V4.1 structure)
+  payroll: ['P1_payroll', 'P1_payslip_sending', 'P1_masav_employees', 'P1_social_benefits', 'P1_operator', 'P1_authorities', 'P1_closing'],
   social_security: ['P1_social_security'],
   deductions: ['P1_deductions'],
-  // Legacy keys → map to new parent
-  masav_employees: ['P1_ancillary'],
-  masav_social: ['P1_ancillary'],
-  payslip_sending: ['P1_ancillary'],
+  // Legacy keys → map to new nodes
+  masav_employees: ['P1_masav_employees'],
+  masav_social: ['P1_social_benefits', 'P1_operator'],
+  payslip_sending: ['P1_payslip_sending'],
+  payroll_ancillary: ['P1_payslip_sending', 'P1_masav_employees'],  // V4.0 → V4.1
   authorities_payment: ['P1_social_security', 'P1_deductions'],
 
   // P2 — Bookkeeping & Tax (V4.0 structure)
@@ -105,12 +106,20 @@ export function migrateClientToProcessTree(client) {
     }
   }
 
-  // Step 3: Auto-enable parent nodes (V4.0 hierarchy)
-  // P1: payroll → ancillary, authorities; authorities → social_security, deductions
-  if (enabledNodes.has('P1_ancillary') || enabledNodes.has('P1_authorities')) enabledNodes.add('P1_payroll');
+  // Step 3: Auto-enable parent nodes (V4.1 hierarchy)
+  // P1: all nodes depend on payroll; authorities → social_security, deductions; social_benefits → operator/taml
+  if (enabledNodes.has('P1_operator') || enabledNodes.has('P1_taml')) {
+    enabledNodes.add('P1_social_benefits');
+  }
   if (enabledNodes.has('P1_social_security') || enabledNodes.has('P1_deductions')) {
     enabledNodes.add('P1_authorities');
+  }
+  // Any P1 node → auto-enable payroll + closing
+  const hasAnyP1Child = ['P1_payslip_sending', 'P1_masav_employees', 'P1_social_benefits', 'P1_authorities', 'P1_closing']
+    .some(id => enabledNodes.has(id));
+  if (hasAnyP1Child) {
     enabledNodes.add('P1_payroll');
+    enabledNodes.add('P1_closing');
   }
 
   // P2: production → bookkeeping, masav_suppliers; reporting → vat, tax_advances; closing → reconciliation, pnl

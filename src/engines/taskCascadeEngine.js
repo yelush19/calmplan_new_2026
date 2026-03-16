@@ -133,9 +133,9 @@ const POST_PAYROLL_SERVICES = [...PHASE_B_SERVICES, ...PHASE_C_SERVICES, ...MSB_
 const CASCADE_SERVICE_TO_TREE_NODE = {
   deductions:          'P1_deductions',
   social_security:     'P1_social_security',
-  payslip_sending:     'P1_ancillary',      // V4.0: step of P1_ancillary
-  masav_social:        'P1_ancillary',      // V4.0: step of P1_ancillary
-  masav_employees:     'P1_ancillary',      // V4.0: step of P1_ancillary
+  payslip_sending:     'P1_payslip_sending',  // V4.1: own node
+  masav_social:        'P1_social_benefits',  // V4.1: social benefits node
+  masav_employees:     'P1_masav_employees',  // V4.1: own node
   masav_suppliers:     'P2_masav_suppliers',
   authorities_payment: 'P1_authorities',    // V4.0: parent node
   vat_reporting:       'P2_vat',

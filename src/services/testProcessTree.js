@@ -109,7 +109,7 @@ export async function testProcessTree() {
       // Create a mock client with the migrated process_tree
       const clientWithTree = { ...testClient, process_tree };
 
-      const testNodes = ['P2_vat', 'P1_payroll', 'P1_ancillary', 'P1_social_security', 'P2_tax_advances'];
+      const testNodes = ['P2_vat', 'P1_payroll', 'P1_masav_employees', 'P1_social_security', 'P2_tax_advances'];
       for (const nodeId of testNodes) {
         const freq = resolveFrequency(nodeId, clientWithTree, tree);
         const nodeMap = buildNodeMap(tree);
@@ -131,8 +131,8 @@ export async function testProcessTree() {
 
       // Start with empty tree
       let clientTree = {};
-      console.log('\n  4a. Enable P1_ancillary (child) → should auto-enable P1_payroll (parent)');
-      clientTree = toggleNode(clientTree, 'P1_ancillary', true, tree);
+      console.log('\n  4a. Enable P1_masav_employees (child) → should auto-enable P1_payroll (parent)');
+      clientTree = toggleNode(clientTree, 'P1_masav_employees', true, tree);
       const enabled4a = Object.entries(clientTree).filter(([,v]) => v.enabled).map(([k]) => k);
       console.log('    enabled:', enabled4a);
       console.log('    P1_payroll auto-enabled?', isNodeEnabled(clientTree, 'P1_payroll') ? '✅ YES' : '❌ NO');
