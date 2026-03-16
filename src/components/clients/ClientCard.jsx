@@ -159,15 +159,15 @@ function ServiceTreeSection({ services }) {
             {/* Group header - collapsible */}
             <button
               onClick={(e) => { e.stopPropagation(); toggleGroup(Number(groupId)); }}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs font-bold transition-colors rounded-t-md ${groupColor}`}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-bold transition-colors rounded-t-md ${groupColor}`}
             >
               {isGroupExpanded ? (
-                <ChevronDown className="w-3 h-3 shrink-0 text-white/80" />
+                <ChevronDown className="w-4 h-4 shrink-0 text-white/80" />
               ) : (
-                <ChevronLeft className="w-3 h-3 shrink-0 text-white/80" />
+                <ChevronLeft className="w-4 h-4 shrink-0 text-white/80" />
               )}
               <span className="text-white">{groupLabel}</span>
-              <Badge className="bg-white/20 text-white text-[9px] px-1 py-0 border border-white/30 mr-auto">
+              <Badge className="bg-white/20 text-white text-xs px-1.5 py-0 border border-white/30 mr-auto">
                 {svcs.length}
               </Badge>
             </button>
@@ -185,15 +185,15 @@ function ServiceTreeSection({ services }) {
                     <div key={svcKey} className="mr-2 border-r-2 pr-2" style={{ borderColor: groupColor.includes('green') ? '#86efac' : groupColor.includes('blue') ? '#93c5fd' : groupColor.includes('purple') ? '#c4b5fd' : groupColor.includes('amber') ? '#fcd34d' : groupColor.includes('emerald') ? '#6ee7b7' : '#a5b4fc' }}>
                       <button
                         onClick={(e) => { e.stopPropagation(); if (hasSteps) toggleService(svcKey); }}
-                        className="w-full flex items-center gap-1.5 py-0.5 text-xs hover:text-gray-900 transition-colors"
+                        className="w-full flex items-center gap-2 py-1 text-sm hover:text-gray-900 transition-colors"
                       >
                         {hasSteps ? (
-                          isServiceExpanded ? <ChevronDown className="w-2.5 h-2.5 text-gray-400" /> : <ChevronLeft className="w-2.5 h-2.5 text-gray-400" />
-                        ) : <div className="w-2.5" />}
-                        <span className="text-gray-700">{treeLabels[svcKey] || svcKey.replace(/_/g, ' ')}</span>
+                          isServiceExpanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronLeft className="w-3.5 h-3.5 text-gray-400" />
+                        ) : <div className="w-3.5" />}
+                        <span className="text-gray-700 font-medium">{treeLabels[svcKey] || svcKey.replace(/_/g, ' ')}</span>
                         {hasSteps && (
-                          <span className="text-[9px] text-gray-400 mr-auto flex items-center gap-0.5">
-                            <Layers className="w-2.5 h-2.5" />
+                          <span className="text-xs text-gray-400 mr-auto flex items-center gap-0.5">
+                            <Layers className="w-3 h-3" />
                             {steps.length}
                           </span>
                         )}
@@ -203,8 +203,8 @@ function ServiceTreeSection({ services }) {
                       {isServiceExpanded && hasSteps && (
                         <div className="mr-4 pb-1 space-y-0.5">
                           {steps.map((step, idx) => (
-                            <div key={step.key} className="flex items-center gap-1.5 text-[10px] text-gray-500 py-0.5">
-                              <Badge className="bg-amber-50 text-amber-600 text-[8px] px-1 py-0 border border-amber-200">{idx + 1}</Badge>
+                            <div key={step.key} className="flex items-center gap-1.5 text-xs text-gray-600 py-0.5">
+                              <Badge className="bg-amber-50 text-amber-600 text-[10px] px-1.5 py-0 border border-amber-200 font-bold">{idx + 1}</Badge>
                               <span>{step.label}</span>
                             </div>
                           ))}
@@ -340,28 +340,28 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
                   className="w-5 h-5"
                 />
               </div>
-              
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-gray-800 group-hover:text-emerald-600 transition-colors leading-tight min-w-0 flex-1">
-                <Building className="w-4 h-4 text-gray-600 flex-shrink-0" />
+
+              <CardTitle className="text-xl font-bold flex items-center gap-2 text-gray-900 group-hover:text-emerald-600 transition-colors leading-tight min-w-0 flex-1">
+                <Building className="w-5 h-5 text-gray-600 flex-shrink-0" />
                 <span className="truncate">{client.name}</span>
               </CardTitle>
             </div>
-            
+
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Badge className={`${uiProps.badge} text-xs flex-shrink-0 flex items-center gap-1 border`}>
-                  <StatusIcon className={`w-3 h-3 ${uiProps.color}`} />
+              <Badge className={`${uiProps.badge} text-sm font-bold flex-shrink-0 flex items-center gap-1.5 border px-3 py-1`}>
+                  <StatusIcon className={`w-4 h-4 ${uiProps.color}`} />
                   {uiProps.label}
               </Badge>
               {relatedTasks.length > 0 && (
-                <Badge className="bg-blue-100 text-blue-800 text-xs">
+                <Badge className="bg-blue-100 text-blue-800 text-sm font-semibold px-2.5 py-0.5">
                   {relatedTasks.length} משימות
                 </Badge>
               )}
             </div>
         </div>
         {mainContact?.name && (
-          <p className="text-sm text-gray-600 flex items-center gap-2 mt-1 truncate">
-            <User className="w-3 h-3 flex-shrink-0" />
+          <p className="text-base text-gray-700 flex items-center gap-2 mt-1 truncate font-medium">
+            <User className="w-4 h-4 flex-shrink-0" />
             <span>{mainContact.name}</span>
           </p>
         )}
@@ -371,14 +371,14 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         {(mainContact?.phone || mainContact?.email) && (
           <div className="space-y-2 mb-3">
             {mainContact.phone && (
-              <a href={`tel:${mainContact.phone}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-emerald-700 transition-colors">
-                <Phone className="w-3 h-3 flex-shrink-0" />
+              <a href={`tel:${mainContact.phone}`} className="flex items-center gap-2 text-base text-gray-700 hover:text-emerald-700 transition-colors font-medium">
+                <Phone className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate">{mainContact.phone}</span>
               </a>
             )}
             {mainContact.email && (
-              <a href={`mailto:${mainContact.email}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-emerald-700 transition-colors">
-                <Mail className="w-3 h-3 flex-shrink-0" />
+              <a href={`mailto:${mainContact.email}`} className="flex items-center gap-2 text-base text-gray-700 hover:text-emerald-700 transition-colors">
+                <Mail className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate">{mainContact.email}</span>
               </a>
             )}
@@ -387,10 +387,10 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         
         {/* רו"ח */}
         {accountantName && (
-          <div className="flex items-center gap-2 text-xs text-gray-600 mb-2 pb-2 border-b border-gray-100">
-            <BookUser className="w-3 h-3 text-indigo-500 flex-shrink-0" />
-            <span className="font-medium text-indigo-700">רו"ח:</span>
-            <span>{accountantName}</span>
+          <div className="flex items-center gap-2 text-sm text-gray-700 mb-2 pb-2 border-b border-gray-100">
+            <BookUser className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+            <span className="font-bold text-indigo-700">רו"ח:</span>
+            <span className="font-medium">{accountantName}</span>
           </div>
         )}
 
@@ -398,12 +398,12 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         {hasReporting && (
           <div className="border-t border-gray-100 pt-2 min-h-[3rem]">
             {reportingRow1.length > 0 && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
                 {reportingRow1.map(f => (
-                  <span key={f.key} className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-gray-400" />
-                    <span className="font-medium">{f.label}:</span>
-                    <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-semibold' : ''}>
+                  <span key={f.key} className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="font-bold">{f.label}:</span>
+                    <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-bold' : 'font-medium'}>
                       {frequencyLabels[reportingInfo[f.key]] || reportingInfo[f.key]}
                     </span>
                   </span>
@@ -411,12 +411,12 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
               </div>
             )}
             {reportingRow2.length > 0 && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 mt-1">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 mt-1">
                 {reportingRow2.map(f => (
-                  <span key={f.key} className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-gray-400" />
-                    <span className="font-medium">{f.label}:</span>
-                    <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-semibold' : ''}>
+                  <span key={f.key} className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="font-bold">{f.label}:</span>
+                    <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-bold' : 'font-medium'}>
                       {frequencyLabels[reportingInfo[f.key]] || reportingInfo[f.key]}
                     </span>
                   </span>
@@ -434,15 +434,15 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         {/* Tax IDs - quick reference */}
         {(client.tax_info?.tax_deduction_file_number || client.tax_info?.annual_tax_ids?.tax_advances_id || client.entity_number) && (
           <div className="border-t border-gray-100 pt-2 mt-2">
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
               {client.entity_number && (
-                <span><span className="font-medium text-gray-600">ח"פ:</span> {client.entity_number}</span>
+                <span><span className="font-bold text-gray-700">ח"פ:</span> {client.entity_number}</span>
               )}
               {client.tax_info?.tax_deduction_file_number && (
-                <span><span className="font-medium text-gray-600">פנקס ניכויים:</span> {client.tax_info.tax_deduction_file_number}</span>
+                <span><span className="font-bold text-gray-700">פנקס ניכויים:</span> {client.tax_info.tax_deduction_file_number}</span>
               )}
               {client.tax_info?.annual_tax_ids?.tax_advances_id && (
-                <span><span className="font-medium text-gray-600">פנקס מקדמות:</span> {client.tax_info.annual_tax_ids.tax_advances_id}</span>
+                <span><span className="font-bold text-gray-700">פנקס מקדמות:</span> {client.tax_info.annual_tax_ids.tax_advances_id}</span>
               )}
             </div>
           </div>
@@ -451,22 +451,22 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         {/* Bank accounts summary */}
         {accountsSummary && (
           <div className="border-t border-gray-100 pt-2 mt-2">
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
               {accountsSummary.banks > 0 && (
-                <span className="flex items-center gap-1">
-                  <Banknote className="w-3 h-3 text-blue-500" />
+                <span className="flex items-center gap-1.5">
+                  <Banknote className="w-4 h-4 text-blue-500" />
                   {accountsSummary.banks} חשבונות בנק
                 </span>
               )}
               {accountsSummary.cards > 0 && (
-                <span className="flex items-center gap-1">
-                  <CreditCard className="w-3 h-3 text-purple-500" />
+                <span className="flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-purple-500" />
                   {accountsSummary.cards} כרט' אשראי
                 </span>
               )}
               {accountsSummary.other > 0 && (
-                <span className="flex items-center gap-1">
-                  <Building className="w-3 h-3 text-gray-500" />
+                <span className="flex items-center gap-1.5">
+                  <Building className="w-4 h-4 text-gray-500" />
                   {accountsSummary.other} נוספים
                 </span>
               )}
@@ -512,37 +512,37 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
         )}
       </CardContent>
       
-      <CardFooter className="grid grid-cols-4 gap-1 p-2 border-t-2 border-gray-200 bg-gray-50/80 rounded-b-xl flex-shrink-0">
-          <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
-            <Edit className="w-3 h-3 ml-1" />
+      <CardFooter className="grid grid-cols-4 gap-1.5 p-2.5 border-t-2 border-gray-200 bg-gray-50/80 rounded-b-xl flex-shrink-0">
+          <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
+            <Edit className="w-4 h-4 ml-1" />
             עריכה
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectTasks(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
-            <CheckSquare className="w-3 h-3 ml-1" />
+          <Button variant="ghost" size="sm" onClick={() => onSelectTasks(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
+            <CheckSquare className="w-4 h-4 ml-1" />
             משימות
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectFiles?.(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
-            <FolderOpen className="w-3 h-3 ml-1" />
+          <Button variant="ghost" size="sm" onClick={() => onSelectFiles?.(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
+            <FolderOpen className="w-4 h-4 ml-1" />
             קבצים
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowTaxInfo(true)} className="h-8 text-xs text-neutral-medium hover:bg-emerald-50 hover:text-emerald-700">
-            <Receipt className="w-3 h-3 ml-1" />
+          <Button variant="ghost" size="sm" onClick={() => setShowTaxInfo(true)} className="h-9 text-sm font-medium text-gray-600 hover:bg-emerald-50 hover:text-emerald-700">
+            <Receipt className="w-4 h-4 ml-1" />
             פרטי מס
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectAccounts(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
-            <Building className="w-3 h-3 ml-1" />
+          <Button variant="ghost" size="sm" onClick={() => onSelectAccounts(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
+            <Building className="w-4 h-4 ml-1" />
             חשבונות
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectCollections(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
-              <DollarSign className="w-3 h-3 ml-1" />
+          <Button variant="ghost" size="sm" onClick={() => onSelectCollections(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
+              <DollarSign className="w-4 h-4 ml-1" />
               גבייה
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onSelectContracts(client)} className="h-8 text-xs text-neutral-medium hover:bg-white hover:text-emerald-700 hover:shadow-sm">
-              <FileText className="w-3 h-3 ml-1" />
+          <Button variant="ghost" size="sm" onClick={() => onSelectContracts(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
+              <FileText className="w-4 h-4 ml-1" />
               חוזים
           </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete} className="h-8 text-xs text-status-error hover:bg-rose-100 hover:text-status-error">
-              <Trash2 className="w-3 h-3 ml-1" />
+          <Button variant="ghost" size="sm" onClick={onDelete} className="h-9 text-sm font-medium text-red-500 hover:bg-rose-100 hover:text-red-600">
+              <Trash2 className="w-4 h-4 ml-1" />
               מחיקה
           </Button>
       </CardFooter>

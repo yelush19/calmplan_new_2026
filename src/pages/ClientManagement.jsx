@@ -846,14 +846,17 @@ export default function ClientManagementPage() {
 
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Users className="w-6 h-6 text-primary" />
-          </div>
+          <img
+            src="/logo-litay.png"
+            alt="Litay LTD"
+            className="w-14 h-14 rounded-xl object-contain border border-gray-200 shadow-sm bg-white p-1"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-neutral-dark">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
               ניהול לקוחות ({filteredClients.length} מתוך {clients.length})
             </h1>
-            <p className="text-neutral-medium">מערכת CRM מתקדמת לניהול לקוחות ותהליכים</p>
+            <p className="text-sm text-gray-500">מערכת CRM מתקדמת לניהול לקוחות ותהליכים</p>
           </div>
         </div>
 
@@ -1283,10 +1286,10 @@ export default function ClientManagementPage() {
           setShowClientForm(false);
         }
       }}>
-        <DialogContent className="sm:max-w-[700px] h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[900px] lg:max-w-[1050px] h-[92vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedClient?.id ? `עריכת לקוח: ${selectedClient.name}` : 'יצירת לקוח חדש'}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold">{selectedClient?.id ? `עריכת לקוח: ${selectedClient.name}` : 'יצירת לקוח חדש'}</DialogTitle>
+            <DialogDescription className="text-sm">
               {selectedClient?.id ? 'עדכן את פרטי הלקוח.' : 'מלא את הפרטים ליצירת לקוח חדש.'}
             </DialogDescription>
           </DialogHeader>

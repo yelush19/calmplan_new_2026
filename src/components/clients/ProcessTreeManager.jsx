@@ -902,10 +902,27 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
             <p className="text-[10px] text-amber-700 mt-0.5">
               צמתים אלו קיימים בכרטיס הלקוח אך לא במפת התהליכים. ניתן ליצור אותם בהגדרות מערכת או להסיר אותם.
             </p>
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {orphanNodes.map(id => (
-                <Badge key={id} className="bg-amber-100 text-amber-800 text-[9px]">{id}</Badge>
-              ))}
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {orphanNodes.map(id => {
+                // Translate English node IDs to Hebrew labels
+                const hebrewLabels = {
+                  'P1_deductions_report': 'דיווח ניכויים',
+                  'P1_deductions_payment': 'תשלום ניכויים',
+                  'P1_social_security_report': 'דיווח ביטוח לאומי',
+                  'P1_social_security_payment': 'תשלום ביטוח לאומי',
+                  'P1_payroll': 'הכנת שכר',
+                  'P1_payslip_sending': 'משלוח תלושים',
+                  'P2_vat_reporting': 'דיווח מע"מ',
+                  'P2_vat_payment': 'תשלום מע"מ',
+                  'P2_bookkeeping': 'הנהלת חשבונות',
+                  'P2_reconciliation': 'התאמות',
+                  'P2_tax_advances': 'מקדמות מס',
+                };
+                const label = hebrewLabels[id] || id.replace(/^P\d_/, '').replace(/_/g, ' ');
+                return (
+                  <Badge key={id} className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 font-medium" title={id}>{label}</Badge>
+                );
+              })}
             </div>
             <div className="flex gap-2 mt-2">
               <Button type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={handleDismissOrphans}>

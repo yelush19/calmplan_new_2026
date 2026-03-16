@@ -91,13 +91,27 @@ const COGNITIVE_LABELS = ['ננו', 'פשוט', 'בינוני', 'מורכב'];
 const VB_W = 1800, VB_H = 1100;
 const CX = VB_W / 2, CY = VB_H / 2;
 
-// ── Shape palette definition (directive #5) ──
+// ── Shape palette definition (directive #5) — AYOA/MindMeister inspired ──
 const PALETTE_SHAPES = [
   { key: 'cloud', label: 'ענן', icon: Cloud },
   { key: 'bubble', label: 'בועה', icon: Circle },
   { key: 'diamond', label: 'מעוין', icon: Diamond },
   { key: 'pill', label: 'כמוסה', icon: Minus },
   { key: 'star', label: 'כוכב', icon: Star },
+  { key: 'hexagon', label: 'משושה', icon: MessageCircle },
+  { key: 'capsule', label: 'קפסולה', icon: Minus },
+];
+
+// ── Color grid for node styling (MindMeister-inspired) ──
+const COLOR_GRID = [
+  // Row 1 - Vibrant
+  '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', '#03A9F4',
+  '#00BCD4', '#009688', '#4CAF50', '#8BC34A', '#CDDC39', '#FFC107',
+  '#FF9800', '#FF5722', '#795548', '#607D8B',
+  // Row 2 - Pastel
+  '#F48FB1', '#CE93D8', '#B39DDB', '#9FA8DA', '#90CAF9', '#81D4FA',
+  '#80DEEA', '#80CBC4', '#A5D6A7', '#C5E1A5', '#E6EE9C', '#FFE082',
+  '#FFCC80', '#FFAB91', '#BCAAA4', '#B0BEC5',
 ];
 
 // ── Magnetic snap distance (directive #6) ──
@@ -403,14 +417,14 @@ function ParentDropdown({ selectedNodeId, allNodes, moveService, currentParentId
 
   return (
     <div>
-      <label className="text-[9px] font-bold text-gray-400 block mb-0.5">שיוך להורה (נתיב מלא)</label>
-      <div className="text-[8px] text-gray-300 mb-0.5 truncate" title={currentPath}>
+      <label className="text-xs font-bold text-gray-500 block mb-1">שיוך להורה (נתיב מלא)</label>
+      <div className="text-[10px] text-gray-400 mb-1 truncate" title={currentPath}>
         נוכחי: {currentPath}
       </div>
       <select
         value={currentParentId || ''}
         onChange={handleChange}
-        className="w-full px-2 py-1 text-[10px] border rounded-lg focus:ring-1 focus:ring-blue-300 focus:outline-none bg-white"
+        className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-300 focus:outline-none bg-white font-medium"
         dir="rtl"
       >
         {parentOptions.map(opt => (
@@ -521,14 +535,14 @@ function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
-        <label className="text-[9px] font-bold text-gray-400 flex items-center gap-1">
-          <ListOrdered className="w-3 h-3" />
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
+          <ListOrdered className="w-4 h-4" />
           שלבי תהליך ({steps.length})
         </label>
       </div>
 
-      <div ref={listRef} className="space-y-0.5">
+      <div ref={listRef} className="space-y-1">
         {displaySteps.map((step, i) => {
           const isBeingDragged = stepDrag && (
             stepDrag.fromIndex === stepDrag.currentIndex
@@ -541,30 +555,30 @@ function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
             <div
               key={`${step.key || i}-${i}`}
               data-step-index={i}
-              className={`flex items-center gap-1 rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 rounded-xl transition-all ${
                 isBeingDragged
-                  ? 'bg-blue-50 shadow-sm ring-1 ring-blue-200 scale-[1.02]'
+                  ? 'bg-blue-50 shadow-sm ring-2 ring-blue-200 scale-[1.02]'
                   : isDropTarget
-                    ? 'bg-green-50 ring-1 ring-green-200'
+                    ? 'bg-green-50 ring-2 ring-green-200'
                     : 'bg-gray-50 hover:bg-gray-100'
               }`}
               style={{
-                padding: '4px 6px',
-                minHeight: '32px',
+                padding: '6px 8px',
+                minHeight: '38px',
               }}
             >
               {/* ⋮⋮ Drag handle */}
               <button
-                className="flex-shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-gray-200 text-gray-300 hover:text-gray-500 transition-colors"
+                className="flex-shrink-0 cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-200 text-gray-300 hover:text-gray-500 transition-colors"
                 onMouseDown={(e) => handleDragStart(i, e)}
                 title="גרור לשינוי סדר"
               >
-                <GripVertical className="w-3 h-3" />
+                <GripVertical className="w-4 h-4" />
               </button>
 
               {/* Auto-index badge */}
               <span
-                className="flex-shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-bold"
+                className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
                 style={{ backgroundColor: bg, color }}
               >
                 {i + 1}
@@ -576,14 +590,14 @@ function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
                 value={step.label || ''}
                 onChange={(e) => handleStepLabelChange(i, e.target.value)}
                 placeholder="שם שלב..."
-                className="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] bg-transparent border-0 border-b border-transparent focus:border-gray-300 focus:outline-none text-gray-700 placeholder-gray-300 transition-colors"
+                className="flex-1 min-w-0 px-2 py-1 text-sm bg-transparent border-0 border-b border-transparent focus:border-gray-300 focus:outline-none text-gray-700 placeholder-gray-300 transition-colors font-medium"
                 dir="rtl"
               />
 
               {/* Delete step */}
               <button
                 onClick={() => handleDeleteStep(i)}
-                className={`flex-shrink-0 p-0.5 rounded transition-all ${
+                className={`flex-shrink-0 p-1 rounded transition-all ${
                   steps.length <= 1
                     ? 'text-gray-200 cursor-not-allowed'
                     : 'text-gray-300 hover:text-red-500 hover:bg-red-50'
@@ -591,7 +605,7 @@ function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
                 disabled={steps.length <= 1}
                 title="מחק שלב"
               >
-                <Trash2 className="w-2.5 h-2.5" />
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           );
@@ -601,9 +615,9 @@ function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
       {/* + Add step button */}
       <button
         onClick={handleAddStep}
-        className="w-full mt-1.5 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-dashed border-gray-200 text-[9px] font-medium text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all"
+        className="w-full mt-2 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed border-gray-200 text-xs font-bold text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all"
       >
-        <Plus className="w-3 h-3" />
+        <Plus className="w-4 h-4" />
         הוסף שלב
       </button>
     </div>
@@ -816,7 +830,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         y: saved?.y ?? CY + Math.sin(angle) * rootDist,
         parentId: 'hub',
         dashboard: dna.dashboard,
-        r: 48,
+        r: 56,
       });
     });
 
@@ -884,7 +898,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           steps: svc.steps || [],
           weight,
           cogLoad: weight?.cognitiveLoad || 0,
-          r: Math.max(26, Math.min(42, 22 + (svc.label || '').length * 0.8 - depth * 2)), // adaptive to label length
+          r: Math.max(32, Math.min(48, 28 + (svc.label || '').length * 0.8 - depth * 2)), // adaptive to label length
           nextStepIds: svc.nextStepIds || (svc.nextStepId ? [svc.nextStepId] : []),
           isParallel: svc.isParallel || false,
           _isCustom: !!customServices[svc.key],
@@ -910,7 +924,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
             const stepParentId = sti === 0 ? svc.key : `${svc.key}_step_${sti - 1}`;
 
             const stepLabel = step.label || step.key;
-            const stepR = Math.max(20, Math.min(35, 16 + stepLabel.length * 0.7));
+            const stepR = Math.max(24, Math.min(38, 20 + stepLabel.length * 0.7));
             const stepNode = {
               id: `${svc.key}_step_${sti}`,
               type: 'step',
@@ -1558,7 +1572,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
   const totalServices = Object.values(liveServices).length;
 
   return (
-    <div className="relative w-full" style={{ minHeight: '620px' }}
+    <div className="relative w-full" style={{ minHeight: '820px' }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
@@ -1568,7 +1582,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         ref={svgRef}
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         className="w-full h-full"
-        style={{ maxHeight: 'calc(100vh - 200px)', minHeight: '580px', userSelect: 'none' }}
+        style={{ maxHeight: 'calc(100vh - 120px)', minHeight: '780px', userSelect: 'none' }}
       >
         <defs>
           <filter id="settings-glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -1675,7 +1689,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           onError={(e) => { e.target.style.display = 'none'; }}
         />
         <circle cx={CX} cy={CY} r={55} fill="none" stroke="#66BB6A" strokeWidth={1.5} strokeDasharray="4 3" />
-        <text x={CX} y={CY + 48} textAnchor="middle" fill="#78909C" fontSize="9">{totalServices} שירותים</text>
+        <text x={CX} y={CY + 48} textAnchor="middle" fill="#78909C" fontSize="12" fontWeight="600">{totalServices} שירותים</text>
 
         {/* ── All Nodes (directive #4: draggable) ── */}
         {displayNodes.map(node => {
@@ -1725,11 +1739,11 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                 const childCount = displayNodes.filter(n => n.parentId === node.id).length;
                 return (
                   <>
-                    <text x={node.x} y={node.y - 8} textAnchor="middle" fontSize="14" fontWeight="700" fill="#263238">{node.id}</text>
-                    <text x={node.x} y={node.y + 7} textAnchor="middle" fontSize="10" fill={node.color} fontWeight="500">
+                    <text x={node.x} y={node.y - 10} textAnchor="middle" fontSize="18" fontWeight="800" fill="#263238">{node.id}</text>
+                    <text x={node.x} y={node.y + 8} textAnchor="middle" fontSize="13" fill={node.color} fontWeight="600">
                       {node.label.replace(node.id + ' ', '')}
                     </text>
-                    <text x={node.x} y={node.y + 20} textAnchor="middle" fontSize="8" fill="#90A4AE">
+                    <text x={node.x} y={node.y + 23} textAnchor="middle" fontSize="10" fill="#78909C" fontWeight="500">
                       {isCollapsed ? `(${childCount} מוסתרים)` : `${childCount} שירותים`}
                     </text>
                     {/* Collapse/Expand toggle button */}
@@ -1794,19 +1808,19 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                     lines[1] = lines[1].substring(0, maxCharsPerLine - 1) + '…';
                   }
                 }
-                const lineHeight = 11;
+                const lineHeight = 13;
                 const labelStartY = node.y - (lines.length - 1) * lineHeight / 2 - 4;
                 return (
                   <>
                     {lines.map((line, li) => (
-                      <text key={li} x={node.x} y={labelStartY + li * lineHeight} textAnchor="middle" fontSize="9" fontWeight="600" fill="#263238">
+                      <text key={li} x={node.x} y={labelStartY + li * lineHeight} textAnchor="middle" fontSize="11" fontWeight="700" fill="#263238">
                         {line}
                       </text>
                     ))}
-                    <text x={node.x} y={labelStartY + lines.length * lineHeight} textAnchor="middle" fontSize="7" fill={node.color}>
+                    <text x={node.x} y={labelStartY + lines.length * lineHeight} textAnchor="middle" fontSize="9" fill={node.color} fontWeight="500">
                       {(node.steps || []).length} שלבים
                     </text>
-                    <text x={node.x} y={labelStartY + lines.length * lineHeight + 9} textAnchor="middle" fontSize="6" fill="#90A4AE">
+                    <text x={node.x} y={labelStartY + lines.length * lineHeight + 11} textAnchor="middle" fontSize="8" fill="#78909C">
                       {COGNITIVE_LABELS[node.cogLoad || 0]} • {node.weight?.duration || 15}ד׳
                     </text>
                     {node._isCustom && (
@@ -1881,15 +1895,15 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                     lines[1] = lines[1].substring(0, maxChars - 1) + '…';
                   }
                 }
-                const startY = node.y - (lines.length * 4);
+                const startY = node.y - (lines.length * 5);
                 return (
                   <>
                     {lines.map((line, li) => (
-                      <text key={li} x={node.x} y={startY + li * 9} textAnchor="middle" fontSize="7" fontWeight="500" fill="#37474F">
+                      <text key={li} x={node.x} y={startY + li * 11} textAnchor="middle" fontSize="9" fontWeight="600" fill="#37474F">
                         {line}
                       </text>
                     ))}
-                    <text x={node.x} y={startY + lines.length * 9} textAnchor="middle" fontSize="6" fill="#90A4AE">{(node.stepIndex || 0) + 1}</text>
+                    <text x={node.x} y={startY + lines.length * 11} textAnchor="middle" fontSize="8" fill="#78909C" fontWeight="500">{(node.stepIndex || 0) + 1}</text>
                   </>
                 );
               })()}
@@ -2028,11 +2042,11 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       {/* ══════ DNA Legend + Sync Button ══════ */}
       <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
         {/* DNA Legend */}
-        <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm border border-gray-100">
           {Object.entries(DNA).map(([key, val]) => (
-            <div key={key} className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: val.color }} />
-              <span className="text-[10px] font-medium" style={{ color: val.color }}>{key}</span>
+            <div key={key} className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: val.color }} />
+              <span className="text-xs font-bold" style={{ color: val.color }}>{key}</span>
             </div>
           ))}
         </div>
@@ -2042,16 +2056,16 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
           <button
             onClick={handleForceSync}
             disabled={syncStatus === 'syncing'}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               syncStatus === 'syncing'
                 ? 'bg-blue-50 text-blue-400 cursor-wait'
-                : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
+                : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95 shadow-sm'
             }`}
           >
             {syncStatus === 'syncing' ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <CloudUpload className="w-3.5 h-3.5" />
+              <CloudUpload className="w-4 h-4" />
             )}
             {syncStatus === 'syncing' ? 'מסנכרן...' : 'סנכרון מלא'}
           </button>
@@ -2091,40 +2105,123 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         </div>
       </div>
 
-      {/* ══════ Contextual Sidebar (directive #8) ══════ */}
+      {/* ══════ Contextual Sidebar — AYOA/MindMeister-style Editor (directive #8) ══════ */}
       <AnimatePresence>
         {selectedNode && selectedNode.type === 'service' && (
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={{ opacity: 0, x: -30 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute bottom-3 left-3 w-64 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-20"
+            className="absolute top-3 left-3 w-80 bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-20"
           >
             {/* Header */}
-            <div className="px-3 py-2.5 border-b border-gray-50 flex items-center justify-between"
-              style={{ background: `linear-gradient(135deg, ${selectedNode.color}10, transparent)` }}>
-              <span className="text-xs font-bold text-gray-800">{selectedNode.label}</span>
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between"
+              style={{ background: `linear-gradient(135deg, ${selectedNode.color}15, ${selectedNode.color}05)` }}>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: selectedNode.color }} />
+                <span className="text-sm font-bold text-gray-800 truncate">{selectedNode.label}</span>
+              </div>
               <button onClick={() => setSelectedNodeId(null)}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-400">
-                <X className="w-3.5 h-3.5" />
+                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 space-y-2.5 max-h-[300px] overflow-y-auto">
-              {/* Name edit (directive #8: two-way binding) */}
+            <div className="p-4 space-y-4 max-h-[calc(100vh-260px)] overflow-y-auto">
+              {/* Name edit */}
               <div>
-                <label className="text-[9px] font-bold text-gray-400 block mb-0.5">שם שירות</label>
+                <label className="text-xs font-bold text-gray-500 block mb-1">שם שירות</label>
                 <input
                   type="text"
                   value={selectedNode.label || ''}
                   onChange={(e) => updateService(selectedNodeId, { label: e.target.value })}
-                  className="w-full px-2 py-1 text-xs border rounded-lg focus:ring-1 focus:ring-blue-300 focus:outline-none"
+                  className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-300 focus:outline-none font-medium"
                   dir="rtl"
                 />
               </div>
 
-              {/* Parent node assignment (breadcrumb path dropdown) */}
+              {/* ── Shape / Border / Line Tabs (MindMeister-inspired) ── */}
+              <div className="border-2 border-gray-100 rounded-xl overflow-hidden">
+                <div className="flex border-b border-gray-100">
+                  {[
+                    { key: 'shape', label: 'צורה' },
+                    { key: 'color', label: 'צבע' },
+                    { key: 'info', label: 'מידע' },
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => {
+                        // Use a simple data attribute to track active tab
+                        const panel = document.getElementById('sidebar-tab-content');
+                        if (panel) panel.dataset.activeTab = tab.key;
+                        // Force re-render by toggling a state
+                        setHoveredNodeId(prev => prev);
+                      }}
+                      className="flex-1 px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-all border-b-2 border-transparent focus:border-blue-500 focus:text-blue-600"
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div id="sidebar-tab-content" className="p-3 space-y-3">
+                  {/* Shape selector grid */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 block mb-2">בחר צורה</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {PALETTE_SHAPES.map(shape => {
+                        const ShapeIcon = shape.icon;
+                        const isActive = (design.getNodeOverride?.(selectedNodeId)?.shape || design.shape || 'bubble') === shape.key;
+                        return (
+                          <button
+                            key={shape.key}
+                            onClick={() => {
+                              design.setNodeOverride?.(selectedNodeId, { shape: shape.key });
+                              updateService(selectedNodeId, { _shape: shape.key });
+                            }}
+                            className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 transition-all ${
+                              isActive
+                                ? 'border-blue-500 bg-blue-50 shadow-sm'
+                                : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <ShapeIcon className={`w-5 h-5 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <span className={`text-[10px] font-medium ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>{shape.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Color grid (MindMeister-inspired) */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 block mb-2">בחר צבע</label>
+                    <div className="grid grid-cols-8 gap-1.5">
+                      {COLOR_GRID.map(color => {
+                        const currentColor = design.getNodeOverride?.(selectedNodeId)?.color || selectedNode.color;
+                        const isActive = currentColor === color;
+                        return (
+                          <button
+                            key={color}
+                            onClick={() => {
+                              design.setNodeOverride?.(selectedNodeId, { color });
+                              updateService(selectedNodeId, { _color: color });
+                            }}
+                            className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${
+                              isActive ? 'border-gray-800 ring-2 ring-offset-1 ring-gray-400 scale-110' : 'border-transparent hover:border-gray-300'
+                            }`}
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Parent node assignment */}
               <ParentDropdown
                 selectedNodeId={selectedNodeId}
                 allNodes={allNodes}
@@ -2135,16 +2232,16 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
 
               {/* Cognitive weight */}
               <div>
-                <label className="text-[9px] font-bold text-gray-400 block mb-0.5">עומס קוגניטיבי</label>
-                <div className="flex items-center gap-1">
+                <label className="text-xs font-bold text-gray-500 block mb-1.5">עומס קוגניטיבי</label>
+                <div className="flex items-center gap-1.5">
                   {COGNITIVE_LABELS.map((label, i) => (
                     <button
                       key={i}
                       onClick={() => updateService(selectedNodeId, { _cogOverride: i })}
-                      className={`px-2 py-0.5 rounded text-[9px] font-medium transition-all ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                         (selectedNode.cogLoad || 0) === i
-                          ? 'bg-gray-800 text-white'
-                          : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                          ? 'bg-gray-800 text-white shadow-sm'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                       }`}
                     >
                       {label}
@@ -2163,68 +2260,66 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
               />
 
               {/* Duration & weight info */}
-              <div className="flex items-center gap-3 text-[9px] text-gray-400 pt-1 border-t border-gray-50">
-                <span>משך: {selectedNode.weight?.duration || 15}ד׳</span>
+              <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
+                <span className="font-medium">משך: {selectedNode.weight?.duration || 15}ד׳</span>
                 <span>סוג: {selectedNode.taskType || 'linear'}</span>
                 {selectedNode._isCustom && (
-                  <span className="text-green-500 font-bold">מותאם</span>
+                  <span className="text-green-600 font-bold">מותאם</span>
                 )}
               </div>
 
-              {/* Save to DB button */}
-              <button
-                onClick={async () => {
-                  setMapSaving(true);
-                  try {
-                    invalidateTreeCache();
-                    const { tree, configId: cid } = await loadCompanyTree();
-                    if (!tree) throw new Error('No tree in DB');
-                    // Update node label in tree if it's a custom service
-                    let merged = { ...tree };
-                    const svc = liveServices[selectedNodeId];
-                    if (svc) {
-                      const branch = getDashboardBranch(svc.dashboard);
-                      if (merged.branches?.[branch]) {
-                        const updateNodeInTree = (nodes) => nodes.map(n => {
-                          if (n.id === selectedNodeId) return { ...n, label: svc.label || n.label };
-                          if (n.children?.length) return { ...n, children: updateNodeInTree(n.children) };
-                          return n;
-                        });
-                        merged = { ...merged, branches: { ...merged.branches, [branch]: { ...merged.branches[branch], children: updateNodeInTree(merged.branches[branch].children || []) } } };
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    setMapSaving(true);
+                    try {
+                      invalidateTreeCache();
+                      const { tree, configId: cid } = await loadCompanyTree();
+                      if (!tree) throw new Error('No tree in DB');
+                      let merged = { ...tree };
+                      const svc = liveServices[selectedNodeId];
+                      if (svc) {
+                        const branch = getDashboardBranch(svc.dashboard);
+                        if (merged.branches?.[branch]) {
+                          const updateNodeInTree = (nodes) => nodes.map(n => {
+                            if (n.id === selectedNodeId) return { ...n, label: svc.label || n.label };
+                            if (n.children?.length) return { ...n, children: updateNodeInTree(n.children) };
+                            return n;
+                          });
+                          merged = { ...merged, branches: { ...merged.branches, [branch]: { ...merged.branches[branch], children: updateNodeInTree(merged.branches[branch].children || []) } } };
+                        }
                       }
-                    }
-                    // Also merge any missing custom services
-                    for (const [key, cs] of Object.entries(customServices)) {
-                      if (ALL_SERVICES[key]) continue;
-                      const br = getDashboardBranch(cs.dashboard);
-                      if (!merged.branches?.[br]) continue;
-                      const exists = (nodes) => nodes.some(n => n.id === key || (n.children?.length && exists(n.children)));
-                      if (!exists(merged.branches[br].children || [])) {
-                        merged.branches[br] = { ...merged.branches[br], children: [...(merged.branches[br].children || []), { id: key, label: cs.label || 'שירות חדש', service_key: key, is_parent_task: false, default_frequency: 'monthly', depends_on: [], execution: 'sequential', children: [], steps: [] }] };
+                      for (const [key, cs] of Object.entries(customServices)) {
+                        if (ALL_SERVICES[key]) continue;
+                        const br = getDashboardBranch(cs.dashboard);
+                        if (!merged.branches?.[br]) continue;
+                        const exists = (nodes) => nodes.some(n => n.id === key || (n.children?.length && exists(n.children)));
+                        if (!exists(merged.branches[br].children || [])) {
+                          merged.branches[br] = { ...merged.branches[br], children: [...(merged.branches[br].children || []), { id: key, label: cs.label || 'שירות חדש', service_key: key, is_parent_task: false, default_frequency: 'monthly', depends_on: [], execution: 'sequential', children: [], steps: [] }] };
+                        }
                       }
+                      await saveAndBroadcast(merged, cid, 'MindMap:SidebarSave');
+                      setMapDirty(false);
+                      toast({ title: 'נשמר ל-DB', description: 'השינויים נשמרו בהצלחה' });
+                    } catch (err) {
+                      toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
                     }
-                    await saveAndBroadcast(merged, cid, 'MindMap:SidebarSave');
-                    setMapDirty(false);
-                    toast({ title: 'נשמר ל-DB', description: 'השינויים נשמרו בהצלחה' });
-                  } catch (err) {
-                    toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
-                  }
-                  setMapSaving(false);
-                }}
-                disabled={mapSaving}
-                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-green-50 text-green-600 text-[10px] font-bold hover:bg-green-100 transition-all border border-green-200"
-              >
-                {mapSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                {mapSaving ? 'שומר...' : 'שמור ל-DB'}
-              </button>
-
-              {/* Delete button */}
-              <button
-                onClick={() => setDeleteConfirm(selectedNodeId)}
-                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-red-50 text-red-500 text-[10px] font-medium hover:bg-red-100 transition-all"
-              >
-                <Trash2 className="w-3 h-3" /> הסר שירות
-              </button>
+                    setMapSaving(false);
+                  }}
+                  disabled={mapSaving}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-green-50 text-green-700 text-sm font-bold hover:bg-green-100 transition-all border-2 border-green-200"
+                >
+                  {mapSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {mapSaving ? 'שומר...' : 'שמור'}
+                </button>
+                <button
+                  onClick={() => setDeleteConfirm(selectedNodeId)}
+                  className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl bg-red-50 text-red-500 text-sm font-medium hover:bg-red-100 transition-all border-2 border-red-200"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -2273,7 +2368,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
       </AnimatePresence>
 
       {/* Instructions */}
-      <div className="absolute bottom-3 right-3 text-[9px] text-gray-400 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-gray-100 z-10">
+      <div className="absolute bottom-3 right-3 text-xs text-gray-500 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-gray-200 shadow-sm z-10 font-medium">
         גרור צורה ליצירה • גרור ענף להעברה • גרור לפח למחיקה • + לילד מהיר
       </div>
     </div>
