@@ -13,7 +13,7 @@ import {
 import {
   ArrowRight, Save, Plus, ChevronDown, ChevronRight, Paperclip,
   FileSpreadsheet, FileText, Send, CheckSquare, Upload, X,
-  BookOpen, Circle
+  BookOpen, Circle, Download
 } from 'lucide-react';
 import {
   createWorkbookFromTemplate,
@@ -22,6 +22,7 @@ import {
   DEFAULT_ACCOUNT_GROUPS,
 } from '@/config/balanceWorkbookTemplates';
 import WorksheetEditor from '@/components/balance/WorksheetEditor';
+import { exportToExcel, downloadCSV } from '@/engines/workbookExportEngine';
 
 // ── סטטוס קבוצה ──
 const GROUP_STATUSES = [
@@ -494,6 +495,7 @@ export default function BalanceSheetWorkbookPage() {
           {/* ────── Output Tab ────── */}
           <TabsContent value="output" className="m-0 p-4">
             <OutputTab
+              workbook={workbook}
               output={workbook.output || {}}
               onTogglePackageItem={toggleOutputPackageItem}
               onAddRound={addRound}
@@ -832,7 +834,7 @@ const ROUND_TYPE_LABELS = {
   answers: 'תשובות',
 };
 
-function OutputTab({ output, onTogglePackageItem, onAddRound, onUpdateRoundNotes }) {
+function OutputTab({ workbook, output, onTogglePackageItem, onAddRound, onUpdateRoundNotes }) {
   const pkg = output.package || {};
   const rounds = output.rounds || [];
 
@@ -857,6 +859,36 @@ function OutputTab({ output, onTogglePackageItem, onAddRound, onUpdateRoundNotes
               <span className="text-sm">{PACKAGE_LABELS[key]}</span>
             </label>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Export buttons */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">ייצוא חוברת עבודה</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          <Button
+            size="sm"
+            className="gap-2 bg-green-700 hover:bg-green-800"
+            onClick={() => exportToExcel(workbook)}
+          >
+            <Download className="w-4 h-4" />
+            הורד אקסל (.xlsx)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => downloadCSV(workbook)}
+          >
+            <Download className="w-4 h-4" />
+            הורד בוחן CSV
+          </Button>
+          <p className="text-xs text-gray-500 w-full mt-1">
+            האקסל כולל: בוחן והפניות + כל גליונות העבודה + פקודות יומן.
+            הרו"ח מקבל קובץ שהוא יכול לעבוד עליו.
+          </p>
         </CardContent>
       </Card>
 
