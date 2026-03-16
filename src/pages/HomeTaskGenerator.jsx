@@ -38,7 +38,7 @@ const homeCategories = {
   family: {
     title: "משפחה וזמן אישי",
     icon: Heart,
-    color: "bg-pink-100 text-pink-800",
+    color: "bg-violet-100 text-violet-800",
     emoji: "❤️"
   },
   maintenance: {

@@ -57,7 +57,7 @@ export default function InspirationPage() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center space-y-2"
       >
-        <h1 className="text-4xl font-bold text-pink-800">השראה, פנאי ומה שביניהם</h1>
+        <h1 className="text-4xl font-bold text-violet-800">השראה, פנאי ומה שביניהם</h1>
         <p className="text-xl text-gray-600">פינה קטנה לנפש, עם המלצות לקריאה ומוזיקה שמתאימה בדיוק לך.</p>
       </motion.div>
 

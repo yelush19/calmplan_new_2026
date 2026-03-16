@@ -140,7 +140,7 @@ function MiniCalendar({ now, onClose }) {
         </Link>
       </div>
 
-      <div className="flex gap-2 mt-2 text-[10px] text-gray-400 justify-center">
+      <div className="flex gap-2 mt-2 text-[12px] text-gray-400 justify-center">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> היום</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-200 ring-1 ring-amber-300 inline-block" /> דדליין</span>
       </div>
@@ -266,7 +266,7 @@ export default function TimeAwareness() {
                     <span>{d.workDays} ימ"ע {d.label} (ה-{d.day})</span>
                   )}
                   {d.calendarDays === 0 && d.total > 0 && (
-                    <span className={`mr-0.5 px-1 py-0 rounded text-[10px] font-bold ${
+                    <span className={`mr-0.5 px-1 py-0 rounded text-[12px] font-bold ${
                       hasIncomplete ? 'bg-amber-300 text-amber-900' : 'bg-emerald-300 text-emerald-900'
                     }`}>
                       {d.total - d.incomplete}/{d.total}

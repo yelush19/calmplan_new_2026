@@ -14,7 +14,7 @@ import { Plus, X, Pin, PinOff, Trash2, Link2, Edit3, Check, User, Calendar, Tag,
 // ADHD-friendly: soft muted pastels, low contrast, calming tones
 const NOTE_COLORS = [
   { key: 'yellow', bg: 'bg-[#FFF8E7]', border: 'border-[#E8D5A3]', text: 'text-[#6B5B3E]', hover: 'hover:bg-[#FFF3D6]', ring: 'ring-[#D4BA6A]' },
-  { key: 'pink', bg: 'bg-[#FFF0F3]', border: 'border-[#E8B4BE]', text: 'text-[#7A4A55]', hover: 'hover:bg-[#FFE4EA]', ring: 'ring-[#D4899A]' },
+  { key: 'pink', bg: 'bg-[#F5F0FF]', border: 'border-[#C4B5E3]', text: 'text-[#5B437A]', hover: 'hover:bg-[#EDE9FE]', ring: 'ring-[#A78BFA]' },
   { key: 'blue', bg: 'bg-[#EFF6FF]', border: 'border-[#A8C8E8]', text: 'text-[#3B5975]', hover: 'hover:bg-[#E0EEFA]', ring: 'ring-[#7EB0D6]' },
   { key: 'green', bg: 'bg-[#F0FAF4]', border: 'border-[#A3D4B5]', text: 'text-[#3D6B50]', hover: 'hover:bg-[#E0F5E8]', ring: 'ring-[#78BF94]' },
   { key: 'purple', bg: 'bg-[#F5F0FF]', border: 'border-[#BDA8E8]', text: 'text-[#5B437A]', hover: 'hover:bg-[#ECE4FF]', ring: 'ring-[#9A7ED6]' },
@@ -29,7 +29,7 @@ const URGENCY_OPTIONS = [
   { value: 'low', label: 'נמוך', color: 'bg-blue-100 text-blue-700' },
   { value: 'medium', label: 'בינוני', color: 'bg-amber-100 text-amber-700' },
   { value: 'high', label: 'גבוה', color: 'bg-orange-100 text-orange-700' },
-  { value: 'urgent', label: 'דחוף', color: 'bg-rose-100 text-rose-700' },
+  { value: 'urgent', label: 'דחוף', color: 'bg-amber-100 text-amber-700' },
 ];
 
 const CATEGORY_OPTIONS = [
@@ -113,7 +113,7 @@ function NoteAttachments({ noteId, attachments = [], clientName, onUpdate }) {
       {attachments.length > 0 && (
         <div className="space-y-0.5 mb-1">
           {attachments.map(att => (
-            <div key={att.id} className="flex items-center gap-1 text-[10px] opacity-80 group/att">
+            <div key={att.id} className="flex items-center gap-1 text-[12px] opacity-80 group/att">
               <FileText className="w-2.5 h-2.5" />
               <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate max-w-[120px]">
                 {att.file_name}
@@ -128,7 +128,7 @@ function NoteAttachments({ noteId, attachments = [], clientName, onUpdate }) {
       <button
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="inline-flex items-center gap-0.5 text-[10px] opacity-60 hover:opacity-100 transition-opacity"
+        className="inline-flex items-center gap-0.5 text-[12px] opacity-60 hover:opacity-100 transition-opacity"
       >
         {uploading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Paperclip className="w-2.5 h-2.5" />}
         {uploading ? 'מעלה...' : 'צרף קובץ'}
@@ -294,7 +294,7 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
           פתקים
           {notes.length > 0 && <span className="text-sm font-normal text-gray-400">({notes.length})</span>}
           {threeDayNotes.length > 0 && (
-            <Badge className="bg-rose-100 text-rose-700 text-[10px] px-1.5 py-0 gap-0.5">
+            <Badge className="bg-amber-100 text-amber-700 text-[12px] px-1.5 py-0 gap-0.5">
               <AlertTriangle className="w-2.5 h-2.5" />
               {threeDayNotes.length} ב-3 ימים
             </Badge>
@@ -483,25 +483,25 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                     {/* Extra fields */}
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {note.client_name && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] opacity-70">
+                        <span className="inline-flex items-center gap-0.5 text-[12px] opacity-70">
                           <User className="w-2.5 h-2.5" />
                           {note.client_name}
                         </span>
                       )}
                       {note.category && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] opacity-70">
+                        <span className="inline-flex items-center gap-0.5 text-[12px] opacity-70">
                           <Tag className="w-2.5 h-2.5" />
                           {CATEGORY_OPTIONS.find(c => c.value === note.category)?.label || note.category}
                         </span>
                       )}
                       {note.due_date && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] opacity-70">
+                        <span className="inline-flex items-center gap-0.5 text-[12px] opacity-70">
                           <Calendar className="w-2.5 h-2.5" />
                           {note.due_date}
                         </span>
                       )}
                       {note.urgency && note.urgency !== 'none' && (
-                        <Badge className={`text-[10px] px-1 py-0 h-4 ${URGENCY_OPTIONS.find(u => u.value === note.urgency)?.color || ''}`}>
+                        <Badge className={`text-[12px] px-1 py-0 h-4 ${URGENCY_OPTIONS.find(u => u.value === note.urgency)?.color || ''}`}>
                           {URGENCY_OPTIONS.find(u => u.value === note.urgency)?.label}
                         </Badge>
                       )}
@@ -524,7 +524,7 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                     {/* Actions - show on hover */}
                     <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {note._isVirtual ? (
-                        <Badge className="bg-rose-100 text-rose-700 text-[9px] px-1 py-0">
+                        <Badge className="bg-amber-100 text-amber-700 text-[12px] px-1 py-0">
                           <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
                           כלל 3 ימים
                         </Badge>

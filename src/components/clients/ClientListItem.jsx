@@ -187,8 +187,8 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
                     <Button variant="ghost" size="icon" onClick={() => onSelectFiles?.(client)} title="ניהול קבצים" className="h-9 w-9 hover:bg-white hover:shadow-sm rounded-lg">
                         <FolderOpen className="w-4.5 h-4.5 text-gray-500 group-hover:text-gray-700" />
                     </Button>
-                     <Button variant="ghost" size="icon" onClick={() => onDelete(client.id)} title="מחיקת לקוח" className="h-9 w-9 hover:bg-rose-50 rounded-lg">
-                        <Trash2 className="w-4.5 h-4.5 text-gray-400 hover:text-red-500" />
+                     <Button variant="ghost" size="icon" onClick={() => onDelete(client.id)} title="מחיקת לקוח" className="h-9 w-9 hover:bg-orange-50 rounded-lg">
+                        <Trash2 className="w-4.5 h-4.5 text-gray-400 hover:text-orange-600" />
                     </Button>
                 </div>
             </div>

@@ -180,7 +180,7 @@ export default function GlobalSearch() {
       key: 'recurring_tasks',
       label: 'הזרקת משימות חוזרות',
       icon: Zap,
-      color: 'text-rose-600',
+      color: 'text-violet-600',
       keywords: ['הזרקה', 'inject', 'חוזרות', 'recurring', 'פברואר', 'מרץ'],
       action: () => navigate(createPageUrl('RecurringTasks')),
     },
@@ -311,7 +311,7 @@ export default function GlobalSearch() {
       >
         <Search className="w-4 h-4" />
         <span className="flex-1 text-right">חיפוש או ביצוע פעולה...</span>
-        <kbd className="hidden md:inline-flex items-center gap-0.5 rounded-full border border-[#E0E0E0] bg-white px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+        <kbd className="hidden md:inline-flex items-center gap-0.5 rounded-full border border-[#E0E0E0] bg-white px-1.5 py-0.5 text-[12px] font-mono text-muted-foreground">
           Ctrl+K
         </kbd>
       </button>
@@ -400,7 +400,7 @@ export default function GlobalSearch() {
           {!isLoading && results.services && results.services.length > 0 && (
             <CommandGroup heading={
               <span className="flex items-center gap-1.5">
-                <Network className="w-3.5 h-3.5 text-pink-600" />
+                <Network className="w-3.5 h-3.5 text-violet-600" />
                 שירותים (קטלוג P1-P5)
                 <span className="text-gray-400 font-normal">({results.services.length})</span>
               </span>
@@ -426,7 +426,7 @@ export default function GlobalSearch() {
                   }}
                   className="flex items-center gap-2 cursor-pointer"
                 >
-                  <Network className="w-4 h-4 text-pink-600 shrink-0" />
+                  <Network className="w-4 h-4 text-violet-600 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{svc.label}</div>
                     <div className="text-[11px] text-gray-400 truncate">

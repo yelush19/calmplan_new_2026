@@ -82,11 +82,11 @@ function DayCell({ day, dateKey, tasks, isToday, onSelect }) {
           {dayTasks.slice(0, 3).map((t) => (
             <div key={t.id} className="flex items-center gap-1">
               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${PRIORITY_DOTS[t.priority] || PRIORITY_DOTS.medium}`} />
-              <span className="text-[10px] text-gray-700 truncate leading-tight">{t.title}</span>
+              <span className="text-[12px] text-gray-700 truncate leading-tight">{t.title}</span>
             </div>
           ))}
           {dayTasks.length > 3 && (
-            <span className="text-[10px] text-gray-400">+{dayTasks.length - 3} נוספות</span>
+            <span className="text-[12px] text-gray-400">+{dayTasks.length - 3} נוספות</span>
           )}
         </div>
       )}
@@ -125,10 +125,10 @@ function TaskDetailPanel({ dateKey, tasks, onClose }) {
                   <span className="text-sm font-medium text-gray-900 truncate">{t.title}</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {t.client_name && <Badge variant="outline" className="text-[10px]">{t.client_name}</Badge>}
-                  {t.category && <Badge variant="outline" className="text-[10px]">{resolveCategoryLabel(t.category)}</Badge>}
+                  {t.client_name && <Badge variant="outline" className="text-[12px]">{t.client_name}</Badge>}
+                  {t.category && <Badge variant="outline" className="text-[12px]">{resolveCategoryLabel(t.category)}</Badge>}
                   {t.status && (
-                    <Badge className={`text-[10px] ${STATUS_COLORS[t.status] || ''}`}>
+                    <Badge className={`text-[12px] ${STATUS_COLORS[t.status] || ''}`}>
                       {STATUS_LABELS[t.status] || t.status}
                     </Badge>
                   )}

@@ -35,7 +35,7 @@ import { ALL_SERVICES, getStepsForService } from '@/config/processTemplates';
 // =====================================================
 
 const TABS = [
-  { key: 'architect', label: 'Process Architect', icon: Network, color: 'text-[#E91E63]', bg: 'bg-gradient-to-r from-[#E91E6310] to-[#FFC10710] border-[#E91E6330]', activeBg: 'bg-gradient-to-r from-[#E91E63] to-[#FFC107] text-white' },
+  { key: 'architect', label: 'Process Architect', icon: Network, color: 'text-[#6366F1]', bg: 'bg-gradient-to-r from-[#6366F110] to-[#FFC10710] border-[#6366F130]', activeBg: 'bg-gradient-to-r from-[#6366F1] to-[#FFC107] text-white' },
   { key: 'automations', label: 'אוטומציות', icon: Zap, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-200', activeBg: 'bg-purple-600 text-white' },
   { key: 'system', label: 'מערכת', icon: Monitor, color: 'text-[#4682B4]', bg: 'bg-[#4682B408] border-[#4682B430]', activeBg: 'bg-[#4682B4] text-white' },
 ];
@@ -185,8 +185,8 @@ export default function SettingsPage() {
     <div className="space-y-6 pb-24" dir="rtl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-3 rounded-full" style={{ background: 'linear-gradient(135deg, #E91E6320, #FFC10720)' }}>
-          <Network className="w-8 h-8 text-[#E91E63]" />
+        <div className="p-3 rounded-full" style={{ background: 'linear-gradient(135deg, #6366F120, #FFC10720)' }}>
+          <Network className="w-8 h-8 text-[#6366F1]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">הגדרות ופרמטרים</h1>
@@ -449,7 +449,7 @@ function LitaySettings() {
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Icon className={`w-4 h-4 ${group.iconColor}`} />
                   {group.label}
-                  <Badge variant="outline" className="text-[10px] mr-auto">
+                  <Badge variant="outline" className="text-[12px] mr-auto">
                     {(params[group.key] || []).length}
                   </Badge>
                 </CardTitle>
@@ -798,7 +798,7 @@ function AutomationSettings() {
               <div className={`w-2 h-2 rounded-full ${a.active ? 'bg-green-500' : 'bg-gray-300'}`} />
               <div className="flex-1">
                 <div className="text-xs font-bold text-gray-700">{a.name}</div>
-                <div className="text-[10px] text-gray-400">{a.desc}</div>
+                <div className="text-[12px] text-gray-400">{a.desc}</div>
               </div>
             </div>
           ))}
@@ -812,11 +812,11 @@ function AutomationSettings() {
             <CardTitle className="text-sm flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-500" />
               לוג אוטומציות
-              <Badge className="bg-gray-100 text-gray-600 text-[10px]">{log.length}</Badge>
+              <Badge className="bg-gray-100 text-gray-600 text-[12px]">{log.length}</Badge>
             </CardTitle>
             {log.length > 0 && (
               <Button variant="ghost" size="sm" onClick={() => { clearAutomationLog(); setLog([]); }}
-                className="text-[10px] text-gray-400 h-6 px-2">
+                className="text-[12px] text-gray-400 h-6 px-2">
                 <Trash2 className="w-3 h-3 mr-1" /> נקה
               </Button>
             )}
@@ -830,7 +830,7 @@ function AutomationSettings() {
           ) : (
             <div className="max-h-64 overflow-y-auto space-y-1.5">
               {log.slice(0, 50).map(entry => (
-                <div key={entry.id} className="flex items-start gap-2 px-2 py-1.5 rounded-lg bg-gray-50 text-[10px]">
+                <div key={entry.id} className="flex items-start gap-2 px-2 py-1.5 rounded-lg bg-gray-50 text-[12px]">
                   <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
                     entry.action === 'task_unlocked' ? 'bg-green-500' :
                     entry.action === 'task_archived' ? 'bg-blue-500' : 'bg-gray-400'
@@ -979,7 +979,7 @@ function DataCleanupSection() {
         <CardTitle className="text-sm flex items-center gap-2">
           <Trash2 className="w-4 h-4 text-red-600" />
           ניקוי נתונים ישנים
-          <Badge className="bg-red-100 text-red-700 text-[10px]">לפני מרץ 2026</Badge>
+          <Badge className="bg-red-100 text-red-700 text-[12px]">לפני מרץ 2026</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -1063,7 +1063,7 @@ function DataCleanupSection() {
                 <Server className="w-3 h-3 text-blue-500" />
                 <span>Supabase: נמחקו <strong>{deleteResult.supaDeleted}</strong> שורות</span>
                 {deleteResult.supaError && (
-                  <Badge className="bg-orange-100 text-orange-700 text-[9px]">{deleteResult.supaError}</Badge>
+                  <Badge className="bg-orange-100 text-orange-700 text-[12px]">{deleteResult.supaError}</Badge>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -1072,9 +1072,9 @@ function DataCleanupSection() {
               </div>
             </div>
             {deleteResult.log?.length > 0 && (
-              <details className="text-[10px] text-gray-500 mt-1">
+              <details className="text-[12px] text-gray-500 mt-1">
                 <summary className="cursor-pointer hover:text-gray-700">לוג מפורט</summary>
-                <pre className="mt-1 p-2 bg-gray-100 rounded text-[9px] whitespace-pre-wrap max-h-32 overflow-y-auto">
+                <pre className="mt-1 p-2 bg-gray-100 rounded text-[12px] whitespace-pre-wrap max-h-32 overflow-y-auto">
                   {deleteResult.log.join('\n')}
                 </pre>
               </details>
@@ -1201,7 +1201,7 @@ function PurgeAllSection() {
               <div className="text-red-700">שגיאה: {purgeResult.error}</div>
             )}
             {purgeResult.log?.length > 0 && (
-              <details className="mt-2 text-[10px] text-gray-500">
+              <details className="mt-2 text-[12px] text-gray-500">
                 <summary className="cursor-pointer hover:text-gray-700">לוג</summary>
                 <pre className="mt-1 p-2 bg-gray-100 rounded whitespace-pre-wrap max-h-24 overflow-y-auto">
                   {purgeResult.log.join('\n')}
@@ -1274,9 +1274,9 @@ function CloudSyncSection() {
           <Cloud className={`w-4 h-4 ${isSupabaseConfigured ? 'text-green-600' : 'text-orange-500'}`} />
           סנכרון ענן
           {isSupabaseConfigured ? (
-            <Badge className="bg-green-100 text-green-700 text-[10px]">מחובר</Badge>
+            <Badge className="bg-green-100 text-green-700 text-[12px]">מחובר</Badge>
           ) : (
-            <Badge className="bg-orange-100 text-orange-700 text-[10px]">מקומי בלבד</Badge>
+            <Badge className="bg-orange-100 text-orange-700 text-[12px]">מקומי בלבד</Badge>
           )}
         </CardTitle>
       </CardHeader>
@@ -1321,7 +1321,7 @@ function CloudSyncSection() {
                 VITE_SUPABASE_URL=https://xxx.supabase.co<br/>
                 VITE_SUPABASE_ANON_KEY=eyJ...
               </div>
-              <p className="text-[10px] text-gray-400">לאחר ההגדרה, בצעי build מחדש ופתחי את האפליקציה.</p>
+              <p className="text-[12px] text-gray-400">לאחר ההגדרה, בצעי build מחדש ופתחי את האפליקציה.</p>
             </div>
             <Button variant="outline" size="sm" onClick={testConnection} disabled={isTesting} className="text-xs gap-1">
               {isTesting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Database className="w-3 h-3" />}
@@ -1423,7 +1423,7 @@ function PlatformManagementSection() {
           <div className="flex items-center gap-2">
             <Server className="w-4 h-4 text-blue-600" />
             פלטפורמות פרויקטים
-            {saveStatus === 'saved' && <Badge className="bg-green-100 text-green-700 text-[10px]">נשמר</Badge>}
+            {saveStatus === 'saved' && <Badge className="bg-green-100 text-green-700 text-[12px]">נשמר</Badge>}
           </div>
           <div className="flex gap-1">
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleSave([...DEFAULT_PLATFORMS])}>איפוס</Button>
@@ -1435,8 +1435,8 @@ function PlatformManagementSection() {
         {platforms.map(plat => (
           <div key={plat.id} className={`flex items-center gap-2 p-2 rounded-lg border ${plat.enabled ? 'bg-white' : 'bg-gray-50 opacity-60'}`}>
             <Switch checked={plat.enabled} onCheckedChange={() => togglePlatform(plat.id)} />
-            <Badge className={`${plat.color} text-[10px]`}>{plat.name}</Badge>
-            <span className="text-[10px] text-gray-400 flex-1">{plat.fields.length} שדות</span>
+            <Badge className={`${plat.color} text-[12px]`}>{plat.name}</Badge>
+            <span className="text-[12px] text-gray-400 flex-1">{plat.fields.length} שדות</span>
             <button onClick={() => setEditingPlatform({ ...plat })} className="p-1 text-gray-400 hover:text-blue-600"><Pencil className="w-3 h-3" /></button>
             <button onClick={() => deletePlatform(plat.id)} className="p-1 text-gray-400 hover:text-amber-600"><Trash2 className="w-3 h-3" /></button>
           </div>
@@ -1446,13 +1446,13 @@ function PlatformManagementSection() {
           <div className="border-2 border-blue-300 rounded-lg p-3 bg-blue-50 space-y-3 mt-2">
             <h4 className="font-semibold text-sm">{editingPlatform.isNew ? 'פלטפורמה חדשה' : `עריכה: ${editingPlatform.name}`}</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div><Label className="text-[10px]">שם</Label><Input value={editingPlatform.name} onChange={e => setEditingPlatform(p => ({ ...p, name: e.target.value }))} className="h-8 text-sm" /></div>
-              <div><Label className="text-[10px]">אייקון</Label>
+              <div><Label className="text-[12px]">שם</Label><Input value={editingPlatform.name} onChange={e => setEditingPlatform(p => ({ ...p, name: e.target.value }))} className="h-8 text-sm" /></div>
+              <div><Label className="text-[12px]">אייקון</Label>
                 <select value={editingPlatform.icon} onChange={e => setEditingPlatform(p => ({ ...p, icon: e.target.value }))} className="w-full border rounded-md px-2 py-1.5 text-sm">
                   {ICON_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
               </div>
-              <div><Label className="text-[10px]">צבע</Label>
+              <div><Label className="text-[12px]">צבע</Label>
                 <select value={editingPlatform.color} onChange={e => setEditingPlatform(p => ({ ...p, color: e.target.value }))} className="w-full border rounded-md px-2 py-1.5 text-sm">
                   {COLOR_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
@@ -1460,21 +1460,21 @@ function PlatformManagementSection() {
               <div className="flex items-end"><Badge className={`${editingPlatform.color} px-3 py-1`}>{editingPlatform.name || '...'}</Badge></div>
             </div>
             <div>
-              <Label className="text-[10px] font-semibold">שדות</Label>
+              <Label className="text-[12px] font-semibold">שדות</Label>
               <div className="space-y-1 mt-1">
                 {editingPlatform.fields.map((field, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-xs bg-white p-1.5 rounded border">
-                    <span className="font-mono text-[10px] text-gray-500 w-24 truncate">{field.key}</span>
+                    <span className="font-mono text-[12px] text-gray-500 w-24 truncate">{field.key}</span>
                     <span className="flex-1">{field.label}</span>
                     <button onClick={() => removeFieldFromEditing(idx)} className="text-amber-400 hover:text-amber-600"><X className="w-3 h-3" /></button>
                   </div>
                 ))}
               </div>
               <div className="grid grid-cols-5 gap-1 mt-2">
-                <Input value={newField.key} onChange={e => setNewField(p => ({ ...p, key: e.target.value.replace(/\s/g, '_') }))} placeholder="key" className="text-[10px] h-7" dir="ltr" />
-                <Input value={newField.label} onChange={e => setNewField(p => ({ ...p, label: e.target.value }))} placeholder="תווית" className="text-[10px] h-7" />
-                <Input value={newField.placeholder} onChange={e => setNewField(p => ({ ...p, placeholder: e.target.value }))} placeholder="placeholder" className="text-[10px] h-7" dir="ltr" />
-                <select value={newField.type} onChange={e => setNewField(p => ({ ...p, type: e.target.value }))} className="border rounded-md px-1 text-[10px]">
+                <Input value={newField.key} onChange={e => setNewField(p => ({ ...p, key: e.target.value.replace(/\s/g, '_') }))} placeholder="key" className="text-[12px] h-7" dir="ltr" />
+                <Input value={newField.label} onChange={e => setNewField(p => ({ ...p, label: e.target.value }))} placeholder="תווית" className="text-[12px] h-7" />
+                <Input value={newField.placeholder} onChange={e => setNewField(p => ({ ...p, placeholder: e.target.value }))} placeholder="placeholder" className="text-[12px] h-7" dir="ltr" />
+                <select value={newField.type} onChange={e => setNewField(p => ({ ...p, type: e.target.value }))} className="border rounded-md px-1 text-[12px]">
                   <option value="text">טקסט</option><option value="url">URL</option>
                 </select>
                 <Button variant="outline" size="sm" onClick={addFieldToEditing} disabled={!newField.key || !newField.label} className="h-7 p-0"><Plus className="w-3 h-3" /></Button>
@@ -1643,7 +1643,7 @@ function DataBackupSection() {
         <CardTitle className="text-sm flex items-center gap-2">
           <Database className="w-4 h-4 text-blue-600" />
           גיבוי ושחזור נתונים
-          <Badge variant={isSupabaseConfigured ? "default" : "outline"} className={`text-[10px] mr-auto ${isSupabaseConfigured ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+          <Badge variant={isSupabaseConfigured ? "default" : "outline"} className={`text-[12px] mr-auto ${isSupabaseConfigured ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
             {isSupabaseConfigured ? <><Cloud className="w-3 h-3 ml-1" /> Supabase</> : <><AlertTriangle className="w-3 h-3 ml-1" /> localStorage</>}
           </Badge>
         </CardTitle>
@@ -1671,12 +1671,12 @@ function DataBackupSection() {
                   ? `גיבוי אחרון: ${new Date(lastAutoBackup).toLocaleString('he-IL')}`
                   : 'טרם בוצע גיבוי'}
               </span>
-              <Button onClick={downloadAutoBackup} variant="outline" size="sm" className="h-6 text-[10px] border-blue-300 text-blue-700">
+              <Button onClick={downloadAutoBackup} variant="outline" size="sm" className="h-6 text-[12px] border-blue-300 text-blue-700">
                 <Download className="w-3 h-3 ml-1" /> הורד גיבוי אוטומטי
               </Button>
             </div>
           )}
-          <p className="text-[10px] text-blue-600/70">שומר snapshot כל 2 שעות בדפדפן + גיבוי יומי אוטומטי ל-Supabase.</p>
+          <p className="text-[12px] text-blue-600/70">שומר snapshot כל 2 שעות בדפדפן + גיבוי יומי אוטומטי ל-Supabase.</p>
         </div>
 
         {/* Daily Supabase backup */}
@@ -1687,7 +1687,7 @@ function DataBackupSection() {
                 <Cloud className="w-4 h-4 text-green-600" />
                 <span className="text-sm font-medium text-green-800">גיבוי יומי ל-Supabase</span>
               </div>
-              <Badge className="bg-green-100 text-green-800 text-[10px]">
+              <Badge className="bg-green-100 text-green-800 text-[12px]">
                 {lastSupaBackup ? `${lastSupaBackup}` : 'טרם בוצע'}
               </Badge>
             </div>
@@ -1697,11 +1697,11 @@ function DataBackupSection() {
                   ? `גיבוי אחרון: ${lastSupaBackup}`
                   : 'טרם בוצע גיבוי ל-Supabase'}
               </span>
-              <Button onClick={handleManualSupaBackup} disabled={isSavingToSupa} variant="outline" size="sm" className="h-6 text-[10px] border-green-300 text-green-700">
+              <Button onClick={handleManualSupaBackup} disabled={isSavingToSupa} variant="outline" size="sm" className="h-6 text-[12px] border-green-300 text-green-700">
                 <Cloud className="w-3 h-3 ml-1" /> {isSavingToSupa ? 'שומר...' : 'גבה עכשיו'}
               </Button>
             </div>
-            <p className="text-[10px] text-green-600/70">נשמר אוטומטית פעם ביום. שומר 7 גיבויים אחרונים.</p>
+            <p className="text-[12px] text-green-600/70">נשמר אוטומטית פעם ביום. שומר 7 גיבויים אחרונים.</p>
           </div>
         )}
 

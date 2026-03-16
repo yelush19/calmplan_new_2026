@@ -46,9 +46,9 @@ const STATUS_LABELS = {
 };
 
 const COLOR_PALETTE = [
-  '#0288D1', '#7B1FA2', '#D81B60', '#F9A825', '#2E7D32',
-  '#E53935', '#FF5722', '#00BCD4', '#795548', '#607D8B',
-  '#9C27B0', '#1565C0', '#00695C', '#EF6C00', '#AD1457', '#FF9800',
+  '#0288D1', '#7B1FA2', '#6366F1', '#F9A825', '#2E7D32',
+  '#F59E0B', '#FF5722', '#00BCD4', '#795548', '#607D8B',
+  '#9C27B0', '#1565C0', '#00695C', '#EF6C00', '#8B5CF6', '#FF9800',
 ];
 
 // Tapered connection path (from SettingsMindMap)
@@ -472,9 +472,9 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
                   <span className="text-[11px] font-bold text-gray-800 truncate flex-1">{task.title}</span>
                 </div>
                 <div className="flex items-center gap-2 mr-3 mt-0.5">
-                  {task.client_name && <span className="text-[10px] text-gray-500">{task.client_name}</span>}
-                  {task.due_date && <span className="text-[10px] text-orange-500 font-medium">{task.due_date}</span>}
-                  <span className="text-[9px] px-1.5 py-0.5 rounded font-bold"
+                  {task.client_name && <span className="text-[12px] text-gray-500">{task.client_name}</span>}
+                  {task.due_date && <span className="text-[12px] text-orange-500 font-medium">{task.due_date}</span>}
+                  <span className="text-[12px] px-1.5 py-0.5 rounded font-bold"
                     style={{ backgroundColor: (STATUS_COLORS[task.status] || '#90A4AE') + '15', color: STATUS_COLORS[task.status] }}>
                     {STATUS_LABELS[task.status] || task.status}
                   </span>
@@ -488,13 +488,13 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
       {/* ═══ Design Editor ═══ */}
       <button onClick={() => setShowEditor(!showEditor)}
         className="absolute top-3 right-3 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all z-20"
-        style={{ backgroundColor: showEditor ? '#E91E63' : 'white', color: showEditor ? 'white' : '#666', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        style={{ backgroundColor: showEditor ? '#6366F1' : 'white', color: showEditor ? 'white' : '#666', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         {showEditor ? 'X \u05E1\u05D2\u05D5\u05E8' : '\u270F\uFE0F \u05E2\u05D5\u05E8\u05DA \u05E2\u05D9\u05E6\u05D5\u05D1'}
       </button>
 
       {showEditor && (
         <div className="absolute top-12 right-3 w-72 bg-white rounded-2xl shadow-2xl border overflow-hidden" style={{ zIndex: 30 }} dir="rtl">
-          <div className="px-4 py-2.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-black text-sm">
+          <div className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-black text-sm">
             עורך עיצוב
           </div>
           <div className="p-3 space-y-3 max-h-80 overflow-y-auto">
@@ -509,7 +509,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
                     className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
                   {customColors[id] && (
                     <button onClick={() => setCustomColors(prev => { const n = { ...prev }; delete n[id]; return n; })}
-                      className="text-[9px] text-gray-400 hover:text-red-500">איפוס</button>
+                      className="text-[12px] text-gray-400 hover:text-red-500">איפוס</button>
                   )}
                 </div>
               ))}
@@ -525,7 +525,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
                   return (
                     <button key={nid}
                       onClick={() => setEditingNodeColor(editingNodeColor === nid ? null : nid)}
-                      className="px-2 py-0.5 rounded-lg text-[8px] font-bold"
+                      className="px-2 py-0.5 rounded-lg text-[11px] font-bold"
                       style={{ backgroundColor: editingNodeColor === nid ? getColor(nid, dna.color) : dna.bg, color: editingNodeColor === nid ? 'white' : dna.color }}>
                       {node.label?.substring(0, 6)}
                     </button>
@@ -534,7 +534,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
               </div>
               {editingNodeColor && (
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] text-gray-500">{nodeMap[editingNodeColor]?.label}:</span>
+                  <span className="text-[12px] text-gray-500">{nodeMap[editingNodeColor]?.label}:</span>
                   {COLOR_PALETTE.map(c => (
                     <button key={c} onClick={() => setCustomColors(prev => ({ ...prev, [editingNodeColor]: c }))}
                       className="w-5 h-5 rounded-full border-2"
@@ -548,18 +548,18 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
             <div>
               <div className="text-[11px] font-bold text-gray-600 mb-1.5">חיבורים מותאמים</div>
               {customConnections.map(cc => (
-                <div key={cc.id} className="flex items-center gap-2 mb-1 text-[10px]">
+                <div key={cc.id} className="flex items-center gap-2 mb-1 text-[12px]">
                   <span className="text-gray-600">{nodeMap[cc.from]?.label || cc.from} \u2190 {nodeMap[cc.to]?.label || cc.to}</span>
                   <button onClick={() => setCustomConnections(prev => prev.filter(c => c.id !== cc.id))}
                     className="text-red-400 hover:text-red-600 font-bold">X</button>
                 </div>
               ))}
               <div className="flex gap-1 mt-1">
-                <select id="ptf-cc-from" className="text-[10px] border rounded px-1 py-0.5 flex-1">
+                <select id="ptf-cc-from" className="text-[12px] border rounded px-1 py-0.5 flex-1">
                   <option value="">מ...</option>
                   {Object.keys(nodeMap).map(nid => <option key={nid} value={nid}>{nodeMap[nid].label}</option>)}
                 </select>
-                <select id="ptf-cc-to" className="text-[10px] border rounded px-1 py-0.5 flex-1">
+                <select id="ptf-cc-to" className="text-[12px] border rounded px-1 py-0.5 flex-1">
                   <option value="">אל...</option>
                   {Object.keys(nodeMap).map(nid => <option key={nid} value={nid}>{nodeMap[nid].label}</option>)}
                 </select>
@@ -567,7 +567,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
                   const f = document.getElementById('ptf-cc-from')?.value;
                   const t = document.getElementById('ptf-cc-to')?.value;
                   if (f && t && f !== t) setCustomConnections(prev => [...prev, { from: f, to: t, id: `cc-${Date.now()}` }]);
-                }} className="px-2 py-0.5 bg-purple-500 text-white rounded text-[10px] font-bold">+</button>
+                }} className="px-2 py-0.5 bg-purple-500 text-white rounded text-[12px] font-bold">+</button>
               </div>
             </div>
           </div>
@@ -579,10 +579,10 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
         {Object.entries(BRANCH_DNA).map(([id, dna]) => (
           <div key={id} className="flex items-center gap-1">
             <div className="w-3 h-3 rounded" style={{ backgroundColor: getColor(id, dna.color) }} />
-            <span className="text-[9px] font-bold" style={{ color: getColor(id, dna.color) }}>{id}</span>
+            <span className="text-[12px] font-bold" style={{ color: getColor(id, dna.color) }}>{id}</span>
           </div>
         ))}
-        <span className="text-[10px] text-gray-400">V4.3</span>
+        <span className="text-[12px] text-gray-400">V4.3</span>
       </div>
     </div>
   );

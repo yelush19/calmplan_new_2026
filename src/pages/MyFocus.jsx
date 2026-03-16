@@ -122,7 +122,7 @@ export default function MyFocus() {
           </div>
           <div>
             <div className="text-sm font-bold">{energy.label}</div>
-            <div className="text-[10px] text-gray-400">{format(new Date(), 'EEEE, d בMMMM', { locale: he })}</div>
+            <div className="text-[12px] text-gray-400">{format(new Date(), 'EEEE, d בMMMM', { locale: he })}</div>
           </div>
         </div>
 
@@ -132,13 +132,13 @@ export default function MyFocus() {
         <div className="flex items-center gap-3">
           <div className="text-center">
             <div className="text-lg font-bold text-[#4682B4]">{todayTasks.length}</div>
-            <div className="text-[9px] text-gray-400">משימות</div>
+            <div className="text-[12px] text-gray-400">משימות</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-bold" style={{ color: kpis.efficiencyScore >= 50 ? '#2E7D32' : '#F57C00' }}>
               {kpis.efficiencyScore}%
             </div>
-            <div className="text-[9px] text-gray-400">יעילות</div>
+            <div className="text-[12px] text-gray-400">יעילות</div>
           </div>
           <div className="flex items-center gap-1">
             {[3, 2, 1, 0].map(tier => {
@@ -148,7 +148,7 @@ export default function MyFocus() {
               return (
                 <div key={tier} className="flex items-center gap-0.5">
                   <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: lc.color }} />
-                  <span className="text-[10px] font-bold" style={{ color: lc.color }}>{count}</span>
+                  <span className="text-[12px] font-bold" style={{ color: lc.color }}>{count}</span>
                 </div>
               );
             })}
@@ -161,7 +161,7 @@ export default function MyFocus() {
         <button
           onClick={() => setViewMode(viewMode === 'canvas' ? 'radial' : 'canvas')}
           className={`px-2 py-1 rounded-lg text-[11px] font-medium transition-all ${
-            viewMode === 'canvas' ? 'bg-[#E91E63]/10 text-[#E91E63] font-bold' : 'text-gray-500 hover:text-gray-700'
+            viewMode === 'canvas' ? 'bg-[#6366F1]/10 text-[#6366F1] font-bold' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           🎨 קנבס
@@ -172,15 +172,15 @@ export default function MyFocus() {
       {energySuggestions.length > 0 && (
         <div className="flex items-center gap-2 bg-white rounded-xl border px-3 py-2 overflow-x-auto">
           <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-          <span className="text-[10px] text-gray-500 shrink-0 font-medium">מומלץ עכשיו:</span>
+          <span className="text-[12px] text-gray-500 shrink-0 font-medium">מומלץ עכשיו:</span>
           {energySuggestions.map(task => {
             const lc = LOAD_COLORS[task._load] || LOAD_COLORS[0];
             return (
               <div key={task.id} className="flex items-center gap-1.5 px-2 py-1 rounded-lg border shrink-0"
                 style={{ borderColor: lc.color + '40' }}>
                 <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: lc.color }} />
-                <span className="text-[10px] font-medium truncate max-w-[120px]">{task.title}</span>
-                <span className="text-[9px] text-gray-400">{task._duration}דק׳</span>
+                <span className="text-[12px] font-medium truncate max-w-[120px]">{task.title}</span>
+                <span className="text-[12px] text-gray-400">{task._duration}דק׳</span>
               </div>
             );
           })}

@@ -320,7 +320,7 @@ export default function BatchSetupPage() {
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {(client.service_types || []).slice(0, 3).map(st => (
-                              <Badge key={st} variant="outline" className="text-[10px] py-0">
+                              <Badge key={st} variant="outline" className="text-[12px] py-0">
                                 {st === 'payroll' ? 'שכר' :
                                  st === 'vat_reporting' ? 'מע"מ' :
                                  st === 'tax_advances' ? 'מקדמות' :
@@ -331,7 +331,7 @@ export default function BatchSetupPage() {
                               </Badge>
                             ))}
                             {(client.service_types || []).length > 3 && (
-                              <Badge variant="outline" className="text-[10px] py-0">
+                              <Badge variant="outline" className="text-[12px] py-0">
                                 +{(client.service_types || []).length - 3}
                               </Badge>
                             )}

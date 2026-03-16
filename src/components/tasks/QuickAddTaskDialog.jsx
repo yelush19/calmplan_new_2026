@@ -139,7 +139,7 @@ function SearchableSelect({ value, onChange, items, placeholder, renderItem, gro
                 if (groupItems.length === 0) return null;
                 return (
                   <div key={group.key}>
-                    <div className="px-3 py-1 text-[10px] font-bold text-[#455A64] bg-[#F5F5F5] sticky top-0">
+                    <div className="px-3 py-1 text-[12px] font-bold text-[#455A64] bg-[#F5F5F5] sticky top-0">
                       {group.label}
                     </div>
                     {groupItems.map(item => {

@@ -386,7 +386,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
 
         {/* Dependency indicator */}
         {node.depends_on?.length > 0 && (
-          <span className="text-[10px] text-gray-400 flex items-center gap-0.5" title={`תלוי ב: ${node.depends_on.join(', ')}`}>
+          <span className="text-[12px] text-gray-400 flex items-center gap-0.5" title={`תלוי ב: ${node.depends_on.join(', ')}`}>
             <GitBranch className="w-3 h-3" />
           </span>
         )}
@@ -427,7 +427,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           {/* Move-to dropdown */}
           {showMoveMenu && (
             <div className="absolute top-6 left-0 z-50 bg-white border-2 border-violet-200 rounded-lg shadow-xl p-2 min-w-[200px] max-h-[200px] overflow-y-auto">
-              <div className="text-[10px] font-bold text-gray-500 px-2 py-1 border-b mb-1">העבר "{node.label}" אל:</div>
+              <div className="text-[12px] font-bold text-gray-500 px-2 py-1 border-b mb-1">העבר "{node.label}" אל:</div>
               {getMovableTargets().map(target => (
                 <button
                   key={target.id}
@@ -442,7 +442,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
               <button
                 type="button"
                 onClick={() => setShowMoveMenu(false)}
-                className="w-full text-center text-[10px] text-gray-400 hover:text-gray-600 mt-1 pt-1 border-t"
+                className="w-full text-center text-[12px] text-gray-400 hover:text-gray-600 mt-1 pt-1 border-t"
               >
                 ביטול
               </button>
@@ -457,7 +457,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           {/* Steps header */}
           <div className="px-3 py-1.5 bg-amber-100/60 border-b border-amber-200 flex items-center justify-between">
             <span className="text-[11px] font-bold text-amber-700">שלבי תהליך ({nodeSteps.length})</span>
-            <span className="text-[9px] text-amber-500">סדר ביצוע →</span>
+            <span className="text-[12px] text-amber-500">סדר ביצוע →</span>
           </div>
           <div className="px-2 py-1.5">
             {nodeSteps.map((step, idx) => (
@@ -468,7 +468,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
                 )}
                 <div className="flex items-center gap-2 py-1 px-1 rounded-md hover:bg-amber-50 transition-colors">
                   {/* Step number circle */}
-                  <div className={`w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-black border-2 z-10 ${
+                  <div className={`w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-black border-2 z-10 ${
                     idx === 0 ? 'bg-amber-500 text-white border-amber-600' :
                     idx === nodeSteps.length - 1 ? 'bg-emerald-500 text-white border-emerald-600' :
                     'bg-white text-amber-700 border-amber-300'
@@ -479,10 +479,10 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
                   <span className="text-[11px] font-medium text-gray-700 flex-1">{step.label}</span>
                   {/* Phase indicator for first/last */}
                   {idx === 0 && (
-                    <span className="text-[8px] text-amber-500 bg-amber-100 px-1.5 py-0.5 rounded-full font-bold">התחלה</span>
+                    <span className="text-[11px] text-amber-500 bg-amber-100 px-1.5 py-0.5 rounded-full font-bold">התחלה</span>
                   )}
                   {idx === nodeSteps.length - 1 && (
-                    <span className="text-[8px] text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full font-bold">סיום</span>
+                    <span className="text-[11px] text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full font-bold">סיום</span>
                   )}
                   {/* Delete step button */}
                   <button
@@ -509,7 +509,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
                   autoFocus
                   onKeyDown={(e) => { if (e.key === 'Enter') handleAddStep(); if (e.key === 'Escape') setAddingStep(false); }}
                 />
-                <Button type="button" size="sm" onClick={handleAddStep} disabled={!newStepLabel.trim()} className="h-6 px-2 text-[10px] bg-amber-600 text-white">
+                <Button type="button" size="sm" onClick={handleAddStep} disabled={!newStepLabel.trim()} className="h-6 px-2 text-[12px] bg-amber-600 text-white">
                   <Plus className="w-3 h-3" />
                 </Button>
                 <button type="button" onClick={() => setAddingStep(false)}><X className="w-3 h-3 text-gray-400" /></button>
@@ -518,7 +518,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
               <button
                 type="button"
                 onClick={() => setAddingStep(true)}
-                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-amber-600 transition-colors"
+                className="flex items-center gap-1 text-[12px] text-gray-400 hover:text-amber-600 transition-colors"
               >
                 <Plus className="w-3 h-3" /> הוסף שלב
               </button>
@@ -539,7 +539,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddChild(); if (e.key === 'Escape') setAddingChild(false); }}
           />
           <Button type="button" size="sm" onClick={handleAddChild} disabled={!newChildName.trim()}
-            className={`h-6 px-2 text-[10px] text-white ${branchId === 'P1' ? 'bg-blue-600' : branchId === 'P2' ? 'bg-amber-600' : branchId === 'P3' ? 'bg-amber-600' : branchId === 'P5' ? 'bg-green-600' : 'bg-purple-600'}`}>
+            className={`h-6 px-2 text-[12px] text-white ${branchId === 'P1' ? 'bg-blue-600' : branchId === 'P2' ? 'bg-amber-600' : branchId === 'P3' ? 'bg-amber-600' : branchId === 'P5' ? 'bg-green-600' : 'bg-purple-600'}`}>
             <Plus className="w-3 h-3" /> הוסף
           </Button>
           <button type="button" onClick={() => setAddingChild(false)} className="text-gray-400"><X className="w-3.5 h-3.5" /></button>
@@ -571,7 +571,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
               </SelectContent>
             </Select>
             {selectedOption?.sla_day && (
-              <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1.5 py-0">
+              <Badge className="bg-red-50 text-red-700 border-red-200 text-[12px] px-1.5 py-0">
                 דדליין: {selectedOption.sla_day} לחודש
               </Badge>
             )}
@@ -586,7 +586,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
             <Banknote className="w-3.5 h-3.5 text-amber-600" />
             <span className="text-amber-700 font-medium">מקושר לחשבונות בנק</span>
             {activeAccounts.length > 0 ? (
-              <Badge className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0">
+              <Badge className="bg-amber-100 text-amber-800 text-[12px] px-1.5 py-0">
                 {activeAccounts.length} חשבונות פעילים
               </Badge>
             ) : (
@@ -599,7 +599,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           {activeAccounts.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {activeAccounts.map(acc => (
-                <span key={acc.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white rounded-full text-[10px] border border-amber-200 text-amber-800">
+                <span key={acc.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white rounded-full text-[12px] border border-amber-200 text-amber-800">
                   {acc.account_name}
                   <span className="text-amber-500">
                     ({FREQUENCY_LABELS[acc.reconciliation_frequency] || acc.reconciliation_frequency || 'חודשי'})
@@ -622,7 +622,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           <div className="mt-0.5 relative">
             {isMutuallyExclusive && (
               <div className="flex items-center gap-2 mr-8 mb-1">
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                <span className="text-[12px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                   בחר אחד בלבד
                 </span>
               </div>
@@ -652,7 +652,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
                 {isMutuallyExclusive && childIdx < node.children.length - 1 && (
                   <div className="flex items-center gap-2 mr-10 my-0.5">
                     <div className="flex-1 h-px bg-amber-200" />
-                    <span className="text-[10px] font-bold text-amber-500">או</span>
+                    <span className="text-[12px] font-bold text-amber-500">או</span>
                     <div className="flex-1 h-px bg-amber-200" />
                   </div>
                 )}
@@ -689,7 +689,7 @@ function AddProcessButton({ branchId, branchColors, onAdd }) {
           onKeyDown={(e) => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setOpen(false); }}
         />
         <Button type="button" size="sm" onClick={add} disabled={!name.trim()}
-          className={`h-6 px-2 text-[10px] text-white ${branchColors.dot.replace('bg-', 'bg-')}`}>
+          className={`h-6 px-2 text-[12px] text-white ${branchColors.dot.replace('bg-', 'bg-')}`}>
           <Plus className="w-3 h-3 ml-0.5" /> הוסף
         </Button>
         <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
@@ -997,7 +997,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
 
       {/* Inference preview panel */}
       {inferResult && (
-        <div className="border-2 border-purple-300 rounded-xl bg-gradient-to-l from-purple-50 to-pink-50 p-4 space-y-3">
+        <div className="border-2 border-purple-300 rounded-xl bg-gradient-to-l from-purple-50 to-violet-50 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-purple-600" />
@@ -1073,7 +1073,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
                 <div className={`w-3 h-3 rounded-full ${colors.dot}`} />
                 <span className={`text-base font-black ${colors.text}`}>{branchId} | {branch.label}</span>
                 {branchEnabledCount > 0 && (
-                  <Badge className={`${colors.badge} text-[10px] px-1.5 py-0`}>
+                  <Badge className={`${colors.badge} text-[12px] px-1.5 py-0`}>
                     {branchEnabledCount} פעילים
                   </Badge>
                 )}

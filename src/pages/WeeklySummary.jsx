@@ -26,6 +26,7 @@ import { he } from 'date-fns/locale';
 
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import { getCategoryLabel } from '@/utils/categoryLabels';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 function ProgressBar({ value, max, color = 'bg-blue-500', label, sublabel }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
@@ -51,7 +52,7 @@ function MiniStatusDropdown({ task, onStatusChange }) {
   const sCfg = statusConfig[task.status] || statusConfig.not_started;
   return (
     <Select value={task.status || 'not_started'} onValueChange={(s) => onStatusChange(task, s)}>
-      <SelectTrigger className={`h-6 text-[10px] px-1.5 w-auto min-w-[80px] border-0 ${sCfg.color}`}>
+      <SelectTrigger className={`h-6 text-[12px] px-1.5 w-auto min-w-[80px] border-0 ${sCfg.color}`}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -230,6 +231,14 @@ export default function WeeklySummary() {
   const weekLabel = `${format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'dd/MM', { locale: he })} - ${format(endOfWeek(new Date(), { weekStartsOn: 0 }), 'dd/MM', { locale: he })}`;
 
   return (
+    <UnifiedAyoaLayout
+      tasks={rawTasks}
+      clients={clients}
+      centerLabel="סיכום שבועי"
+      accentColor="#0EA5E9"
+      onEditTask={handleEditTask}
+      isLoading={isLoading}
+    >
     <div className="space-y-6 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -273,7 +282,7 @@ export default function WeeklySummary() {
               <CardContent className="p-3 text-center">
                 <Icon className={`w-5 h-5 mx-auto mb-1 ${color}`} />
                 <p className={`text-2xl font-bold ${color}`}>{value}</p>
-                <p className="text-[10px] text-gray-500">{label}</p>
+                <p className="text-[12px] text-gray-500">{label}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -304,7 +313,7 @@ export default function WeeklySummary() {
                     status === 'not_started' ? 'bg-gray-400' :
                     status === 'waiting_for_materials' ? 'bg-amber-500' :
                     status === 'ready_for_reporting' ? 'bg-teal-500' :
-                    status === 'issue' ? 'bg-pink-500' :
+                    status === 'issue' ? 'bg-amber-500' :
                     status === 'waiting_for_approval' ? 'bg-purple-500' :
                     'bg-gray-400'}
                   sublabel={`${count} (${analysis.activeCount > 0 ? Math.round(count/analysis.activeCount*100) : 0}%)`}
@@ -363,9 +372,9 @@ export default function WeeklySummary() {
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-amber-600" />
                       <span className="font-semibold text-sm">{clientName}</span>
-                      <Badge className="bg-amber-100 text-amber-700 text-[10px]">{data.count}</Badge>
+                      <Badge className="bg-amber-100 text-amber-700 text-[12px]">{data.count}</Badge>
                     </div>
-                    <span className="text-[10px] text-stone-500">מקס׳ {data.maxDays} ימים</span>
+                    <span className="text-[12px] text-stone-500">מקס׳ {data.maxDays} ימים</span>
                   </div>
                   <div className="space-y-1">
                     {data.tasks.map(task => (
@@ -474,7 +483,7 @@ export default function WeeklySummary() {
             <CardContent className="pt-0">
               <div className="flex flex-wrap gap-1.5">
                 {analysis.completedThisWeek.map(t => (
-                  <Badge key={t.id} className="bg-emerald-100 text-emerald-700 text-[10px] py-0.5 px-2">
+                  <Badge key={t.id} className="bg-emerald-100 text-emerald-700 text-[12px] py-0.5 px-2">
                     {t.title}
                   </Badge>
                 ))}
@@ -517,5 +526,6 @@ export default function WeeklySummary() {
       />
       {ConfirmDialogComponent}
     </div>
+    </UnifiedAyoaLayout>
   );
 }

@@ -6,23 +6,25 @@
  */
 
 import React from 'react';
-import { Network, Target, BarChart3, List, Flame } from 'lucide-react';
+import { Network, Target, BarChart3, List, Flame, Layers } from 'lucide-react';
 
 export const VIEW_MODES = {
-  focus:  { label: 'פוקוס',   icon: Flame,    key: 'focus' },
-  map:    { label: 'מפה',     icon: Network,  key: 'map' },
-  radial: { label: 'רדיאלי', icon: Target,   key: 'radial' },
-  gantt:  { label: 'גאנט',   icon: BarChart3, key: 'gantt' },
-  feed:   { label: 'רשימה',  icon: List,     key: 'feed' },
+  focus:    { label: 'פוקוס',   icon: Flame,    key: 'focus' },
+  map:      { label: 'מפה',     icon: Network,  key: 'map' },
+  radial:   { label: 'רדיאלי', icon: Target,   key: 'radial' },
+  workflow: { label: 'שכבות',  icon: Layers,   key: 'workflow' },
+  gantt:    { label: 'גאנט',   icon: BarChart3, key: 'gantt' },
+  feed:     { label: 'רשימה',  icon: List,     key: 'feed' },
 };
 
 // DNA accent per view mode
 const VIEW_ACCENTS = {
-  focus:  '#FF9800',
-  map:    '#E91E63',
-  radial: '#00A3E0',
-  gantt:  '#B2AC88',
-  feed:   '#FFC107',
+  focus:    '#FF9800',
+  map:      '#0891B2',
+  radial:   '#00A3E0',
+  workflow: '#8B5CF6',
+  gantt:    '#B2AC88',
+  feed:     '#FFC107',
 };
 
 export default function AyoaViewToggle({ value, onChange, className = '', accentColor }) {

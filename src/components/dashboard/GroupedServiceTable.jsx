@@ -47,7 +47,7 @@ function ExecutionBar({ startDate, dueDate }) {
 
   return (
     <div className="bg-gray-50 rounded-lg px-2.5 py-2 space-y-1">
-      <div className="flex items-center justify-between text-[10px]">
+      <div className="flex items-center justify-between text-[12px]">
         <span className="flex items-center gap-1 text-gray-500">
           <Timer className="w-3 h-3" />
           {start && isValid(start) ? format(start, 'd/M') : '—'}
@@ -201,7 +201,7 @@ export default function GroupedServiceTable({
                         />
                         <div className={`w-2.5 h-2.5 rounded-full ${config.bg} border ${config.border} shrink-0`} />
                         <span className="font-semibold text-gray-700 text-xs">{config.label}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 font-normal">
+                        <Badge variant="secondary" className="text-[12px] px-1.5 py-0 bg-gray-100 text-gray-500 font-normal">
                           {rows.length}
                         </Badge>
                         {/* Mini progress for this group */}
@@ -315,13 +315,13 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                   </span>
                 )}
                 {isClimb && task.status !== 'production_completed' && (
-                  <Badge className="text-[8px] px-1 py-0 bg-purple-100 text-purple-600 border-purple-200 shrink-0">45+</Badge>
+                  <Badge className="text-[11px] px-1 py-0 bg-purple-100 text-purple-600 border-purple-200 shrink-0">45+</Badge>
                 )}
               </div>
               {taxIds.length > 0 && (
                 <div className="flex gap-2 mt-0.5">
                   {taxIds.map(({ label, value }) => (
-                    <span key={label} className="text-[10px] text-gray-400">
+                    <span key={label} className="text-[12px] text-gray-400">
                       <span className="font-medium">{label}:</span> {value}
                     </span>
                   ))}
@@ -329,7 +329,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
               )}
             </div>
             {subTasks.length > 0 && (
-              <Badge className="text-[9px] px-1 py-0 bg-indigo-100 text-indigo-600 shrink-0">
+              <Badge className="text-[12px] px-1 py-0 bg-indigo-100 text-indigo-600 shrink-0">
                 {subTasks.filter(s => s.done).length}/{subTasks.length}
               </Badge>
             )}
@@ -344,8 +344,8 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
               if (!isValid(d)) return null;
               const t = new Date(); t.setHours(0,0,0,0);
               const rem = differenceInDays(d, t);
-              if (rem < 0) return <Badge className="text-[9px] px-1 py-0 bg-amber-100 text-amber-700 shrink-0">-{Math.abs(rem)}d</Badge>;
-              if (rem <= 3) return <Badge className="text-[9px] px-1 py-0 bg-amber-100 text-amber-700 shrink-0">{rem}d</Badge>;
+              if (rem < 0) return <Badge className="text-[12px] px-1 py-0 bg-amber-100 text-amber-700 shrink-0">-{Math.abs(rem)}d</Badge>;
+              if (rem <= 3) return <Badge className="text-[12px] px-1 py-0 bg-amber-100 text-amber-700 shrink-0">{rem}d</Badge>;
               return null;
             })()}
           </div>
@@ -379,7 +379,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
             <td key={stepDef.key} className="py-1.5 px-2 text-center">
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className={`w-8 h-8 mx-auto rounded-md border-2 flex items-center justify-center text-[9px] font-bold transition-all ${
+                  <button className={`w-8 h-8 mx-auto rounded-md border-2 flex items-center justify-center text-[12px] font-bold transition-all ${
                     allSubsDone
                       ? 'bg-emerald-500 border-emerald-500 text-white'
                       : subsDone > 0
@@ -424,7 +424,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
             <Popover open={showStatusMenu} onOpenChange={setShowStatusMenu}>
               <PopoverTrigger asChild>
                 <button className="cursor-pointer">
-                  <Badge className={`${statusCfg.bg} ${statusCfg.text} text-[10px] px-1.5 py-0.5 font-semibold hover:opacity-80 transition-opacity`}>
+                  <Badge className={`${statusCfg.bg} ${statusCfg.text} text-[12px] px-1.5 py-0.5 font-semibold hover:opacity-80 transition-opacity`}>
                     {statusCfg.label}
                   </Badge>
                 </button>
@@ -442,14 +442,14 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                       >
                         <div className={`w-2.5 h-2.5 rounded-full ${cfg.bg} border ${cfg.border}`} />
                         {cfg.label}
-                        {s === 'production_completed' && <span className="text-[9px] text-gray-400 mr-auto">(+כל השלבים)</span>}
+                        {s === 'production_completed' && <span className="text-[12px] text-gray-400 mr-auto">(+כל השלבים)</span>}
                       </button>
                     );
                   })}
                 </div>
                 {task.status === 'reported_waiting_for_payment' && (
                   <div className="border-t mt-1 pt-2 px-2 pb-1">
-                    <label className="text-[10px] text-gray-500 block mb-1">תאריך יעד לתשלום:</label>
+                    <label className="text-[12px] text-gray-500 block mb-1">תאריך יעד לתשלום:</label>
                     <input
                       type="date"
                       value={task.payment_due_date || ''}
@@ -461,7 +461,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
               </PopoverContent>
             </Popover>
             {task.status === 'reported_waiting_for_payment' && task.payment_due_date && (
-              <span className="text-[9px] text-yellow-700 font-medium">
+              <span className="text-[12px] text-yellow-700 font-medium">
                 תשלום: {new Date(task.payment_due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })}
               </span>
             )}
@@ -511,8 +511,8 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
                     {st.done && <Check className="w-3 h-3 text-white" />}
                   </button>
                   <span className={`flex-1 ${st.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>{st.title}</span>
-                  {st.due_time && <span className="text-[10px] text-blue-400">{st.due_time}</span>}
-                  {st.due_date && <span className="text-[10px] text-gray-400">{new Date(st.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })}</span>}
+                  {st.due_time && <span className="text-[12px] text-blue-400">{st.due_time}</span>}
+                  {st.due_date && <span className="text-[12px] text-gray-400">{new Date(st.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })}</span>}
                   <button onClick={() => handleDeleteSubTask(st.id)} className="text-gray-300 hover:text-amber-500"><Trash2 className="w-3 h-3" /></button>
                 </div>
               ))}
@@ -647,7 +647,7 @@ function StepCell({ stepData, onToggle, onDateChange }) {
             <Check className="w-4 h-4 text-white" />
           </div>
           {stepData.date && (
-            <span className="text-[9px] text-emerald-600 font-medium mt-0.5 leading-none">
+            <span className="text-[12px] text-emerald-600 font-medium mt-0.5 leading-none">
               {formatDate(stepData.date)}
             </span>
           )}

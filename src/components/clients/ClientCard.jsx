@@ -63,9 +63,9 @@ const serviceTypeColors = {
     // P5 שנתי (ירוק)
     annual_reports: 'bg-green-100 text-green-800 border-green-200',
     personal_reports: 'bg-green-100 text-green-800 border-green-200',
-    // P3 ניהול (ורוד)
-    admin: 'bg-pink-100 text-pink-800 border-pink-200',
-    office: 'bg-pink-100 text-pink-800 border-pink-200',
+    // P3 ניהול (כתום-ענבר)
+    admin: 'bg-amber-100 text-amber-800 border-amber-200',
+    office: 'bg-amber-100 text-amber-800 border-amber-200',
     // Legacy
     bookkeeping_full: 'bg-purple-100 text-purple-800 border-purple-200',
     masav_employees: 'bg-sky-100 text-sky-800 border-sky-200',
@@ -110,10 +110,10 @@ const serviceGroupLabels = {
 };
 
 const serviceGroupIcons = {
-  1: 'bg-emerald-800 border-emerald-600',   // ירוק יער עמוק
-  2: 'bg-sky-700 border-sky-500',           // כחול
-  3: 'bg-green-700 border-green-500',       // ירוק
-  4: 'bg-pink-700 border-pink-500',         // ורוד
+  1: 'bg-teal-700 border-teal-500',         // טורקיז כהה — הנה"ח
+  2: 'bg-sky-600 border-sky-400',           // כחול שמיים — שכר
+  3: 'bg-emerald-700 border-emerald-500',   // ירוק אמרלד — דוחות שנתיים
+  4: 'bg-amber-600 border-amber-400',       // כתום-ענבר — ניהול (לא ורוד!)
 };
 
 /**
@@ -139,10 +139,10 @@ function ProcessTreeSection({ processTree }) {
 
   // Branch group config
   const branchConfig = {
-    P1: { label: 'שכר', bg: 'bg-sky-700', border: 'border-sky-300', count: 'bg-sky-500' },
-    P2: { label: 'הנה"ח ודוחות', bg: 'bg-emerald-800', border: 'border-emerald-300', count: 'bg-emerald-600' },
-    P3: { label: 'ניהול', bg: 'bg-amber-700', border: 'border-amber-300', count: 'bg-amber-500' },
-    P5: { label: 'דוחות שנתיים', bg: 'bg-green-700', border: 'border-green-300', count: 'bg-green-500' },
+    P1: { label: 'שכר', bg: 'bg-sky-600', border: 'border-sky-300', count: 'bg-sky-400' },
+    P2: { label: 'הנה"ח ודוחות', bg: 'bg-teal-700', border: 'border-teal-300', count: 'bg-teal-500' },
+    P3: { label: 'ניהול', bg: 'bg-amber-600', border: 'border-amber-300', count: 'bg-amber-400' },
+    P5: { label: 'דוחות שנתיים', bg: 'bg-emerald-700', border: 'border-emerald-300', count: 'bg-emerald-500' },
   };
 
   // Collect enabled nodes per branch
@@ -193,12 +193,12 @@ function ProcessTreeSection({ processTree }) {
                         ) : <div className="w-3.5" />}
                         <span className="text-gray-700 font-medium">{node.label}</span>
                         {freq && (
-                          <span className="text-[10px] text-gray-400 mr-1">
+                          <span className="text-[12px] text-gray-400 mr-1">
                             ({freq === 'monthly' ? 'חודשי' : freq === 'bimonthly' ? 'דו-חודשי' : freq})
                           </span>
                         )}
                         {slaDay && (
-                          <span className="text-[10px] text-red-500 font-bold mr-1">SLA:{slaDay}</span>
+                          <span className="text-[12px] text-red-500 font-bold mr-1">SLA:{slaDay}</span>
                         )}
                         {steps.length > 0 && (
                           <span className="text-xs text-gray-400 mr-auto flex items-center gap-0.5">
@@ -210,9 +210,9 @@ function ProcessTreeSection({ processTree }) {
                         <div className="mr-4 pb-1 space-y-0.5">
                           {steps.map((step, idx) => (
                             <div key={step.key || idx} className="flex items-center gap-1.5 text-xs text-gray-600 py-0.5">
-                              <Badge className="bg-amber-50 text-amber-600 text-[10px] px-1.5 py-0 border border-amber-200 font-bold">{idx + 1}</Badge>
+                              <Badge className="bg-amber-50 text-amber-600 text-[12px] px-1.5 py-0 border border-amber-200 font-bold">{idx + 1}</Badge>
                               <span>{step.label}</span>
-                              {step.sla_day && <span className="text-red-400 text-[9px] font-bold">({step.sla_day})</span>}
+                              {step.sla_day && <span className="text-red-400 text-[12px] font-bold">({step.sla_day})</span>}
                             </div>
                           ))}
                         </div>
@@ -297,7 +297,7 @@ function ServiceTreeSection({ services }) {
                         <div className="mr-4 pb-1 space-y-0.5">
                           {steps.map((step, idx) => (
                             <div key={step.key} className="flex items-center gap-1.5 text-xs text-gray-600 py-0.5">
-                              <Badge className="bg-amber-50 text-amber-600 text-[10px] px-1.5 py-0 border border-amber-200 font-bold">{idx + 1}</Badge>
+                              <Badge className="bg-amber-50 text-amber-600 text-[12px] px-1.5 py-0 border border-amber-200 font-bold">{idx + 1}</Badge>
                               <span>{step.label}</span>
                             </div>
                           ))}
@@ -679,7 +679,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
               <FileText className="w-4 h-4 ml-1" />
               חוזים
           </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete} className="h-9 text-sm font-medium text-red-500 hover:bg-rose-100 hover:text-red-600">
+          <Button variant="ghost" size="sm" onClick={onDelete} className="h-9 text-sm font-medium text-orange-600 hover:bg-orange-100 hover:text-orange-700">
               <Trash2 className="w-4 h-4 ml-1" />
               מחיקה
           </Button>

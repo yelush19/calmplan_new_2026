@@ -18,6 +18,7 @@ import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import AyoaWorkflowView from '@/components/canvas/AyoaWorkflowView';
 import FocusMapView from '@/components/canvas/FocusMapView';
 import ProcessTreeFocusMap from '@/components/canvas/ProcessTreeFocusMap';
 import GanttView from '@/components/views/GanttView';
@@ -144,6 +145,13 @@ export default function UnifiedAyoaLayout({
               tasks={tasks}
               clients={clients}
               currentMonth={currentMonth || new Date()}
+              onEditTask={onEditTask}
+            />
+          )}
+
+          {localView === 'workflow' && (
+            <AyoaWorkflowView
+              tasks={tasks}
               onEditTask={onEditTask}
             />
           )}

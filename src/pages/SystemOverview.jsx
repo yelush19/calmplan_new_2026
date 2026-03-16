@@ -109,7 +109,7 @@ function BackupStatusPanel() {
               </summary>
               <div className="mt-1 space-y-0.5 max-h-32 overflow-y-auto">
                 {status.recentBackups.map((b, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[10px] text-gray-600 font-mono" dir="ltr">
+                  <div key={i} className="flex items-center gap-2 text-[12px] text-gray-600 font-mono" dir="ltr">
                     <span>{b.name}</span>
                     <span className="text-gray-400">{b.sizeKB} KB</span>
                   </div>
@@ -157,7 +157,7 @@ function BackupStatusPanel() {
         </summary>
         <div className="mt-2 space-y-1.5 text-gray-600" dir="ltr">
           <p className="font-bold">Required Vercel Environment Variables:</p>
-          <div className="bg-gray-50 p-2 rounded font-mono text-[10px] space-y-1">
+          <div className="bg-gray-50 p-2 rounded font-mono text-[12px] space-y-1">
             <div><span className="text-blue-600">SUPABASE_URL</span> = https://ryivxxdqxexcsxvexkiu.supabase.co</div>
             <div><span className="text-blue-600">SUPABASE_SERVICE_ROLE_KEY</span> = (from Supabase → Settings → API → service_role)</div>
             <div><span className="text-blue-600">GOOGLE_SERVICE_ACCOUNT</span> = (JSON string of service account key)</div>

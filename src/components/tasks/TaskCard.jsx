@@ -277,13 +277,13 @@ export default function TaskCard({
                     </h3>
                   )}
                   {!isQuickEditing && isQuickWin && task.status !== 'completed' && (
-                    <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 font-bold border border-emerald-300 gap-0.5 shrink-0">
+                    <Badge className="bg-emerald-100 text-emerald-700 text-[12px] px-1.5 py-0 font-bold border border-emerald-300 gap-0.5 shrink-0">
                       <Zap className="w-3 h-3" />
                       ניצחון מהיר
                     </Badge>
                   )}
                   {!isQuickEditing && isClimb && task.status !== 'completed' && (
-                    <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0 font-medium border border-purple-200 shrink-0">
+                    <Badge className="bg-purple-100 text-purple-700 text-[12px] px-1.5 py-0 font-medium border border-purple-200 shrink-0">
                       45+ דק'
                     </Badge>
                   )}

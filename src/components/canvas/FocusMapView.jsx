@@ -279,7 +279,7 @@ export default function FocusMapView({
             <feGaussianBlur stdDeviation="1.5" />
           </filter>
           <filter id="focus-sel-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#E91E63" floodOpacity="0.35" />
+            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#6366F1" floodOpacity="0.35" />
           </filter>
           {/* Cognitive load tier gradients */}
           {[0, 1, 2, 3].map(tier => {
@@ -399,7 +399,7 @@ export default function FocusMapView({
               {/* Selection glow */}
               {isSelected && (
                 <circle cx={node.x} cy={node.y} r={node.r + 8}
-                  fill="none" stroke="#E91E63" strokeWidth={2.5} opacity={0.7}>
+                  fill="none" stroke="#6366F1" strokeWidth={2.5} opacity={0.7}>
                   <animate attributeName="opacity" values="0.7;0.3;0.7" dur="1.5s" repeatCount="indefinite" />
                 </circle>
               )}
@@ -479,7 +479,7 @@ export default function FocusMapView({
 
       {/* Legend — Focus Map identity */}
       <div className="absolute bottom-3 right-3 flex flex-col gap-1.5 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-amber-100">
-        <div className="flex items-center gap-2 text-[10px] font-bold text-amber-800">
+        <div className="flex items-center gap-2 text-[12px] font-bold text-amber-800">
           <div className="w-3 h-3 rounded-full" style={{ background: 'linear-gradient(135deg, #FFC107, #FF9800)' }} />
           מפת פוקוס דינמית
         </div>
@@ -493,12 +493,12 @@ export default function FocusMapView({
                   width: 6 + tier * 4, height: 6 + tier * 4,
                   borderColor: lc.color, backgroundColor: lc.color + '20',
                 }} />
-                <span className="text-[8px] font-bold" style={{ color: lc.color }}>{t.label}</span>
+                <span className="text-[11px] font-bold" style={{ color: lc.color }}>{t.label}</span>
               </div>
             );
           })}
         </div>
-        <div className="flex items-center gap-3 text-[9px]">
+        <div className="flex items-center gap-3 text-[12px]">
           <span className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-amber-400" /> פעיל
           </span>

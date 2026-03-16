@@ -91,7 +91,7 @@ export default function CompletionFeedback() {
               >
                 <span className="text-xl">{option.emoji}</span>
                 <span className="text-sm font-bold">{option.key}</span>
-                <span className="text-[10px] font-medium">{option.label}</span>
+                <span className="text-[12px] font-medium">{option.label}</span>
               </button>
             ))}
           </div>
