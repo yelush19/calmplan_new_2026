@@ -42,7 +42,7 @@ const PROCESS_TEMPLATES = {
     name: 'דיווח שכר',
     category: 'שכר',
     frequencyField: 'payroll_frequency',
-    dayOfMonth: 15,
+    dayOfMonth: 9, // שכר: דדליין אחרון 9, נורמלי 7
     requiresPayroll: true,
   },
   tax_advances: {
@@ -64,7 +64,7 @@ const PROCESS_TEMPLATES = {
     name: 'פנסיות — מתפעל',
     category: 'פנסיות — מתפעל',
     frequencyField: null,
-    dayOfMonth: 14,
+    dayOfMonth: 15, // מתפעל: עד 13-15 כולל מס"ב
     requiresPayroll: true,
     treeNodeId: 'P1_operator',
   },
@@ -72,7 +72,7 @@ const PROCESS_TEMPLATES = {
     name: 'פנסיות — טמל',
     category: 'פנסיות — טמל',
     frequencyField: null,
-    dayOfMonth: 14,
+    dayOfMonth: 15, // טמל: עד 13-15
     requiresPayroll: true,
     treeNodeId: 'P1_taml',
   },

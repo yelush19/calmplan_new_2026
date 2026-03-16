@@ -107,10 +107,10 @@ const P1_BRANCH = {
       ],
     }),
 
-    // ── מס"ב עובדים — SLA: 8 לחודש ──
+    // ── מס"ב עובדים — SLA: 9 לחודש ──
     node('P1_masav_employees', 'מס"ב עובדים', 'masav_employees', {
       depends_on: ['P1_payroll'],
-      sla_day: 8,
+      sla_day: 9,
       steps: [
         { key: 'file_prep',   label: 'הכנת קובץ' },
         { key: 'upload',      label: 'העלאה לבנק' },
