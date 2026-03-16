@@ -284,6 +284,13 @@ function LayoutInner({ children }) {
   useAutoReminders();
   const backupHealth = useBackupMonitor();
 
+  // Green Plus (+) global event — opens QuickAddTaskDialog from any AYOA view
+  useEffect(() => {
+    const handler = () => setShowQuickAdd(true);
+    window.addEventListener('calmplan:add-new-service', handler);
+    return () => window.removeEventListener('calmplan:add-new-service', handler);
+  }, []);
+
   const handleImportJsonBackup = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;

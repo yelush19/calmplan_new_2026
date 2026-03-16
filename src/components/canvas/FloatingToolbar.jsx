@@ -14,7 +14,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Cloud, Circle, Diamond, Plus, Palette, Shapes, MessageCircle,
-  Star, Type, Bold, Italic, Copy,
+  Star, Type, Bold, Italic, Copy, Heart, Crown, Flag,
+  AlignLeft, AlignCenter, AlignRight, Underline,
 } from 'lucide-react';
 
 // ── 20 Vibrant AYOA Palette — Full Spectrum ──
@@ -55,6 +56,9 @@ const TOOLBAR_SHAPES = [
   { key: 'diamond', label: 'מעוין', icon: Diamond },
   { key: 'pill',    label: 'כמוסה', icon: PillIcon },
   { key: 'star',    label: 'כוכב',  icon: Star },
+  { key: 'heart',   label: 'לב',    icon: Heart },
+  { key: 'crown',   label: 'כתר',   icon: Crown },
+  { key: 'banner',  label: 'באנר',  icon: Flag },
 ];
 
 // ── Typography ──
@@ -170,7 +174,7 @@ export default function FloatingToolbar({
             </motion.div>
           )}
 
-          {/* Shape Picker — 6 shapes */}
+          {/* Shape Picker — 9 shapes */}
           {activeSection === 'shape' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-3 py-2.5">
               <div className="grid grid-cols-3 gap-1.5">
@@ -239,23 +243,38 @@ export default function FloatingToolbar({
                   ))}
                 </div>
               </div>
-              {/* Bold / Italic */}
-              <div className="flex items-center gap-2">
+              {/* Bold / Italic / Underline */}
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => onBoldChange?.(!nodeBold)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
                     nodeBold ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  <Bold className="w-3 h-3" /> Bold
+                  <Bold className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => onItalicChange?.(!nodeItalic)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
                     nodeItalic ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  <Italic className="w-3 h-3" /> Italic
+                  <Italic className="w-3 h-3" />
+                </button>
+                <button
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  <Underline className="w-3 h-3" />
+                </button>
+                <div className="w-px h-5 bg-slate-200 mx-0.5" />
+                <button className="p-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all">
+                  <AlignRight className="w-3 h-3" />
+                </button>
+                <button className="p-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all">
+                  <AlignCenter className="w-3 h-3" />
+                </button>
+                <button className="p-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all">
+                  <AlignLeft className="w-3 h-3" />
                 </button>
               </div>
             </motion.div>

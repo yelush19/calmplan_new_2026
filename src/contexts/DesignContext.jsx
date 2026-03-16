@@ -30,6 +30,7 @@ const DEFAULTS = {
   glassmorphism: false,
   softShadows: true,
   mapTemplate: 'ayoa-organic', // ayoa-organic | mindmap-classic | minimalist
+  fillMode: 'filled',        // 'filled' | 'border' -- Fill Mode Toggle
   stickerMap: {},            // nodeId -> emoji/icon key
   nodeOverrides: {},         // nodeId -> { shape, color, lineStyle } -- per-node style overrides (cross-page)
   // -- Branch Color Engine: P1-P5 customizable colors --
@@ -504,6 +505,7 @@ export function DesignProvider({ children }) {
 // Safe fallback object when used outside DesignProvider (prevents TDZ / crash)
 const SAFE_FALLBACK = {
   ...DEFAULTS,
+  fillMode: 'filled',
   updatePref: () => {},
   applyTemplate: () => {},
   setSticker: () => {},

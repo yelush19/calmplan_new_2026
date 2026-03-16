@@ -13,14 +13,18 @@ import { useDesign, MAP_TEMPLATES } from '@/contexts/DesignContext';
 
 // ── Shape Options ──
 const SHAPES = [
-  { key: 'cloud', label: 'ענן', icon: '☁️', css: 'rounded-[40%]' },
-  { key: 'circle', label: 'עיגול', icon: '⭕', css: 'rounded-full' },
-  { key: 'star', label: 'כוכב', icon: '⭐', css: 'rounded-lg' },
-  { key: 'hexagon', label: 'משושה', icon: '⬡', css: 'rounded-xl' },
-  { key: 'bubble', label: 'בועה', icon: '💬', css: 'rounded-2xl' },
-  { key: 'diamond', label: 'יהלום', icon: '◆', css: 'rotate-45 rounded-lg' },
-  { key: 'capsule', label: 'כמוסה', icon: '💊', css: 'rounded-full' },
-  { key: 'roundedRect', label: 'מלבן', icon: '▬', css: 'rounded-lg' },
+  { key: 'cloud', label: 'ענן', icon: '☁️' },
+  { key: 'circle', label: 'עיגול', icon: '⭕' },
+  { key: 'star', label: 'כוכב', icon: '⭐' },
+  { key: 'hexagon', label: 'משושה', icon: '⬡' },
+  { key: 'bubble', label: 'בועה', icon: '💬' },
+  { key: 'diamond', label: 'יהלום', icon: '◆' },
+  { key: 'capsule', label: 'כמוסה', icon: '💊' },
+  { key: 'roundedRect', label: 'מלבן', icon: '▬' },
+  { key: 'heart', label: 'לב', icon: '❤️' },
+  { key: 'banner', label: 'באנר', icon: '🏴' },
+  { key: 'crown', label: 'כתר', icon: '👑' },
+  { key: 'speech', label: 'דיבור', icon: '🗨️' },
 ];
 
 // ── Color Palette ──
@@ -153,6 +157,33 @@ export default function DesignPanel({ isOpen, onClose }) {
           {/* Shape Selection */}
           {activeTab === 'shape' && (
             <div>
+              {/* Fill/Border Toggle */}
+              <div className="flex items-center gap-2 mb-3">
+                <p className="text-xs text-gray-500">מצב מילוי:</p>
+                <div className="flex bg-gray-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => design.updatePref('fillMode', 'filled')}
+                    className={`px-3 py-1 text-[10px] rounded-md transition-all ${
+                      (design.fillMode || 'filled') === 'filled'
+                        ? 'bg-white text-blue-700 font-bold shadow-sm'
+                        : 'text-gray-500'
+                    }`}
+                  >
+                    מלא
+                  </button>
+                  <button
+                    onClick={() => design.updatePref('fillMode', 'border')}
+                    className={`px-3 py-1 text-[10px] rounded-md transition-all ${
+                      design.fillMode === 'border'
+                        ? 'bg-white text-blue-700 font-bold shadow-sm'
+                        : 'text-gray-500'
+                    }`}
+                  >
+                    קו בלבד
+                  </button>
+                </div>
+              </div>
+
               <p className="text-xs text-gray-500 mb-3">בחר צורת ברירת מחדל לצמתים:</p>
               <div className="grid grid-cols-4 gap-2">
                 {SHAPES.map(shape => (

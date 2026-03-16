@@ -276,7 +276,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full" style={{ backgroundColor: 'var(--cp-canvas-bg, #F8F9FA)' }}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VB} ${VB}`}
