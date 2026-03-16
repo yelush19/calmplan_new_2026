@@ -86,7 +86,7 @@ const BRANCH_DISPLAY = {
   },
 };
 
-export default function ClientListItem({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectFiles }) {
+export default function ClientListItem({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectFiles, onSelectProviders }) {
     const uiProps = statusUI[client.status] || statusUI.inactive;
     const mainContact = client.contacts?.find(c => c.is_primary) || client.contacts?.[0] || { name: client.contact_person, email: client.email, phone: client.phone };
 

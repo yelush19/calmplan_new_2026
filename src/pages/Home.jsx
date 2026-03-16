@@ -34,6 +34,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useDesign } from "@/contexts/DesignContext";
 import OverdueAlert from "@/components/tasks/OverdueAlert";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
+import BadDayMode from "@/components/tasks/BadDayMode";
 
 // ─── Draggable panel wrapper (localStorage persist) ─────────
 function DraggablePanel({ storageKey, children, className = '', style = {} }) {
@@ -152,6 +153,7 @@ export default function HomePage() {
   const [focusView, setFocusView] = useState('mindmap'); // Default to mind map
   const [statsExpanded, setStatsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [badDayActive, setBadDayActive] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
@@ -382,6 +384,21 @@ export default function HomePage() {
     } catch { /* ignore */ }
   }, []);
 
+  // ── BAD DAY MODE: postpone non-urgent tasks ──
+  const handlePostponeBadDay = useCallback(async () => {
+    const nonUrgent = (data?.activeTasks || []).filter(t =>
+      t.priority !== 'urgent' && t.status === 'not_started'
+    );
+    for (const t of nonUrgent) {
+      try {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const newDate = tomorrow.toISOString().split('T')[0];
+        await Task.update(t.id, { due_date: newDate });
+      } catch { /* ignore */ }
+    }
+  }, [data]);
+
   // ── KPI CAPACITY METRICS (from DNA) ──
   // Must be above early return to respect Rules of Hooks
   const capacityKPIs = useMemo(() => {
@@ -606,8 +623,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ═══ ALERTS — overdue + upcoming deadlines ═══ */}
+      {/* ═══ ALERTS — overdue + upcoming deadlines + bad day mode ═══ */}
       <div className="px-4 space-y-3">
+        <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
         <OverdueAlert tasks={allFocusTasks} />
         <AdvanceWarningPanel />
       </div>

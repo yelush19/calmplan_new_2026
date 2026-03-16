@@ -41,6 +41,7 @@ import DesignFloatingTab from "@/components/canvas/DesignFloatingTab";
 import BiologicalClockIndicator from "@/components/canvas/BiologicalClockIndicator";
 import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
 import { runAllAutomations } from "@/engines/automationEngine";
+import AggressiveReminderSystem from "@/components/notifications/AggressiveReminderSystem";
 
 // Work Modes — aligned to P1-P5 pillar tree
 const WORK_MODES = [
@@ -1158,6 +1159,9 @@ function LayoutInner({ children }) {
       {/* Reality Check & Completion Feedback */}
       <RealityCheck />
       <CompletionFeedback />
+
+      {/* Aggressive Reminder System — global deadline notifications */}
+      <AggressiveReminderSystem />
 
       {/* Design Engine Floating Tab — persistent across all pages */}
       <DesignFloatingTab />

@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { RoadmapItem } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from 'framer-motion';
-import { CheckSquare, ListTodo, Loader } from 'lucide-react';
+import { CheckSquare, ListTodo, Loader, Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import RoadmapForm from '@/components/roadmap/RoadmapForm';
 
 const roadmapTasks = [
     // שלב 1: תשתית נתונים ✅ הושלם במלואו
@@ -43,6 +45,8 @@ export default function RoadmapPage() {
     const [items, setItems] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isResetting, setIsResetting] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [showAddForm, setShowAddForm] = useState(false);
 
     useEffect(() => {
         loadRoadmapItems();
@@ -101,6 +105,22 @@ export default function RoadmapPage() {
         }
     };
 
+    const handleSaveItem = async (formData) => {
+        try {
+            if (editingItem) {
+                await RoadmapItem.update(editingItem.id, formData);
+                setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, ...formData } : i));
+                setEditingItem(null);
+            } else {
+                const created = await RoadmapItem.create({ ...formData, order: items.length + 1 });
+                if (created) setItems(prev => [...prev, created]);
+                setShowAddForm(false);
+            }
+        } catch (error) {
+            console.error('שגיאה בשמירת פריט:', error);
+        }
+    };
+
     const completedCount = items.filter(item => item.status === 'completed').length;
     const totalCount = items.length;
     const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
@@ -135,10 +155,16 @@ export default function RoadmapPage() {
                         <CardTitle>
                            משימות פיתוח - סטטוס מעודכן
                         </CardTitle>
-                        <Button variant="outline" size="sm" onClick={handleReset} disabled={isResetting}>
-                            <RefreshCw className={`w-4 h-4 ml-2 ${isResetting ? 'animate-spin' : ''}`} />
-                            עדכן רשימה
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
+                                <Plus className="w-4 h-4 ml-2" />
+                                הוסף פריט
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={handleReset} disabled={isResetting}>
+                                <RefreshCw className={`w-4 h-4 ml-2 ${isResetting ? 'animate-spin' : ''}`} />
+                                עדכן רשימה
+                            </Button>
+                        </div>
                     </div>
                      <div className="text-sm font-normal text-muted-foreground pt-2">
                             {completedCount} / {totalCount} הושלמו ({Math.round(progress)}%)
@@ -179,6 +205,9 @@ export default function RoadmapPage() {
                                         </span>
                                         {item.details && <p className={`text-sm mt-1 ${item.status === 'completed' ? 'text-green-600' : 'text-gray-600'}`}>{item.details}</p>}
                                     </label>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingItem(item); }}>
+                                        <Pencil className="w-4 h-4 text-gray-400 hover:text-gray-700" />
+                                    </Button>
                                     {item.status === 'completed' && (
                                         <div className="text-green-500 ml-2">
                                             <CheckSquare className="w-5 h-5" />
@@ -220,6 +249,21 @@ export default function RoadmapPage() {
                     </CardContent>
                 </Card>
             </div>
+            {/* Edit/Add Form Dialog */}
+            <Dialog open={!!editingItem || showAddForm} onOpenChange={(open) => {
+                if (!open) { setEditingItem(null); setShowAddForm(false); }
+            }}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>{editingItem ? 'עריכת פריט' : 'הוספת פריט חדש'}</DialogTitle>
+                    </DialogHeader>
+                    <RoadmapForm
+                        item={editingItem}
+                        onSave={handleSaveItem}
+                        onCancel={() => { setEditingItem(null); setShowAddForm(false); }}
+                    />
+                </DialogContent>
+            </Dialog>
         </motion.div>
     );
 }
