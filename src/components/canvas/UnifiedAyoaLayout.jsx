@@ -19,6 +19,7 @@ import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
 import FocusMapView from '@/components/canvas/FocusMapView';
+import ProcessTreeFocusMap from '@/components/canvas/ProcessTreeFocusMap';
 import GanttView from '@/components/views/GanttView';
 import { Table, Loader2 } from 'lucide-react';
 
@@ -106,12 +107,11 @@ export default function UnifiedAyoaLayout({
         <>
           {localView === 'focus' && (
             <div className="rounded-2xl overflow-hidden border border-amber-100"
-              style={{ minHeight: '450px', background: 'linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%)' }}>
-              <FocusMapView
+              style={{ minHeight: '500px', background: 'linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%)' }}>
+              <ProcessTreeFocusMap
                 tasks={tasks}
-                allTasks={allTasks}
+                clients={clients}
                 centerLabel={centerLabel}
-                centerSub={centerSub || `${tasks.length} משימות`}
               />
             </div>
           )}
