@@ -77,11 +77,11 @@ function InlineEdit({ value, onSave, className = '' }) {
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="h-6 text-sm px-1 w-[200px]"
+          className="h-8 text-base px-2 w-[240px]"
           autoFocus
           onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
           onBlur={save}
@@ -93,11 +93,11 @@ function InlineEdit({ value, onSave, className = '' }) {
   return (
     <span
       className={`cursor-pointer hover:underline decoration-dashed underline-offset-2 ${className}`}
-      onClick={() => { setDraft(value); setEditing(true); }}
+      onClick={(e) => { e.stopPropagation(); setDraft(value); setEditing(true); }}
       title="לחץ לעריכה"
     >
       {value}
-      <Pencil className="w-3 h-3 inline mr-1 opacity-0 group-hover/node:opacity-50" />
+      <Pencil className="w-3.5 h-3.5 inline mr-1 opacity-0 group-hover/node:opacity-60" />
     </span>
   );
 }
@@ -124,38 +124,38 @@ function StepsEditor({ steps, onChange }) {
   };
 
   return (
-    <div className="space-y-2 mt-2 mr-6 p-3 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+    <div className="space-y-2.5 mt-2 mr-6 p-4 bg-amber-50/40 rounded-xl border-2 border-dashed border-amber-300">
       <div className="flex items-center gap-2">
-        <Layers className="w-3.5 h-3.5 text-gray-400" />
-        <span className="text-xs font-medium text-gray-600">שלבים ({steps.length})</span>
+        <Layers className="w-4.5 h-4.5 text-amber-500" />
+        <span className="text-sm font-bold text-amber-700">שלבי תהליך ({steps.length})</span>
       </div>
       {steps.map((step, idx) => (
-        <div key={step.key || idx} className="flex items-center gap-2 group/step">
-          <GripVertical className="w-3 h-3 text-gray-300" />
-          <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0 shrink-0">{idx + 1}</Badge>
+        <div key={step.key || idx} className="flex items-center gap-2.5 group/step bg-white rounded-lg px-3 py-2 border border-amber-200">
+          <GripVertical className="w-4 h-4 text-amber-300 cursor-grab" />
+          <Badge className="bg-amber-200 text-amber-800 text-sm font-bold px-2.5 py-0.5 shrink-0 rounded-lg">{idx + 1}</Badge>
           <InlineEdit
             value={step.label}
             onSave={(val) => renameStep(idx, val)}
-            className="text-xs text-gray-700 flex-1"
+            className="text-sm text-gray-800 flex-1 font-medium"
           />
           <button
             onClick={() => removeStep(idx)}
             className="opacity-0 group-hover/step:opacity-100 text-gray-300 hover:text-red-500 transition-all"
           >
-            <X className="w-3 h-3" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       ))}
-      <div className="flex gap-1.5">
+      <div className="flex gap-2">
         <Input
           value={newStep}
           onChange={(e) => setNewStep(e.target.value)}
-          placeholder="הוסף שלב חדש..."
-          className="flex-1 h-6 text-xs"
+          placeholder="...הוסף שלב חדש"
+          className="flex-1 h-9 text-sm"
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addStep(); } }}
         />
-        <Button type="button" variant="outline" size="sm" onClick={addStep} disabled={!newStep.trim()} className="h-6 w-6 p-0">
-          <Plus className="w-3 h-3" />
+        <Button type="button" variant="outline" size="sm" onClick={addStep} disabled={!newStep.trim()} className="h-9 w-9 p-0">
+          <Plus className="w-4 h-4" />
         </Button>
       </div>
     </div>
@@ -210,42 +210,42 @@ function ExtraFieldsEditor({ extraFields, onChange }) {
   };
 
   return (
-    <div className="mr-6 mt-1 mb-1 p-2 rounded-lg border border-purple-200 bg-purple-50/50 space-y-2">
+    <div className="mr-6 mt-2 mb-2 p-4 rounded-xl border-2 border-purple-200 bg-purple-50/50 space-y-3">
       <div className="flex items-center gap-2">
-        <Settings2 className="w-3.5 h-3.5 text-purple-500" />
-        <span className="text-[10px] font-bold text-purple-700">שדות נוספים ({Object.keys(fields).length})</span>
+        <Settings2 className="w-4.5 h-4.5 text-purple-500" />
+        <span className="text-sm font-bold text-purple-700">שדות נוספים ({Object.keys(fields).length})</span>
       </div>
       {Object.entries(fields).map(([key, field]) => (
-        <div key={key} className="bg-white rounded p-2 border border-purple-100 space-y-1">
+        <div key={key} className="bg-white rounded-lg p-3 border border-purple-100 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-700 flex-1">{field.label}</span>
+            <span className="text-sm font-semibold text-gray-700 flex-1">{field.label}</span>
             <button onClick={() => setEditingFieldKey(editingFieldKey === key ? null : key)} className="text-purple-400 hover:text-purple-600">
-              <Pencil className="w-3 h-3" />
+              <Pencil className="w-4 h-4" />
             </button>
             <button onClick={() => removeField(key)} className="text-gray-300 hover:text-red-500">
-              <X className="w-3 h-3" />
+              <X className="w-4 h-4" />
             </button>
           </div>
           {editingFieldKey === key && (
-            <div className="space-y-1 mt-1">
+            <div className="space-y-2 mt-2">
               {(field.options || []).map((opt, i) => (
-                <div key={i} className="flex items-center gap-1 text-[10px]">
-                  <Badge className="bg-purple-100 text-purple-700 text-[9px]">{opt.label}</Badge>
+                <div key={i} className="flex items-center gap-2">
+                  <Badge className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5">{opt.label}</Badge>
                   <button onClick={() => removeOption(key, i)} className="text-gray-300 hover:text-red-500">
-                    <X className="w-2.5 h-2.5" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 <Input
                   value={newOptionLabel}
                   onChange={(e) => setNewOptionLabel(e.target.value)}
-                  placeholder="אפשרות חדשה..."
-                  className="h-5 text-[10px] flex-1"
+                  placeholder="...אפשרות חדשה"
+                  className="h-8 text-sm flex-1"
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(key); } }}
                 />
-                <Button type="button" variant="outline" size="sm" onClick={() => addOption(key)} disabled={!newOptionLabel.trim()} className="h-5 w-5 p-0">
-                  <Plus className="w-2.5 h-2.5" />
+                <Button type="button" variant="outline" size="sm" onClick={() => addOption(key)} disabled={!newOptionLabel.trim()} className="h-8 w-8 p-0">
+                  <Plus className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>
@@ -253,16 +253,16 @@ function ExtraFieldsEditor({ extraFields, onChange }) {
         </div>
       ))}
       {addingField ? (
-        <div className="flex gap-1">
+        <div className="flex gap-2">
           <Input value={newFieldLabel} onChange={(e) => setNewFieldLabel(e.target.value)}
-            placeholder="שם השדה..." className="h-6 text-[10px] flex-1" autoFocus
+            placeholder="...שם השדה" className="h-9 text-sm flex-1" autoFocus
             onKeyDown={(e) => { if (e.key === 'Enter') addField(); if (e.key === 'Escape') setAddingField(false); }} />
-          <Button type="button" size="sm" onClick={addField} disabled={!newFieldLabel.trim()} className="h-6 px-2 text-[9px] bg-purple-600 text-white">הוסף</Button>
-          <button onClick={() => setAddingField(false)}><X className="w-3 h-3 text-gray-400" /></button>
+          <Button type="button" size="sm" onClick={addField} disabled={!newFieldLabel.trim()} className="h-9 px-3 text-sm bg-purple-600 text-white">הוסף</Button>
+          <button onClick={() => setAddingField(false)}><X className="w-4 h-4 text-gray-400" /></button>
         </div>
       ) : (
-        <button onClick={() => setAddingField(true)} className="text-[10px] text-purple-500 hover:text-purple-700 flex items-center gap-1">
-          <Plus className="w-3 h-3" /> הוסף שדה
+        <button onClick={() => setAddingField(true)} className="text-sm text-purple-500 hover:text-purple-700 flex items-center gap-1.5 font-medium">
+          <Plus className="w-4 h-4" /> הוסף שדה
         </button>
       )}
     </div>
@@ -334,147 +334,150 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
     setAddingChild(false);
   };
 
+  // Depth-based background tinting for visual hierarchy
+  const depthBg = depth === 0 ? branchColor + '08' : depth === 1 ? branchColor + '05' : 'transparent';
+  const depthBorder = depth === 0 ? branchColor + '30' : branchColor + '20';
+
   return (
-    <div className={depth > 0 ? 'mr-6 border-r-2 pr-4' : ''} style={depth > 0 ? { borderColor: branchColor + '40' } : {}}>
-      <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors group/node">
+    <div className={depth > 0 ? 'mr-8 border-r-3 pr-5' : ''} style={depth > 0 ? { borderColor: branchColor + '50', borderRightWidth: '3px' } : {}}>
+      {/* ── CLICKABLE ROW — click anywhere opens Sheet editor ── */}
+      <div
+        className="flex items-center gap-3 py-3 px-4 rounded-xl transition-all group/node cursor-pointer hover:shadow-md"
+        style={{ backgroundColor: depthBg, border: `1.5px solid ${depthBorder}`, marginBottom: '4px' }}
+        onClick={() => onOpenEditor && onOpenEditor(node.id, branchId)}
+        title="לחץ לעריכה מלאה בחלון צידי"
+      >
         {/* Collapse */}
         {hasChildren ? (
-          <button type="button" onClick={() => setCollapsed(!collapsed)} className="w-7 h-7 flex items-center justify-center rounded-md border-2 transition-colors" style={{ borderColor: branchColor + '60', color: branchColor, backgroundColor: collapsed ? branchColor + '15' : 'transparent' }}>
-            {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          <button type="button" onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }} className="w-8 h-8 flex items-center justify-center rounded-lg border-2 transition-colors shrink-0" style={{ borderColor: branchColor + '70', color: branchColor, backgroundColor: collapsed ? branchColor + '20' : 'transparent' }}>
+            {collapsed ? <ChevronLeft className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
-        ) : <div className="w-7" />}
+        ) : <div className="w-8" />}
 
-        {/* Color dot */}
-        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: branchColor }} />
+        {/* Color indicator bar */}
+        <div className="w-1.5 h-8 rounded-full shrink-0" style={{ backgroundColor: branchColor }} />
 
         {/* Editable label */}
         <InlineEdit
           value={node.label}
           onSave={(val) => updateField('label', val)}
-          className="text-base font-semibold text-gray-800 flex-1"
+          className="text-lg font-bold text-gray-900 flex-1"
         />
 
         {/* Parent badge */}
         {node.is_parent_task && (
-          <Badge className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 border-blue-200">אב</Badge>
+          <Badge className="text-sm px-2.5 py-1 bg-blue-50 text-blue-700 border-blue-300 font-bold">אב</Badge>
         )}
 
         {/* Frequency inherit badge */}
         {node.frequency_inherit && (
-          <Badge className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500">ירושה</Badge>
+          <Badge className="text-sm px-2.5 py-1 bg-gray-100 text-gray-600 font-medium">ירושה</Badge>
         )}
 
         {/* Extra fields badge */}
         {hasExtraFields && (
-          <Badge className="text-xs px-2 py-0.5 bg-purple-50 text-purple-500">{Object.keys(node.extra_fields).length} שדות</Badge>
+          <Badge className="text-sm px-2.5 py-1 bg-purple-50 text-purple-600 font-medium">{Object.keys(node.extra_fields).length} שדות</Badge>
         )}
 
         {/* Frequency */}
-        <Select value={node.default_frequency || 'monthly'} onValueChange={(val) => updateField('default_frequency', val)}>
-          <SelectTrigger className="h-7 w-[90px] text-sm border-gray-300">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FREQUENCY_OPTIONS.map(opt => (
-              <SelectItem key={opt.value} value={opt.value} className="text-sm">{opt.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Select value={node.default_frequency || 'monthly'} onValueChange={(val) => updateField('default_frequency', val)}>
+            <SelectTrigger className="h-9 w-[100px] text-sm font-medium border-gray-300 rounded-lg">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FREQUENCY_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value} className="text-sm">{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Settings toggle */}
         <button
           type="button"
-          onClick={() => setShowSettings(!showSettings)}
-          className={`flex items-center gap-1 transition-colors ${showSettings ? 'text-purple-600' : 'text-gray-400 hover:text-gray-600'}`}
+          onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }}
+          className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${showSettings ? 'bg-purple-100 text-purple-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
           title="הגדרות מתקדמות"
         >
-          <Settings2 className="w-4 h-4" />
+          <Settings2 className="w-5 h-5" />
         </button>
 
         {/* Steps toggle + inline badges */}
         <button
           type="button"
-          onClick={() => setShowSteps(!showSteps)}
-          className={`text-sm flex items-center gap-1 transition-colors ${showSteps ? 'text-amber-600' : 'text-gray-400 hover:text-gray-600'}`}
+          onClick={(e) => { e.stopPropagation(); setShowSteps(!showSteps); }}
+          className={`flex items-center gap-1.5 h-8 px-2 rounded-lg transition-colors ${showSteps ? 'bg-amber-100 text-amber-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
           title="ערוך שלבים"
         >
-          <Layers className="w-4 h-4" />
-          {resolvedSteps.length > 0 && <span className="font-semibold">{resolvedSteps.length}</span>}
-          {isInheritedSteps && <span className="text-xs text-blue-400 mr-0.5">T</span>}
+          <Layers className="w-5 h-5" />
+          {resolvedSteps.length > 0 && <span className="text-sm font-bold">{resolvedSteps.length}</span>}
+          {isInheritedSteps && <span className="text-xs text-blue-500 font-bold mr-0.5">T</span>}
         </button>
         {/* Inline step labels (always visible when steps exist) */}
         {!showSteps && resolvedSteps.length > 0 && (
-          <div className="flex flex-wrap gap-1 max-w-[280px]">
+          <div className="flex flex-wrap gap-1.5 max-w-[320px]">
             {resolvedSteps.slice(0, 4).map((step, i) => (
-              <Badge key={step.key || i} className={`text-xs px-1.5 py-0.5 border whitespace-nowrap ${isInheritedSteps ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+              <Badge key={step.key || i} className={`text-sm px-2 py-0.5 border whitespace-nowrap font-medium ${isInheritedSteps ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                 {step.label}
               </Badge>
             ))}
             {resolvedSteps.length > 4 && (
-              <Badge className="bg-gray-50 text-gray-500 text-xs px-1.5 py-0.5 border border-gray-200">
+              <Badge className="bg-gray-100 text-gray-600 text-sm px-2 py-0.5 border border-gray-200 font-medium">
                 +{resolvedSteps.length - 4}
               </Badge>
             )}
           </div>
         )}
 
-        {/* Open side panel editor */}
-        {onOpenEditor && (
+        {/* Action buttons container - stop propagation */}
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          {/* Add child */}
           <button
             type="button"
-            onClick={() => onOpenEditor(node.id, branchId)}
-            className="px-2 py-1 rounded-md text-xs font-bold border-2 transition-all hover:shadow-sm"
-            style={{ borderColor: branchColor, color: branchColor, backgroundColor: branchColor + '10' }}
-            title="ערוך בחלון צידי"
+            onClick={() => setAddingChild(!addingChild)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-green-50"
+            style={{ color: branchColor }}
+            title="הוסף צומת בן"
           >
-            <Pencil className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
           </button>
-        )}
 
-        {/* Add child */}
-        <button
-          type="button"
-          onClick={() => setAddingChild(!addingChild)}
-          className="text-green-500 hover:text-green-700 transition-all"
-          title="הוסף צומת בן"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+          {/* Move node (re-parent) */}
+          {onMoveNode && (
+            <button
+              type="button"
+              onClick={() => setShowMoveMenu(!showMoveMenu)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+              title="העבר לאב אחר"
+            >
+              <ArrowRightLeft className="w-5 h-5" />
+            </button>
+          )}
 
-        {/* Move node (re-parent) */}
-        {onMoveNode && (
+          {/* Remove */}
           <button
             type="button"
-            onClick={() => setShowMoveMenu(!showMoveMenu)}
-            className="text-blue-400 hover:text-blue-600 transition-all"
-            title="העבר לאב אחר"
+            onClick={onRemove}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+            title="מחק צומת"
           >
-            <ArrowRightLeft className="w-4 h-4" />
+            <Trash2 className="w-5 h-5" />
           </button>
-        )}
-
-        {/* Remove */}
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-gray-300 hover:text-red-500 transition-all"
-          title="מחק צומת"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        </div>
       </div>
 
       {/* Move menu — supports move to branch root OR under specific parent node */}
       {showMoveMenu && onMoveNode && (
-        <div className="mr-9 mt-1 mb-1 p-2 rounded-lg border-2 border-blue-200 bg-blue-50 space-y-2 max-h-[300px] overflow-y-auto">
-          <span className="text-[10px] font-bold text-blue-700">העבר ל:</span>
+        <div className="mr-10 mt-2 mb-2 p-4 rounded-xl border-2 border-blue-300 bg-blue-50 space-y-3 max-h-[350px] overflow-y-auto">
+          <span className="text-sm font-bold text-blue-700">העבר ל:</span>
           {/* Quick move to branch root */}
           <div>
-            <span className="text-[9px] text-gray-500">שורש ענף:</span>
-            <div className="flex flex-wrap gap-1 mt-0.5">
+            <span className="text-xs text-gray-500 font-medium">שורש ענף:</span>
+            <div className="flex flex-wrap gap-2 mt-1">
               {(allBranchIds || []).filter(b => b !== branchId).map(targetBranch => (
                 <Button key={targetBranch} type="button" variant="outline" size="sm"
-                  className="h-5 px-2 text-[9px]"
+                  className="h-8 px-3 text-sm font-bold"
                   onClick={() => { onMoveNode(node, branchId, targetBranch, null); setShowMoveMenu(false); }}>
                   {targetBranch}
                 </Button>
@@ -483,15 +486,15 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
           </div>
           {/* Move under specific parent node */}
           <div>
-            <span className="text-[9px] text-gray-500">תחת צומת אב:</span>
+            <span className="text-xs text-gray-500 font-medium">תחת צומת אב:</span>
             <Input
               value={moveSearch}
               onChange={(e) => setMoveSearch(e.target.value)}
-              placeholder="חפש צומת..."
-              className="h-5 text-[10px] mt-0.5"
+              placeholder="...חפש צומת"
+              className="h-8 text-sm mt-1"
               autoFocus
             />
-            <div className="mt-1 space-y-0.5 max-h-[180px] overflow-y-auto">
+            <div className="mt-2 space-y-1 max-h-[200px] overflow-y-auto">
               {(allNodesFlat || [])
                 .filter(n => n.id !== node.id && !descendantIds.has(n.id))
                 .filter(n => !moveSearch || n.label.includes(moveSearch) || n.id.includes(moveSearch))
@@ -499,51 +502,51 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
                   <button
                     key={target.id}
                     type="button"
-                    className="w-full text-right text-[10px] px-2 py-1 rounded hover:bg-blue-100 flex items-center gap-1.5 transition-colors"
+                    className="w-full text-right text-sm px-3 py-2 rounded-lg hover:bg-blue-100 flex items-center gap-2 transition-colors"
                     onClick={() => { onMoveNode(node, branchId, target._branchId, target.id); setShowMoveMenu(false); setMoveSearch(''); }}
                   >
-                    <Badge className="text-[8px] px-1 py-0 bg-gray-100 text-gray-500 shrink-0">{target._branchId}</Badge>
-                    <span className="truncate">{target.label}</span>
-                    <span className="text-[8px] text-gray-400 shrink-0">{target.id}</span>
+                    <Badge className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 shrink-0 font-bold">{target._branchId}</Badge>
+                    <span className="truncate font-medium">{target.label}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{target.id}</span>
                   </button>
                 ))
               }
             </div>
           </div>
-          <button onClick={() => { setShowMoveMenu(false); setMoveSearch(''); }} className="text-[9px] text-gray-400 hover:text-gray-600">ביטול</button>
+          <button onClick={() => { setShowMoveMenu(false); setMoveSearch(''); }} className="text-sm text-gray-400 hover:text-gray-600 font-medium">ביטול</button>
         </div>
       )}
 
       {/* Advanced settings panel */}
       {showSettings && (
-        <div className="mr-9 mt-1 mb-1 p-2 rounded-lg border border-gray-200 bg-gray-50/50 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center gap-2">
+        <div className="mr-10 mt-2 mb-2 p-4 rounded-xl border-2 border-gray-200 bg-gray-50/50 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-2.5">
               <Switch checked={!!node.is_parent_task} onCheckedChange={(val) => updateField('is_parent_task', val)} />
-              <span className="text-[10px] text-gray-600">משימת אב</span>
+              <span className="text-sm text-gray-700 font-medium">משימת אב</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <Switch checked={!!node.frequency_inherit} onCheckedChange={(val) => updateField('frequency_inherit', val)} />
-              <span className="text-[10px] text-gray-600">ירושת תדירות</span>
+              <span className="text-sm text-gray-700 font-medium">ירושת תדירות</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-500 shrink-0">ביצוע:</span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm text-gray-600 shrink-0 font-medium">מצב ביצוע:</span>
             <Select value={node.execution || 'sequential'} onValueChange={(val) => updateField('execution', val)}>
-              <SelectTrigger className="h-5 text-[10px] flex-1"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 text-sm flex-1"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="sequential" className="text-xs">סדרתי</SelectItem>
-                <SelectItem value="parallel" className="text-xs">מקבילי</SelectItem>
+                <SelectItem value="sequential" className="text-sm">סדרתי</SelectItem>
+                <SelectItem value="parallel" className="text-sm">מקבילי</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-500 shrink-0">שדה תדירות:</span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm text-gray-600 shrink-0 font-medium">שדה תדירות:</span>
             <Input
               value={node.frequency_field || ''}
               onChange={(e) => updateField('frequency_field', e.target.value || null)}
               placeholder="לא מוגדר"
-              className="h-5 text-[10px] flex-1"
+              className="h-9 text-sm flex-1"
             />
           </div>
           {/* Extra fields editor */}
@@ -564,21 +567,21 @@ function NodeEditor({ node, depth, branchId, branchColor, onUpdate, onRemove, al
 
       {/* Add child form */}
       {addingChild && (
-        <div className="mr-9 mt-1 mb-1 flex items-center gap-2 p-2 rounded-lg border-2 border-dashed" style={{ borderColor: branchColor + '60', backgroundColor: branchColor + '08' }}>
+        <div className="mr-10 mt-2 mb-2 flex items-center gap-3 p-3 rounded-xl border-2 border-dashed" style={{ borderColor: branchColor + '60', backgroundColor: branchColor + '08' }}>
           <Input
             value={newChildName}
             onChange={(e) => setNewChildName(e.target.value)}
-            placeholder="שם צומת בן חדש..."
-            className="flex-1 h-7 text-xs border-0 bg-transparent focus-visible:ring-0"
+            placeholder="...שם צומת בן חדש"
+            className="flex-1 h-9 text-sm border-0 bg-transparent focus-visible:ring-0"
             autoFocus
             onKeyDown={(e) => { if (e.key === 'Enter') addChild(); if (e.key === 'Escape') setAddingChild(false); }}
           />
           <Button type="button" size="sm" onClick={addChild} disabled={!newChildName.trim()}
-            className="h-6 px-2 text-[10px] text-white" style={{ backgroundColor: branchColor }}>
-            <Plus className="w-3 h-3 ml-0.5" /> הוסף
+            className="h-9 px-4 text-sm text-white font-bold" style={{ backgroundColor: branchColor }}>
+            <Plus className="w-4 h-4 ml-1" /> הוסף
           </Button>
           <button onClick={() => setAddingChild(false)} className="text-gray-400 hover:text-gray-600">
-            <X className="w-3.5 h-3.5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
       )}
@@ -1034,89 +1037,89 @@ export default function ProcessArchitect() {
     <div className="space-y-4">
       {/* ── Side Panel Editor (Sheet) ── */}
       <Sheet open={!!editingNode} onOpenChange={(open) => { if (!open) { setEditingNodeId(null); setEditingBranchId(null); } }}>
-        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] overflow-y-auto" style={{ backgroundColor: '#FFFFFF' }}>
+        <SheetContent side="right" className="w-[520px] sm:max-w-[520px] overflow-y-auto" style={{ backgroundColor: '#FFFFFF' }}>
           {editingNode && (
             <>
-              <SheetHeader className="border-b pb-4 mb-4">
-                <SheetTitle className="text-lg font-black flex items-center gap-2" style={{ color: editingBranchColor }}>
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: editingBranchColor }} />
+              <SheetHeader className="pb-5 mb-5" style={{ borderBottom: `3px solid ${editingBranchColor}30` }}>
+                <SheetTitle className="text-xl font-black flex items-center gap-3" style={{ color: editingBranchColor }}>
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: editingBranchColor }} />
                   {editingNode.label}
                 </SheetTitle>
-                <SheetDescription className="text-sm text-gray-500">
+                <SheetDescription className="text-base text-gray-500 font-medium">
                   {editingBranchId} | {editingNode.id}
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {/* ── Label ── */}
                 <div>
-                  <Label className="text-sm font-bold text-gray-700">שם הצומת</Label>
+                  <Label className="text-base font-bold text-gray-700">שם הצומת</Label>
                   <Input
                     value={editingNode.label}
                     onChange={(e) => updateNodeById(editingNodeId, { label: e.target.value })}
-                    className="mt-1 text-base"
+                    className="mt-1.5 text-lg h-11"
                   />
                 </div>
 
                 {/* ── Frequency ── */}
                 <div>
-                  <Label className="text-sm font-bold text-gray-700">תדירות ברירת מחדל</Label>
+                  <Label className="text-base font-bold text-gray-700">תדירות ברירת מחדל</Label>
                   <Select value={editingNode.default_frequency || 'monthly'} onValueChange={(val) => updateNodeById(editingNodeId, { default_frequency: val })}>
-                    <SelectTrigger className="mt-1 h-9 text-sm">
-                      <Calendar className="w-4 h-4 ml-2 text-gray-400" />
+                    <SelectTrigger className="mt-1.5 h-11 text-base">
+                      <Calendar className="w-5 h-5 ml-2 text-gray-400" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {FREQUENCY_OPTIONS.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value} className="text-sm">{opt.label}</SelectItem>
+                        <SelectItem key={opt.value} value={opt.value} className="text-base">{opt.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-gray-400 mt-1">תדירות זו תחול על כל לקוח שלא הגדיר דריסה ידנית</p>
+                  <p className="text-sm text-gray-400 mt-1.5">תדירות זו תחול על כל לקוח שלא הגדיר דריסה ידנית</p>
                 </div>
 
                 {/* ── Toggles ── */}
-                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-2">
+                <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border-2 border-gray-200">
+                  <div className="flex items-center gap-3">
                     <Switch checked={!!editingNode.is_parent_task} onCheckedChange={(val) => updateNodeById(editingNodeId, { is_parent_task: val })} />
-                    <span className="text-sm text-gray-700">משימת אב</span>
+                    <span className="text-base text-gray-700 font-medium">משימת אב</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <Switch checked={!!editingNode.frequency_inherit} onCheckedChange={(val) => updateNodeById(editingNodeId, { frequency_inherit: val })} />
-                    <span className="text-sm text-gray-700">ירושת תדירות</span>
+                    <span className="text-base text-gray-700 font-medium">ירושת תדירות</span>
                   </div>
                 </div>
 
                 {/* ── Execution ── */}
                 <div>
-                  <Label className="text-sm font-bold text-gray-700">מצב ביצוע</Label>
+                  <Label className="text-base font-bold text-gray-700">מצב ביצוע</Label>
                   <Select value={editingNode.execution || 'sequential'} onValueChange={(val) => updateNodeById(editingNodeId, { execution: val })}>
-                    <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="mt-1.5 h-11 text-base"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sequential" className="text-sm">סדרתי</SelectItem>
-                      <SelectItem value="parallel" className="text-sm">מקבילי</SelectItem>
+                      <SelectItem value="sequential" className="text-base">סדרתי</SelectItem>
+                      <SelectItem value="parallel" className="text-base">מקבילי</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* ── Frequency Field ── */}
                 <div>
-                  <Label className="text-sm font-bold text-gray-700">שדה תדירות (מ-reporting_info)</Label>
+                  <Label className="text-base font-bold text-gray-700">שדה תדירות (מ-reporting_info)</Label>
                   <Input
                     value={editingNode.frequency_field || ''}
                     onChange={(e) => updateNodeById(editingNodeId, { frequency_field: e.target.value || null })}
                     placeholder="לדוגמה: vat_reporting_frequency"
-                    className="mt-1 text-sm"
+                    className="mt-1.5 text-base h-11"
                   />
                 </div>
 
                 {/* ── Steps Editor ── */}
-                <div className="border border-amber-200 rounded-lg overflow-hidden">
-                  <div className="px-3 py-2 bg-amber-50 flex items-center gap-2 border-b border-amber-200">
-                    <Layers className="w-4 h-4 text-amber-600" />
-                    <span className="text-sm font-bold text-amber-700">שלבים ({(editingNode.steps || []).length})</span>
+                <div className="border-2 border-amber-200 rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 bg-amber-50 flex items-center gap-2 border-b-2 border-amber-200">
+                    <Layers className="w-5 h-5 text-amber-600" />
+                    <span className="text-base font-bold text-amber-700">שלבים ({(editingNode.steps || []).length})</span>
                   </div>
-                  <div className="p-3 space-y-2">
+                  <div className="p-4 space-y-2">
                     <StepsEditor
                       steps={editingNode.steps || []}
                       onChange={(steps) => updateNodeById(editingNodeId, { steps })}
@@ -1125,12 +1128,12 @@ export default function ProcessArchitect() {
                 </div>
 
                 {/* ── Extra Fields Editor ── */}
-                <div className="border border-purple-200 rounded-lg overflow-hidden">
-                  <div className="px-3 py-2 bg-purple-50 flex items-center gap-2 border-b border-purple-200">
-                    <Settings2 className="w-4 h-4 text-purple-600" />
-                    <span className="text-sm font-bold text-purple-700">שדות נוספים</span>
+                <div className="border-2 border-purple-200 rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 bg-purple-50 flex items-center gap-2 border-b-2 border-purple-200">
+                    <Settings2 className="w-5 h-5 text-purple-600" />
+                    <span className="text-base font-bold text-purple-700">שדות נוספים</span>
                   </div>
-                  <div className="p-3">
+                  <div className="p-4">
                     <ExtraFieldsEditor
                       extraFields={editingNode.extra_fields || {}}
                       onChange={(ef) => updateNodeById(editingNodeId, { extra_fields: Object.keys(ef).length > 0 ? ef : undefined })}
@@ -1144,28 +1147,29 @@ export default function ProcessArchitect() {
       </Sheet>
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-row-reverse">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-[#E91E6315] to-[#FFC10715]">
-            <Network className="w-5 h-5 text-[#E91E63]" />
+      <div className="flex items-center justify-between flex-row-reverse p-4 rounded-2xl bg-gradient-to-l from-pink-50/50 to-amber-50/30 border-2 border-gray-100">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-[#E91E6320] to-[#FFC10720]">
+            <Network className="w-7 h-7 text-[#E91E63]" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-gray-800">אדריכל תהליכים</h3>
-            <p className="text-xs text-gray-500">
+            <h3 className="text-xl font-black text-gray-800">אדריכל תהליכים</h3>
+            <p className="text-sm text-gray-500 font-medium">
               {Object.keys(tree.branches).length} ענפים • {totalNodes} צמתים
-              {isDirty && <span className="text-amber-600 mr-2 font-medium"> • שינויים שלא נשמרו</span>}
+              {isDirty && <span className="text-amber-600 mr-2 font-bold"> • שינויים שלא נשמרו</span>}
             </p>
+            <p className="text-xs text-gray-400 mt-0.5">לחץ על שורה כדי לפתוח עורך מלא בצד</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {saveResult === 'success' && (
-            <Badge className="bg-green-100 text-green-700 text-xs gap-1">
-              <CheckCircle className="w-3 h-3" /> נשמר — ישתקף מיד בכרטיסי לקוח
+            <Badge className="bg-green-100 text-green-700 text-sm gap-1.5 px-3 py-1 font-bold">
+              <CheckCircle className="w-4 h-4" /> נשמר — ישתקף מיד בכרטיסי לקוח
             </Badge>
           )}
           {saveResult === 'error' && (
-            <Badge className="bg-red-100 text-red-700 text-xs gap-1">
-              <AlertTriangle className="w-3 h-3" /> שגיאה בשמירה
+            <Badge className="bg-red-100 text-red-700 text-sm gap-1.5 px-3 py-1 font-bold">
+              <AlertTriangle className="w-4 h-4" /> שגיאה בשמירה
             </Badge>
           )}
           <Button
@@ -1173,9 +1177,9 @@ export default function ProcessArchitect() {
             variant="outline"
             size="sm"
             onClick={() => setAddingBranch(!addingBranch)}
-            className="text-xs h-8 gap-1"
+            className="text-sm h-10 gap-1.5 px-4 font-bold"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
             ענף חדש
           </Button>
           <Button
@@ -1183,9 +1187,9 @@ export default function ProcessArchitect() {
             size="sm"
             onClick={handleSave}
             disabled={saving || !isDirty}
-            className="text-xs h-8 gap-1 bg-[#2E7D32] text-white hover:bg-[#1B5E20]"
+            className="text-sm h-10 gap-1.5 px-5 font-bold bg-[#2E7D32] text-white hover:bg-[#1B5E20]"
           >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? 'שומר...' : 'שמור לDB'}
           </Button>
         </div>
@@ -1193,21 +1197,21 @@ export default function ProcessArchitect() {
 
       {/* Add branch form */}
       {addingBranch && (
-        <div className="flex items-center gap-2 p-3 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50/50">
+        <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50/50">
           <Input
             value={newBranchLabel}
             onChange={(e) => setNewBranchLabel(e.target.value)}
             placeholder="שם ענף חדש (לדוגמה: ייעוץ מס, ניהול נכסים...)"
-            className="flex-1 h-8 text-sm"
+            className="flex-1 h-10 text-base"
             autoFocus
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddBranch(); if (e.key === 'Escape') setAddingBranch(false); }}
           />
           <Button type="button" size="sm" onClick={handleAddBranch} disabled={!newBranchLabel.trim()}
-            className="h-8 px-4 text-xs bg-purple-600 text-white hover:bg-purple-700">
-            <Plus className="w-3 h-3 ml-1" /> צור ענף
+            className="h-10 px-5 text-sm font-bold bg-purple-600 text-white hover:bg-purple-700">
+            <Plus className="w-4 h-4 ml-1" /> צור ענף
           </Button>
           <button onClick={() => setAddingBranch(false)} className="text-gray-400 hover:text-gray-600">
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
       )}
@@ -1222,11 +1226,11 @@ export default function ProcessArchitect() {
         const isUserBranch = !['P1', 'P2', 'P3', 'P5'].includes(branchId);
 
         return (
-          <Card key={branchId} className="overflow-hidden" style={{ borderColor: color + '40' }}>
-            <CardHeader className="py-2 px-4" style={{ backgroundColor: color + '08' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                <span className="text-sm font-bold" style={{ color }}>
+          <Card key={branchId} className="overflow-hidden rounded-2xl border-2" style={{ borderColor: color + '50' }}>
+            <CardHeader className="py-3 px-5" style={{ backgroundColor: color + '12' }}>
+              <div className="flex items-center gap-4">
+                <div className="w-5 h-5 rounded-full" style={{ backgroundColor: color }} />
+                <span className="text-lg font-black" style={{ color }}>
                   {branchId} |{' '}
                   <InlineEdit
                     value={branch.label}
@@ -1234,7 +1238,7 @@ export default function ProcessArchitect() {
                     className="inline"
                   />
                 </span>
-                <Badge variant="outline" className="text-[10px] h-5" style={{ borderColor: color + '40', color }}>
+                <Badge variant="outline" className="text-sm h-7 px-3 font-bold" style={{ borderColor: color + '50', color }}>
                   {nodeCount} צמתים
                 </Badge>
                 <div className="flex-1" />
@@ -1247,14 +1251,14 @@ export default function ProcessArchitect() {
                     className="text-gray-300 hover:text-red-500 transition-colors"
                     title="מחק ענף"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 )}
               </div>
             </CardHeader>
-            <CardContent className="py-2 px-3">
+            <CardContent className="py-3 px-4">
               {(branch.children || []).length === 0 ? (
-                <div className="text-center py-4 text-gray-400 text-xs">
+                <div className="text-center py-6 text-gray-400 text-sm">
                   ענף ריק — לחץ + להוספת צומת
                 </div>
               ) : (
@@ -1283,12 +1287,11 @@ export default function ProcessArchitect() {
       })}
 
       {/* Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 mb-16">
-        <strong>סנכרון:</strong> לאחר שמירה, כל כרטיס לקוח יטען את המבנה המעודכן אוטומטית.
-        <br />
-        <strong>שלבים:</strong> לחץ על אייקון השלבים (⊞) ליד כל צומת כדי להגדיר Steps.
-        <br />
-        <strong>ענפים חדשים:</strong> לחץ "ענף חדש" ליצירת P6, P7 וכו'.
+      <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 text-sm text-blue-800 mb-16 space-y-1">
+        <p><strong>לחץ על שורה</strong> כדי לפתוח עורך מלא בצד ימין.</p>
+        <p><strong>סנכרון:</strong> לאחר שמירה, כל כרטיס לקוח יטען את המבנה המעודכן אוטומטית.</p>
+        <p><strong>שלבים:</strong> לחץ על אייקון השלבים (⊞) ליד כל צומת כדי להגדיר Steps.</p>
+        <p><strong>ענפים חדשים:</strong> לחץ "ענף חדש" ליצירת P6, P7 וכו'.</p>
       </div>
 
       {/* ── Floating Save Button ── */}
@@ -1325,21 +1328,21 @@ function AddNodeButton({ branchId, color, onAdd }) {
 
   if (open) {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="שם צומת חדש..."
-          className="h-6 text-xs w-[160px]"
+          placeholder="...שם צומת חדש"
+          className="h-9 text-sm w-[200px]"
           autoFocus
           onKeyDown={(e) => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setOpen(false); }}
         />
         <Button type="button" size="sm" onClick={add} disabled={!name.trim()}
-          className="h-6 px-2 text-[10px] text-white" style={{ backgroundColor: color }}>
-          <Plus className="w-3 h-3" />
+          className="h-9 px-3 text-sm font-bold text-white" style={{ backgroundColor: color }}>
+          <Plus className="w-4 h-4" />
         </Button>
         <button onClick={() => setOpen(false)} className="text-gray-400">
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
     );
@@ -1348,11 +1351,11 @@ function AddNodeButton({ branchId, color, onAdd }) {
   return (
     <button
       onClick={() => setOpen(true)}
-      className="w-6 h-6 rounded-lg flex items-center justify-center text-white hover:opacity-80 transition-opacity"
+      className="w-8 h-8 rounded-lg flex items-center justify-center text-white hover:opacity-80 transition-opacity"
       style={{ backgroundColor: color }}
       title="הוסף צומת"
     >
-      <Plus className="w-3.5 h-3.5" />
+      <Plus className="w-4 h-4" />
     </button>
   );
 }
