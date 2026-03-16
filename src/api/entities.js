@@ -51,6 +51,7 @@ export const TaxReport2025 = lazyEntity('TaxReport2025');
 export const TaxReport2024 = lazyEntity('TaxReport2024');
 export const WeeklyTask = lazyEntity('WeeklyTask');
 export const BalanceSheet = lazyEntity('BalanceSheet');
+export const BalanceSheetWorkbook = lazyEntity('BalanceSheetWorkbook');
 export const StickyNote = lazyEntity('StickyNote');
 export const Project = lazyEntity('Project');
 export const SystemConfig = lazyEntity('SystemConfig');

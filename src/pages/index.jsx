@@ -67,6 +67,8 @@ import WeeklyPlanningDashboard from "./WeeklyPlanningDashboard";
 
 import BalanceSheets from "./BalanceSheets";
 
+import BalanceSheetWorkbook from "./BalanceSheetWorkbook";
+
 import WeeklySummary from "./WeeklySummary";
 
 import RecurringTasks from "./RecurringTasks";
@@ -172,6 +174,8 @@ const PAGES = {
     WeeklyPlanningDashboard: WeeklyPlanningDashboard,
     
     BalanceSheets: BalanceSheets,
+
+    BalanceSheetWorkbook: BalanceSheetWorkbook,
 
     WeeklySummary: WeeklySummary,
 
@@ -299,6 +303,8 @@ function PagesContent() {
                 <Route path="/WeeklyPlanningDashboard" element={<WeeklyPlanningDashboard />} />
                 
                 <Route path="/BalanceSheets" element={<BalanceSheets />} />
+
+                <Route path="/BalanceSheetWorkbook" element={<BalanceSheetWorkbook />} />
 
                 <Route path="/WeeklySummary" element={<WeeklySummary />} />
 

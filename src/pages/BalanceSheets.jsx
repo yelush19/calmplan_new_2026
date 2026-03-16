@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BalanceSheet, Client, Task } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,8 @@ import {
 import {
   BarChart3, Plus, Filter, RefreshCw, CheckCircle, AlertCircle, Clock,
   FileText, Building2, Calendar, User, ExternalLink, FolderOpen, ChevronDown,
-  ChevronUp, ChevronRight, Pencil, Save, X, ListChecks, Wand2, Settings2, Trash2, Check, Search
+  ChevronUp, ChevronRight, Pencil, Save, X, ListChecks, Wand2, Settings2, Trash2, Check, Search,
+  BookOpen
 } from 'lucide-react';
 import { generateProcessTasks } from '@/api/functions';
 import { loadBalanceSheetTemplates, saveBalanceSheetTemplates, DEFAULT_STAGE_TEMPLATES } from '@/config/balanceSheetTemplates';
@@ -60,7 +62,7 @@ const WorkflowProgress = ({ currentStage }) => {
   );
 };
 
-const BalanceSheetCard = ({ balance, onUpdate, onStageChange, onGenerateFromTemplate }) => {
+const BalanceSheetCard = ({ balance, onUpdate, onStageChange, onGenerateFromTemplate, onOpenWorkbook }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const stage = getStageConfig(balance.current_stage);
@@ -156,6 +158,14 @@ const BalanceSheetCard = ({ balance, onUpdate, onStageChange, onGenerateFromTemp
               <Wand2 className="w-3.5 h-3.5" />
               צור משימות מתבנית
             </Button>
+            <Button
+              size="sm"
+              className="w-full text-xs gap-1 bg-green-700 hover:bg-green-800 text-white"
+              onClick={() => onOpenWorkbook(balance)}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              פתח חוברת עבודה
+            </Button>
           </div>
 
           {/* Edit form */}
@@ -190,6 +200,7 @@ const BalanceSheetCard = ({ balance, onUpdate, onStageChange, onGenerateFromTemp
 };
 
 export default function BalanceSheetsPage() {
+  const navigate = useNavigate();
   const [balanceSheets, setBalanceSheets] = useState([]);
   const [clients, setClients] = useState([]);
   const [filters, setFilters] = useState({ stage: 'all', client: 'all', year: String(new Date().getFullYear() - 1) });
@@ -640,6 +651,7 @@ export default function BalanceSheetsPage() {
                             onStageChange={handleStageChange}
                             onUpdate={handleUpdate}
                             onGenerateFromTemplate={(id) => setShowGenerateDialog(id)}
+                            onOpenWorkbook={(b) => navigate(`/BalanceSheetWorkbook?balanceSheetId=${b.id}&clientId=${b.client_id}&year=${b.tax_year}`)}
                           />
                         ))}
                       </AnimatePresence>
