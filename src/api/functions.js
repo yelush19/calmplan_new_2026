@@ -61,16 +61,16 @@ const PROCESS_TEMPLATES = {
     deprecated: true, // Replaced by tree-aware social_operator / social_taml
   },
   social_operator: {
-    name: 'סוציאליות מתפעל',
-    category: 'סוציאליות מתפעל',
+    name: 'פנסיות — מתפעל',
+    category: 'פנסיות — מתפעל',
     frequencyField: null,
     dayOfMonth: 14,
     requiresPayroll: true,
     treeNodeId: 'P1_operator',
   },
   social_taml: {
-    name: 'סוציאליות טמל',
-    category: 'סוציאליות טמל',
+    name: 'פנסיות — טמל',
+    category: 'פנסיות — טמל',
     frequencyField: null,
     dayOfMonth: 14,
     requiresPayroll: true,
@@ -1185,15 +1185,19 @@ export const cleanupGhostTasks = async ({ dryRun = true } = {}) => {
     'work_vat_reporting', 'מע"מ',
     'work_payroll', 'שכר',
     'work_tax_advances', 'מקדמות מס',
-    'work_social_operator', 'סוציאליות מתפעל',
-    'work_social_taml', 'סוציאליות טמל',
-    'work_deductions', 'ניכויים',
+    'work_social_operator', 'פנסיות — מתפעל',
+    'work_social_taml', 'פנסיות — טמל',
+    'work_deductions', 'ניכויים — דיווח',
     'work_client_management', 'דוח שנתי',
   ]);
 
   // Known deprecated/ghost categories from old code
   const GHOST_CATEGORIES = new Set([
-    'סוציאליות',           // old generic — replaced by מתפעל/טמל
+    'סוציאליות',           // old generic — replaced by פנסיות וקרנות
+    'סוציאליות מתפעל',     // old — replaced by פנסיות — מתפעל
+    'סוציאליות טמל',       // old — replaced by פנסיות — טמל
+    'סוציאליות - מתפעל',   // old variant
+    'סוציאליות - טמל',     // old variant
     'ביטוח לאומי',         // old generic social_security
     'social_security',      // old English category
   ]);

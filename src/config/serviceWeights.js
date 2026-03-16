@@ -31,7 +31,7 @@ export const SERVICE_WEIGHTS = {
   'work_masav_authorities': { duration: 15, cognitiveLoad: 0, label: 'MASAV Authorities' },
   'משלוח תלושים':      { duration: 15, cognitiveLoad: 0, label: 'משלוח תלושים' },
   'work_payslip_sending': { duration: 15, cognitiveLoad: 0, label: 'Payslip Sending' },
-  'סוציאליות':         { duration: 15, cognitiveLoad: 0, label: 'סוציאליות' },
+  'פנסיות וקרנות':     { duration: 15, cognitiveLoad: 0, label: 'פנסיות וקרנות' },
   'work_social_benefits': { duration: 15, cognitiveLoad: 0, label: 'Social Benefits' },
 
   // P2 — Bookkeeping & VAT

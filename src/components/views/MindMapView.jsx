@@ -266,7 +266,7 @@ const CATEGORY_TO_FUNCTION = {
   'work_masav':         'services',
   'משלוח תלושים':      'services',
   'work_payslip_sending': 'services',
-  'סוציאליות':         'services',
+  'פנסיות וקרנות':     'services',
   'work_social_benefits': 'services',
   'מילואים':           'services',
   'work_reserve_claims': 'services',
@@ -300,7 +300,7 @@ const CATEGORY_TO_DEPARTMENT = {
   'work_masav': 'שכר',
   'מס"ב סוציאליות': 'שכר',        // MASAV social → payroll
   'work_masav_social': 'שכר',
-  'סוציאליות': 'שכר',
+  'פנסיות וקרנות': 'שכר',
   'work_social_benefits': 'שכר',
   'משלוח תלושים': 'שכר',          // payslip sending → payroll
   'work_payslip_sending': 'שכר',

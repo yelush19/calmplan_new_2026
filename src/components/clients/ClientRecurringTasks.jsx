@@ -97,7 +97,7 @@ const REPORT_CATEGORIES = {
     branch: 'P1',
   },
   'ביטוח לאומי': {
-    label: 'סוציאליות',
+    label: 'ביטוח לאומי — דיווח',
     icon: Building,
     color: 'bg-rose-100 text-rose-800',
     accent: 'border-rose-400',
@@ -112,7 +112,7 @@ const REPORT_CATEGORIES = {
     branch: 'P1',
   },
   'ניכויים': {
-    label: 'ניכויים',
+    label: 'ניכויים — דיווח',
     icon: FileText,
     color: 'bg-amber-100 text-amber-800',
     accent: 'border-amber-400',
@@ -235,7 +235,7 @@ const REPORT_CATEGORIES = {
     branch: 'P1',
   },
   'מתפעל': {
-    label: 'סוציאליות - מתפעל',
+    label: 'פנסיות — מתפעל',
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',
@@ -249,7 +249,7 @@ const REPORT_CATEGORIES = {
     branch: 'P1',
   },
   'טמל + לקוח': {
-    label: 'סוציאליות - טמל',
+    label: 'פנסיות — טמל',
     icon: FileText,
     color: 'bg-sky-100 text-sky-800',
     accent: 'border-sky-400',

@@ -9,7 +9,7 @@ import { Task } from '@/api/entities';
 // Map each reporting deadline to the task categories it covers (Hebrew + English work categories)
 const REPORTING_DEADLINES = [
   { day: 9,  label: 'שכר - מס"ב ותלושים', color: 'slate', categories: ['שכר', 'work_payroll'] },
-  { day: 15, label: 'סוציאליות וביטוח לאומי', color: 'slate', categories: ['ביטוח לאומי', 'work_social_security'] },
+  { day: 15, label: 'פנסיות וקרנות + ביטוח לאומי דיווח', color: 'slate', categories: ['ביטוח לאומי', 'work_social_security'] },
   { day: 19, label: 'מע"מ / ניכויים / מקדמות', color: 'gray', categories: ['מע"מ', 'work_vat_reporting', 'ניכויים', 'work_deductions', 'מקדמות מס', 'work_tax_advances'] },
   { day: 23, label: '874 מפורט', color: 'gray', categories: ['מע"מ 874', 'work_vat_874'] },
 ];

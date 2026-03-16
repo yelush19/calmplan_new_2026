@@ -10,8 +10,10 @@
 const CATEGORY_TO_P_BRANCH = {
   // P1 — Payroll
   'שכר': 'P1', 'work_payroll': 'P1',
-  'ביטוח לאומי': 'P1', 'work_social_security': 'P1',
-  'ניכויים': 'P1', 'work_deductions': 'P1',
+  'ביטוח לאומי': 'P1', 'ביטוח לאומי — דיווח': 'P1', 'work_social_security': 'P1',
+  'ניכויים': 'P1', 'ניכויים — דיווח': 'P1', 'work_deductions': 'P1',
+  'פנסיות וקרנות': 'P1', 'פנסיות — מתפעל': 'P1', 'פנסיות — טמל': 'P1',
+  'work_social_operator': 'P1', 'work_social_taml': 'P1', 'work_social_benefits': 'P1',
   'מס"ב עובדים': 'P1', 'מס"ב סוציאליות': 'P1',
   // P2 — Bookkeeping & Tax
   'מע"מ': 'P2', 'work_vat_reporting': 'P2',
