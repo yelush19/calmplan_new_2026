@@ -576,11 +576,13 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [results, setResults] = useState(null);
   const [collapsedCategories, setCollapsedCategories] = useState(new Set());
 
-  // Month selection state — user picks which report months to generate
+  // Month selection state — default to PREVIOUS month (work is retroactive)
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedMonths, setSelectedMonths] = useState(new Set([currentMonth]));
+  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const prevMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+  const [selectedYear, setSelectedYear] = useState(prevMonthYear);
+  const [selectedMonths, setSelectedMonths] = useState(new Set([prevMonth]));
   const [forceInject, setForceInject] = useState(false);
   const [expandedCard, setExpandedCard] = useState(null); // catKey of expanded card
   const [isClearingCache, setIsClearingCache] = useState(false);
@@ -634,7 +636,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   };
 
   const selectCurrentMonth = () => {
-    setSelectedMonths(new Set([currentMonth]));
+    setSelectedMonths(new Set([prevMonth]));
+    setSelectedYear(prevMonthYear);
   };
 
   // Clear existing recurring tasks for the selected months so re-injection works
@@ -927,7 +930,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     const result = [];
     for (const [branchKey, branchDef] of Object.entries(P_BRANCHES)) {
       const branchCategories = [];
-      let totalClients = 0;
+      const uniqueBranchClients = new Set();
+      let totalServices = 0;
       for (const catKey of branchDef.categories) {
         const categoryDef = REPORT_CATEGORIES[catKey];
         if (!categoryDef) continue;
@@ -939,16 +943,17 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           const freq = getClientFrequency(catKey, client);
           if (freq === 'not_applicable') continue;
           clientCount++;
+          uniqueBranchClients.add(client.id);
           frequencies[freq] = (frequencies[freq] || 0) + 1;
           matchedClients.push({ id: client.id, name: client.name, frequency: freq });
         }
         if (clientCount > 0) {
           branchCategories.push({ key: catKey, label: categoryDef.label, icon: categoryDef.icon, dot: categoryDef.dot, clientCount, frequencies, matchedClients });
-          totalClients += clientCount;
+          totalServices += clientCount;
         }
       }
-      if (totalClients > 0) {
-        result.push({ ...branchDef, key: branchKey, totalClients, branchCategories });
+      if (uniqueBranchClients.size > 0) {
+        result.push({ ...branchDef, key: branchKey, totalClients: uniqueBranchClients.size, totalServices, branchCategories });
       }
     }
     return result;
@@ -1028,31 +1033,41 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 <div className={`px-4 py-3 ${branch.bgSoft} flex items-center gap-3`}>
                   <div className="w-4 h-4 rounded-full" style={{ backgroundColor: design.getBranchColor(branch.key) }} />
                   <span className="text-lg font-black text-gray-800">{branch.label}</span>
-                  <span className="text-base font-bold text-gray-500 mr-auto">{branch.totalClients} לקוחות</span>
+                  <span className="text-base font-bold text-gray-500 mr-auto">{branch.totalClients} לקוחות · {branch.totalServices} שירותים</span>
                 </div>
-                {/* Category cards within branch */}
+                {/* Category cards within branch — AYOA glass style */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3">
-                  {branch.branchCategories.map((cat) => {
+                  {branch.branchCategories.map((cat, catIdx) => {
                     const Icon = cat.icon;
                     const isExpanded = expandedCard === cat.key;
+                    const branchColor = design.getBranchColor(branch.key);
                     return (
-                      <div
+                      <motion.div
                         key={cat.key}
-                        className={`rounded-xl bg-white border transition-all cursor-pointer ${
-                          isExpanded ? 'border-blue-300 shadow-md col-span-1 md:col-span-2' : 'border-gray-100 hover:border-gray-200'
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: catIdx * 0.05 }}
+                        className={`rounded-2xl transition-all cursor-pointer border-2 ${
+                          isExpanded ? 'shadow-lg col-span-1 md:col-span-2' : 'hover:shadow-md hover:scale-[1.01]'
                         }`}
+                        style={{
+                          background: `linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.65))`,
+                          backdropFilter: 'blur(12px)',
+                          borderColor: isExpanded ? branchColor : `${branchColor}40`,
+                        }}
                         onClick={() => setExpandedCard(isExpanded ? null : cat.key)}
                       >
                         <div className="p-4">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className={`w-3 h-3 rounded-full ${cat.dot}`} />
-                            <span className="text-base font-bold text-gray-700">{cat.label}</span>
-                            <ChevronDown className={`w-4 h-4 text-gray-400 mr-auto transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: branchColor }} />
+                            <span className="text-base font-black text-gray-800">{cat.label}</span>
+                            <ChevronDown className={`w-4 h-4 mr-auto transition-transform ${isExpanded ? 'rotate-180' : ''}`} style={{ color: branchColor }} />
                           </div>
-                          <p className="text-3xl font-black text-gray-800 mb-2">{cat.clientCount}</p>
+                          <p className="text-4xl font-black mb-2" style={{ color: branchColor }}>{cat.clientCount}</p>
                           <div className="flex flex-wrap gap-2">
                             {Object.entries(cat.frequencies).map(([freq, count]) => (
-                              <span key={freq} className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">
+                              <span key={freq} className="text-xs px-2.5 py-1 rounded-full font-bold"
+                                style={{ backgroundColor: `${branchColor}15`, color: branchColor }}>
                                 {FREQUENCY_LABELS[freq] || freq} ({count})
                               </span>
                             ))}
@@ -1060,15 +1075,16 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                         </div>
                         {/* ── Expanded Client List ── */}
                         {isExpanded && cat.matchedClients && (
-                          <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50 max-h-64 overflow-y-auto">
-                            <div className="text-xs font-bold text-gray-500 mb-2">{cat.clientCount} לקוחות:</div>
+                          <div className="border-t px-4 py-3 max-h-64 overflow-y-auto" style={{ borderColor: `${branchColor}20`, background: `${branchColor}08` }}>
+                            <div className="text-xs font-bold mb-2" style={{ color: branchColor }}>{cat.clientCount} לקוחות:</div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
                               {cat.matchedClients
                                 .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
                                 .map((mc, idx) => (
-                                <div key={mc.id || idx} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-gray-100 text-sm">
+                                <div key={mc.id || idx} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-sm"
+                                  style={{ background: 'rgba(255,255,255,0.8)', borderColor: `${branchColor}20` }}>
                                   <span className="font-medium text-gray-800 truncate flex-1">{mc.name}</span>
-                                  <span className="text-[10px] text-gray-400 flex-shrink-0">
+                                  <span className="text-[10px] font-bold flex-shrink-0" style={{ color: `${branchColor}99` }}>
                                     {FREQUENCY_LABELS[mc.frequency] || mc.frequency}
                                   </span>
                                 </div>
@@ -1076,7 +1092,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                             </div>
                           </div>
                         )}
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
@@ -1145,7 +1161,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 onClick={selectCurrentMonth}
                 className="rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-100"
               >
-                חודש נוכחי
+                חודש קודם
               </Button>
               <Button
                 variant="ghost"
@@ -1221,8 +1237,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                       key={branchKey}
                       onClick={() => {
                         if (selectedMonths.size === 0) {
-                          setSelectedMonths(new Set([currentMonth]));
-                          generateTasksPreview(new Set([currentMonth]), branchKey);
+                          setSelectedMonths(new Set([prevMonth]));
+                          generateTasksPreview(new Set([prevMonth]), branchKey);
                         } else {
                           generateTasksPreview(null, branchKey);
                         }

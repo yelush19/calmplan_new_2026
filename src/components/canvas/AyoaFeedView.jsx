@@ -13,6 +13,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
+import { TASK_STATUS_CONFIG } from '@/config/processTemplates';
 import { CheckCircle } from 'lucide-react';
 
 export default function AyoaFeedView({ tasks = [], onEditTask }) {
@@ -61,8 +62,8 @@ export default function AyoaFeedView({ tasks = [], onEditTask }) {
                 {task.due_date && (
                   <span className="text-[11px] font-semibold text-slate-700">{task.due_date}</span>
                 )}
-                <Badge variant="outline" className="text-[10px] px-1.5 h-4 rounded-full font-bold text-slate-700">
-                  {status}
+                <Badge variant="outline" className={`text-[10px] px-1.5 h-4 rounded-full font-bold ${TASK_STATUS_CONFIG[status]?.color || 'text-slate-700'}`}>
+                  {TASK_STATUS_CONFIG[status]?.text || status}
                 </Badge>
               </div>
             </div>
