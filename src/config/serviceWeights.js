@@ -43,12 +43,12 @@ export const SERVICE_WEIGHTS = {
   'work_social_benefits': { duration: 15, cognitiveLoad: 0, label: 'Social Benefits' },
 
   // P2 — Bookkeeping & VAT
-  'מע"מ':              { duration: 15, cognitiveLoad: 1, label: 'מע"מ' },
-  'work_vat_reporting': { duration: 15, cognitiveLoad: 1, label: 'VAT Reporting' },
-  'מע"מ 874':          { duration: 15, cognitiveLoad: 0, label: 'מע"מ 874' },
-  'work_vat_874':       { duration: 15, cognitiveLoad: 0, label: 'VAT 874' },
-  'מקדמות מס':         { duration: 15, cognitiveLoad: 0, label: 'מקדמות מס' },
-  'work_tax_advances':  { duration: 15, cognitiveLoad: 0, label: 'Tax Advances' },
+  'מע"מ':              { duration: 5,  cognitiveLoad: 0, label: 'מע"מ' },                // דיווח 3 + תשלום 2 דק'
+  'work_vat_reporting': { duration: 5,  cognitiveLoad: 0, label: 'VAT Reporting' },
+  'מע"מ 874':          { duration: 5,  cognitiveLoad: 0, label: 'מע"מ 874' },           // דיווח 3 + תשלום 2 דק'
+  'work_vat_874':       { duration: 5,  cognitiveLoad: 0, label: 'VAT 874' },
+  'מקדמות מס':         { duration: 5,  cognitiveLoad: 0, label: 'מקדמות מס' },          // דיווח 3 + תשלום 2 דק'
+  'work_tax_advances':  { duration: 5,  cognitiveLoad: 0, label: 'Tax Advances' },
   'הנהלת חשבונות':     { duration: 30, cognitiveLoad: 2, label: 'הנהלת חשבונות' },
   'work_bookkeeping':   { duration: 30, cognitiveLoad: 2, label: 'Bookkeeping' },
   'התאמות':            { duration: 30, cognitiveLoad: 2, label: 'התאמות' },
