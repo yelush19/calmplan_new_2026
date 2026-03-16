@@ -1,12 +1,14 @@
 /**
- * SettingsMindMap — Clean Hierarchical Process Map (V4.0)
+ * SettingsMindMap — AYOA-Style Visual Mind Map (V4.0)
  *
- * Replaces the chaotic force-directed SVG with a clean, organized tree layout.
- * - Branches in columns (P1–P5)
- * - Nodes as cards with steps shown as chips
- * - Clean SVG connections between levels
+ * Clean radial SVG mind map:
+ * - Hub logo in center
+ * - P1–P5 branches radiating outward as colored bubbles
+ * - Child nodes in organized arcs around parent
+ * - Steps shown as small chips ON the node (not separate bubbles)
+ * - Clean bezier curve connections
  * - Sidebar editor for node details
- * - Full CRUD + DB sync preserved
+ * - Reads ONLY from DB tree (no processTemplates ghost nodes)
  */
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -14,164 +16,104 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ALL_SERVICES,
 } from '@/config/processTemplates';
-import { SERVICE_WEIGHTS, getServiceWeight } from '@/config/serviceWeights';
 import { useDesign } from '@/contexts/DesignContext';
 import {
   Trash2, Plus, GripVertical, X, ListOrdered,
-  Save, Loader2, ChevronDown, ChevronLeft,
-  Circle, Cloud, Diamond, Star, Minus, MessageCircle,
+  Save, Loader2,
 } from 'lucide-react';
-
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import {
-  loadCompanyTree, invalidateTreeCache, saveCompanyTree,
+  loadCompanyTree, invalidateTreeCache,
   saveAndBroadcast, onTreeChange,
   loadSettingFromDb, syncSettingToDb,
   ensureMindMapSync,
 } from '@/services/processTreeService';
 import { toast } from '@/components/ui/use-toast';
 
-// ── DNA Colors (P-branch identity) ──
+// ── DNA Colors ──
 const BASE_DNA = {
-  P1: { color: '#0288D1', label: 'חשבות שכר', bg: '#E1F5FE', glow: '#0288D140', dashboard: 'payroll', gradient: 'from-sky-500 to-blue-600' },
-  P2: { color: '#7B1FA2', label: 'הנה"ח ומיסים', bg: '#F3E5F5', glow: '#7B1FA240', dashboard: 'tax', gradient: 'from-purple-500 to-violet-600' },
-  P3: { color: '#D81B60', label: 'ניהול', bg: '#FCE4EC', glow: '#D81B6040', dashboard: 'admin', gradient: 'from-pink-500 to-rose-600' },
-  P4: { color: '#F9A825', label: 'בית ואישי', bg: '#FFF8E1', glow: '#F9A82540', dashboard: 'home', gradient: 'from-amber-400 to-orange-500' },
-  P5: { color: '#2E7D32', label: 'דוחות שנתיים', bg: '#E8F5E9', glow: '#2E7D3240', dashboard: 'annual_reports', gradient: 'from-green-500 to-emerald-600' },
+  P1: { color: '#0288D1', label: 'חשבות שכר', bg: '#E1F5FE', lightBg: '#E1F5FE90' },
+  P2: { color: '#7B1FA2', label: 'הנה"ח ומיסים', bg: '#F3E5F5', lightBg: '#F3E5F590' },
+  P3: { color: '#D81B60', label: 'ניהול', bg: '#FCE4EC', lightBg: '#FCE4EC90' },
+  P4: { color: '#F9A825', label: 'בית ואישי', bg: '#FFF8E1', lightBg: '#FFF8E190' },
+  P5: { color: '#2E7D32', label: 'דוחות שנתיים', bg: '#E8F5E9', lightBg: '#E8F5E990' },
 };
 
 const DYNAMIC_COLORS = [
-  { color: '#9C27B0', glow: '#9C27B040' },
-  { color: '#FF5722', glow: '#FF572240' },
-  { color: '#00BCD4', glow: '#00BCD440' },
-  { color: '#795548', glow: '#79554840' },
-  { color: '#607D8B', glow: '#607D8B40' },
+  { color: '#9C27B0' }, { color: '#FF5722' }, { color: '#00BCD4' },
+  { color: '#795548' }, { color: '#607D8B' },
 ];
 
-function getDashboardBranch(dashboard) {
-  if (dashboard === 'payroll') return 'P1';
-  if (dashboard === 'tax') return 'P2';
-  if (dashboard === 'admin' || dashboard === 'additional') return 'P3';
-  if (dashboard === 'home') return 'P4';
-  if (dashboard === 'annual_reports') return 'P5';
-  if (dashboard?.startsWith('P')) return dashboard;
-  return 'P3';
+// ── Canvas ──
+const VB_W = 1600, VB_H = 1000;
+const CX = VB_W / 2, CY = VB_H / 2;
+
+// ── Branch angles (radial layout) ──
+const BRANCH_ANGLES = {
+  P1: -Math.PI * 0.75,   // top-left
+  P2: -Math.PI * 0.25,   // top-right
+  P3: Math.PI * 0.05,    // right
+  P4: Math.PI * 0.55,    // bottom-right
+  P5: Math.PI * 0.95,    // bottom-left
+};
+
+// ── Bezier curve between two points ──
+function bezierPath(x1, y1, x2, y2) {
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  // Control point offset perpendicular to midpoint
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const curvature = Math.min(40, len * 0.15);
+  const cpx = mx - (dy / len) * curvature;
+  const cpy = my + (dx / len) * curvature;
+  return `M${x1},${y1} Q${cpx},${cpy} ${x2},${y2}`;
 }
 
-// ── Persistence helpers ──
-function loadOverrides() {
-  try { return JSON.parse(localStorage.getItem('calmplan_service_overrides') || '{}'); }
-  catch { return {}; }
-}
-function saveOverrides(o) {
-  localStorage.setItem('calmplan_service_overrides', JSON.stringify(o));
-  syncToSupabase('service_overrides', o);
-}
-function loadCustomServices() {
-  try { return JSON.parse(localStorage.getItem('calmplan_custom_services') || '{}'); }
-  catch { return {}; }
-}
-function saveCustomServices(c) {
-  localStorage.setItem('calmplan_custom_services', JSON.stringify(c));
-  syncToSupabase('custom_services', c);
+// ── Tapered connection (thick at start, thin at end) ──
+function taperedPath(x1, y1, x2, y2, w1 = 6, w2 = 2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const nx = -dy / len, ny = dx / len;
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const curvature = Math.min(30, len * 0.12);
+  const cpx = mx - nx * curvature * 2;
+  const cpy = my + ny * curvature * 2;
+  // Build a tapered shape using two quadratic curves
+  const hw1 = w1 / 2, hw2 = w2 / 2;
+  return `M${x1 + nx * hw1},${y1 + ny * hw1}
+    Q${cpx + nx * (hw1 + hw2) / 2},${cpy + ny * (hw1 + hw2) / 2} ${x2 + nx * hw2},${y2 + ny * hw2}
+    L${x2 - nx * hw2},${y2 - ny * hw2}
+    Q${cpx - nx * (hw1 + hw2) / 2},${cpy - ny * (hw1 + hw2) / 2} ${x1 - nx * hw1},${y1 - ny * hw1}
+    Z`;
 }
 
-async function syncToSupabase(key, data) {
-  try { await syncSettingToDb(key, data); } catch (err) {
-    console.warn(`[Supabase] Failed to sync ${key}:`, err.message);
+// ── Wrap text for SVG ──
+function wrapText(text, maxChars) {
+  if (!text || text.length <= maxChars) return [text || ''];
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    if (current && (current + ' ' + word).length > maxChars) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = current ? current + ' ' + word : word;
+    }
   }
+  if (current) lines.push(current);
+  return lines.slice(0, 2); // max 2 lines
 }
 
-// ── Shape palette ──
-const PALETTE_SHAPES = [
-  { key: 'cloud', label: 'ענן', icon: Cloud },
-  { key: 'bubble', label: 'בועה', icon: Circle },
-  { key: 'diamond', label: 'מעוין', icon: Diamond },
-  { key: 'pill', label: 'כמוסה', icon: Minus },
-  { key: 'star', label: 'כוכב', icon: Star },
-  { key: 'hexagon', label: 'משושה', icon: MessageCircle },
-];
-
-const COLOR_GRID = [
-  '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', '#03A9F4',
-  '#00BCD4', '#009688', '#4CAF50', '#8BC34A', '#CDDC39', '#FFC107',
-  '#FF9800', '#FF5722', '#795548', '#607D8B',
-  '#F48FB1', '#CE93D8', '#B39DDB', '#9FA8DA', '#90CAF9', '#81D4FA',
-  '#80DEEA', '#80CBC4', '#A5D6A7', '#C5E1A5', '#E6EE9C', '#FFE082',
-  '#FFCC80', '#FFAB91', '#BCAAA4', '#B0BEC5',
-];
-
-const COGNITIVE_LABELS = ['ננו', 'פשוט', 'בינוני', 'מורכב'];
-
-// ══════════════════════════════════════════════════════════════════════
-// SortableStepsManager — Drag-to-reorder, editable, add/delete steps
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// SortableStepsManager — for sidebar editor
+// ══════════════════════════════════════════════════════════════
 
 function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
-  const [stepDrag, setStepDrag] = useState(null);
-  const [dropPreview, setDropPreview] = useState(null);
-  const dragYRef = useRef(0);
-  const listRef = useRef(null);
-
   const commitSteps = useCallback((newSteps) => {
     updateService(serviceKey, { steps: newSteps });
   }, [serviceKey, updateService]);
-
-  const handleStepLabelChange = useCallback((index, newLabel) => {
-    const updated = steps.map((s, i) => i === index ? { ...s, label: newLabel } : s);
-    commitSteps(updated);
-  }, [steps, commitSteps]);
-
-  const handleAddStep = useCallback(() => {
-    commitSteps([...steps, { key: `step_${Date.now()}`, label: '', icon: 'check-circle' }]);
-  }, [steps, commitSteps]);
-
-  const handleDeleteStep = useCallback((index) => {
-    if (steps.length <= 1) return;
-    commitSteps(steps.filter((_, i) => i !== index));
-  }, [steps, commitSteps]);
-
-  const handleDragStart = useCallback((index, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragYRef.current = e.clientY;
-    setStepDrag({ fromIndex: index, currentIndex: index });
-    setDropPreview(index);
-
-    const handleMove = (moveE) => {
-      const deltaY = moveE.clientY - dragYRef.current;
-      const indexShift = Math.round(deltaY / 36);
-      const newIndex = Math.max(0, Math.min(steps.length - 1, index + indexShift));
-      setStepDrag(prev => prev ? { ...prev, currentIndex: newIndex } : null);
-      setDropPreview(newIndex);
-    };
-
-    const handleUp = () => {
-      setStepDrag(prev => {
-        if (prev && prev.fromIndex !== prev.currentIndex) {
-          const reordered = [...steps];
-          const [moved] = reordered.splice(prev.fromIndex, 1);
-          reordered.splice(prev.currentIndex, 0, moved);
-          commitSteps(reordered);
-        }
-        return null;
-      });
-      setDropPreview(null);
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
-    };
-
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-  }, [steps, commitSteps]);
-
-  const displaySteps = useMemo(() => {
-    if (!stepDrag || stepDrag.fromIndex === stepDrag.currentIndex) return steps;
-    const preview = [...steps];
-    const [moved] = preview.splice(stepDrag.fromIndex, 1);
-    preview.splice(stepDrag.currentIndex, 0, moved);
-    return preview;
-  }, [steps, stepDrag]);
 
   return (
     <div>
@@ -181,707 +123,515 @@ function SortableStepsManager({ steps, serviceKey, updateService, color, bg }) {
           שלבי תהליך ({steps.length})
         </label>
       </div>
-      <div ref={listRef} className="space-y-1">
-        {displaySteps.map((step, i) => {
-          const isBeingDragged = stepDrag && i === stepDrag.currentIndex;
-          return (
-            <div
-              key={`${step.key || i}-${i}`}
-              className={`flex items-center gap-1.5 rounded-xl transition-all ${
-                isBeingDragged ? 'bg-blue-50 shadow-sm ring-2 ring-blue-200' : 'bg-gray-50 hover:bg-gray-100'
-              }`}
-              style={{ padding: '6px 8px', minHeight: '38px' }}
-            >
-              <button className="flex-shrink-0 cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-200 text-gray-300 hover:text-gray-500"
-                onMouseDown={(e) => handleDragStart(i, e)}>
-                <GripVertical className="w-4 h-4" />
-              </button>
-              <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
-                style={{ backgroundColor: bg, color }}>
-                {i + 1}
-              </span>
-              <input type="text" value={step.label || ''} onChange={(e) => handleStepLabelChange(i, e.target.value)}
-                placeholder="שם שלב..." dir="rtl"
-                className="flex-1 min-w-0 px-2 py-1 text-sm bg-transparent border-0 border-b border-transparent focus:border-gray-300 focus:outline-none text-gray-700 placeholder-gray-300 font-medium" />
-              <button onClick={() => handleDeleteStep(i)}
-                className={`flex-shrink-0 p-1 rounded ${steps.length <= 1 ? 'text-gray-200 cursor-not-allowed' : 'text-gray-300 hover:text-red-500 hover:bg-red-50'}`}
-                disabled={steps.length <= 1}>
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          );
-        })}
+      <div className="space-y-1">
+        {steps.map((step, i) => (
+          <div key={step.key || i}
+            className="flex items-center gap-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all"
+            style={{ padding: '6px 8px', minHeight: '36px' }}>
+            <button className="flex-shrink-0 cursor-grab p-1 rounded hover:bg-gray-200 text-gray-300">
+              <GripVertical className="w-3.5 h-3.5" />
+            </button>
+            <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+              style={{ backgroundColor: color }}>
+              {i + 1}
+            </span>
+            <input type="text" value={step.label || ''} dir="rtl"
+              onChange={(e) => {
+                const updated = steps.map((s, j) => j === i ? { ...s, label: e.target.value } : s);
+                commitSteps(updated);
+              }}
+              placeholder="שם שלב..."
+              className="flex-1 min-w-0 px-2 py-0.5 text-sm bg-transparent border-0 focus:outline-none text-gray-700 font-medium" />
+            <button onClick={() => { if (steps.length > 1) commitSteps(steps.filter((_, j) => j !== i)); }}
+              className="flex-shrink-0 p-0.5 rounded text-gray-300 hover:text-red-500">
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        ))}
       </div>
-      <button onClick={handleAddStep}
-        className="w-full mt-2 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed border-gray-200 text-xs font-bold text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all">
-        <Plus className="w-4 h-4" />
-        הוסף שלב
+      <button onClick={() => commitSteps([...steps, { key: `step_${Date.now()}`, label: '' }])}
+        className="w-full mt-2 flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl border-2 border-dashed border-gray-200 text-xs font-bold text-gray-400 hover:text-blue-500 hover:border-blue-300 transition-all">
+        <Plus className="w-3.5 h-3.5" /> הוסף שלב
       </button>
     </div>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// TreeNodeCard — Single node in the hierarchical tree
-// ══════════════════════════════════════════════════════════════════════
-
-function TreeNodeCard({ node, branchColor, branchBg, isSelected, onClick, depth = 0 }) {
-  const stepCount = node.steps?.length || 0;
-  const hasChildren = node.children?.length > 0;
-  const [expanded, setExpanded] = useState(true);
-
-  const depthIndent = depth * 20;
-  const isGroupNode = node.is_parent_task && hasChildren;
-
-  return (
-    <div className="relative" style={{ paddingRight: `${depthIndent}px` }}>
-      {/* Connection line to parent */}
-      {depth > 0 && (
-        <div className="absolute top-5 w-4 border-t-2 border-dashed"
-          style={{ right: `${depthIndent - 16}px`, borderColor: branchColor + '40' }} />
-      )}
-
-      {/* Node card */}
-      <div
-        onClick={() => onClick(node)}
-        className={`group relative rounded-xl border-2 transition-all cursor-pointer mb-2 ${
-          isSelected
-            ? 'border-blue-500 bg-blue-50/50 shadow-lg ring-2 ring-blue-200'
-            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
-        }`}
-        style={{
-          borderRightWidth: '4px',
-          borderRightColor: branchColor,
-        }}
-      >
-        <div className="px-3 py-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              {/* Expand/collapse for group nodes */}
-              {isGroupNode && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-                  className="p-0.5 rounded hover:bg-gray-100 text-gray-400 flex-shrink-0"
-                >
-                  {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-                </button>
-              )}
-
-              {/* Node color dot */}
-              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: branchColor }} />
-
-              {/* Node label */}
-              <span className={`font-bold truncate ${isGroupNode ? 'text-base text-gray-900' : 'text-sm text-gray-800'}`}>
-                {node.label}
-              </span>
-            </div>
-
-            {/* Step count badge */}
-            {stepCount > 0 && (
-              <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                style={{ backgroundColor: branchBg, color: branchColor }}>
-                {stepCount} שלבים
-              </span>
-            )}
-          </div>
-
-          {/* Steps as chips */}
-          {stepCount > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {node.steps.map((step, i) => (
-                <span key={step.key || i}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium border"
-                  style={{
-                    backgroundColor: branchBg,
-                    borderColor: branchColor + '30',
-                    color: branchColor,
-                  }}>
-                  <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-                    style={{ backgroundColor: branchColor + 'BB' }}>
-                    {i + 1}
-                  </span>
-                  {step.label}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Frequency / extra info */}
-          {node.default_frequency && node.default_frequency !== 'monthly' && (
-            <div className="mt-1.5 text-[10px] text-gray-400 font-medium">
-              {node.default_frequency === 'bimonthly' ? 'דו-חודשי' :
-               node.default_frequency === 'yearly' ? 'שנתי' :
-               node.default_frequency === 'daily' ? 'יומי' :
-               node.default_frequency === 'weekly' ? 'שבועי' : node.default_frequency}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Children (recursive) */}
-      {isGroupNode && expanded && (
-        <div className="relative">
-          {/* Vertical connector line */}
-          <div className="absolute top-0 bottom-4 w-0.5"
-            style={{ right: `${depthIndent + 12}px`, backgroundColor: branchColor + '25' }} />
-          {node.children.map(child => (
-            <TreeNodeCard
-              key={child.id}
-              node={child}
-              branchColor={branchColor}
-              branchBg={branchBg}
-              isSelected={isSelected && false}
-              onClick={onClick}
-              depth={depth + 1}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 
 export default function SettingsMindMap({ onSelectService, onConfigChange }) {
+  const svgRef = useRef(null);
   const design = useDesign();
-  const [overrides, setOverrides] = useState(loadOverrides);
-  const [customServices, setCustomServices] = useState(loadCustomServices);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState(null);
+  const [dbTreeRef, setDbTreeRef] = useState({ tree: null, configId: null });
   const [dbBranches, setDbBranches] = useState({});
   const [mapSaving, setMapSaving] = useState(false);
-  const [dbTreeRef, setDbTreeRef] = useState({ tree: null, configId: null });
-  const [collapsedBranches, setCollapsedBranches] = useState(new Set());
+  const [overrides, setOverrides] = useState({});
+  const [customServices, setCustomServices] = useState({});
 
-  // ── Mount: Reconcile localStorage with Supabase ──
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await ensureMindMapSync();
-      if (cancelled) return;
-      const dbOverrides = await loadSettingFromDb('service_overrides');
-      if (cancelled) return;
-      if (dbOverrides && typeof dbOverrides === 'object' && Object.keys(dbOverrides).length > 0) {
-        setOverrides(dbOverrides);
-        localStorage.setItem('calmplan_service_overrides', JSON.stringify(dbOverrides));
-      }
-      const dbCustom = await loadSettingFromDb('custom_services');
-      if (cancelled) return;
-      if (dbCustom && typeof dbCustom === 'object') {
-        setCustomServices(dbCustom);
-        localStorage.setItem('calmplan_custom_services', JSON.stringify(dbCustom));
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  // Refresh branches from DB
-  const refreshBranchesFromDb = useCallback(async () => {
+  // ── Load tree from DB ──
+  const refreshFromDb = useCallback(async () => {
     invalidateTreeCache();
     try {
       const { tree, configId } = await loadCompanyTree();
       if (!tree?.branches) return;
       setDbTreeRef({ tree, configId });
+      // Detect dynamic branches
       const extra = {};
       let dynIdx = 0;
-      for (const [branchId, branch] of Object.entries(tree.branches)) {
+      for (const [branchId] of Object.entries(tree.branches)) {
         if (!BASE_DNA[branchId]) {
           const palette = DYNAMIC_COLORS[dynIdx % DYNAMIC_COLORS.length];
-          extra[branchId] = {
-            color: palette.color,
-            label: `${branchId} ${branch.label}`,
-            bg: palette.color + '15',
-            glow: palette.glow,
-            dashboard: branchId,
-          };
+          extra[branchId] = { color: palette.color, label: branchId, bg: palette.color + '15', lightBg: palette.color + '10' };
           dynIdx++;
         }
       }
       setDbBranches(extra);
-
-      const validBranches = new Set(Object.keys(tree.branches));
-      setCustomServices(prev => {
-        const cleaned = {};
-        let removed = 0;
-        for (const [key, svc] of Object.entries(prev)) {
-          const branch = getDashboardBranch(svc.dashboard);
-          if (validBranches.has(branch) || BASE_DNA[branch]) {
-            cleaned[key] = svc;
-          } else { removed++; }
-        }
-        if (removed > 0) saveCustomServices(cleaned);
-        return cleaned;
-      });
     } catch (err) {
-      console.warn('[MindMap] Could not refresh branches:', err);
+      console.warn('[MindMap] Load failed:', err);
     }
   }, []);
 
-  useEffect(() => { refreshBranchesFromDb(); }, [refreshBranchesFromDb]);
+  useEffect(() => { refreshFromDb(); }, [refreshFromDb]);
 
-  // Listen for tree changes from Architect
+  // Listen for tree changes
   useEffect(() => {
-    const unsub = onTreeChange(async (detail) => {
-      refreshBranchesFromDb();
-      const dbCustom = await loadSettingFromDb('custom_services');
-      if (dbCustom && typeof dbCustom === 'object') {
-        setCustomServices(dbCustom);
-        localStorage.setItem('calmplan_custom_services', JSON.stringify(dbCustom));
-      }
-      const dbOverrides = await loadSettingFromDb('service_overrides');
-      if (dbOverrides && typeof dbOverrides === 'object' && Object.keys(dbOverrides).length > 0) {
-        setOverrides(dbOverrides);
-        localStorage.setItem('calmplan_service_overrides', JSON.stringify(dbOverrides));
-      }
-    });
+    const unsub = onTreeChange(() => { refreshFromDb(); });
     return unsub;
-  }, [refreshBranchesFromDb]);
+  }, [refreshFromDb]);
 
   const DNA = useMemo(() => ({ ...BASE_DNA, ...dbBranches }), [dbBranches]);
 
-  // ── Build the tree data from DB tree ──
-  const treeData = useMemo(() => {
+  // ── Build ALL nodes for the SVG map from DB tree ONLY ──
+  const { nodes, edges } = useMemo(() => {
     const tree = dbTreeRef.tree;
-    if (!tree?.branches) return {};
-    return tree.branches;
-  }, [dbTreeRef.tree]);
+    if (!tree?.branches) return { nodes: [], edges: [] };
 
-  // ── Build live service registry ──
-  const liveServices = useMemo(() => {
-    const merged = {};
-    for (const [key, svc] of Object.entries(ALL_SERVICES)) {
-      if (overrides[key]?._hidden) continue;
-      merged[key] = { ...svc, ...(overrides[key] || {}) };
-    }
-    for (const [key, svc] of Object.entries(customServices)) {
-      if (ALL_SERVICES[key]) continue;
-      merged[key] = { ...svc };
-    }
-    return merged;
-  }, [overrides, customServices]);
+    const allNodes = [];
+    const allEdges = [];
+    const branchKeys = Object.keys(tree.branches);
 
-  // Find selected node in the tree
-  const selectedNode = useMemo(() => {
-    if (!selectedNodeId || !dbTreeRef.tree?.branches) return null;
-    const findNode = (nodes) => {
-      for (const n of nodes) {
-        if (n.id === selectedNodeId || n.service_key === selectedNodeId) return n;
-        if (n.children?.length) {
-          const found = findNode(n.children);
-          if (found) return found;
+    // Hub node
+    allNodes.push({ id: 'hub', type: 'hub', x: CX, y: CY, r: 50, label: '', color: '#2C3E50' });
+
+    // Position each branch
+    branchKeys.forEach((branchId, branchIdx) => {
+      const branch = tree.branches[branchId];
+      const dna = DNA[branchId];
+      if (!dna) return;
+
+      // Branch angle
+      const angle = BRANCH_ANGLES[branchId] ??
+        (Math.PI * 0.9 + branchIdx * Math.PI * 0.4);
+      const branchDist = 220;
+      const bx = CX + Math.cos(angle) * branchDist;
+      const by = CY + Math.sin(angle) * branchDist;
+
+      // Branch root node
+      allNodes.push({
+        id: branchId,
+        type: 'branch',
+        label: `${branchId}\n${branch.label}`,
+        x: bx, y: by, r: 52,
+        color: dna.color,
+        bg: dna.bg,
+        branchId,
+      });
+      allEdges.push({ from: { x: CX, y: CY }, to: { x: bx, y: by }, color: dna.color, w1: 8, w2: 3 });
+
+      // Layout children in a fan around the branch
+      const children = branch.children || [];
+      if (children.length === 0) return;
+
+      const childDist = 160;
+      const fanAngle = Math.min(Math.PI * 0.9, Math.PI * 0.2 + children.length * Math.PI * 0.12);
+      const startAngle = angle - fanAngle / 2;
+
+      const layoutNode = (node, parentX, parentY, parentAngle, depth, indexInSiblings, siblingCount) => {
+        const dist = depth === 1 ? childDist : 120;
+        let nodeAngle;
+        if (siblingCount === 1) {
+          nodeAngle = parentAngle;
+        } else {
+          const spread = Math.min(Math.PI * 0.8, Math.PI * 0.15 + siblingCount * Math.PI * 0.1);
+          const start = parentAngle - spread / 2;
+          nodeAngle = start + (spread * indexInSiblings) / Math.max(1, siblingCount - 1);
         }
-      }
-      return null;
-    };
-    for (const branch of Object.values(dbTreeRef.tree.branches)) {
-      const found = findNode(branch.children || []);
-      if (found) return found;
-    }
-    // Also check liveServices
-    if (liveServices[selectedNodeId]) {
-      const svc = liveServices[selectedNodeId];
-      return { id: selectedNodeId, label: svc.label, steps: svc.steps || [], service_key: selectedNodeId, dashboard: svc.dashboard };
-    }
-    return null;
-  }, [selectedNodeId, dbTreeRef.tree, liveServices]);
 
-  // ── CRUD Operations ──
-  const updateService = useCallback((serviceKey, updates) => {
-    if (ALL_SERVICES[serviceKey]) {
-      setOverrides(prev => {
-        const next = { ...prev, [serviceKey]: { ...(prev[serviceKey] || {}), ...updates } };
-        saveOverrides(next);
-        return next;
+        const nx = parentX + Math.cos(nodeAngle) * dist;
+        const ny = parentY + Math.sin(nodeAngle) * dist;
+        const hasChildren = node.children && node.children.length > 0;
+        const stepCount = node.steps?.length || 0;
+        const labelLen = (node.label || '').length;
+        const r = hasChildren ? 44 : Math.max(34, Math.min(44, 28 + labelLen * 0.6));
+
+        allNodes.push({
+          id: node.id,
+          type: hasChildren ? 'group' : 'service',
+          label: node.label,
+          x: nx, y: ny, r,
+          color: dna.color,
+          bg: dna.bg,
+          branchId,
+          steps: node.steps || [],
+          stepCount,
+          frequency: node.default_frequency,
+          serviceKey: node.service_key,
+          isParent: node.is_parent_task,
+          nodeData: node,
+        });
+
+        allEdges.push({
+          from: { x: parentX, y: parentY },
+          to: { x: nx, y: ny },
+          color: dna.color,
+          w1: depth === 1 ? 5 : 3,
+          w2: depth === 1 ? 2 : 1.2,
+        });
+
+        // Recurse into children
+        if (hasChildren) {
+          node.children.forEach((child, ci) => {
+            layoutNode(child, nx, ny, nodeAngle, depth + 1, ci, node.children.length);
+          });
+        }
+      };
+
+      children.forEach((child, ci) => {
+        layoutNode(child, bx, by, angle, 1, ci, children.length);
       });
-    } else {
-      setCustomServices(prev => {
-        const next = { ...prev, [serviceKey]: { ...prev[serviceKey], ...updates } };
-        saveCustomServices(next);
-        return next;
-      });
-    }
-    onConfigChange?.({ action: 'update', key: serviceKey, updates });
-  }, [onConfigChange]);
-
-  const deleteService = useCallback((serviceKey) => {
-    if (ALL_SERVICES[serviceKey]) {
-      setOverrides(prev => {
-        const next = { ...prev, [serviceKey]: { ...(prev[serviceKey] || {}), _hidden: true } };
-        saveOverrides(next);
-        return next;
-      });
-    } else {
-      setCustomServices(prev => {
-        const next = { ...prev };
-        delete next[serviceKey];
-        saveCustomServices(next);
-        return next;
-      });
-    }
-    onConfigChange?.({ action: 'delete', key: serviceKey });
-    if (selectedNodeId === serviceKey) setSelectedNodeId(null);
-  }, [onConfigChange, selectedNodeId]);
-
-  const moveService = useCallback((serviceKey, newDashboard) => {
-    updateService(serviceKey, { dashboard: newDashboard });
-  }, [updateService]);
-
-  // ── Handle node click ──
-  const handleNodeClick = useCallback((node) => {
-    const key = node.service_key || node.id;
-    setSelectedNodeId(key);
-    if (onSelectService) onSelectService(key);
-    design.setActiveTaskId?.(key);
-    window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId: key } }));
-  }, [onSelectService, design]);
-
-  // ── Toggle branch collapse ──
-  const toggleBranch = useCallback((branchId) => {
-    setCollapsedBranches(prev => {
-      const next = new Set(prev);
-      if (next.has(branchId)) next.delete(branchId);
-      else next.add(branchId);
-      return next;
     });
-  }, []);
 
-  // ── Save to DB ──
+    return { nodes: allNodes, edges: allEdges };
+  }, [dbTreeRef.tree, DNA]);
+
+  // Find selected node data
+  const selectedNode = useMemo(() => {
+    if (!selectedNodeId) return null;
+    return nodes.find(n => n.id === selectedNodeId) || null;
+  }, [selectedNodeId, nodes]);
+
+  // ── CRUD ──
+  const updateService = useCallback((serviceKey, updates) => {
+    // Update in DB tree
+    if (!dbTreeRef.tree) return;
+    const updateInTree = (nodes) => nodes.map(n => {
+      if (n.id === serviceKey || n.service_key === serviceKey) {
+        return { ...n, ...updates };
+      }
+      if (n.children?.length) return { ...n, children: updateInTree(n.children) };
+      return n;
+    });
+
+    const newTree = { ...dbTreeRef.tree };
+    for (const [branchId, branch] of Object.entries(newTree.branches)) {
+      newTree.branches[branchId] = { ...branch, children: updateInTree(branch.children || []) };
+    }
+    setDbTreeRef(prev => ({ ...prev, tree: newTree }));
+    onConfigChange?.({ action: 'update', key: serviceKey, updates });
+  }, [dbTreeRef.tree, onConfigChange]);
+
+  // ── Save ──
   const handleSave = useCallback(async () => {
     setMapSaving(true);
     try {
-      invalidateTreeCache();
-      const { tree, configId: cid } = await loadCompanyTree();
-      if (!tree) throw new Error('No tree in DB');
-      await saveAndBroadcast(tree, cid, 'MindMap:Save');
+      await saveAndBroadcast(dbTreeRef.tree, dbTreeRef.configId, 'MindMap:Save');
       toast({ title: 'נשמר', description: 'המפה נשמרה בהצלחה' });
     } catch (err) {
       toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
     }
     setMapSaving(false);
+  }, [dbTreeRef]);
+
+  // ── SVG coordinate helper ──
+  const svgPoint = useCallback((clientX, clientY) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: clientX, y: clientY };
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: clientX, y: clientY };
+    const inv = ctm.inverse();
+    return { x: inv.a * clientX + inv.c * clientY + inv.e, y: inv.b * clientX + inv.d * clientY + inv.f };
   }, []);
 
-  // ── Count total nodes ──
-  const totalNodes = useMemo(() => {
-    let count = 0;
-    const countNodes = (nodes) => {
-      for (const n of (nodes || [])) {
-        count++;
-        if (n.children?.length) countNodes(n.children);
-      }
-    };
-    for (const branch of Object.values(treeData)) {
-      countNodes(branch.children);
-    }
-    return count;
-  }, [treeData]);
-
-  // ── Branch display order ──
-  const branchOrder = ['P1', 'P2', 'P5', 'P3', 'P4'];
-  const sortedBranches = useMemo(() => {
-    const allBranchIds = Object.keys(treeData);
-    const ordered = [];
-    for (const id of branchOrder) {
-      if (allBranchIds.includes(id)) ordered.push(id);
-    }
-    for (const id of allBranchIds) {
-      if (!ordered.includes(id)) ordered.push(id);
-    }
-    return ordered;
-  }, [treeData]);
-
-  // Selected node's branch color
-  const selectedBranchColor = useMemo(() => {
-    if (!selectedNode) return '#666';
-    const findBranch = (branchId, nodes) => {
-      for (const n of (nodes || [])) {
-        if (n.id === selectedNodeId || n.service_key === selectedNodeId) return branchId;
-        if (n.children?.length) {
-          const found = findBranch(branchId, n.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    for (const [branchId, branch] of Object.entries(treeData)) {
-      const found = findBranch(branchId, branch.children);
-      if (found) return DNA[found]?.color || '#666';
-    }
-    return '#666';
-  }, [selectedNode, selectedNodeId, treeData, DNA]);
+  // Count services
+  const totalServices = nodes.filter(n => n.type === 'service' || n.type === 'group').length;
 
   return (
-    <div className="relative w-full min-h-[600px]" dir="rtl">
-      {/* ══════ Header Bar ══════ */}
-      <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-l from-gray-50 to-white border-b border-gray-200 rounded-t-xl">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <img src={`${window.location.origin}/logo-litay.png`} alt="" className="w-8 h-8 rounded-full"
-              onError={(e) => { e.target.style.display = 'none'; }} />
-            <h2 className="text-lg font-black text-gray-800">מפת תהליכים</h2>
-          </div>
-          <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-xs font-bold text-gray-500">
-            {totalNodes} צמתים
-          </span>
-        </div>
+    <div className="relative w-full" style={{ minHeight: '700px' }}>
+      {/* ══════ SVG Canvas ══════ */}
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        className="w-full h-full"
+        style={{ maxHeight: 'calc(100vh - 140px)', minHeight: '680px', userSelect: 'none' }}
+        dir="ltr"
+      >
+        <defs>
+          <filter id="node-shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.12" />
+          </filter>
+          <filter id="glow-select" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#4682B4" floodOpacity="0.4" />
+          </filter>
+          <filter id="glow-hover" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#999" floodOpacity="0.3" />
+          </filter>
+          {/* Dot grid */}
+          <pattern id="dot-grid" width="30" height="30" patternUnits="userSpaceOnUse">
+            <circle cx="15" cy="15" r="0.5" fill="#ddd" />
+          </pattern>
+          <clipPath id="hub-clip"><circle cx={CX} cy={CY} r={45} /></clipPath>
+        </defs>
 
-        <div className="flex items-center gap-2">
-          {/* Branch filter chips */}
-          {sortedBranches.map(branchId => {
-            const dna = DNA[branchId];
-            if (!dna) return null;
-            const isCollapsed = collapsedBranches.has(branchId);
-            return (
-              <button
-                key={branchId}
-                onClick={() => toggleBranch(branchId)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border-2 ${
-                  isCollapsed
-                    ? 'bg-gray-100 text-gray-400 border-gray-200'
-                    : 'text-white border-transparent shadow-sm'
-                }`}
-                style={isCollapsed ? {} : { backgroundColor: dna.color }}
-              >
-                <span className="text-sm">{branchId}</span>
-                <span>{treeData[branchId]?.label || dna.label}</span>
-              </button>
-            );
-          })}
+        {/* Background */}
+        <rect width={VB_W} height={VB_H} fill="url(#dot-grid)" rx="12" />
 
-          {/* Save button */}
-          <button onClick={handleSave} disabled={mapSaving}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50">
-            {mapSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            שמור
-          </button>
-        </div>
+        {/* ── Tapered connections ── */}
+        {edges.map((edge, i) => (
+          <path
+            key={`edge-${i}`}
+            d={taperedPath(edge.from.x, edge.from.y, edge.to.x, edge.to.y, edge.w1, edge.w2)}
+            fill={edge.color}
+            opacity={0.35}
+          />
+        ))}
+
+        {/* ── Hub ── */}
+        <circle cx={CX} cy={CY} r={50} fill="white" filter="url(#node-shadow)" />
+        <image
+          href={`${window.location.origin}/logo-litay.png`}
+          x={CX - 45} y={CY - 45} width={90} height={90}
+          clipPath="url(#hub-clip)"
+          preserveAspectRatio="xMidYMid slice"
+          onError={(e) => { e.target.style.display = 'none'; }}
+        />
+        <circle cx={CX} cy={CY} r={50} fill="none" stroke="#66BB6A" strokeWidth={1.5} strokeDasharray="4 3" />
+        <text x={CX} y={CY + 42} textAnchor="middle" fill="#78909C" fontSize="10" fontWeight="600">{totalServices} שירותים</text>
+
+        {/* ── Nodes ── */}
+        {nodes.map(node => {
+          if (node.type === 'hub') return null;
+          const isSelected = selectedNodeId === node.id;
+          const isHovered = hoveredNodeId === node.id;
+          const r = isSelected ? node.r + 3 : isHovered ? node.r + 1 : node.r;
+
+          return (
+            <g
+              key={node.id}
+              style={{ cursor: 'pointer' }}
+              filter={isSelected ? 'url(#glow-select)' : isHovered ? 'url(#glow-hover)' : 'url(#node-shadow)'}
+              onClick={() => {
+                if (node.type !== 'branch') {
+                  setSelectedNodeId(node.id);
+                  onSelectService?.(node.serviceKey || node.id);
+                  design.setActiveTaskId?.(node.id);
+                }
+              }}
+              onMouseEnter={() => setHoveredNodeId(node.id)}
+              onMouseLeave={() => setHoveredNodeId(null)}
+            >
+              {/* Selection ring */}
+              {isSelected && (
+                <circle cx={node.x} cy={node.y} r={r + 6} fill="none"
+                  stroke={node.color} strokeWidth={2} opacity={0.5} strokeDasharray="5 3">
+                  <animateTransform attributeName="transform" type="rotate"
+                    from={`0 ${node.x} ${node.y}`} to={`360 ${node.x} ${node.y}`}
+                    dur="12s" repeatCount="indefinite" />
+                </circle>
+              )}
+
+              {/* Node shape — AYOA cloud/bubble style */}
+              {node.type === 'branch' ? (
+                <>
+                  {/* Branch root: cloud shape */}
+                  <ellipse cx={node.x} cy={node.y} rx={r + 5} ry={r - 5}
+                    fill={node.color} opacity={0.15} />
+                  <ellipse cx={node.x} cy={node.y} rx={r} ry={r - 8}
+                    fill="white" stroke={node.color} strokeWidth={2.5} />
+                  {/* Branch ID */}
+                  <text x={node.x} y={node.y - 8} textAnchor="middle"
+                    fill={node.color} fontSize="18" fontWeight="900" fontFamily="system-ui">
+                    {node.branchId}
+                  </text>
+                  {/* Branch label */}
+                  <text x={node.x} y={node.y + 10} textAnchor="middle"
+                    fill={node.color} fontSize="11" fontWeight="700" fontFamily="system-ui">
+                    {dbTreeRef.tree?.branches[node.branchId]?.label || ''}
+                  </text>
+                  {/* Child count */}
+                  <text x={node.x} y={node.y + 24} textAnchor="middle"
+                    fill={node.color} fontSize="9" fontWeight="500" opacity={0.6}>
+                    {(dbTreeRef.tree?.branches[node.branchId]?.children || []).length} שירותים
+                  </text>
+                </>
+              ) : (
+                <>
+                  {/* Service / group node: rounded bubble */}
+                  <circle cx={node.x} cy={node.y} r={r}
+                    fill="white" stroke={node.color}
+                    strokeWidth={node.type === 'group' ? 3 : 2} />
+
+                  {/* Colored accent arc on top */}
+                  <path
+                    d={`M${node.x - r * 0.7},${node.y - r * 0.7} A${r},${r} 0 0,1 ${node.x + r * 0.7},${node.y - r * 0.7}`}
+                    fill="none" stroke={node.color} strokeWidth={3} strokeLinecap="round"
+                  />
+
+                  {/* Label */}
+                  {(() => {
+                    const lines = wrapText(node.label, Math.floor(r / 3.5));
+                    const fontSize = r > 40 ? 11 : 10;
+                    const startY = node.y - (lines.length - 1) * (fontSize * 0.6);
+                    return lines.map((line, li) => (
+                      <text key={li} x={node.x} y={startY + li * (fontSize + 2)}
+                        textAnchor="middle" fill="#333" fontSize={fontSize}
+                        fontWeight="700" fontFamily="system-ui">
+                        {line}
+                      </text>
+                    ));
+                  })()}
+
+                  {/* Step count badge */}
+                  {node.stepCount > 0 && (
+                    <>
+                      <circle cx={node.x + r * 0.65} cy={node.y + r * 0.65} r={10}
+                        fill={node.color} />
+                      <text x={node.x + r * 0.65} y={node.y + r * 0.65 + 3.5}
+                        textAnchor="middle" fill="white" fontSize="8" fontWeight="800">
+                        {node.stepCount}
+                      </text>
+                    </>
+                  )}
+
+                  {/* Frequency label */}
+                  {node.frequency && node.frequency !== 'monthly' && (
+                    <text x={node.x} y={node.y + r - 4} textAnchor="middle"
+                      fill={node.color} fontSize="7" fontWeight="600" opacity={0.7}>
+                      {node.frequency === 'bimonthly' ? 'דו-חודשי' :
+                       node.frequency === 'yearly' ? 'שנתי' :
+                       node.frequency === 'daily' ? 'יומי' :
+                       node.frequency === 'weekly' ? 'שבועי' : ''}
+                    </text>
+                  )}
+
+                  {/* Parent indicator (small diamond) */}
+                  {node.isParent && node.type === 'group' && (
+                    <polygon
+                      points={`${node.x},${node.y - r - 6} ${node.x + 5},${node.y - r - 1} ${node.x},${node.y - r + 4} ${node.x - 5},${node.y - r - 1}`}
+                      fill={node.color} opacity={0.8}
+                    />
+                  )}
+                </>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* ── Save Button ── */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+        <button onClick={handleSave} disabled={mapSaving}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 shadow-lg transition-all disabled:opacity-50">
+          {mapSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {mapSaving ? 'שומר...' : 'שמור שינויים'}
+        </button>
       </div>
 
-      {/* ══════ Main Content: Tree + Sidebar ══════ */}
-      <div className="flex gap-0">
-        {/* ── Tree Columns ── */}
-        <div className="flex-1 overflow-x-auto">
-          <div className={`grid gap-4 p-5 ${
-            sortedBranches.filter(id => !collapsedBranches.has(id)).length <= 3
-              ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
-          }`}>
-            {sortedBranches.map(branchId => {
-              if (collapsedBranches.has(branchId)) return null;
-              const branch = treeData[branchId];
-              const dna = DNA[branchId];
-              if (!branch || !dna) return null;
+      {/* ── DNA Legend ── */}
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1.5 border border-gray-200 shadow-sm z-10">
+        {Object.entries(DNA).map(([id, dna]) => (
+          <div key={id} className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dna.color }} />
+            <span className="text-[10px] font-bold" style={{ color: dna.color }}>{id}</span>
+          </div>
+        ))}
+      </div>
 
-              return (
-                <div key={branchId} className="min-w-[280px]">
-                  {/* Branch header */}
-                  <div className="rounded-xl mb-3 overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 text-white font-black text-base flex items-center justify-between"
-                      style={{ background: `linear-gradient(135deg, ${dna.color}, ${dna.color}DD)` }}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl font-black opacity-60">{branchId}</span>
-                        <span>{branch.label}</span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-bold">
-                        {(branch.children || []).length} שירותים
+      {/* ══════ Sidebar Editor ══════ */}
+      <AnimatePresence>
+        {selectedNode && selectedNode.type !== 'branch' && (
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="absolute top-3 left-3 w-80 bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-20"
+          >
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between"
+              style={{ background: `linear-gradient(135deg, ${selectedNode.color}15, ${selectedNode.color}05)` }}>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: selectedNode.color }} />
+                <span className="text-sm font-bold text-gray-800 truncate">{selectedNode.label}</span>
+              </div>
+              <button onClick={() => setSelectedNodeId(null)}
+                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4 max-h-[calc(100vh-260px)] overflow-y-auto">
+              {/* Name edit */}
+              <div>
+                <label className="text-xs font-bold text-gray-500 block mb-1">שם שירות</label>
+                <input type="text" value={selectedNode.label || ''} dir="rtl"
+                  onChange={(e) => updateService(selectedNodeId, { label: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-300 focus:outline-none font-medium" />
+              </div>
+
+              {/* Steps display as badges */}
+              {selectedNode.stepCount > 0 && (
+                <div>
+                  <label className="text-xs font-bold text-gray-500 block mb-1.5">שלבים ({selectedNode.stepCount})</label>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedNode.steps.map((step, i) => (
+                      <span key={step.key || i}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium border"
+                        style={{ backgroundColor: selectedNode.bg, borderColor: selectedNode.color + '30', color: selectedNode.color }}>
+                        <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+                          style={{ backgroundColor: selectedNode.color + 'CC' }}>
+                          {i + 1}
+                        </span>
+                        {step.label}
                       </span>
-                    </div>
-                  </div>
-
-                  {/* Branch nodes */}
-                  <div className="space-y-0">
-                    {(branch.children || []).map(node => (
-                      <TreeNodeCard
-                        key={node.id}
-                        node={node}
-                        branchColor={dna.color}
-                        branchBg={dna.bg}
-                        isSelected={selectedNodeId === node.id || selectedNodeId === node.service_key}
-                        onClick={handleNodeClick}
-                        depth={0}
-                      />
                     ))}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              )}
 
-        {/* ══════ Sidebar Editor ══════ */}
-        <AnimatePresence>
-          {selectedNode && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 360 }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="border-r border-gray-200 bg-white shadow-lg overflow-hidden flex-shrink-0"
-            >
-              <div className="w-[360px] h-full overflow-y-auto">
-                {/* Header */}
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10"
-                  style={{ background: `linear-gradient(135deg, ${selectedBranchColor}10, white)` }}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: selectedBranchColor }} />
-                    <span className="text-sm font-bold text-gray-800 truncate">{selectedNode.label}</span>
-                  </div>
-                  <button onClick={() => setSelectedNodeId(null)}
-                    className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+              {/* Steps editor */}
+              <SortableStepsManager
+                steps={selectedNode.steps || []}
+                serviceKey={selectedNodeId}
+                updateService={updateService}
+                color={selectedNode.color}
+                bg={selectedNode.bg}
+              />
 
-                <div className="p-4 space-y-4">
-                  {/* Name edit */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-1">שם שירות</label>
-                    <input type="text" value={selectedNode.label || ''} dir="rtl"
-                      onChange={(e) => updateService(selectedNodeId, { label: e.target.value })}
-                      className="w-full px-3 py-2.5 text-sm border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-300 focus:outline-none font-medium" />
-                  </div>
-
-                  {/* Shape selector */}
-                  <div className="border-2 border-gray-100 rounded-xl overflow-hidden">
-                    <div className="p-3 space-y-3">
-                      <div>
-                        <label className="text-xs font-bold text-gray-400 block mb-2">צורה</label>
-                        <div className="grid grid-cols-6 gap-1.5">
-                          {PALETTE_SHAPES.map(shape => {
-                            const ShapeIcon = shape.icon;
-                            const isActive = (design.getNodeOverride?.(selectedNodeId)?.shape || design.shape || 'bubble') === shape.key;
-                            return (
-                              <button key={shape.key}
-                                onClick={() => {
-                                  design.setNodeOverride?.(selectedNodeId, { shape: shape.key });
-                                  updateService(selectedNodeId, { _shape: shape.key });
-                                }}
-                                className={`flex flex-col items-center gap-0.5 p-2 rounded-xl border-2 transition-all ${
-                                  isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-gray-300'
-                                }`}>
-                                <ShapeIcon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                                <span className={`text-[9px] font-medium ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>{shape.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-gray-400 block mb-2">צבע</label>
-                        <div className="grid grid-cols-8 gap-1.5">
-                          {COLOR_GRID.map(color => {
-                            const currentColor = design.getNodeOverride?.(selectedNodeId)?.color || selectedBranchColor;
-                            const isActive = currentColor === color;
-                            return (
-                              <button key={color}
-                                onClick={() => {
-                                  design.setNodeOverride?.(selectedNodeId, { color });
-                                  updateService(selectedNodeId, { _color: color });
-                                }}
-                                className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${
-                                  isActive ? 'border-gray-800 ring-2 ring-offset-1 ring-gray-400 scale-110' : 'border-transparent hover:border-gray-300'
-                                }`}
-                                style={{ backgroundColor: color }} />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cognitive weight */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 block mb-1.5">עומס קוגניטיבי</label>
-                    <div className="flex items-center gap-1.5">
-                      {COGNITIVE_LABELS.map((label, i) => (
-                        <button key={i} onClick={() => updateService(selectedNodeId, { _cogOverride: i })}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                            i === 0 ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                          }`}>
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Steps Manager */}
-                  <SortableStepsManager
-                    steps={selectedNode.steps || []}
-                    serviceKey={selectedNodeId}
-                    updateService={updateService}
-                    color={selectedBranchColor}
-                    bg={selectedBranchColor + '15'}
-                  />
-
-                  {/* Action buttons */}
-                  <div className="flex gap-2 pt-2 border-t border-gray-100">
-                    <button onClick={async () => {
-                        setMapSaving(true);
-                        try {
-                          invalidateTreeCache();
-                          const { tree, configId: cid } = await loadCompanyTree();
-                          if (!tree) throw new Error('No tree');
-                          await saveAndBroadcast(tree, cid, 'MindMap:SidebarSave');
-                          toast({ title: 'נשמר', description: 'השינויים נשמרו' });
-                        } catch (err) {
-                          toast({ title: 'שגיאה', description: err.message, variant: 'destructive' });
-                        }
-                        setMapSaving(false);
-                      }}
-                      disabled={mapSaving}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-green-50 text-green-700 text-sm font-bold hover:bg-green-100 border-2 border-green-200">
-                      {mapSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      {mapSaving ? 'שומר...' : 'שמור'}
-                    </button>
-                    <button onClick={() => setDeleteConfirm(selectedNodeId)}
-                      className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl bg-red-50 text-red-500 text-sm font-medium hover:bg-red-100 border-2 border-red-200">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+              {/* Info */}
+              <div className="flex items-center gap-3 text-xs text-gray-400 pt-2 border-t border-gray-100">
+                <span>{selectedNode.branchId}</span>
+                <span>{selectedNode.id}</span>
+                {selectedNode.frequency && <span>{selectedNode.frequency}</span>}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
 
-      {/* ══════ Delete Confirmation ══════ */}
-      <AnimatePresence>
-        {deleteConfirm && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center z-50">
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-            <div className="relative bg-white rounded-2xl shadow-2xl p-5 max-w-[280px] border border-red-100">
-              <div className="text-center mb-3">
-                <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-2">
-                  <Trash2 className="w-6 h-6 text-red-500" />
-                </div>
-                <p className="text-sm font-bold text-gray-800">מחיקת שירות</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {liveServices[deleteConfirm]?.label || resolveCategoryLabel(deleteConfirm)}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 px-3 py-2 rounded-xl text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
-                  ביטול
-                </button>
-                <button onClick={() => { deleteService(deleteConfirm); setDeleteConfirm(null); }}
-                  className="flex-1 px-3 py-2 rounded-xl text-xs font-medium bg-red-500 text-white hover:bg-red-600">
-                  מחק
-                </button>
-              </div>
+              {/* Save */}
+              <button onClick={handleSave} disabled={mapSaving}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-green-50 text-green-700 text-sm font-bold hover:bg-green-100 border-2 border-green-200">
+                {mapSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {mapSaving ? 'שומר...' : 'שמור'}
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Instructions */}
-      <div className="text-center py-3 text-xs text-gray-400 font-medium border-t border-gray-100">
-        לחץ על צומת כדי לערוך פרטים ושלבים בצד
+      <div className="absolute bottom-3 right-3 text-xs text-gray-400 bg-white/90 rounded-xl px-3 py-1.5 border border-gray-200 shadow-sm z-10 font-medium">
+        לחץ על בועה כדי לערוך
       </div>
     </div>
   );
