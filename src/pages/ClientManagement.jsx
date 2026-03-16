@@ -59,6 +59,7 @@ import ClientContractsManager from '@/components/clients/ClientContractsManager'
 import ClientTasksTab from '@/components/clients/ClientTasksTab';
 // MondayDataImport removed (Kill Monday directive)
 import ClientFilesManager from '@/components/files/ClientFilesManager';
+import ClientServiceProvidersTab from '@/components/clients/ClientServiceProvidersTab';
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 
 // Helper: retry with exponential backoff for rate limits
@@ -102,6 +103,7 @@ export default function ClientManagementPage() {
   const [selectedContractsClient, setSelectedContractsClient] = useState(null);
   const [selectedTasksClient, setSelectedTasksClient] = useState(null);
   const [selectedFilesClient, setSelectedFilesClient] = useState(null);
+  const [selectedProvidersClient, setSelectedProvidersClient] = useState(null);
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -1157,6 +1159,7 @@ export default function ClientManagementPage() {
                               onSelectCollections={setSelectedCollectionsClient}
                               onSelectContracts={setSelectedContractsClient}
                               onSelectFiles={setSelectedFilesClient}
+                              onSelectProviders={setSelectedProvidersClient}
                               onDelete={() => handleDeleteClient(client.id)}
                             />
                           ))}
@@ -1198,6 +1201,7 @@ export default function ClientManagementPage() {
                                 onSelectCollections={setSelectedCollectionsClient}
                                 onSelectContracts={setSelectedContractsClient}
                                 onSelectFiles={setSelectedFilesClient}
+                              onSelectProviders={setSelectedProvidersClient}
                                 onDelete={() => handleDeleteClient(client.id)}
                               />
                             ))}
@@ -1389,6 +1393,19 @@ export default function ClientManagementPage() {
             <DialogDescription>ניהול קבצים ומסמכים של הלקוח.</DialogDescription>
           </DialogHeader>
           {selectedFilesClient && <ClientFilesManager clientId={selectedFilesClient.id} clientName={selectedFilesClient.name} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Providers Dialog */}
+      <Dialog open={!!selectedProvidersClient} onOpenChange={(open) => {
+        if (!open) setSelectedProvidersClient(null);
+      }}>
+        <DialogContent className="sm:max-w-[1100px] h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ספקי שירות עבור {selectedProvidersClient?.name}</DialogTitle>
+            <DialogDescription>ניהול ספקי שירות המשויכים ללקוח.</DialogDescription>
+          </DialogHeader>
+          {selectedProvidersClient && <ClientServiceProvidersTab clientId={selectedProvidersClient.id} clientName={selectedProvidersClient.name} />}
         </DialogContent>
       </Dialog>
 

@@ -315,7 +315,7 @@ function ServiceTreeSection({ services }) {
   );
 }
 
-export default function ClientCard({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks, onSelectFiles }) {
+export default function ClientCard({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks, onSelectFiles, onSelectProviders }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [relatedTasks, setRelatedTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
@@ -658,6 +658,10 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
           <Button variant="ghost" size="sm" onClick={() => onSelectFiles?.(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
             <FolderOpen className="w-4 h-4 ml-1" />
             קבצים
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => onSelectProviders?.(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
+            <Briefcase className="w-4 h-4 ml-1" />
+            ספקי שירות
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowTaxInfo(true)} className="h-9 text-sm font-medium text-gray-600 hover:bg-emerald-50 hover:text-emerald-700">
             <Receipt className="w-4 h-4 ml-1" />

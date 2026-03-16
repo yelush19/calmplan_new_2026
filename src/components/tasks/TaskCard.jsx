@@ -279,7 +279,7 @@ export default function TaskCard({
                   {!isQuickEditing && isQuickWin && task.status !== 'completed' && (
                     <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 font-bold border border-emerald-300 gap-0.5 shrink-0">
                       <Zap className="w-3 h-3" />
-                      Quick Win
+                      ניצחון מהיר
                     </Badge>
                   )}
                   {!isQuickEditing && isClimb && task.status !== 'completed' && (
