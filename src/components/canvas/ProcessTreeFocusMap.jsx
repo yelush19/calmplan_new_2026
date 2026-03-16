@@ -1,16 +1,12 @@
 /**
- * ProcessTreeFocusMap — Process Tree as Focus Map (V4.3)
+ * ProcessTreeFocusMap — Ayoa-Style Process Tree Mind Map (V4.3)
  *
- * Adapts the SettingsMindMap architect layout for FOCUS pages:
- *   - Radial layout with process tree branches (P1-P5)
- *   - Each node shows: label, task count, client names, step progress
- *   - Structured cards (not just circles) with status indicators
- *   - Click nodes to see/link to client tasks
- *   - Tapered bezier connections like the architect map
- *
- * Data flow:
- *   companyTree (DB) → radial layout → overlay tasks per node
- *   tasks matched by: tree_node_id, service_key, or category
+ * Premium radial mind map for the Focus page:
+ *   - Filled branch cards with DNA colors (P1-P5)
+ *   - Organic tapered connections
+ *   - Service nodes as structured white cards with color accents
+ *   - Task matching, expand/collapse, interactive detail panel
+ *   - Built from the company process tree dynamically
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -18,28 +14,27 @@ import { loadCompanyTree } from '@/services/processTreeService';
 import { flattenTree, PROCESS_TREE_SEED } from '@/config/companyProcessTree';
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
 
-const VB_W = 1400, VB_H = 900;
+const VB_W = 1600, VB_H = 1000;
 const CX = VB_W / 2, CY = VB_H / 2;
 
-// Branch angles (radial, like SettingsMindMap)
-const BRANCH_ANGLES = {
-  P1: -Math.PI * 0.7,
-  P2: -Math.PI * 0.2,
-  P3:  Math.PI * 0.15,
-  P4:  Math.PI * 0.6,
-  P5:  Math.PI * 0.95,
+// Branch radial positions — spread around center
+const BRANCH_LAYOUT = {
+  P1: { angle: -Math.PI * 0.6, dist: 240, emoji: '\uD83D\uDCB0' },
+  P2: { angle: -Math.PI * 0.1, dist: 250, emoji: '\uD83D\uDCCA' },
+  P5: { angle: Math.PI * 0.25, dist: 240, emoji: '\uD83D\uDCCB' },
+  P3: { angle: Math.PI * 0.55, dist: 220, emoji: '\uD83D\uDCC1' },
+  P4: { angle: Math.PI * 0.85, dist: 230, emoji: '\uD83C\uDFE0' },
 };
 
-// Branch colors
+// Branch DNA colors — filled card backgrounds
 const BRANCH_DNA = {
-  P1: { color: '#0288D1', label: 'חשבות שכר', bg: '#E1F5FE' },
-  P2: { color: '#7B1FA2', label: 'הנה"ח ומיסים', bg: '#F3E5F5' },
-  P3: { color: '#D81B60', label: 'ניהול', bg: '#FCE4EC' },
-  P4: { color: '#F9A825', label: 'בית ואישי', bg: '#FFF8E1' },
-  P5: { color: '#2E7D32', label: 'דוחות שנתיים', bg: '#E8F5E9' },
+  P1: { color: '#0288D1', dark: '#01579B', label: 'חשבות שכר', bg: '#E1F5FE', grad: ['#039BE5', '#0277BD'] },
+  P2: { color: '#7B1FA2', dark: '#4A148C', label: 'הנהלת חשבונות', bg: '#F3E5F5', grad: ['#9C27B0', '#6A1B9A'] },
+  P3: { color: '#D81B60', dark: '#880E4F', label: 'ניהול משרד', bg: '#FCE4EC', grad: ['#E91E63', '#C2185B'] },
+  P4: { color: '#F9A825', dark: '#F57F17', label: 'בית ואישי', bg: '#FFF8E1', grad: ['#FFB300', '#FF8F00'] },
+  P5: { color: '#2E7D32', dark: '#1B5E20', label: 'דוחות שנתיים', bg: '#E8F5E9', grad: ['#43A047', '#2E7D32'] },
 };
 
-// Status colors for task badges
 const STATUS_COLORS = {
   not_started: '#1565C0',
   in_progress: '#F57C00',
@@ -50,15 +45,24 @@ const STATUS_COLORS = {
   completed: '#1B5E20',
 };
 
-// Tapered bezier path (from SettingsMindMap)
-function taperedPath(x1, y1, x2, y2, w1 = 6, w2 = 2) {
+const STATUS_LABELS = {
+  not_started: 'לא התחיל',
+  in_progress: 'בתהליך',
+  waiting_for_materials: 'ממתין לחומרים',
+  sent_for_review: 'נשלח לבדיקה',
+  needs_corrections: 'דרוש תיקון',
+  production_completed: 'הושלם',
+};
+
+// Organic bezier path between nodes
+function organicPath(x1, y1, x2, y2, w1 = 8, w2 = 3) {
   const dx = x2 - x1, dy = y2 - y1;
   const len = Math.sqrt(dx * dx + dy * dy) || 1;
   const nx = -dy / len, ny = dx / len;
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-  const curvature = Math.min(30, len * 0.12);
-  const cpx = mx - nx * curvature * 2;
-  const cpy = my + ny * curvature * 2;
+  const curve = Math.min(40, len * 0.15);
+  const cpx = mx + nx * curve * 1.5;
+  const cpy = my - ny * curve * 1.5;
   const hw1 = w1 / 2, hw2 = w2 / 2;
   return `M${x1 + nx * hw1},${y1 + ny * hw1}
     Q${cpx + nx * (hw1 + hw2) / 2},${cpy + ny * (hw1 + hw2) / 2} ${x2 + nx * hw2},${y2 + ny * hw2}
@@ -67,48 +71,26 @@ function taperedPath(x1, y1, x2, y2, w1 = 6, w2 = 2) {
     Z`;
 }
 
-// Wrap text to multiple lines
-function wrapText(text, maxChars = 12) {
-  if (!text || text.length <= maxChars) return [text || ''];
-  const words = text.split(' ');
-  const lines = [];
-  let current = '';
-  for (const word of words) {
-    if (current.length + word.length + 1 > maxChars && current) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = current ? current + ' ' + word : word;
-    }
-  }
-  if (current) lines.push(current);
-  return lines.slice(0, 2);
-}
-
 // Match task to tree node
 function matchTaskToNode(task, nodeMap) {
-  // 1. Direct tree_node_id match
   if (task.tree_node_id && nodeMap[task.tree_node_id]) return task.tree_node_id;
-  // 2. service_key match
   if (task.service_key) {
     for (const [nodeId, node] of Object.entries(nodeMap)) {
       if (node.service_key === task.service_key) return nodeId;
     }
   }
-  // 3. Category → label match
   const cat = resolveCategoryLabel(task.category || '').toLowerCase();
   for (const [nodeId, node] of Object.entries(nodeMap)) {
     const nodeLabel = (node.label || '').toLowerCase();
     if (cat && nodeLabel && (cat.includes(nodeLabel) || nodeLabel.includes(cat))) return nodeId;
   }
-  // 4. Known category mappings
   const catMap = {
-    'שכר': 'P1_payroll', 'payroll': 'P1_payroll',
-    'מע"מ': 'P2_vat', 'vat': 'P2_vat',
-    'מקדמות': 'P2_tax_advances', 'tax_advances': 'P2_tax_advances',
+    'שכר': 'P1_payroll', 'payroll': 'P1_payroll', 'work_payroll': 'P1_payroll',
+    'מע"מ': 'P2_vat', 'vat': 'P2_vat', 'work_vat': 'P2_vat', 'work_vat_reporting': 'P2_vat',
+    'מקדמות': 'P2_tax_advances', 'tax_advances': 'P2_tax_advances', 'work_tax_advances': 'P2_tax_advances',
     'ביטוח לאומי': 'P1_social_security', 'social_security': 'P1_social_security',
     'ניכויים': 'P1_deductions', 'deductions': 'P1_deductions',
-    'התאמות': 'P2_reconciliation', 'reconciliation': 'P2_reconciliation',
+    'התאמות': 'P2_reconciliation', 'reconciliation': 'P2_reconciliation', 'work_reconciliation': 'P2_reconciliation',
     'הכנסות': 'P2_income', 'הוצאות': 'P2_expenses',
     'רוו"ה': 'P2_pnl', 'pnl': 'P2_pnl',
   };
@@ -130,7 +112,6 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
     loadCompanyTree().then(({ tree }) => setCompanyTree(tree)).catch(() => setCompanyTree(PROCESS_TREE_SEED));
   }, []);
 
-  // Build node map from tree
   const nodeMap = useMemo(() => {
     if (!companyTree) return {};
     const flat = flattenTree(companyTree);
@@ -139,7 +120,6 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
     return map;
   }, [companyTree]);
 
-  // Match tasks to tree nodes
   const tasksByNode = useMemo(() => {
     const map = {};
     for (const task of tasks) {
@@ -153,37 +133,30 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
     return map;
   }, [tasks, nodeMap]);
 
-  // Build layout nodes with positions
+  const today = useMemo(() => {
+    const d = new Date();
+    const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    return `יום ${days[d.getDay()]}, ${d.getDate()}/${d.getMonth() + 1}`;
+  }, []);
+
+  // Build all display nodes and edges
   const { displayNodes, displayEdges } = useMemo(() => {
     if (!companyTree?.branches) return { displayNodes: [], displayEdges: [] };
-
     const nodes = [];
     const edges = [];
 
-    // Center hub
-    nodes.push({
-      id: 'hub', type: 'hub',
-      x: CX, y: CY, r: 50,
-      label: centerLabel,
-      color: '#1E3A5F',
-    });
+    // All branches including P4
+    const branchEntries = Object.entries(companyTree.branches);
 
-    const branchEntries = Object.entries(companyTree.branches).filter(([id]) => id !== 'P4');
-    const branchCount = branchEntries.length;
+    branchEntries.forEach(([branchId, branch]) => {
+      const dna = BRANCH_DNA[branchId] || { color: '#607D8B', dark: '#455A64', label: branchId, bg: '#ECEFF1', grad: ['#607D8B', '#455A64'] };
+      const layout = BRANCH_LAYOUT[branchId] || { angle: 0, dist: 220, emoji: '' };
+      const bx = CX + Math.cos(layout.angle) * layout.dist;
+      const by = CY + Math.sin(layout.angle) * layout.dist;
 
-    branchEntries.forEach(([branchId, branch], bi) => {
-      const dna = BRANCH_DNA[branchId] || { color: '#607D8B', label: branchId, bg: '#ECEFF1' };
-      const angle = BRANCH_ANGLES[branchId] ?? (-Math.PI / 2 + bi * (2 * Math.PI / branchCount));
-      const branchDist = 200;
-      const bx = CX + Math.cos(angle) * branchDist;
-      const by = CY + Math.sin(angle) * branchDist;
-
-      // Count tasks in this branch (including children)
       const branchChildren = branch.children || [];
       const allBranchNodeIds = flattenTree({ branches: { [branchId]: branch } }).map(n => n.id);
       const branchTaskCount = allBranchNodeIds.reduce((sum, nid) => sum + (tasksByNode[nid]?.length || 0), 0);
-
-      // Unique clients in this branch
       const branchClients = new Set();
       allBranchNodeIds.forEach(nid => {
         (tasksByNode[nid] || []).forEach(t => { if (t.client_name) branchClients.add(t.client_name); });
@@ -191,91 +164,71 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
 
       nodes.push({
         id: branchId, type: 'branch',
-        x: bx, y: by, r: 40,
+        x: bx, y: by,
         label: dna.label,
-        branchId, color: dna.color, bg: dna.bg,
+        branchId, color: dna.color, dark: dna.dark, bg: dna.bg, grad: dna.grad,
+        emoji: layout.emoji,
         taskCount: branchTaskCount,
         clientCount: branchClients.size,
-        angle,
+        angle: layout.angle,
       });
 
-      edges.push({ from: { x: CX, y: CY }, to: { x: bx, y: by }, color: dna.color, w1: 7, w2: 3 });
+      edges.push({ from: { x: CX, y: CY }, to: { x: bx, y: by }, color: dna.color, w1: 10, w2: 4 });
 
-      // Child nodes (services) — radial around branch
+      // Child nodes (services)
       if (expandedBranches.has(branchId)) {
-        const childDist = 160;
+        const childDist = 180;
         const childCount = branchChildren.length;
-        const spread = Math.min(Math.PI * 0.8, Math.PI * 0.15 + childCount * Math.PI * 0.12);
+        const spread = Math.min(Math.PI * 0.9, Math.PI * 0.18 + childCount * Math.PI * 0.13);
 
         branchChildren.forEach((child, ci) => {
           let childAngle;
           if (childCount === 1) {
-            childAngle = angle;
+            childAngle = layout.angle;
           } else {
-            const start = angle - spread / 2;
+            const start = layout.angle - spread / 2;
             childAngle = start + (spread * ci) / Math.max(1, childCount - 1);
           }
           const cx_ = bx + Math.cos(childAngle) * childDist;
           const cy_ = by + Math.sin(childAngle) * childDist;
 
           const nodeTasks = tasksByNode[child.id] || [];
-          const steps = child.steps || [];
           const hasSubNodes = child.children && child.children.length > 0;
 
-          // Count tasks from sub-nodes too
           let subTaskCount = nodeTasks.length;
           if (hasSubNodes) {
-            const subFlat = [];
-            const walkChildren = (ch) => { for (const c of ch) { subFlat.push(c); if (c.children) walkChildren(c.children); } };
+            const walkChildren = (ch) => { for (const c of ch) { subTaskCount += (tasksByNode[c.id]?.length || 0); if (c.children) walkChildren(c.children); } };
             walkChildren(child.children);
-            subFlat.forEach(sn => { subTaskCount += (tasksByNode[sn.id]?.length || 0); });
           }
 
-          // Unique clients for this node
           const nodeClients = new Set();
           nodeTasks.forEach(t => { if (t.client_name) nodeClients.add(t.client_name); });
 
-          // Step progress from tasks
-          let doneSteps = 0, totalSteps = 0;
-          nodeTasks.forEach(t => {
-            if (t.process_steps) {
-              const stepsObj = t.process_steps;
-              Object.values(stepsObj).forEach(s => {
-                totalSteps++;
-                if (s.done) doneSteps++;
-              });
-            }
-          });
-
-          // Status distribution
           const statusDist = {};
-          nodeTasks.forEach(t => {
-            const s = t.status || 'not_started';
-            statusDist[s] = (statusDist[s] || 0) + 1;
-          });
+          nodeTasks.forEach(t => { const s = t.status || 'not_started'; statusDist[s] = (statusDist[s] || 0) + 1; });
 
           nodes.push({
             id: child.id, type: 'service',
-            x: cx_, y: cy_, r: 32,
+            x: cx_, y: cy_,
             label: child.label,
-            branchId, color: dna.color, bg: dna.bg,
+            branchId, color: dna.color, dark: dna.dark, bg: dna.bg,
             taskCount: subTaskCount,
             clientCount: nodeClients.size,
-            stepCount: steps.length,
-            doneSteps, totalSteps,
+            stepCount: (child.steps || []).length,
             statusDist,
             sla_day: child.sla_day,
             angle: childAngle,
             tasks: nodeTasks,
+            hasSubNodes,
           });
 
-          edges.push({ from: { x: bx, y: by }, to: { x: cx_, y: cy_ }, color: dna.color, w1: 4, w2: 1.5 });
+          edges.push({ from: { x: bx, y: by }, to: { x: cx_, y: cy_ }, color: dna.color, w1: 5, w2: 2 });
 
-          // Sub-nodes (e.g., מתפעל/טמל under סוציאליות)
+          // Sub-nodes
           if (hasSubNodes && expandedBranches.has(child.id)) {
-            const subDist = 110;
+            const subDist = 120;
             const subCount = child.children.length;
-            const subSpread = Math.min(Math.PI * 0.5, Math.PI * 0.1 + subCount * Math.PI * 0.1);
+            const subSpread = Math.min(Math.PI * 0.5, Math.PI * 0.12 + subCount * Math.PI * 0.1);
 
             child.children.forEach((sub, si) => {
               const subAngle = subCount === 1 ? childAngle :
@@ -286,7 +239,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
 
               nodes.push({
                 id: sub.id, type: 'sub',
-                x: sx, y: sy, r: 24,
+                x: sx, y: sy,
                 label: sub.label,
                 branchId, color: dna.color, bg: dna.bg,
                 taskCount: subTasks.length,
@@ -295,7 +248,7 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
                 tasks: subTasks,
               });
 
-              edges.push({ from: { x: cx_, y: cy_ }, to: { x: sx, y: sy }, color: dna.color, w1: 2.5, w2: 1 });
+              edges.push({ from: { x: cx_, y: cy_ }, to: { x: sx, y: sy }, color: dna.color, w1: 3, w2: 1.2 });
             });
           }
         });
@@ -303,13 +256,12 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
     });
 
     return { displayNodes: nodes, displayEdges: edges };
-  }, [companyTree, tasksByNode, expandedBranches, centerLabel]);
+  }, [companyTree, tasksByNode, expandedBranches]);
 
   const toggleBranch = useCallback((branchId) => {
     setExpandedBranches(prev => {
       const next = new Set(prev);
-      if (next.has(branchId)) next.delete(branchId);
-      else next.add(branchId);
+      if (next.has(branchId)) next.delete(branchId); else next.add(branchId);
       return next;
     });
   }, []);
@@ -319,9 +271,9 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
 
   if (!companyTree) {
     return (
-      <div className="flex items-center justify-center w-full h-full min-h-[300px]">
+      <div className="flex items-center justify-center w-full h-full min-h-[400px]">
         <div className="text-center">
-          <div className="text-3xl mb-2">🎯</div>
+          <div className="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <div className="text-sm font-bold text-gray-500">טוען מפת תהליכים...</div>
         </div>
       </div>
@@ -329,54 +281,69 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
   }
 
   return (
-    <div className="relative w-full h-full" style={{ backgroundColor: '#FAFBFC' }}>
+    <div className="relative w-full h-full" style={{ minHeight: '500px', background: 'linear-gradient(135deg, #FAFBFC 0%, #F0F4F8 50%, #FAFBFC 100%)' }}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VB_W} ${VB_H}`}
         className="w-full h-full"
-        style={{ maxHeight: 'calc(100vh - 180px)' }}
+        style={{ maxHeight: 'calc(100vh - 160px)' }}
         onClick={() => setSelectedNodeId(null)}
       >
         <defs>
           <filter id="ptf-shadow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.1" />
+            <feDropShadow dx="0" dy="3" stdDeviation="6" floodColor="#000" floodOpacity="0.12" />
+          </filter>
+          <filter id="ptf-shadow-lg" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="4" stdDeviation="10" floodColor="#000" floodOpacity="0.18" />
           </filter>
           <filter id="ptf-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#FFC107" floodOpacity="0.3" />
-          </filter>
-          <filter id="ptf-select" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#E91E63" floodOpacity="0.4" />
+            <feDropShadow dx="0" dy="0" stdDeviation="10" floodColor="#1E3A5F" floodOpacity="0.35" />
           </filter>
           <radialGradient id="ptf-center-grad">
             <stop offset="0%" stopColor="#1E3A5F" />
-            <stop offset="70%" stopColor="#0D2137" />
-            <stop offset="100%" stopColor="#0A1929" />
+            <stop offset="60%" stopColor="#0D2137" />
+            <stop offset="100%" stopColor="#091520" />
           </radialGradient>
+          <radialGradient id="ptf-center-ring">
+            <stop offset="70%" stopColor="transparent" />
+            <stop offset="100%" stopColor="#FFC10715" />
+          </radialGradient>
+          {/* Branch gradients */}
+          {Object.entries(BRANCH_DNA).map(([id, dna]) => (
+            <linearGradient key={id} id={`ptf-grad-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={dna.grad[0]} />
+              <stop offset="100%" stopColor={dna.grad[1]} />
+            </linearGradient>
+          ))}
         </defs>
 
-        {/* Tapered connections */}
+        {/* Background subtle rings */}
+        <circle cx={CX} cy={CY} r={180} fill="none" stroke="#E0E0E0" strokeWidth={0.5} strokeDasharray="4 8" opacity={0.4} />
+        <circle cx={CX} cy={CY} r={380} fill="none" stroke="#E0E0E0" strokeWidth={0.5} strokeDasharray="4 8" opacity={0.3} />
+
+        {/* Organic connections */}
         {displayEdges.map((edge, i) => (
           <path key={`edge-${i}`}
-            d={taperedPath(edge.from.x, edge.from.y, edge.to.x, edge.to.y, edge.w1, edge.w2)}
+            d={organicPath(edge.from.x, edge.from.y, edge.to.x, edge.to.y, edge.w1, edge.w2)}
             fill={edge.color}
-            opacity={0.25}
+            opacity={0.35}
           />
         ))}
 
-        {/* ── Center Hub ── */}
-        <circle cx={CX} cy={CY} r={55} fill="none" stroke="#FFC10730" strokeWidth={2} />
-        <circle cx={CX} cy={CY} r={50} fill="url(#ptf-center-grad)" filter="url(#ptf-glow)" />
-        <text x={CX} y={CY - 12} textAnchor="middle" fill="white" fontSize="16" fontWeight="900">{centerLabel}</text>
-        <text x={CX} y={CY + 6} textAnchor="middle" fill="#FFC107" fontSize="13" fontWeight="700">{totalTasks} משימות</text>
-        <text x={CX} y={CY + 22} textAnchor="middle" fill="white" fontSize="10" fontWeight="600" opacity="0.6">
-          {Object.keys(BRANCH_DNA).filter(b => b !== 'P4').length} ענפים
-        </text>
+        {/* ═══ Center Hub ═══ */}
+        <circle cx={CX} cy={CY} r={72} fill="url(#ptf-center-ring)" />
+        <circle cx={CX} cy={CY} r={62} fill="url(#ptf-center-grad)" filter="url(#ptf-glow)" />
+        <circle cx={CX} cy={CY} r={62} fill="none" stroke="#FFC107" strokeWidth={2} opacity={0.4} />
+        <text x={CX} y={CY - 18} textAnchor="middle" fill="white" fontSize="18" fontWeight="900" fontFamily="system-ui">{centerLabel}</text>
+        <text x={CX} y={CY + 2} textAnchor="middle" fill="#FFC107" fontSize="14" fontWeight="800">{totalTasks} משימות להיום</text>
+        <text x={CX} y={CY + 20} textAnchor="middle" fill="white" fontSize="11" fontWeight="600" opacity="0.5">{today}</text>
 
-        {/* ── Branch Nodes ── */}
+        {/* ═══ Branch Cards (Filled with DNA color) ═══ */}
         {displayNodes.filter(n => n.type === 'branch').map(node => {
           const isHovered = hoveredNodeId === node.id;
           const isSelected = selectedNodeId === node.id;
           const isExpanded = expandedBranches.has(node.id);
+          const cardW = 155, cardH = 65;
           return (
             <g key={node.id}
               onClick={(e) => { e.stopPropagation(); toggleBranch(node.id); setSelectedNodeId(node.id); }}
@@ -384,154 +351,140 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
               onMouseLeave={() => setHoveredNodeId(null)}
               style={{ cursor: 'pointer' }}
             >
+              {/* Selection ring */}
               {isSelected && (
-                <circle cx={node.x} cy={node.y} r={node.r + 8}
-                  fill="none" stroke={node.color} strokeWidth={2} opacity={0.5} strokeDasharray="5 3">
-                  <animateTransform attributeName="transform" type="rotate"
-                    from={`0 ${node.x} ${node.y}`} to={`360 ${node.x} ${node.y}`}
-                    dur="12s" repeatCount="indefinite" />
-                </circle>
+                <rect x={node.x - cardW/2 - 5} y={node.y - cardH/2 - 5} width={cardW + 10} height={cardH + 10} rx={18}
+                  fill="none" stroke={node.color} strokeWidth={2.5} opacity={0.5} strokeDasharray="6 4">
+                  <animate attributeName="stroke-dashoffset" from="0" to="20" dur="3s" repeatCount="indefinite" />
+                </rect>
               )}
-              {/* Card background */}
-              <rect x={node.x - 70} y={node.y - 30} width={140} height={60} rx={12}
-                fill="white" stroke={node.color} strokeWidth={isHovered ? 3 : 2}
-                filter="url(#ptf-shadow)"
-                style={{ transition: 'stroke-width 0.2s' }}
+              {/* Card body — FILLED with branch gradient */}
+              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={cardH} rx={14}
+                fill={`url(#ptf-grad-${node.branchId})`}
+                filter={isHovered ? 'url(#ptf-shadow-lg)' : 'url(#ptf-shadow)'}
+                stroke="white" strokeWidth={isHovered ? 2.5 : 1}
+                style={{ transition: 'all 0.2s' }}
               />
-              {/* Color accent bar */}
-              <rect x={node.x - 70} y={node.y - 30} width={140} height={8} rx={4}
-                fill={node.color} />
+              {/* Branch emoji */}
+              <text x={node.x - cardW/2 + 20} y={node.y - 6} textAnchor="middle" fontSize="20">{node.emoji}</text>
               {/* Branch label */}
-              <text x={node.x} y={node.y - 6} textAnchor="middle" fontSize="13" fontWeight="900" fill={node.color}>
+              <text x={node.x + 6} y={node.y - 10} textAnchor="middle" fill="white" fontSize="14" fontWeight="900" fontFamily="system-ui">
                 {node.branchId} {node.label}
               </text>
-              {/* Task count + client count */}
-              <text x={node.x} y={node.y + 12} textAnchor="middle" fontSize="11" fontWeight="700" fill="#555">
+              {/* Task + client count */}
+              <text x={node.x + 6} y={node.y + 10} textAnchor="middle" fill="white" fontSize="11" fontWeight="700" opacity="0.9">
                 {node.taskCount} משימות · {node.clientCount} לקוחות
               </text>
-              {/* Expand indicator */}
-              <circle cx={node.x + 62} cy={node.y - 22} r={9}
-                fill={isExpanded ? node.color : 'white'} stroke={node.color} strokeWidth={1.5} />
-              <text x={node.x + 62} y={node.y - 18} textAnchor="middle" fontSize="12" fontWeight="900"
-                fill={isExpanded ? 'white' : node.color}>
-                {isExpanded ? '−' : '+'}
+              {/* Expand/collapse badge */}
+              <circle cx={node.x + cardW/2 - 2} cy={node.y - cardH/2 + 2} r={11}
+                fill={isExpanded ? 'white' : 'rgba(255,255,255,0.3)'} stroke="white" strokeWidth={1.5} />
+              <text x={node.x + cardW/2 - 2} y={node.y - cardH/2 + 6} textAnchor="middle"
+                fontSize="14" fontWeight="900" fill={isExpanded ? node.color : 'white'}>
+                {isExpanded ? '\u2212' : '+'}
               </text>
             </g>
           );
         })}
 
-        {/* ── Service Nodes (structured cards) ── */}
+        {/* ═══ Service Cards (White with color accent) ═══ */}
         {displayNodes.filter(n => n.type === 'service').map(node => {
           const isHovered = hoveredNodeId === node.id;
           const isSelected = selectedNodeId === node.id;
           const hasTasks = node.taskCount > 0;
-          const hasSubNodes = companyTree?.branches?.[node.branchId]?.children?.find(c => c.id === node.id)?.children?.length > 0;
-          const lines = wrapText(node.label, 14);
-          const cardW = 130, cardH = hasTasks ? 72 : 52;
+          const cardW = 140, cardH = hasTasks ? 76 : 56;
+          const label = node.label;
 
           return (
             <g key={node.id}
               onClick={(e) => {
                 e.stopPropagation();
-                if (hasSubNodes) toggleBranch(node.id);
+                if (node.hasSubNodes) toggleBranch(node.id);
                 setSelectedNodeId(node.id);
               }}
               onMouseEnter={() => setHoveredNodeId(node.id)}
               onMouseLeave={() => setHoveredNodeId(null)}
-              style={{ cursor: 'pointer', opacity: isHovered ? 1 : 0.95 }}
+              style={{ cursor: 'pointer' }}
             >
               {isSelected && (
                 <rect x={node.x - cardW/2 - 4} y={node.y - cardH/2 - 4} width={cardW + 8} height={cardH + 8} rx={14}
-                  fill="none" stroke={node.color} strokeWidth={2} opacity={0.5} strokeDasharray="5 3" />
+                  fill="none" stroke={node.color} strokeWidth={2} opacity={0.4} strokeDasharray="5 3" />
               )}
               {/* Card body */}
-              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={cardH} rx={10}
-                fill="white" stroke={hasTasks ? node.color : '#E0E0E0'} strokeWidth={isHovered ? 2.5 : 1.5}
+              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={cardH} rx={12}
+                fill="white" stroke={hasTasks ? node.color : '#D0D5DD'}
+                strokeWidth={isHovered || isSelected ? 2.5 : 1.5}
                 filter="url(#ptf-shadow)"
+                style={{ transition: 'all 0.15s' }}
               />
-              {/* Color left border accent */}
-              <rect x={node.x - cardW/2} y={node.y - cardH/2 + 4} width={4} height={cardH - 8} rx={2}
+              {/* Color accent — top bar */}
+              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={6} rx={3}
                 fill={node.color} />
               {/* Label */}
-              {lines.map((line, li) => (
-                <text key={li} x={node.x + 4} y={node.y - cardH/2 + 18 + li * 14}
-                  textAnchor="middle" fontSize="11" fontWeight="800" fill="#1E293B">
-                  {line}
+              <text x={node.x} y={node.y - cardH/2 + 24} textAnchor="middle" fontSize="12" fontWeight="800" fill="#1E293B">
+                {label.length > 16 ? label.substring(0, 15) + '...' : label}
+              </text>
+              {/* Step count + SLA */}
+              {(node.stepCount > 0 || node.sla_day) && (
+                <text x={node.x} y={node.y - cardH/2 + 38} textAnchor="middle" fontSize="9" fontWeight="600" fill="#90A4AE">
+                  {node.stepCount > 0 ? `${node.stepCount} שלבים` : ''}
+                  {node.stepCount > 0 && node.sla_day ? ' · ' : ''}
+                  {node.sla_day ? `SLA: ${node.sla_day}` : ''}
                 </text>
-              ))}
+              )}
               {/* Task count badge */}
               {hasTasks && (
                 <>
-                  <circle cx={node.x + cardW/2 - 12} cy={node.y - cardH/2 + 12} r={10}
-                    fill={node.color} />
-                  <text x={node.x + cardW/2 - 12} y={node.y - cardH/2 + 16}
-                    textAnchor="middle" fontSize="9" fontWeight="900" fill="white">
+                  <circle cx={node.x + cardW/2 - 4} cy={node.y - cardH/2 + 4} r={12}
+                    fill={node.color} stroke="white" strokeWidth={2} />
+                  <text x={node.x + cardW/2 - 4} y={node.y - cardH/2 + 8}
+                    textAnchor="middle" fontSize="10" fontWeight="900" fill="white">
                     {node.taskCount}
                   </text>
                 </>
               )}
-              {/* Status mini-bar */}
+              {/* Status bar */}
               {hasTasks && node.statusDist && (
                 <g>
                   {(() => {
                     const statuses = Object.entries(node.statusDist);
                     const total = statuses.reduce((s, [, c]) => s + c, 0);
-                    const barW = cardW - 20;
-                    const barY = node.y + cardH/2 - 14;
+                    const barW = cardW - 24;
+                    const barY = node.y + cardH/2 - 16;
                     let offset = 0;
                     return statuses.map(([status, count], si) => {
                       const w = (count / total) * barW;
-                      const x = node.x - cardW/2 + 10 + offset;
+                      const x = node.x - cardW/2 + 12 + offset;
                       offset += w;
                       return (
-                        <rect key={si} x={x} y={barY} width={Math.max(2, w)} height={5} rx={2.5}
+                        <rect key={si} x={x} y={barY} width={Math.max(3, w)} height={6} rx={3}
                           fill={STATUS_COLORS[status] || '#90A4AE'} />
                       );
                     });
                   })()}
                 </g>
               )}
-              {/* SLA badge */}
-              {node.sla_day && (
-                <g>
-                  <rect x={node.x - cardW/2 + 6} y={node.y + cardH/2 - 24} width={28} height={14} rx={4}
-                    fill="#FFF3E0" stroke="#FF9800" strokeWidth={0.5} />
-                  <text x={node.x - cardW/2 + 20} y={node.y + cardH/2 - 14}
-                    textAnchor="middle" fontSize="8" fontWeight="800" fill="#E65100">
-                    {node.sla_day}
-                  </text>
-                </g>
-              )}
-              {/* Step count */}
-              {node.stepCount > 0 && (
-                <text x={node.x + 4} y={node.y + (hasTasks ? 6 : 10)}
-                  textAnchor="middle" fontSize="9" fontWeight="600" fill="#90A4AE">
-                  {node.stepCount} שלבים
-                  {node.totalSteps > 0 ? ` · ${node.doneSteps}/${node.totalSteps} בוצעו` : ''}
-                </text>
-              )}
               {/* Expand indicator for sub-nodes */}
-              {hasSubNodes && (
-                <g>
-                  <circle cx={node.x + cardW/2 - 4} cy={node.y + cardH/2 - 4} r={7}
-                    fill={expandedBranches.has(node.id) ? node.color : '#E0E0E0'} />
-                  <text x={node.x + cardW/2 - 4} y={node.y + cardH/2 - 1}
-                    textAnchor="middle" fontSize="10" fontWeight="900"
+              {node.hasSubNodes && (
+                <>
+                  <circle cx={node.x + cardW/2 - 6} cy={node.y + cardH/2 - 6} r={8}
+                    fill={expandedBranches.has(node.id) ? node.color : '#E8E8E8'} stroke="white" strokeWidth={1} />
+                  <text x={node.x + cardW/2 - 6} y={node.y + cardH/2 - 3}
+                    textAnchor="middle" fontSize="11" fontWeight="900"
                     fill={expandedBranches.has(node.id) ? 'white' : '#666'}>
-                    {expandedBranches.has(node.id) ? '−' : '+'}
+                    {expandedBranches.has(node.id) ? '\u25BC' : '\u25B6'}
                   </text>
-                </g>
+                </>
               )}
             </g>
           );
         })}
 
-        {/* ── Sub-nodes (smaller cards) ── */}
+        {/* ═══ Sub-nodes (compact cards) ═══ */}
         {displayNodes.filter(n => n.type === 'sub').map(node => {
           const isHovered = hoveredNodeId === node.id;
+          const isSelected = selectedNodeId === node.id;
           const hasTasks = node.taskCount > 0;
-          const lines = wrapText(node.label, 12);
-          const cardW = 100, cardH = 40;
+          const cardW = 110, cardH = 42;
 
           return (
             <g key={node.id}
@@ -540,59 +493,72 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
               onMouseLeave={() => setHoveredNodeId(null)}
               style={{ cursor: 'pointer' }}
             >
-              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={cardH} rx={8}
-                fill={hasTasks ? 'white' : '#F5F5F5'} stroke={hasTasks ? node.color : '#DDD'} strokeWidth={isHovered ? 2 : 1}
+              <rect x={node.x - cardW/2} y={node.y - cardH/2} width={cardW} height={cardH} rx={10}
+                fill={isSelected ? node.bg : 'white'} stroke={hasTasks ? node.color : '#DDD'}
+                strokeWidth={isHovered || isSelected ? 2 : 1}
                 filter="url(#ptf-shadow)" />
-              <rect x={node.x - cardW/2} y={node.y - cardH/2 + 3} width={3} height={cardH - 6} rx={1.5}
+              {/* Color accent left */}
+              <rect x={node.x - cardW/2} y={node.y - cardH/2 + 4} width={4} height={cardH - 8} rx={2}
                 fill={node.color} />
-              {lines.map((line, li) => (
-                <text key={li} x={node.x + 4} y={node.y - 2 + li * 12}
-                  textAnchor="middle" fontSize="10" fontWeight="700" fill="#333">
-                  {line}
-                </text>
-              ))}
+              <text x={node.x + 2} y={node.y + 1} textAnchor="middle" fontSize="10" fontWeight="700" fill="#333">
+                {node.label.length > 14 ? node.label.substring(0, 13) + '...' : node.label}
+              </text>
               {hasTasks && (
                 <>
-                  <circle cx={node.x + cardW/2 - 8} cy={node.y - cardH/2 + 8} r={7}
-                    fill={node.color} />
-                  <text x={node.x + cardW/2 - 8} y={node.y - cardH/2 + 11.5}
+                  <circle cx={node.x + cardW/2 - 4} cy={node.y - cardH/2 + 4} r={8}
+                    fill={node.color} stroke="white" strokeWidth={1.5} />
+                  <text x={node.x + cardW/2 - 4} y={node.y - cardH/2 + 8}
                     textAnchor="middle" fontSize="8" fontWeight="900" fill="white">
                     {node.taskCount}
                   </text>
                 </>
               )}
               {node.sla_day && (
-                <text x={node.x - cardW/2 + 14} y={node.y + cardH/2 - 6}
-                  textAnchor="middle" fontSize="7" fontWeight="800" fill="#E65100">
-                  SLA:{node.sla_day}
-                </text>
+                <>
+                  <rect x={node.x - cardW/2 + 8} y={node.y + cardH/2 - 18} width={30} height={13} rx={4}
+                    fill="#FFF3E0" stroke="#FF9800" strokeWidth={0.5} />
+                  <text x={node.x - cardW/2 + 23} y={node.y + cardH/2 - 9}
+                    textAnchor="middle" fontSize="7" fontWeight="800" fill="#E65100">
+                    SLA:{node.sla_day}
+                  </text>
+                </>
               )}
             </g>
           );
         })}
       </svg>
 
-      {/* ── Selected Node Detail Panel ── */}
+      {/* ═══ Selected Node Detail Panel ═══ */}
       {selectedNode && selectedNode.tasks && selectedNode.tasks.length > 0 && (
-        <div className="absolute top-3 left-3 w-72 bg-white rounded-xl shadow-lg border-2 overflow-hidden z-20"
-          style={{ borderColor: selectedNode.color }}>
-          <div className="px-3 py-2 text-white font-black text-sm" style={{ backgroundColor: selectedNode.color }}>
-            {selectedNode.label} — {selectedNode.tasks.length} משימות
+        <div className="absolute top-4 left-4 w-80 bg-white rounded-2xl shadow-2xl border overflow-hidden z-20"
+          style={{ borderColor: selectedNode.color, borderWidth: '2px' }}>
+          <div className="px-4 py-3 text-white font-black text-sm flex items-center justify-between"
+            style={{ background: `linear-gradient(135deg, ${selectedNode.color}, ${selectedNode.dark || selectedNode.color})` }}>
+            <span>{selectedNode.label}</span>
+            <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs">{selectedNode.tasks.length} משימות</span>
           </div>
-          <div className="max-h-48 overflow-y-auto divide-y divide-gray-100">
+          <div className="max-h-56 overflow-y-auto divide-y divide-gray-50">
             {selectedNode.tasks.map(task => (
-              <div key={task.id} className="px-3 py-2 hover:bg-gray-50 transition-colors">
+              <div key={task.id} className="px-4 py-2.5 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0"
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white"
                     style={{ backgroundColor: STATUS_COLORS[task.status] || '#90A4AE' }} />
-                  <span className="text-xs font-bold text-gray-800 truncate">{task.title}</span>
+                  <span className="text-xs font-bold text-gray-800 truncate flex-1">{task.title}</span>
                 </div>
-                {task.client_name && (
-                  <div className="text-[10px] text-gray-500 mr-4 mt-0.5">{task.client_name}</div>
-                )}
-                {task.due_date && (
-                  <div className="text-[10px] text-gray-400 mr-4">{task.due_date}</div>
-                )}
+                <div className="flex items-center gap-3 mr-4 mt-1">
+                  {task.client_name && (
+                    <span className="text-[10px] text-gray-500">{task.client_name}</span>
+                  )}
+                  {task.due_date && (
+                    <span className="text-[10px] text-orange-500 font-medium">{task.due_date}</span>
+                  )}
+                  {task.status && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold"
+                      style={{ backgroundColor: (STATUS_COLORS[task.status] || '#90A4AE') + '15', color: STATUS_COLORS[task.status] }}>
+                      {STATUS_LABELS[task.status] || task.status}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -600,16 +566,14 @@ export default function ProcessTreeFocusMap({ tasks = [], clients = [], centerLa
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-3 right-3 flex flex-col gap-1 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border">
-        <div className="text-[10px] font-bold text-gray-600">מפת תהליכים · עץ V4.3</div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {Object.entries(BRANCH_DNA).filter(([id]) => id !== 'P4').map(([id, dna]) => (
-            <div key={id} className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: dna.color }} />
-              <span className="text-[9px] font-bold" style={{ color: dna.color }}>{id}</span>
-            </div>
-          ))}
-        </div>
+      <div className="absolute bottom-3 right-3 flex items-center gap-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border">
+        <span className="text-[10px] font-bold text-gray-500">V4.3</span>
+        {Object.entries(BRANCH_DNA).map(([id, dna]) => (
+          <div key={id} className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ background: `linear-gradient(135deg, ${dna.grad[0]}, ${dna.grad[1]})` }} />
+            <span className="text-[9px] font-bold" style={{ color: dna.color }}>{id}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

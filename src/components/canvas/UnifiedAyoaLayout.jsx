@@ -47,8 +47,8 @@ export default function UnifiedAyoaLayout({
   const tasks = data || tasksProp || [];
   const allTasks = allTasksProp || tasks;
 
-  // null = show children (original content). AYOA views are opt-in only.
-  const [localView, setLocalView] = useState(null);
+  // 'focus' = default to focus mind map. null = show children (table).
+  const [localView, setLocalView] = useState('focus');
 
   const accent = accentColor || (branch && DNA_ACCENTS[branch]) || DNA_ACCENTS.P2;
   const isOriginalActive = localView === null;

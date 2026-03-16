@@ -33,7 +33,7 @@ const P_BRANCHES = {
     bgSoft: 'bg-sky-50',
     dot: 'bg-sky-500',
     order: 1,
-    categories: ['שכר', 'ביטוח לאומי', 'ניכויים'],
+    categories: ['שכר', 'ביטוח לאומי', 'ניכויים', 'משלוח תלושים', 'מס"ב עובדים', 'מתפעל', 'טמל + לקוח', 'קליטה להנה"ח'],
   },
   P2: {
     key: 'P2',
@@ -43,7 +43,7 @@ const P_BRANCHES = {
     bgSoft: 'bg-purple-50',
     dot: 'bg-purple-500',
     order: 2,
-    categories: ['מע"מ', 'מקדמות מס', 'דוח רו"ה'],
+    categories: ['מע"מ', 'מקדמות מס', 'דוח רו"ה', 'קליטת הכנסות', 'קליטת הוצאות', 'מס"ב ספקים'],
   },
   P3: {
     key: 'P3',
@@ -53,7 +53,7 @@ const P_BRANCHES = {
     bgSoft: 'bg-pink-50',
     dot: 'bg-pink-500',
     order: 3,
-    categories: ['התאמות חשבונות'],
+    categories: ['התאמות חשבונות', 'אדמיניסטרציה', 'משרד'],
   },
   P5: {
     key: 'P5',
@@ -63,7 +63,7 @@ const P_BRANCHES = {
     bgSoft: 'bg-green-50',
     dot: 'bg-green-500',
     order: 5,
-    categories: ['דוח שנתי', 'הצהרת הון'],
+    categories: ['דוח שנתי', 'הצהרת הון', 'דוחות אישיים'],
   },
 };
 
@@ -91,6 +91,7 @@ const REPORT_CATEGORIES = {
     dot: 'bg-sky-500',
     frequencyField: 'payroll_frequency',
     serviceTypeKey: 'payroll',
+    treeNodeId: 'P1_payroll',
     dayOfMonth: 15,
     order: 1,
     branch: 'P1',
@@ -104,7 +105,7 @@ const REPORT_CATEGORIES = {
     dot: 'bg-rose-500',
     frequencyField: 'social_security_frequency',
     serviceTypeKey: 'social_security',
-    // Fallback: if no dedicated frequency, inherit from payroll
+    treeNodeId: 'P1_social_security',
     fallbackFrequencyField: 'payroll_frequency',
     dayOfMonth: 15,
     order: 2,
@@ -119,7 +120,7 @@ const REPORT_CATEGORIES = {
     dot: 'bg-amber-500',
     frequencyField: 'deductions_frequency',
     serviceTypeKey: 'deductions',
-    // Fallback: if no dedicated frequency, inherit from payroll
+    treeNodeId: 'P1_deductions',
     fallbackFrequencyField: 'payroll_frequency',
     dayOfMonth: 19,
     order: 3,
@@ -134,6 +135,7 @@ const REPORT_CATEGORIES = {
     dot: 'bg-purple-500',
     frequencyField: 'vat_reporting_frequency',
     serviceTypeKey: 'vat_reporting',
+    treeNodeId: 'P2_vat',
     dayOfMonth: 15,
     order: 4,
     branch: 'P2',
@@ -147,6 +149,7 @@ const REPORT_CATEGORIES = {
     dot: 'bg-teal-500',
     frequencyField: 'tax_advances_frequency',
     serviceTypeKey: 'tax_advances',
+    treeNodeId: 'P2_tax_advances',
     dayOfMonth: 15,
     order: 5,
     branch: 'P2',
@@ -160,6 +163,7 @@ const REPORT_CATEGORIES = {
     dot: 'bg-indigo-500',
     frequencyField: 'pnl_frequency',
     serviceTypeKey: 'pnl_reports',
+    treeNodeId: 'P2_pnl',
     dayOfMonth: 15,
     order: 6,
     branch: 'P2',
@@ -174,6 +178,7 @@ const REPORT_CATEGORIES = {
     dot: 'bg-pink-500',
     frequencyField: 'pnl_frequency',
     serviceTypeKey: 'reconciliation',
+    treeNodeId: 'P2_reconciliation',
     fallbackFrequencyField: 'vat_reporting_frequency',
     dayOfMonth: 25,
     order: 7,
@@ -189,8 +194,176 @@ const REPORT_CATEGORIES = {
     dot: 'bg-green-500',
     frequencyField: null,
     serviceTypeKey: 'annual_reports',
+    treeNodeId: 'P5_annual_reports',
     dayOfMonth: 31,
     order: 8,
+    branch: 'P5',
+    frequency: 'yearly',
+  },
+
+  // ============================================================
+  // Tree V4.3 nodes — dynamic from process tree
+  // ============================================================
+
+  // ── P1: Additional payroll nodes ──
+  'משלוח תלושים': {
+    label: 'משלוח תלושים',
+    icon: FileText,
+    color: 'bg-sky-100 text-sky-800',
+    accent: 'border-sky-400',
+    bgSoft: 'bg-sky-50',
+    dot: 'bg-sky-500',
+    frequencyField: 'payroll_frequency',
+    serviceTypeKey: 'payslip_sending',
+    treeNodeId: 'P1_payslip_sending',
+    dayOfMonth: 10,
+    order: 10,
+    branch: 'P1',
+  },
+  'מס"ב עובדים': {
+    label: 'מס"ב עובדים',
+    icon: FileText,
+    color: 'bg-sky-100 text-sky-800',
+    accent: 'border-sky-400',
+    bgSoft: 'bg-sky-50',
+    dot: 'bg-sky-500',
+    frequencyField: 'payroll_frequency',
+    serviceTypeKey: 'masav_employees',
+    treeNodeId: 'P1_masav_employees',
+    dayOfMonth: 8,
+    order: 11,
+    branch: 'P1',
+  },
+  'מתפעל': {
+    label: 'סוציאליות - מתפעל',
+    icon: FileText,
+    color: 'bg-sky-100 text-sky-800',
+    accent: 'border-sky-400',
+    bgSoft: 'bg-sky-50',
+    dot: 'bg-sky-500',
+    frequencyField: 'payroll_frequency',
+    serviceTypeKey: 'social_operator',
+    treeNodeId: 'P1_operator',
+    dayOfMonth: 14,
+    order: 12,
+    branch: 'P1',
+  },
+  'טמל + לקוח': {
+    label: 'סוציאליות - טמל',
+    icon: FileText,
+    color: 'bg-sky-100 text-sky-800',
+    accent: 'border-sky-400',
+    bgSoft: 'bg-sky-50',
+    dot: 'bg-sky-500',
+    frequencyField: 'payroll_frequency',
+    serviceTypeKey: 'social_taml',
+    treeNodeId: 'P1_taml',
+    dayOfMonth: 14,
+    order: 13,
+    branch: 'P1',
+  },
+  'קליטה להנה"ח': {
+    label: 'קליטה להנה"ח',
+    icon: FileText,
+    color: 'bg-sky-100 text-sky-800',
+    accent: 'border-sky-400',
+    bgSoft: 'bg-sky-50',
+    dot: 'bg-sky-500',
+    frequencyField: 'payroll_frequency',
+    serviceTypeKey: 'payroll_closing',
+    treeNodeId: 'P1_closing',
+    dayOfMonth: 15,
+    order: 14,
+    branch: 'P1',
+  },
+
+  // ── P2: Additional bookkeeping nodes ──
+  'קליטת הכנסות': {
+    label: 'קליטת הכנסות',
+    icon: Calculator,
+    color: 'bg-purple-100 text-purple-800',
+    accent: 'border-purple-400',
+    bgSoft: 'bg-purple-50',
+    dot: 'bg-purple-500',
+    frequencyField: null,
+    serviceTypeKey: 'income_entry',
+    treeNodeId: 'P2_income',
+    dayOfMonth: 15,
+    order: 15,
+    branch: 'P2',
+  },
+  'קליטת הוצאות': {
+    label: 'קליטת הוצאות',
+    icon: Calculator,
+    color: 'bg-purple-100 text-purple-800',
+    accent: 'border-purple-400',
+    bgSoft: 'bg-purple-50',
+    dot: 'bg-purple-500',
+    frequencyField: null,
+    serviceTypeKey: 'expense_entry',
+    treeNodeId: 'P2_expenses',
+    dayOfMonth: 15,
+    order: 16,
+    branch: 'P2',
+  },
+  'מס"ב ספקים': {
+    label: 'מס"ב ספקים',
+    icon: Calculator,
+    color: 'bg-purple-100 text-purple-800',
+    accent: 'border-purple-400',
+    bgSoft: 'bg-purple-50',
+    dot: 'bg-purple-500',
+    frequencyField: null,
+    serviceTypeKey: 'masav_suppliers',
+    treeNodeId: 'P2_masav_suppliers',
+    dayOfMonth: 15,
+    order: 17,
+    branch: 'P2',
+  },
+
+  // ── P3: Admin nodes ──
+  'אדמיניסטרציה': {
+    label: 'אדמיניסטרציה',
+    icon: FileText,
+    color: 'bg-pink-100 text-pink-800',
+    accent: 'border-pink-400',
+    bgSoft: 'bg-pink-50',
+    dot: 'bg-pink-500',
+    frequencyField: null,
+    serviceTypeKey: 'admin',
+    treeNodeId: 'P3_admin',
+    dayOfMonth: 25,
+    order: 18,
+    branch: 'P3',
+  },
+  'משרד': {
+    label: 'ניהול משרד',
+    icon: FileText,
+    color: 'bg-pink-100 text-pink-800',
+    accent: 'border-pink-400',
+    bgSoft: 'bg-pink-50',
+    dot: 'bg-pink-500',
+    frequencyField: null,
+    serviceTypeKey: 'office',
+    treeNodeId: 'P3_office',
+    dayOfMonth: 25,
+    order: 19,
+    branch: 'P3',
+  },
+
+  // ── P5: Additional annual nodes ──
+  'דוחות אישיים': {
+    label: 'דוחות אישיים',
+    icon: FileText,
+    color: 'bg-green-100 text-green-800',
+    accent: 'border-green-400',
+    bgSoft: 'bg-green-50',
+    dot: 'bg-green-500',
+    frequencyField: null,
+    serviceTypeKey: 'personal_reports',
+    treeNodeId: 'P5_personal_reports',
+    dayOfMonth: 31,
+    order: 20,
     branch: 'P5',
     frequency: 'yearly',
   },
@@ -244,7 +417,18 @@ function getClientFrequency(categoryKey, client) {
  * full_service = vat_reporting + payroll + tax_advances + annual_reports
  * Payroll auto-links: payroll → social_security + deductions (via automation rules)
  */
-const FULL_SERVICE_EXPANSION = ['vat_reporting', 'payroll', 'tax_advances', 'annual_reports', 'social_security', 'deductions', 'reconciliation'];
+const FULL_SERVICE_EXPANSION = [
+  // P1 - Payroll chain
+  'payroll', 'payslip_sending', 'masav_employees', 'social_operator', 'social_taml',
+  'social_security', 'deductions', 'payroll_closing',
+  // P2 - Bookkeeping chain
+  'vat_reporting', 'tax_advances', 'income_entry', 'expense_entry',
+  'masav_suppliers', 'reconciliation', 'pnl_reports',
+  // P3 - Admin
+  'admin', 'office',
+  // P5 - Annual
+  'annual_reports', 'personal_reports',
+];
 
 function getExpandedServices(client) {
   const raw = client.service_types || [];
@@ -252,11 +436,17 @@ function getExpandedServices(client) {
   if (expanded.has('full_service')) {
     for (const s of FULL_SERVICE_EXPANSION) expanded.add(s);
   }
-  // Also check process_tree enabled nodes — their service_key maps to serviceTypeKey
+  // Check process_tree enabled nodes — map to serviceTypeKey
   const processTree = client.process_tree || {};
   for (const [nodeId, nodeState] of Object.entries(processTree)) {
     if (nodeState?.enabled) {
-      // Extract service_key from nodeId (e.g., 'P1_payroll' → 'payroll', 'P1_social_security' → 'social_security')
+      // Direct nodeId → serviceTypeKey from REPORT_CATEGORIES (by treeNodeId match)
+      for (const cat of Object.values(REPORT_CATEGORIES)) {
+        if (cat.treeNodeId === nodeId && cat.serviceTypeKey) {
+          expanded.add(cat.serviceTypeKey);
+        }
+      }
+      // Fallback: extract service_key from nodeId (e.g., 'P1_payroll' → 'payroll')
       const serviceKey = nodeId.replace(/^P\d+_/, '');
       if (serviceKey) expanded.add(serviceKey);
     }
