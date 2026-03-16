@@ -242,35 +242,44 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
   // Depth-based indentation: each level gets progressively indented
   const depthIndent = depth === 0 ? '' : `mr-${Math.min(depth * 8, 24)}`;
 
+  // Branch-specific accent colors for depth > 0
+  const depthAccentColors = {
+    P1: { line: 'border-blue-300', inset: 'shadow-blue-400', dashedBorder: 'border-blue-200' },
+    P2: { line: 'border-amber-300', inset: 'shadow-amber-400', dashedBorder: 'border-amber-200' },
+    P3: { line: 'border-pink-300', inset: 'shadow-pink-400', dashedBorder: 'border-pink-200' },
+    P5: { line: 'border-green-300', inset: 'shadow-green-400', dashedBorder: 'border-green-200' },
+  };
+  const accent = depthAccentColors[branchId] || { line: 'border-gray-300', inset: 'shadow-gray-400', dashedBorder: 'border-gray-200' };
+
   return (
-    <div className={`relative ${depth === 0 ? 'mb-1.5' : 'mb-0.5'}`}>
+    <div className={`relative ${depth === 0 ? 'mb-2' : 'mb-0.5'}`}>
       {/* Tree connector lines for child nodes */}
       {depth > 0 && (
         <>
-          {/* Vertical line from parent — stops at midpoint for last sibling */}
+          {/* Vertical line from parent — branch-colored */}
           <div
-            className="absolute top-0 border-r-2 border-gray-300"
+            className={`absolute top-0 border-r-2 ${accent.line}`}
             style={{
-              right: `${(depth - 1) * 32 + 14}px`,
-              height: isLastSibling ? '18px' : '100%',
+              right: `${(depth - 1) * 36 + 16}px`,
+              height: isLastSibling ? '20px' : '100%',
             }}
           />
           {/* Horizontal connector line to this node */}
           <div
-            className="absolute top-[18px] h-0 border-t-2 border-gray-300"
-            style={{ right: `${(depth - 1) * 32 + 14}px`, width: '18px' }}
+            className={`absolute top-[20px] h-0 border-t-2 ${accent.line}`}
+            style={{ right: `${(depth - 1) * 36 + 16}px`, width: '20px' }}
           />
         </>
       )}
       <div
-        className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors group/treenode relative ${
+        className={`flex items-center gap-2 py-2 px-3 rounded-lg transition-colors group/treenode relative ${
         depth === 0
           ? (enabled ? `${colors.bg} border-2 ${colors.border} shadow-sm` : 'bg-gray-50 opacity-60 border-2 border-gray-200')
           : depth === 1
-            ? (enabled ? `bg-white border border-gray-200 shadow-[inset_3px_0_0_0] shadow-gray-400` : 'bg-gray-50/50 opacity-50 border border-gray-100')
-            : (enabled ? `bg-gray-50/60 border border-dashed border-gray-200` : 'bg-gray-50/30 opacity-40 border border-dashed border-gray-100')
+            ? (enabled ? `bg-white border-2 border-gray-200 shadow-[inset_4px_0_0_0] ${accent.inset}` : 'bg-gray-50/50 opacity-50 border border-gray-100')
+            : (enabled ? `bg-gray-50/80 border-2 border-dashed ${accent.dashedBorder}` : 'bg-gray-50/30 opacity-40 border border-dashed border-gray-100')
       }`}
-        style={depth > 0 ? { marginRight: `${depth * 32}px` } : undefined}
+        style={depth > 0 ? { marginRight: `${depth * 36}px` } : undefined}
       >
         {/* Collapse toggle */}
         {hasChildren ? (
@@ -387,7 +396,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
           <button type="button" onClick={() => setShowMoveMenu(!showMoveMenu)} className="text-violet-400 hover:text-violet-600" title="העבר לאב אחר">
             <MoveRight className="w-4 h-4" />
           </button>
-          <button type="button" onClick={() => setAddingChild(!addingChild)} className="text-emerald-400 hover:text-emerald-600" title="הוסף צומת בן">
+          <button type="button" onClick={() => setAddingChild(!addingChild)} className={`${colors.text} opacity-60 hover:opacity-100`} title="הוסף צומת בן">
             <Plus className="w-4 h-4" />
           </button>
           <button type="button" onClick={handleDeleteNode} className="text-gray-300 hover:text-red-500" title="מחק צומת">
@@ -509,7 +518,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddChild(); if (e.key === 'Escape') setAddingChild(false); }}
           />
           <Button type="button" size="sm" onClick={handleAddChild} disabled={!newChildName.trim()}
-            className="h-6 px-2 text-[10px] bg-emerald-600 text-white">
+            className={`h-6 px-2 text-[10px] text-white ${branchId === 'P1' ? 'bg-blue-600' : branchId === 'P2' ? 'bg-amber-600' : branchId === 'P3' ? 'bg-pink-600' : branchId === 'P5' ? 'bg-green-600' : 'bg-purple-600'}`}>
             <Plus className="w-3 h-3" /> הוסף
           </Button>
           <button type="button" onClick={() => setAddingChild(false)} className="text-gray-400"><X className="w-3.5 h-3.5" /></button>
@@ -636,7 +645,7 @@ function AddProcessButton({ branchId, branchColors, onAdd }) {
           onKeyDown={(e) => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setOpen(false); }}
         />
         <Button type="button" size="sm" onClick={add} disabled={!name.trim()}
-          className="h-6 px-2 text-[10px] bg-emerald-600 text-white hover:bg-emerald-700">
+          className={`h-6 px-2 text-[10px] text-white ${branchColors.dot.replace('bg-', 'bg-')}`}>
           <Plus className="w-3 h-3 ml-0.5" /> הוסף
         </Button>
         <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
@@ -683,10 +692,16 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
           return updated;
         });
       }
-      // ORPHAN DETECTION: find client tree nodes not in system tree
+      // ORPHAN AUTO-CLEANUP: silently remove client tree nodes not in system tree
       if (tree && processTree && Object.keys(processTree).length > 0) {
         const orphans = findOrphanClientNodes(processTree, tree);
-        setOrphanNodes(orphans);
+        if (orphans.length > 0) {
+          const cleaned = { ...processTree };
+          orphans.forEach(id => { delete cleaned[id]; });
+          onChange(cleaned);
+          console.log(`[ProcessTreeManager] Auto-cleaned ${orphans.length} orphan nodes:`, orphans);
+        }
+        setOrphanNodes([]);
       }
     } catch (err) {
       console.error('[ProcessTreeManager] Failed to load tree:', err);
@@ -716,37 +731,42 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
 
   const clientTree = processTree || {};
 
+  // Auto-save wrapper: calls onChange and shows subtle toast
+  const saveWithNotification = useCallback((updated, message) => {
+    onChange(updated);
+    toast({ title: '✓ שינוי נשמר', description: message || '', duration: 1500, className: 'bg-green-50 border-green-200' });
+  }, [onChange]);
+
   const handleToggle = useCallback((nodeId, enabled) => {
     if (!companyTree) return;
     const updated = toggleNode(clientTree, nodeId, enabled, companyTree);
-    onChange(updated);
-  }, [clientTree, companyTree, onChange]);
+    saveWithNotification(updated, enabled ? 'שירות הופעל' : 'שירות כובה');
+  }, [clientTree, companyTree, saveWithNotification]);
 
   const handleFrequencyChange = useCallback((nodeId, frequency) => {
     const updated = { ...clientTree };
     updated[nodeId] = { ...updated[nodeId], frequency: frequency || undefined };
-    // Clean up: remove frequency key if null
     if (!frequency) {
       const { frequency: _, ...rest } = updated[nodeId];
       updated[nodeId] = rest;
     }
-    onChange(updated);
-  }, [clientTree, onChange]);
+    saveWithNotification(updated, 'תדירות עודכנה');
+  }, [clientTree, saveWithNotification]);
 
   const handleExtraFieldChange = useCallback((nodeId, fieldKey, value) => {
     const updated = { ...clientTree };
     updated[nodeId] = { ...updated[nodeId], [fieldKey]: value };
-    onChange(updated);
-  }, [clientTree, onChange]);
+    saveWithNotification(updated);
+  }, [clientTree, saveWithNotification]);
 
   const handleFullService = useCallback(() => {
     const updated = applyFullService(clientTree);
-    onChange(updated);
-  }, [clientTree, onChange]);
+    saveWithNotification(updated, 'כל השירותים הופעלו');
+  }, [clientTree, saveWithNotification]);
 
   const handleClearAll = useCallback(() => {
-    onChange({});
-  }, [onChange]);
+    saveWithNotification({}, 'כל השירותים כובו');
+  }, [saveWithNotification]);
 
   // Add a new process: creates node in company tree (system settings) AND enables it for this client
   const handleAddProcess = useCallback(async (branchId, parentNodeId, name) => {
@@ -891,47 +911,7 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
         </div>
       </div>
 
-      {/* Orphan nodes warning */}
-      {orphanNodes.length > 0 && (
-        <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-          <div className="flex-1">
-            <p className="text-xs font-bold text-amber-800">
-              נמצאו {orphanNodes.length} צמתים שלא קיימים בהגדרות מערכת
-            </p>
-            <p className="text-[10px] text-amber-700 mt-0.5">
-              צמתים אלו קיימים בכרטיס הלקוח אך לא במפת התהליכים. ניתן ליצור אותם בהגדרות מערכת או להסיר אותם.
-            </p>
-            <div className="flex flex-wrap gap-1.5 mt-1.5">
-              {orphanNodes.map(id => {
-                // Translate English node IDs to Hebrew labels
-                const hebrewLabels = {
-                  'P1_deductions_report': 'דיווח ניכויים',
-                  'P1_deductions_payment': 'תשלום ניכויים',
-                  'P1_social_security_report': 'דיווח ביטוח לאומי',
-                  'P1_social_security_payment': 'תשלום ביטוח לאומי',
-                  'P1_payroll': 'הכנת שכר',
-                  'P1_payslip_sending': 'משלוח תלושים',
-                  'P2_vat_reporting': 'דיווח מע"מ',
-                  'P2_vat_payment': 'תשלום מע"מ',
-                  'P2_bookkeeping': 'הנהלת חשבונות',
-                  'P2_reconciliation': 'התאמות',
-                  'P2_tax_advances': 'מקדמות מס',
-                };
-                const label = hebrewLabels[id] || id.replace(/^P\d_/, '').replace(/_/g, ' ');
-                return (
-                  <Badge key={id} className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 font-medium" title={id}>{label}</Badge>
-                );
-              })}
-            </div>
-            <div className="flex gap-2 mt-2">
-              <Button type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={handleDismissOrphans}>
-                הסר צמתים מיותרים
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Orphan nodes — auto-clean silently, no warning banner */}
 
       {/* Branch sections */}
       {Object.entries(companyTree.branches).filter(([branchId]) => branchId !== 'P4').map(([branchId, branch]) => {
