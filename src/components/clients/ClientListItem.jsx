@@ -86,8 +86,8 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
     });
 
     return (
-        <div className={`group flex flex-col md:flex-row items-start md:items-center justify-between px-4 py-3 transition-all duration-200 border-b-2 border-gray-100 hover:bg-gray-50/80 ${isSelected ? 'bg-blue-50/60 border-r-4 border-r-blue-500' : 'hover:border-r-4 hover:border-r-emerald-300'}`}>
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className={`group flex flex-col md:flex-row items-start md:items-center justify-between px-5 py-4 transition-all duration-200 border-b-2 border-gray-100 hover:bg-blue-50/40 ${isSelected ? 'bg-blue-50/60 border-r-4 border-r-blue-500' : 'hover:border-r-4 hover:border-r-emerald-400'}`}>
+            <div className="flex items-center gap-4 flex-1 min-w-0">
                 {/* Selection Checkbox */}
                 <div onClick={(e) => e.stopPropagation()}>
                   <Checkbox
@@ -99,30 +99,30 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
-                      <h3 className="text-base font-bold text-gray-800 group-hover:text-emerald-700 transition-colors truncate">{client.name}</h3>
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{client.name}</h3>
                   </div>
 
                   {/* Services grouped by branch — matching card layout */}
                   {sortedBranches.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
                       {sortedBranches.map(([branchId, svcs]) => {
                         const branchCfg = BRANCH_DISPLAY[branchId];
                         if (!branchCfg) {
                           // Unknown branch — plain badges
                           return svcs.map(st => (
-                            <Badge key={st} className="bg-gray-50 text-gray-600 border-gray-200 text-[10px] px-1.5 py-0 border">
+                            <Badge key={st} className="bg-gray-50 text-gray-700 border-gray-300 text-xs px-2 py-0.5 border font-medium">
                               {serviceTypeLabels[st] || st}
                             </Badge>
                           ));
                         }
                         return (
                           <div key={branchId} className="flex items-center gap-0.5">
-                            <span className={`${branchCfg.headerBg} text-white text-[9px] font-bold px-1.5 py-0.5 rounded-r-md`}>
+                            <span className={`${branchCfg.headerBg} text-white text-[11px] font-bold px-2 py-1 rounded-r-lg`}>
                               {branchCfg.label}
                             </span>
                             <div className="flex gap-0.5">
                               {svcs.map(st => (
-                                <Badge key={st} className={`${branchCfg.badgeBg} text-[10px] px-1.5 py-0 border rounded-none last:rounded-l-md`}>
+                                <Badge key={st} className={`${branchCfg.badgeBg} text-xs px-2 py-0.5 border rounded-none last:rounded-l-lg font-medium`}>
                                   {serviceTypeLabels[st] || st}
                                 </Badge>
                               ))}
@@ -135,41 +135,41 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
                 </div>
             </div>
 
-            <div className="w-full md:w-auto flex items-center justify-start gap-4 mt-3 md:mt-0">
+            <div className="w-full md:w-auto flex items-center justify-start gap-5 mt-3 md:mt-0">
                 {mainContact?.phone && (
-                  <a href={`tel:${mainContact.phone}`} className="text-sm text-gray-500 hover:text-emerald-700 flex items-center gap-1.5 transition-colors">
-                    <Phone className="w-3.5 h-3.5"/>
+                  <a href={`tel:${mainContact.phone}`} className="text-base text-gray-600 hover:text-emerald-700 flex items-center gap-2 transition-colors font-medium">
+                    <Phone className="w-4 h-4"/>
                     <span className="hidden sm:inline">{mainContact.phone}</span>
                   </a>
                 )}
                 {mainContact?.email && (
-                  <a href={`mailto:${mainContact.email}`} className="text-sm text-gray-500 hover:text-emerald-700 flex items-center gap-1.5 transition-colors">
-                    <Mail className="w-3.5 h-3.5"/>
+                  <a href={`mailto:${mainContact.email}`} className="text-base text-gray-600 hover:text-emerald-700 flex items-center gap-2 transition-colors">
+                    <Mail className="w-4 h-4"/>
                     <span className="hidden sm:inline truncate max-w-xs">{mainContact.email}</span>
                   </a>
                 )}
             </div>
 
             <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 mt-3 md:mt-0">
-                <Badge className={`${uiProps.badge} flex items-center gap-1 border text-xs font-semibold`}>
-                    {client.status === 'onboarding_pending' && <UserCheck className="w-3 h-3"/>}
+                <Badge className={`${uiProps.badge} flex items-center gap-1.5 border text-sm font-bold px-3 py-1`}>
+                    {client.status === 'onboarding_pending' && <UserCheck className="w-4 h-4"/>}
                     {uiProps.label}
                 </Badge>
-                <div className="flex gap-0.5">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(client)} title="עריכת פרטים" className="h-8 w-8 hover:bg-white hover:shadow-sm">
-                        <Edit className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+                <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => onEdit(client)} title="עריכת פרטים" className="h-9 w-9 hover:bg-white hover:shadow-sm rounded-lg">
+                        <Edit className="w-4.5 h-4.5 text-gray-500 group-hover:text-gray-700" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onSelectAccounts(client)} title="ניהול חשבונות" className="h-8 w-8 hover:bg-white hover:shadow-sm">
-                        <Building className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+                    <Button variant="ghost" size="icon" onClick={() => onSelectAccounts(client)} title="ניהול חשבונות" className="h-9 w-9 hover:bg-white hover:shadow-sm rounded-lg">
+                        <Building className="w-4.5 h-4.5 text-gray-500 group-hover:text-gray-700" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onSelectCollections(client)} title="ניהול גבייה" className="h-8 w-8 hover:bg-white hover:shadow-sm">
-                        <DollarSign className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+                    <Button variant="ghost" size="icon" onClick={() => onSelectCollections(client)} title="ניהול גבייה" className="h-9 w-9 hover:bg-white hover:shadow-sm rounded-lg">
+                        <DollarSign className="w-4.5 h-4.5 text-gray-500 group-hover:text-gray-700" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onSelectFiles?.(client)} title="ניהול קבצים" className="h-8 w-8 hover:bg-white hover:shadow-sm">
-                        <FolderOpen className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+                    <Button variant="ghost" size="icon" onClick={() => onSelectFiles?.(client)} title="ניהול קבצים" className="h-9 w-9 hover:bg-white hover:shadow-sm rounded-lg">
+                        <FolderOpen className="w-4.5 h-4.5 text-gray-500 group-hover:text-gray-700" />
                     </Button>
-                     <Button variant="ghost" size="icon" onClick={() => onDelete(client.id)} title="מחיקת לקוח" className="h-8 w-8 hover:bg-rose-50">
-                        <Trash2 className="w-4 h-4 text-gray-300 hover:text-red-500" />
+                     <Button variant="ghost" size="icon" onClick={() => onDelete(client.id)} title="מחיקת לקוח" className="h-9 w-9 hover:bg-rose-50 rounded-lg">
+                        <Trash2 className="w-4.5 h-4.5 text-gray-400 hover:text-red-500" />
                     </Button>
                 </div>
             </div>
