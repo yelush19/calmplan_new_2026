@@ -15,6 +15,7 @@ import {
   ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X,
   Network, BarChart3, GitBranchPlus
 } from "lucide-react";
+import { cleanupGhostTasks } from '@/api/functions';
 import MindMapView from "../components/views/MindMapView";
 import GanttView from "../components/views/GanttView";
 import { getActiveTreeTasks, getTaskPBranch, getPBranchLabel } from '@/utils/taskTreeFilter';
@@ -177,6 +178,20 @@ export default function TasksPage() {
 
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [showInjectionPanel, setShowInjectionPanel] = useState(false);
+  const [ghostCleanup, setGhostCleanup] = useState(null); // { loading, result }
+
+  const runGhostScan = async () => {
+    setGhostCleanup({ loading: true, result: null });
+    const res = await cleanupGhostTasks({ dryRun: true });
+    setGhostCleanup({ loading: false, result: res.data });
+  };
+
+  const runGhostDelete = async () => {
+    setGhostCleanup(prev => ({ ...prev, loading: true }));
+    const res = await cleanupGhostTasks({ dryRun: false });
+    setGhostCleanup({ loading: false, result: res.data });
+    loadTasks(); // Refresh
+  };
   const [listSubTaskParent, setListSubTaskParent] = useState(null);
   const [collapsedParents, setCollapsedParents] = useState({});
 
@@ -602,6 +617,16 @@ export default function TasksPage() {
             <GitBranchPlus className="w-4 h-4" />
             הזרקת משימות
           </Button>
+          <Button
+            size="sm"
+            onClick={runGhostScan}
+            variant="outline"
+            className="gap-1 rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+            disabled={ghostCleanup?.loading}
+          >
+            <Trash2 className="w-4 h-4" />
+            ניקוי רפאים
+          </Button>
           <Button size="sm" onClick={() => setShowQuickAdd(true)} className="gap-1 rounded-xl">
             <Plus className="w-4 h-4" />
             משימה מהירה
@@ -611,6 +636,62 @@ export default function TasksPage() {
           </Button>
         </div>
       </div>
+
+      {/* ── Ghost Cleanup Result Panel ── */}
+      {ghostCleanup?.result && (
+        <Card className="border-red-200 bg-red-50/30 shadow-sm">
+          <CardContent className="p-4" dir="rtl">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-red-800">
+                סריקת רפאים — {ghostCleanup.result.dryRun ? 'תצוגה מקדימה' : 'הושלם'}
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setGhostCleanup(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              <div className="text-center p-2 bg-white rounded-lg">
+                <div className="text-lg font-bold">{ghostCleanup.result.totalTasks}</div>
+                <div className="text-xs text-gray-500">סה"כ משימות</div>
+              </div>
+              <div className="text-center p-2 bg-red-100 rounded-lg">
+                <div className="text-lg font-bold text-red-700">{ghostCleanup.result.ghostCount}</div>
+                <div className="text-xs text-red-600">רפאים שזוהו</div>
+              </div>
+              <div className="text-center p-2 bg-white rounded-lg">
+                <div className="text-lg font-bold">{ghostCleanup.result.deletedCount || 0}</div>
+                <div className="text-xs text-gray-500">נמחקו</div>
+              </div>
+            </div>
+            {ghostCleanup.result.ghostsByCategory && Object.keys(ghostCleanup.result.ghostsByCategory).length > 0 && (
+              <div className="mb-3">
+                <div className="text-xs font-bold text-gray-600 mb-1">לפי קטגוריה:</div>
+                <div className="flex gap-2 flex-wrap">
+                  {Object.entries(ghostCleanup.result.ghostsByCategory).map(([cat, count]) => (
+                    <Badge key={cat} variant="outline" className="text-red-600 border-red-300">
+                      {cat}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {ghostCleanup.result.ghostCount > 0 && ghostCleanup.result.dryRun && (
+              <Button
+                size="sm"
+                onClick={runGhostDelete}
+                className="bg-red-600 hover:bg-red-700 text-white gap-1"
+                disabled={ghostCleanup.loading}
+              >
+                <Trash2 className="w-4 h-4" />
+                {ghostCleanup.loading ? 'מוחק...' : `מחק ${ghostCleanup.result.ghostCount} רפאים`}
+              </Button>
+            )}
+            {ghostCleanup.result.ghostCount === 0 && (
+              <p className="text-sm text-green-700 font-medium">לא נמצאו רפאים — הכל נקי!</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Manual Task Injection Panel (collapsible) ── */}
       <AnimatePresence>

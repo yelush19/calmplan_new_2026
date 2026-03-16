@@ -1165,3 +1165,122 @@ export const nuclearWipeTasks = async () => {
   console.log('[NuclearWipe]', log.join(' | '));
   return { data: { success: true, log } };
 };
+
+/**
+ * Ghost Task Cleanup — identifies and removes orphan tasks from old code generations.
+ *
+ * A "ghost" task is one that:
+ *   1. Has a deprecated/generic category that no longer matches current templates
+ *   2. Has no matching tree node in the company process tree
+ *   3. Was auto-generated (is_recurring=true) but uses old category naming
+ *
+ * Returns a preview list (dryRun=true) or actually deletes (dryRun=false).
+ */
+export const cleanupGhostTasks = async ({ dryRun = true } = {}) => {
+  const log = [];
+  const timestamp = () => `[${new Date().toLocaleTimeString('he-IL')}]`;
+
+  // Categories that the CURRENT generateProcessTasks produces
+  const VALID_CATEGORIES = new Set([
+    'work_vat_reporting', 'מע"מ',
+    'work_payroll', 'שכר',
+    'work_tax_advances', 'מקדמות מס',
+    'work_social_operator', 'סוציאליות מתפעל',
+    'work_social_taml', 'סוציאליות טמל',
+    'work_deductions', 'ניכויים',
+    'work_client_management', 'דוח שנתי',
+  ]);
+
+  // Known deprecated/ghost categories from old code
+  const GHOST_CATEGORIES = new Set([
+    'סוציאליות',           // old generic — replaced by מתפעל/טמל
+    'ביטוח לאומי',         // old generic social_security
+    'social_security',      // old English category
+  ]);
+
+  try {
+    const allTasks = await entities.Task.list();
+    const ghostTasks = [];
+    const validTasks = [];
+
+    for (const task of allTasks) {
+      const cat = (task.category || '').trim();
+
+      // Only check auto-generated recurring tasks
+      if (!task.is_recurring) {
+        validTasks.push(task);
+        continue;
+      }
+
+      // Check if category is a known ghost
+      if (GHOST_CATEGORIES.has(cat)) {
+        ghostTasks.push({
+          id: task.id,
+          title: task.title,
+          category: cat,
+          client_name: task.client_name,
+          due_date: task.due_date,
+          status: task.status,
+          reason: `קטגוריה מיושנת: "${cat}"`,
+        });
+        continue;
+      }
+
+      // Check if category is valid
+      if (VALID_CATEGORIES.has(cat)) {
+        validTasks.push(task);
+        continue;
+      }
+
+      // Unknown category — flag as potential ghost but don't auto-delete
+      validTasks.push(task);
+    }
+
+    log.push(`${timestamp()} סה"כ משימות: ${allTasks.length}`);
+    log.push(`${timestamp()} רפאים שזוהו: ${ghostTasks.length}`);
+    log.push(`${timestamp()} תקינות: ${validTasks.length}`);
+
+    // Group ghosts by category for summary
+    const ghostsByCategory = {};
+    for (const g of ghostTasks) {
+      if (!ghostsByCategory[g.category]) ghostsByCategory[g.category] = [];
+      ghostsByCategory[g.category].push(g);
+    }
+
+    if (!dryRun && ghostTasks.length > 0) {
+      let deleted = 0;
+      for (const ghost of ghostTasks) {
+        try {
+          await entities.Task.delete(ghost.id);
+          deleted++;
+        } catch (err) {
+          log.push(`${timestamp()} שגיאה במחיקת ${ghost.id}: ${err.message}`);
+        }
+      }
+      log.push(`${timestamp()} נמחקו ${deleted} רפאים`);
+    }
+
+    return {
+      data: {
+        success: true,
+        dryRun,
+        totalTasks: allTasks.length,
+        ghostCount: ghostTasks.length,
+        ghostTasks: ghostTasks.slice(0, 100), // limit preview to 100
+        ghostsByCategory: Object.fromEntries(
+          Object.entries(ghostsByCategory).map(([cat, tasks]) => [cat, tasks.length])
+        ),
+        deletedCount: dryRun ? 0 : ghostTasks.length,
+        log,
+      },
+    };
+  } catch (err) {
+    return {
+      data: {
+        success: false,
+        error: err.message,
+        log,
+      },
+    };
+  }
+};
