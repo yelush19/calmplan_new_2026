@@ -620,6 +620,12 @@ export const generateProcessTasks = async (params = {}) => {
           if (freq === 'not_applicable' || freq === 'yearly') continue;
 
           const template = PROCESS_TEMPLATES[templateKey];
+
+          // Enforce frequency constraints per template
+          // Social security + payroll = monthly only
+          if ((templateKey === 'social_security' || templateKey === 'payroll') && freq !== 'monthly') continue;
+          // Deductions = monthly or bimonthly only
+          if (templateKey === 'deductions' && freq !== 'monthly' && freq !== 'bimonthly') continue;
           const workCategory = TEMPLATE_TO_WORK_CATEGORY[templateKey] || template.category;
 
           // ── COMPOSITE UNIQUE KEY CHECK ──
