@@ -137,13 +137,15 @@ const P1_BRANCH = {
             { key: 'send_confirmations', label: 'שליחת אסמכתאות למתפעל' },
           ],
         }),
-        // ── טמל: client handles payments directly ──
-        node('P1_taml', 'טמל', 'social_taml', {
+        // ── טמל + לקוח: same steps as מתפעל, client handles payments ──
+        node('P1_taml', 'טמל + לקוח', 'social_taml', {
           depends_on: ['P1_social_benefits'],
           steps: [
-            { key: 'file_generation',     label: 'הפקת קובץ תשלומים' },
-            { key: 'upload_or_send',      label: 'העלאה לבנק / שליחה ללקוח' },
-            { key: 'update_and_transmit', label: 'עדכון תאריכים + אסמכתאות + שידור' },
+            { key: 'file_generation',    label: 'הפקת קובץ' },
+            { key: 'send_to_client',     label: 'שליחה ללקוח' },
+            { key: 'instructions_check', label: 'קבלת הנחיות + בדיקת תקינות', sla_day: 12 },
+            { key: 'masav_social',       label: 'מס"ב סוציאליות + קליטה', sla_day: 14 },
+            { key: 'send_confirmations', label: 'שליחת אסמכתאות ללקוח' },
           ],
         }),
       ],
@@ -464,7 +466,7 @@ const P4_BRANCH = {
 // ============================================================
 
 export const PROCESS_TREE_SEED = {
-  version: '4.2',
+  version: '4.3',
   branches: {
     P1: P1_BRANCH,
     P2: P2_BRANCH,

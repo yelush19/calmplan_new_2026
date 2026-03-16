@@ -653,7 +653,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="basic" className="space-y-6">
-            <TabsList className="flex flex-wrap gap-2 h-auto p-3 rounded-2xl bg-gradient-to-l from-gray-50 to-white border-2 border-gray-100 shadow-sm">
+            <TabsList className="flex flex-wrap gap-2 h-auto p-3 rounded-2xl bg-gradient-to-l from-gray-50 to-white border-2 border-gray-100 shadow-sm sticky top-0 z-20">
               <TabsTrigger value="basic" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-sky-500 data-[state=active]:to-sky-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-sky-300 data-[state=inactive]:hover:text-sky-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">📋 פרטים</TabsTrigger>
               <TabsTrigger value="process_tree" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-emerald-300 data-[state=inactive]:hover:text-emerald-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">🌳 תהליכים</TabsTrigger>
               <TabsTrigger value="financial" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-amber-300 data-[state=inactive]:hover:text-amber-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">💰 כספי</TabsTrigger>
@@ -663,7 +663,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <TabsTrigger value="integration" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-indigo-300 data-[state=inactive]:hover:text-indigo-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">🔗 חיבורים</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="basic" className="space-y-4">
+            <TabsContent value="basic" className="space-y-4 rounded-2xl border-2 border-sky-200 bg-sky-50/30 p-5">
               <div className="grid md:grid-cols-2 gap-4">
                 <div><Label htmlFor="name">שם הלקוח *</Label><Input id="name" value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)} required /></div>
                 <div><Label htmlFor="nickname">כינוי (מוצג במפה)</Label><Input id="nickname" value={formData.nickname || ''} onChange={(e) => handleInputChange('nickname', e.target.value)} placeholder="שם מקוצר / כינוי" /><p className="text-xs text-gray-500 mt-1">אם ריק, יוצג שם הלקוח המלא</p></div>
@@ -742,7 +742,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 ))}
               </div>
             </TabsContent>
-            <TabsContent value="process_tree" className="space-y-4">
+            <TabsContent value="process_tree" className="space-y-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50/30 p-5">
               <ProcessTreeManager
                 processTree={formData.process_tree}
                 onChange={(updated) => setFormData(prev => ({ ...prev, process_tree: updated }))}
@@ -753,7 +753,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               />
             </TabsContent>
             {/* ===== נתונים כספיים TAB ===== */}
-            <TabsContent value="financial" className="space-y-5">
+            <TabsContent value="financial" className="space-y-5 rounded-2xl border-2 border-amber-200 bg-amber-50/30 p-5">
               {/* שכ"ט חודשי */}
               <div>
                 <Label className="text-lg font-bold">שכ״ט חודשי</Label>
@@ -923,7 +923,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
             </TabsContent>
 
             {/* ===== נותני שירותים TAB ===== */}
-            <TabsContent value="providers" className="space-y-5">
+            <TabsContent value="providers" className="space-y-5 rounded-2xl border-2 border-violet-200 bg-violet-50/30 p-5">
               {client?.id ? (
                 <div className="space-y-4">
                   {/* Linked Companies Display */}
@@ -1021,7 +1021,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 </div>
               )}
             </TabsContent>
-            <TabsContent value="tax" className="space-y-4">
+            <TabsContent value="tax" className="space-y-4 rounded-2xl border-2 border-rose-200 bg-rose-50/30 p-5">
               <h3 className="text-lg font-semibold mb-4">פרטי מס בסיסיים</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
@@ -1176,7 +1176,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <div><Label htmlFor="preferred_method">אמצעי תקשורת מועדף</Label><Select value={formData.communication_preferences.preferred_method} onValueChange={(value) => handleInputChange('preferred_method', value, 'communication_preferences')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="email">אימייל</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem><SelectItem value="phone">טלפון</SelectItem><SelectItem value="teams">Teams</SelectItem></SelectContent></Select></div>
               <div><Label htmlFor="notes">הערות</Label><Textarea id="notes" value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} className="h-24" /></div>
             </TabsContent>
-            <TabsContent value="accounts" className="space-y-4">
+            <TabsContent value="accounts" className="space-y-4 rounded-2xl border-2 border-cyan-200 bg-cyan-50/30 p-5">
               {client?.id ? (
                 <ClientAccountsManager clientId={client.id} clientName={client.name || formData.name} />
               ) : (
@@ -1185,7 +1185,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 </div>
               )}
             </TabsContent>
-            <TabsContent value="integration" className="space-y-4">
+            <TabsContent value="integration" className="space-y-4 rounded-2xl border-2 border-indigo-200 bg-indigo-50/30 p-5">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="calmplan_id">מזהה CalmPlan</Label>
