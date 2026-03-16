@@ -58,6 +58,23 @@ const PROCESS_TEMPLATES = {
     frequencyField: null, // monthly when payroll exists
     dayOfMonth: 15,
     requiresPayroll: true,
+    deprecated: true, // Replaced by tree-aware social_operator / social_taml
+  },
+  social_operator: {
+    name: 'סוציאליות מתפעל',
+    category: 'סוציאליות מתפעל',
+    frequencyField: null,
+    dayOfMonth: 14,
+    requiresPayroll: true,
+    treeNodeId: 'P1_operator',
+  },
+  social_taml: {
+    name: 'סוציאליות טמל',
+    category: 'סוציאליות טמל',
+    frequencyField: null,
+    dayOfMonth: 14,
+    requiresPayroll: true,
+    treeNodeId: 'P1_taml',
   },
   deductions: {
     name: 'ניכויים במקור',
@@ -212,12 +229,21 @@ function getClientTemplates(client) {
     templateKeys.push('payroll');
   }
 
-  // Social security: requires BOTH explicit service AND payroll service
+  // Social security: tree-aware — use operator or taml path based on client's process tree
+  // The generic 'social_security' template is DEPRECATED (replaced by specific paths)
   if (expanded.has('social_security') && clientHasPayroll(client)) {
     const ssFreq = reporting.social_security_frequency;
     const payrollFreq = reporting.payroll_frequency;
     if (freqIsActive(ssFreq) || freqIsActive(payrollFreq)) {
-      templateKeys.push('social_security');
+      const clientTree = client.process_tree || {};
+      const hasOperator = clientTree.P1_operator?.enabled;
+      const hasTaml = clientTree.P1_taml?.enabled;
+      if (hasOperator) {
+        templateKeys.push('social_operator');
+      } else if (hasTaml) {
+        templateKeys.push('social_taml');
+      }
+      // If neither is enabled in tree, skip — no generic social_security fallback
     }
   }
 
@@ -552,6 +578,9 @@ export const generateProcessTasks = async (params = {}) => {
     vat: 'work_vat_reporting',
     payroll: 'work_payroll',
     tax_advances: 'work_tax_advances',
+    social_operator: 'work_social_operator',
+    social_taml: 'work_social_taml',
+    deductions: 'work_deductions',
     annual_report: 'work_client_management',
   };
 
@@ -622,8 +651,10 @@ export const generateProcessTasks = async (params = {}) => {
           const template = PROCESS_TEMPLATES[templateKey];
 
           // Enforce frequency constraints per template
-          // Social security + payroll = monthly only
-          if ((templateKey === 'social_security' || templateKey === 'payroll') && freq !== 'monthly') continue;
+          // Skip deprecated generic social_security — tree-aware variants replace it
+          if (template.deprecated) continue;
+          // Social security variants + payroll = monthly only
+          if ((templateKey === 'social_operator' || templateKey === 'social_taml' || templateKey === 'payroll') && freq !== 'monthly') continue;
           // Deductions = monthly or bimonthly only
           if (templateKey === 'deductions' && freq !== 'monthly' && freq !== 'bimonthly') continue;
           const workCategory = TEMPLATE_TO_WORK_CATEGORY[templateKey] || template.category;
