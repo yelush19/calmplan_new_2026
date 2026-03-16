@@ -565,7 +565,19 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                 }
                 if (node.type !== 'branch') {
                   setSelectedNodeId(node.id);
-                  onSelectService?.(node.serviceKey || node.id);
+                  // Pass full service object so TemplatePanel can edit it
+                  onSelectService?.({
+                    key: node.id,
+                    label: node.label,
+                    steps: node.steps || [],
+                    dashboard: node.branchId === 'P1' ? 'payroll' : node.branchId === 'P2' ? 'tax' : node.branchId === 'P5' ? 'annual_reports' : node.branchId === 'P4' ? 'home' : 'admin',
+                    branch: node.branchId,
+                    serviceKey: node.serviceKey,
+                    _crud: {
+                      updateService: (key, updates) => updateService(key, updates),
+                      deleteService: () => {},
+                    },
+                  });
                   design.setActiveTaskId?.(node.id);
                 }
               }}

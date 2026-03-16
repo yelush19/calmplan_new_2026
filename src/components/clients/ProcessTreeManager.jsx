@@ -98,22 +98,13 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
   const enabled = isNodeEnabled(clientTree, node.id);
   const hasChildren = node.children && node.children.length > 0;
 
-  // Hide disabled nodes when hideIfDisabled is active (ADHD-friendly: less clutter)
-  if (hideIfDisabled && !enabled && !hasChildren) return null;
-  // For parent nodes: hide only if ALL children are also disabled
-  if (hideIfDisabled && !enabled && hasChildren) {
-    const anyChildEnabled = (nodes) => (nodes || []).some(n =>
-      isNodeEnabled(clientTree, n.id) || anyChildEnabled(n.children)
-    );
-    if (!anyChildEnabled(node.children)) return null;
-  }
   // Resolve steps: node.steps from DB tree, fallback to processTemplates via service_key
   const nodeSteps = (node.steps && node.steps.length > 0)
     ? node.steps
     : (node.service_key ? getStepsForService(node.service_key) : []);
   const colors = getBranchColors(branchId);
 
-  // Resolve effective frequency
+  // Resolve effective frequency — MUST be called before any early return (React hooks rule)
   const effectiveFreq = useMemo(() => {
     if (!enabled) return null;
     const mockClient = { process_tree: clientTree, reporting_info: {} };
@@ -122,6 +113,16 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
 
   const clientOverride = clientTree?.[node.id]?.frequency;
   const hasFrequencyField = !!node.frequency_field || node.frequency_inherit;
+
+  // Hide disabled nodes when hideIfDisabled is active (ADHD-friendly: less clutter)
+  // IMPORTANT: This must be AFTER all hooks to avoid React error #310
+  if (hideIfDisabled && !enabled && !hasChildren) return null;
+  if (hideIfDisabled && !enabled && hasChildren) {
+    const anyChildEnabled = (nodes) => (nodes || []).some(n =>
+      isNodeEnabled(clientTree, n.id) || anyChildEnabled(n.children)
+    );
+    if (!anyChildEnabled(node.children)) return null;
+  }
 
   // Check for extra_fields (e.g., VAT reporting method)
   const extraFields = node.extra_fields || {};

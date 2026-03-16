@@ -393,6 +393,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   
   const services = [...(client.service_types || [])].sort((a, b) => (serviceGroupOrder[a] || 99) - (serviceGroupOrder[b] || 99));
   const reportingInfo = client.reporting_info || {};
+  const pt = client.process_tree || {};
 
   const frequencyLabels = {
     monthly: 'חודשי',
@@ -403,18 +404,28 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
     not_applicable: 'לא רלוונטי',
   };
 
+  // Resolve frequency: process_tree overrides → reporting_info fallback
+  const resolveFreq = (nodeId, reportingKey) => {
+    // 1. Check process_tree node override
+    if (pt[nodeId]?.frequency) return pt[nodeId].frequency;
+    // 2. Fallback to reporting_info
+    return reportingInfo[reportingKey] || null;
+  };
+
   // Row 1: מע"מ ומקדמות
   const reportingRow1 = [
-    { key: 'vat_reporting_frequency', label: 'מע"מ' },
-    { key: 'tax_advances_frequency', label: 'מקדמות' },
-  ].filter(f => reportingInfo[f.key] && reportingInfo[f.key] !== 'not_applicable');
+    { nodeId: 'P2_vat', key: 'vat_reporting_frequency', label: 'מע"מ' },
+    { nodeId: 'P2_tax_advances', key: 'tax_advances_frequency', label: 'מקדמות' },
+  ].map(f => ({ ...f, value: resolveFreq(f.nodeId, f.key) }))
+   .filter(f => f.value && f.value !== 'not_applicable');
 
   // Row 2: שכר, ב"ל וניכויים (ללקוחות עם שכר)
   const reportingRow2 = [
-    { key: 'payroll_frequency', label: 'שכר' },
-    { key: 'social_security_frequency', label: 'ב"ל' },
-    { key: 'deductions_frequency', label: 'ניכויים' },
-  ].filter(f => reportingInfo[f.key] && reportingInfo[f.key] !== 'not_applicable');
+    { nodeId: 'P1_payroll', key: 'payroll_frequency', label: 'שכר' },
+    { nodeId: 'P1_social_security', key: 'social_security_frequency', label: 'ב"ל' },
+    { nodeId: 'P1_deductions', key: 'deductions_frequency', label: 'ניכויים' },
+  ].map(f => ({ ...f, value: resolveFreq(f.nodeId, f.key) }))
+   .filter(f => f.value && f.value !== 'not_applicable');
 
   const hasReporting = reportingRow1.length > 0 || reportingRow2.length > 0;
 
@@ -494,8 +505,8 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
                   <span key={f.key} className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-gray-400" />
                     <span className="font-bold">{f.label}:</span>
-                    <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-bold' : 'font-medium'}>
-                      {frequencyLabels[reportingInfo[f.key]] || reportingInfo[f.key]}
+                    <span className={f.value === 'bimonthly' ? 'text-amber-600 font-bold' : 'font-medium'}>
+                      {frequencyLabels[f.value] || f.value}
                     </span>
                   </span>
                 ))}
@@ -507,8 +518,8 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
                   <span key={f.key} className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-gray-400" />
                     <span className="font-bold">{f.label}:</span>
-                    <span className={reportingInfo[f.key] === 'bimonthly' ? 'text-amber-600 font-bold' : 'font-medium'}>
-                      {frequencyLabels[reportingInfo[f.key]] || reportingInfo[f.key]}
+                    <span className={f.value === 'bimonthly' ? 'text-amber-600 font-bold' : 'font-medium'}>
+                      {frequencyLabels[f.value] || f.value}
                     </span>
                   </span>
                 ))}
