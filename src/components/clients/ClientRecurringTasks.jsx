@@ -18,6 +18,7 @@ import { he } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
 import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_NAMES } from '@/config/taxCalendar2026';
 import { getScheduledStartForCategory } from '@/config/automationRules';
+import { getServiceWeight } from '@/config/serviceWeights';
 import { onTreeChange } from '@/services/processTreeService';
 import { useDesign } from '@/contexts/DesignContext';
 
@@ -43,7 +44,7 @@ const P_BRANCHES = {
     bgSoft: 'bg-purple-50',
     dot: 'bg-purple-500',
     order: 2,
-    categories: ['מע"מ', 'מקדמות מס', 'דוח רו"ה', 'קליטת הכנסות', 'קליטת הוצאות', 'מס"ב ספקים'],
+    categories: ['מע"מ', 'מע"מ 874', 'מקדמות מס', 'דוח רו"ה', 'קליטת הכנסות', 'קליטת הוצאות', 'מס"ב ספקים'],
   },
   P3: {
     key: 'P3',
@@ -94,7 +95,7 @@ const REPORT_CATEGORIES = {
     frequencyField: 'payroll_frequency',
     serviceTypeKey: 'payroll',
     treeNodeId: 'P1_payroll',
-    dayOfMonth: 15,
+    dayOfMonth: 9, // שכר: דדליין אחרון 9, נורמלי 7
     order: 1,
     branch: 'P1',
   },
@@ -133,7 +134,7 @@ const REPORT_CATEGORIES = {
     branch: 'P1',
   },
   'מע"מ': {
-    label: 'מע"מ',
+    label: 'מע"מ תקופתי',
     emoji: '🧾',
     cardColor: '#4682B4', // P2 group
     icon: Calculator,
@@ -144,9 +145,27 @@ const REPORT_CATEGORIES = {
     frequencyField: 'vat_reporting_frequency',
     serviceTypeKey: 'vat_reporting',
     treeNodeId: 'P2_vat',
-    dayOfMonth: 15,
+    dayOfMonth: 19,
     order: 4,
     branch: 'P2',
+    exclude874: true, // לא להציג ללקוחות 874
+  },
+  'מע"מ 874': {
+    label: 'מע"מ 874 מפורט',
+    emoji: '📑',
+    cardColor: '#4682B4', // P2 group
+    icon: Calculator,
+    color: 'bg-slate-100 text-slate-800',
+    accent: 'border-slate-400',
+    bgSoft: 'bg-slate-50',
+    dot: 'bg-[#4682B4]',
+    frequencyField: 'vat_reporting_frequency',
+    serviceTypeKey: 'vat_reporting',
+    treeNodeId: 'P2_vat',
+    dayOfMonth: 23, // 874 מפורט: דדליין 23
+    order: 4.5,
+    branch: 'P2',
+    only874: true, // רק ללקוחות 874
   },
   'מקדמות מס': {
     label: 'מקדמות מס',
@@ -160,7 +179,7 @@ const REPORT_CATEGORIES = {
     frequencyField: 'tax_advances_frequency',
     serviceTypeKey: 'tax_advances',
     treeNodeId: 'P2_tax_advances',
-    dayOfMonth: 15,
+    dayOfMonth: 19, // מקדמות: דיווח מקוון עד 19
     order: 5,
     branch: 'P2',
   },
@@ -234,7 +253,7 @@ const REPORT_CATEGORIES = {
     frequencyField: 'payroll_frequency',
     serviceTypeKey: 'payslip_sending',
     treeNodeId: 'P1_payslip_sending',
-    dayOfMonth: 10,
+    dayOfMonth: 9, // תלושים: עד 9 לכל חודש או קודם בחג/שבת
     order: 10,
     branch: 'P1',
   },
@@ -250,7 +269,7 @@ const REPORT_CATEGORIES = {
     frequencyField: 'payroll_frequency',
     serviceTypeKey: 'masav_employees',
     treeNodeId: 'P1_masav_employees',
-    dayOfMonth: 8,
+    dayOfMonth: 9, // מס"ב עובדים: אותם דדליינים כמו שכר 7-9
     order: 11,
     branch: 'P1',
   },
@@ -266,7 +285,7 @@ const REPORT_CATEGORIES = {
     frequencyField: 'payroll_frequency',
     serviceTypeKey: 'social_operator',
     treeNodeId: 'P1_operator',
-    dayOfMonth: 14,
+    dayOfMonth: 15, // מתפעל: עד 13-15 כולל העלאת מס"ב
     order: 12,
     branch: 'P1',
   },
@@ -282,7 +301,7 @@ const REPORT_CATEGORIES = {
     frequencyField: 'payroll_frequency',
     serviceTypeKey: 'social_taml',
     treeNodeId: 'P1_taml',
-    dayOfMonth: 14,
+    dayOfMonth: 15, // טמל: עד 13-15
     order: 13,
     branch: 'P1',
   },
@@ -298,7 +317,7 @@ const REPORT_CATEGORIES = {
     frequencyField: 'payroll_frequency',
     serviceTypeKey: 'payroll_closing',
     treeNodeId: 'P1_closing',
-    dayOfMonth: 15,
+    dayOfMonth: 12, // קליטה להנה"ח: לאחר שליחת תלושים +3 ימים
     order: 14,
     branch: 'P1',
   },
@@ -764,6 +783,11 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
         // ── SERVICE FILTER: strict check against client's actual services ──
         if (!expandedServices.has(categoryDef.serviceTypeKey)) continue;
 
+        // ── 874 FILTER: split מע"מ תקופתי vs מע"מ 874 ──
+        const clientIs874 = isClient874(client);
+        if (categoryDef.exclude874 && clientIs874) continue;
+        if (categoryDef.only874 && !clientIs874) continue;
+
         const freq = getClientFrequency(categoryKey, client);
         if (freq === 'not_applicable') {
           coverage[categoryKey].skippedFreq++;
@@ -792,7 +816,6 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           }
 
           const taskId = `${client.id}_${categoryKey}_${dueDateStr}`;
-          const clientIs874 = categoryKey === 'מע"מ' && isClient874(client);
           const scheduledStart = getScheduledStartForCategory(categoryKey, dueDateStr);
           const branchKey = categoryDef.branch;
           if (!branchKey || !P_BRANCHES[branchKey]) continue;
@@ -800,6 +823,9 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           // ── depends_on: link to parent task if exists ──
           const parentCategory = TASK_DEPENDENCIES[categoryKey];
           const parentTaskId = parentCategory ? `${client.id}_${parentCategory}_${dueDateStr}` : null;
+
+          // ── Cognitive load from serviceWeights ──
+          const sw = getServiceWeight(categoryKey);
 
           const task = {
             _previewId: taskId, title: taskTitle,
@@ -809,6 +835,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             category: categoryKey, branch: branchKey,
             context: 'work', priority: 'high', status: 'not_started',
             is_recurring: true, source: 'recurring_tasks',
+            estimated_duration: sw.duration,
+            cognitive_load: sw.cognitiveLoad,
             _categoryOrder: categoryDef.order, _categoryLabel: categoryDef.label,
             _categoryColor: categoryDef.color, _categoryAccent: categoryDef.accent,
             _categoryBgSoft: categoryDef.bgSoft, _categoryDot: categoryDef.dot,
@@ -954,6 +982,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setResults({ created, errors, total: tasksToCreate.length });
     setIsGenerating(false);
     setShowPreview(false);
+    // Reset deadline overrides back to defaults after injection
+    setDeadlineOverrides({});
     await loadData();
     if (onGenerateComplete) onGenerateComplete();
   };
@@ -1252,7 +1282,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {[
                 { key: 'payroll', label: 'שכר + תלושים + מס"ב', defaultDay: 9 },
-                { key: 'social_operator', label: 'פנסיות', defaultDay: 14 },
+                { key: 'social_operator', label: 'פנסיות', defaultDay: 15 },
                 { key: 'social_security', label: 'ביטוח לאומי', defaultDay: 15 },
                 { key: 'deductions', label: 'ניכויים', defaultDay: 19 },
                 { key: 'vat', label: 'מע"מ', defaultDay: 19 },
@@ -1444,6 +1474,36 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 ))}
               </div>
             )}
+
+            {/* Cognitive load summary */}
+            {previewTasks.length > 0 && (() => {
+              const selected = previewTasks.filter(t => selectedTaskIds.has(t._previewId));
+              const totalMinutes = selected.reduce((sum, t) => sum + (t.estimated_duration || 15), 0);
+              const totalHours = (totalMinutes / 60).toFixed(1);
+              const monthCount = selectedMonths.size || 1;
+              const avgDailyMinutes = Math.round(totalMinutes / (monthCount * 22)); // ~22 working days/month
+              const limit = design?.cognitiveLoadLimit || 480;
+              const overloaded = avgDailyMinutes > limit;
+              const LOAD_LABELS = ['ננו', 'פשוט', 'בינוני', 'מורכב'];
+              const loadMix = [0, 0, 0, 0];
+              selected.forEach(t => { loadMix[t.cognitive_load ?? 0]++; });
+              return (
+                <div className={`flex items-center gap-3 mt-3 px-3 py-2 rounded-xl border ${overloaded ? 'bg-red-50 border-red-300' : 'bg-blue-50 border-blue-200'}`}>
+                  <span className="text-xs font-bold text-gray-700">⏱ {totalHours} שעות</span>
+                  <span className="text-[10px] text-gray-500">|</span>
+                  <span className={`text-xs font-bold ${overloaded ? 'text-red-600' : 'text-blue-600'}`}>
+                    ~{avgDailyMinutes} דק׳/יום
+                  </span>
+                  <span className="text-[10px] text-gray-500">|</span>
+                  {loadMix.map((count, tier) => count > 0 && (
+                    <span key={tier} className="text-[10px] font-bold text-gray-600">
+                      {LOAD_LABELS[tier]}: {count}
+                    </span>
+                  ))}
+                  {overloaded && <span className="text-xs font-bold text-red-600 mr-auto">⚠ חריגה מסף יומי</span>}
+                </div>
+              );
+            })()}
 
             {/* Progress bar */}
             {previewTasks.length > 0 && (
