@@ -322,26 +322,7 @@ function getReportDescription(templateKey, month, year, client) {
   return `${template.name} ${reportMonthName} ${reportYear}`;
 }
 
-// ===== Monday.com functions REMOVED (Kill Monday directive) =====
-// All sync/push/board operations eliminated.
-// SSoT is now: serviceWeights.js + automationRules.js + taxCalendar2026.js
-
-/* QUARANTINED — The following Monday functions were removed:
- * mondayReportsAutomation, syncClientsFromBoard, syncTasksFromBoard,
- * syncReconciliationsFromBoard, syncClientAccountsFromBoard, syncTherapistsFromBoard,
- * purgeAndResync, syncAllBoards, emergencyCleanup, handleAddColumn,
- * handleCreateMonthlyBoards, handlePushClientToMonday, handlePushTaskToMonday,
- * reverseSyncAllBoards, filterMondayItems, syncMondayReports, syncReconciliationTasks
- */
-
-// Stubs for backwards compatibility (prevent import errors)
-export const mondayBoardApi = async () => ({ data: { success: false, error: 'Monday.com integration removed — use CalmPlan DNA' } });
-export const mondayApi = async () => ({ data: { success: false, error: 'Monday.com integration removed — use CalmPlan DNA' } });
-export const mondayReportsAutomation = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
-export const filterMondayItems = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
-export const syncMondayReports = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
-export const syncReconciliationTasks = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
-export const syncAllBoards = async () => ({ data: { success: false, error: 'Monday.com integration removed' } });
+// Monday.com integration fully removed. No stubs needed — no active imports remain.
 
 export const exportClientsToExcel = async () => ({ data: { success: false, error: 'Export not available' } });
 
