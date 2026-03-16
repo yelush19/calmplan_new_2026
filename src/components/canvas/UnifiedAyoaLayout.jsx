@@ -47,8 +47,8 @@ export default function UnifiedAyoaLayout({
   const tasks = data || tasksProp || [];
   const allTasks = allTasksProp || tasks;
 
-  // 'focus' = default to focus mind map. null = show children (table).
-  const [localView, setLocalView] = useState('focus');
+  // null = show children (table/original content). Views are OPT-IN only.
+  const [localView, setLocalView] = useState(null);
 
   const accent = accentColor || (branch && DNA_ACCENTS[branch]) || DNA_ACCENTS.P2;
   const isOriginalActive = localView === null;
