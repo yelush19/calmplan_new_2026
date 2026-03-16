@@ -580,6 +580,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonths, setSelectedMonths] = useState(new Set([currentMonth]));
   const [forceInject, setForceInject] = useState(false);
+  const [expandedCard, setExpandedCard] = useState(null); // catKey of expanded card
   const [isClearingCache, setIsClearingCache] = useState(false);
 
   useEffect(() => { loadData(); }, []);
@@ -930,15 +931,17 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
         if (!categoryDef) continue;
         let clientCount = 0;
         const frequencies = {};
+        const matchedClients = [];
         for (const client of clients) {
           if (!clientHasService(catKey, client)) continue;
           const freq = getClientFrequency(catKey, client);
           if (freq === 'not_applicable') continue;
           clientCount++;
           frequencies[freq] = (frequencies[freq] || 0) + 1;
+          matchedClients.push({ id: client.id, name: client.name, frequency: freq });
         }
         if (clientCount > 0) {
-          branchCategories.push({ key: catKey, label: categoryDef.label, icon: categoryDef.icon, dot: categoryDef.dot, clientCount, frequencies });
+          branchCategories.push({ key: catKey, label: categoryDef.label, icon: categoryDef.icon, dot: categoryDef.dot, clientCount, frequencies, matchedClients });
           totalClients += clientCount;
         }
       }
@@ -999,23 +1002,48 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3">
                   {branch.branchCategories.map((cat) => {
                     const Icon = cat.icon;
+                    const isExpanded = expandedCard === cat.key;
                     return (
                       <div
                         key={cat.key}
-                        className="p-4 rounded-xl bg-white border border-gray-100 hover:border-gray-200 transition-all"
+                        className={`rounded-xl bg-white border transition-all cursor-pointer ${
+                          isExpanded ? 'border-blue-300 shadow-md col-span-1 md:col-span-2' : 'border-gray-100 hover:border-gray-200'
+                        }`}
+                        onClick={() => setExpandedCard(isExpanded ? null : cat.key)}
                       >
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className={`w-3 h-3 rounded-full ${cat.dot}`} />
-                          <span className="text-base font-bold text-gray-700">{cat.label}</span>
+                        <div className="p-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={`w-3 h-3 rounded-full ${cat.dot}`} />
+                            <span className="text-base font-bold text-gray-700">{cat.label}</span>
+                            <ChevronDown className={`w-4 h-4 text-gray-400 mr-auto transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          </div>
+                          <p className="text-3xl font-black text-gray-800 mb-2">{cat.clientCount}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(cat.frequencies).map(([freq, count]) => (
+                              <span key={freq} className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">
+                                {FREQUENCY_LABELS[freq] || freq} ({count})
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                        <p className="text-3xl font-black text-gray-800 mb-2">{cat.clientCount}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(cat.frequencies).map(([freq, count]) => (
-                            <span key={freq} className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">
-                              {FREQUENCY_LABELS[freq] || freq} ({count})
-                            </span>
-                          ))}
-                        </div>
+                        {/* ── Expanded Client List ── */}
+                        {isExpanded && cat.matchedClients && (
+                          <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50 max-h-64 overflow-y-auto">
+                            <div className="text-xs font-bold text-gray-500 mb-2">{cat.clientCount} לקוחות:</div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                              {cat.matchedClients
+                                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
+                                .map((mc, idx) => (
+                                <div key={mc.id || idx} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-gray-100 text-sm">
+                                  <span className="font-medium text-gray-800 truncate flex-1">{mc.name}</span>
+                                  <span className="text-[10px] text-gray-400 flex-shrink-0">
+                                    {FREQUENCY_LABELS[mc.frequency] || mc.frequency}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
