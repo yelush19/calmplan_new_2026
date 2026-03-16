@@ -20,6 +20,14 @@ export const SERVICE_WEIGHTS = {
   'ניכויים':           { duration: 15, cognitiveLoad: 1, label: 'ניכויים' },
   'work_deductions':    { duration: 15, cognitiveLoad: 1, label: 'Deductions' },
 
+  // Payroll voucher intake — 5 דק' גג לכל אחד
+  'קליטת פקודת שכר':   { duration: 5,  cognitiveLoad: 0, label: 'קליטת פקודת שכר' },
+  'work_salary_entry':  { duration: 5,  cognitiveLoad: 0, label: 'Salary Entry' },
+  'רישום תשלומי עובדים': { duration: 5, cognitiveLoad: 0, label: 'רישום תשלומי עובדים' },
+  'work_employee_payments': { duration: 5, cognitiveLoad: 0, label: 'Employee Payments' },
+  'רישום תשלומי פנסיות': { duration: 5, cognitiveLoad: 0, label: 'רישום תשלומי פנסיות' },
+  'work_pension_payments': { duration: 5, cognitiveLoad: 0, label: 'Pension Payments' },
+
   // MASAV services — real-world timings
   'מס"ב עובדים':       { duration: 10, cognitiveLoad: 0, label: 'מס"ב עובדים' },       // 5-10 דק' כולל הודעת ווטסאפ לחותמים
   'work_masav':         { duration: 10, cognitiveLoad: 0, label: 'MASAV' },
