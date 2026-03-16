@@ -103,24 +103,83 @@ function InlineEdit({ value, onSave, className = '' }) {
   );
 }
 
-// ── Steps editor for a node ──
+// ── Sub-steps editor (nested under a step) ──
+function SubStepsEditor({ subSteps = [], onChange }) {
+  const [newSub, setNewSub] = useState('');
+
+  const addSub = () => {
+    if (!newSub.trim()) return;
+    const key = `sub_${Date.now()}`;
+    onChange([...subSteps, { key, label: newSub.trim() }]);
+    setNewSub('');
+  };
+
+  const removeSub = (idx) => onChange(subSteps.filter((_, i) => i !== idx));
+
+  const renameSub = (idx, newLabel) => {
+    const updated = [...subSteps];
+    updated[idx] = { ...updated[idx], label: newLabel };
+    onChange(updated);
+  };
+
+  return (
+    <div className="mr-8 mt-1.5 mb-1 space-y-1.5">
+      {subSteps.map((sub, si) => (
+        <div key={sub.key || si} className="flex items-center gap-2 group/sub bg-amber-50 rounded-md px-2.5 py-1.5 border border-amber-100">
+          <GripVertical className="w-3.5 h-3.5 text-amber-200 cursor-grab" />
+          <span className="text-[10px] font-bold text-amber-500 w-5 text-center">{si + 1}</span>
+          <InlineEdit
+            value={sub.label}
+            onSave={(val) => renameSub(si, val)}
+            className="text-xs text-gray-700 flex-1"
+          />
+          <button onClick={() => removeSub(si)} className="opacity-0 group-hover/sub:opacity-100 text-gray-300 hover:text-red-400 transition-all">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+      <div className="flex gap-1.5">
+        <Input
+          value={newSub}
+          onChange={(e) => setNewSub(e.target.value)}
+          placeholder="...הוסף תת-שלב"
+          className="flex-1 h-7 text-xs"
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSub(); } }}
+        />
+        <Button type="button" variant="ghost" size="sm" onClick={addSub} disabled={!newSub.trim()} className="h-7 w-7 p-0 text-amber-500">
+          <Plus className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Steps editor for a node (with sub-steps support) ──
 function StepsEditor({ steps, onChange }) {
   const [newStep, setNewStep] = useState('');
+  const [expandedStepIdx, setExpandedStepIdx] = useState(null);
 
   const addStep = () => {
     if (!newStep.trim()) return;
     const key = `step_${Date.now()}`;
-    onChange([...steps, { key, label: newStep.trim() }]);
+    onChange([...steps, { key, label: newStep.trim(), sub_steps: [] }]);
     setNewStep('');
   };
 
   const removeStep = (idx) => {
     onChange(steps.filter((_, i) => i !== idx));
+    if (expandedStepIdx === idx) setExpandedStepIdx(null);
   };
 
   const renameStep = (idx, newLabel) => {
     const updated = [...steps];
     updated[idx] = { ...updated[idx], label: newLabel };
+    onChange(updated);
+  };
+
+  const updateSubSteps = (idx, newSubSteps) => {
+    const updated = [...steps];
+    updated[idx] = { ...updated[idx], sub_steps: newSubSteps };
     onChange(updated);
   };
 
@@ -130,23 +189,43 @@ function StepsEditor({ steps, onChange }) {
         <Layers className="w-4.5 h-4.5 text-amber-500" />
         <span className="text-sm font-bold text-amber-700">שלבי תהליך ({steps.length})</span>
       </div>
-      {steps.map((step, idx) => (
-        <div key={step.key || idx} className="flex items-center gap-2.5 group/step bg-white rounded-lg px-3 py-2 border border-amber-200">
-          <GripVertical className="w-4 h-4 text-amber-300 cursor-grab" />
-          <Badge className="bg-amber-200 text-amber-800 text-sm font-bold px-2.5 py-0.5 shrink-0 rounded-lg">{idx + 1}</Badge>
-          <InlineEdit
-            value={step.label}
-            onSave={(val) => renameStep(idx, val)}
-            className="text-sm text-gray-800 flex-1 font-medium"
-          />
-          <button
-            onClick={() => removeStep(idx)}
-            className="opacity-0 group-hover/step:opacity-100 text-gray-300 hover:text-red-500 transition-all"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      ))}
+      {steps.map((step, idx) => {
+        const isExpanded = expandedStepIdx === idx;
+        const subCount = (step.sub_steps || []).length;
+        return (
+          <div key={step.key || idx}>
+            <div className="flex items-center gap-2.5 group/step bg-white rounded-lg px-3 py-2 border border-amber-200">
+              <GripVertical className="w-4 h-4 text-amber-300 cursor-grab" />
+              <Badge className="bg-amber-200 text-amber-800 text-sm font-bold px-2.5 py-0.5 shrink-0 rounded-lg">{idx + 1}</Badge>
+              <InlineEdit
+                value={step.label}
+                onSave={(val) => renameStep(idx, val)}
+                className="text-sm text-gray-800 flex-1 font-medium"
+              />
+              <button
+                onClick={() => setExpandedStepIdx(isExpanded ? null : idx)}
+                className="text-amber-400 hover:text-amber-600 transition-all flex items-center gap-0.5"
+                title="תתי-שלבים"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                {subCount > 0 && <span className="text-[10px] font-bold">{subCount}</span>}
+              </button>
+              <button
+                onClick={() => removeStep(idx)}
+                className="opacity-0 group-hover/step:opacity-100 text-gray-300 hover:text-red-500 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {isExpanded && (
+              <SubStepsEditor
+                subSteps={step.sub_steps || []}
+                onChange={(subs) => updateSubSteps(idx, subs)}
+              />
+            )}
+          </div>
+        );
+      })}
       <div className="flex gap-2">
         <Input
           value={newStep}

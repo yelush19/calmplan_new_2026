@@ -385,7 +385,7 @@ export default function PayrollReportsDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : (
-        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="דיווחי שכר" centerSub="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
+        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="דיווחי שכר" centerSub="P1" branch="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
         {sortedServiceKeys.length > 0 ? (
         viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />

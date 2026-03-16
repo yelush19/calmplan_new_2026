@@ -150,8 +150,8 @@ const getSidebarSections = () => ({
     icon: FileBarChart,
     tabColor: 'border-[#2E7D32]',
     items: [
-      { name: "דוחות שנתיים / מאזנים", href: createPageUrl("BalanceSheets"), icon: Scaling },
-      { name: "הצהרות הון", href: createPageUrl("BalanceSheets"), icon: FileBarChart },
+      { name: "מאזנים", href: createPageUrl("BalanceSheets"), icon: Scaling },
+      { name: "דוחות אישיים", href: createPageUrl("BalanceSheets"), icon: FileBarChart },
     ]
   },
 });
