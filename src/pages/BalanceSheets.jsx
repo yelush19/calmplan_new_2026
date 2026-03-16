@@ -221,6 +221,8 @@ export default function BalanceSheetsPage() {
   const [isGeneratingFromTemplate, setIsGeneratingFromTemplate] = useState(false);
   const [templateGenResult, setTemplateGenResult] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  // Task selection state for template generation dialog
+  const [selectedTemplateTasks, setSelectedTemplateTasks] = useState({});
 
   useEffect(() => {
     loadData();
@@ -317,7 +319,35 @@ export default function BalanceSheetsPage() {
     }
   };
 
-  // Generate tasks from template for a specific balance sheet
+  // Initialize task selection when opening dialog
+  const openGenerateDialog = (balanceId) => {
+    const selection = {};
+    Object.entries(templates).forEach(([stageKey, stageData]) => {
+      stageData.tasks.forEach(t => {
+        selection[`${stageKey}::${t.key}`] = true; // all selected by default
+      });
+    });
+    setSelectedTemplateTasks(selection);
+    setShowGenerateDialog(balanceId);
+  };
+
+  const toggleTaskSelection = (stageKey, taskKey) => {
+    setSelectedTemplateTasks(prev => ({
+      ...prev,
+      [`${stageKey}::${taskKey}`]: !prev[`${stageKey}::${taskKey}`],
+    }));
+  };
+
+  const toggleStageSelection = (stageKey, tasks) => {
+    const allSelected = tasks.every(t => selectedTemplateTasks[`${stageKey}::${t.key}`]);
+    const updated = { ...selectedTemplateTasks };
+    tasks.forEach(t => { updated[`${stageKey}::${t.key}`] = !allSelected; });
+    setSelectedTemplateTasks(updated);
+  };
+
+  const selectedCount = Object.values(selectedTemplateTasks).filter(Boolean).length;
+
+  // Generate tasks from template — only selected tasks
   const handleGenerateFromTemplate = async (balanceId) => {
     const balance = balanceSheets.find(b => b.id === balanceId);
     if (!balance) return;
@@ -326,7 +356,6 @@ export default function BalanceSheetsPage() {
     setTemplateGenResult(null);
 
     try {
-      // Load existing tasks for this client + balance sheet year
       const allTasks = await Task.list(null, 5000).catch(() => []);
       const existingClientTasks = allTasks.filter(t =>
         (t.client_id === balance.client_id || t.client_name === balance.client_name) &&
@@ -340,8 +369,10 @@ export default function BalanceSheetsPage() {
 
       for (const [stageKey, stageTemplate] of Object.entries(templates)) {
         for (const taskTemplate of stageTemplate.tasks) {
-          const taskTitle = `${taskTemplate.title} - ${balance.client_name} - ${balance.tax_year}`;
+          // Skip unselected tasks
+          if (!selectedTemplateTasks[`${stageKey}::${taskTemplate.key}`]) continue;
 
+          const taskTitle = `${taskTemplate.title} - ${balance.client_name} - ${balance.tax_year}`;
           if (existingTitles.has(taskTitle)) continue;
 
           await Task.create({
@@ -650,7 +681,7 @@ export default function BalanceSheetsPage() {
                             balance={balance}
                             onStageChange={handleStageChange}
                             onUpdate={handleUpdate}
-                            onGenerateFromTemplate={(id) => setShowGenerateDialog(id)}
+                            onGenerateFromTemplate={(id) => openGenerateDialog(id)}
                             onOpenWorkbook={(b) => navigate(`/BalanceSheetWorkbook?balanceSheetId=${b.id}&clientId=${b.client_id}&year=${b.tax_year}`)}
                           />
                         ))}
@@ -665,9 +696,9 @@ export default function BalanceSheetsPage() {
       )}
       </UnifiedAyoaLayout>
 
-      {/* Generate from template confirmation dialog */}
+      {/* Generate from template confirmation dialog — with task selection */}
       <Dialog open={!!showGenerateDialog} onOpenChange={(open) => !open && setShowGenerateDialog(null)}>
-        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[560px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>יצירת משימות מתבנית מאזן</DialogTitle>
             <DialogDescription>
@@ -678,31 +709,56 @@ export default function BalanceSheetsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm text-gray-600">יווצרו המשימות הבאות מהתבנית (משימות קיימות לא יכפלו):</p>
-            {Object.entries(templates).map(([stageKey, stageData]) => (
-              <div key={stageKey} className="border rounded-lg p-3">
-                <h4 className="font-semibold text-sm text-gray-800 mb-2">{stageData.label}</h4>
-                <div className="space-y-1">
-                  {stageData.tasks.map(t => (
-                    <div key={t.key} className="flex items-center gap-2 text-xs text-gray-600">
-                      <ListChecks className="w-3 h-3 text-purple-500" />
-                      <span>{t.title}</span>
-                    </div>
-                  ))}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">סמני את המשימות הרלוונטיות (קיימות לא יכפלו):</p>
+              <Badge variant="outline" className="text-xs">{selectedCount} נבחרו</Badge>
+            </div>
+            {Object.entries(templates).map(([stageKey, stageData]) => {
+              const stageTasks = stageData.tasks;
+              const allStageSelected = stageTasks.every(t => selectedTemplateTasks[`${stageKey}::${t.key}`]);
+              const someStageSelected = stageTasks.some(t => selectedTemplateTasks[`${stageKey}::${t.key}`]);
+              return (
+                <div key={stageKey} className="border rounded-lg p-3">
+                  <label className="flex items-center gap-2 cursor-pointer mb-2">
+                    <input
+                      type="checkbox"
+                      checked={allStageSelected}
+                      ref={el => { if (el) el.indeterminate = someStageSelected && !allStageSelected; }}
+                      onChange={() => toggleStageSelection(stageKey, stageTasks)}
+                      className="w-4 h-4 rounded accent-purple-600"
+                    />
+                    <span className="font-semibold text-sm text-gray-800">{stageData.label}</span>
+                    <Badge variant="outline" className="text-[10px] mr-auto">
+                      {stageTasks.filter(t => selectedTemplateTasks[`${stageKey}::${t.key}`]).length}/{stageTasks.length}
+                    </Badge>
+                  </label>
+                  <div className="space-y-1 mr-6">
+                    {stageTasks.map(t => (
+                      <label key={t.key} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                        <input
+                          type="checkbox"
+                          checked={!!selectedTemplateTasks[`${stageKey}::${t.key}`]}
+                          onChange={() => toggleTaskSelection(stageKey, t.key)}
+                          className="w-3.5 h-3.5 rounded accent-purple-600"
+                        />
+                        <span>{t.title}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setShowGenerateDialog(null)}>ביטול</Button>
               <Button
                 onClick={() => handleGenerateFromTemplate(showGenerateDialog)}
-                disabled={isGeneratingFromTemplate}
+                disabled={isGeneratingFromTemplate || selectedCount === 0}
                 className="bg-purple-600 hover:bg-purple-700"
               >
                 {isGeneratingFromTemplate ? (
                   <><RefreshCw className="w-4 h-4 ml-1 animate-spin" /> יוצר...</>
                 ) : (
-                  <><Wand2 className="w-4 h-4 ml-1" /> צור משימות</>
+                  <><Wand2 className="w-4 h-4 ml-1" /> צור {selectedCount} משימות</>
                 )}
               </Button>
             </div>
@@ -737,6 +793,7 @@ export default function BalanceSheetsPage() {
 function TemplateEditor({ templates, onSave, onCancel }) {
   const [editTemplates, setEditTemplates] = useState(() => JSON.parse(JSON.stringify(templates)));
   const [expandedStage, setExpandedStage] = useState(null);
+  const [newStageName, setNewStageName] = useState('');
 
   const handleAddTask = (stageKey) => {
     const updated = { ...editTemplates };
@@ -767,6 +824,30 @@ function TemplateEditor({ templates, onSave, onCancel }) {
     setEditTemplates(updated);
   };
 
+  const handleAddStage = () => {
+    if (!newStageName.trim()) return;
+    const stageKey = `custom_stage_${Date.now()}`;
+    setEditTemplates(prev => ({
+      ...prev,
+      [stageKey]: { label: newStageName.trim(), tasks: [] },
+    }));
+    setNewStageName('');
+    setExpandedStage(stageKey);
+  };
+
+  const handleRemoveStage = (stageKey) => {
+    const updated = { ...editTemplates };
+    delete updated[stageKey];
+    setEditTemplates(updated);
+    if (expandedStage === stageKey) setExpandedStage(null);
+  };
+
+  const handleRenameStage = (stageKey, newLabel) => {
+    const updated = { ...editTemplates };
+    updated[stageKey] = { ...updated[stageKey], label: newLabel };
+    setEditTemplates(updated);
+  };
+
   const totalTasks = Object.values(editTemplates).reduce((sum, s) => sum + s.tasks.length, 0);
 
   return (
@@ -788,11 +869,31 @@ function TemplateEditor({ templates, onSave, onCancel }) {
                 <h3 className="font-semibold text-gray-800">{stageData.label}</h3>
                 <Badge variant="outline" className="text-xs">{stageData.tasks.length} משימות</Badge>
               </div>
-              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
+                  onClick={(e) => { e.stopPropagation(); handleRemoveStage(stageKey); }}
+                  title="מחק שלב"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
             </button>
 
             {isExpanded && (
               <CardContent className="pt-0 space-y-3">
+                {/* Editable stage name */}
+                <div className="flex gap-2 items-center">
+                  <Label className="text-xs text-gray-500 shrink-0">שם שלב:</Label>
+                  <Input
+                    value={stageData.label}
+                    onChange={(e) => handleRenameStage(stageKey, e.target.value)}
+                    className="text-sm h-8"
+                  />
+                </div>
                 {stageData.tasks.map((task, idx) => (
                   <div key={task.key || idx} className="flex gap-2 items-start bg-gray-50 rounded-lg p-2">
                     <div className="flex-1 space-y-1">
@@ -832,6 +933,26 @@ function TemplateEditor({ templates, onSave, onCancel }) {
           </Card>
         );
       })}
+
+      {/* Add new stage */}
+      <div className="flex gap-2 items-center border-2 border-dashed border-gray-300 rounded-lg p-3">
+        <Input
+          value={newStageName}
+          onChange={(e) => setNewStageName(e.target.value)}
+          placeholder="שם שלב חדש..."
+          className="text-sm h-8 flex-1"
+          onKeyDown={(e) => e.key === 'Enter' && handleAddStage()}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1 shrink-0"
+          onClick={handleAddStage}
+          disabled={!newStageName.trim()}
+        >
+          <Plus className="w-3 h-3" /> הוסף שלב
+        </Button>
+      </div>
 
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="outline" onClick={onCancel}>ביטול</Button>
