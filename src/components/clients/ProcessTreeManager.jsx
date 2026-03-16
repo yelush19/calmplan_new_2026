@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download, Plus, AlertTriangle, X, Layers, ArrowUp, ArrowDown, Pencil, GripVertical, Trash2, MoveRight } from 'lucide-react';
+import { Loader2, Zap, ChevronDown, ChevronLeft, Calendar, GitBranch, Banknote, AlertCircle, FileText, Download, Plus, AlertTriangle, X, Layers, ArrowUp, ArrowDown, Pencil, GripVertical, Trash2, MoveRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   loadCompanyTree,
@@ -40,6 +40,7 @@ import {
 import { getStepsForService } from '@/config/processTemplates';
 import { toast } from '@/components/ui/use-toast';
 import { ClientAccount } from '@/api/entities';
+import { inferClientServices, mergeInferredNodes } from '@/services/inferClientServices';
 
 // ── Branch colors ──
 const BRANCH_COLORS = {
@@ -677,13 +678,14 @@ function AddProcessButton({ branchId, branchColors, onAdd }) {
 }
 
 // ── Main Component ──
-export default function ProcessTreeManager({ processTree, onChange, clientId, clientName, reportingInfo }) {
+export default function ProcessTreeManager({ processTree, onChange, clientId, clientName, reportingInfo, clientData }) {
   const [companyTree, setCompanyTree] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [expandedBranches, setExpandedBranches] = useState({ P1: true, P2: true, P3: false, P5: false });
   const [showDisabledBranches, setShowDisabledBranches] = useState({}); // branchId → bool
   const [orphanNodes, setOrphanNodes] = useState([]);
+  const [inferResult, setInferResult] = useState(null); // { nodes, reasons, addedCount, addedIds }
 
   // Load company tree and clean stale client nodes
   const refreshTree = useCallback(async () => {
@@ -842,6 +844,31 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
     }
   }, [refreshTree]);
 
+  // ── Smart inference: auto-enable based on client data ──
+  const handleInferServices = useCallback(() => {
+    if (!clientData) {
+      toast({ title: 'שגיאה', description: 'אין נתוני לקוח זמינים', variant: 'destructive' });
+      return;
+    }
+    const { nodes, reasons } = inferClientServices(clientData, bankAccounts);
+    const { merged, addedCount, addedIds } = mergeInferredNodes(clientTree, nodes);
+
+    if (addedCount === 0) {
+      toast({ title: 'הסקת שירותים', description: 'כל השירותים הרלוונטיים כבר פעילים', duration: 3000 });
+      setInferResult(null);
+      return;
+    }
+
+    // Show preview before applying
+    setInferResult({ nodes, reasons, addedCount, addedIds, merged });
+  }, [clientData, bankAccounts, clientTree]);
+
+  const handleApplyInference = useCallback(() => {
+    if (!inferResult?.merged) return;
+    saveWithNotification(inferResult.merged, `${inferResult.addedCount} שירותים הופעלו אוטומטית`);
+    setInferResult(null);
+  }, [inferResult, saveWithNotification]);
+
   const enabledCount = getEnabledNodeIds(clientTree).length;
 
   if (loading) {
@@ -913,6 +940,17 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
           <Button
             type="button"
             size="sm"
+            onClick={handleInferServices}
+            className="text-xs h-7 bg-gradient-to-l from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
+            disabled={!clientData}
+            title="הסק שירותים אוטומטית מנתוני הלקוח"
+          >
+            <Sparkles className="w-3.5 h-3.5 ml-1" />
+            הסק שירותים
+          </Button>
+          <Button
+            type="button"
+            size="sm"
             onClick={handleFullService}
             className="text-xs h-7 bg-gradient-to-l from-emerald-500 to-blue-500 text-white hover:from-emerald-600 hover:to-blue-600"
           >
@@ -923,6 +961,53 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
       </div>
 
       {/* Orphan nodes — auto-clean silently, no warning banner */}
+
+      {/* Inference preview panel */}
+      {inferResult && (
+        <div className="border-2 border-purple-300 rounded-xl bg-gradient-to-l from-purple-50 to-pink-50 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              <span className="text-sm font-black text-purple-800">הסקת שירותים אוטומטית</span>
+              <Badge className="bg-purple-100 text-purple-700 text-xs px-2">
+                {inferResult.addedCount} שירותים חדשים
+              </Badge>
+            </div>
+            <button type="button" onClick={() => setInferResult(null)} className="text-gray-400 hover:text-gray-600">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          {/* Reasons */}
+          <div className="space-y-1">
+            {inferResult.reasons.map((reason, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs text-purple-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                {reason}
+              </div>
+            ))}
+          </div>
+          {/* Added nodes list */}
+          <div className="flex flex-wrap gap-1.5">
+            {inferResult.addedIds.map(id => (
+              <Badge key={id} className="bg-white text-purple-700 border border-purple-200 text-[11px]">
+                {id}
+              </Badge>
+            ))}
+          </div>
+          {/* Apply / Cancel */}
+          <div className="flex items-center gap-2 pt-1">
+            <Button type="button" size="sm" onClick={handleApplyInference}
+              className="text-xs h-8 bg-purple-600 text-white hover:bg-purple-700">
+              <Sparkles className="w-3.5 h-3.5 ml-1" />
+              הפעל {inferResult.addedCount} שירותים
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setInferResult(null)}
+              className="text-xs h-8 text-gray-500">
+              ביטול
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Branch sections */}
       {Object.entries(companyTree.branches).filter(([branchId]) => branchId !== 'P4').map(([branchId, branch]) => {
@@ -987,17 +1072,21 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
                   />
                 ))}
 
-                {/* Show/hide disabled toggle */}
+                {/* Show/hide disabled toggle — prominent button */}
                 {hiddenCount > 0 && (
                   <button
                     type="button"
                     onClick={() => setShowDisabledBranches(prev => ({ ...prev, [branchId]: !showDisabled }))}
-                    className="w-full flex items-center justify-center gap-1.5 py-1.5 mt-1 rounded-lg text-xs font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors border border-dashed border-gray-200"
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 mt-2 rounded-xl text-sm font-bold transition-all border-2 ${
+                      showDisabled
+                        ? 'bg-orange-50 text-orange-600 border-orange-300 hover:bg-orange-100'
+                        : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300'
+                    }`}
                   >
                     {showDisabled ? (
-                      <><X className="w-3 h-3" /> הסתר {hiddenCount} שירותים כבויים</>
+                      <><EyeOff className="w-4 h-4" /> הסתר {hiddenCount} שירותים כבויים</>
                     ) : (
-                      <><Plus className="w-3 h-3" /> הצג {hiddenCount} שירותים מוסתרים</>
+                      <><Eye className="w-4 h-4" /> הצג {hiddenCount} שירותים מוסתרים</>
                     )}
                   </button>
                 )}
