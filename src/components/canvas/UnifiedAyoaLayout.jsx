@@ -20,7 +20,7 @@ import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
 import AyoaWorkflowView from '@/components/canvas/AyoaWorkflowView';
 import FocusMapView from '@/components/canvas/FocusMapView';
-import ProcessTreeFocusMap from '@/components/canvas/ProcessTreeFocusMap';
+// ProcessTreeFocusMap removed — FocusMapView is the unified "focus" view
 import GanttView from '@/components/views/GanttView';
 import { Table, Loader2 } from 'lucide-react';
 
@@ -110,11 +110,11 @@ export default function UnifiedAyoaLayout({
           {localView === 'focus' && (
             <div className="rounded-2xl overflow-hidden border border-amber-100"
               style={{ minHeight: '500px', background: 'linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%)' }}>
-              <ProcessTreeFocusMap
+              <FocusMapView
                 tasks={tasks}
-                clients={clients}
+                allTasks={allTasks}
                 centerLabel={centerLabel}
-                branch={branch}
+                centerSub={`${tasks.length} משימות`}
               />
             </div>
           )}
