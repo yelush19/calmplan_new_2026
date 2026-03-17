@@ -787,10 +787,6 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       return t.priority !== 'low';
     });
 
-    // HARD LIMIT: If task count exceeds 70, log warning
-    if (activeTasks.length > 70) {
-      console.warn(`[CalmPlan] TRUTH ENGINE: ${activeTasks.length} tasks for ${currentMonthPrefix} exceeds 70 limit!`);
-    }
     console.log(`[CalmPlan] MindMap rendering ${activeTasks.length} tasks for ${currentMonthPrefix}`);
 
     // ══════════════════════════════════════════════════════════════
