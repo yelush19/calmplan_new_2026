@@ -773,7 +773,15 @@ function useCircleMapLayout(tasks) {
       if (ctx === 'home' && hi < AUTO_SLOTS_HOME.length) { slot = AUTO_SLOTS_HOME[hi++]; }
       else if (wi < AUTO_SLOTS_WORK.length) { slot = AUTO_SLOTS_WORK[wi++]; }
       else { slot = AUTO_SLOTS_WORK[wi % AUTO_SLOTS_WORK.length]; wi++; }
-      newBubbles[task.id] = { taskId: task.id, cx: slot.cx, cy: slot.cy, ringId: slot.ringId };
+      // Run overlap assignment: if the slot sits inside multiple rings,
+      // assign to the smallest-radius ring and nudge 12px toward its centre.
+      const assigned = detectRingAndNudge(slot.cx, slot.cy, layout.rings);
+      newBubbles[task.id] = {
+        taskId: task.id,
+        cx: assigned.cx,
+        cy: assigned.cy,
+        ringId: assigned.ringId || slot.ringId,
+      };
     }
     if (changed) {
       const nl = { ...layout, bubbles: newBubbles };
@@ -812,12 +820,15 @@ function detectRingAndNudge(px, py, rings) {
   candidates.sort((a, b) => a.ring.r - b.ring.r);
   const winner = candidates[0];
 
-  // Nudge 12px towards winner's centre
-  const dx = winner.ring.cx - px;
-  const dy = winner.ring.cy - py;
-  const d = Math.sqrt(dx * dx + dy * dy);
   let nx = px, ny = py;
-  if (d > 1) { nx = px + (dx / d) * NUDGE_PX; ny = py + (dy / d) * NUDGE_PX; }
+  // If the bubble sits inside more than one ring, nudge 12px towards
+  // the winning ring's centre so it clearly belongs to one group.
+  if (candidates.length > 1) {
+    const dx = winner.ring.cx - px;
+    const dy = winner.ring.cy - py;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 1) { nx = px + (dx / d) * NUDGE_PX; ny = py + (dy / d) * NUDGE_PX; }
+  }
 
   return { ringId: winner.rid, cx: nx, cy: ny };
 }
@@ -897,15 +908,20 @@ function DraggableRing({ ring, canvasRef, onDragEnd }) {
   const color = RING_COLOR[ring.id];
   const circumference = 2 * Math.PI * ring.r;
 
+  const startDrag = (e) => onPointerDown(e, cx, cy, canvasRef.current);
+
   return (
     <g>
+      {/* Layer 0: invisible wide hit-area for easier grabbing */}
+      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke="transparent" strokeWidth={18}
+        style={{ cursor: dragging ? 'grabbing' : 'grab', pointerEvents: 'stroke' }}
+        onPointerDown={startDrag} />
       {/* Layer 1: soft glow */}
       <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke={color} strokeWidth={6} opacity={0.15} filter="url(#cm-glow)" style={{ pointerEvents: 'none' }} />
       {/* Layer 2: glass stroke — white core + coloured edge */}
       <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={3} style={{ pointerEvents: 'none' }} />
       <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke={color} strokeWidth={2} opacity={0.55}
-        style={{ cursor: 'grab', pointerEvents: 'stroke' }}
-        onPointerDown={e => onPointerDown(e, ring.cx, ring.cy, canvasRef.current)} />
+        style={{ pointerEvents: 'none' }} />
       {/* Layer 3: shimmer — bright dash travelling along ring */}
       <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={3}
         strokeDasharray={`${circumference * 0.08} ${circumference * 0.92}`} strokeLinecap="round"
@@ -936,8 +952,8 @@ function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
   const ringEntries = ['A', 'B', 'C', 'D'].map(id => ({ id, ...layout.rings[id] }));
 
   return (
-    <div style={{ backgroundColor: '#FFFFFF' }}>
-      <div ref={canvasRef} className="relative" style={{ maxWidth: 1100, width: '100%', margin: '0 auto', aspectRatio: `${VB_W} / ${VB_H}` }}>
+    <div style={{ backgroundColor: '#FFFFFF', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
+      <div ref={canvasRef} className="relative w-full" style={{ aspectRatio: `${VB_W} / ${VB_H}` }}>
         {/* SVG layer — glass rings */}
         <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet">
           <GlassRingDefs />
