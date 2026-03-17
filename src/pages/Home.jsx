@@ -734,27 +734,13 @@ function layoutTasks(tasks) {
 }
 
 // §2 — Decide which rings to render based on task contexts
-function activeRings(tasks) {
-  const hasWork = tasks.some(t => getTaskContext(t) !== 'home');
-  const hasHome = tasks.some(t => getTaskContext(t) === 'home');
-  const homeCount = tasks.filter(t => getTaskContext(t) === 'home').length;
-  const out = [];
-  // Always show Ring A if there are any work/other tasks (or if no tasks at all)
-  if (hasWork || !hasHome) { out.push(RINGS[0]); }
-  // Show Ring B when 3+ tasks exist and there are work tasks
-  if (hasWork && tasks.length >= 3) { out.push(RINGS[1]); }
-  // Show Ring C if any home tasks
-  if (hasHome) { out.push(RINGS[2]); }
-  // Show Ring D if 2+ home tasks
-  if (homeCount >= 2) { out.push(RINGS[3]); }
-  if (out.length === 0) out.push(RINGS[0]);
-  return out;
-}
+// Always render all 4 rings so the layout matches the AYOA screenshot
+function activeRings() { return RINGS; }
 
 // ── §1+§6  AyoaMiniCanvas component ────────────────────────────
 function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
   const layout = useMemo(() => layoutTasks(tasks), [tasks]);
-  const rings  = useMemo(() => activeRings(tasks),  [tasks]);
+  const rings  = useMemo(() => activeRings(), []);
 
   return (
     <div style={{ backgroundColor: '#FFFFFF' }}>
