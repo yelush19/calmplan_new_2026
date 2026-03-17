@@ -14,7 +14,7 @@ import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   Target, AlertTriangle, ChevronDown, Sparkles,
-  Plus, CreditCard, Search, Eye,
+  Plus, CreditCard, Search, Eye, Sun, Moon, Coffee, Heart,
 } from "lucide-react";
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import TaskEditDialog from "@/components/tasks/TaskEditDialog";
@@ -27,11 +27,13 @@ import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
 import useTaskCascade from "@/hooks/useTaskCascade";
 import { useApp } from "@/contexts/AppContext";
 import { useDesign } from "@/contexts/DesignContext";
+import { useBiologicalClock } from "@/contexts/BiologicalClockContext";
 import OverdueAlert from "@/components/tasks/OverdueAlert";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
 import BadDayMode from "@/components/tasks/BadDayMode";
 import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
+import { StickyNote } from "@/api/entities";
 
 // ─── Zero-Panic Colors (NO RED) ─────────────────────────────────
 const ZERO_PANIC = {
@@ -43,9 +45,22 @@ const ZERO_PANIC = {
 
 const getGreeting = () => {
   const hour = new Date().getHours();
+  if (hour < 6) return "לילה טוב";
   if (hour < 12) return "בוקר טוב";
   if (hour < 18) return "צהריים טובים";
-  return "ערב טוב";
+  if (hour < 21) return "ערב טוב";
+  return "לילה טוב";
+};
+
+// Calming daily message based on time of day
+const getDailyMessage = () => {
+  const hour = new Date().getHours();
+  if (hour < 8) return "הבוקר שלך — קחי רגע לנשום לפני שמתחילים";
+  if (hour < 12) return "שעות שיא — זמן מצוין למשימות שדורשות ריכוז";
+  if (hour < 14) return "הפסקת צהריים — אכלת? שתית?";
+  if (hour < 17) return "אחר הצהריים — משימות קלות ושיחות";
+  if (hour < 21) return "סוף יום — סיכום קצר ותכנון מחר";
+  return "זמן לנוח — המשימות יחכו למחר";
 };
 
 function getTaskContext(task) {
@@ -91,9 +106,16 @@ export default function HomePage() {
   const [noteTask, setNoteTask] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { focusMode } = useApp();
+  const [stickyNotes, setStickyNotes] = useState([]);
 
   let design = null;
   try { design = useDesign(); } catch { /* not mounted */ }
+
+  let bioClockZone = null;
+  try {
+    const bioContext = useBiologicalClock();
+    bioClockZone = bioContext?.currentZone;
+  } catch { /* not mounted */ }
 
   const allTasksForCascade = data?.allTasks || [];
   const setAllTasksForCascade = useCallback((updater) => {
@@ -105,8 +127,25 @@ export default function HomePage() {
   }, []);
   const { insights } = useTaskCascade(allTasksForCascade, setAllTasksForCascade, clients);
 
-  useEffect(() => { loadData(); }, []);
-  useRealtimeRefresh(() => { loadData(); }, ['tasks', 'events', 'clients']);
+  useEffect(() => { loadData(); loadStickyNotes(); }, []);
+  useRealtimeRefresh(() => { loadData(); loadStickyNotes(); }, ['tasks', 'events', 'clients']);
+
+  const loadStickyNotes = async () => {
+    try {
+      const notes = await StickyNote.list(null, 100).catch(() => []);
+      const sorted = (notes || []).sort((a, b) => {
+        const urgencyOrder = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
+        const ua = urgencyOrder[a.urgency] ?? 4;
+        const ub = urgencyOrder[b.urgency] ?? 4;
+        if (ua !== ub) return ua - ub;
+        // Pinned first
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return 0;
+      });
+      setStickyNotes(sorted.slice(0, 6));
+    } catch { /* ignore */ }
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -159,7 +198,19 @@ export default function HomePage() {
         return taskDate >= tomorrow && taskDate <= in3Days;
       });
 
-      const waitingPayment = activeTasks.filter(t => t.status === 'reported_waiting_for_payment');
+      // Payment tab: tasks with payment_due_date set, OR completed production awaiting payment step
+      const waitingPayment = allTasks.filter(t => {
+        // Include tasks explicitly marked with legacy status
+        if (t.status === 'reported_waiting_for_payment') return true;
+        // Include completed tasks that have a payment_due_date (payment pending)
+        if (t.status === 'production_completed' && t.payment_due_date) return true;
+        // Include tasks where production is complete but payment step isn't done
+        if (t.status === 'production_completed' && t.process_steps) {
+          const steps = t.process_steps;
+          if (steps.payment && !steps.payment.done) return true;
+        }
+        return false;
+      });
 
       const allEvents = Array.isArray(eventsData) ? eventsData : [];
       const todayEvents = allEvents.filter(event => {
@@ -212,14 +263,26 @@ export default function HomePage() {
       }
       setData(prev => {
         if (!prev) return prev;
+        const updatedTask = { ...task, status: newStatus };
         const updateInList = (list) => list.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
         const filterCompleted = (list) => list.filter(t => !(t.id === task.id && newStatus === 'production_completed'));
+
+        // When production completed, check if task should flow to payment tab
+        let newPayment = prev.payment.filter(t => t.id !== task.id);
+        if (newStatus === 'production_completed') {
+          // Add to payment tab if it has a payment step or payment_due_date
+          const hasPaymentStep = task.process_steps?.payment && !task.process_steps.payment.done;
+          if (hasPaymentStep || task.payment_due_date) {
+            newPayment = [...newPayment, updatedTask];
+          }
+        }
+
         return {
           ...prev,
           overdue: filterCompleted(updateInList(prev.overdue)),
           today: filterCompleted(updateInList(prev.today)),
           upcoming: filterCompleted(updateInList(prev.upcoming)),
-          payment: prev.payment.filter(t => t.id !== task.id),
+          payment: newPayment,
           completedToday: newStatus === 'production_completed' ? prev.completedToday + 1 : prev.completedToday,
         };
       });
@@ -396,80 +459,100 @@ export default function HomePage() {
         accentColor="#00A3E0"
         onEditTask={setEditingTask}
       >
-        {/* ═══ CHILDREN: KPI + FOCUS TABS + TASK LIST ═══ */}
+        {/* ═══ CHILDREN: CALMING OPENING + AYOA MAP + TASKS ═══ */}
         <div className="space-y-3">
 
-          {/* ── KPI Summary Strip ── */}
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-l from-sky-50 to-white rounded-2xl border border-sky-100">
-            {/* Greeting */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-gray-800">
-                {getGreeting()}{userName ? `, ${userName}` : ''}
-              </span>
-            </div>
-
-            <div className="w-px h-8 bg-sky-200" />
-
-            {/* Stats row */}
-            <div className="flex items-center gap-3">
-              <Link to={createPageUrl("Tasks") + "?tab=active&context=work"} className="flex items-center gap-1 hover:opacity-80">
-                <Briefcase className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
-                <span className="text-sm font-extrabold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</span>
-              </Link>
-              <Link to={createPageUrl("Tasks") + "?tab=active&context=home"} className="flex items-center gap-1 hover:opacity-80">
-                <HomeIcon className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.green }} />
-                <span className="text-sm font-extrabold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</span>
-              </Link>
-              {data.overdue.length > 0 && (
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.orange }} />
-                  <span className="text-sm font-extrabold" style={{ color: ZERO_PANIC.orange }}>{data.overdue.length}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="w-px h-8 bg-sky-200" />
-
-            {/* Capacity */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-gray-500">קיבולת</span>
-              <span className="text-sm font-bold text-[#4682B4]">
-                {(capacityKPIs.totalMinutes / 60).toFixed(1)}h
-              </span>
-              <span className="text-[11px] text-gray-400">/ {(capacityKPIs.dailyCapacityMinutes / 60)}h</span>
-            </div>
-
-            <div className="w-px h-8 bg-sky-200" />
-
-            {/* Efficiency */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-gray-500">יעילות</span>
-              <span className="text-sm font-bold" style={{
-                color: capacityKPIs.efficiencyScore >= 75 ? '#2E7D32' :
-                       capacityKPIs.efficiencyScore >= 50 ? '#F57C00' : '#800000'
-              }}>
-                {capacityKPIs.efficiencyScore}%
-              </span>
-            </div>
-
-            {/* Progress */}
-            <div className="flex-1 flex items-center gap-2 me-2">
-              <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }} />
+          {/* ── Calming Opening Section ── */}
+          <div className="px-4 py-4 rounded-2xl border border-sky-100/60" style={{ background: 'linear-gradient(135deg, #F8FCFF 0%, #F0F7FA 50%, #F5FAFE 100%)' }}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-slate-700">
+                  {getGreeting()}{userName ? `, ${userName}` : ''}
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">{getDailyMessage()}</p>
+                {bioClockZone && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-base">{bioClockZone.icon}</span>
+                    <span className="text-xs font-medium" style={{ color: bioClockZone.color }}>
+                      {bioClockZone.label} · {bioClockZone.description}
+                    </span>
+                  </div>
+                )}
               </div>
-              <span className="text-[11px] font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
+              <div className="flex items-center gap-2">
+                {/* Quick stats — compact */}
+                <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-white/60 border border-sky-100/40">
+                  <Link to={createPageUrl("Tasks") + "?tab=active&context=work"} className="flex items-center gap-1 hover:opacity-80">
+                    <Briefcase className="w-3 h-3" style={{ color: ZERO_PANIC.blue }} />
+                    <span className="text-xs font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</span>
+                  </Link>
+                  <Link to={createPageUrl("Tasks") + "?tab=active&context=home"} className="flex items-center gap-1 hover:opacity-80">
+                    <HomeIcon className="w-3 h-3" style={{ color: ZERO_PANIC.green }} />
+                    <span className="text-xs font-bold" style={{ color: ZERO_PANIC.green }}>{data.homeCount}</span>
+                  </Link>
+                  {data.overdue.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      <span className="text-xs font-bold text-slate-500">{data.overdue.length}</span>
+                    </div>
+                  )}
+                </div>
+                <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-[#5A9EB5] hover:bg-[#4A8EA5] text-white gap-1 h-7 text-xs px-3">
+                  <Plus className="w-3.5 h-3.5" />
+                  חדש
+                </Button>
+              </div>
             </div>
 
-            {/* Quick Add */}
-            <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-[#00A3E0] hover:bg-[#0288D1] text-white gap-1 h-7 text-xs px-3">
-              <Plus className="w-3.5 h-3.5" />
-              חדש
-            </Button>
+            {/* Progress bar — subtle */}
+            <div className="flex items-center gap-2 mt-3">
+              <span className="text-[10px] text-slate-400">התקדמות היום</span>
+              <div className="flex-1 bg-slate-100 rounded-full h-1 overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #7EBDC2, #5A9EB5)' }} />
+              </div>
+              <span className="text-[10px] font-bold text-slate-400">{Math.round(progress)}%</span>
+            </div>
           </div>
 
-          {/* ── Alerts ── */}
-          <div className="space-y-2">
-            <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
+          {/* ── BadDayMode — prominent, calming ── */}
+          <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
+
+          {/* ── Sticky Notes — embedded, sorted by priority ── */}
+          {stickyNotes.length > 0 && (
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-bold text-slate-500 px-1">פתקים דביקים</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {stickyNotes.map(note => {
+                  const urgencyColors = {
+                    urgent: { bg: '#FFF8E7', border: '#E8D5A3', dot: '#D4AA4F' },
+                    high: { bg: '#FEF3F2', border: '#E8C4C0', dot: '#C47A72' },
+                    medium: { bg: '#F0F7FA', border: '#B8D4E3', dot: '#6BA3BD' },
+                    low: { bg: '#F0FAF4', border: '#A3D4B5', dot: '#6BAF82' },
+                    none: { bg: '#F8F9FA', border: '#E0E0E0', dot: '#BDBDBD' },
+                  };
+                  const colors = urgencyColors[note.urgency] || urgencyColors.none;
+                  return (
+                    <div key={note.id} className="p-2.5 rounded-xl border text-sm" style={{
+                      backgroundColor: colors.bg,
+                      borderColor: colors.border,
+                    }}>
+                      <div className="flex items-start gap-1.5">
+                        {note.pinned && <Pin className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-xs text-slate-700 truncate">{note.title || 'פתק'}</p>
+                          {note.content && <p className="text-[11px] text-slate-500 truncate mt-0.5">{note.content}</p>}
+                        </div>
+                        <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: colors.dot }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Soft Alerts (moved below, less prominent) ── */}
+          <div className="space-y-1.5">
             <OverdueAlert tasks={allFocusTasks} />
             <AdvanceWarningPanel />
           </div>

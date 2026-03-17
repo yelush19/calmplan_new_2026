@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertTriangle, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { motion } from 'framer-motion';
 
@@ -23,21 +23,25 @@ export default function OverdueAlert({ tasks }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -20 }}
+      initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-6"
+      className="mb-4"
     >
-      <Card className="border-amber-200 bg-amber-50">
-        <CardContent className="p-4">
+      <Card className="border border-sky-200 bg-sky-50/60">
+        <CardContent className="p-3">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-6 h-6 text-amber-600" />
+            {/* Subtle pulsing dot instead of screaming icon */}
+            <div className="relative flex-shrink-0">
+              <Clock className="w-5 h-5 text-sky-600" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+            </div>
             <div>
-              <h3 className="font-semibold text-amber-800">
-                יש לך {overdueTasks.length} משימות באיחור
+              <h3 className="font-semibold text-sky-800 text-sm">
+                {overdueTasks.length} משימות ממתינות לטיפול
               </h3>
               {criticalOverdue.length > 0 && (
-                <p className="text-sm text-amber-600 mt-1">
-                  {criticalOverdue.length} מהן באיחור קריטי (מעל 3 ימים)
+                <p className="text-xs text-sky-600 mt-0.5">
+                  {criticalOverdue.length} מהן דורשות תשומת לב (מעל 3 ימים)
                 </p>
               )}
             </div>

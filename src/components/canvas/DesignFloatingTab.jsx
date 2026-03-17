@@ -154,10 +154,15 @@ function useSavedThemes() {
   return { themes, saveTheme, deleteTheme };
 }
 
+const ONBOARDING_KEY = 'calmplan_design_onboarding_seen';
+
 export default function DesignFloatingTab() {
   const design = useDesign();
   const [isOpen, setIsOpen] = useState(() => {
     try { return localStorage.getItem(PANEL_STORAGE_KEY) === 'true'; } catch { return false; }
+  });
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try { return !localStorage.getItem(ONBOARDING_KEY); } catch { return true; }
   });
   // Sections: 'presets' | 'type' | 'theme' | 'shape' | 'line' | 'palette' | 'templates' | 'stickers' | 'saved'
   const [activeSection, setActiveSection] = useState(null);
@@ -334,6 +339,49 @@ export default function DesignFloatingTab() {
         {isOpen ? <X className="w-5 h-5" /> : <Paintbrush className="w-5 h-5" />}
       </motion.button>
 
+      {/* First-visit Onboarding Tooltip */}
+      <AnimatePresence>
+        {showOnboarding && !isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+            className="absolute bottom-16 left-1/2 -translate-x-1/2 w-64 bg-white rounded-2xl shadow-xl border-2 border-indigo-100 p-4 z-50"
+          >
+            <div className="text-center space-y-2">
+              <Paintbrush className="w-8 h-8 text-indigo-500 mx-auto" />
+              <h4 className="font-bold text-sm text-slate-800">מנוע עיצוב</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                התאימי את העיצוב שלך בקליק אחד: תבניות מוכנות, צבעים, צורות ומפות.
+              </p>
+              <div className="flex gap-2 justify-center pt-1">
+                <button
+                  onClick={() => {
+                    setShowOnboarding(false);
+                    try { localStorage.setItem(ONBOARDING_KEY, 'true'); } catch {}
+                    togglePanel();
+                  }}
+                  className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-bold hover:bg-indigo-600 transition-colors"
+                >
+                  נסי עכשיו
+                </button>
+                <button
+                  onClick={() => {
+                    setShowOnboarding(false);
+                    try { localStorage.setItem(ONBOARDING_KEY, 'true'); } catch {}
+                  }}
+                  className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-200 transition-colors"
+                >
+                  אחר כך
+                </button>
+              </div>
+            </div>
+            {/* Arrow pointing down */}
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-b-2 border-r-2 border-indigo-100 rotate-45" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Expanded Panel */}
       <AnimatePresence>
         {isOpen && (
@@ -350,6 +398,16 @@ export default function DesignFloatingTab() {
               <div className="flex items-center gap-2">
                 <Paintbrush className="w-4 h-4 text-indigo-600" />
                 <span className="font-bold text-[13px] text-slate-800">מנוע עיצוב</span>
+                <button
+                  onClick={() => {
+                    design.applyTemplate('ayoa-organic');
+                    pushState({ theme: design.theme, shape: design.shape, lineStyle: design.lineStyle, curvature: design.curvature });
+                  }}
+                  className="px-2 py-0.5 bg-indigo-500 text-white rounded-full text-[10px] font-bold hover:bg-indigo-600 transition-colors"
+                  title="החלת תבנית מיטבית בקליק אחד"
+                >
+                  FULL SERVICE
+                </button>
               </div>
               <div className="flex items-center gap-1">
                 <button
