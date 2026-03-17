@@ -126,6 +126,7 @@ export default function UnifiedAyoaLayout({
                 tasks={tasks}
                 centerLabel={centerLabel}
                 centerSub={centerSub || `${tasks.length} משימות`}
+                accentColor={accent}
               />
             </div>
           )}

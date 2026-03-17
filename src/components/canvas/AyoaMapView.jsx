@@ -26,7 +26,7 @@ const VB_W = 1400, VB_H = 900;
 const CX = VB_W / 2, CY = VB_H / 2;
 
 const DNA_DEFAULTS = {
-  P1: '#00A3E0', P2: '#4682B4', P3: '#F59E0B', P4: '#FACC15', P5: '#2E7D32',
+  P1: '#00A3E0', P2: '#4682B4', P3: '#F59E0B', P4: '#FACC15', P5: '#2E7D32', P6: '#7C3AED',
 };
 
 function getCategoryColor(category, branchColors) {
@@ -38,6 +38,13 @@ function getCategoryColor(category, branchColors) {
   if (cat.includes('בית') || cat.includes('אישי') || cat.includes('home') || cat.includes('ארוחות')) return c.P4;
   if (cat.includes('דוח שנתי') || cat.includes('הצהרת הון') || cat.includes('מאזנ')) return c.P5;
   if (cat.includes('admin') || cat.includes('אדמיני') || cat.includes('ייעוץ') || cat.includes('פגישה') || cat.includes('שיווק')) return c.P3;
+  // P6 — Project status categories
+  if (cat.includes('תכנון') || cat.includes('planning')) return '#94A3B8';
+  if (cat.includes('בפיתוח') || cat.includes('development')) return '#3B82F6';
+  if (cat.includes('בדיקות') || cat.includes('testing')) return '#F59E0B';
+  if (cat.includes('באוויר') || cat.includes('deployed')) return '#10B981';
+  if (cat.includes('תחזוקה') || cat.includes('maintenance')) return '#8B5CF6';
+  if (cat.includes('ארכיון') || cat.includes('archived')) return '#9CA3AF';
   return c.P4;
 }
 
@@ -100,7 +107,7 @@ function computeAutoLayout(catEntries, branchColors, globalShape) {
   return { catNodes, tNodes };
 }
 
-export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', centerSub = '' }) {
+export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', centerSub = '', accentColor }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const [focusedNode, setFocusedNode] = useState(null);
@@ -459,7 +466,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
         onClick={() => setSelectedNode(null)}>
         <defs>
           <filter id="map-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#6366F1" floodOpacity="0.2" />
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={accentColor || '#6366F1'} floodOpacity="0.2" />
           </filter>
           <filter id="map-blur">
             <feGaussianBlur stdDeviation="4" />
@@ -468,12 +475,12 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.08" />
           </filter>
           <filter id="sel-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#6366F1" floodOpacity="0.35" />
+            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor={accentColor || '#6366F1'} floodOpacity="0.35" />
           </filter>
           <radialGradient id="map-center-grad">
-            <stop offset="0%" stopColor="#FFC107" />
-            <stop offset="70%" stopColor="#FF9800" />
-            <stop offset="100%" stopColor="#E65100" />
+            <stop offset="0%" stopColor={accentColor || '#FFC107'} />
+            <stop offset="70%" stopColor={accentColor ? `${accentColor}DD` : '#FF9800'} />
+            <stop offset="100%" stopColor={accentColor ? `${accentColor}99` : '#E65100'} />
           </radialGradient>
         </defs>
 

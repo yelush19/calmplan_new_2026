@@ -79,6 +79,8 @@ import FeeManagement from "./FeeManagement";
 
 import Projects from "./Projects";
 
+import ProjectWorkbook from "./ProjectWorkbook";
+
 import PeriodicSummaryReports from "./PeriodicSummaryReports";
 
 import AutomationRules from "./AutomationRules";
@@ -186,6 +188,8 @@ const PAGES = {
     FeeManagement: FeeManagement,
 
     Projects: Projects,
+
+    ProjectWorkbook: ProjectWorkbook,
 
     PeriodicSummaryReports: PeriodicSummaryReports,
 
@@ -315,6 +319,8 @@ function PagesContent() {
                 <Route path="/FeeManagement" element={<FeeManagement />} />
 
                 <Route path="/Projects" element={<Projects />} />
+
+                <Route path="/ProjectWorkbook" element={<ProjectWorkbook />} />
 
                 <Route path="/PeriodicSummaryReports" element={<PeriodicSummaryReports />} />
 
