@@ -1166,21 +1166,8 @@ function LayoutInner({ children }) {
       {/* Design Engine Floating Tab — persistent across all pages */}
       <DesignFloatingTab />
 
-      {/* Floating Add Event FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_add_event" className="fixed bottom-5 left-[8.5rem] z-[9999]">
-        {({ guardClick }) => (
-          <button
-            onClick={guardClick(() => navigate(createPageUrl("NewEvent")))}
-            className="w-11 h-11 rounded-full shadow-xl flex items-center justify-center bg-[#1E3A5F] hover:bg-[#2C3E50] text-white ring-2 ring-white/50 select-none"
-            title="הוסף אירוע • גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
-          >
-            <CalendarPlus className="w-5 h-5" />
-          </button>
-        )}
-      </DraggableFab>
-
-      {/* Floating Quick Add Task FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_quick_add" className="fixed bottom-5 left-[4.5rem] z-[9999]">
+      {/* ── Floating Action Buttons — vertical stack on right side, draggable ── */}
+      <DraggableFab storageKey="fab_quick_add" className="fixed right-4 bottom-[11rem] z-[9999]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => setShowQuickAdd(true))}
@@ -1192,8 +1179,19 @@ function LayoutInner({ children }) {
         )}
       </DraggableFab>
 
-      {/* Floating Sticky Notes FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_notes" className="fixed bottom-5 left-5 z-[9999]">
+      <DraggableFab storageKey="fab_add_event" className="fixed right-4 bottom-[7.5rem] z-[9999]">
+        {({ guardClick }) => (
+          <button
+            onClick={guardClick(() => navigate(createPageUrl("NewEvent")))}
+            className="w-11 h-11 rounded-full shadow-xl flex items-center justify-center bg-[#1E3A5F] hover:bg-[#2C3E50] text-white ring-2 ring-white/50 select-none"
+            title="הוסף אירוע • גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
+          >
+            <CalendarPlus className="w-5 h-5" />
+          </button>
+        )}
+      </DraggableFab>
+
+      <DraggableFab storageKey="fab_notes" className="fixed right-4 bottom-16 z-[9999]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => setNotesOpen(!notesOpen))}

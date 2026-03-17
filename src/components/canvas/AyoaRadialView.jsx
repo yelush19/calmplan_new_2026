@@ -116,18 +116,20 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
     return () => container.removeEventListener('wheel', handler);
   }, []);
 
-  // ── SVG coordinate conversion ──
+  // ── SVG coordinate conversion (accounts for zoom/pan viewBox) ──
   const screenToSVG = useCallback((clientX, clientY) => {
     const svg = svgRef.current;
     if (!svg) return { x: 0, y: 0 };
     const rect = svg.getBoundingClientRect();
-    const scaleX = VB / rect.width;
-    const scaleY = VB / rect.height;
+    const vbW = VB / zoom;
+    const vbH = VB / zoom;
+    const vbX = (VB - vbW) / 2 - pan.x / zoom;
+    const vbY = (VB - vbH) / 2 - pan.y / zoom;
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
+      x: vbX + ((clientX - rect.left) / rect.width) * vbW,
+      y: vbY + ((clientY - rect.top) / rect.height) * vbH,
     };
-  }, []);
+  }, [zoom, pan]);
 
   // ── Drag handlers (parent-child sticky movement) ──
   const handleDragStart = useCallback((e, catIndex) => {
@@ -326,10 +328,12 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
     const rect = svg.getBoundingClientRect();
     const node = positionedNodes.find(n => n.id === nodeId);
     if (!node) return;
-    const scaleX = rect.width / VB;
-    const scaleY = rect.height / VB;
-    const screenX = rect.left + node.x * scaleX * zoom + pan.x;
-    const screenY = rect.top + node.y * scaleY * zoom + pan.y;
+    const vbW = VB / zoom;
+    const vbH = VB / zoom;
+    const vbX = (VB - vbW) / 2 - pan.x / zoom;
+    const vbY = (VB - vbH) / 2 - pan.y / zoom;
+    const screenX = rect.left + ((node.x - vbX) / vbW) * rect.width;
+    const screenY = rect.top + ((node.y - vbY) / vbH) * rect.height;
 
     if (selectedNode === nodeId) {
       setSelectedNode(null);
@@ -454,7 +458,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         ))}
 
         {/* Branches: center → categories (uses Design Engine line style) */}
-        {nodes.filter(n => n.type === 'category').map(node => {
+        {positionedNodes.filter(n => n.type === 'category').map(node => {
           const isBlurred = focusedNode !== null && focusedNode !== node.id;
           const conn = getConnectionProps(
             globalLineStyle, CX, CY, node.x, node.y, node.color,
@@ -468,9 +472,9 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         })}
 
         {/* Branches: categories → tasks */}
-        {nodes.filter(n => n.type === 'task').map(node => {
+        {positionedNodes.filter(n => n.type === 'task').map(node => {
           const isBlurred = focusedNode !== null && focusedNode !== node.id;
-          const parentCat = nodes.find(n2 => n2.type === 'category' && Math.abs(n2.angle - node.parentAngle) < 0.01);
+          const parentCat = positionedNodes.find(n2 => n2.type === 'category' && Math.abs(n2.angle - node.parentAngle) < 0.01);
           const px = parentCat ? parentCat.x : CX;
           const py = parentCat ? parentCat.y : CY;
           const conn = getConnectionProps(
@@ -501,18 +505,19 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         <text x={CX + RINGS.ring3 + 8} y={CY - 6} fontSize="8" fill="#334155" fontWeight="700">ייצור</text>
 
         {/* Category nodes (Ring 1) */}
-        {nodes.filter(n => n.type === 'category').map(node => {
+        {positionedNodes.filter(n => n.type === 'category').map(node => {
           const isFocused = focusedNode === node.id;
           const isBlurred = focusedNode !== null && !isFocused;
           const isSelected = selectedNode === node.id;
           const isActive = activeBranches.has(node.label) || activeBranches.has(node.branch);
           return (
-            <g key={node.id}
+            <g key={node.id} data-node="true"
+              onMouseDown={(e) => { if (e.button === 0) handleDragStart(e, node.catIndex); }}
               onClick={(e) => handleNodeClick(e, node.id)}
               onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
               onDoubleClick={(e) => handleNodeContextMenu(e, node.id)}
               style={{
-                cursor: 'pointer',
+                cursor: 'grab',
                 transition: 'filter 0.4s ease, opacity 0.4s ease',
                 filter: isBlurred ? 'url(#radial-blur)' : 'none',
                 opacity: isBlurred ? 0.25 : 1,
@@ -550,12 +555,12 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         })}
 
         {/* Task nodes (Ring 2-3) */}
-        {nodes.filter(n => n.type === 'task').map(node => {
+        {positionedNodes.filter(n => n.type === 'task').map(node => {
           const isFocused = focusedNode === node.id;
           const isBlurred = focusedNode !== null && !isFocused;
           const isSelected = selectedNode === node.id;
           return (
-            <g key={node.id}
+            <g key={node.id} data-node="true"
               onClick={(e) => handleNodeClick(e, node.id)}
               onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
               onDoubleClick={(e) => handleNodeContextMenu(e, node.id)}
@@ -645,16 +650,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         onClose={() => setSelectedNode(null)}
       />
 
-      {/* Green '+' Floating Action Button — add new service node */}
-      <button
-        onClick={() => {
-          window.dispatchEvent(new CustomEvent('calmplan:add-new-service', { detail: {} }));
-        }}
-        className="absolute bottom-4 left-4 w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-        title="הוסף שירות חדש"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+      {/* Green '+' FAB removed — global FAB in Layout handles quick-add */}
     </div>
   );
 }

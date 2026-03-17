@@ -689,19 +689,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
         onClose={() => setSelectedNode(null)}
       />
 
-      {/* Green '+' FAB — add new child task/service */}
-      <button
-        onClick={() => {
-          window.dispatchEvent(new CustomEvent('calmplan:add-new-service', { detail: {} }));
-        }}
-        className="absolute bottom-4 left-4 w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-        title="הוסף משימה חדשה"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </button>
+      {/* Green '+' FAB removed — global FAB in Layout handles quick-add */}
     </div>
   );
 }
