@@ -107,7 +107,31 @@ import MyFocus from "./MyFocus";
 
 import Inventory from "./Inventory";
 
+import WeeklyPlanner from "./WeeklyPlanner";
+
+import TreatmentInput from "./TreatmentInput";
+
+import AutomationPage from "./AutomationPage";
+
+import CalendarView from "./CalendarView";
+
 import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const pageTransition = {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -8 },
+    transition: { duration: 0.2, ease: 'easeOut' },
+};
+
+function AnimatedPage({ children }) {
+    return (
+        <motion.div {...pageTransition}>
+            {children}
+        </motion.div>
+    );
+}
 
 const PAGES = {
     
@@ -215,6 +239,14 @@ const PAGES = {
 
     Inventory: Inventory,
 
+    WeeklyPlanner: WeeklyPlanner,
+
+    TreatmentInput: TreatmentInput,
+
+    AutomationPage: AutomationPage,
+
+    CalendarView: CalendarView,
+
 }
 
 function _getCurrentPage(url) {
@@ -237,118 +269,127 @@ function PagesContent() {
     
     return (
         <Layout currentPageName={currentPage}>
-            <Routes>            
+            <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+
+                    <Route path="/" element={<AnimatedPage><Home /></AnimatedPage>} />
                 
-                    <Route path="/" element={<Home />} />
                 
+                <Route path="/Calendar" element={<AnimatedPage><Calendar /></AnimatedPage>} />
                 
-                <Route path="/Calendar" element={<Calendar />} />
+                <Route path="/NewEvent" element={<AnimatedPage><NewEvent /></AnimatedPage>} />
                 
-                <Route path="/NewEvent" element={<NewEvent />} />
+                <Route path="/Print" element={<AnimatedPage><Print /></AnimatedPage>} />
                 
-                <Route path="/Print" element={<Print />} />
+                <Route path="/Tasks" element={<AnimatedPage><Tasks /></AnimatedPage>} />
                 
-                <Route path="/Tasks" element={<Tasks />} />
+                <Route path="/Analytics" element={<AnimatedPage><Analytics /></AnimatedPage>} />
                 
-                <Route path="/Analytics" element={<Analytics />} />
+                <Route path="/TaskMatrix" element={<AnimatedPage><TaskMatrix /></AnimatedPage>} />
                 
-                <Route path="/TaskMatrix" element={<TaskMatrix />} />
-                
-                <Route path="/Settings" element={<Settings />} />
+                <Route path="/Settings" element={<AnimatedPage><Settings /></AnimatedPage>} />
                 
                 {/* MondayIntegration route removed — Kill Monday */}
                 
-                <Route path="/Recommendations" element={<Recommendations />} />
+                <Route path="/Recommendations" element={<AnimatedPage><Recommendations /></AnimatedPage>} />
                 
-                <Route path="/Dashboards" element={<Dashboards />} />
+                <Route path="/Dashboards" element={<AnimatedPage><Dashboards /></AnimatedPage>} />
                 
-                <Route path="/LifeSettings" element={<LifeSettings />} />
+                <Route path="/LifeSettings" element={<AnimatedPage><LifeSettings /></AnimatedPage>} />
                 
-                <Route path="/Reconciliations" element={<Reconciliations />} />
+                <Route path="/Reconciliations" element={<AnimatedPage><Reconciliations /></AnimatedPage>} />
                 
-                <Route path="/Home" element={<Home />} />
+                <Route path="/Home" element={<AnimatedPage><Home /></AnimatedPage>} />
                 
-                <Route path="/BusinessHub" element={<BusinessHub />} />
+                <Route path="/BusinessHub" element={<AnimatedPage><BusinessHub /></AnimatedPage>} />
                 
-                <Route path="/MealPlanner" element={<MealPlanner />} />
+                <Route path="/MealPlanner" element={<AnimatedPage><MealPlanner /></AnimatedPage>} />
                 
-                <Route path="/Inspiration" element={<Inspiration />} />
+                <Route path="/Inspiration" element={<AnimatedPage><Inspiration /></AnimatedPage>} />
                 
-                <Route path="/ClientManagement" element={<ClientManagement />} />
+                <Route path="/ClientManagement" element={<AnimatedPage><ClientManagement /></AnimatedPage>} />
                 
-                <Route path="/Collections" element={<Collections />} />
+                <Route path="/Collections" element={<AnimatedPage><Collections /></AnimatedPage>} />
                 
-                <Route path="/ServiceProviders" element={<ServiceProviders />} />
+                <Route path="/ServiceProviders" element={<AnimatedPage><ServiceProviders /></AnimatedPage>} />
                 
-                <Route path="/ClientOnboarding" element={<ClientOnboarding />} />
+                <Route path="/ClientOnboarding" element={<AnimatedPage><ClientOnboarding /></AnimatedPage>} />
                 
-                <Route path="/PayrollDashboard" element={<PayrollDashboard />} />
+                <Route path="/PayrollDashboard" element={<AnimatedPage><PayrollDashboard /></AnimatedPage>} />
 
-                <Route path="/ClientsDashboard" element={<ClientsDashboard />} />
+                <Route path="/ClientsDashboard" element={<AnimatedPage><ClientsDashboard /></AnimatedPage>} />
 
-                <Route path="/TaxReportsDashboard" element={<TaxReportsDashboard />} />
+                <Route path="/TaxReportsDashboard" element={<AnimatedPage><TaxReportsDashboard /></AnimatedPage>} />
 
-                <Route path="/Leads" element={<Leads />} />
+                <Route path="/Leads" element={<AnimatedPage><Leads /></AnimatedPage>} />
                 
-                <Route path="/Roadmap" element={<Roadmap />} />
+                <Route path="/Roadmap" element={<AnimatedPage><Roadmap /></AnimatedPage>} />
 
-                <Route path="/HomeTaskGenerator" element={<HomeTaskGenerator />} />
+                <Route path="/HomeTaskGenerator" element={<AnimatedPage><HomeTaskGenerator /></AnimatedPage>} />
                 
-                <Route path="/TestDataManager" element={<TestDataManager />} />
+                <Route path="/TestDataManager" element={<AnimatedPage><TestDataManager /></AnimatedPage>} />
                 
-                <Route path="/EmergencyRecovery" element={<EmergencyRecovery />} />
+                <Route path="/EmergencyRecovery" element={<AnimatedPage><EmergencyRecovery /></AnimatedPage>} />
                 
-                <Route path="/SystemOverview" element={<SystemOverview />} />
+                <Route path="/SystemOverview" element={<AnimatedPage><SystemOverview /></AnimatedPage>} />
                 
-                <Route path="/EmergencyReset" element={<EmergencyReset />} />
+                <Route path="/EmergencyReset" element={<AnimatedPage><EmergencyReset /></AnimatedPage>} />
                 
                 {/* FullSync route removed — Kill Monday */}
                 
-                <Route path="/WeeklyPlanningDashboard" element={<WeeklyPlanningDashboard />} />
+                <Route path="/WeeklyPlanningDashboard" element={<AnimatedPage><WeeklyPlanningDashboard /></AnimatedPage>} />
                 
-                <Route path="/BalanceSheets" element={<BalanceSheets />} />
+                <Route path="/BalanceSheets" element={<AnimatedPage><BalanceSheets /></AnimatedPage>} />
 
-                <Route path="/BalanceSheetWorkbook" element={<BalanceSheetWorkbook />} />
+                <Route path="/BalanceSheetWorkbook" element={<AnimatedPage><BalanceSheetWorkbook /></AnimatedPage>} />
 
-                <Route path="/WeeklySummary" element={<WeeklySummary />} />
+                <Route path="/WeeklySummary" element={<AnimatedPage><WeeklySummary /></AnimatedPage>} />
 
-                <Route path="/RecurringTasks" element={<RecurringTasks />} />
+                <Route path="/RecurringTasks" element={<AnimatedPage><RecurringTasks /></AnimatedPage>} />
 
-                <Route path="/DataImportTool" element={<DataImportTool />} />
+                <Route path="/DataImportTool" element={<AnimatedPage><DataImportTool /></AnimatedPage>} />
 
-                <Route path="/FeeManagement" element={<FeeManagement />} />
+                <Route path="/FeeManagement" element={<AnimatedPage><FeeManagement /></AnimatedPage>} />
 
-                <Route path="/Projects" element={<Projects />} />
+                <Route path="/Projects" element={<AnimatedPage><Projects /></AnimatedPage>} />
 
-                <Route path="/ProjectWorkbook" element={<ProjectWorkbook />} />
+                <Route path="/ProjectWorkbook" element={<AnimatedPage><ProjectWorkbook /></AnimatedPage>} />
 
-                <Route path="/PeriodicSummaryReports" element={<PeriodicSummaryReports />} />
+                <Route path="/PeriodicSummaryReports" element={<AnimatedPage><PeriodicSummaryReports /></AnimatedPage>} />
 
-                <Route path="/AutomationRules" element={<AutomationRules />} />
+                <Route path="/AutomationRules" element={<AnimatedPage><AutomationRules /></AnimatedPage>} />
 
-                <Route path="/AdditionalServicesDashboard" element={<AdditionalServicesDashboard scope="p1" />} />
+                <Route path="/AdditionalServicesDashboard" element={<AnimatedPage><AdditionalServicesDashboard scope="p1" /></AnimatedPage>} />
 
-                <Route path="/PayrollReportsDashboard" element={<PayrollReportsDashboard />} />
+                <Route path="/PayrollReportsDashboard" element={<AnimatedPage><PayrollReportsDashboard /></AnimatedPage>} />
 
-                <Route path="/BookkeepingExtrasDashboard" element={<AdditionalServicesDashboard scope="p2" />} />
+                <Route path="/BookkeepingExtrasDashboard" element={<AnimatedPage><AdditionalServicesDashboard scope="p2" /></AnimatedPage>} />
 
-                <Route path="/AdminTasksDashboard" element={<AdminTasksDashboard />} />
+                <Route path="/AdminTasksDashboard" element={<AnimatedPage><AdminTasksDashboard /></AnimatedPage>} />
 
-                <Route path="/ClientFiles" element={<ClientFiles />} />
+                <Route path="/ClientFiles" element={<AnimatedPage><ClientFiles /></AnimatedPage>} />
 
-                <Route path="/BackupManager" element={<BackupManager />} />
+                <Route path="/BackupManager" element={<AnimatedPage><BackupManager /></AnimatedPage>} />
 
-                <Route path="/SystemReadiness" element={<SystemReadiness />} />
+                <Route path="/SystemReadiness" element={<AnimatedPage><SystemReadiness /></AnimatedPage>} />
 
-                <Route path="/ClientContracts" element={<ClientContracts />} />
+                <Route path="/ClientContracts" element={<AnimatedPage><ClientContracts /></AnimatedPage>} />
 
-                <Route path="/BatchSetup" element={<BatchSetup />} />
+                <Route path="/BatchSetup" element={<AnimatedPage><BatchSetup /></AnimatedPage>} />
 
-                <Route path="/FinancialResultsDashboard" element={<FinancialResultsDashboard />} />
+                <Route path="/FinancialResultsDashboard" element={<AnimatedPage><FinancialResultsDashboard /></AnimatedPage>} />
 
-                <Route path="/MyFocus" element={<MyFocus />} />
+                <Route path="/MyFocus" element={<AnimatedPage><MyFocus /></AnimatedPage>} />
 
-                <Route path="/Inventory" element={<Inventory />} />
+                <Route path="/Inventory" element={<AnimatedPage><Inventory /></AnimatedPage>} />
+
+                <Route path="/WeeklyPlanner" element={<AnimatedPage><WeeklyPlanner /></AnimatedPage>} />
+
+                <Route path="/TreatmentInput" element={<AnimatedPage><TreatmentInput /></AnimatedPage>} />
+
+                <Route path="/AutomationPage" element={<AnimatedPage><AutomationPage /></AnimatedPage>} />
+
+                <Route path="/CalendarView" element={<AnimatedPage><CalendarView /></AnimatedPage>} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -359,6 +400,7 @@ function PagesContent() {
                 } />
 
             </Routes>
+            </AnimatePresence>
         </Layout>
     );
 }
