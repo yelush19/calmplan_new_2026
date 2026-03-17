@@ -12,7 +12,7 @@
  *   No pale gray text. Semi-bold/Bold labels. High contrast.
  */
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { renderNodeShape, buildTaperedBranch } from './AyoaNode';
 import { getConnectionProps } from '@/engines/lineStyleEngine';
 import { useDesign } from '@/contexts/DesignContext';
@@ -80,9 +80,19 @@ function describeWedge(cx, cy, innerR, outerR, startAngle, endAngle) {
 
 export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', centerSub = '' }) {
   const svgRef = useRef(null);
+  const containerRef = useRef(null);
   const [focusedNode, setFocusedNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [toolbarPos, setToolbarPos] = useState({ x: 0, y: 0 });
+
+  // ── Zoom & Pan state ──
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const panRef = useRef({ active: false, startX: 0, startY: 0, origPanX: 0, origPanY: 0 });
+
+  // ── Drag state (category nodes drag their children) ──
+  const [dragOffsets, setDragOffsets] = useState({}); // catIndex → {dx, dy}
+  const dragRef = useRef({ active: false, catIndex: null, startX: 0, startY: 0, origDx: 0, origDy: 0 });
 
   // Design engine (safe — useDesign returns fallback if outside provider)
   const design = useDesign();
@@ -92,6 +102,92 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
 
   // Status Sync: detect which categories have active sub-tasks
   const activeBranches = useMemo(() => getActiveBranches(tasks), [tasks]);
+
+  // ── Zoom wheel handler ──
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const handler = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      setZoom(prev => Math.min(3, Math.max(0.3, prev + delta)));
+    };
+    container.addEventListener('wheel', handler, { passive: false });
+    return () => container.removeEventListener('wheel', handler);
+  }, []);
+
+  // ── SVG coordinate conversion ──
+  const screenToSVG = useCallback((clientX, clientY) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const rect = svg.getBoundingClientRect();
+    const scaleX = VB / rect.width;
+    const scaleY = VB / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  }, []);
+
+  // ── Drag handlers (parent-child sticky movement) ──
+  const handleDragStart = useCallback((e, catIndex) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const svgPt = screenToSVG(e.clientX, e.clientY);
+    const offset = dragOffsets[catIndex] || { dx: 0, dy: 0 };
+    dragRef.current = { active: true, catIndex, startX: svgPt.x, startY: svgPt.y, origDx: offset.dx, origDy: offset.dy };
+  }, [dragOffsets, screenToSVG]);
+
+  // ── Pan (background drag) ──
+  const handleBgMouseDown = useCallback((e) => {
+    if (e.target.closest('[data-node]')) return;
+    if (e.button === 1 || (e.button === 0 && !e.target.closest('[data-node]'))) {
+      panRef.current = { active: true, startX: e.clientX, startY: e.clientY, origPanX: pan.x, origPanY: pan.y };
+    }
+  }, [pan]);
+
+  const handleMouseMove = useCallback((e) => {
+    // Pan handling
+    if (panRef.current.active) {
+      const dx = e.clientX - panRef.current.startX;
+      const dy = e.clientY - panRef.current.startY;
+      setPan({ x: panRef.current.origPanX + dx, y: panRef.current.origPanY + dy });
+      return;
+    }
+    // Drag handling
+    if (!dragRef.current.active) return;
+    const svgPt = screenToSVG(e.clientX, e.clientY);
+    const dx = svgPt.x - dragRef.current.startX;
+    const dy = svgPt.y - dragRef.current.startY;
+    setDragOffsets(prev => ({
+      ...prev,
+      [dragRef.current.catIndex]: {
+        dx: dragRef.current.origDx + dx,
+        dy: dragRef.current.origDy + dy,
+      },
+    }));
+  }, [screenToSVG]);
+
+  const handleMouseUp = useCallback(() => {
+    dragRef.current.active = false;
+    panRef.current.active = false;
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp]);
+
+  // ── Auto-Layout: reset all drag offsets ──
+  const handleAutoLayout = useCallback(() => {
+    setDragOffsets({});
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
+  }, []);
 
   const { nodes, ringSegments } = useMemo(() => {
     const catMap = {};
@@ -146,6 +242,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
       allNodes.push({
         id: `cat-${ci}`,
         type: 'category',
+        baseX: r1x, baseY: r1y,
         x: r1x, y: r1y,
         r: 30,
         shape: 'bubble',
@@ -154,6 +251,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         label: resolveCategoryLabel(cat).substring(0, 14),
         subLabel: `${catTasks.length}`,
         angle: midAngle,
+        catIndex: ci,
       });
 
       // Task nodes — spread across rings 2-3 using sin/cos
@@ -172,11 +270,14 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         const r = 20;
         const ov = design?.getNodeOverride?.(task.id) || {};
 
+        const taskX = CX + Math.cos(taskAngle) * taskRing;
+        const taskY = CY + Math.sin(taskAngle) * taskRing;
         allNodes.push({
           id: task.id,
           type: 'task',
-          x: CX + Math.cos(taskAngle) * taskRing,
-          y: CY + Math.sin(taskAngle) * taskRing,
+          baseX: taskX, baseY: taskY,
+          x: taskX,
+          y: taskY,
           r,
           shape: ov.shape || globalShape,
           color: ov.color || dnaColor,
@@ -188,6 +289,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           parentColor: dnaColor,
           statusGlow: STATUS_GLOW[status] || '#546E7A',
           sticker: design?.stickerMap?.[task.id] || null,
+          catIndex: ci,
         });
       });
     });
@@ -195,9 +297,22 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
     return { nodes: allNodes, ringSegments: segments };
   }, [tasks, design?.nodeOverrides, design?.stickerMap, branchColors, globalShape]);
 
+  // ── Apply drag offsets to produce final positioned nodes ──
+  const positionedNodes = useMemo(() => {
+    return nodes.map(node => {
+      const offset = dragOffsets[node.catIndex] || { dx: 0, dy: 0 };
+      return {
+        ...node,
+        x: node.baseX + offset.dx,
+        y: node.baseY + offset.dy,
+      };
+    });
+  }, [nodes, dragOffsets]);
+
   // Single click: toggle focus/navigate only (no toolbar)
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
+    if (dragRef.current.active) return;
     setFocusedNode(prev => prev === nodeId ? null : nodeId);
   }, []);
 
@@ -205,15 +320,16 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
   const handleNodeContextMenu = useCallback((e, nodeId) => {
     e.stopPropagation();
     e.preventDefault();
+    if (dragRef.current.active) return;
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
-    const node = nodes.find(n => n.id === nodeId);
+    const node = positionedNodes.find(n => n.id === nodeId);
     if (!node) return;
     const scaleX = rect.width / VB;
     const scaleY = rect.height / VB;
-    const screenX = rect.left + node.x * scaleX;
-    const screenY = rect.top + node.y * scaleY;
+    const screenX = rect.left + node.x * scaleX * zoom + pan.x;
+    const screenY = rect.top + node.y * scaleY * zoom + pan.y;
 
     if (selectedNode === nodeId) {
       setSelectedNode(null);
@@ -223,7 +339,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
       // Notify Design Engine of selection
       window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId } }));
     }
-  }, [nodes, selectedNode]);
+  }, [positionedNodes, selectedNode, zoom, pan]);
 
   const handleColorChange = useCallback(async (color) => {
     if (!selectedNode || !design?.setNodeOverride) return;
@@ -283,12 +399,30 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
   }
 
   return (
-    <div className="relative w-full h-full" style={{ backgroundColor: 'var(--cp-canvas-bg, #F8F9FA)' }}>
+    <div ref={containerRef} className="relative w-full h-full" style={{ overflow: 'hidden', backgroundColor: 'var(--cp-canvas-bg, #F8F9FA)' }}>
+      {/* ── Control Bar: Auto-Layout, Zoom level ── */}
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+        <button onClick={handleAutoLayout}
+          className="px-3 py-1.5 rounded-xl bg-white shadow-lg border text-[12px] font-bold hover:bg-gray-50 transition-all"
+          style={{ borderColor: '#E2E8F0', color: '#475569' }}
+          title="סידור אוטומטי">
+          סדר מחדש
+        </button>
+        <div className="flex items-center gap-1 bg-white rounded-xl shadow-lg border px-2 py-1" style={{ borderColor: '#E2E8F0' }}>
+          <button onClick={() => setZoom(z => Math.max(0.3, z - 0.15))}
+            className="w-6 h-6 rounded-lg text-sm font-bold hover:bg-gray-100 transition-colors text-gray-600">-</button>
+          <span className="text-[12px] font-bold text-gray-500 w-10 text-center">{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZoom(z => Math.min(3, z + 0.15))}
+            className="w-6 h-6 rounded-lg text-sm font-bold hover:bg-gray-100 transition-colors text-gray-600">+</button>
+        </div>
+      </div>
+
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${VB} ${VB}`}
+        viewBox={`${(VB - VB / zoom) / 2 - pan.x / zoom} ${(VB - VB / zoom) / 2 - pan.y / zoom} ${VB / zoom} ${VB / zoom}`}
         className="w-full h-full"
-        style={{ maxHeight: 'calc(100vh - 180px)' }}
+        style={{ maxHeight: 'calc(100vh - 180px)', cursor: panRef.current.active ? 'grabbing' : 'grab' }}
+        onMouseDown={handleBgMouseDown}
         onClick={() => setSelectedNode(null)}
       >
         <defs>

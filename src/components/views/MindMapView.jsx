@@ -2642,7 +2642,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   // Tier sub-node drag: move this tier + all its client children
                   e.stopPropagation();
                   e.preventDefault();
-                  e.currentTarget.setPointerCapture(e.pointerId);
+                  // Capture pointer on CONTAINER so container's onPointerMove fires
+                  if (containerRef.current) containerRef.current.setPointerCapture(e.pointerId);
                   nodeHasDragged.current = false;
                   const tierKey = sub.key.startsWith('tier-') ? sub.key : `tier-${branch.category}-${sub.key}`;
                   const childPositions = [];
@@ -2718,7 +2719,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  e.currentTarget.setPointerCapture(e.pointerId);
+                  // Capture pointer on CONTAINER so container's onPointerMove fires
+                  if (containerRef.current) containerRef.current.setPointerCapture(e.pointerId);
                   nodeHasDragged.current = false;
                   const childPositions = [];
                   branch.clientPositions.forEach(cp => {
