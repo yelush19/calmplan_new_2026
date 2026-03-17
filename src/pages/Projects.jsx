@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Project } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Pencil, Trash2, ExternalLink, GitBranch, Globe, Server,
   FolderKanban, X, Check, Database, BarChart3, HardDrive, TrainFront,
-  ChevronDown, ChevronUp, Cpu, Layers, Rocket
+  ChevronDown, ChevronUp, Cpu, Layers, Rocket, BookOpen
 } from 'lucide-react';
 import { loadPlatformConfig } from '@/config/platformConfig';
 import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
@@ -76,7 +77,7 @@ const groupVariants = {
 /* ────────────────────────────────────────────── */
 /*  Project Card Component                        */
 /* ────────────────────────────────────────────── */
-function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelete }) {
+function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelete, onOpenWorkbook }) {
   const PlatIcon = platform ? getPlatformIcon(platform.icon) : null;
   const getSystemTypeLabel = (type) => systemTypes.find(s => s.value === type)?.label || type;
 
@@ -124,6 +125,13 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
               </div>
             </div>
             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => onOpenWorkbook(project)}
+                className="p-1.5 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
+                title="חוברת פיתוח"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={() => onEdit(project)}
                 className="p-1.5 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
@@ -248,6 +256,7 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
 /*  Main Projects Page                            */
 /* ────────────────────────────────────────────── */
 export default function Projects() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingProject, setEditingProject] = useState(null);
@@ -357,6 +366,10 @@ export default function Projects() {
 
   const getPlatformForProject = (project) =>
     platforms.find(p => p.id === project.platform) || null;
+
+  const openWorkbook = (project) => {
+    navigate(`/ProjectWorkbook?projectId=${project.id}`);
+  };
 
   /* ── Pseudo-tasks for Ayoa views ── */
   const pseudoTasks = useMemo(() =>
@@ -755,6 +768,7 @@ export default function Projects() {
                               platforms={platforms}
                               onEdit={startEdit}
                               onDelete={handleDelete}
+                              onOpenWorkbook={openWorkbook}
                               custom={idx}
                             />
                           ))}

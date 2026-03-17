@@ -13,7 +13,8 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Plus, Hourglass, Maximize2, Star,
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
   CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2,
-  Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import, Activity, Search
+  Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import, Activity, Search,
+  BookOpen
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -162,6 +163,7 @@ const getSidebarSections = () => ({
     tabColor: 'border-[#7C3AED]',
     items: [
       { name: "פרוייקטים", href: createPageUrl("Projects"), icon: FolderKanban },
+      { name: "חוברת פיתוח", href: createPageUrl("ProjectWorkbook"), icon: BookOpen },
     ]
   },
 });
