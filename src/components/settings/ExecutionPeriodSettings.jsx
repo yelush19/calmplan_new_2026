@@ -44,11 +44,11 @@ const BRANCH_CONFIG = {
   },
   P3: {
     label: 'P3 | ניהול ותכנון',
-    color: 'bg-pink-50',
-    border: 'border-pink-300',
-    badge: 'bg-pink-100 text-pink-800',
-    dot: 'bg-pink-500',
-    headerBg: 'bg-pink-100/70',
+    color: 'bg-violet-50',
+    border: 'border-violet-300',
+    badge: 'bg-violet-100 text-violet-800',
+    dot: 'bg-violet-500',
+    headerBg: 'bg-violet-100/70',
   },
   P5: {
     label: 'P5 | דוחות שנתיים',
@@ -228,7 +228,7 @@ export default function ExecutionPeriodSettings() {
               >
                 <div className={`w-3 h-3 rounded-full ${branchCfg.dot}`} />
                 <span className="text-sm font-black text-gray-800 flex-1 text-right">{branchCfg.label}</span>
-                <Badge className={`${branchCfg.badge} text-[10px]`}>{services.length} שירותים</Badge>
+                <Badge className={`${branchCfg.badge} text-[12px]`}>{services.length} שירותים</Badge>
                 {isCollapsed ?
                   <ChevronLeft className="w-4 h-4 text-gray-400" /> :
                   <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -238,7 +238,7 @@ export default function ExecutionPeriodSettings() {
               {!isCollapsed && (
                 <div className={`${branchCfg.color} p-3 space-y-1`}>
                   {/* Column headers */}
-                  <div className="grid grid-cols-[1fr_70px_70px_70px_1fr] gap-2 text-[10px] text-gray-500 font-bold px-2 pb-1 border-b border-gray-200/60">
+                  <div className="grid grid-cols-[1fr_70px_70px_70px_1fr] gap-2 text-[12px] text-gray-500 font-bold px-2 pb-1 border-b border-gray-200/60">
                     <span>שירות</span>
                     <span className="text-center">התחלה</span>
                     <span className="text-center">דדליין</span>

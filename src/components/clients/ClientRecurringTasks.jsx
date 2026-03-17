@@ -1202,7 +1202,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                                 <div key={mc.id || idx} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-sm"
                                   style={{ background: 'white', borderColor: `${cat.cardColor || branchColor}25` }}>
                                   <span className="font-medium text-gray-800 truncate flex-1">{mc.name}</span>
-                                  <span className="text-[10px] font-bold flex-shrink-0" style={{ color: `${cat.cardColor || branchColor}99` }}>
+                                  <span className="text-[12px] font-bold flex-shrink-0" style={{ color: `${cat.cardColor || branchColor}99` }}>
                                     {FREQUENCY_LABELS[mc.frequency] || mc.frequency}
                                   </span>
                                 </div>
@@ -1304,7 +1304,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-blue-500" />
               <span className="text-sm font-bold text-gray-800">דדליינים — דריסה זמנית</span>
-              <span className="text-[10px] text-blue-500 font-medium">(חגים / מצב מיוחד)</span>
+              <span className="text-[12px] text-blue-500 font-medium">(חגים / מצב מיוחד)</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {[
@@ -1328,7 +1328,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-blue-400">שנה את היום בחודש אם הדדליין הוזז בגלל חג/שבת. שינוי זה חל רק על ההזרקה הנוכחית.</p>
+            <p className="text-[12px] text-blue-400">שנה את היום בחודש אם הדדליין הוזז בגלל חג/שבת. שינוי זה חל רק על ההזרקה הנוכחית.</p>
           </div>
 
           {/* ── Force Inject Mode + Clear Cache ── */}
@@ -1517,13 +1517,13 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
               return (
                 <div className={`flex items-center gap-3 mt-3 px-3 py-2 rounded-xl border ${overloaded ? 'bg-red-50 border-red-300' : 'bg-blue-50 border-blue-200'}`}>
                   <span className="text-xs font-bold text-gray-700">⏱ {totalHours} שעות</span>
-                  <span className="text-[10px] text-gray-500">|</span>
+                  <span className="text-[12px] text-gray-500">|</span>
                   <span className={`text-xs font-bold ${overloaded ? 'text-red-600' : 'text-blue-600'}`}>
                     ~{avgDailyMinutes} דק׳/יום
                   </span>
-                  <span className="text-[10px] text-gray-500">|</span>
+                  <span className="text-[12px] text-gray-500">|</span>
                   {loadMix.map((count, tier) => count > 0 && (
-                    <span key={tier} className="text-[10px] font-bold text-gray-600">
+                    <span key={tier} className="text-[12px] font-bold text-gray-600">
                       {LOAD_LABELS[tier]}: {count}
                     </span>
                   ))}

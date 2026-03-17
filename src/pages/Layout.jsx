@@ -109,7 +109,7 @@ const getSidebarSections = () => ({
   p3_hub: {
     title: "P3 | ניהול ותכנון",
     icon: Brain,
-    tabColor: 'border-[#E91E63]',
+    tabColor: 'border-[#6366F1]',
     items: [],
     subGroups: [
       { key: 'p3_strategy', label: 'אסטרטגיה ותכנון', icon: Brain, items: [
@@ -285,7 +285,7 @@ function GlobalAyoaBar() {
       <AyoaViewToggle value={ayoaView} onChange={setAyoaView} />
       <div className="flex items-center gap-1 mr-auto">
         {[
-          { color: '#E91E63', label: 'אישי' },
+          { color: '#6366F1', label: 'אישי' },
           { color: '#FFC107', label: 'משימות' },
           { color: '#00A3E0', label: 'תיקיות' },
           { color: '#800000', label: 'דחוף' },
@@ -524,14 +524,14 @@ function LayoutInner({ children }) {
             </Button>
             <Link to={createPageUrl("Home")} className="flex items-center gap-2.5 group">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md transition-transform group-hover:scale-105"
-                style={{ background: 'linear-gradient(135deg, #00A3E0, #E91E63)' }}>
+                style={{ background: 'linear-gradient(135deg, #00A3E0, #6366F1)' }}>
                 <Brain className="w-5 h-5 text-white" />
               </div>
               <div className="hidden md:block">
-                <h1 className="text-base font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#00A3E0] to-[#E91E63]">
+                <h1 className="text-base font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#00A3E0] to-[#6366F1]">
                   CalmPlan
                 </h1>
-                <p className="text-[9px] font-medium text-gray-400 -mt-0.5">Ayoa-Powered OS</p>
+                <p className="text-[12px] font-medium text-gray-400 -mt-0.5">Ayoa-Powered OS</p>
               </div>
             </Link>
           </div>
@@ -584,7 +584,7 @@ function LayoutInner({ children }) {
                 <button className="relative p-2 rounded-lg hover:bg-amber-50 transition-colors">
                   <Hourglass className="w-5 h-5 text-purple-500" />
                   {emergencyCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-[12px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {emergencyCount}
                     </span>
                   )}
@@ -819,7 +819,7 @@ function LayoutInner({ children }) {
                     <div className="flex flex-col flex-1 overflow-y-auto">
                       {/* Mantra — very top of sidebar */}
                       <div className="px-3 pt-4 pb-2 text-center">
-                        <p className="block font-black text-xl py-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#E91E63] via-[#00A3E0] to-[#FFC107]">
+                        <p className="block font-black text-xl py-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#6366F1] via-[#00A3E0] to-[#FFC107]">
                           עשוי טוב יותר ממושלם
                         </p>
                       </div>
@@ -850,10 +850,10 @@ function LayoutInner({ children }) {
                               style={workMode === mode.key ? {
                                 background: mode.key === 'doing' ? 'linear-gradient(135deg, #00A3E0, #00BCD4)'
                                   : mode.key === 'planning' ? 'linear-gradient(135deg, #7C4DFF, #9C27B0)'
-                                  : 'linear-gradient(135deg, #E91E63, #FF6B9D)',
+                                  : 'linear-gradient(135deg, #6366F1, #818CF8)',
                                 boxShadow: mode.key === 'doing' ? '0 4px 15px #00A3E040'
                                   : mode.key === 'planning' ? '0 4px 15px #7C4DFF40'
-                                  : '0 4px 15px #E91E6340',
+                                  : '0 4px 15px #6366F140',
                               } : {}}
                             >
                               <mode.icon className="w-4 h-4" />
@@ -912,7 +912,7 @@ function LayoutInner({ children }) {
                               {/* Pinned Clients */}
                               {pinnedClients.length > 0 && (
                                 <>
-                                  <h4 className="text-[10px] font-bold text-[#455A64] px-3 pt-1 pb-0.5">גישה מהירה</h4>
+                                  <h4 className="text-[12px] font-bold text-[#455A64] px-3 pt-1 pb-0.5">גישה מהירה</h4>
                                   {pinnedClients.slice(0, 8).map(client => (
                                     <Link key={client.id}
                                       to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
@@ -927,7 +927,7 @@ function LayoutInner({ children }) {
                               {/* My Menu */}
                               {myMenu.length > 0 && (
                                 <>
-                                  <h4 className="text-[10px] font-bold text-[#455A64] px-3 pt-1 pb-0.5">התפריט שלי</h4>
+                                  <h4 className="text-[12px] font-bold text-[#455A64] px-3 pt-1 pb-0.5">התפריט שלי</h4>
                                   {myMenu.map(href => {
                                     let menuItem = null;
                                     for (const section of Object.values(sidebarSections)) {
@@ -957,7 +957,7 @@ function LayoutInner({ children }) {
                               )}
                               {/* Empty state hint */}
                               {pinnedClients.length === 0 && myMenu.length === 0 && (
-                                <p className="text-[10px] text-gray-400 px-3 py-2">
+                                <p className="text-[12px] text-gray-400 px-3 py-2">
                                   לחצי על ⭐ ליד פריט בתפריט כדי להוסיף אותו לכאן
                                 </p>
                               )}
@@ -982,7 +982,7 @@ function LayoutInner({ children }) {
                           <Eye className="w-4 h-4" style={{ color: isActive(createPageUrl("Home")) ? 'white' : '#00A3E0' }} />
                           פוקוס יומי
                           {dailyFocusTasks.length > 0 && (
-                            <Badge className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0">{dailyFocusTasks.length}</Badge>
+                            <Badge className="text-[12px] bg-amber-100 text-amber-700 px-1.5 py-0">{dailyFocusTasks.length}</Badge>
                           )}
                         </Link>
                         <Link to={createPageUrl("MyFocus")}
@@ -1018,7 +1018,7 @@ function LayoutInner({ children }) {
                                     <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{
                                       background: key === 'p1_payroll' ? 'linear-gradient(135deg, #00A3E020, #00BCD420)'
                                         : key === 'p2_bookkeeping' ? 'linear-gradient(135deg, #B2AC8820, #8BC34A20)'
-                                        : key === 'p3_hub' ? 'linear-gradient(135deg, #E91E6320, #9C27B020)'
+                                        : key === 'p3_hub' ? 'linear-gradient(135deg, #6366F120, #9C27B020)'
                                         : key === 'p4_home' ? 'linear-gradient(135deg, #FFC10720, #FF980020)'
                                         : key === 'p5_annual' ? 'linear-gradient(135deg, #2E7D3220, #1B5E2020)'
                                         : key === 'p6_projects' ? 'linear-gradient(135deg, #7C3AED20, #6D28D920)'
@@ -1027,7 +1027,7 @@ function LayoutInner({ children }) {
                                       <section.icon className="w-3.5 h-3.5" style={{
                                         color: key === 'p1_payroll' ? '#00A3E0'
                                           : key === 'p2_bookkeeping' ? '#B2AC88'
-                                          : key === 'p3_hub' ? '#E91E63'
+                                          : key === 'p3_hub' ? '#6366F1'
                                           : key === 'p4_home' ? '#FFC107'
                                           : key === 'p5_annual' ? '#2E7D32'
                                           : key === 'p6_projects' ? '#7C3AED'

@@ -14,10 +14,10 @@ const categoryColors = {
     laundry: 'border-l-4 border-blue-500 bg-blue-50',
     shopping: 'border-l-4 border-amber-500 bg-amber-50',
     garden: 'border-l-4 border-green-500 bg-green-50',
-    caregiving: 'border-l-4 border-rose-500 bg-rose-50',
+    caregiving: 'border-l-4 border-violet-500 bg-violet-50',
     maintenance: 'border-l-4 border-gray-500 bg-gray-50',
     errands: 'border-l-4 border-indigo-500 bg-indigo-50',
-    family: 'border-l-4 border-pink-500 bg-pink-50',
+    family: 'border-l-4 border-violet-500 bg-violet-50',
     personal: 'border-l-4 border-purple-500 bg-purple-50',
     health: 'border-l-4 border-teal-500 bg-teal-50',
     default: 'border-l-4 border-gray-300 bg-gray-50'

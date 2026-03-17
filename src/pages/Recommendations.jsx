@@ -8,6 +8,7 @@ import { startOfWeek, endOfWeek, addDays, isWithinInterval, format, isBefore, pa
 import { he } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 export default function RecommendationsPage() {
     const [tasks, setTasks] = useState([]);
@@ -210,6 +211,7 @@ export default function RecommendationsPage() {
     const completedToday = getCompletedToday();
 
     return (
+        <UnifiedAyoaLayout tasks={tasks || []} centerLabel="המלצות" accentColor="#7C3AED" isLoading={isLoading}>
         <div className="space-y-8">
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
                 <h1 className="text-4xl font-bold text-neutral-dark">מרכז ההמלצות החכם</h1>
@@ -392,5 +394,6 @@ export default function RecommendationsPage() {
                 </Card>
             </motion.div>
         </div>
+        </UnifiedAyoaLayout>
     );
 }

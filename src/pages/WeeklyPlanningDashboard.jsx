@@ -27,6 +27,7 @@ import {
 import { he } from 'date-fns/locale';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import { getCategoryLabel } from '@/utils/categoryLabels';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 const WORK_DAYS = [
   { dayIndex: 0, name: 'ראשון', short: 'א' },
@@ -49,11 +50,11 @@ const PRIORITY_CONFIG = {
 
 const CATEGORY_BAR_COLORS = {
   'מע"מ': 'bg-blue-500', 'מקדמות': 'bg-purple-500', 'ניכויים': 'bg-teal-500',
-  'ב"ל': 'bg-rose-500', 'שכר': 'bg-orange-500', 'ניהול': 'bg-sky-500', 'אחר': 'bg-gray-400',
+  'ב"ל': 'bg-violet-500', 'שכר': 'bg-orange-500', 'ניהול': 'bg-sky-500', 'אחר': 'bg-gray-400',
 };
 const CATEGORY_BADGE_COLORS = {
   'מע"מ': 'bg-blue-100 text-blue-700', 'מקדמות': 'bg-purple-100 text-purple-700',
-  'ניכויים': 'bg-teal-100 text-teal-700', 'ב"ל': 'bg-rose-100 text-rose-700',
+  'ניכויים': 'bg-teal-100 text-teal-700', 'ב"ל': 'bg-violet-100 text-violet-700',
   'שכר': 'bg-orange-100 text-orange-700', 'ניהול': 'bg-sky-100 text-sky-700',
   'אחר': 'bg-gray-100 text-gray-600',
 };
@@ -62,7 +63,7 @@ function MiniStatusDropdown({ task, onStatusChange }) {
   const sCfg = statusConfig[task.status] || statusConfig.not_started;
   return (
     <Select value={task.status || 'not_started'} onValueChange={(s) => onStatusChange(task, s)}>
-      <SelectTrigger className={`h-6 text-[10px] px-1.5 w-auto min-w-[80px] border-0 ${sCfg.color}`}>
+      <SelectTrigger className={`h-6 text-[12px] px-1.5 w-auto min-w-[80px] border-0 ${sCfg.color}`}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -77,7 +78,7 @@ function MiniStatusDropdown({ task, onStatusChange }) {
 function RescheduleDropdown({ task, weekDays, onReschedule }) {
   return (
     <Select value={undefined} onValueChange={(dayStr) => onReschedule(task, dayStr)}>
-      <SelectTrigger className="h-6 text-[10px] px-1.5 w-auto min-w-[50px] border border-gray-200 bg-white">
+      <SelectTrigger className="h-6 text-[12px] px-1.5 w-auto min-w-[50px] border border-gray-200 bg-white">
         <ArrowLeftRight className="w-3 h-3" />
       </SelectTrigger>
       <SelectContent>
@@ -122,7 +123,7 @@ function WorkloadHeatmap({ dailyTasks, weekCategories }) {
 
             return (
               <div key={wd.dayIndex} className="flex-1 flex flex-col items-center gap-1">
-                <span className={`text-[10px] font-bold ${isOverloaded ? 'text-amber-600' : 'text-gray-500'}`}>
+                <span className={`text-[12px] font-bold ${isOverloaded ? 'text-amber-600' : 'text-gray-500'}`}>
                   {taskCount}
                 </span>
                 <div className="w-full relative" style={{ height: '80px' }}>
@@ -172,12 +173,12 @@ function WorkloadHeatmap({ dailyTasks, weekCategories }) {
           {weekCategories.map(cat => (
             <div key={cat} className="flex items-center gap-1">
               <div className={`w-2.5 h-2.5 rounded-sm ${CATEGORY_BAR_COLORS[cat] || 'bg-gray-400'}`} />
-              <span className="text-[10px] text-gray-500">{cat}</span>
+              <span className="text-[12px] text-gray-500">{cat}</span>
             </div>
           ))}
           <div className="flex items-center gap-1 mr-2">
             <div className="w-4 border-t border-amber-300 border-dashed" />
-            <span className="text-[10px] text-gray-400">קיבולת ({MAX_DAILY_TASKS})</span>
+            <span className="text-[12px] text-gray-400">קיבולת ({MAX_DAILY_TASKS})</span>
           </div>
         </div>
       </CardContent>
@@ -213,7 +214,7 @@ function CategoryWeekSummary({ weekTasks }) {
             const pct = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
             return (
               <div key={cat} className="flex items-center gap-3">
-                <div className={`px-2 py-0.5 rounded text-[10px] font-medium min-w-[50px] text-center ${CATEGORY_BADGE_COLORS[cat] || 'bg-gray-100 text-gray-600'}`}>
+                <div className={`px-2 py-0.5 rounded text-[12px] font-medium min-w-[50px] text-center ${CATEGORY_BADGE_COLORS[cat] || 'bg-gray-100 text-gray-600'}`}>
                   {cat}
                 </div>
                 <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -222,7 +223,7 @@ function CategoryWeekSummary({ weekTasks }) {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <span className="text-[10px] text-gray-500 min-w-[50px] text-left">
+                <span className="text-[12px] text-gray-500 min-w-[50px] text-left">
                   {data.completed}/{data.total} ({pct}%)
                 </span>
               </div>
@@ -577,11 +578,11 @@ export default function WeeklyPlanningDashboard() {
           </p>
           <div className="flex items-center gap-1.5 mt-0.5">
             {task.client_name && (
-              <span className="text-[10px] text-gray-400 truncate max-w-[120px]">{task.client_name}</span>
+              <span className="text-[12px] text-gray-400 truncate max-w-[120px]">{task.client_name}</span>
             )}
           </div>
         </div>
-        <Badge className={`text-[9px] px-1.5 py-0 ${CATEGORY_BADGE_COLORS[catLabel] || 'bg-gray-100 text-gray-600'}`}>
+        <Badge className={`text-[12px] px-1.5 py-0 ${CATEGORY_BADGE_COLORS[catLabel] || 'bg-gray-100 text-gray-600'}`}>
           {catLabel}
         </Badge>
         <MiniStatusDropdown task={task} onStatusChange={handleStatusChange} />
@@ -628,7 +629,7 @@ export default function WeeklyPlanningDashboard() {
         <div key={cat}>
           <div className="flex items-center gap-2 mb-1 mt-2 first:mt-0">
             <div className={`w-2 h-2 rounded-sm ${CATEGORY_BAR_COLORS[cat] || 'bg-gray-400'}`} />
-            <span className="text-[10px] font-semibold text-gray-500">{cat} ({catTasks.length})</span>
+            <span className="text-[12px] font-semibold text-gray-500">{cat} ({catTasks.length})</span>
           </div>
           {catTasks.map(renderTaskRow)}
         </div>
@@ -711,6 +712,14 @@ export default function WeeklyPlanningDashboard() {
   }
 
   return (
+    <UnifiedAyoaLayout
+      tasks={tasks}
+      clients={[]}
+      centerLabel="תכנון שבועי"
+      accentColor="#6366F1"
+      onEditTask={handleEditTask}
+      isLoading={isLoading}
+    >
     <div className="space-y-5 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -891,9 +900,9 @@ export default function WeeklyPlanningDashboard() {
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${pri.dot}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate text-gray-800">{task.title}</p>
-                    {task.client_name && <span className="text-[10px] text-gray-400">{task.client_name}</span>}
+                    {task.client_name && <span className="text-[12px] text-gray-400">{task.client_name}</span>}
                   </div>
-                  <Badge className={`text-[9px] px-1.5 py-0 ${CATEGORY_BADGE_COLORS[catLabel] || 'bg-gray-100 text-gray-600'}`}>
+                  <Badge className={`text-[12px] px-1.5 py-0 ${CATEGORY_BADGE_COLORS[catLabel] || 'bg-gray-100 text-gray-600'}`}>
                     {catLabel}
                   </Badge>
                   {isAssigning ? (
@@ -902,7 +911,7 @@ export default function WeeklyPlanningDashboard() {
                         <button
                           key={wd.dateStr}
                           onClick={() => handleAssignToDay(task, wd.dateStr)}
-                          className="px-2 py-1 text-[10px] font-bold rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition-colors"
+                          className="px-2 py-1 text-[12px] font-bold rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition-colors"
                         >
                           {wd.short}׳
                         </button>
@@ -916,7 +925,7 @@ export default function WeeklyPlanningDashboard() {
                       variant="outline"
                       size="sm"
                       onClick={() => setAssigningTaskId(task.id)}
-                      className="h-6 text-[10px] px-2 border-indigo-200 text-indigo-600"
+                      className="h-6 text-[12px] px-2 border-indigo-200 text-indigo-600"
                     >
                       שבץ ליום
                     </Button>
@@ -956,15 +965,15 @@ export default function WeeklyPlanningDashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate text-gray-800">{task.title}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        {task.client_name && <span className="text-[10px] text-gray-400">{task.client_name}</span>}
+                        {task.client_name && <span className="text-[12px] text-gray-400">{task.client_name}</span>}
                         {task.due_date && (
-                          <span className="text-[10px] text-amber-600">
+                          <span className="text-[12px] text-amber-600">
                             יעד: {format(parseISO(task.due_date), 'dd/MM', { locale: he })}
                           </span>
                         )}
                       </div>
                     </div>
-                    <Badge className={`text-[9px] px-1.5 py-0 ${CATEGORY_BADGE_COLORS[catLabel] || 'bg-gray-100 text-gray-600'}`}>
+                    <Badge className={`text-[12px] px-1.5 py-0 ${CATEGORY_BADGE_COLORS[catLabel] || 'bg-gray-100 text-gray-600'}`}>
                       {catLabel}
                     </Badge>
                     <MiniStatusDropdown task={task} onStatusChange={handleStatusChange} />
@@ -1038,12 +1047,12 @@ export default function WeeklyPlanningDashboard() {
                       יום {wd.name}
                     </span>
                     <span className="text-sm text-gray-400">{format(day.date, 'dd/MM')}</span>
-                    {day.isToday && <Badge className="bg-indigo-600 text-white text-[10px]">היום</Badge>}
+                    {day.isToday && <Badge className="bg-indigo-600 text-white text-[12px]">היום</Badge>}
                     {/* Category chips in header */}
                     {taskCount > 0 && (
                       <div className="flex gap-1 mr-2">
                         {Object.entries(dayCats).slice(0, 4).map(([cat, cnt]) => (
-                          <span key={cat} className={`text-[9px] px-1.5 py-0 rounded ${CATEGORY_BADGE_COLORS[cat] || 'bg-gray-100 text-gray-500'}`}>
+                          <span key={cat} className={`text-[12px] px-1.5 py-0 rounded ${CATEGORY_BADGE_COLORS[cat] || 'bg-gray-100 text-gray-500'}`}>
                             {cat} {cnt}
                           </span>
                         ))}
@@ -1137,5 +1146,6 @@ export default function WeeklyPlanningDashboard() {
       />
       {ConfirmDialogComponent}
     </div>
+    </UnifiedAyoaLayout>
   );
 }

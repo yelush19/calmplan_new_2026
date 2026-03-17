@@ -301,9 +301,9 @@ export default function SystemReadiness() {
 
       {/* Keyboard hint */}
       <div className="flex items-center gap-4 text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2">
-        <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-[10px]">Tab</kbd> מעבר לשדה הבא</span>
-        <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-[10px]">↑↓</kbd> מעבר בין שורות</span>
-        <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-[10px]">Enter</kbd> שורה הבאה</span>
+        <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-[12px]">Tab</kbd> מעבר לשדה הבא</span>
+        <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-[12px]">↑↓</kbd> מעבר בין שורות</span>
+        <span><kbd className="px-1.5 py-0.5 bg-white rounded border text-[12px]">Enter</kbd> שורה הבאה</span>
       </div>
 
       {/* Main Table */}
@@ -321,19 +321,19 @@ export default function SystemReadiness() {
                 <th className="text-center py-2.5 px-3 font-semibold text-gray-600 text-xs min-w-[130px]">
                   <div className="flex flex-col items-center">
                     <span>מספר עובדים</span>
-                    <span className="text-[9px] text-gray-400 font-normal">לחישוב Tier שכר</span>
+                    <span className="text-[12px] text-gray-400 font-normal">לחישוב Tier שכר</span>
                   </div>
                 </th>
                 <th className="text-center py-2.5 px-3 font-semibold text-gray-600 text-xs min-w-[130px]">
                   <div className="flex flex-col items-center">
                     <span>רמת מורכבות</span>
-                    <span className="text-[9px] text-gray-400 font-normal">התאמות/מאזנים</span>
+                    <span className="text-[12px] text-gray-400 font-normal">התאמות/מאזנים</span>
                   </div>
                 </th>
                 <th className="text-center py-2.5 px-3 font-semibold text-gray-600 text-xs min-w-[130px]">
                   <div className="flex flex-col items-center">
                     <span>נפח מע"מ (דק')</span>
-                    <span className="text-[9px] text-gray-400 font-normal">לחישוב Energy Tier</span>
+                    <span className="text-[12px] text-gray-400 font-normal">לחישוב Energy Tier</span>
                   </div>
                 </th>
                 <th className="text-center py-2.5 px-3 font-semibold text-gray-600 text-xs min-w-[120px]">
@@ -374,7 +374,7 @@ export default function SystemReadiness() {
                     <td className="py-2 px-3 text-center">
                       <span className="text-xs text-gray-500">{taskCount}</span>
                       {hasPayroll && (
-                        <Badge className="text-[8px] px-1 py-0 bg-gray-100 text-gray-500 mr-1">שכר</Badge>
+                        <Badge className="text-[11px] px-1 py-0 bg-gray-100 text-gray-500 mr-1">שכר</Badge>
                       )}
                     </td>
 
@@ -430,7 +430,7 @@ export default function SystemReadiness() {
                     <td className="py-2 px-3 text-center">
                       <div className="flex flex-col items-center gap-0.5">
                         {employeeCount > 0 && (
-                          <Badge className={`text-[10px] px-1.5 py-0 ${
+                          <Badge className={`text-[12px] px-1.5 py-0 ${
                             tier.key === 'nano' ? 'bg-emerald-100 text-emerald-700 border-emerald-300' :
                             tier.key === 'small' ? 'bg-blue-100 text-blue-700 border-blue-300' :
                             tier.key === 'mid' ? 'bg-amber-100 text-amber-700 border-amber-300' :
@@ -441,7 +441,7 @@ export default function SystemReadiness() {
                           </Badge>
                         )}
                         {vatVolume > 0 && (
-                          <span className={`text-[9px] font-medium ${
+                          <span className={`text-[12px] font-medium ${
                             vatVolume <= 20 ? 'text-emerald-600' :
                             vatVolume <= 45 ? 'text-blue-600' :
                             'text-purple-600'

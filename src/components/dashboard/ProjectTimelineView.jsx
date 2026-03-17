@@ -90,7 +90,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
       {/* Timeline header - day markers */}
       <div className="relative border-b border-gray-100">
         <div className="flex">
-          <div className="w-[200px] shrink-0 px-3 py-1.5 text-[10px] text-gray-500 font-medium border-l bg-gray-50">
+          <div className="w-[200px] shrink-0 px-3 py-1.5 text-[12px] text-gray-500 font-medium border-l bg-gray-50">
             משימה / לקוח
           </div>
           <div className="flex-1 relative h-7 bg-gray-50">
@@ -98,7 +98,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
               {timelineRange.days.map((day, i) => (
                 <div
                   key={i}
-                  className={`flex-1 text-center text-[8px] py-1.5 border-l border-gray-100 ${
+                  className={`flex-1 text-center text-[11px] py-1.5 border-l border-gray-100 ${
                     isToday(day) ? 'bg-blue-100 font-bold text-blue-700' : day.getDay() === 6 ? 'bg-gray-100 text-gray-400' : 'text-gray-400'
                   }`}
                 >
@@ -116,7 +116,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
           <div key={category}>
             {/* Category header */}
             <div className="flex bg-[#F5F5F5] border-b border-gray-100">
-              <div className="w-[200px] shrink-0 px-3 py-1 text-[10px] font-bold text-gray-600 border-l">
+              <div className="w-[200px] shrink-0 px-3 py-1 text-[12px] font-bold text-gray-600 border-l">
                 {category}
                 <span className="text-gray-400 font-normal mr-1">({catTasks.length})</span>
               </div>
@@ -145,11 +145,11 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
                         {task.client_name || task.title}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <Badge className={`text-[8px] px-1 py-0 h-3.5 ${statusCfg.color}`}>
+                        <Badge className={`text-[11px] px-1 py-0 h-3.5 ${statusCfg.color}`}>
                           {statusCfg.text}
                         </Badge>
                         {remaining !== null && (
-                          <span className={`text-[9px] font-medium ${
+                          <span className={`text-[12px] font-medium ${
                             remaining < 0 ? 'text-amber-600' : remaining <= 1 ? 'text-amber-500' : remaining <= 3 ? 'text-amber-600' : 'text-gray-400'
                           }`}>
                             {remaining < 0 ? `${Math.abs(remaining)}d-` : remaining === 0 ? 'היום' : `${remaining}d`}
@@ -179,7 +179,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
                         style={barStyle}
                         title={`${task.client_name || task.title} — ${task.due_date || ''}`}
                       >
-                        <span className="absolute inset-0 flex items-center justify-center text-white text-[8px] font-bold truncate px-1">
+                        <span className="absolute inset-0 flex items-center justify-center text-white text-[11px] font-bold truncate px-1">
                           {task.client_name?.substring(0, 8) || ''}
                         </span>
                       </div>
@@ -199,7 +199,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
       </div>
 
       {/* Legend */}
-      <div className="px-4 py-2 bg-gray-50 border-t flex items-center gap-3 text-[10px] text-gray-500">
+      <div className="px-4 py-2 bg-gray-50 border-t flex items-center gap-3 text-[12px] text-gray-500">
         <div className="flex items-center gap-1"><div className="w-3 h-2 rounded bg-emerald-400" /> הושלם</div>
         <div className="flex items-center gap-1"><div className="w-3 h-2 rounded bg-blue-400" /> בעבודה</div>
         <div className="flex items-center gap-1"><div className="w-3 h-2 rounded bg-amber-400" /> קרוב לדדליין</div>

@@ -97,7 +97,7 @@ const getPriorityColor = (priority) => {
 // ============================================================
 // Compact Task Card — Hebrew only, clear info
 // ============================================================
-const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allTasks = [], onAddSubTask }) => {
+const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allTasks = [], onAddSubTask, bulkMode, isSelected, onToggleSelection }) => {
   const [expanded, setExpanded] = useState(false);
   const statusCfg = STATUS_CONFIG[task?.status] || STATUS_CONFIG.not_started;
 
@@ -125,17 +125,26 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allT
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`mb-2 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow ${getPriorityColor(task.priority)} ${snapshot.isDragging ? 'ring-2 ring-primary' : ''}`}
+          className={`mb-2 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow ${getPriorityColor(task.priority)} ${snapshot.isDragging ? 'ring-2 ring-primary' : ''} ${bulkMode && isSelected ? 'ring-2 ring-violet-400 bg-violet-50' : ''}`}
         >
-          <div className="p-2.5 cursor-pointer" onClick={() => { if (onEdit) { onEdit(task); } else { setExpanded(!expanded); } }}>
+          <div className="p-2.5 cursor-pointer" onClick={() => { if (bulkMode) { onToggleSelection?.(task.id); } else if (onEdit) { onEdit(task); } else { setExpanded(!expanded); } }}>
             {/* Row 1: Client name + due date */}
             <div className="flex justify-between items-center gap-1">
+              {bulkMode && (
+                <input
+                  type="checkbox"
+                  checked={!!isSelected}
+                  onChange={(e) => { e.stopPropagation(); onToggleSelection?.(task.id); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-4 h-4 rounded border-violet-300 text-violet-600 accent-violet-600 shrink-0"
+                />
+              )}
               <span className="font-bold text-xs text-gray-800 truncate">
                 {task.client_name || 'ללא לקוח'}
               </span>
               <div className="flex items-center gap-1 shrink-0">
                 {formatDate(task.due_date || task.date) && (
-                  <span className="text-[10px] text-gray-500 font-medium">
+                  <span className="text-[12px] text-gray-500 font-medium">
                     {formatDate(task.due_date || task.date)}
                   </span>
                 )}
@@ -144,16 +153,16 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allT
             </div>
             {/* Row 2: Category + status */}
             <div className="flex items-center gap-1.5 mt-1">
-              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 shrink-0">
+              <Badge variant="outline" className="text-[12px] px-1 py-0 h-4 shrink-0">
                 {displayCategory}
               </Badge>
               {isQuickWin && (
-                <Badge className="bg-emerald-100 text-emerald-700 text-[9px] px-1 py-0 border border-emerald-300 gap-0.5">
+                <Badge className="bg-emerald-100 text-emerald-700 text-[12px] px-1 py-0 border border-emerald-300 gap-0.5">
                   <Zap className="w-2.5 h-2.5" />סיום מהיר
                 </Badge>
               )}
               {task.status === 'production_completed' && (
-                <Badge className="bg-sky-100 text-sky-700 text-[9px] px-1 py-0 border border-sky-300">
+                <Badge className="bg-sky-100 text-sky-700 text-[12px] px-1 py-0 border border-sky-300">
                   הושלם ייצור
                 </Badge>
               )}
@@ -180,7 +189,7 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allT
               {(() => {
                 const childCount = allTasks.filter(t => t.parent_id === task.id || t.master_task_id === task.id).length;
                 return childCount > 0 ? (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1 text-violet-600 border-violet-200">
+                  <Badge variant="outline" className="text-[12px] px-1.5 py-0 gap-1 text-violet-600 border-violet-200">
                     <GitBranchPlus className="w-3 h-3" />{childCount} תת-משימות
                   </Badge>
                 ) : null;
@@ -235,7 +244,7 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allT
 // ============================================================
 // Main KanbanView
 // ============================================================
-export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask, onEditTask, clients = [], onTaskCreated }) {
+export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTask, onEditTask, clients = [], onTaskCreated, bulkMode = false, selectedTaskIds = new Set(), onToggleTaskSelection }) {
   const [board, setBoard] = useState(columnsConfig);
   const [collapsed, setCollapsed] = useState({});
   const [subTaskParent, setSubTaskParent] = useState(null);
@@ -375,7 +384,7 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                               <div className="flex items-center gap-1.5 px-1 py-1 mb-1.5 border-b border-gray-200">
                                 {groupBy === 'client' ? <Users className="w-3 h-3 text-gray-400" /> : <Layers className="w-3 h-3 text-gray-400" />}
                                 <span className="text-[11px] font-bold text-gray-600">{group.label}</span>
-                                <span className="text-[10px] text-gray-400">({group.tasks.length})</span>
+                                <span className="text-[12px] text-gray-400">({group.tasks.length})</span>
                               </div>
                             )}
                             {group.tasks.map((task, i) => (
@@ -389,6 +398,9 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                                 clients={clients}
                                 allTasks={tasks}
                                 onAddSubTask={setSubTaskParent}
+                                bulkMode={bulkMode}
+                                isSelected={selectedTaskIds.has(task.id)}
+                                onToggleSelection={onToggleTaskSelection}
                               />
                             ))}
                           </div>

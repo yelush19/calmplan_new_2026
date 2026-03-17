@@ -40,9 +40,9 @@ const DYNAMIC_COLORS = [
 
 // Color palette for node editor
 const COLOR_PALETTE = [
-  '#0288D1', '#7B1FA2', '#D81B60', '#F9A825', '#2E7D32',
-  '#E53935', '#FF5722', '#00BCD4', '#795548', '#607D8B',
-  '#9C27B0', '#1565C0', '#00695C', '#EF6C00', '#AD1457',
+  '#0288D1', '#7B1FA2', '#6366F1', '#F9A825', '#2E7D32',
+  '#D97706', '#FF5722', '#00BCD4', '#795548', '#607D8B',
+  '#9C27B0', '#1565C0', '#00695C', '#EF6C00', '#4F46E5',
 ];
 
 // Shape options for node editor
@@ -159,7 +159,7 @@ function SortableStepsManager({ steps, serviceKey, updateService, color }) {
             <button className="flex-shrink-0 cursor-grab p-1 rounded hover:bg-gray-200 text-gray-300">
               <GripVertical className="w-3.5 h-3.5" />
             </button>
-            <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+            <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold text-white"
               style={{ backgroundColor: color }}>
               {i + 1}
             </span>
@@ -672,7 +672,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                   {node.slaDay && (
                     <>
                       <circle cx={node.x - r * 0.65} cy={node.y + r * 0.65} r={10}
-                        fill="#EF5350" />
+                        fill="#F59E0B" />
                       <text x={node.x - r * 0.65} y={node.y + r * 0.65 + 3.5}
                         textAnchor="middle" fill="white" fontSize="7" fontWeight="800">
                         {node.slaDay}
@@ -723,7 +723,7 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
         {Object.entries(DNA).map(([id, dna]) => (
           <div key={id} className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dna.color }} />
-            <span className="text-[10px] font-bold" style={{ color: dna.color }}>{id}</span>
+            <span className="text-[12px] font-bold" style={{ color: dna.color }}>{id}</span>
           </div>
         ))}
       </div>
@@ -848,13 +848,13 @@ export default function SettingsMindMap({ onSelectService, onConfigChange }) {
                       <span key={step.key || i}
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium border"
                         style={{ backgroundColor: selectedNode.bg, borderColor: selectedNode.color + '30', color: selectedNode.color }}>
-                        <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+                        <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
                           style={{ backgroundColor: selectedNode.color + 'CC' }}>
                           {i + 1}
                         </span>
                         {step.label}
                         {step.sla_day && (
-                          <span className="text-[9px] text-red-500 font-bold mr-1">({step.sla_day})</span>
+                          <span className="text-[12px] text-red-500 font-bold mr-1">({step.sla_day})</span>
                         )}
                       </span>
                     ))}

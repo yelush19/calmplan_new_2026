@@ -73,7 +73,7 @@ export default function MoodTracker() {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-purple-50 to-pink-50">
+    <Card className="bg-gradient-to-br from-purple-50 to-violet-50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Heart className="w-5 h-5 text-purple-600" />

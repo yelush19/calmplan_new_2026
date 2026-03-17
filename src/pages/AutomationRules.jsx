@@ -33,7 +33,7 @@ const entityDisplayConfig = {
   AccountReconciliation: { color: 'bg-cyan-100 text-cyan-800', label: 'התאמות' },
   Task_monthly_reports: { color: 'bg-slate-100 text-slate-800', label: 'ריכוז חודשי' },
   Task_tax_reports: { color: 'bg-orange-100 text-orange-800', label: 'דיווחי מיסים' },
-  Task_payroll: { color: 'bg-pink-100 text-pink-800', label: 'שכר' },
+  Task_payroll: { color: 'bg-violet-100 text-violet-800', label: 'שכר' },
   Task_additional_services: { color: 'bg-indigo-100 text-indigo-800', label: 'שירותים נוספים' },
 };
 
@@ -1109,8 +1109,8 @@ export default function AutomationRules() {
                       <span className="font-medium text-gray-700">{d.clientName}</span>
                       <span className="text-gray-400">-</span>
                       <span className="text-gray-500 truncate max-w-[180px]">{d.taskTitle}</span>
-                      <Badge variant="outline" className="text-[9px] px-1 py-0">{d.category}</Badge>
-                      {d.reason && <span className="text-[9px] text-amber-600">({d.reason})</span>}
+                      <Badge variant="outline" className="text-[12px] px-1 py-0">{d.category}</Badge>
+                      {d.reason && <span className="text-[12px] text-amber-600">({d.reason})</span>}
                     </div>
                   ))}
                 </div>
@@ -1227,14 +1227,14 @@ export default function AutomationRules() {
                     })}
                   >
                     {isOpen ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                    <Badge className={`text-[10px] ${cfg.color || 'bg-gray-100'}`}>{REPORT_ENTITIES[entityKey]}</Badge>
+                    <Badge className={`text-[12px] ${cfg.color || 'bg-gray-100'}`}>{REPORT_ENTITIES[entityKey]}</Badge>
                     <span className="text-xs font-medium">{cfg.label || entityKey}</span>
-                    <span className="text-[10px] text-gray-400 mr-auto">{entityRules.length}</span>
+                    <span className="text-[12px] text-gray-400 mr-auto">{entityRules.length}</span>
                   </button>
                   {isOpen && (
                     <div className="p-2 space-y-1.5 bg-white">
                       {entityRules.length === 0 ? (
-                        <p className="text-gray-400 text-center py-1 text-[10px]">אין חוקים</p>
+                        <p className="text-gray-400 text-center py-1 text-[12px]">אין חוקים</p>
                       ) : entityRules.map(rule => (
                         <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
                       ))}
@@ -1271,14 +1271,14 @@ export default function AutomationRules() {
                     <span className="text-xs font-medium text-gray-700 block mb-1">{cat.label}</span>
                     <div className="flex items-center gap-1">
                       <div className="flex-1 text-center">
-                        <span className="text-[9px] text-blue-600 block">דיגיטלי</span>
+                        <span className="text-[12px] text-blue-600 block">דיגיטלי</span>
                         <Input type="number" min="1" max="31"
                           value={entry.digital || ''}
                           onChange={(e) => handleDueDateChange(cat.key, e.target.value, 'digital')}
                           className="w-full text-center text-xs h-7" placeholder="-" />
                       </div>
                       <div className="flex-1 text-center">
-                        <span className="text-[9px] text-amber-600 block">המחאה</span>
+                        <span className="text-[12px] text-amber-600 block">המחאה</span>
                         <Input type="number" min="1" max="31"
                           value={entry.check || ''}
                           onChange={(e) => handleDueDateChange(cat.key, e.target.value, 'check')}
@@ -1305,7 +1305,7 @@ export default function AutomationRules() {
               {dueDatesSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
               שמור תאריכי יעד
             </Button>
-            <span className="text-[10px] text-gray-400">יעד = חודש שאחרי תקופת הדיווח. דיגיטלי/המחאה = לפי הגדרת לקוח.</span>
+            <span className="text-[12px] text-gray-400">יעד = חודש שאחרי תקופת הדיווח. דיגיטלי/המחאה = לפי הגדרת לקוח.</span>
           </div>
         </CardContent>
       </Card>
@@ -1379,11 +1379,11 @@ export default function AutomationRules() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{rule.name}</span>
-                      {!rule.enabled && <Badge variant="outline" className="text-[10px] text-orange-600">מושבת</Badge>}
+                      {!rule.enabled && <Badge variant="outline" className="text-[12px] text-orange-600">מושבת</Badge>}
                     </div>
                     <p className="text-xs text-gray-500 truncate">{rule.description}</p>
                   </div>
-                  <Badge className={`text-[10px] shrink-0 ${cfg.color || 'bg-gray-100'}`}>
+                  <Badge className={`text-[12px] shrink-0 ${cfg.color || 'bg-gray-100'}`}>
                     {cfg.label || rule.target_entity}
                   </Badge>
                 </div>
@@ -1518,11 +1518,11 @@ export default function AutomationRules() {
                               ) : (
                                 <Square className="w-3.5 h-3.5 text-gray-300 shrink-0" />
                               )}
-                              <Badge className={`text-[10px] shrink-0 ${(entityDisplayConfig[item.entity] || {}).color || 'bg-gray-100'}`}>
+                              <Badge className={`text-[12px] shrink-0 ${(entityDisplayConfig[item.entity] || {}).color || 'bg-gray-100'}`}>
                                 {item.entityLabel}
                               </Badge>
                               <span className="truncate">{item.description}</span>
-                              {item.ruleName && <span className="text-[10px] text-gray-400 shrink-0">({item.ruleName})</span>}
+                              {item.ruleName && <span className="text-[12px] text-gray-400 shrink-0">({item.ruleName})</span>}
                             </div>
                           ))}
                         </div>

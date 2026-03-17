@@ -18,27 +18,27 @@ import {
   AlignLeft, AlignCenter, AlignRight, Underline,
 } from 'lucide-react';
 
-// ── 20 Vibrant AYOA Palette — Full Spectrum ──
+// ── 20 Solid Professional Colors — NO pink, NO red, NO fuchsia ──
 const TOOLBAR_COLORS = [
   { color: '#00A3E0', label: 'שמיים' },
-  { color: '#E91E63', label: 'מג\'נטה' },
-  { color: '#FFC107', label: 'שקיעה' },
-  { color: '#8BC34A', label: 'ליים' },
-  { color: '#FF6B9D', label: 'ורוד ניאון' },
+  { color: '#1565C0', label: 'כחול עמוק' },
+  { color: '#0891B2', label: 'ציאן' },
+  { color: '#0EA5E9', label: 'תכלת' },
   { color: '#00BCD4', label: 'טורקיז' },
+  { color: '#2E7D32', label: 'יער עמוק' },
+  { color: '#059669', label: 'אמרלד' },
+  { color: '#16A34A', label: 'ירוק' },
+  { color: '#8BC34A', label: 'ליים' },
+  { color: '#0D9488', label: 'טיל' },
   { color: '#FF9800', label: 'כתום' },
-  { color: '#9C27B0', label: 'סגול' },
-  { color: '#81D4FA', label: 'תכלת' },
-  { color: '#F8BBD0', label: 'ורוד רך' },
-  { color: '#C5E1A5', label: 'ירוק רך' },
-  { color: '#FFE082', label: 'זהב רך' },
-  { color: '#7C4DFF', label: 'אינדיגו' },
-  { color: '#FF5252', label: 'אדום חי' },
+  { color: '#F59E0B', label: 'ענבר' },
+  { color: '#D97706', label: 'דבש' },
+  { color: '#FFC107', label: 'זהב' },
   { color: '#B2AC88', label: 'מרווה' },
   { color: '#4682B4', label: 'פלדה' },
-  { color: '#E040FB', label: 'פוקסיה' },
-  { color: '#00E676', label: 'ניאון ירוק' },
-  { color: '#FF6E40', label: 'קורל' },
+  { color: '#7C3AED', label: 'סגול' },
+  { color: '#6366F1', label: 'אינדיגו' },
+  { color: '#8B5CF6', label: 'לבנדר' },
   { color: '#1DE9B6', label: 'מנטה' },
 ];
 
@@ -97,6 +97,7 @@ export default function FloatingToolbar({
     { key: 'color', label: 'צבע', icon: Palette },
     { key: 'shape', label: 'צורה', icon: Shapes },
     { key: 'type',  label: 'טקסט', icon: Type },
+    { key: 'sticker', label: 'סטיקר', icon: Star },
   ];
 
   return (
@@ -124,7 +125,7 @@ export default function FloatingToolbar({
               {onAddBranch && (
                 <button onClick={onAddBranch}
                   className="p-1.5 rounded-lg transition-all hover:bg-gray-100" title="הוסף ענף">
-                  <Plus className="w-3.5 h-3.5 text-[#E91E63]" />
+                  <Plus className="w-3.5 h-3.5 text-[#7C3AED]" />
                 </button>
               )}
               <button onClick={onClose}
@@ -280,12 +281,33 @@ export default function FloatingToolbar({
             </motion.div>
           )}
 
+          {/* Sticker Picker */}
+          {activeSection === 'sticker' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-3 py-2.5">
+              <div className="grid grid-cols-8 gap-1">
+                {['✅', '⏳', '🚧', '⚠️', '🔥', '⚡', '⭐', '🎯',
+                  '🚀', '💡', '💪', '🏆', '💼', '💰', '📊', '📅',
+                  '🟢', '🟡', '🟠', '🔵', '🟣', '📋', '🔒', '🔍',
+                ].map((sticker, i) => (
+                  <motion.button
+                    key={i}
+                    whileHover={{ scale: 1.3, rotate: 10 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-indigo-50 text-base transition-all"
+                  >
+                    {sticker}
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           {/* Apply to Children (Directive #6) */}
           {onApplyToChildren && (
             <div className="px-3 pb-2.5 pt-1 border-t border-gray-50 mt-1">
               <button
                 onClick={onApplyToChildren}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold transition-all bg-gradient-to-r from-[#E91E63] to-[#FF6B9D] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold transition-all bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Copy className="w-3.5 h-3.5" />
                 החל על כל הילדים

@@ -164,7 +164,7 @@ export default function TaskFileAttachments({ taskId, attachments = [], onUpdate
                   {att.file_name}
                 </a>
                 {att.file_size && (
-                  <span className="text-gray-400 text-[10px]">{formatFileSize(att.file_size)}</span>
+                  <span className="text-gray-400 text-[12px]">{formatFileSize(att.file_size)}</span>
                 )}
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <a

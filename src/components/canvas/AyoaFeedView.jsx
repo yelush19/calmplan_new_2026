@@ -55,14 +55,14 @@ export default function AyoaFeedView({ tasks = [], onEditTask }) {
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 {category && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 h-4 rounded-full font-bold border-[#4682B4] text-[#4682B4]">
+                  <Badge variant="outline" className="text-[12px] px-1.5 h-4 rounded-full font-bold border-[#4682B4] text-[#4682B4]">
                     {category}
                   </Badge>
                 )}
                 {task.due_date && (
                   <span className="text-[11px] font-semibold text-slate-700">{task.due_date}</span>
                 )}
-                <Badge variant="outline" className={`text-[10px] px-1.5 h-4 rounded-full font-bold ${TASK_STATUS_CONFIG[status]?.color || 'text-slate-700'}`}>
+                <Badge variant="outline" className={`text-[12px] px-1.5 h-4 rounded-full font-bold ${TASK_STATUS_CONFIG[status]?.color || 'text-slate-700'}`}>
                   {TASK_STATUS_CONFIG[status]?.text || status}
                 </Badge>
               </div>

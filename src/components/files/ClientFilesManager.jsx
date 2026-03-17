@@ -235,7 +235,7 @@ export default function ClientFilesManager({ clientId, clientName }) {
                 <Icon className="w-3.5 h-3.5" />
                 {tab.label}
                 {count > 0 && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 min-w-[18px] flex items-center justify-center rounded-full">
+                  <Badge variant="secondary" className="text-[12px] px-1.5 py-0 h-4 min-w-[18px] flex items-center justify-center rounded-full">
                     {count}
                   </Badge>
                 )}

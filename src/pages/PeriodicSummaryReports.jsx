@@ -90,11 +90,11 @@ function ReportCell({ report, onEdit }) {
           isOverdue ? 'border-amber-300 bg-amber-50' : 'border-gray-200 hover:border-gray-300'
         }`}
       >
-        <Badge className={`${statusConfig.color} text-[10px] px-1.5 py-0`}>
+        <Badge className={`${statusConfig.color} text-[12px] px-1.5 py-0`}>
           {statusConfig.label}
         </Badge>
         {targetDate && (
-          <div className={`text-[10px] mt-1 ${isOverdue ? 'text-amber-600 font-bold' : 'text-gray-500'}`}>
+          <div className={`text-[12px] mt-1 ${isOverdue ? 'text-amber-600 font-bold' : 'text-gray-500'}`}>
             {targetDate.toLocaleDateString('he-IL')}
           </div>
         )}
@@ -742,7 +742,7 @@ export default function PeriodicSummaryReports() {
                   {columns.map(col => (
                     <th key={`${col.typeKey}_${col.period}`} className="text-center p-2 font-semibold min-w-[110px] bg-gray-100">
                       <div className="text-xs">{col.label}</div>
-                      <div className="text-[10px] text-muted-foreground font-normal">יעד: {col.targetLabel}</div>
+                      <div className="text-[12px] text-muted-foreground font-normal">יעד: {col.targetLabel}</div>
                     </th>
                   ))}
                 </tr>

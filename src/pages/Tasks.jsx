@@ -96,7 +96,7 @@ const priorityConfig = {
   low: { text: 'נמוך', color: 'bg-blue-50 text-blue-700', dot: 'bg-blue-400', order: 3 },
   medium: { text: 'בינוני', color: 'bg-amber-50 text-amber-700', dot: 'bg-amber-400', order: 2 },
   high: { text: 'גבוה', color: 'bg-orange-50 text-orange-700', dot: 'bg-orange-400', order: 1 },
-  urgent: { text: 'דחוף', color: 'bg-rose-50 text-rose-700', dot: 'bg-rose-500', order: 0 },
+  urgent: { text: 'דחוף', color: 'bg-amber-50 text-amber-800', dot: 'bg-amber-500', order: 0 },
 };
 
 // Hebrew → golden status migration for imported data
@@ -659,7 +659,7 @@ export default function TasksPage() {
           <Button
             size="sm"
             onClick={() => setShowInjectionPanel(prev => !prev)}
-            className={`gap-1 rounded-xl ${showInjectionPanel ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'}`}
+            className={`gap-1 rounded-xl ${showInjectionPanel ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'}`}
           >
             <GitBranchPlus className="w-4 h-4" />
             הזרקת משימות
@@ -790,7 +790,7 @@ export default function TasksPage() {
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
-              <Badge className={`text-[10px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? 'bg-[#F5F5F5] text-white' : 'bg-gray-100 text-gray-500'}`}>
+              <Badge className={`text-[12px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? 'bg-[#F5F5F5] text-white' : 'bg-gray-100 text-gray-500'}`}>
                 {count}
               </Badge>
             </button>
@@ -846,6 +846,30 @@ export default function TasksPage() {
         </CardContent>
       </Card>
 
+      {/* View Toggle: list / kanban / mindmap / gantt */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500 font-medium">תצוגה:</span>
+        <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
+          {[
+            { key: 'kanban', label: 'קנבן', icon: LayoutGrid },
+            { key: 'list', label: 'רשימה', icon: List },
+            { key: 'mindmap', label: 'מיינדמפ', icon: Network },
+            { key: 'gantt', label: 'גאנט', icon: BarChart3 },
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+                view === key ? 'bg-primary/10 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Group by toggle for list view */}
       {view === 'list' && (
         <div className="flex items-center gap-2 flex-wrap">
@@ -873,19 +897,42 @@ export default function TasksPage() {
             <button onClick={collapseAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
               כווץ הכל
             </button>
-          <button
-            onClick={() => bulkMode ? exitBulkMode() : setBulkMode(true)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 mr-auto ${
-              bulkMode
-                ? 'bg-violet-100 text-violet-700 border-violet-400'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
-            }`}
-          >
-            {bulkMode ? `ביטול (${selectedTaskIds.size} נבחרו)` : 'עדכון מרובה'}
-          </button>
           </div>
         </div>
       )}
+
+      {/* Bulk update toggle — available in all views */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => bulkMode ? exitBulkMode() : setBulkMode(true)}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+            bulkMode
+              ? 'bg-violet-100 text-violet-700 border-violet-400'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
+          }`}
+        >
+          {bulkMode ? `ביטול (${selectedTaskIds.size} נבחרו)` : 'עדכון מרובה'}
+        </button>
+        {bulkMode && (
+          <>
+            <button
+              onClick={() => {
+                const allIds = filteredTasks.map(t => t.id);
+                setSelectedTaskIds(new Set(allIds));
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-violet-50 text-violet-600 hover:bg-violet-100 border border-violet-200 transition-colors"
+            >
+              בחר הכל ({filteredTasks.length})
+            </button>
+            <button
+              onClick={() => setSelectedTaskIds(new Set())}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200 transition-colors"
+            >
+              נקה בחירה
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Bulk action floating bar */}
       <AnimatePresence>
@@ -924,7 +971,7 @@ export default function TasksPage() {
 
       {/* Content */}
       <ViewErrorBoundary>
-      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} isLoading={isLoading} centerLabel="משימות" centerSub="P3" accentColor="#E91E63" onEditTask={handleEditTask}>
+      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} isLoading={isLoading} centerLabel="משימות" centerSub="P3" accentColor="#6366F1" onEditTask={handleEditTask}>
       {view === 'list' ? (
         sortedTasks.length === 0 ? (
           <Card className="border-0 shadow-sm">
@@ -978,7 +1025,7 @@ export default function TasksPage() {
                             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isGroupCollapsed ? 'rotate-[-90deg]' : ''}`} />
                             <div className={`w-2.5 h-2.5 rounded-full ${groupDotStyle ? '' : groupDot} shrink-0`} style={groupDotStyle || undefined} />
                             <span className="font-semibold text-gray-700 text-xs">{groupLabel}</span>
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 font-normal">
+                            <Badge variant="secondary" className="text-[12px] px-1.5 py-0 bg-gray-100 text-gray-500 font-normal">
                               {groupTasks.length}
                             </Badge>
                           </div>
@@ -1010,7 +1057,7 @@ export default function TasksPage() {
                                     <div className="flex items-center gap-2">
                                       <ChevronDown className={`w-3 h-3 text-gray-300 transition-transform ${isCatCollapsed ? 'rotate-[-90deg]' : ''}`} />
                                       <span className="text-[11px] font-semibold text-gray-500">{cat}</span>
-                                      <span className="text-[10px] text-gray-400">({catTasks.length})</span>
+                                      <span className="text-[12px] text-gray-400">({catTasks.length})</span>
                                     </div>
                                   </td>
                                 </tr>
@@ -1075,7 +1122,7 @@ export default function TasksPage() {
                             {/* Category */}
                             <td className="px-3 py-2">
                               {task.category ? (
-                                <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                                <Badge variant="outline" className="text-[12px] px-2 py-0.5">
                                   {getCategoryLabel(task.category)}
                                 </Badge>
                               ) : (
@@ -1093,7 +1140,7 @@ export default function TasksPage() {
                                     {task.title}
                                   </p>
                                   {task.description && (
-                                    <p className="text-[10px] text-gray-400 truncate max-w-[250px]">
+                                    <p className="text-[12px] text-gray-400 truncate max-w-[250px]">
                                       {task.description.slice(0, 50)}
                                     </p>
                                   )}
@@ -1112,7 +1159,7 @@ export default function TasksPage() {
                                 value={task.status}
                                 onValueChange={(newStatus) => handleStatusChange(task, newStatus)}
                               >
-                                <SelectTrigger className="w-28 h-7 rounded-lg text-[10px] border-0 bg-gray-50">
+                                <SelectTrigger className="w-28 h-7 rounded-lg text-[12px] border-0 bg-gray-50">
                                   <div className="flex items-center gap-1.5">
                                     <div className={`w-2 h-2 rounded-full ${sts.dot}`} />
                                     <SelectValue />
@@ -1132,7 +1179,7 @@ export default function TasksPage() {
                             </td>
                             {/* Priority */}
                             <td className="px-3 py-2">
-                              <Badge className={`text-[10px] px-2 py-0.5 ${pri.color}`}>
+                              <Badge className={`text-[12px] px-2 py-0.5 ${pri.color}`}>
                                 {pri.text}
                               </Badge>
                             </td>
@@ -1210,6 +1257,9 @@ export default function TasksPage() {
           getPriorityText={(p) => priorityConfig[p]?.text || p}
           clients={clientsList}
           onTaskCreated={loadTasks}
+          bulkMode={bulkMode}
+          selectedTaskIds={selectedTaskIds}
+          onToggleTaskSelection={toggleTaskSelection}
         />
       )}
       </UnifiedAyoaLayout>

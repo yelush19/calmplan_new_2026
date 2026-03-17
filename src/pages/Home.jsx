@@ -524,7 +524,7 @@ export default function HomePage() {
           {/* KPI 1: Total Capacity */}
           <div className="flex items-center gap-2 min-w-[140px]">
             <div className="flex flex-col">
-              <span className="text-[10px] text-gray-500 font-medium">קיבולת יומית</span>
+              <span className="text-[12px] text-gray-500 font-medium">קיבולת יומית</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-xl font-bold text-[#4682B4]">
                   {(capacityKPIs.totalMinutes / 60).toFixed(1)}
@@ -537,7 +537,7 @@ export default function HomePage() {
                 background: `conic-gradient(#4682B4 ${capacityKPIs.utilizationPercent * 3.6}deg, #E0E0E0 0deg)`,
                 color: capacityKPIs.utilizationPercent > 100 ? '#800000' : '#4682B4',
               }}>
-              <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[8px]">
+              <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[11px]">
                 {capacityKPIs.utilizationPercent}%
               </div>
             </div>
@@ -548,7 +548,7 @@ export default function HomePage() {
           {/* KPI 2: Cognitive Load Mix */}
           <div className="flex items-center gap-2 min-w-[180px]">
             <div className="flex flex-col">
-              <span className="text-[10px] text-gray-500 font-medium">מיקס עומס קוגניטיבי</span>
+              <span className="text-[12px] text-gray-500 font-medium">מיקס עומס קוגניטיבי</span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {[3, 2, 1, 0].map(tier => {
                   const count = capacityKPIs.cognitiveLoadMix[tier] || 0;
@@ -570,7 +570,7 @@ export default function HomePage() {
           {/* KPI 3: Efficiency Score */}
           <div className="flex items-center gap-2 min-w-[120px]">
             <div className="flex flex-col">
-              <span className="text-[10px] text-gray-500 font-medium">יעילות</span>
+              <span className="text-[12px] text-gray-500 font-medium">יעילות</span>
               <span className="text-xl font-bold" style={{
                 color: capacityKPIs.efficiencyScore >= 75 ? '#2E7D32' :
                        capacityKPIs.efficiencyScore >= 50 ? '#F57C00' : '#800000'
@@ -585,11 +585,11 @@ export default function HomePage() {
           {/* KPI 4: P-Priority Split */}
           <div className="flex items-center gap-2 min-w-[150px]">
             <div className="flex flex-col">
-              <span className="text-[10px] text-gray-500 font-medium">עומס לפי מחלקה</span>
+              <span className="text-[12px] text-gray-500 font-medium">עומס לפי מחלקה</span>
               <div className="flex items-center gap-2 mt-0.5">
                 {Object.entries(capacityKPIs.loadByPriority).map(([p, mins]) => (
                   mins > 0 && <div key={p} className="flex items-center gap-0.5">
-                    <span className="text-[10px] font-bold text-gray-600">{p}</span>
+                    <span className="text-[12px] font-bold text-gray-600">{p}</span>
                     <span className="text-xs font-semibold text-[#4682B4]">{Math.round(mins / 60 * 10) / 10}h</span>
                   </div>
                 ))}
@@ -690,7 +690,7 @@ export default function HomePage() {
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }} />
                 </div>
               </div>
-              <span className="text-[10px] font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
+              <span className="text-[12px] font-bold" style={{ color: ZERO_PANIC.green }}>{Math.round(progress)}%</span>
             </div>
 
             {/* Expanded details */}
@@ -705,7 +705,7 @@ export default function HomePage() {
                 >
                   <div className="px-3 pb-2 pt-1 border-t border-gray-100 flex flex-col gap-1.5">
                     {/* Date */}
-                    <div className="text-[10px] text-gray-500 font-medium">
+                    <div className="text-[12px] text-gray-500 font-medium">
                       {format(new Date(), 'EEEE, d בMMMM yyyy', { locale: he })}
                     </div>
 
@@ -771,7 +771,7 @@ export default function HomePage() {
                           await nuclearWipeTasks();
                           window.location.reload();
                         }}
-                        className="gap-1 h-7 text-[10px] px-3 w-full border-red-300 text-red-600 hover:bg-red-50">
+                        className="gap-1 h-7 text-[12px] px-3 w-full border-red-300 text-red-600 hover:bg-red-50">
                         <Trash2 className="w-3 h-3" />
                         מחק הכל (Nuclear Wipe)
                       </Button>
@@ -793,7 +793,7 @@ export default function HomePage() {
             style={{ backgroundColor: '#FFFFFF' }}
           >
             <Target className="w-3.5 h-3.5" style={{ color: ZERO_PANIC.blue }} />
-            <span className="text-[10px] font-semibold text-gray-600 ml-0.5">מרכז השליטה</span>
+            <span className="text-[12px] font-semibold text-gray-600 ml-0.5">מרכז השליטה</span>
             <div className="flex bg-[#F5F5F5] rounded-md p-0.5 mr-1">
               <Button variant={focusView === 'mindmap' ? 'secondary' : 'ghost'} size="icon" className="h-5 w-5" onClick={() => setFocusView('mindmap')} title="מפת חשיבה">
                 <Network className="w-2.5 h-2.5" />
@@ -809,7 +809,7 @@ export default function HomePage() {
               </Button>
             </div>
             <Link to={createPageUrl("Tasks")}>
-              <span className="text-[9px] text-gray-400 hover:text-gray-600 cursor-pointer whitespace-nowrap">כל המשימות →</span>
+              <span className="text-[12px] text-gray-400 hover:text-gray-600 cursor-pointer whitespace-nowrap">כל המשימות →</span>
             </Link>
           </div>
           </DraggablePanel>
@@ -842,7 +842,7 @@ export default function HomePage() {
                       {insight.type === 'info' && <Eye className="w-2.5 h-2.5" />}
                       {insight.type === 'celebration' && <Sparkles className="w-2.5 h-2.5" />}
                     </div>
-                    <p className={`text-[10px] font-medium ${c.text} truncate max-w-[180px]`}>{insight.title}</p>
+                    <p className={`text-[12px] font-medium ${c.text} truncate max-w-[180px]`}>{insight.title}</p>
                   </div>
                 );
               })}
@@ -862,19 +862,19 @@ export default function HomePage() {
             <Link to={createPageUrl("WeeklyPlanningDashboard")}>
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50 cursor-pointer transition-colors">
                 <Brain className="w-3 h-3" style={{ color: ZERO_PANIC.blue }} />
-                <span className="text-[10px] font-medium" style={{ color: '#1565C0' }}>תכנון</span>
+                <span className="text-[12px] font-medium" style={{ color: '#1565C0' }}>תכנון</span>
               </div>
             </Link>
             <Link to={createPageUrl("PayrollDashboard")}>
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-gray-100 cursor-pointer transition-colors">
                 <Briefcase className="w-3 h-3 text-gray-500" />
-                <span className="text-[10px] font-medium text-gray-700">שכר</span>
+                <span className="text-[12px] font-medium text-gray-700">שכר</span>
               </div>
             </Link>
             <Link to={createPageUrl("AutomationRules")}>
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-orange-50 cursor-pointer transition-colors">
                 <Zap className="w-3 h-3" style={{ color: ZERO_PANIC.orange }} />
-                <span className="text-[10px] font-medium" style={{ color: '#E65100' }}>אוטומציות</span>
+                <span className="text-[12px] font-medium" style={{ color: '#E65100' }}>אוטומציות</span>
               </div>
             </Link>
           </div>
@@ -906,7 +906,7 @@ export default function HomePage() {
                     </Button>
                   </div>
                   <Link to={createPageUrl("Tasks")}>
-                    <Button variant="ghost" size="sm" className="text-[10px] text-gray-500 gap-0.5 h-6 px-1.5">
+                    <Button variant="ghost" size="sm" className="text-[12px] text-gray-500 gap-0.5 h-6 px-1.5">
                       כל המשימות <ArrowRight className="w-3 h-3" />
                     </Button>
                   </Link>
@@ -926,7 +926,7 @@ export default function HomePage() {
                       className={`flex items-center gap-1 px-2 py-1 rounded-t-md text-xs font-medium whitespace-nowrap border-b-2 ${isActive ? `${tab.activeBg} border-current` : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>
                       <Icon className={`w-3 h-3 ${isActive ? '' : tab.color}`} />
                       <span>{tab.label}</span>
-                      {count > 0 && <Badge className={`text-[9px] px-1 py-0 h-3.5 ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>{count}</Badge>}
+                      {count > 0 && <Badge className={`text-[12px] px-1 py-0 h-3.5 ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>{count}</Badge>}
                     </button>
                   );
                 })}
@@ -966,23 +966,23 @@ export default function HomePage() {
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-bold truncate">{task.title}</span>
                               {task.client_name && (
-                                <span className="text-[10px] text-gray-400 truncate">• {task.client_name}</span>
+                                <span className="text-[12px] text-gray-400 truncate">• {task.client_name}</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: lc.color + '20', color: lc.color }}>
+                              <span className="text-[12px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: lc.color + '20', color: lc.color }}>
                                 {lc.label}
                               </span>
-                              <span className="text-[10px] text-gray-400">{task._duration} דק׳</span>
+                              <span className="text-[12px] text-gray-400">{task._duration} דק׳</span>
                               {task.due_date && (
-                                <span className="text-[10px] text-gray-400">{format(parseISO(task.due_date), 'dd/MM')}</span>
+                                <span className="text-[12px] text-gray-400">{format(parseISO(task.due_date), 'dd/MM')}</span>
                               )}
-                              <span className="text-[10px] font-medium" style={{ color: lc.color }}>{task._priority}</span>
+                              <span className="text-[12px] font-medium" style={{ color: lc.color }}>{task._priority}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
                             {statusConfig[task.status] && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#F5F5F5' }}>
+                              <span className="text-[12px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#F5F5F5' }}>
                                 {statusConfig[task.status]?.label || task.status}
                               </span>
                             )}
@@ -1084,7 +1084,7 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, 
               setAllExpanded(true);
             }
           }}
-          className="text-[10px] text-[#455A64] hover:text-[#000000] flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#F5F5F5]"
+          className="text-[12px] text-[#455A64] hover:text-[#000000] flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#F5F5F5]"
         >
           <ChevronDown className={`w-3 h-3 transition-transform ${allExpanded ? 'rotate-180' : ''}`} />
           {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
@@ -1100,7 +1100,7 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, 
             >
               <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
               <span className="text-xs font-bold text-[#000000]">{clientName}</span>
-              <span className="text-[10px] text-[#455A64]">({clientTasks.length})</span>
+              <span className="text-[12px] text-[#455A64]">({clientTasks.length})</span>
             </button>
             {!isCollapsed && (
               <div className="space-y-1 mt-1 mr-2">
@@ -1152,10 +1152,10 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm text-gray-800 truncate">{task.title}</span>
           {task.priority === 'urgent' && (
-            <Badge style={{ backgroundColor: '#FFF3E0', color: '#E65100' }} className="text-[10px] px-1.5 py-0">דחוף</Badge>
+            <Badge style={{ backgroundColor: '#FFF3E0', color: '#E65100' }} className="text-[12px] px-1.5 py-0">דחוף</Badge>
           )}
           {isMissingData && (
-            <Badge className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 border border-dashed border-gray-300">חסר מידע</Badge>
+            <Badge className="text-[12px] px-1.5 py-0 bg-gray-100 text-gray-500 border border-dashed border-gray-300">חסר מידע</Badge>
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -1163,26 +1163,26 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
             <span className="text-[11px] text-gray-500 truncate max-w-[120px]">{task.client_name}</span>
           )}
           {task.category && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{task.category}</Badge>
+            <Badge variant="outline" className="text-[12px] px-1.5 py-0 h-4">{task.category}</Badge>
           )}
           {task.client_size && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-bold">{task.client_size}</Badge>
+            <Badge variant="outline" className="text-[12px] px-1 py-0 h-4 font-bold">{task.client_size}</Badge>
           )}
           {showDeadlineContext && isOverdue && (
-            <Badge style={{ backgroundColor: '#F3E5F5', color: '#7B1FA2' }} className="text-[10px] px-1.5 py-0">
+            <Badge style={{ backgroundColor: '#F3E5F5', color: '#7B1FA2' }} className="text-[12px] px-1.5 py-0">
               {daysFromDue === 1 ? 'אתמול' : `${daysFromDue} ימים באיחור`}
             </Badge>
           )}
           {showDeadlineContext && !isOverdue && task.due_date && (
-            <span className="text-[10px] text-gray-400">היום - {format(parseISO(task.due_date), 'd/M')}</span>
+            <span className="text-[12px] text-gray-400">היום - {format(parseISO(task.due_date), 'd/M')}</span>
           )}
           {showDate && task.due_date && (
-            <span className="text-[10px] text-gray-400">
+            <span className="text-[12px] text-gray-400">
               {isTomorrow(parseISO(task.due_date)) ? 'מחר' : format(parseISO(task.due_date), 'd/M')}
             </span>
           )}
           {showPaymentDate && task.payment_due_date && (
-            <Badge className={`text-[10px] px-1.5 py-0 ${paymentDaysLeft <= 0 ? 'bg-purple-100 text-purple-700' : paymentDaysLeft <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
+            <Badge className={`text-[12px] px-1.5 py-0 ${paymentDaysLeft <= 0 ? 'bg-purple-100 text-purple-700' : paymentDaysLeft <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
               {paymentDaysLeft < 0 ? `${Math.abs(paymentDaysLeft)} ימים באיחור תשלום` : paymentDaysLeft === 0 ? 'תשלום היום' : `${paymentDaysLeft} ימים לתשלום`}
             </Badge>
           )}
@@ -1212,13 +1212,13 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
             type="date"
             value={task.payment_due_date || ''}
             onChange={(e) => onPaymentDateChange(task, e.target.value)}
-            className="h-7 text-[10px] px-1.5 w-[110px] border border-yellow-300 rounded bg-yellow-50 text-yellow-800"
+            className="h-7 text-[12px] px-1.5 w-[110px] border border-yellow-300 rounded bg-yellow-50 text-yellow-800"
             title="תאריך יעד לתשלום"
           />
         )}
         {onStatusChange && (
           <Select value={task.status || 'not_started'} onValueChange={(newStatus) => onStatusChange(task, newStatus)}>
-            <SelectTrigger className={`h-7 text-[10px] px-2 w-auto min-w-[90px] border-0 ${statusCfg.color}`}>
+            <SelectTrigger className={`h-7 text-[12px] px-2 w-auto min-w-[90px] border-0 ${statusCfg.color}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

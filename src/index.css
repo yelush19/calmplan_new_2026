@@ -423,9 +423,9 @@ button:focus-visible {
   /* Typography */
   --cp-font: 'Heebo', 'Assistant', sans-serif;
   --cp-font-heading: 'Assistant', 'Heebo', sans-serif;
-  --cp-font-size-xs: 10px;
-  --cp-font-size-sm: 12px;
-  --cp-font-size-md: 14px;
+  --cp-font-size-xs: 12px;   /* Minimum readable — was 10px, now 12px */
+  --cp-font-size-sm: 13px;   /* Small but clear — was 12px */
+  --cp-font-size-md: 15px;   /* Normal baseline — was 14px */
   --cp-font-size-lg: 18px;
   --cp-font-size-xl: 22px;
 
@@ -442,7 +442,7 @@ button:focus-visible {
   --cp-p5: #2E7D32;
 
   /* AYOA Organic palette */
-  --cp-pastel-pink: #FFE0E6;
+  --cp-pastel-pink: #EDE9FE;
   --cp-pastel-blue: #E3F2FD;
   --cp-pastel-green: #E8F5E9;
   --cp-pastel-yellow: #FFF8E1;

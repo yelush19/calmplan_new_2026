@@ -111,7 +111,7 @@ export default function TaxInfoDialog({ client, open, onClose }) {
 
             {/* Last updated */}
             {annual.last_updated && (
-              <div className="text-[10px] text-gray-400 text-left" dir="ltr">
+              <div className="text-[12px] text-gray-400 text-left" dir="ltr">
                 Last updated: {new Date(annual.last_updated).toLocaleDateString('he-IL')}
               </div>
             )}

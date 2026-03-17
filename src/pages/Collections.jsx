@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Plus, Filter, FileText, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Invoice, Client } from '@/api/entities';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 export default function CollectionsPage() {
     const [invoices, setInvoices] = useState([]);
@@ -49,6 +50,7 @@ export default function CollectionsPage() {
     const outstandingRevenue = invoices.filter(inv => ['sent', 'overdue'].includes(inv.status)).reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
     return (
+        <UnifiedAyoaLayout tasks={[]} centerLabel="גבייה" accentColor="#059669" isLoading={isLoading}>
         <div className="space-y-6">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -172,5 +174,6 @@ export default function CollectionsPage() {
                 </CardContent>
             </Card>
         </div>
+        </UnifiedAyoaLayout>
     );
 }
