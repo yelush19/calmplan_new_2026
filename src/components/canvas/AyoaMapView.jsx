@@ -351,9 +351,17 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
     setPan({ x: 0, y: 0 });
   }, [allNodes]);
 
-  // ── Node click handler ──
+  // ── Node click handler: toggle focus only (no toolbar) ──
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
+    if (dragRef.current.active) return; // ignore if dragging
+    setFocusedNode(prev => prev === nodeId ? null : nodeId);
+  }, []);
+
+  // ── Node right-click / double-click: open FloatingToolbar ──
+  const handleNodeContextMenu = useCallback((e, nodeId) => {
+    e.stopPropagation();
+    e.preventDefault();
     if (dragRef.current.active) return; // ignore if dragging
     const svg = svgRef.current;
     if (!svg) return;
@@ -373,7 +381,6 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
       // Notify Design Engine of selection
       window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId } }));
     }
-    setFocusedNode(prev => prev === nodeId ? null : nodeId);
   }, [allNodes, selectedNode, zoom, pan]);
 
   const handleColorChange = useCallback((color) => {
@@ -511,6 +518,8 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
             <g key={node.id}
               onMouseDown={(e) => { if (e.button === 0) handleDragStart(e, node.catIndex); }}
               onClick={(e) => handleNodeClick(e, node.id)}
+              onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
+              onDoubleClick={(e) => handleNodeContextMenu(e, node.id)}
               style={{
                 cursor: 'grab',
                 transition: 'filter 0.4s ease, opacity 0.4s ease',
@@ -565,6 +574,8 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
           return (
             <g key={node.id}
               onClick={(e) => handleNodeClick(e, node.id)}
+              onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
+              onDoubleClick={(e) => handleNodeContextMenu(e, node.id)}
               style={{
                 cursor: 'pointer',
                 transition: 'filter 0.4s ease, opacity 0.4s ease',
@@ -632,6 +643,8 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
               )}
               {/* Collector body */}
               <g filter="url(#map-node-shadow)" onClick={(e) => handleNodeClick(e, cNode.id)}
+                onContextMenu={(e) => handleNodeContextMenu(e, cNode.id)}
+                onDoubleClick={(e) => handleNodeContextMenu(e, cNode.id)}
                 style={{ cursor: 'pointer' }}>
                 {renderNodeShape(cNode.shape, cNode.x, cNode.y, cNode.r, cNode.bg, cNode.color, 2.5)}
                 {renderNodeShape(cNode.shape, cNode.x, cNode.y, cNode.r - 3, 'white', 'none', 0)}

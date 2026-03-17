@@ -4,8 +4,8 @@ import { getServiceWeight } from '@/config/serviceWeights';
 /**
  * CognitiveCapacityHeader — "מד דופק" קיבולת יומית
  *
- * Replaces the static Kanban 3-column header with a dynamic cognitive load graph.
- * Shows stacked bars by complexity tier, and clicking a bar filters the task list.
+ * Clean stacked horizontal bar design showing cognitive load tiers.
+ * Clicking a bar filters the task list.
  *
  * Colors (Zero Gray Policy):
  *   - בורדו (#800000) = מורכב (cognitiveLoad 3)
@@ -15,10 +15,10 @@ import { getServiceWeight } from '@/config/serviceWeights';
  */
 
 const TIER_CONFIG = {
-  3: { label: 'מורכב', color: '#800000', bg: 'bg-[#800000]/10', text: 'text-[#800000]', icon: '🧗' },
-  2: { label: 'בינוני', color: '#4682B4', bg: 'bg-[#4682B4]/10', text: 'text-[#4682B4]', icon: '📦' },
-  1: { label: 'פשוט', color: '#ADD8E6', bg: 'bg-[#ADD8E6]/10', text: 'text-[#5B99A8]', icon: '🟢' },
-  0: { label: 'ננו', color: '#8FBC8F', bg: 'bg-[#8FBC8F]/10', text: 'text-[#5A8A5A]', icon: '⚡' },
+  3: { label: 'מורכב', color: '#800000', lightBg: '#80000012', icon: '🧗' },
+  2: { label: 'בינוני', color: '#4682B4', lightBg: '#4682B412', icon: '📦' },
+  1: { label: 'פשוט', color: '#ADD8E6', lightBg: '#ADD8E612', labelColor: '#5B99A8', icon: '🟢' },
+  0: { label: 'ננו', color: '#8FBC8F', lightBg: '#8FBC8F12', labelColor: '#5A8A5A', icon: '⚡' },
 };
 
 export default function CognitiveCapacityHeader({ tasks = [], onFilterTier }) {
@@ -76,53 +76,65 @@ export default function CognitiveCapacityHeader({ tasks = [], onFilterTier }) {
         )}
       </div>
 
-      {/* Bar graph */}
-      <div className="flex items-end gap-3 h-20">
+      {/* Stacked horizontal bars */}
+      <div className="flex flex-col gap-1.5">
         {tierData.map(({ tier, count, totalMinutes: mins, pct }) => {
           const cfg = TIER_CONFIG[tier];
           const isActive = activeTier === tier;
           const isDimmed = activeTier !== null && !isActive;
-          const barHeight = Math.max(8, pct * 0.7); // scale to 70px max
+          const textColor = cfg.labelColor || cfg.color;
 
           return (
             <button
               key={tier}
               onClick={() => handleBarClick(tier)}
-              className={`flex-1 flex flex-col items-center gap-1 transition-all duration-200 rounded-lg p-1
-                ${isActive ? 'ring-2 ring-offset-1' : ''}
-                ${isDimmed ? 'opacity-30' : 'opacity-100'}
+              className={`group flex items-center gap-2.5 w-full rounded-lg px-2.5 py-1 transition-all duration-200
+                ${isActive ? 'ring-1.5 ring-offset-1' : ''}
+                ${isDimmed ? 'opacity-35' : 'opacity-100'}
                 hover:opacity-100`}
               style={{
-                ...(isActive ? { ringColor: cfg.color } : {}),
+                backgroundColor: isActive ? cfg.lightBg : 'transparent',
+                ...(isActive ? { '--tw-ring-color': cfg.color } : {}),
               }}
               title={`${cfg.label}: ${count} משימות, ${mins} דק'`}
             >
-              {/* Count label above bar */}
-              <span className="text-xs font-bold" style={{ color: cfg.color }}>
-                {count > 0 ? count : ''}
-              </span>
-
-              {/* The bar — AYOA-style soft rounded capsule with glow */}
-              <div
-                className="w-full rounded-full transition-all duration-300"
-                style={{
-                  height: `${barHeight}px`,
-                  backgroundColor: count > 0 ? cfg.color : '#E0E0E0',
-                  minWidth: '40px',
-                  boxShadow: count > 0 ? `0 2px 12px 0 ${cfg.color}55, 0 0 20px 0 ${cfg.color}30` : 'none',
-                }}
-              />
-
-              {/* Label below bar */}
-              <div className="flex items-center gap-0.5">
-                <span className="text-[12px]">{cfg.icon}</span>
-                <span className="text-[12px] font-medium text-slate-600">{cfg.label}</span>
+              {/* Left: icon + label */}
+              <div className="flex items-center gap-1.5 w-20 shrink-0" dir="rtl">
+                <span className="text-xs leading-none">{cfg.icon}</span>
+                <span className="text-xs font-semibold truncate" style={{ color: textColor }}>
+                  {cfg.label}
+                </span>
               </div>
 
-              {/* Minutes */}
-              {count > 0 && (
-                <span className="text-[12px] text-slate-400">{mins} דק'</span>
-              )}
+              {/* Center: progress bar track */}
+              <div
+                className="flex-1 h-3 rounded-md overflow-hidden"
+                style={{ backgroundColor: count > 0 ? `${cfg.color}15` : '#f1f5f9' }}
+              >
+                <div
+                  className="h-full rounded-md transition-all duration-500 ease-out"
+                  style={{
+                    width: `${Math.max(count > 0 ? 4 : 0, pct)}%`,
+                    backgroundColor: count > 0 ? cfg.color : 'transparent',
+                    boxShadow: count > 0 ? `0 1px 3px ${cfg.color}30` : 'none',
+                  }}
+                />
+              </div>
+
+              {/* Right: count + minutes */}
+              <div className="flex items-center gap-1.5 w-24 shrink-0 justify-end" dir="rtl">
+                <span
+                  className="text-xs font-bold tabular-nums min-w-[1.25rem] text-center"
+                  style={{ color: count > 0 ? textColor : '#cbd5e1' }}
+                >
+                  {count}
+                </span>
+                {count > 0 && (
+                  <span className="text-[11px] text-slate-400 tabular-nums">
+                    · {mins} דק׳
+                  </span>
+                )}
+              </div>
             </button>
           );
         })}
@@ -130,9 +142,9 @@ export default function CognitiveCapacityHeader({ tasks = [], onFilterTier }) {
 
       {/* Active filter indicator */}
       {activeTier !== null && (
-        <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2">
+        <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center gap-2">
           <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold text-white"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold text-white"
             style={{ backgroundColor: TIER_CONFIG[activeTier].color }}
           >
             {TIER_CONFIG[activeTier].icon} מציג רק: {TIER_CONFIG[activeTier].label}

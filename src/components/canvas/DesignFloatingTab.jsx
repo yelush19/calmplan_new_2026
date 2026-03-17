@@ -27,49 +27,49 @@ const SAVED_THEMES_KEY = 'calmplan_saved_themes';
 
 // Font options -- readable, professional Hebrew fonts
 const FONTS = [
-  { key: 'Heebo', label: 'Heebo', sample: '\u05d0\u05d1\u05d2' },
-  { key: 'Assistant', label: 'Assistant', sample: '\u05d0\u05d1\u05d2' },
-  { key: 'Varela Round', label: 'Varela Round', sample: '\u05d0\u05d1\u05d2' },
-  { key: 'Arial Hebrew', label: 'Arial Hebrew', sample: '\u05d0\u05d1\u05d2' },
+  { key: 'Heebo', label: 'Heebo', sample: 'אבג' },
+  { key: 'Assistant', label: 'Assistant', sample: 'אבג' },
+  { key: 'Varela Round', label: 'Varela Round', sample: 'אבג' },
+  { key: 'Arial Hebrew', label: 'Arial Hebrew', sample: 'אבג' },
 ];
 
 // Shape quick-picks
 const QUICK_SHAPES = [
-  { key: 'bubble', icon: '\u26aa', label: '\u05d1\u05d5\u05e2\u05d4' },
-  { key: 'cloud', icon: '\u2601\ufe0f', label: '\u05e2\u05e0\u05df' },
-  { key: 'capsule', icon: '\u{1F48A}', label: '\u05db\u05de\u05d5\u05e1\u05d4' },
-  { key: 'star', icon: '\u2b50', label: '\u05db\u05d5\u05db\u05d1' },
-  { key: 'hexagon', icon: '\u2b21', label: '\u05de\u05e9\u05d5\u05e9\u05d4' },
-  { key: 'speech', icon: '\u{1F4AC}', label: '\u05d3\u05d9\u05d1\u05d5\u05e8' },
-  { key: 'diamond', icon: '\u25c6', label: '\u05d9\u05d4\u05dc\u05d5\u05dd' },
-  { key: 'heart', icon: '\u2764\ufe0f', label: '\u05dc\u05d1' },
-  { key: 'roundedRect', icon: '\u25ac', label: '\u05de\u05dc\u05d1\u05df' },
-  { key: 'pill', icon: '\u{1F48A}', label: '\u05d2\u05dc\u05d5\u05dc\u05d4' },
-  { key: 'banner', icon: '\u{1F3F3}\ufe0f', label: '\u05d1\u05d0\u05e0\u05e8' },
-  { key: 'crown', icon: '\u{1F451}', label: '\u05db\u05ea\u05e8' },
+  { key: 'bubble', icon: '⚪', label: 'בועה' },
+  { key: 'cloud', icon: '☁️', label: 'ענן' },
+  { key: 'capsule', icon: '💊', label: 'כמוסה' },
+  { key: 'star', icon: '⭐', label: 'כוכב' },
+  { key: 'hexagon', icon: '⬡', label: 'משושה' },
+  { key: 'speech', icon: '💬', label: 'דיבור' },
+  { key: 'diamond', icon: '◆', label: 'יהלום' },
+  { key: 'heart', icon: '❤️', label: 'לב' },
+  { key: 'roundedRect', icon: '▬', label: 'מלבן' },
+  { key: 'pill', icon: '💊', label: 'גלולה' },
+  { key: 'banner', icon: '🏳️', label: 'באנר' },
+  { key: 'crown', icon: '👑', label: 'כתר' },
 ];
 
 // Theme options
 const THEMES = [
-  { key: 'light', icon: Sun, label: '\u05d1\u05d4\u05d9\u05e8', color: '#FFF' },
-  { key: 'soft-gray', icon: CloudMoon, label: '\u05d0\u05e4\u05d5\u05e8 \u05e8\u05da', color: '#E8EAEE' },
-  { key: 'dark', icon: Moon, label: '\u05db\u05d4\u05d4', color: '#1E293B' },
+  { key: 'light', icon: Sun, label: 'בהיר', color: '#FFF' },
+  { key: 'soft-gray', icon: CloudMoon, label: 'אפור רך', color: '#E8EAEE' },
+  { key: 'dark', icon: Moon, label: 'כהה', color: '#1E293B' },
 ];
 
 // Curvature presets
 const CURVATURE_PRESETS = [
-  { value: 0, label: '\u05d9\u05e9\u05e8' },
-  { value: 0.12, label: '\u05e2\u05d3\u05d9\u05df' },
-  { value: 0.25, label: '\u05d0\u05d5\u05e8\u05d2\u05e0\u05d9' },
-  { value: 0.4, label: '\u05d2\u05dc\u05d9' },
+  { value: 0, label: 'ישר' },
+  { value: 0.12, label: 'עדין' },
+  { value: 0.25, label: 'אורגני' },
+  { value: 0.4, label: 'גלי' },
 ];
 
 // Line style options
 const LINE_STYLES = [
-  { key: 'tapered', label: '\u05d8\u05e4\u05dc\u05d9' },
-  { key: 'solid', label: '\u05de\u05dc\u05d0' },
-  { key: 'dashed', label: '\u05de\u05e7\u05d5\u05d5\u05e7\u05d5' },
-  { key: 'dotted', label: '\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea' },
+  { key: 'tapered', label: 'טפלי' },
+  { key: 'solid', label: 'מלא' },
+  { key: 'dashed', label: 'מקווקו' },
+  { key: 'dotted', label: 'נקודות' },
 ];
 
 // Branch color palette -- NO pink, NO red, NO fuchsia. Solid professional colors.
@@ -83,20 +83,20 @@ const BRANCH_COLORS = [
 // Sticker library -- organized categories
 const STICKER_CATEGORIES = [
   {
-    label: '\u05e1\u05d8\u05d8\u05d5\u05e1',
-    stickers: ['\u2705', '\u23f3', '\u{1F6A7}', '\u26a0\ufe0f', '\u{1F4CB}', '\u{1F512}', '\u{1F50D}', '\u{1F4E4}'],
+    label: 'סטטוס',
+    stickers: ['✅', '⏳', '🚧', '⚠️', '📋', '🔒', '🔍', '📤'],
   },
   {
-    label: '\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea',
-    stickers: ['\u{1F525}', '\u26a1', '\u2b50', '\u{1F3AF}', '\u{1F680}', '\u{1F4A1}', '\u{1F4AA}', '\u{1F3C6}'],
+    label: 'עדיפות',
+    stickers: ['🔥', '⚡', '⭐', '🎯', '🚀', '💡', '💪', '🏆'],
   },
   {
-    label: '\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea',
-    stickers: ['\u{1F4BC}', '\u{1F4B0}', '\u{1F4CA}', '\u{1F4C5}', '\u{1F465}', '\u{1F3E2}', '\u{1F4DD}', '\u2699\ufe0f'],
+    label: 'קטגוריות',
+    stickers: ['💼', '💰', '📊', '📅', '👥', '🏢', '📝', '⚙️'],
   },
   {
-    label: '\u05e1\u05de\u05dc\u05d9\u05dd',
-    stickers: ['\u{1F7E2}', '\u{1F7E1}', '\u{1F7E0}', '\u{1F535}', '\u{1F7E3}', '\u2b1c', '\u2b1b', '\u{1F536}'],
+    label: 'סמלים',
+    stickers: ['🟢', '🟡', '🟠', '🔵', '🟣', '⬜', '⬛', '🔶'],
   },
 ];
 
@@ -297,13 +297,13 @@ export default function DesignFloatingTab() {
 
   // Quick actions bar
   const quickActions = [
-    { key: 'presets', icon: Sparkles, label: '\u05ea\u05d1\u05e0\u05d9\u05d5\u05ea' },
-    { key: 'type', icon: Type, label: '\u05d2\u05d5\u05e4\u05df' },
-    { key: 'theme', icon: Sun, label: '\u05e2\u05e8\u05db\u05d4' },
-    { key: 'shape', icon: Shapes, label: '\u05e6\u05d5\u05e8\u05d5\u05ea' },
-    { key: 'line', icon: Sliders, label: '\u05e7\u05d5\u05d5\u05d9\u05dd' },
-    { key: 'palette', icon: Palette, label: '\u05e6\u05d1\u05e2\u05d9\u05dd' },
-    { key: 'templates', icon: Layout, label: '\u05de\u05e4\u05d5\u05ea' },
+    { key: 'presets', icon: Sparkles, label: 'תבניות' },
+    { key: 'type', icon: Type, label: 'גופן' },
+    { key: 'theme', icon: Sun, label: 'ערכה' },
+    { key: 'shape', icon: Shapes, label: 'צורות' },
+    { key: 'line', icon: Sliders, label: 'קווים' },
+    { key: 'palette', icon: Palette, label: 'צבעים' },
+    { key: 'templates', icon: Layout, label: 'מפות' },
   ];
 
   return (
@@ -329,7 +329,7 @@ export default function DesignFloatingTab() {
             ? 'bg-gradient-to-br from-indigo-500 to-blue-600 text-white'
             : 'bg-white text-indigo-600 border-2 border-indigo-200 hover:border-indigo-400'
         }`}
-        title="\u05de\u05e0\u05d5\u05e2 \u05e2\u05d9\u05e6\u05d5\u05d1 \u2022 \u05d2\u05e8\u05d5\u05e8 \u05dc\u05e9\u05d9\u05e0\u05d5\u05d9 \u05de\u05d9\u05e7\u05d5\u05dd"
+        title="מנוע עיצוב • גרור לשינוי מיקום"
       >
         {isOpen ? <X className="w-5 h-5" /> : <Paintbrush className="w-5 h-5" />}
       </motion.button>
@@ -349,14 +349,14 @@ export default function DesignFloatingTab() {
             <div className="px-4 py-2.5 bg-gradient-to-l from-indigo-50 to-blue-50 border-b flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Paintbrush className="w-4 h-4 text-indigo-600" />
-                <span className="font-bold text-[13px] text-slate-800">\u05de\u05e0\u05d5\u05e2 \u05e2\u05d9\u05e6\u05d5\u05d1</span>
+                <span className="font-bold text-[13px] text-slate-800">מנוע עיצוב</span>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={handleUndo}
                   disabled={!canUndo}
                   className={`p-1.5 rounded-lg transition-all ${canUndo ? 'hover:bg-white/80 text-slate-600' : 'text-slate-300 cursor-not-allowed'}`}
-                  title="\u05d1\u05d8\u05dc"
+                  title="בטל"
                 >
                   <Undo2 className="w-3.5 h-3.5" />
                 </button>
@@ -364,7 +364,7 @@ export default function DesignFloatingTab() {
                   onClick={handleRedo}
                   disabled={!canRedo}
                   className={`p-1.5 rounded-lg transition-all ${canRedo ? 'hover:bg-white/80 text-slate-600' : 'text-slate-300 cursor-not-allowed'}`}
-                  title="\u05e9\u05d7\u05d6\u05e8"
+                  title="שחזר"
                 >
                   <Redo2 className="w-3.5 h-3.5" />
                 </button>
@@ -372,7 +372,7 @@ export default function DesignFloatingTab() {
                 <button
                   onClick={() => { setSaveDialogOpen(true); setActiveSection('saved'); }}
                   className="p-1.5 rounded-lg hover:bg-white/80 text-indigo-500 transition-all"
-                  title="\u05e9\u05de\u05d5\u05e8 \u05e2\u05e8\u05db\u05d4"
+                  title="שמור ערכה"
                 >
                   <Save className="w-3.5 h-3.5" />
                 </button>
@@ -403,7 +403,7 @@ export default function DesignFloatingTab() {
               {/* Presets Section */}
               {activeSection === 'presets' && (
                 <div className="p-3 space-y-2">
-                  <p className="text-[11px] text-slate-500 font-bold">\u05ea\u05d1\u05e0\u05d9\u05d5\u05ea \u05de\u05d5\u05db\u05e0\u05d5\u05ea:</p>
+                  <p className="text-[11px] text-slate-500 font-bold">תבניות מוכנות:</p>
                   <div className="grid grid-cols-2 gap-2">
                     {Object.entries(DESIGN_PRESETS).map(([key, preset]) => (
                       <button
@@ -437,7 +437,7 @@ export default function DesignFloatingTab() {
               {/* Typography Section */}
               {activeSection === 'type' && (
                 <div className="p-3 space-y-2">
-                  <p className="text-[11px] text-slate-500 font-bold">\u05d2\u05d5\u05e4\u05df:</p>
+                  <p className="text-[11px] text-slate-500 font-bold">גופן:</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {FONTS.map(f => (
                       <button
@@ -461,7 +461,7 @@ export default function DesignFloatingTab() {
               {/* Theme Section */}
               {activeSection === 'theme' && (
                 <div className="p-3 space-y-2">
-                  <p className="text-[11px] text-slate-500 font-bold">\u05e2\u05e8\u05db\u05ea \u05e0\u05d5\u05e9\u05d0:</p>
+                  <p className="text-[11px] text-slate-500 font-bold">ערכת נושא:</p>
                   <div className="flex gap-2">
                     {THEMES.map(t => (
                       <button
@@ -484,7 +484,7 @@ export default function DesignFloatingTab() {
               {/* Shape Section */}
               {activeSection === 'shape' && (
                 <div className="p-3 space-y-2">
-                  <p className="text-[11px] text-slate-500 font-bold">\u05e6\u05d5\u05e8\u05ea \u05d1\u05e8\u05d9\u05e8\u05ea \u05de\u05d7\u05d3\u05dc:</p>
+                  <p className="text-[11px] text-slate-500 font-bold">צורת ברירת מחדל:</p>
                   <div className="grid grid-cols-4 gap-1.5">
                     {QUICK_SHAPES.map(s => (
                       <button
@@ -511,7 +511,7 @@ export default function DesignFloatingTab() {
                         onChange={(e) => updateWithHistory('glassmorphism', e.target.checked)}
                         className="w-3.5 h-3.5 rounded accent-indigo-600"
                       />
-                      \u05d6\u05db\u05d5\u05db\u05d9\u05ea
+                      זכוכית
                     </label>
                     <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer font-medium">
                       <input
@@ -520,7 +520,7 @@ export default function DesignFloatingTab() {
                         onChange={(e) => updateWithHistory('softShadows', e.target.checked)}
                         className="w-3.5 h-3.5 rounded accent-indigo-600"
                       />
-                      \u05e6\u05dc\u05dc\u05d9\u05dd \u05e8\u05db\u05d9\u05dd
+                      צללים רכים
                     </label>
                   </div>
                 </div>
@@ -529,7 +529,7 @@ export default function DesignFloatingTab() {
               {/* Line Style Section */}
               {activeSection === 'line' && (
                 <div className="p-3 space-y-2">
-                  <p className="text-[11px] text-slate-500 font-bold">\u05e1\u05d2\u05e0\u05d5\u05df \u05e7\u05d5:</p>
+                  <p className="text-[11px] text-slate-500 font-bold">סגנון קו:</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {LINE_STYLES.map(ls => (
                       <button
@@ -547,7 +547,7 @@ export default function DesignFloatingTab() {
                   </div>
 
                   {/* Curvature */}
-                  <p className="text-[11px] text-slate-500 font-bold mt-3">\u05e7\u05d9\u05de\u05d5\u05e8:</p>
+                  <p className="text-[11px] text-slate-500 font-bold mt-3">קימור:</p>
                   <div className="flex gap-1.5">
                     {CURVATURE_PRESETS.map(cp => (
                       <button
@@ -577,7 +577,7 @@ export default function DesignFloatingTab() {
               {/* Palette Section (Branch Colors) */}
               {activeSection === 'palette' && (
                 <div className="p-3 space-y-2.5">
-                  <p className="text-[11px] text-slate-500 font-bold">\u05e6\u05d1\u05e2\u05d9 \u05e2\u05e0\u05e4\u05d9\u05dd:</p>
+                  <p className="text-[11px] text-slate-500 font-bold">צבעי ענפים:</p>
                   {['P1', 'P2', 'P3', 'P4', 'P5'].map(branch => (
                     <div key={branch} className="flex items-center gap-2">
                       <span className="text-[12px] font-bold text-slate-700 w-7">{branch}</span>
@@ -600,7 +600,7 @@ export default function DesignFloatingTab() {
 
                   {/* Stickers section */}
                   <div className="border-t pt-2 mt-3">
-                    <p className="text-[11px] text-slate-500 font-bold mb-2">\u05e1\u05d8\u05d9\u05e7\u05e8\u05d9\u05dd:</p>
+                    <p className="text-[11px] text-slate-500 font-bold mb-2">סטיקרים:</p>
                     {STICKER_CATEGORIES.map(cat => (
                       <div key={cat.label} className="mb-2">
                         <span className="text-[10px] text-slate-400 font-medium">{cat.label}:</span>
@@ -610,7 +610,7 @@ export default function DesignFloatingTab() {
                               key={sticker}
                               onClick={() => design.setSticker(design.activeTaskId, sticker)}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-all text-lg hover:scale-110"
-                              title={`\u05d4\u05d7\u05dc \u05e1\u05d8\u05d9\u05e7\u05e8 ${sticker}`}
+                              title={`החל סטיקר ${sticker}`}
                             >
                               {sticker}
                             </button>
@@ -625,7 +625,7 @@ export default function DesignFloatingTab() {
               {/* Templates Section */}
               {activeSection === 'templates' && (
                 <div className="p-3 space-y-2">
-                  <p className="text-[11px] text-slate-500 font-bold">\u05ea\u05d1\u05e0\u05d9\u05ea \u05de\u05e4\u05d4:</p>
+                  <p className="text-[11px] text-slate-500 font-bold">תבנית מפה:</p>
                   <div className="space-y-1.5">
                     {Object.entries(MAP_TEMPLATES).map(([key, tpl]) => (
                       <button
@@ -645,7 +645,7 @@ export default function DesignFloatingTab() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-base">{tpl.emoji || '\u{1F5FA}\ufe0f'}</span>
+                          <span className="text-base">{tpl.emoji || '🗺️'}</span>
                           <div>
                             <span className="text-[12px] font-bold text-slate-800">{tpl.label}</span>
                             <p className="text-[10px] text-slate-500">{tpl.description}</p>
@@ -660,7 +660,7 @@ export default function DesignFloatingTab() {
               {/* Saved Themes Section */}
               {activeSection === 'saved' && (
                 <div className="p-3 space-y-2">
-                  <p className="text-[11px] text-slate-500 font-bold">\u05e2\u05e8\u05db\u05d5\u05ea \u05e9\u05de\u05d5\u05e8\u05d5\u05ea:</p>
+                  <p className="text-[11px] text-slate-500 font-bold">ערכות שמורות:</p>
 
                   {/* Save dialog */}
                   {saveDialogOpen && (
@@ -670,21 +670,21 @@ export default function DesignFloatingTab() {
                         value={saveName}
                         onChange={(e) => setSaveName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSaveTheme()}
-                        placeholder="\u05e9\u05dd \u05dc\u05e2\u05e8\u05db\u05d4..."
+                        placeholder="שם לערכה..."
                         className="flex-1 text-[12px] px-3 py-1.5 rounded-lg border border-slate-300 outline-none focus:border-indigo-400"
                       />
                       <button
                         onClick={handleSaveTheme}
                         className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
                       >
-                        \u05e9\u05de\u05d5\u05e8
+                        שמור
                       </button>
                     </div>
                   )}
 
                   {savedThemes.length === 0 ? (
                     <div className="text-center py-4 text-[12px] text-slate-400">
-                      \u05d0\u05d9\u05df \u05e2\u05e8\u05db\u05d5\u05ea \u05e9\u05de\u05d5\u05e8\u05d5\u05ea. \u05dc\u05d7\u05e5 \u05e2\u05dc \u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05db\u05d3\u05d9 \u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e2\u05e8\u05db\u05d4 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9\u05ea.
+                      אין ערכות שמורות. לחץ על כפתור השמירה כדי לשמור את הערכה הנוכחית.
                     </div>
                   ) : (
                     <div className="space-y-1.5">
@@ -712,7 +712,7 @@ export default function DesignFloatingTab() {
                       onClick={() => setSaveDialogOpen(true)}
                       className="w-full py-2 rounded-xl border-2 border-dashed border-slate-300 text-[12px] text-slate-500 font-medium hover:border-indigo-400 hover:text-indigo-500 transition-all"
                     >
-                      + \u05e9\u05de\u05d5\u05e8 \u05e2\u05e8\u05db\u05d4 \u05e0\u05d5\u05db\u05d7\u05d9\u05ea
+                      + שמור ערכה נוכחית
                     </button>
                   )}
                 </div>
@@ -722,8 +722,8 @@ export default function DesignFloatingTab() {
               {!activeSection && (
                 <div className="p-4 text-center text-[12px] text-slate-400 space-y-2">
                   <Sparkles className="w-6 h-6 mx-auto text-indigo-300" />
-                  <p className="font-medium">\u05d1\u05d7\u05e8 \u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4 \u05dc\u05de\u05e2\u05dc\u05d4 \u05dc\u05db\u05d9\u05d5\u05d5\u05df \u05e2\u05d9\u05e6\u05d5\u05d1</p>
-                  <p className="text-[10px]">\u05d0\u05d5 \u05d1\u05d7\u05e8 \u05ea\u05d1\u05e0\u05d9\u05ea \u05de\u05d5\u05db\u05e0\u05d4 \u05dc\u05d4\u05ea\u05d7\u05dc\u05d4 \u05de\u05d4\u05d9\u05e8\u05d4</p>
+                  <p className="font-medium">בחר קטגוריה למעלה לכיוון עיצוב</p>
+                  <p className="text-[10px]">או בחר תבנית מוכנה להתחלה מהירה</p>
                 </div>
               )}
             </div>

@@ -28,7 +28,6 @@ import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import { useAyoaView } from '@/contexts/AyoaViewContext';
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import useRealtimeRefresh from '@/hooks/useRealtimeRefresh';
@@ -157,11 +156,16 @@ export default function MyFocus() {
 
         <div className="flex-1" />
 
-        {/* Canvas toggle (bonus view, global toggle handles Map/Radial/Gantt/Feed) */}
+        {/* View Toggle: all AYOA views + canvas */}
+        <AyoaViewToggle
+          value={viewMode === 'canvas' ? null : viewMode}
+          onChange={(v) => setViewMode(v)}
+          accentColor="#FF9800"
+        />
         <button
           onClick={() => setViewMode(viewMode === 'canvas' ? 'radial' : 'canvas')}
-          className={`px-2 py-1 rounded-lg text-[11px] font-medium transition-all ${
-            viewMode === 'canvas' ? 'bg-[#6366F1]/10 text-[#6366F1] font-bold' : 'text-gray-500 hover:text-gray-700'
+          className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all ${
+            viewMode === 'canvas' ? 'bg-[#6366F1]/10 text-[#6366F1] font-bold shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
           }`}
         >
           🎨 קנבס
@@ -195,14 +199,31 @@ export default function MyFocus() {
               <DesignCanvas tasks={todayTasks} clients={clients} />
             </CardContent>
           </Card>
+        ) : viewMode === 'radial' ? (
+          <div className="h-full rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '450px' }}>
+            <AyoaRadialView tasks={todayTasks} centerLabel="הפוקוס שלי" centerSub={`${todayTasks.length} משימות`} />
+          </div>
+        ) : viewMode === 'map' ? (
+          <div className="h-full rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '450px' }}>
+            <AyoaMapView tasks={todayTasks} centerLabel="הפוקוס שלי" centerSub={`${todayTasks.length} משימות`} />
+          </div>
+        ) : viewMode === 'gantt' ? (
+          <Card className="h-full overflow-auto">
+            <CardContent className="p-2">
+              <GanttView tasks={todayTasks} clients={clients} />
+            </CardContent>
+          </Card>
+        ) : viewMode === 'feed' ? (
+          <div className="h-full">
+            <AyoaFeedView tasks={todayTasks} />
+          </div>
         ) : (
-          <UnifiedAyoaLayout tasks={todayTasks} allTasks={tasks} clients={clients} isLoading={isLoading} centerLabel="הפוקוס שלי" centerSub="P4" accentColor="#FF9800">
-            <Card className="h-full overflow-auto">
-              <CardContent className="p-2">
-                <GanttView tasks={todayTasks} clients={clients} />
-              </CardContent>
-            </Card>
-          </UnifiedAyoaLayout>
+          /* fallback: show gantt as default table view */
+          <Card className="h-full overflow-auto">
+            <CardContent className="p-2">
+              <GanttView tasks={todayTasks} clients={clients} />
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

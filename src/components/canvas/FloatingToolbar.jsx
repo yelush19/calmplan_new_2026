@@ -20,26 +20,26 @@ import {
 
 // ── 20 Solid Professional Colors — NO pink, NO red, NO fuchsia ──
 const TOOLBAR_COLORS = [
-  { color: '#00A3E0', label: '\u05e9\u05de\u05d9\u05d9\u05dd' },
-  { color: '#1565C0', label: '\u05db\u05d7\u05d5\u05dc \u05e2\u05de\u05d5\u05e7' },
-  { color: '#0891B2', label: '\u05e6\u05d9\u05d0\u05df' },
-  { color: '#0EA5E9', label: '\u05ea\u05db\u05dc\u05ea' },
-  { color: '#00BCD4', label: '\u05d8\u05d5\u05e8\u05e7\u05d9\u05d6' },
-  { color: '#2E7D32', label: '\u05d9\u05e2\u05e8 \u05e2\u05de\u05d5\u05e7' },
-  { color: '#059669', label: '\u05d0\u05de\u05e8\u05dc\u05d3' },
-  { color: '#16A34A', label: '\u05d9\u05e8\u05d5\u05e7' },
-  { color: '#8BC34A', label: '\u05dc\u05d9\u05d9\u05dd' },
-  { color: '#0D9488', label: '\u05d8\u05d9\u05dc' },
-  { color: '#FF9800', label: '\u05db\u05ea\u05d5\u05dd' },
-  { color: '#F59E0B', label: '\u05e2\u05e0\u05d1\u05e8' },
-  { color: '#D97706', label: '\u05d3\u05d1\u05e9' },
-  { color: '#FFC107', label: '\u05d6\u05d4\u05d1' },
-  { color: '#B2AC88', label: '\u05de\u05e8\u05d5\u05d5\u05d4' },
-  { color: '#4682B4', label: '\u05e4\u05dc\u05d3\u05d4' },
-  { color: '#7C3AED', label: '\u05e1\u05d2\u05d5\u05dc' },
-  { color: '#6366F1', label: '\u05d0\u05d9\u05e0\u05d3\u05d9\u05d2\u05d5' },
-  { color: '#8B5CF6', label: '\u05dc\u05d1\u05e0\u05d3\u05e8' },
-  { color: '#1DE9B6', label: '\u05de\u05e0\u05d8\u05d4' },
+  { color: '#00A3E0', label: 'שמיים' },
+  { color: '#1565C0', label: 'כחול עמוק' },
+  { color: '#0891B2', label: 'ציאן' },
+  { color: '#0EA5E9', label: 'תכלת' },
+  { color: '#00BCD4', label: 'טורקיז' },
+  { color: '#2E7D32', label: 'יער עמוק' },
+  { color: '#059669', label: 'אמרלד' },
+  { color: '#16A34A', label: 'ירוק' },
+  { color: '#8BC34A', label: 'ליים' },
+  { color: '#0D9488', label: 'טיל' },
+  { color: '#FF9800', label: 'כתום' },
+  { color: '#F59E0B', label: 'ענבר' },
+  { color: '#D97706', label: 'דבש' },
+  { color: '#FFC107', label: 'זהב' },
+  { color: '#B2AC88', label: 'מרווה' },
+  { color: '#4682B4', label: 'פלדה' },
+  { color: '#7C3AED', label: 'סגול' },
+  { color: '#6366F1', label: 'אינדיגו' },
+  { color: '#8B5CF6', label: 'לבנדר' },
+  { color: '#1DE9B6', label: 'מנטה' },
 ];
 
 // ── 6 Organic Shapes ──
@@ -94,10 +94,10 @@ export default function FloatingToolbar({
   const [activeSection, setActiveSection] = useState('color');
 
   const sections = [
-    { key: 'color', label: '\u05e6\u05d1\u05e2', icon: Palette },
-    { key: 'shape', label: '\u05e6\u05d5\u05e8\u05d4', icon: Shapes },
-    { key: 'type',  label: '\u05d8\u05e7\u05e1\u05d8', icon: Type },
-    { key: 'sticker', label: '\u05e1\u05d8\u05d9\u05e7\u05e8', icon: Star },
+    { key: 'color', label: 'צבע', icon: Palette },
+    { key: 'shape', label: 'צורה', icon: Shapes },
+    { key: 'type',  label: 'טקסט', icon: Type },
+    { key: 'sticker', label: 'סטיקר', icon: Star },
   ];
 
   return (
@@ -285,9 +285,9 @@ export default function FloatingToolbar({
           {activeSection === 'sticker' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-3 py-2.5">
               <div className="grid grid-cols-8 gap-1">
-                {['\u2705', '\u23f3', '\u{1F6A7}', '\u26a0\ufe0f', '\u{1F525}', '\u26a1', '\u2b50', '\u{1F3AF}',
-                  '\u{1F680}', '\u{1F4A1}', '\u{1F4AA}', '\u{1F3C6}', '\u{1F4BC}', '\u{1F4B0}', '\u{1F4CA}', '\u{1F4C5}',
-                  '\u{1F7E2}', '\u{1F7E1}', '\u{1F7E0}', '\u{1F535}', '\u{1F7E3}', '\u{1F4CB}', '\u{1F512}', '\u{1F50D}',
+                {['✅', '⏳', '🚧', '⚠️', '🔥', '⚡', '⭐', '🎯',
+                  '🚀', '💡', '💪', '🏆', '💼', '💰', '📊', '📅',
+                  '🟢', '🟡', '🟠', '🔵', '🟣', '📋', '🔒', '🔍',
                 ].map((sticker, i) => (
                   <motion.button
                     key={i}
@@ -310,7 +310,7 @@ export default function FloatingToolbar({
                 className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold transition-all bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Copy className="w-3.5 h-3.5" />
-                \u05d4\u05d7\u05dc \u05e2\u05dc \u05db\u05dc \u05d4\u05d9\u05dc\u05d3\u05d9\u05dd
+                החל על כל הילדים
               </button>
             </div>
           )}

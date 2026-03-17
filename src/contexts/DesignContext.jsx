@@ -89,9 +89,9 @@ const THEME_VARS = {
 // Map templates -- preset combinations
 export const MAP_TEMPLATES = {
   'ayoa-organic': {
-    label: 'AYOA \u05d0\u05d5\u05e8\u05d2\u05e0\u05d9',
-    description: '\u05e2\u05e0\u05e3 + \u05e7\u05d5\u05d5\u05d9\u05dd \u05d8\u05e4\u05dc\u05d9\u05dd + \u05e4\u05e1\u05d8\u05dc',
-    emoji: '\u{1F33F}',
+    label: 'AYOA אורגני',
+    description: 'ענף + קווים טפלים + פסטל',
+    emoji: '🌿',
     shape: 'cloud',
     lineStyle: 'tapered',
     curvature: 0.25,
@@ -99,9 +99,9 @@ export const MAP_TEMPLATES = {
     softShadows: true,
   },
   'mindmap-classic': {
-    label: '\u05de\u05e4\u05ea \u05d7\u05e9\u05d9\u05d1\u05d4 \u05e7\u05dc\u05e1\u05d9\u05ea',
-    description: '\u05db\u05de\u05d5\u05e1\u05d4 + \u05d1\u05d6\u05d9\u05d4 \u05de\u05dc\u05d0\u05d4 + \u05e6\u05d1\u05e2\u05d9\u05dd \u05d7\u05d6\u05e7\u05d9\u05dd',
-    emoji: '\u{1F9E0}',
+    label: 'מפת חשיבה קלסית',
+    description: 'כמוסה + בזיה מלאה + צבעים חזקים',
+    emoji: '🧠',
     shape: 'capsule',
     lineStyle: 'solid',
     curvature: 0.15,
@@ -109,9 +109,9 @@ export const MAP_TEMPLATES = {
     softShadows: true,
   },
   minimalist: {
-    label: '\u05de\u05d9\u05e0\u05d9\u05de\u05dc\u05d9\u05e1\u05d8\u05d9',
-    description: '\u05de\u05dc\u05d1\u05e0\u05d9\u05dd + \u05e7\u05d5 \u05de\u05e7\u05d5\u05d5\u05e7\u05d5 \u05d3\u05e7 + \u05d2\u05d5\u05d5\u05e0\u05d9 \u05d0\u05e4\u05d5\u05e8',
-    emoji: '\u2b1c',
+    label: 'מינימליסטי',
+    description: 'מלבנים + קו מקווקו דק + גווני אפור',
+    emoji: '⬜',
     shape: 'roundedRect',
     lineStyle: 'dashed',
     curvature: 0.1,
@@ -119,9 +119,9 @@ export const MAP_TEMPLATES = {
     softShadows: false,
   },
   'organic-tree': {
-    label: '\u05e2\u05e5 \u05d0\u05d5\u05e8\u05d2\u05e0\u05d9',
-    description: '\u05e2\u05e0\u05e4\u05d9\u05dd \u05de\u05e2\u05d5\u05d2\u05dc\u05d9\u05dd \u05e2\u05dd \u05e2\u05e7\u05de\u05d5\u05de\u05d9\u05d5\u05ea \u05d8\u05d1\u05e2\u05d9\u05ea',
-    emoji: '\u{1F333}',
+    label: 'עץ אורגני',
+    description: 'ענפים מעוגלים עם עקמומיות טבעית',
+    emoji: '🌳',
     shape: 'bubble',
     lineStyle: 'tapered',
     curvature: 0.4,
@@ -129,9 +129,9 @@ export const MAP_TEMPLATES = {
     softShadows: true,
   },
   'radial-burst': {
-    label: '\u05e4\u05e8\u05e5 \u05e8\u05d3\u05d9\u05d0\u05dc\u05d9',
-    description: '\u05d8\u05d1\u05e2\u05d5\u05ea \u05e7\u05d5\u05e0\u05e6\u05e0\u05d8\u05e8\u05d9\u05d5\u05ea \u05de\u05d4\u05de\u05e8\u05db\u05d6 \u05d4\u05d7\u05d5\u05e6\u05d4',
-    emoji: '\u{1F3AF}',
+    label: 'פרץ רדיאלי',
+    description: 'טבעות קונצנטריות מהמרכז החוצה',
+    emoji: '🎯',
     shape: 'hexagon',
     lineStyle: 'solid',
     curvature: 0.3,
@@ -139,9 +139,9 @@ export const MAP_TEMPLATES = {
     softShadows: true,
   },
   'speed-map': {
-    label: '\u05de\u05e4\u05d4 \u05de\u05d4\u05d9\u05e8\u05d4',
-    description: '\u05e2\u05e0\u05e4\u05d9\u05dd \u05d1\u05db\u05d9\u05d5\u05d5\u05df \u05d0\u05d7\u05d3 \u2014 \u05de\u05d9\u05de\u05d9\u05df \u05dc\u05e9\u05de\u05d0\u05dc',
-    emoji: '\u26a1',
+    label: 'מפה מהירה',
+    description: 'ענפים בכיוון אחד — מימין לשמאל',
+    emoji: '⚡',
     shape: 'pill',
     lineStyle: 'solid',
     curvature: 0.05,
@@ -149,9 +149,9 @@ export const MAP_TEMPLATES = {
     softShadows: false,
   },
   'section-circles': {
-    label: '\u05e2\u05d9\u05d2\u05d5\u05dc\u05d9 \u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea',
-    description: '\u05e2\u05d9\u05d2\u05d5\u05dc\u05d9\u05dd \u05d2\u05d3\u05d5\u05dc\u05d9\u05dd \u05dc\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea, \u05e7\u05d8\u05e0\u05d9\u05dd \u05dc\u05ea\u05ea\u05d9-\u05de\u05e9\u05d9\u05de\u05d5\u05ea',
-    emoji: '\u{1F535}',
+    label: 'עיגולי קטגוריות',
+    description: 'עיגולים גדולים לקטגוריות, קטנים לתתי-משימות',
+    emoji: '🔵',
     shape: 'bubble',
     lineStyle: 'tapered',
     curvature: 0.2,
@@ -159,9 +159,9 @@ export const MAP_TEMPLATES = {
     softShadows: true,
   },
   'flow-chart': {
-    label: '\u05ea\u05e8\u05e9\u05d9\u05dd \u05d6\u05e8\u05d9\u05de\u05d4',
-    description: '\u05ea\u05d9\u05d1\u05d5\u05ea \u05de\u05d7\u05d5\u05d1\u05e8\u05d5\u05ea \u05d1\u05e7\u05d5\u05d5\u05d9\u05dd \u05d9\u05e9\u05e8\u05d9\u05dd',
-    emoji: '\u{1F4CA}',
+    label: 'תרשים זרימה',
+    description: 'תיבות מחוברות בקווים ישרים',
+    emoji: '📊',
     shape: 'roundedRect',
     lineStyle: 'solid',
     curvature: 0,
@@ -169,9 +169,9 @@ export const MAP_TEMPLATES = {
     softShadows: true,
   },
   'free-canvas': {
-    label: '\u05e7\u05e0\u05d1\u05e1 \u05d7\u05d5\u05e4\u05e9\u05d9',
-    description: '\u05d2\u05e8\u05d9\u05e8\u05d4 \u05d7\u05d5\u05e4\u05e9\u05d9\u05ea \u05dc\u05dc\u05d0 layout \u05e7\u05d1\u05d5\u05e2',
-    emoji: '\u{1F3A8}',
+    label: 'קנבס חופשי',
+    description: 'גרירה חופשית ללא layout קבוע',
+    emoji: '🎨',
     shape: 'star',
     lineStyle: 'dotted',
     curvature: 0.15,
@@ -183,9 +183,9 @@ export const MAP_TEMPLATES = {
 // Design presets -- quick visual themes (NO pink, NO red, NO fuchsia)
 export const DESIGN_PRESETS = {
   colorful: {
-    label: '\u05e6\u05d1\u05e2\u05d5\u05e0\u05d9',
-    emoji: '\u{1F308}',
-    description: '\u05e6\u05d1\u05e2\u05d9\u05dd \u05e2\u05d6\u05d9\u05dd \u05d5\u05d0\u05e0\u05e8\u05d2\u05d8\u05d9\u05d9\u05dd',
+    label: 'צבעוני',
+    emoji: '🌈',
+    description: 'צבעים עזים ואנרגטיים',
     theme: 'light',
     shape: 'cloud',
     lineStyle: 'tapered',
@@ -195,9 +195,9 @@ export const DESIGN_PRESETS = {
     branchColors: { P1: '#00A3E0', P2: '#2E7D32', P3: '#FF9800', P4: '#6366F1', P5: '#0891B2' },
   },
   minimal: {
-    label: '\u05de\u05d9\u05e0\u05d9\u05de\u05dc\u05d9',
-    emoji: '\u2b1c',
-    description: '\u05e0\u05e7\u05d9 \u05d5\u05e4\u05e9\u05d5\u05d8',
+    label: 'מינימלי',
+    emoji: '⬜',
+    description: 'נקי ופשוט',
     theme: 'light',
     shape: 'roundedRect',
     lineStyle: 'dashed',
@@ -207,9 +207,9 @@ export const DESIGN_PRESETS = {
     branchColors: { P1: '#64748B', P2: '#94A3B8', P3: '#475569', P4: '#334155', P5: '#1E293B' },
   },
   'dark-pro': {
-    label: '\u05db\u05d4\u05d4 \u05de\u05e7\u05e6\u05d5\u05e2\u05d9',
-    emoji: '\u{1F319}',
-    description: '\u05e2\u05e8\u05db\u05ea \u05e6\u05d1\u05e2\u05d9\u05dd \u05db\u05d4\u05d4 \u05de\u05e7\u05e6\u05d5\u05e2\u05d9\u05ea',
+    label: 'כהה מקצועי',
+    emoji: '🌙',
+    description: 'ערכת צבעים כהה מקצועית',
     theme: 'dark',
     shape: 'capsule',
     lineStyle: 'solid',
@@ -219,9 +219,9 @@ export const DESIGN_PRESETS = {
     branchColors: { P1: '#60A5FA', P2: '#34D399', P3: '#FBBF24', P4: '#818CF8', P5: '#2DD4BF' },
   },
   'pastel-soft': {
-    label: '\u05e4\u05e1\u05d8\u05dc \u05e8\u05da',
-    emoji: '\u{1F9C1}',
-    description: '\u05d2\u05d5\u05d5\u05e0\u05d9\u05dd \u05e8\u05db\u05d9\u05dd \u05d5\u05e0\u05e2\u05d9\u05de\u05d9\u05dd',
+    label: 'פסטל רך',
+    emoji: '🧁',
+    description: 'גוונים רכים ונעימים',
     theme: 'light',
     shape: 'bubble',
     lineStyle: 'tapered',
@@ -231,9 +231,9 @@ export const DESIGN_PRESETS = {
     branchColors: { P1: '#93C5FD', P2: '#86EFAC', P3: '#FDE68A', P4: '#A5B4FC', P5: '#5EEAD4' },
   },
   corporate: {
-    label: '\u05e2\u05e1\u05e7\u05d9',
-    emoji: '\u{1F4BC}',
-    description: '\u05de\u05e7\u05e6\u05d5\u05e2\u05d9 \u05d5\u05e8\u05e9\u05de\u05d9',
+    label: 'עסקי',
+    emoji: '💼',
+    description: 'מקצועי ורשמי',
     theme: 'soft-gray',
     shape: 'roundedRect',
     lineStyle: 'solid',
@@ -243,9 +243,9 @@ export const DESIGN_PRESETS = {
     branchColors: { P1: '#1565C0', P2: '#2E7D32', P3: '#E65100', P4: '#4A148C', P5: '#00695C' },
   },
   creative: {
-    label: '\u05d9\u05e6\u05d9\u05e8\u05ea\u05d9',
-    emoji: '\u{1F3A8}',
-    description: '\u05e0\u05d5\u05e2\u05d6 \u05d5\u05d9\u05e6\u05d9\u05e8\u05ea\u05d9',
+    label: 'יצירתי',
+    emoji: '🎨',
+    description: 'נועז ויצירתי',
     theme: 'light',
     shape: 'star',
     lineStyle: 'tapered',
@@ -580,10 +580,10 @@ export function DesignProvider({ children }) {
     if (!taskId) return;
     setPrefs(prev => ({
       ...prev,
-      stickerMap: { ...prev.stickerMap, [taskId]: '\u2705' },
+      stickerMap: { ...prev.stickerMap, [taskId]: '✅' },
     }));
     ServiceCatalog.filter({ key: taskId }).then(results => {
-      if (results?.[0]) ServiceCatalog.update(results[0].id, { sticker: '\u2705' });
+      if (results?.[0]) ServiceCatalog.update(results[0].id, { sticker: '✅' });
     }).catch(() => {});
   }, []);
 

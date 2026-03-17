@@ -846,6 +846,30 @@ export default function TasksPage() {
         </CardContent>
       </Card>
 
+      {/* View Toggle: list / kanban / mindmap / gantt */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500 font-medium">תצוגה:</span>
+        <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
+          {[
+            { key: 'kanban', label: 'קנבן', icon: LayoutGrid },
+            { key: 'list', label: 'רשימה', icon: List },
+            { key: 'mindmap', label: 'מיינדמפ', icon: Network },
+            { key: 'gantt', label: 'גאנט', icon: BarChart3 },
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+                view === key ? 'bg-primary/10 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Group by toggle for list view */}
       {view === 'list' && (
         <div className="flex items-center gap-2 flex-wrap">
@@ -873,19 +897,42 @@ export default function TasksPage() {
             <button onClick={collapseAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
               כווץ הכל
             </button>
-          <button
-            onClick={() => bulkMode ? exitBulkMode() : setBulkMode(true)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 mr-auto ${
-              bulkMode
-                ? 'bg-violet-100 text-violet-700 border-violet-400'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
-            }`}
-          >
-            {bulkMode ? `ביטול (${selectedTaskIds.size} נבחרו)` : 'עדכון מרובה'}
-          </button>
           </div>
         </div>
       )}
+
+      {/* Bulk update toggle — available in all views */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => bulkMode ? exitBulkMode() : setBulkMode(true)}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+            bulkMode
+              ? 'bg-violet-100 text-violet-700 border-violet-400'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
+          }`}
+        >
+          {bulkMode ? `ביטול (${selectedTaskIds.size} נבחרו)` : 'עדכון מרובה'}
+        </button>
+        {bulkMode && (
+          <>
+            <button
+              onClick={() => {
+                const allIds = filteredTasks.map(t => t.id);
+                setSelectedTaskIds(new Set(allIds));
+              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-violet-50 text-violet-600 hover:bg-violet-100 border border-violet-200 transition-colors"
+            >
+              בחר הכל ({filteredTasks.length})
+            </button>
+            <button
+              onClick={() => setSelectedTaskIds(new Set())}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200 transition-colors"
+            >
+              נקה בחירה
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Bulk action floating bar */}
       <AnimatePresence>
@@ -1210,6 +1257,9 @@ export default function TasksPage() {
           getPriorityText={(p) => priorityConfig[p]?.text || p}
           clients={clientsList}
           onTaskCreated={loadTasks}
+          bulkMode={bulkMode}
+          selectedTaskIds={selectedTaskIds}
+          onToggleTaskSelection={toggleTaskSelection}
         />
       )}
       </UnifiedAyoaLayout>
