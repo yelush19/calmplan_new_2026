@@ -49,31 +49,32 @@ function getUrgencyLevel(daysUntilDue) {
 }
 
 function getUrgencyConfig(level) {
+  // Calm, non-aggressive color palette — no red, no screaming orange
   const configs = {
     overdue: {
-      bg: 'bg-amber-500',
-      bgLight: 'bg-amber-50 border-amber-200',
-      text: 'text-amber-900',
-      textLight: 'text-amber-700',
-      badge: 'bg-amber-500 text-white',
+      bg: 'bg-slate-500',
+      bgLight: 'bg-slate-50 border-slate-200',
+      text: 'text-slate-800',
+      textLight: 'text-slate-600',
+      badge: 'bg-slate-500 text-white',
       icon: Clock,
       label: 'ממתין לטיפול'
     },
     today: {
-      bg: 'bg-orange-400',
-      bgLight: 'bg-orange-50 border-orange-200',
-      text: 'text-orange-800',
-      textLight: 'text-orange-600',
-      badge: 'bg-orange-400 text-white',
+      bg: 'bg-sky-500',
+      bgLight: 'bg-sky-50 border-sky-200',
+      text: 'text-sky-800',
+      textLight: 'text-sky-600',
+      badge: 'bg-sky-500 text-white',
       icon: Clock,
       label: 'היום'
     },
     tomorrow: {
-      bg: 'bg-sky-400',
-      bgLight: 'bg-sky-50 border-sky-200',
-      text: 'text-sky-800',
-      textLight: 'text-sky-600',
-      badge: 'bg-sky-400 text-white',
+      bg: 'bg-teal-400',
+      bgLight: 'bg-teal-50 border-teal-200',
+      text: 'text-teal-800',
+      textLight: 'text-teal-600',
+      badge: 'bg-teal-400 text-white',
       icon: Clock,
       label: 'מחר'
     },
@@ -214,11 +215,11 @@ export default function AggressiveReminderSystem({ onTaskCount }) {
       >
         <Button
           onClick={() => setIsMinimized(false)}
-          className="rounded-full w-14 h-14 shadow-xl bg-amber-500 hover:bg-amber-600"
+          className="rounded-full w-12 h-12 shadow-md bg-slate-400 hover:bg-slate-500"
         >
           <div className="relative">
-            <Bell className="w-6 h-6 text-white" />
-            <span className="absolute -top-2 -right-2 bg-white text-amber-600 rounded-full w-5 h-5 text-xs font-bold flex items-center justify-center">
+            <Bell className="w-5 h-5 text-white" />
+            <span className="absolute -top-1.5 -right-1.5 bg-white text-slate-600 rounded-full w-4 h-4 text-[10px] font-bold flex items-center justify-center">
               {visibleReminders.length}
             </span>
           </div>
@@ -233,27 +234,28 @@ export default function AggressiveReminderSystem({ onTaskCount }) {
       animate={{ opacity: 1, y: 0 }}
       className="mb-6 space-y-3"
     >
-      {/* Overdue - calm amber */}
+      {/* Overdue - calm slate (no amber/red) */}
       {overdueReminders.length > 0 && (
-        <Card className="border-2 border-amber-200 bg-amber-50 shadow-sm">
+        <Card className="border border-slate-200 bg-slate-50/60">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-white" />
+                <div className="relative w-8 h-8 bg-slate-400 rounded-full flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-white" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-amber-800 text-lg">
+                  <h3 className="font-bold text-slate-700 text-sm">
                     {overdueReminders.length} משימות ממתינות לטיפול
                   </h3>
-                  <p className="text-sm text-amber-600">כדאי לטפל כשיש רגע</p>
+                  <p className="text-xs text-slate-500">כדאי לטפל כשיש רגע</p>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsMinimized(true)}
-                className="text-amber-600 hover:bg-amber-100"
+                className="text-slate-500 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </Button>

@@ -517,23 +517,24 @@ function LayoutInner({ children }) {
     <div dir="rtl" className="min-h-screen bg-background text-foreground">
       <div className="h-screen flex flex-col">
         {/* === TOP HEADER BAR === */}
-        <header className="border-b border-gray-200/60 px-4 py-1.5 flex items-center justify-between sticky top-0 z-50"
-          style={{ background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFF 50%, #FFF8F0 100%)', boxShadow: '0 2px 20px rgba(0,163,224,0.06), 0 1px 4px rgba(0,0,0,0.04)' }}>
-          {/* Right: Logo + Mobile menu */}
+        <header className="border-b border-gray-200/60 px-4 py-2 flex items-center justify-between sticky top-0 z-50"
+          style={{ background: 'linear-gradient(135deg, #FAFEFE 0%, #F0F7FA 50%, #F5F9FC 100%)', boxShadow: '0 1px 8px rgba(0,163,224,0.05)' }}>
+          {/* Right: LITAY Logo + Mobile menu */}
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
               {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </Button>
-            <Link to={createPageUrl("Home")} className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md transition-transform group-hover:scale-105"
-                style={{ background: 'linear-gradient(135deg, #00A3E0, #6366F1)' }}>
-                <Brain className="w-5 h-5 text-white" />
-              </div>
+            <Link to={createPageUrl("Home")} className="flex items-center gap-3 group">
+              <img
+                src="/logo-litay.png"
+                alt="LITAY Logo"
+                className="w-10 h-10 rounded-xl object-contain transition-transform group-hover:scale-105 drop-shadow-sm"
+              />
               <div className="hidden md:block">
-                <h1 className="text-base font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#00A3E0] to-[#6366F1]">
-                  CalmPlan
+                <h1 className="text-base font-black tracking-tight" style={{ color: '#4A7C8F' }}>
+                  LitayCalmPlan
                 </h1>
-                <p className="text-[12px] font-medium text-gray-400 -mt-0.5">Ayoa-Powered OS</p>
+                <p className="text-[11px] font-medium -mt-0.5" style={{ color: '#8BAAB8' }}>ניהול חכם ורגוע</p>
               </div>
             </Link>
           </div>
@@ -543,15 +544,18 @@ function LayoutInner({ children }) {
             <GlobalSearch />
           </div>
 
-          {/* Left: Header actions */}
-          <div className="flex items-center gap-2">
+          {/* Left: Header actions — compact row */}
+          <div className="flex items-center gap-2.5">
             {/* Biological Clock Indicator */}
             <div className="hidden md:block">
               <BiologicalClockIndicator />
             </div>
 
-            {/* Deadline Countdown */}
-            <Badge variant={daysLeft <= 3 ? "destructive" : "secondary"} className="text-xs hidden md:inline-flex">
+            {/* Deadline Countdown — calm style, no destructive red */}
+            <Badge variant="secondary" className="text-xs hidden md:inline-flex border border-sky-200" style={{
+              backgroundColor: daysLeft <= 3 ? '#FFF8E7' : '#F0F7FA',
+              color: daysLeft <= 3 ? '#B8860B' : '#5A8FA0',
+            }}>
               עוד {daysLeft} ימים ל{deadlineLabel}
             </Badge>
 
@@ -637,17 +641,15 @@ function LayoutInner({ children }) {
             <div className="md:hidden fixed inset-y-0 right-0 z-40 w-72 bg-white border-l-2 border-[#B0BEC5] shadow-xl overflow-y-auto">
               <div className="p-4 border-b border-[#B0BEC5] flex items-center justify-between">
                 <Link to={createPageUrl("Home")} className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                    <Brain className="w-5 h-5 text-primary-foreground" />
-                  </div>
-                  <h1 className="text-lg font-bold">CalmPlan</h1>
+                  <img src="/logo-litay.png" alt="LITAY" className="w-8 h-8 rounded-lg object-contain" />
+                  <h1 className="text-lg font-bold" style={{ color: '#4A7C8F' }}>LitayCalmPlan</h1>
                 </Link>
                 <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                   <X className="w-5 h-5" />
                 </Button>
               </div>
               <div className="px-4 pt-2 pb-0 text-center">
-                <p className="block font-black text-2xl py-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#4682B4] to-[#6B8EB5]">✨ עשוי טוב יותר ממושלם</p>
+                <p className="block font-black text-2xl py-6 text-center" style={{ color: '#6B9DB5' }}>עשוי טוב יותר ממושלם</p>
               </div>
 
               {/* Mobile search */}
@@ -773,7 +775,7 @@ function LayoutInner({ children }) {
                 className="hidden md:flex"
                 style={{ overflow: 'hidden' }}
               >
-                <aside className="flex flex-col border-l border-gray-200/60 h-full w-full" style={{ background: 'linear-gradient(180deg, #FAFBFE 0%, #F5F7FC 50%, #F0F4FA 100%)' }}>
+                <aside className="flex flex-col border-l border-gray-200/40 h-full w-full" style={{ background: 'linear-gradient(180deg, #FAFCFE 0%, #F4F8FB 50%, #EFF4F8 100%)' }}>
 
                   {/* Toggle button */}
                   <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -821,7 +823,7 @@ function LayoutInner({ children }) {
                     <div className="flex flex-col flex-1 overflow-y-auto">
                       {/* Mantra — very top of sidebar */}
                       <div className="px-3 pt-4 pb-2 text-center">
-                        <p className="block font-black text-xl py-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-[#6366F1] via-[#00A3E0] to-[#FFC107]">
+                        <p className="block font-black text-xl py-4 text-center" style={{ color: '#6B9DB5' }}>
                           עשוי טוב יותר ממושלם
                         </p>
                       </div>
@@ -969,7 +971,7 @@ function LayoutInner({ children }) {
                       )}
 
                       {/* Navigation sections — Accordion */}
-                      <nav className="flex-1 p-2">
+                      <nav className="flex-1 px-2 py-1 space-y-0.5">
                         {/* Daily Focus — single entry point (no duplication) */}
                         <Link to={createPageUrl("Home")}
                           onClick={() => setIsMobileMenuOpen(false)}

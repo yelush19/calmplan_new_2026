@@ -1,15 +1,15 @@
 /**
  * ── UnifiedAyoaLayout: Global View Engine Wrapper ──
  *
- * CRITICAL RULE: Children are ALWAYS visible by default.
- * localView = null → show children (original page content).
- * localView = 'map'|'radial'|'gantt'|'feed' → show AYOA visualization.
+ * UPDATED RULE: AYOA Focus Map is the DEFAULT view.
+ * localView = 'focus' (default) → show dynamic AYOA circle-group map.
+ * localView = null → show children (table/original page content — opt-in).
+ * localView = 'map'|'radial'|'gantt'|'feed' → show other visualizations.
  *
- * The wrapper is TRANSPARENT by default. It only intercepts rendering
- * when the user explicitly clicks an AYOA view button.
+ * User feedback: "לעולם לא שורות נגללות — מפת קבוצות דינאמית כברירת מחדל"
  *
  * Directive #1: One House, Many Rooms.
- * Directive #5: 4 Lenses (Map, Radial, Gantt, Feed) — all opt-in.
+ * Directive #5: 4 Lenses (Map, Radial, Gantt, Feed).
  * Directive #6: FloatingToolbar on node click (handled by child views).
  */
 
@@ -50,8 +50,9 @@ export default function UnifiedAyoaLayout({
   const tasks = data || tasksProp || [];
   const allTasks = allTasksProp || tasks;
 
-  // null = show children (table/original content). Views are OPT-IN only.
-  const [localView, setLocalView] = useState(null);
+  // 'focus' = AYOA dynamic map (DEFAULT). null = show children (table/original content).
+  // User feedback: "לעולם לא שורות נגללות — מפת קבוצות דינאמית כברירת מחדל"
+  const [localView, setLocalView] = useState('focus');
 
   const accent = accentColor || (branch && DNA_ACCENTS[branch]) || DNA_ACCENTS.P2;
   const isOriginalActive = localView === null;
@@ -90,7 +91,7 @@ export default function UnifiedAyoaLayout({
             }}
           >
             <Table className="w-3.5 h-3.5" />
-            טבלה
+            רשימה
           </button>
         )}
       </div>
