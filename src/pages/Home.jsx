@@ -561,9 +561,11 @@ export default function HomePage() {
         ) : (
           <AyoaMiniCanvas
             tasks={calmTasks}
+            allTasks={data.activeTasks}
             totalExtra={(data.overdue.length + data.today.length) - calmTasks.length}
             onEdit={setEditingTask}
             onStatusChange={handleStatusChange}
+            onShowFullMap={() => setShowFullMap(true)}
           />
         )}
 
@@ -934,7 +936,18 @@ function DraggableRing({ ring, canvasRef, onDragEnd }) {
 // §8  AyoaMiniCanvas — full-width responsive
 // ═══════════════════════════════════════════════════════════════════
 
-function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
+// Ring label names (Hebrew)
+const RING_LABEL = { A: 'עבודה', B: 'דחוף', C: 'בית', D: 'מהיר' };
+
+// Map each task to a ring ID based on context
+function taskToRingId(task) {
+  const ctx = getTaskContext(task);
+  if (ctx === 'home') return 'C';
+  if (task.priority === 'urgent') return 'B';
+  return 'A';
+}
+
+function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChange, onShowFullMap }) {
   const { layout, persist, loaded } = useCircleMapLayout(tasks);
   const canvasRef = useRef(null);
 
@@ -947,6 +960,22 @@ function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
     persist({ ...layout, bubbles: { ...layout.bubbles, [taskId]: { taskId, cx, cy, ringId } } });
   }, [layout, persist]);
 
+  // Per-ring counts: visible bubbles vs total tasks in that ring's context
+  const ringCounts = useMemo(() => {
+    const counts = { A: { visible: 0, total: 0 }, B: { visible: 0, total: 0 }, C: { visible: 0, total: 0 }, D: { visible: 0, total: 0 } };
+    // Count visible bubbles by their assigned ring
+    for (const task of tasks) {
+      const bl = layout.bubbles[task.id];
+      if (bl?.ringId && counts[bl.ringId]) counts[bl.ringId].visible++;
+    }
+    // Count total tasks by ring context
+    for (const task of allTasks) {
+      const rid = taskToRingId(task);
+      if (counts[rid]) counts[rid].total++;
+    }
+    return counts;
+  }, [tasks, allTasks, layout.bubbles]);
+
   if (!loaded) return null;
 
   const ringEntries = ['A', 'B', 'C', 'D'].map(id => ({ id, ...layout.rings[id] }));
@@ -954,12 +983,44 @@ function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
   return (
     <div style={{ backgroundColor: '#FFFFFF', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
       <div ref={canvasRef} className="relative w-full" style={{ aspectRatio: `${VB_W} / ${VB_H}` }}>
-        {/* SVG layer — glass rings */}
+        {/* SVG layer — glass rings + per-ring count labels */}
         <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet">
           <GlassRingDefs />
           {ringEntries.map(ring => (
             <DraggableRing key={ring.id} ring={ring} canvasRef={canvasRef} onDragEnd={handleRingDragEnd(ring.id)} />
           ))}
+          {/* Per-ring count labels */}
+          {ringEntries.map(ring => {
+            const c = ringCounts[ring.id];
+            if (!c || c.total === 0) return null;
+            // Position label at top of ring
+            const labelX = ring.cx;
+            const labelY = ring.cy - ring.r - 8;
+            return (
+              <g key={`label-${ring.id}`}>
+                {/* Background pill */}
+                <rect
+                  x={labelX - 36} y={labelY - 11}
+                  width={72} height={22} rx={11}
+                  fill="rgba(255,255,255,0.85)"
+                  stroke={RING_COLOR[ring.id]}
+                  strokeWidth={1}
+                  style={{ pointerEvents: 'none' }}
+                />
+                <text
+                  x={labelX} y={labelY + 4}
+                  textAnchor="middle"
+                  fill={RING_COLOR[ring.id]}
+                  fontSize={11}
+                  fontWeight={600}
+                  fontFamily="inherit"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {RING_LABEL[ring.id]} {c.visible}/{c.total}
+                </text>
+              </g>
+            );
+          })}
         </svg>
 
         {/* HTML layer — draggable bubbles (percentage-positioned) */}
@@ -979,9 +1040,13 @@ function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
       </div>
 
       {totalExtra > 0 && (
-        <p className="text-[11px] text-center mt-1" style={{ color: '#94A3B8' }}>
-          +{totalExtra} משימות נוספות במפה המלאה
-        </p>
+        <button
+          onClick={onShowFullMap}
+          className="w-full text-center mt-2 py-1.5 rounded-lg transition-colors hover:bg-slate-50"
+          style={{ color: '#64748B', fontSize: 12, fontWeight: 500 }}
+        >
+          +{totalExtra} משימות נוספות במפה המלאה →
+        </button>
       )}
     </div>
   );
