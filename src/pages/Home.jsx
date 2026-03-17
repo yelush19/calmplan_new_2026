@@ -665,131 +665,93 @@ const STATUS_DOT_COLOR = {
 };
 
 // Bubble diameter by priority (hierarchy: bigger = more important)
-const BUBBLE_SIZE = { urgent: 150, high: 135, medium: 120, low: 100 };
+// Approved sizes: urgent=140, high=130, medium=115, low=95
+const BUBBLE_SIZE = { urgent: 140, high: 130, medium: 115, low: 95 };
 
-// Category ring definitions — labels appear on the ring
-const CATEGORY_RINGS = [
-  { key: 'work',    label: 'עבודה',     cx: -90, cy: -60,  r: 110 },
-  { key: 'home',    label: 'בית',       cx: 100, cy: 70,   r: 95  },
-];
+// ── Approved 2-ring layout ──────────────────────────────────────
+// Canvas: 520×420, white background
+// Ring A (large): cx=200, cy=200, r=155
+// Ring B (medium): cx=340, cy=180, r=110 — overlaps Ring A by ~40px
+const CANVAS_W = 520;
+const CANVAS_H = 420;
+const RING_A = { cx: 200, cy: 200, r: 155 };
+const RING_B = { cx: 340, cy: 180, r: 110 };
 
-function getCategoryKey(task) {
-  const ctx = getTaskContext(task);
-  if (ctx === 'work') return 'work';
-  if (ctx === 'home') return 'home';
-  return null;
+// Exact bubble positions for 1–5 tasks (approved layout)
+function computeCanvasPositions(count) {
+  // 5 tasks: full approved layout
+  const pos5 = [
+    { x: 180, y: 175 },  // #1 largest — inside Ring A, upper-center
+    { x: 120, y: 300 },  // #2 high — inside Ring A, lower-left, touching edge
+    { x: 310, y: 140 },  // #3 medium — inside Ring B, upper, near intersection
+    { x: 345, y: 275 },  // #4 medium — inside Ring B, lower-right
+    { x: 230, y: 330 },  // #5 small — between both rings, bottom-center
+  ];
+  // 4 tasks: drop #5
+  const pos4 = pos5.slice(0, 4);
+  // 3 tasks: #1 and #2 in Ring A, #3 in Ring B
+  const pos3 = [pos5[0], pos5[1], pos5[2]];
+  // 2 tasks: both inside Ring A
+  const pos2 = [
+    { x: 170, y: 165 },
+    { x: 220, y: 280 },
+  ];
+  // 1 task: centered in Ring A
+  const pos1 = [{ x: 200, y: 195 }];
+
+  const layouts = { 1: pos1, 2: pos2, 3: pos3, 4: pos4, 5: pos5 };
+  return layouts[count] || pos5;
 }
 
-// Compute radial bubble positions around the center of the canvas
-function computeCanvasPositions(tasks) {
-  const cx = 230, cy = 220; // canvas center
-  const mainR = 140; // main circle radius
-
-  if (tasks.length === 1) {
-    return [{ x: cx, y: cy - 10 }];
-  }
-
-  // Place bubbles at angles around the center, with slight radial offsets
-  // First task (highest priority) goes near top-center, rest distributed
-  const angleOffsets = {
-    2: [-0.3, 0.5],
-    3: [-0.4, 0.6, -1.2],
-    4: [-0.3, 0.5, -1.1, 1.2],
-    5: [-0.3, 0.55, -1.0, 1.1, -1.7],
-  };
-  const radialDistances = {
-    2: [40, 65],
-    3: [30, 70, 75],
-    4: [25, 70, 80, 65],
-    5: [20, 68, 72, 85, 80],
-  };
-
-  const angles = angleOffsets[tasks.length] || angleOffsets[5];
-  const radii = radialDistances[tasks.length] || radialDistances[5];
-
-  return tasks.map((_, i) => {
-    const angle = angles[i] ?? (i * 1.2 - 0.5);
-    const dist = radii[i] ?? 70;
-    return {
-      x: cx + Math.cos(angle) * dist,
-      y: cy + Math.sin(angle) * dist,
-    };
-  });
+// Which rings to show based on task count
+function getRingsForCount(count) {
+  if (count <= 2) return [RING_A]; // only Ring A
+  return [RING_A, RING_B]; // both rings
 }
 
 function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
-  const canvasW = 460, canvasH = 460;
-  const cx = 230, cy = 220;
-  const mainR = 140;
+  const positions = useMemo(() => computeCanvasPositions(tasks.length), [tasks.length]);
+  const rings = useMemo(() => getRingsForCount(tasks.length), [tasks.length]);
 
-  const positions = useMemo(() => computeCanvasPositions(tasks), [tasks]);
+  // For 3 tasks, shrink Ring B slightly (r=95 as approved)
+  const adjustedRings = rings.map(ring => {
+    if (ring === RING_B && tasks.length === 3) return { ...ring, r: 95 };
+    return ring;
+  });
 
-  // Determine which category rings to show based on task contexts
-  const activeCategories = useMemo(() => {
-    const cats = new Set();
-    tasks.forEach(t => {
-      const k = getCategoryKey(t);
-      if (k) cats.add(k);
-    });
-    return CATEGORY_RINGS.filter(r => cats.has(r.key));
-  }, [tasks]);
+  // Assign sizes: tasks are already sorted by priority.
+  // Map index → size: first gets largest available for its priority.
+  const bubbleSizes = tasks.map(t => BUBBLE_SIZE[t.priority] || 115);
 
   return (
     <div className="rounded-2xl py-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-      <div className="relative mx-auto" style={{ width: canvasW, maxWidth: '100%', height: canvasH }}>
-        {/* SVG layer: main circle + category rings */}
+      <div className="relative mx-auto" style={{ width: CANVAS_W, maxWidth: '100%', height: CANVAS_H }}>
+        {/* SVG layer: 2 grey rings */}
         <svg
           className="absolute inset-0 w-full h-full"
-          viewBox={`0 0 ${canvasW} ${canvasH}`}
+          viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
           style={{ overflow: 'visible' }}
         >
-          {/* Main circle — big dashed ring */}
-          <circle
-            cx={cx} cy={cy} r={mainR}
-            fill="none"
-            stroke={RING_STROKE}
-            strokeWidth="2"
-            strokeDasharray="6 4"
-          />
-          {/* Center label */}
-          <text x={cx} y={cy + mainR + 22} textAnchor="middle" fill="#94A3B8" fontSize="12" fontFamily="Heebo, Assistant, sans-serif">
-            מה אפשר לעשות היום
-          </text>
-
-          {/* Category rings */}
-          {activeCategories.map(ring => (
-            <g key={ring.key}>
-              <circle
-                cx={cx + ring.cx} cy={cy + ring.cy} r={ring.r}
-                fill="none"
-                stroke={RING_STROKE}
-                strokeWidth="1.5"
-              />
-              {/* Ring label — positioned at top of ring */}
-              <text
-                x={cx + ring.cx}
-                y={cy + ring.cy - ring.r - 6}
-                textAnchor="middle"
-                fill="#94A3B8"
-                fontSize="11"
-                fontFamily="Heebo, Assistant, sans-serif"
-              >
-                {ring.label}
-              </text>
-            </g>
+          {adjustedRings.map((ring, i) => (
+            <circle
+              key={i}
+              cx={ring.cx} cy={ring.cy} r={ring.r}
+              fill="none"
+              stroke={RING_STROKE}
+              strokeWidth={i === 0 ? 2 : 1.5}
+            />
           ))}
         </svg>
 
         {/* HTML layer: interactive bubbles */}
         <AnimatePresence>
           {tasks.map((task, i) => {
-            const size = BUBBLE_SIZE[task.priority] || 120;
             const pos = positions[i];
             return (
               <CanvasBubble
                 key={task.id}
                 task={task}
-                size={size}
+                size={bubbleSizes[i]}
                 x={pos.x}
                 y={pos.y}
                 onEdit={onEdit}
