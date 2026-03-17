@@ -19,83 +19,83 @@ import { useDesign, MAP_TEMPLATES, DESIGN_PRESETS } from '@/contexts/DesignConte
 
 // -- Shape Options (12 shapes) --
 const SHAPES = [
-  { key: 'cloud', label: '\u05e2\u05e0\u05df', icon: '\u2601\ufe0f' },
-  { key: 'bubble', label: '\u05d1\u05d5\u05e2\u05d4', icon: '\u26aa' },
-  { key: 'star', label: '\u05db\u05d5\u05db\u05d1', icon: '\u2b50' },
-  { key: 'hexagon', label: '\u05de\u05e9\u05d5\u05e9\u05d4', icon: '\u2b21' },
-  { key: 'speech', label: '\u05d3\u05d9\u05d1\u05d5\u05e8', icon: '\u{1F5E8}\ufe0f' },
-  { key: 'diamond', label: '\u05d9\u05d4\u05dc\u05d5\u05dd', icon: '\u25c6' },
-  { key: 'capsule', label: '\u05db\u05de\u05d5\u05e1\u05d4', icon: '\u{1F48A}' },
-  { key: 'roundedRect', label: '\u05de\u05dc\u05d1\u05df', icon: '\u25ac' },
-  { key: 'heart', label: '\u05dc\u05d1', icon: '\u{1F49A}' },
-  { key: 'banner', label: '\u05d1\u05d0\u05e0\u05e8', icon: '\u{1F3F3}\ufe0f' },
-  { key: 'crown', label: '\u05db\u05ea\u05e8', icon: '\u{1F451}' },
-  { key: 'pill', label: '\u05d2\u05dc\u05d5\u05dc\u05d4', icon: '\u{1F48A}' },
+  { key: 'cloud', label: 'ענן', icon: '☁️' },
+  { key: 'bubble', label: 'בועה', icon: '⚪' },
+  { key: 'star', label: 'כוכב', icon: '⭐' },
+  { key: 'hexagon', label: 'משושה', icon: '⬡' },
+  { key: 'speech', label: 'דיבור', icon: '🗨️' },
+  { key: 'diamond', label: 'יהלום', icon: '◆' },
+  { key: 'capsule', label: 'כמוסה', icon: '💊' },
+  { key: 'roundedRect', label: 'מלבן', icon: '▬' },
+  { key: 'heart', label: 'לב', icon: '💚' },
+  { key: 'banner', label: 'באנר', icon: '🏳️' },
+  { key: 'crown', label: 'כתר', icon: '👑' },
+  { key: 'pill', label: 'גלולה', icon: '💊' },
 ];
 
 // -- Color Palette (NO pink, NO red, NO fuchsia) --
 const COLORS = [
-  { key: '#00A3E0', label: '\u05ea\u05db\u05dc\u05ea' },
-  { key: '#4682B4', label: '\u05db\u05d7\u05d5\u05dc \u05e4\u05dc\u05d3\u05d4' },
-  { key: '#1565C0', label: '\u05db\u05d7\u05d5\u05dc \u05e2\u05de\u05d5\u05e7' },
-  { key: '#0891B2', label: '\u05e6\u05d9\u05d0\u05df' },
-  { key: '#6366F1', label: '\u05d0\u05d9\u05e0\u05d3\u05d9\u05d2\u05d5' },
-  { key: '#F59E0B', label: '\u05e2\u05e0\u05d1\u05e8' },
-  { key: '#FF9800', label: '\u05db\u05ea\u05d5\u05dd' },
-  { key: '#2E7D32', label: '\u05d9\u05e8\u05d5\u05e7' },
-  { key: '#059669', label: '\u05d0\u05de\u05e8\u05dc\u05d3' },
-  { key: '#7C3AED', label: '\u05e1\u05d2\u05d5\u05dc' },
-  { key: '#0D9488', label: '\u05d8\u05d9\u05dc' },
-  { key: '#D97706', label: '\u05d3\u05d1\u05e9' },
+  { key: '#00A3E0', label: 'תכלת' },
+  { key: '#4682B4', label: 'כחול פלדה' },
+  { key: '#1565C0', label: 'כחול עמוק' },
+  { key: '#0891B2', label: 'ציאן' },
+  { key: '#6366F1', label: 'אינדיגו' },
+  { key: '#F59E0B', label: 'ענבר' },
+  { key: '#FF9800', label: 'כתום' },
+  { key: '#2E7D32', label: 'ירוק' },
+  { key: '#059669', label: 'אמרלד' },
+  { key: '#7C3AED', label: 'סגול' },
+  { key: '#0D9488', label: 'טיל' },
+  { key: '#D97706', label: 'דבש' },
 ];
 
 // -- Sticker Library (organized by category) --
 const STICKER_TABS = [
   {
-    label: '\u05e1\u05d8\u05d8\u05d5\u05e1',
-    stickers: ['\u2705', '\u23f3', '\u{1F6A7}', '\u26a0\ufe0f', '\u{1F4CB}', '\u{1F512}', '\u{1F50D}', '\u{1F4E4}',
-               '\u{1F504}', '\u{1F4E5}', '\u{1F6AB}', '\u2b55'],
+    label: 'סטטוס',
+    stickers: ['✅', '⏳', '🚧', '⚠️', '📋', '🔒', '🔍', '📤',
+               '🔄', '📥', '🚫', '⭕'],
   },
   {
-    label: '\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea',
-    stickers: ['\u{1F525}', '\u26a1', '\u2b50', '\u{1F3AF}', '\u{1F680}', '\u{1F4A1}', '\u{1F4AA}', '\u{1F3C6}',
-               '\u{1F31F}', '\u{1F4A5}', '\u2728', '\u{1F4AB}'],
+    label: 'עדיפות',
+    stickers: ['🔥', '⚡', '⭐', '🎯', '🚀', '💡', '💪', '🏆',
+               '🌟', '💥', '✨', '💫'],
   },
   {
-    label: '\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea',
-    stickers: ['\u{1F4BC}', '\u{1F4B0}', '\u{1F4CA}', '\u{1F4C5}', '\u{1F465}', '\u{1F3E2}', '\u{1F4DD}', '\u2699\ufe0f',
-               '\u{1F4C1}', '\u{1F4CE}', '\u{1F5C2}\ufe0f', '\u{1F4C8}'],
+    label: 'קטגוריות',
+    stickers: ['💼', '💰', '📊', '📅', '👥', '🏢', '📝', '⚙️',
+               '📁', '📎', '🗂️', '📈'],
   },
   {
-    label: '\u05e1\u05de\u05dc\u05d9\u05dd',
-    stickers: ['\u{1F7E2}', '\u{1F7E1}', '\u{1F7E0}', '\u{1F535}', '\u{1F7E3}', '\u2b1c', '\u2b1b', '\u{1F536}',
-               '\u{1F537}', '\u{1F538}', '\u{1F539}', '\u{1F53A}'],
+    label: 'סמלים',
+    stickers: ['🟢', '🟡', '🟠', '🔵', '🟣', '⬜', '⬛', '🔶',
+               '🔷', '🔸', '🔹', '🔺'],
   },
   {
-    label: '\u05d0\u05d5\u05d1\u05d9\u05d9\u05e7\u05d8\u05d9\u05dd',
-    stickers: ['\u{1F4E6}', '\u{1F4B3}', '\u{1F4B5}', '\u{1F4B8}', '\u{1F3E0}', '\u{1F697}', '\u2708\ufe0f', '\u{1F4F1}',
-               '\u{1F4BB}', '\u{1F5A8}\ufe0f', '\u260e\ufe0f', '\u{1F4F7}'],
+    label: 'אובייקטים',
+    stickers: ['📦', '💳', '💵', '💸', '🏠', '🚗', '✈️', '📱',
+               '💻', '🖨️', '☎️', '📷'],
   },
 ];
 
 // -- Background options --
 const BACKGROUNDS = [
-  { key: 'clean', label: '\u05e0\u05e7\u05d9', preview: '#FFFFFF' },
-  { key: 'grid', label: '\u05e8\u05e9\u05ea', preview: 'repeating-linear-gradient(0deg, #f0f0f0 0px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, #f0f0f0 0px, transparent 1px, transparent 20px)' },
-  { key: 'dots', label: '\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea', preview: 'radial-gradient(circle, #ddd 1px, transparent 1px)' },
-  { key: 'soft-gradient', label: '\u05d2\u05e8\u05d3\u05d9\u05d0\u05e0\u05d8', preview: 'linear-gradient(135deg, #f5f7fa, #e8ecf0)' },
-  { key: 'warm', label: '\u05d7\u05de\u05d9\u05dd', preview: 'linear-gradient(135deg, #fef9ef, #fdf2e9)' },
-  { key: 'cool', label: '\u05e7\u05e8\u05d9\u05e8', preview: 'linear-gradient(135deg, #eef2ff, #e0e7ff)' },
+  { key: 'clean', label: 'נקי', preview: '#FFFFFF' },
+  { key: 'grid', label: 'רשת', preview: 'repeating-linear-gradient(0deg, #f0f0f0 0px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, #f0f0f0 0px, transparent 1px, transparent 20px)' },
+  { key: 'dots', label: 'נקודות', preview: 'radial-gradient(circle, #ddd 1px, transparent 1px)' },
+  { key: 'soft-gradient', label: 'גרדיאנט', preview: 'linear-gradient(135deg, #f5f7fa, #e8ecf0)' },
+  { key: 'warm', label: 'חמים', preview: 'linear-gradient(135deg, #fef9ef, #fdf2e9)' },
+  { key: 'cool', label: 'קריר', preview: 'linear-gradient(135deg, #eef2ff, #e0e7ff)' },
 ];
 
 // -- Animation presets --
 const ANIMATIONS = [
-  { key: 'none', label: '\u05dc\u05dc\u05d0', description: '\u05d1\u05dc\u05d9 \u05d0\u05e0\u05d9\u05de\u05e6\u05d9\u05d4' },
-  { key: 'fade', label: '\u05d3\u05e2\u05d9\u05db\u05d4', description: '\u05db\u05e0\u05d9\u05e1\u05d4 \u05e2\u05dd \u05d3\u05e2\u05d9\u05db\u05d4 \u05e2\u05d3\u05d9\u05e0\u05d4' },
-  { key: 'scale', label: '\u05d4\u05ea\u05de\u05d5\u05d3\u05d3\u05d5\u05ea', description: '\u05d4\u05ea\u05de\u05d5\u05d3\u05d3\u05d5\u05ea \u05de\u05d4\u05de\u05e8\u05db\u05d6 \u05d4\u05d7\u05d5\u05e6\u05d4' },
-  { key: 'slide', label: '\u05d4\u05d7\u05dc\u05e7\u05d4', description: '\u05d4\u05d7\u05dc\u05e7\u05d4 \u05de\u05d4\u05e6\u05d3' },
-  { key: 'bounce', label: '\u05e7\u05e4\u05d9\u05e6\u05d4', description: '\u05db\u05e0\u05d9\u05e1\u05d4 \u05e2\u05dd \u05e7\u05e4\u05d9\u05e6\u05d4' },
-  { key: 'stagger', label: '\u05de\u05d3\u05d5\u05e8\u05d2', description: '\u05e6\u05de\u05ea\u05d9\u05dd \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05d1\u05e8\u05e6\u05e3' },
+  { key: 'none', label: 'ללא', description: 'בלי אנימציה' },
+  { key: 'fade', label: 'דעיכה', description: 'כניסה עם דעיכה עדינה' },
+  { key: 'scale', label: 'התמודדות', description: 'התמודדות מהמרכז החוצה' },
+  { key: 'slide', label: 'החלקה', description: 'החלקה מהצד' },
+  { key: 'bounce', label: 'קפיצה', description: 'כניסה עם קפיצה' },
+  { key: 'stagger', label: 'מדורג', description: 'צמתים נכנסים ברצף' },
 ];
 
 export default function DesignPanel({ isOpen, onClose }) {
@@ -130,12 +130,12 @@ export default function DesignPanel({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const tabs = [
-    { key: 'shape', icon: Shapes, label: '\u05e6\u05d5\u05e8\u05d4' },
-    { key: 'color', icon: Palette, label: '\u05e6\u05d1\u05e2' },
-    { key: 'sticker', icon: Sticker, label: '\u05e1\u05d8\u05d9\u05e7\u05e8' },
-    { key: 'template', icon: Layout, label: '\u05ea\u05d1\u05e0\u05d9\u05ea' },
-    { key: 'background', icon: Image, label: '\u05e8\u05e7\u05e2' },
-    { key: 'animation', icon: Wand2, label: '\u05d0\u05e0\u05d9\u05de\u05e6\u05d9\u05d4' },
+    { key: 'shape', icon: Shapes, label: 'צורה' },
+    { key: 'color', icon: Palette, label: 'צבע' },
+    { key: 'sticker', icon: Sticker, label: 'סטיקר' },
+    { key: 'template', icon: Layout, label: 'תבנית' },
+    { key: 'background', icon: Image, label: 'רקע' },
+    { key: 'animation', icon: Wand2, label: 'אנימציה' },
   ];
 
   return (
@@ -154,10 +154,10 @@ export default function DesignPanel({ isOpen, onClose }) {
             <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}>
               <Paintbrush className="w-5 h-5 text-indigo-600" />
             </motion.div>
-            <span className="font-bold text-[14px] text-slate-800">\u05de\u05e0\u05d5\u05e2 \u05e2\u05d9\u05e6\u05d5\u05d1</span>
+            <span className="font-bold text-[14px] text-slate-800">מנוע עיצוב</span>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => design.resetToDefaults()} className="p-1.5 rounded-full hover:bg-white/80 text-slate-400 hover:text-slate-600 transition-all" title="\u05d0\u05d9\u05e4\u05d5\u05e1">
+            <button onClick={() => design.resetToDefaults()} className="p-1.5 rounded-full hover:bg-white/80 text-slate-400 hover:text-slate-600 transition-all" title="איפוס">
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/80 text-slate-400 hover:text-slate-600 transition-all">
@@ -169,8 +169,8 @@ export default function DesignPanel({ isOpen, onClose }) {
         {/* Active Selection */}
         {design.activeTaskId && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="px-4 py-2 bg-indigo-50 border-b flex items-center justify-between">
-            <span className="text-[12px] text-indigo-700 font-bold">\u05e2\u05d9\u05e6\u05d5\u05d1: {design.activeTaskId}</span>
-            <button onClick={() => design.clearSelection()} className="text-[12px] text-indigo-500 hover:text-indigo-700 font-medium">\u05e0\u05e7\u05d4 \u05d1\u05d7\u05d9\u05e8\u05d4</button>
+            <span className="text-[12px] text-indigo-700 font-bold">עיצוב: {design.activeTaskId}</span>
+            <button onClick={() => design.clearSelection()} className="text-[12px] text-indigo-500 hover:text-indigo-700 font-medium">נקה בחירה</button>
           </motion.div>
         )}
 
@@ -197,15 +197,15 @@ export default function DesignPanel({ isOpen, onClose }) {
             {activeTab === 'shape' && (
               <motion.div key="shape" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <p className="text-[12px] text-slate-500 font-medium">\u05de\u05e6\u05d1 \u05de\u05d9\u05dc\u05d5\u05d9:</p>
+                  <p className="text-[12px] text-slate-500 font-medium">מצב מילוי:</p>
                   <div className="flex bg-slate-100 rounded-lg p-0.5">
                     <button onClick={() => design.updatePref('fillMode', 'filled')}
-                      className={`px-3 py-1.5 text-[12px] rounded-md transition-all ${(design.fillMode || 'filled') === 'filled' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-500'}`}>\u05de\u05dc\u05d0</button>
+                      className={`px-3 py-1.5 text-[12px] rounded-md transition-all ${(design.fillMode || 'filled') === 'filled' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-500'}`}>מלא</button>
                     <button onClick={() => design.updatePref('fillMode', 'border')}
-                      className={`px-3 py-1.5 text-[12px] rounded-md transition-all ${design.fillMode === 'border' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-500'}`}>\u05e7\u05d5 \u05d1\u05dc\u05d1\u05d3</button>
+                      className={`px-3 py-1.5 text-[12px] rounded-md transition-all ${design.fillMode === 'border' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-500'}`}>קו בלבד</button>
                   </div>
                 </div>
-                <p className="text-[12px] text-slate-500 mb-3 font-medium">\u05d1\u05d7\u05e8 \u05e6\u05d5\u05e8\u05d4:</p>
+                <p className="text-[12px] text-slate-500 mb-3 font-medium">בחר צורה:</p>
                 <div className="grid grid-cols-4 gap-2">
                   {SHAPES.map((shape, idx) => (
                     <motion.button key={shape.key} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.03 }}
@@ -216,9 +216,9 @@ export default function DesignPanel({ isOpen, onClose }) {
                     </motion.button>
                   ))}
                 </div>
-                <p className="text-[12px] text-slate-500 mt-4 mb-2 font-medium">\u05e1\u05d2\u05e0\u05d5\u05df \u05e7\u05d5:</p>
+                <p className="text-[12px] text-slate-500 mt-4 mb-2 font-medium">סגנון קו:</p>
                 <div className="flex gap-2">
-                  {[{ key: 'solid', label: '\u05de\u05dc\u05d0' }, { key: 'dashed', label: '\u05de\u05e7\u05d5\u05d5\u05e7\u05d5' }, { key: 'dotted', label: '\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea' }, { key: 'tapered', label: '\u05d8\u05e4\u05dc\u05d9' }].map(style => (
+                  {[{ key: 'solid', label: 'מלא' }, { key: 'dashed', label: 'מקווקו' }, { key: 'dotted', label: 'נקודות' }, { key: 'tapered', label: 'טפלי' }].map(style => (
                     <button key={style.key} onClick={() => design.updatePref('lineStyle', style.key)}
                       className={`flex-1 py-2 text-[12px] rounded-xl border-2 transition-all font-semibold ${design.lineStyle === style.key ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-bold' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>{style.label}</button>
                   ))}
@@ -230,7 +230,7 @@ export default function DesignPanel({ isOpen, onClose }) {
             {activeTab === 'color' && (
               <motion.div key="color" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <p className="text-[12px] text-slate-500 mb-3 font-medium">
-                  {design.activeTaskId ? '\u05d1\u05d7\u05e8 \u05e6\u05d1\u05e2 \u05dc\u05e6\u05d5\u05de\u05ea:' : '\u05e6\u05d1\u05e2\u05d9 \u05e2\u05e0\u05e4\u05d9\u05dd (P1-P5):'}
+                  {design.activeTaskId ? 'בחר צבע לצומת:' : 'צבעי ענפים (P1-P5):'}
                 </p>
                 {!design.activeTaskId && (
                   <div className="space-y-2.5 mb-4">
@@ -256,9 +256,9 @@ export default function DesignPanel({ isOpen, onClose }) {
                     ))}
                   </div>
                 )}
-                <p className="text-[12px] text-slate-500 mt-4 mb-2 font-medium">\u05e2\u05e8\u05db\u05ea \u05e0\u05d5\u05e9\u05d0:</p>
+                <p className="text-[12px] text-slate-500 mt-4 mb-2 font-medium">ערכת נושא:</p>
                 <div className="flex gap-2">
-                  {[{ key: 'light', label: '\u05d1\u05d4\u05d9\u05e8', icon: '\u2600\ufe0f' }, { key: 'soft-gray', label: '\u05d0\u05e4\u05d5\u05e8 \u05e8\u05da', icon: '\u{1F324}\ufe0f' }, { key: 'dark', label: '\u05db\u05d4\u05d4', icon: '\u{1F319}' }].map(theme => (
+                  {[{ key: 'light', label: 'בהיר', icon: '☀️' }, { key: 'soft-gray', label: 'אפור רך', icon: '🌤️' }, { key: 'dark', label: 'כהה', icon: '🌙' }].map(theme => (
                     <button key={theme.key} onClick={() => design.updatePref('theme', theme.key)}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 transition-all ${design.theme === theme.key ? 'border-indigo-500 bg-indigo-50 font-bold' : 'border-slate-200 hover:border-slate-300'}`}>
                       <span>{theme.icon}</span>
@@ -273,7 +273,7 @@ export default function DesignPanel({ isOpen, onClose }) {
             {activeTab === 'sticker' && (
               <motion.div key="sticker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <p className="text-[12px] text-slate-500 mb-3 font-medium">
-                  {design.activeTaskId ? '\u05d4\u05d5\u05e1\u05e3 \u05e1\u05d8\u05d9\u05e7\u05e8 \u05dc\u05e6\u05d5\u05de\u05ea:' : '\u05d1\u05d7\u05e8 \u05e6\u05d5\u05de\u05ea \u05db\u05d3\u05d9 \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e1\u05d8\u05d9\u05e7\u05e8'}
+                  {design.activeTaskId ? 'הוסף סטיקר לצומת:' : 'בחר צומת כדי להוסיף סטיקר'}
                 </p>
                 <div className="flex gap-1 mb-3 overflow-x-auto pb-1">
                   {STICKER_TABS.map((cat, idx) => (
@@ -292,7 +292,7 @@ export default function DesignPanel({ isOpen, onClose }) {
                   ))}
                 </div>
                 {design.activeTaskId && design.stickerMap?.[design.activeTaskId] && (
-                  <button onClick={() => handleStickerSelect('')} className="mt-3 text-[12px] text-amber-600 hover:text-amber-700 font-medium">\u05d4\u05e1\u05e8 \u05e1\u05d8\u05d9\u05e7\u05e8</button>
+                  <button onClick={() => handleStickerSelect('')} className="mt-3 text-[12px] text-amber-600 hover:text-amber-700 font-medium">הסר סטיקר</button>
                 )}
               </motion.div>
             )}
@@ -300,7 +300,7 @@ export default function DesignPanel({ isOpen, onClose }) {
             {/* Templates */}
             {activeTab === 'template' && (
               <motion.div key="template" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <p className="text-[12px] text-slate-500 mb-2 font-bold">\u05ea\u05d1\u05e0\u05d9\u05d5\u05ea \u05de\u05d4\u05d9\u05e8\u05d5\u05ea:</p>
+                <p className="text-[12px] text-slate-500 mb-2 font-bold">תבניות מהירות:</p>
                 <div className="grid grid-cols-2 gap-2 mb-4">
                   {Object.entries(DESIGN_PRESETS).map(([key, preset]) => (
                     <motion.button key={key} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -324,13 +324,13 @@ export default function DesignPanel({ isOpen, onClose }) {
                     </motion.button>
                   ))}
                 </div>
-                <p className="text-[12px] text-slate-500 mb-2 font-bold">\u05ea\u05d1\u05e0\u05d9\u05d5\u05ea \u05de\u05e4\u05d4:</p>
+                <p className="text-[12px] text-slate-500 mb-2 font-bold">תבניות מפה:</p>
                 <div className="space-y-1.5">
                   {Object.entries(MAP_TEMPLATES).map(([key, tpl]) => (
                     <motion.button key={key} whileHover={{ x: 4 }} onClick={() => handleTemplateApply(key)}
                       className={`w-full text-right px-3 py-2.5 rounded-xl border-2 transition-all ${design.mapTemplate === key ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'}`}>
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{tpl.emoji || '\u{1F5FA}\ufe0f'}</span>
+                        <span className="text-base">{tpl.emoji || '🗺️'}</span>
                         <div>
                           <span className="text-[13px] font-bold text-slate-800">{tpl.label}</span>
                           <p className="text-[11px] text-slate-500">{tpl.description}</p>
@@ -345,7 +345,7 @@ export default function DesignPanel({ isOpen, onClose }) {
             {/* Backgrounds */}
             {activeTab === 'background' && (
               <motion.div key="background" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <p className="text-[12px] text-slate-500 mb-3 font-medium">\u05e8\u05e7\u05e2 \u05e7\u05e0\u05d1\u05e1:</p>
+                <p className="text-[12px] text-slate-500 mb-3 font-medium">רקע קנבס:</p>
                 <div className="grid grid-cols-3 gap-2">
                   {BACKGROUNDS.map(bg => (
                     <motion.button key={bg.key} whileHover={{ scale: 1.05 }} onClick={() => design.updatePref('canvasBackground', bg.key)}
@@ -361,7 +361,7 @@ export default function DesignPanel({ isOpen, onClose }) {
             {/* Animations */}
             {activeTab === 'animation' && (
               <motion.div key="animation" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <p className="text-[12px] text-slate-500 mb-3 font-medium">\u05d0\u05e0\u05d9\u05de\u05e6\u05d9\u05d5\u05ea \u05db\u05e0\u05d9\u05e1\u05d4:</p>
+                <p className="text-[12px] text-slate-500 mb-3 font-medium">אנימציות כניסה:</p>
                 <div className="space-y-1.5">
                   {ANIMATIONS.map(anim => (
                     <motion.button key={anim.key} whileHover={{ x: 4 }} onClick={() => design.updatePref('animation', anim.key)}
@@ -380,11 +380,11 @@ export default function DesignPanel({ isOpen, onClose }) {
         <div className="px-4 py-3 border-t bg-slate-50 flex items-center gap-4">
           <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer font-medium">
             <input type="checkbox" checked={design.glassmorphism} onChange={(e) => design.updatePref('glassmorphism', e.target.checked)} className="w-3.5 h-3.5 rounded accent-indigo-600" />
-            \u05d6\u05db\u05d5\u05db\u05d9\u05ea
+            זכוכית
           </label>
           <label className="flex items-center gap-1.5 text-[12px] text-slate-600 cursor-pointer font-medium">
             <input type="checkbox" checked={design.softShadows} onChange={(e) => design.updatePref('softShadows', e.target.checked)} className="w-3.5 h-3.5 rounded accent-indigo-600" />
-            \u05e6\u05dc\u05dc\u05d9\u05dd \u05e8\u05db\u05d9\u05dd
+            צללים רכים
           </label>
         </div>
       </motion.div>

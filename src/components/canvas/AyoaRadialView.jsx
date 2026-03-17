@@ -195,8 +195,16 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
     return { nodes: allNodes, ringSegments: segments };
   }, [tasks, design?.nodeOverrides, design?.stickerMap, branchColors, globalShape]);
 
+  // Single click: toggle focus/navigate only (no toolbar)
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
+    setFocusedNode(prev => prev === nodeId ? null : nodeId);
+  }, []);
+
+  // Right-click (context menu) or double-click: open FloatingToolbar
+  const handleNodeContextMenu = useCallback((e, nodeId) => {
+    e.stopPropagation();
+    e.preventDefault();
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
@@ -215,7 +223,6 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
       // Notify Design Engine of selection
       window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId } }));
     }
-    setFocusedNode(prev => prev === nodeId ? null : nodeId);
   }, [nodes, selectedNode]);
 
   const handleColorChange = useCallback(async (color) => {
@@ -368,6 +375,8 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           return (
             <g key={node.id}
               onClick={(e) => handleNodeClick(e, node.id)}
+              onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
+              onDoubleClick={(e) => handleNodeContextMenu(e, node.id)}
               style={{
                 cursor: 'pointer',
                 transition: 'filter 0.4s ease, opacity 0.4s ease',
@@ -414,6 +423,8 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           return (
             <g key={node.id}
               onClick={(e) => handleNodeClick(e, node.id)}
+              onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
+              onDoubleClick={(e) => handleNodeContextMenu(e, node.id)}
               style={{
                 cursor: 'pointer',
                 transition: 'filter 0.4s ease, opacity 0.4s ease',
