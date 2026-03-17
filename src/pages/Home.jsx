@@ -496,11 +496,11 @@ export default function HomePage() {
 
   // ── Default: Calm Home View ──
   return (
-    <div className="w-full h-full flex-1 flex flex-col">
-      <div className="space-y-3 p-4">
+    <div className="w-full h-full flex-1 flex flex-col" style={{ backgroundColor: '#F7F7F7' }}>
+      <div className="space-y-4 p-4">
 
         {/* ═══ 1. Calming Greeting ═══ */}
-        <div className="px-4 py-4 rounded-2xl border border-sky-100" style={{ background: 'linear-gradient(135deg, #F8FCFF 0%, #F0F7FA 50%, #F5FAFE 100%)' }}>
+        <div className="px-4 py-4 rounded-2xl" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <h2 className="text-lg font-bold text-slate-700">
@@ -517,7 +517,7 @@ export default function HomePage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-white border border-sky-100">
+              <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
                 <Link to={createPageUrl("Tasks") + "?tab=active&context=work"} className="flex items-center gap-1 hover:opacity-80">
                   <Briefcase className="w-3 h-3" style={{ color: ZERO_PANIC.blue }} />
                   <span className="text-xs font-bold" style={{ color: ZERO_PANIC.blue }}>{data.workCount}</span>
@@ -544,7 +544,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2 mt-3">
             <span className="text-[10px] text-slate-400">התקדמות היום</span>
             <div className="flex-1 bg-slate-100 rounded-full h-1 overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #7EBDC2, #5A9EB5)' }} />
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: '#5A9EB5' }} />
             </div>
             <span className="text-[10px] font-bold text-slate-400">{Math.round(progress)}%</span>
           </div>
@@ -554,21 +554,33 @@ export default function HomePage() {
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
         {/* ═══ 3. "מה אפשר לעשות היום" — AYOA-style mini-canvas ═══ */}
-        <div className="py-4">
-          <h3 className="text-sm font-bold text-slate-700 mb-4 px-1 text-center">מה אפשר לעשות היום</h3>
+        <div className="py-6">
+          <h3 className="text-sm font-bold text-slate-700 mb-5 px-1 text-center">מה אפשר לעשות היום</h3>
           {calmTasks.length === 0 ? (
-            <Card className="border-sky-100">
-              <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />} text="אין משימות להיום — כל הכבוד!" />
-            </Card>
-          ) : (
-            <div className="relative mx-auto" style={{ maxWidth: 380, height: calmTasks.length <= 2 ? 160 : 260 }}>
-              {calmTasks.map((task, i) => (
-                <CalmBubble key={task.id} task={task} onEdit={setEditingTask} posStyle={BUBBLE_POSITIONS[i]} />
-              ))}
+            <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+              <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
             </div>
-          )}
+          ) : (() => {
+            const positions = computeBubbleLayout(calmTasks.length);
+            const canvasH = calmTasks.length <= 2 ? 180 : calmTasks.length <= 3 ? 260 : 310;
+            return (
+              <div className="relative mx-auto" style={{ maxWidth: 420, height: canvasH }}>
+                <AnimatePresence>
+                  {calmTasks.map((task, i) => (
+                    <CalmBubble
+                      key={task.id}
+                      task={task}
+                      onEdit={setEditingTask}
+                      onStatusChange={handleStatusChange}
+                      posStyle={positions[i]}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            );
+          })()}
           {(data.overdue.length + data.today.length) > 5 && (
-            <p className="text-[11px] text-slate-400 mt-3 text-center">
+            <p className="text-[11px] text-slate-400 mt-4 text-center">
               +{(data.overdue.length + data.today.length) - 5} משימות נוספות במפה המלאה
             </p>
           )}
@@ -577,29 +589,29 @@ export default function HomePage() {
         {/* ═══ 4. Sticky Notes — max 3 ═══ */}
         {stickyNotes.length > 0 && (
           <div className="space-y-1.5">
-            <h3 className="text-xs font-bold text-slate-500 px-1">פתקים דביקים</h3>
+            <h3 className="text-xs font-bold px-1" style={{ color: '#000000' }}>פתקים דביקים</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {stickyNotes.slice(0, 3).map(note => {
-                const urgencyColors = {
-                  urgent: { bg: '#FFF8E7', border: '#E8D5A3', dot: '#D4AA4F' },
-                  high: { bg: '#FEF3F2', border: '#E8C4C0', dot: '#C47A72' },
-                  medium: { bg: '#F0F7FA', border: '#B8D4E3', dot: '#6BA3BD' },
-                  low: { bg: '#F0FAF4', border: '#A3D4B5', dot: '#6BAF82' },
-                  none: { bg: '#F8F9FA', border: '#E0E0E0', dot: '#BDBDBD' },
+                const urgencyDots = {
+                  urgent: '#F59E0B',
+                  high:   '#F59E0B',
+                  medium: '#6366F1',
+                  low:    '#10B981',
+                  none:   '#94A3B8',
                 };
-                const colors = urgencyColors[note.urgency] || urgencyColors.none;
+                const noteDot = urgencyDots[note.urgency] || urgencyDots.none;
                 return (
-                  <div key={note.id} className="p-2.5 rounded-xl border text-sm" style={{
-                    backgroundColor: colors.bg,
-                    borderColor: colors.border,
+                  <div key={note.id} className="p-2.5 rounded-xl text-sm" style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E5E7EB',
                   }}>
                     <div className="flex items-start gap-1.5">
                       {note.pinned && <Pin className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />}
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-xs text-slate-700 truncate">{note.title || 'פתק'}</p>
-                        {note.content && <p className="text-[11px] text-slate-500 truncate mt-0.5">{note.content}</p>}
+                        <p className="font-medium text-xs truncate" style={{ color: '#000000' }}>{note.title || 'פתק'}</p>
+                        {note.content && <p className="text-[11px] truncate mt-0.5" style={{ color: '#000000' }}>{note.content}</p>}
                       </div>
-                      <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: colors.dot }} />
+                      <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: noteDot }} />
                     </div>
                   </div>
                 );
@@ -645,66 +657,143 @@ function EmptyState({ icon, text }) {
   );
 }
 
-// ─── AYOA-style bubble card for the calm "מה אפשר לעשות היום" section ───
-const BUBBLE_COLORS = {
-  urgent: { bg: '#FFF8E7', border: '#E8C46C', ring: '#F5A623' },   // soft amber
-  high:   { bg: '#FFF4EC', border: '#E8BFA0', ring: '#D4925E' },   // warm orange
-  medium: { bg: '#F0F7FA', border: '#A8CBDB', ring: '#5A9EB5' },   // sky blue
-  low:    { bg: '#F0FAF4', border: '#A3D4B5', ring: '#6BAF82' },   // emerald
-};
+// ─── AYOA-style bubble — strict visual spec ───
+// All bubbles share ONE warm-peach fill. No per-priority color variation.
+const BUBBLE_STYLE = { bg: '#FFF7ED', border: '#FED7AA' };
 
-// Scattered positions for up to 5 bubbles — gives a mini-canvas feel
-const BUBBLE_POSITIONS = [
-  { top: 0, left: '50%', transform: 'translateX(-50%)' },          // top-center
-  { top: 30, left: '8%' },                                          // mid-left
-  { top: 45, left: '68%' },                                         // mid-right
-  { top: 110, left: '22%' },                                        // bottom-left
-  { top: 120, left: '58%' },                                        // bottom-right
+// Compute scattered bubble positions dynamically based on task count
+function computeBubbleLayout(count) {
+  // Predefined organic layouts for 1–5 items
+  const layouts = {
+    1: [{ top: '15%', left: '50%', transform: 'translateX(-50%)' }],
+    2: [
+      { top: '10%', left: '25%' },
+      { top: '20%', left: '60%' },
+    ],
+    3: [
+      { top: '0%',  left: '38%' },
+      { top: '42%', left: '8%' },
+      { top: '38%', left: '62%' },
+    ],
+    4: [
+      { top: '0%',  left: '42%' },
+      { top: '30%', left: '5%' },
+      { top: '25%', left: '62%' },
+      { top: '58%', left: '30%' },
+    ],
+    5: [
+      { top: '0%',  left: '38%' },
+      { top: '22%', left: '4%' },
+      { top: '18%', left: '65%' },
+      { top: '52%', left: '18%' },
+      { top: '55%', left: '55%' },
+    ],
+  };
+  return layouts[count] || layouts[5];
+}
+
+// Status dot colors — strict palette: emerald / indigo / orange only
+const QUICK_STATUSES = [
+  { key: 'production_completed',   label: 'הושלם',           dotColor: '#10B981' },
+  { key: 'waiting_for_materials',  label: 'ממתין לחומרים',   dotColor: '#6366F1' },
+  { key: 'needs_corrections',      label: 'לבצע תיקונים',   dotColor: '#F59E0B' },
+  { key: 'not_started',            label: 'לבצע',            dotColor: '#94A3B8' },
 ];
 
-const CONTEXT_BADGE = {
-  work: { label: 'עבודה', icon: Briefcase, color: ZERO_PANIC.blue },
-  home: { label: 'בית', icon: HomeIcon, color: ZERO_PANIC.green },
+// Map task status → spec dot color
+const STATUS_DOT_COLOR = {
+  production_completed:  '#10B981',
+  waiting_for_materials: '#6366F1',
+  needs_corrections:     '#F59E0B',
+  sent_for_review:       '#6366F1',
+  not_started:           '#94A3B8',
 };
 
-function CalmBubble({ task, onEdit, posStyle }) {
-  const ctx = getTaskContext(task);
-  const colors = BUBBLE_COLORS[task.priority] || BUBBLE_COLORS.medium;
-  const badge = CONTEXT_BADGE[ctx];
+
+function CalmBubble({ task, onEdit, onStatusChange, posStyle }) {
+  const [showStatus, setShowStatus] = useState(false);
+  const [fading, setFading] = useState(false);
   const statusCfg = statusConfig[task.status] || statusConfig.not_started;
+  const dotColor = STATUS_DOT_COLOR[task.status] || '#94A3B8';
+
+  const handleQuickStatus = (e, newStatus) => {
+    e.stopPropagation();
+    setShowStatus(false);
+    if (newStatus === 'production_completed') {
+      setFading(true);
+      setTimeout(() => onStatusChange(task, newStatus), 400);
+    } else {
+      onStatusChange(task, newStatus);
+    }
+  };
 
   return (
-    <button
-      onClick={() => onEdit(task)}
-      className="absolute flex flex-col items-center text-center rounded-full p-4 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
-      style={{
-        width: 130,
-        height: 130,
-        backgroundColor: colors.bg,
-        border: `3px solid ${colors.border}`,
-        boxShadow: `0 0 0 2px ${colors.ring}22`,
-        ...posStyle,
-      }}
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.7 }}
+      animate={{ opacity: fading ? 0 : 1, scale: fading ? 0.5 : 1 }}
+      exit={{ opacity: 0, scale: 0.5 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      className="absolute"
+      style={posStyle}
     >
-      {/* Title — 2 lines max */}
-      <span className="text-[13px] font-bold text-slate-700 leading-tight mt-2 line-clamp-2 max-w-[100px]">
-        {task.title}
-      </span>
-
-      {/* Status dot + label */}
-      <span className="mt-auto mb-1 flex items-center gap-1">
-        <span className={`w-2 h-2 rounded-full ${statusCfg.dot}`} />
-        <span className="text-[10px] text-slate-500">{statusCfg.text}</span>
-      </span>
-
-      {/* Context icon */}
-      {badge && (
-        <span className="flex items-center gap-0.5">
-          <badge.icon className="w-3 h-3" style={{ color: badge.color }} />
-          <span className="text-[10px] font-medium" style={{ color: badge.color }}>{badge.label}</span>
+      <button
+        onClick={() => onEdit(task)}
+        className="relative flex flex-col items-center text-center rounded-full p-4 transition-shadow hover:shadow-lg cursor-pointer"
+        style={{
+          width: 130,
+          height: 130,
+          backgroundColor: BUBBLE_STYLE.bg,
+          border: `2px solid ${BUBBLE_STYLE.border}`,
+        }}
+      >
+        {/* Title — spec: 15px bold black, max 2 lines */}
+        <span className="font-bold leading-tight mt-2 line-clamp-2 max-w-[100px]" style={{ fontSize: 15, color: '#000000' }}>
+          {task.title}
         </span>
-      )}
-    </button>
+
+        {/* Status dot + label — spec: 13px regular black */}
+        <span
+          className="mt-auto mb-1 flex items-center gap-1.5 hover:bg-white/50 rounded-full px-2 py-0.5 transition-colors"
+          onClick={(e) => { e.stopPropagation(); setShowStatus(!showStatus); }}
+          title="שנה סטטוס"
+        >
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+          <span style={{ fontSize: 13, color: '#000000' }}>{statusCfg.text}</span>
+          <ChevronDown className="w-2.5 h-2.5" style={{ color: '#000000' }} />
+        </span>
+      </button>
+
+      {/* Quick status picker — floats below bubble */}
+      <AnimatePresence>
+        {showStatus && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="absolute left-1/2 -translate-x-1/2 z-50 rounded-xl shadow-lg py-1.5 px-1"
+            style={{ top: 136, minWidth: 150, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}
+          >
+            {QUICK_STATUSES.map(s => (
+              <button
+                key={s.key}
+                onClick={(e) => handleQuickStatus(e, s.key)}
+                className={`flex items-center gap-2 w-full text-right px-3 py-1.5 rounded-lg transition-colors ${
+                  task.status === s.key ? 'font-bold' : ''
+                }`}
+                style={{ fontSize: 13, color: '#000000', backgroundColor: task.status === s.key ? '#F7F7F7' : undefined }}
+                onMouseEnter={(e) => { if (task.status !== s.key) e.currentTarget.style.backgroundColor = '#F7F7F7'; }}
+                onMouseLeave={(e) => { if (task.status !== s.key) e.currentTarget.style.backgroundColor = ''; }}
+              >
+                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.dotColor }} />
+                <span>{s.label}</span>
+                {s.key === 'production_completed' && <CheckCircle className="w-3 h-3 mr-auto" style={{ color: '#10B981' }} />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
