@@ -51,7 +51,7 @@ const WORK_MODES = [
     icon: Zap,
     color: 'bg-emerald-600 text-white',
     description: 'משימות יומיות + דיווחים שוטפים',
-    visibleSections: ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual']
+    visibleSections: ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p6_projects']
   },
   {
     key: 'planning',
@@ -59,7 +59,7 @@ const WORK_MODES = [
     icon: Brain,
     color: 'bg-blue-600 text-white',
     description: 'תכנון שבועי, עומס קוגניטיבי, אוטומציות',
-    visibleSections: ['p3_hub', 'p4_home', 'p5_annual']
+    visibleSections: ['p3_hub', 'p4_home', 'p5_annual', 'p6_projects']
   },
   {
     key: 'admin',
@@ -67,7 +67,7 @@ const WORK_MODES = [
     icon: Settings,
     color: 'bg-purple-700 text-white',
     description: 'לקוחות + ספקים + ניתוח עסקי',
-    visibleSections: ['p3_hub', 'p4_home', 'p5_annual']
+    visibleSections: ['p3_hub', 'p4_home', 'p5_annual', 'p6_projects']
   },
 ];
 
@@ -155,6 +155,15 @@ const getSidebarSections = () => ({
       { name: "דוחות אישיים", href: createPageUrl("BalanceSheets"), icon: FileBarChart },
     ]
   },
+  // ── P6 | מעקב פרוייקטים — Project Tracking ──
+  p6_projects: {
+    title: "P6 | מעקב פרוייקטים",
+    icon: FolderKanban,
+    tabColor: 'border-[#7C3AED]',
+    items: [
+      { name: "פרוייקטים", href: createPageUrl("Projects"), icon: FolderKanban },
+    ]
+  },
 });
 
 // Map sidebar sections to their parent work mode for auto-switching
@@ -164,11 +173,12 @@ const SECTION_TO_MODE = {
   p3_hub: null,    // P3 is a HUB — visible in all modes
   p4_home: null,   // visible in all modes
   p5_annual: null,  // visible in all modes
+  p6_projects: null, // visible in all modes
 };
 
 const getVisibleSections = (mode) => {
   // All 5 pillars always visible — P3 is a HUB layer (Law 1)
-  return ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual'];
+  return ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p6_projects'];
 };
 
 // Deadline countdown
@@ -188,11 +198,22 @@ function DraggableFab({ storageKey, children, className = '' }) {
   const fullKey = `calmplan_drag_${storageKey}`;
   const didDrag = React.useRef(false);
 
-  // Read saved position once on mount via useMemo (stable across re-renders)
+  // Read saved position once on mount — auto-reset if off-screen
   const initPos = React.useMemo(() => {
     try {
       const s = localStorage.getItem(fullKey);
-      if (s) { const p = JSON.parse(s); if (typeof p.x === 'number') return p; }
+      if (s) {
+        const p = JSON.parse(s);
+        if (typeof p.x === 'number') {
+          const vw = window.innerWidth || 800;
+          const vh = window.innerHeight || 600;
+          if (Math.abs(p.x) > vw * 0.8 || Math.abs(p.y) > vh * 0.8) {
+            localStorage.removeItem(fullKey);
+            return { x: 0, y: 0 };
+          }
+          return p;
+        }
+      }
     } catch { /* ignore */ }
     return { x: 0, y: 0 };
   }, [fullKey]);
@@ -221,11 +242,24 @@ function DraggableFab({ storageKey, children, className = '' }) {
     handler?.(e);
   }, []);
 
+  const constraintsRef = React.useRef(null);
+
+  // Set drag constraints to keep FAB within viewport
+  React.useEffect(() => {
+    constraintsRef.current = {
+      top: -(window.innerHeight - 80),
+      bottom: 60,
+      left: -(window.innerWidth - 80),
+      right: window.innerWidth - 80,
+    };
+  }, []);
+
   return (
     <motion.div
       drag
       dragMomentum={false}
       dragElastic={0}
+      dragConstraints={constraintsRef.current || { top: -500, bottom: 60, left: -500, right: 500 }}
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
@@ -272,7 +306,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p3_strategy', 'p3_clients', 'p3_system']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p6_projects', 'p3_strategy', 'p3_clients', 'p3_system']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
@@ -987,6 +1021,7 @@ function LayoutInner({ children }) {
                                         : key === 'p3_hub' ? 'linear-gradient(135deg, #6366F120, #9C27B020)'
                                         : key === 'p4_home' ? 'linear-gradient(135deg, #FFC10720, #FF980020)'
                                         : key === 'p5_annual' ? 'linear-gradient(135deg, #2E7D3220, #1B5E2020)'
+                                        : key === 'p6_projects' ? 'linear-gradient(135deg, #7C3AED20, #6D28D920)'
                                         : 'linear-gradient(135deg, #54647A20, #37474F20)',
                                     }}>
                                       <section.icon className="w-3.5 h-3.5" style={{
@@ -995,6 +1030,7 @@ function LayoutInner({ children }) {
                                           : key === 'p3_hub' ? '#6366F1'
                                           : key === 'p4_home' ? '#FFC107'
                                           : key === 'p5_annual' ? '#2E7D32'
+                                          : key === 'p6_projects' ? '#7C3AED'
                                           : '#546E7A',
                                       }} />
                                     </div>
@@ -1166,20 +1202,8 @@ function LayoutInner({ children }) {
       {/* Design Engine Floating Tab — persistent across all pages */}
       <DesignFloatingTab />
 
-      {/* ── Floating Action Buttons — vertical stack on right side, draggable ── */}
-      <DraggableFab storageKey="fab_quick_add" className="fixed right-4 bottom-[11rem] z-[9999]">
-        {({ guardClick }) => (
-          <button
-            onClick={guardClick(() => setShowQuickAdd(true))}
-            className="w-11 h-11 rounded-full shadow-xl flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white ring-2 ring-white/50 select-none"
-            title="משימה מהירה • גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
-        )}
-      </DraggableFab>
-
-      <DraggableFab storageKey="fab_add_event" className="fixed right-4 bottom-[7.5rem] z-[9999]">
+      {/* Floating Add Event FAB — draggable, always visible */}
+      <DraggableFab storageKey="fab_add_event" className="fixed bottom-5 left-[8.5rem] z-[10001]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => navigate(createPageUrl("NewEvent")))}
@@ -1191,7 +1215,21 @@ function LayoutInner({ children }) {
         )}
       </DraggableFab>
 
-      <DraggableFab storageKey="fab_notes" className="fixed right-4 bottom-16 z-[9999]">
+      {/* Floating Quick Add Task FAB — draggable, always visible */}
+      <DraggableFab storageKey="fab_quick_add" className="fixed bottom-5 left-[4.5rem] z-[10001]">
+        {({ guardClick }) => (
+          <button
+            onClick={guardClick(() => setShowQuickAdd(true))}
+            className="w-11 h-11 rounded-full shadow-xl flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white ring-2 ring-white/50 select-none"
+            title="משימה מהירה • גרור לשינוי מיקום • לחיצה כפולה לאיפוס"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        )}
+      </DraggableFab>
+
+      {/* Floating Sticky Notes FAB — draggable, always visible */}
+      <DraggableFab storageKey="fab_notes" className="fixed bottom-5 left-5 z-[10001]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => setNotesOpen(!notesOpen))}
