@@ -264,7 +264,7 @@ export default function WeeklySummary() {
           placeholder="חיפוש לפי שם לקוח, משימה..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pr-10 h-9"
+          className="pe-10 h-9"
         />
       </div>
 

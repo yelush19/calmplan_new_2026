@@ -56,18 +56,19 @@ class ViewErrorBoundary extends React.Component {
           <p className="text-lg font-bold text-gray-700">שגיאה בטעינת התצוגה</p>
           <p className="text-sm text-gray-500 max-w-md text-center">{String(this.state.error?.message || this.state.error)}</p>
           <div className="flex gap-3">
-            <button
+            <Button
               onClick={() => { try { localStorage.removeItem('mindmap-positions'); } catch {} this.setState({ hasError: false, error: null }); }}
               className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-bold hover:bg-cyan-700"
             >
               אפס ונסה שוב
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => window.location.reload()}
               className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-bold hover:bg-gray-300"
             >
               רענן דף
-            </button>
+            </Button>
           </div>
         </div>
       );
@@ -633,7 +634,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-4 w-full dark:bg-gray-900 dark:text-white">
       {ConfirmDialogComponent}
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -895,45 +896,51 @@ export default function TasksPage() {
             ))}
           </div>
           <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs me-2">
-            <button onClick={expandAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+            <Button variant="ghost" size="sm" onClick={expandAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors h-auto">
               הרחב הכל
-            </button>
-            <button onClick={collapseAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
+            </Button>
+            <Button variant="ghost" size="sm" onClick={collapseAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors h-auto">
               כווץ הכל
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Bulk update toggle — available in all views */}
       <div className="flex items-center gap-2">
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => bulkMode ? exitBulkMode() : setBulkMode(true)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 h-auto ${
             bulkMode
               ? 'bg-violet-100 text-violet-700 border-violet-400'
               : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
           }`}
         >
           {bulkMode ? `ביטול (${selectedTaskIds.size} נבחרו)` : 'עדכון מרובה'}
-        </button>
+        </Button>
         {bulkMode && (
           <>
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 const allIds = filteredTasks.map(t => t.id);
                 setSelectedTaskIds(new Set(allIds));
               }}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-violet-50 text-violet-600 hover:bg-violet-100 border border-violet-200 transition-colors"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-violet-50 text-violet-600 hover:bg-violet-100 border border-violet-200 transition-colors h-auto"
             >
               בחר הכל ({filteredTasks.length})
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setSelectedTaskIds(new Set())}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200 transition-colors"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200 transition-colors h-auto"
             >
               נקה בחירה
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -952,23 +959,27 @@ export default function TasksPage() {
             <span className="text-gray-300">|</span>
             <span className="text-xs font-bold text-gray-500">שנה סטטוס:</span>
             {Object.entries(statusConfig).map(([key, { text, dot }]) => (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 key={key}
                 onClick={() => handleBulkStatusChange(key)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-transparent hover:border-violet-300 transition-all hover:shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-transparent hover:border-violet-300 transition-all hover:shadow-sm h-auto"
                 style={{ background: 'rgba(255,255,255,0.8)' }}
               >
                 <div className={`w-2.5 h-2.5 rounded-full ${dot}`} />
                 {text}
-              </button>
+              </Button>
             ))}
             <span className="text-gray-300">|</span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={exitBulkMode}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors h-auto"
             >
               <X className="w-4 h-4 text-gray-400" />
-            </button>
+            </Button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1099,12 +1110,14 @@ export default function TasksPage() {
                             <td className="px-3 py-2">
                               <div className="flex items-center gap-1.5" style={{ paddingInlineStart: `${indentPx}px` }}>
                                 {hasChildren && (
-                                  <button
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => toggleParentCollapse(task.id)}
-                                    className="p-0.5 rounded hover:bg-gray-200 transition-colors shrink-0"
+                                    className="p-0.5 rounded hover:bg-gray-200 transition-colors shrink-0 h-auto"
                                   >
                                     <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform ${isParentCollapsed ? 'rotate-[-90deg]' : ''}`} />
-                                  </button>
+                                  </Button>
                                 )}
                                 {depth > 0 && !hasChildren && (
                                   <span className="w-4 shrink-0" />
@@ -1113,13 +1126,15 @@ export default function TasksPage() {
                                   {task.client_name || '-'}
                                 </span>
                                 {clientMap[task.client_name] && (
-                                  <button
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => navigate(`/ClientManagement?clientId=${clientMap[task.client_name]}`)}
-                                    className="p-0.5 rounded hover:bg-primary/10 transition-colors shrink-0"
+                                    className="p-0.5 rounded hover:bg-primary/10 transition-colors shrink-0 h-auto"
                                     title="פתח כרטיס לקוח"
                                   >
                                     <ExternalLink className="w-3 h-3 text-primary" />
-                                  </button>
+                                  </Button>
                                 )}
                               </div>
                             </td>
@@ -1191,35 +1206,43 @@ export default function TasksPage() {
                             <td className="px-2 py-2">
                               <div className="flex items-center gap-0.5">
                                 {depth < 4 && (
-                                  <button
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => setListSubTaskParent(task)}
-                                    className="p-1.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors"
+                                    className="p-1.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors h-auto"
                                     title="הוסף תת-משימה"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
-                                  </button>
+                                  </Button>
                                 )}
-                                <button
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => handleEditTask(task)}
-                                  className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+                                  className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors h-auto"
                                   title="עריכת משימה"
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => handleDeleteTask(task.id)}
-                                  className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
+                                  className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors h-auto"
                                   title="מחק משימה"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => setNoteTask(task)}
-                                  className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
+                                  className="p-1.5 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors h-auto"
                                   title="הוסף לפתק דביק"
                                 >
                                   <Pin className="w-3.5 h-3.5" />
-                                </button>
+                                </Button>
                               </div>
                             </td>
                           </tr>
