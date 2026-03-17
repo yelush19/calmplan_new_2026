@@ -286,7 +286,7 @@ export default function PayrollReportsDashboardPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-5 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
+    <div className="p-4 md:p-6 space-y-5 bg-white dark:bg-gray-900 border border-[#E0E0E0] dark:border-gray-700 shadow-xl rounded-[32px]">
       <div className="flex items-center gap-2 flex-wrap">
         <Link to={createPageUrl('PayrollDashboard')}>
           <Button variant="outline" size="sm" className="gap-2 text-slate-600 hover:text-blue-700">
@@ -296,7 +296,7 @@ export default function PayrollReportsDashboardPage() {
         {clientFilter && (
           <Badge className="bg-[#0277BD] text-white text-sm px-3 py-1.5 gap-2">
             <Users className="w-3.5 h-3.5" />{clientFilter}
-            <button onClick={clearClientFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ml-1"><X className="w-3 h-3" /></button>
+            <button onClick={clearClientFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ms-1"><X className="w-3 h-3" /></button>
           </Badge>
         )}
       </div>
@@ -308,7 +308,7 @@ export default function PayrollReportsDashboardPage() {
             <FileBarChart className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">דיווחים שוטפים (102)</h1>
+            <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">דיווחים שוטפים (102)</h1>
             <p className="text-slate-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | ביטוח לאומי, ניכויים ודיווחי 102</p>
           </div>
         </div>
@@ -344,7 +344,7 @@ export default function PayrollReportsDashboardPage() {
             placeholder="חיפוש לפי שם לקוח, משימה..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10 h-9"
+            className="pe-10 h-9"
           />
         </div>
         <div className="flex bg-white rounded-lg p-0.5 shadow-sm border border-[#E0E0E0] text-xs">

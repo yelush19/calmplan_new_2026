@@ -51,7 +51,7 @@ export default function CollectionsPage() {
 
     return (
         <UnifiedAyoaLayout tasks={[]} centerLabel="גבייה" accentColor="#059669" isLoading={isLoading}>
-        <div className="space-y-6">
+        <div className="space-y-6 dark:bg-gray-900">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -62,12 +62,12 @@ export default function CollectionsPage() {
                         <DollarSign className="w-8 h-8 text-green-700" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-800">ניהול גבייה</h1>
+                        <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">ניהול גבייה</h1>
                         <p className="text-gray-600">מעקב אחר חשבוניות ותשלומים מלקוחות</p>
                     </div>
                 </div>
                 <Button className="bg-green-600 hover:bg-green-700">
-                    <Plus className="w-4 h-4 ml-2" />
+                    <Plus className="w-4 h-4 ms-2" />
                     הפק חשבונית חדשה
                 </Button>
             </motion.div>
@@ -124,7 +124,7 @@ export default function CollectionsPage() {
                                 <h3 className="text-xl font-semibold mb-2">אין חשבוניות להצגה</h3>
                                 <p className="mb-4">התחל על ידי הפקת החשבונית הראשונה שלך</p>
                                 <Button className="bg-green-600 hover:bg-green-700">
-                                    <Plus className="w-4 h-4 ml-2" />
+                                    <Plus className="w-4 h-4 ms-2" />
                                     הפק חשבונית ראשונה
                                 </Button>
                             </div>
@@ -138,7 +138,7 @@ export default function CollectionsPage() {
                                     <div key={statusKey} className="mb-2">
                                         <button
                                             onClick={() => setCollapsedGroups(prev => ({ ...prev, [statusKey]: !prev[statusKey] }))}
-                                            className="w-full flex items-center justify-between p-2 rounded-lg bg-[#F5F5F5] hover:bg-[#E0E0E0] transition-colors"
+                                            className="w-full flex items-center justify-between p-2 rounded-lg bg-[#F5F5F5] dark:bg-gray-800 hover:bg-[#E0E0E0] dark:hover:bg-gray-700 transition-colors text-start"
                                         >
                                             <div className="flex items-center gap-2">
                                                 <ChevronDown className={`w-4 h-4 transition-transform ${collapsedGroups[statusKey] ? '-rotate-90' : ''}`} />
@@ -150,7 +150,7 @@ export default function CollectionsPage() {
                                         {!collapsedGroups[statusKey] && (
                                             <div className="mt-1 space-y-2">
                                                 {groupInvoices.map(invoice => (
-                                                    <div key={invoice.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between items-center gap-4">
+                                                    <div key={invoice.id} className="p-4 rounded-xl shadow-sm border hover:shadow-md transition-shadow flex flex-col md:flex-row justify-between items-center gap-4">
                                                         <div>
                                                             <p className="font-bold text-lg">{invoice.client_name || 'לקוח לא ידוע'}</p>
                                                             <p className="text-sm text-gray-600">חשבונית #{invoice.invoice_number || '—'} {invoice.issue_date ? `מתאריך ${new Date(invoice.issue_date).toLocaleDateString('he-IL')}` : ''}</p>
@@ -158,7 +158,7 @@ export default function CollectionsPage() {
                                                         <div className="flex items-center gap-4">
                                                             <p className="font-bold text-xl">₪{(invoice.amount || 0).toLocaleString()}</p>
                                                             <Badge className={config.color}>
-                                                                <StatusIcon className="w-4 h-4 ml-2" />
+                                                                <StatusIcon className="w-4 h-4 ms-2" />
                                                                 {config.label}
                                                             </Badge>
                                                         </div>

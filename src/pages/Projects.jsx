@@ -90,7 +90,7 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
     >
       <div
         onClick={() => onOpenWorkbook(project)}
-        className="relative rounded-[32px] bg-white/90 backdrop-blur-sm border border-white/60 overflow-hidden transition-all duration-300 cursor-pointer"
+        className="relative rounded-[32px] bg-white/90 dark:bg-gray-900 backdrop-blur-sm border border-white/60 dark:border-gray-700 overflow-hidden transition-all duration-300 cursor-pointer"
         style={{ boxShadow: `0 4px 20px ${ACCENT}10, 0 1px 3px rgba(0,0,0,0.04)` }}
       >
         {/* Top accent stripe */}
@@ -103,7 +103,7 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
           {/* Header row */}
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
-              <h3 className="text-base font-bold text-gray-900 truncate">{project.name}</h3>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{project.name}</h3>
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 <Badge
                   className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold"
@@ -127,19 +127,23 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
               </div>
             </div>
             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={(e) => { e.stopPropagation(); onEdit(project); }}
-                className="p-1.5 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
+                className="p-1.5 h-7 w-7 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900 text-gray-400 hover:text-purple-600 transition-colors"
                 title="עריכה"
               >
                 <Pencil className="w-3.5 h-3.5" />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={(e) => { e.stopPropagation(); onDelete(project.id); }}
-                className="p-1.5 rounded-xl hover:bg-amber-50 text-gray-400 hover:text-amber-500 transition-colors"
+                className="p-1.5 h-7 w-7 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900 text-gray-400 hover:text-amber-500 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -411,12 +415,11 @@ export default function Projects() {
       <div className="flex items-center justify-between">
         <div>
           <h1
-            className="text-3xl font-extrabold bg-clip-text text-transparent"
-            style={{ backgroundImage: `linear-gradient(135deg, ${ACCENT}, #6D28D9)` }}
+            className="text-xl font-bold text-[#1E3A5F] dark:text-white"
           >
             פרויקטים
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">ניהול וצפייה בכל הפרויקטים שלך</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">ניהול וצפייה בכל הפרויקטים שלך</p>
         </div>
         {!isCreating && (
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
@@ -675,8 +678,8 @@ export default function Projects() {
             >
               <FolderKanban className="w-10 h-10" style={{ color: `${ACCENT}60` }} />
             </div>
-            <p className="text-lg font-bold text-gray-700">אין פרויקטים עדיין</p>
-            <p className="text-sm text-gray-400 mt-1">לחצי על "פרויקט חדש" כדי להתחיל</p>
+            <p className="text-lg font-bold text-gray-700 dark:text-white">אין פרויקטים עדיין</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">לחצי על "פרויקט חדש" כדי להתחיל</p>
           </motion.div>
         ) : (
           <>
@@ -719,9 +722,10 @@ export default function Projects() {
                     className="mb-1"
                   >
                     {/* Group header */}
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() => setCollapsedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }))}
-                      className="w-full flex items-center justify-between p-3 rounded-2xl transition-all hover:shadow-sm"
+                      className="w-full flex items-center justify-between p-3 h-auto rounded-2xl transition-all hover:shadow-sm"
                       style={{
                         background: `linear-gradient(135deg, ${statusOpt.accent}08, ${statusOpt.accent}04)`,
                         border: `1px solid ${statusOpt.accent}15`,
@@ -749,7 +753,7 @@ export default function Projects() {
                           {groupProjects.length}
                         </span>
                       </div>
-                    </button>
+                    </Button>
 
                     {/* Cards grid */}
                     <AnimatePresence>

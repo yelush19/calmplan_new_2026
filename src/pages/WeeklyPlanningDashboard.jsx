@@ -176,7 +176,7 @@ function WorkloadHeatmap({ dailyTasks, weekCategories }) {
               <span className="text-[12px] text-gray-500">{cat}</span>
             </div>
           ))}
-          <div className="flex items-center gap-1 mr-2">
+          <div className="flex items-center gap-1 me-2">
             <div className="w-4 border-t border-amber-300 border-dashed" />
             <span className="text-[12px] text-gray-400">קיבולת ({MAX_DAILY_TASKS})</span>
           </div>
@@ -223,7 +223,7 @@ function CategoryWeekSummary({ weekTasks }) {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <span className="text-[12px] text-gray-500 min-w-[50px] text-left">
+                <span className="text-[12px] text-gray-500 min-w-[50px] text-start">
                   {data.completed}/{data.total} ({pct}%)
                 </span>
               </div>
@@ -670,7 +670,7 @@ export default function WeeklyPlanningDashboard() {
                     {sCfg.text} ({tasksInStatus.length})
                   </span>
                 </div>
-                <div className="mr-3">
+                <div className="me-3">
                   {renderGrouped(tasksInStatus)}
                 </div>
               </div>
@@ -759,7 +759,7 @@ export default function WeeklyPlanningDashboard() {
             placeholder="חיפוש לפי שם לקוח, משימה..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10 h-9"
+            className="pe-10 h-9"
           />
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -1050,7 +1050,7 @@ export default function WeeklyPlanningDashboard() {
                     {day.isToday && <Badge className="bg-indigo-600 text-white text-[12px]">היום</Badge>}
                     {/* Category chips in header */}
                     {taskCount > 0 && (
-                      <div className="flex gap-1 mr-2">
+                      <div className="flex gap-1 me-2">
                         {Object.entries(dayCats).slice(0, 4).map(([cat, cnt]) => (
                           <span key={cat} className={`text-[12px] px-1.5 py-0 rounded ${CATEGORY_BADGE_COLORS[cat] || 'bg-gray-100 text-gray-500'}`}>
                             {cat} {cnt}

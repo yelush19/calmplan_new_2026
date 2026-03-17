@@ -59,6 +59,10 @@ export const PeriodicReport = lazyEntity('PeriodicReport');
 export const FileMetadata = lazyEntity('FileMetadata');
 export const ServiceCatalog = lazyEntity('ServiceCatalog');
 export const UserPreferences = lazyEntity('UserPreferences');
+export const MealPlan = lazyEntity('MealPlan');
+export const InspirationItem = lazyEntity('InspirationItem');
+export const InventoryItem = lazyEntity('InventoryItem');
+export const Treatment = lazyEntity('Treatment');
 
 // auth sdk — lazy accessor via registry (no direct base44 import)
 export const User = new Proxy({}, {

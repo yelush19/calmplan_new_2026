@@ -340,7 +340,7 @@ export default function LifeSettingsPage() {
             disabled={isSaving}
             className="bg-green-500 hover:bg-green-600 shadow-lg"
           >
-            <Save className="w-4 h-4 ml-2" />
+            <Save className="w-4 h-4 ms-2" />
             {isSaving ? 'שומר...' : 'שמור שינויים'}
           </Button>
         </motion.div>
@@ -517,7 +517,7 @@ export default function LifeSettingsPage() {
               ))}
             </AnimatePresence>
             <Button onClick={addMealTime} variant="outline" className="w-full">
-              <Plus className="w-4 h-4 ml-2" />
+              <Plus className="w-4 h-4 ms-2" />
               הוסף ארוחה / נשנוש
             </Button>
           </CardContent>
@@ -579,7 +579,7 @@ export default function LifeSettingsPage() {
               ))}
             </AnimatePresence>
             <Button onClick={addBreakReminder} variant="outline" className="w-full">
-              <Plus className="w-4 h-4 ml-2" />
+              <Plus className="w-4 h-4 ms-2" />
               הוסף תזכורת
             </Button>
           </CardContent>
@@ -716,7 +716,7 @@ export default function LifeSettingsPage() {
           size="lg"
           className="bg-green-600 hover:bg-green-700 px-8 py-3 text-lg"
         >
-          <Save className="w-5 h-5 ml-2" />
+          <Save className="w-5 h-5 ms-2" />
           {isSaving ? 'שומר...' : hasChanges ? 'שמור את השבוע הביולוגי' : 'הכל שמור'}
         </Button>
       </motion.div>

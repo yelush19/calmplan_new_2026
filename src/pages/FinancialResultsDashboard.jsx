@@ -219,7 +219,7 @@ export default function FinancialResultsDashboard() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
+    <div className="space-y-6 p-4 md:p-6 bg-white dark:bg-gray-900 border border-[#E0E0E0] dark:border-gray-700 shadow-xl rounded-[32px]">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -227,7 +227,7 @@ export default function FinancialResultsDashboard() {
             <TrendingUp className="w-7 h-7 text-teal-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">תוצרים — רווח והפסד</h1>
+            <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">תוצרים — רווח והפסד</h1>
             <p className="text-sm text-gray-500">
               לקוחות עם שירות דוחות רוה"ס בלבד | {format(selectedMonth, 'MMMM yyyy', { locale: he })}
             </p>
@@ -286,7 +286,7 @@ export default function FinancialResultsDashboard() {
               setAllExpanded(true);
             }
           }}>
-            {allExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+            {allExpanded ? <ChevronUp className="w-4 h-4 ms-1" /> : <ChevronDown className="w-4 h-4 ms-1" />}
             {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
           </Button>
         </div>
@@ -296,7 +296,7 @@ export default function FinancialResultsDashboard() {
           placeholder="חיפוש לקוח..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pr-10 h-9"
+          className="pe-10 h-9"
         />
       </div>
       </div>
@@ -310,7 +310,7 @@ export default function FinancialResultsDashboard() {
               <thead>
                 <tr className="border-b bg-[#F5F5F5]">
                   <th className="text-center p-2 w-10 bg-gray-100">#</th>
-                  <th className="text-right p-3 font-semibold min-w-[180px] bg-gray-100 sticky right-0 z-20 border-l">
+                  <th className="text-start p-3 font-semibold min-w-[180px] bg-gray-100 sticky right-0 z-20 border-l">
                     לקוח
                   </th>
                   <th className="text-center p-2 font-semibold min-w-[100px] bg-gray-50">

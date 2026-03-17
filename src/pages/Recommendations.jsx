@@ -265,7 +265,7 @@ export default function RecommendationsPage() {
                                                 } text-white`}
                                             >
                                                 {rec.action}
-                                                <ArrowRight className="w-4 h-4 mr-2" />
+                                                <ArrowRight className="w-4 h-4 me-2" />
                                             </Button>
                                         )}
                                     </div>
@@ -316,7 +316,7 @@ export default function RecommendationsPage() {
                                         onClick={block.action}
                                         className="bg-green-500 hover:bg-green-600 text-white"
                                     >
-                                        <Plus className="w-4 h-4 ml-1" />
+                                        <Plus className="w-4 h-4 ms-1" />
                                         קבע
                                     </Button>
                                 </div>

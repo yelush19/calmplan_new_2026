@@ -167,7 +167,7 @@ export default function ClientContractsPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 dark:bg-gray-900">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -179,13 +179,13 @@ export default function ClientContractsPage() {
             <FileText className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-neutral-dark">ניהול חוזים</h1>
+            <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">ניהול חוזים</h1>
             <p className="text-neutral-medium">מעקב חוזים והסכמים עם לקוחות</p>
           </div>
         </div>
 
         <Button onClick={loadClients} variant="outline">
-          <RefreshCw className={`w-4 h-4 ml-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 me-2 ${isLoading ? 'animate-spin' : ''}`} />
           רענן
         </Button>
       </motion.div>
@@ -234,12 +234,12 @@ export default function ClientContractsPage() {
         <CardHeader>
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="חיפוש לקוח..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10"
+                className="pe-10"
               />
             </div>
 
@@ -269,7 +269,7 @@ export default function ClientContractsPage() {
             setAllExpanded(true);
           }
         }}>
-          {allExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+          {allExpanded ? <ChevronUp className="w-4 h-4 me-1" /> : <ChevronDown className="w-4 h-4 me-1" />}
           {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
         </Button>
       </div>
@@ -299,7 +299,7 @@ export default function ClientContractsPage() {
                       return next;
                     });
                   }}
-                  className="flex items-center gap-2 w-full text-right px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-2 w-full text-start px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   {isCollapsed ? <ChevronDown className="w-5 h-5 text-gray-500" /> : <ChevronUp className="w-5 h-5 text-gray-500" />}
                   <Badge className={`${contractStatusColors[status]} border`}>
@@ -324,7 +324,7 @@ export default function ClientContractsPage() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.05 }}
                         >
-                          <Card className="hover:shadow-md transition-shadow">
+                          <Card className="rounded-xl shadow-sm border hover:shadow-md transition-shadow">
                             <CardContent className="p-4">
                               <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                                 {/* Client Info */}
@@ -369,7 +369,7 @@ export default function ClientContractsPage() {
                                           <Clock className="w-4 h-4" />
                                           <span>סיום: {format(parseISO(contract.end_date), 'd בMMM yyyy', { locale: he })}</span>
                                           {daysUntilEnd !== null && daysUntilEnd >= 0 && daysUntilEnd <= 30 && (
-                                            <Badge className="bg-yellow-100 text-yellow-800 text-xs mr-1">
+                                            <Badge className="bg-yellow-100 text-yellow-800 text-xs me-1">
                                               {daysUntilEnd} ימים
                                             </Badge>
                                           )}
@@ -387,16 +387,16 @@ export default function ClientContractsPage() {
                                 {/* Actions */}
                                 <div className="flex items-center gap-2">
                                   <Button variant="outline" size="sm">
-                                    <Eye className="w-4 h-4 ml-1" />
+                                    <Eye className="w-4 h-4 me-1" />
                                     צפייה
                                   </Button>
                                   <Button variant="outline" size="sm">
-                                    <Edit className="w-4 h-4 ml-1" />
+                                    <Edit className="w-4 h-4 me-1" />
                                     עריכה
                                   </Button>
                                   {contract.document_url && (
                                     <Button variant="outline" size="sm">
-                                      <Download className="w-4 h-4 ml-1" />
+                                      <Download className="w-4 h-4 me-1" />
                                       הורדה
                                     </Button>
                                   )}

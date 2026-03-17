@@ -290,11 +290,11 @@ export default function HomePage() {
   if (isLoading || !data) {
     return (
       <div className="space-y-6 p-6">
-        <div className="h-16 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-gray-200 rounded-lg animate-pulse" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />)}
         </div>
-        <div className="h-64 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
       </div>
     );
   }
@@ -453,7 +453,7 @@ export default function HomePage() {
             </div>
 
             {/* Progress */}
-            <div className="flex-1 flex items-center gap-2 mr-2">
+            <div className="flex-1 flex items-center gap-2 me-2">
               <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${ZERO_PANIC.green}, #43A047)` }} />
               </div>
@@ -479,8 +479,8 @@ export default function HomePage() {
             <div className="px-3 pt-2">
               {/* Search */}
               <div className="relative mb-2">
-                <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
-                <Input placeholder="חיפוש משימה, לקוח..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pr-8 h-7 text-xs" />
+                <Search className="absolute end-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                <Input placeholder="חיפוש משימה, לקוח..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pe-8 h-7 text-xs" />
               </div>
 
               {/* Tabs */}
@@ -490,12 +490,12 @@ export default function HomePage() {
                   const isActive = activeTab === tab.key;
                   const Icon = tab.icon;
                   return (
-                    <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                      className={`flex items-center gap-1 px-2 py-1 rounded-t-md text-xs font-medium whitespace-nowrap border-b-2 ${isActive ? `${tab.activeBg} border-current` : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>
+                    <Button variant="ghost" key={tab.key} onClick={() => setActiveTab(tab.key)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-t-md text-xs font-medium whitespace-nowrap border-b-2 h-auto ${isActive ? `${tab.activeBg} border-current` : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>
                       <Icon className={`w-3 h-3 ${isActive ? '' : tab.color}`} />
                       <span>{tab.label}</span>
                       {count > 0 && <Badge className={`text-[11px] px-1 py-0 h-3.5 ${isActive ? tab.badgeColor : 'bg-gray-100 text-gray-500'}`}>{count}</Badge>}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -577,7 +577,9 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, 
   return (
     <div className="space-y-1">
       <div className="flex justify-end mb-1">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => {
             if (allExpanded) {
               const collapsed = {};
@@ -589,26 +591,27 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, 
               setAllExpanded(true);
             }
           }}
-          className="text-[11px] text-[#455A64] hover:text-[#000000] flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#F5F5F5]"
+          className="text-[11px] text-[#455A64] hover:text-[#000000] flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[#F5F5F5] h-auto"
         >
           <ChevronDown className={`w-3 h-3 transition-transform ${allExpanded ? 'rotate-180' : ''}`} />
           {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
-        </button>
+        </Button>
       </div>
       {grouped.map(([clientName, clientTasks]) => {
         const isCollapsed = collapsedClients[clientName];
         return (
           <div key={clientName} className="mb-1">
-            <button
+            <Button
+              variant="ghost"
               onClick={() => setCollapsedClients(prev => ({ ...prev, [clientName]: !prev[clientName] }))}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#F5F5F5] hover:bg-[#E0E0E0] transition-colors text-left"
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#F5F5F5] hover:bg-[#E0E0E0] transition-colors text-start h-auto"
             >
               <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
               <span className="text-xs font-bold text-[#000000]">{clientName}</span>
               <span className="text-[11px] text-[#455A64]">({clientTasks.length})</span>
-            </button>
+            </Button>
             {!isCollapsed && (
-              <div className="space-y-1 mt-1 mr-2">
+              <div className="space-y-1 mt-1 me-2">
                 {clientTasks.map(task => (
                   <TaskRow key={task.id} task={task} onStatusChange={onStatusChange} onPaymentDateChange={onPaymentDateChange} onEdit={onEdit} onNote={onNote} showDeadlineContext={showDeadlineContext} showDate={showDate} showPaymentDate={showPaymentDate} />
                 ))}
@@ -622,10 +625,10 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, 
 }
 
 const priorityStyles = {
-  urgent: 'border-r-4 border-r-[#F57C00]',
-  high: 'border-r-4 border-r-[#FF8F00]',
-  medium: 'border-r-4 border-r-[#FFB300]',
-  low: 'border-r-4 border-r-gray-300',
+  urgent: 'border-e-4 border-e-[#F57C00]',
+  high: 'border-e-4 border-e-[#FF8F00]',
+  medium: 'border-e-4 border-e-[#FFB300]',
+  low: 'border-e-4 border-e-gray-300',
 };
 
 function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
@@ -647,7 +650,7 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
 
   return (
     <div
-      className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors ${priorityStyles[task.priority] || 'border-r-4 border-r-gray-200'} ${isOverdue ? 'bg-orange-50' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}
+      className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${priorityStyles[task.priority] || 'border-e-4 border-e-gray-200'} ${isOverdue ? 'bg-orange-50' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -691,14 +694,14 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {onNote && (
-          <button onClick={() => onNote(task)} className="p-1 rounded hover:bg-amber-100 transition-colors" title="הוסף לפתק דביק">
+          <Button variant="ghost" size="sm" onClick={() => onNote(task)} className="p-1 h-auto rounded hover:bg-amber-100 transition-colors" title="הוסף לפתק דביק">
             <Pin className="w-3.5 h-3.5 text-gray-400 hover:text-amber-600" />
-          </button>
+          </Button>
         )}
         {onEdit && (
-          <button onClick={() => onEdit(task)} className="p-1 rounded hover:bg-gray-200 transition-colors" title="ערוך משימה">
+          <Button variant="ghost" size="sm" onClick={() => onEdit(task)} className="p-1 h-auto rounded hover:bg-gray-200 transition-colors" title="ערוך משימה">
             <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
-          </button>
+          </Button>
         )}
         {task.status === 'reported_waiting_for_payment' && onPaymentDateChange && (
           <input

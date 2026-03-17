@@ -316,6 +316,10 @@ export const entities = {
   FileMetadata: createEntity('file_metadata'),
   ServiceCatalog: createEntity('service_catalog'),
   UserPreferences: createEntity('user_preferences'),
+  MealPlan: createEntity('meal_plans'),
+  InspirationItem: createEntity('inspiration_items'),
+  InventoryItem: createEntity('inventory_items'),
+  Treatment: createEntity('treatments'),
 };
 
 export { auth };

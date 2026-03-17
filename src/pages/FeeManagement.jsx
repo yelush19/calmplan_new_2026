@@ -77,7 +77,7 @@ function FeeStatusBadge({ client, allClients }) {
   if (feeStatus === 'oth') {
     return (
       <Badge className="bg-gray-100 text-gray-700 border-gray-300 text-xs border">
-        <UserX className="w-3 h-3 ml-1" />
+        <UserX className="w-3 h-3 ms-1" />
         תיק עצמי
       </Badge>
     );
@@ -87,7 +87,7 @@ function FeeStatusBadge({ client, allClients }) {
     const parent = allClients.find(c => c.id === client.paying_client_id);
     return (
       <Badge className="bg-violet-100 text-violet-700 border-violet-300 text-xs border">
-        <Link2 className="w-3 h-3 ml-1" />
+        <Link2 className="w-3 h-3 ms-1" />
         {parent ? `מתומחר עם ${parent.name}` : 'מקושר ללקוח ראשי'}
       </Badge>
     );
@@ -152,7 +152,7 @@ function ClientFeeTable({ clients, allClients, search, sortBy, title, showFeeSta
               setAllExpanded(true);
             }
           }}>
-            {allExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+            {allExpanded ? <ChevronUp className="w-4 h-4 ms-1" /> : <ChevronDown className="w-4 h-4 ms-1" />}
             {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
           </Button>
         </div>
@@ -162,11 +162,11 @@ function ClientFeeTable({ clients, allClients, search, sortBy, title, showFeeSta
           <ResizableTable className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-right p-3 font-semibold">לקוח</th>
-                <th className="text-right p-3 font-semibold">שירותים</th>
-                {showFeeStatus && <th className="text-right p-3 font-semibold">סטטוס שכ״ט</th>}
-                <th className="text-right p-3 font-semibold">שכ״ט חודשי</th>
-                <th className="text-right p-3 font-semibold">שכ״ט שנתי</th>
+                <th className="text-end p-3 font-semibold">לקוח</th>
+                <th className="text-end p-3 font-semibold">שירותים</th>
+                {showFeeStatus && <th className="text-end p-3 font-semibold">סטטוס שכ״ט</th>}
+                <th className="text-end p-3 font-semibold">שכ״ט חודשי</th>
+                <th className="text-end p-3 font-semibold">שכ״ט שנתי</th>
               </tr>
             </thead>
             <tbody>
@@ -175,7 +175,7 @@ function ClientFeeTable({ clients, allClients, search, sortBy, title, showFeeSta
                 return (
                   <React.Fragment key={group.key}>
                     <tr
-                      className="bg-[#F5F5F5] cursor-pointer hover:bg-[#EEEEEE] border-b"
+                      className="bg-[#F5F5F5] dark:bg-gray-800 cursor-pointer hover:bg-[#EEEEEE] dark:hover:bg-gray-700 border-b"
                       onClick={() => setCollapsedGroups(prev => {
                         const next = new Set(prev);
                         if (next.has(group.key)) next.delete(group.key);
@@ -351,8 +351,8 @@ export default function FeeManagement() {
       accentColor="#059669"
       isLoading={loading}
     >
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">מרכז נתוני שכ״ט</h1>
+    <div className="space-y-6 dark:bg-gray-900">
+      <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">מרכז נתוני שכ״ט</h1>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -423,17 +423,17 @@ export default function FeeManagement() {
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="חיפוש לקוח..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pr-10"
+            className="pe-10"
           />
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-48">
-            <ArrowUpDown className="w-4 h-4 ml-2" />
+            <ArrowUpDown className="w-4 h-4 ms-2" />
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

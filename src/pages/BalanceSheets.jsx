@@ -115,7 +115,7 @@ const BalanceSheetCard = ({ balance, onUpdate, onStageChange, onGenerateFromTemp
             }`}>
               <Calendar className="w-4 h-4" />
               <span>יעד: {new Date(balance.target_date).toLocaleDateString('he-IL')}</span>
-              <span className="mr-auto font-semibold">
+              <span className="me-auto font-semibold">
                 {daysUntilTarget < 0 ? `באיחור ${Math.abs(daysUntilTarget)} ימים` :
                  daysUntilTarget === 0 ? 'היום!' :
                  `עוד ${daysUntilTarget} ימים`}
@@ -129,7 +129,7 @@ const BalanceSheetCard = ({ balance, onUpdate, onStageChange, onGenerateFromTemp
                className="flex items-center gap-2 text-sm text-blue-600 hover:underline p-2 bg-blue-50 rounded-lg">
               <FolderOpen className="w-4 h-4" />
               <span>תיקיית מאזן</span>
-              <ExternalLink className="w-3 h-3 mr-auto" />
+              <ExternalLink className="w-3 h-3 me-auto" />
             </a>
           )}
 
@@ -185,10 +185,10 @@ const BalanceSheetCard = ({ balance, onUpdate, onStageChange, onGenerateFromTemp
               </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
-                  <X className="w-3 h-3 ml-1" /> ביטול
+                  <X className="w-3 h-3 ms-1" /> ביטול
                 </Button>
                 <Button size="sm" onClick={saveEdit}>
-                  <Save className="w-3 h-3 ml-1" /> שמור
+                  <Save className="w-3 h-3 ms-1" /> שמור
                 </Button>
               </div>
             </div>
@@ -469,7 +469,7 @@ export default function BalanceSheetsPage() {
     })), [filteredBalances, balanceSheets]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6 bg-white dark:bg-gray-900 border border-[#E0E0E0] dark:border-gray-700 shadow-xl rounded-[32px]">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -477,7 +477,7 @@ export default function BalanceSheetsPage() {
             <BarChart3 className="w-8 h-8 text-purple-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">מעקב מאזנים שנתיים</h1>
+            <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">מעקב מאזנים שנתיים</h1>
             <p className="text-sm text-gray-600">מעקב שלבי תהליך מאזן לכל לקוח</p>
           </div>
         </div>
@@ -492,7 +492,7 @@ export default function BalanceSheetsPage() {
           </Button>
           <Button variant="outline" onClick={handleGenerateBalanceSheetTasks} disabled={isGeneratingTasks}
             className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
-            <RefreshCw className={`w-4 h-4 ml-1 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ms-1 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
             {isGeneratingTasks ? 'יוצר...' : 'צור משימות'}
           </Button>
         </div>
@@ -523,7 +523,7 @@ export default function BalanceSheetsPage() {
                   ))}
                 </div>
                 <Button onClick={handleCreateForClients}>
-                  <Plus className="w-4 h-4 ml-1" />
+                  <Plus className="w-4 h-4 ms-1" />
                   צור מאזנים ל-{clientsWithoutBalance.length} לקוחות
                 </Button>
               </>
@@ -542,7 +542,7 @@ export default function BalanceSheetsPage() {
           <div className="flex items-center gap-2">
             {generationResult.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
             <span className="font-medium">{generationResult.message}</span>
-            <Button variant="ghost" size="sm" onClick={() => setGenerationResult(null)} className="mr-auto">סגור</Button>
+            <Button variant="ghost" size="sm" onClick={() => setGenerationResult(null)} className="me-auto">סגור</Button>
           </div>
         </div>
       )}
@@ -595,7 +595,7 @@ export default function BalanceSheetsPage() {
           placeholder="חיפוש לפי שם לקוח..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pr-10 h-9"
+          className="pe-10 h-9"
         />
       </div>
 
@@ -632,7 +632,7 @@ export default function BalanceSheetsPage() {
           <div className="flex items-center gap-2">
             {templateGenResult.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
             <span className="font-medium">{templateGenResult.message}</span>
-            <Button variant="ghost" size="sm" onClick={() => setTemplateGenResult(null)} className="mr-auto">סגור</Button>
+            <Button variant="ghost" size="sm" onClick={() => setTemplateGenResult(null)} className="me-auto">סגור</Button>
           </div>
         </div>
       )}
@@ -660,7 +660,7 @@ export default function BalanceSheetsPage() {
             return (
               <div key={stage.key} className="border rounded-lg overflow-hidden">
                 <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 ${stage.color} hover:opacity-90 transition-all text-right`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 ${stage.color} hover:opacity-90 transition-all text-start`}
                   onClick={() => setCollapsedStages(prev => {
                     const next = new Set(prev);
                     if (next.has(stage.key)) next.delete(stage.key); else next.add(stage.key);
@@ -728,11 +728,11 @@ export default function BalanceSheetsPage() {
                       className="w-4 h-4 rounded accent-purple-600"
                     />
                     <span className="font-semibold text-sm text-gray-800">{stageData.label}</span>
-                    <Badge variant="outline" className="text-[12px] mr-auto">
+                    <Badge variant="outline" className="text-[12px] me-auto">
                       {stageTasks.filter(t => selectedTemplateTasks[`${stageKey}::${t.key}`]).length}/{stageTasks.length}
                     </Badge>
                   </label>
-                  <div className="space-y-1 mr-6">
+                  <div className="space-y-1 me-6">
                     {stageTasks.map(t => (
                       <label key={t.key} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
                         <input
@@ -756,9 +756,9 @@ export default function BalanceSheetsPage() {
                 className="bg-purple-600 hover:bg-purple-700"
               >
                 {isGeneratingFromTemplate ? (
-                  <><RefreshCw className="w-4 h-4 ml-1 animate-spin" /> יוצר...</>
+                  <><RefreshCw className="w-4 h-4 ms-1 animate-spin" /> יוצר...</>
                 ) : (
-                  <><Wand2 className="w-4 h-4 ml-1" /> צור {selectedCount} משימות</>
+                  <><Wand2 className="w-4 h-4 ms-1" /> צור {selectedCount} משימות</>
                 )}
               </Button>
             </div>
@@ -863,7 +863,7 @@ function TemplateEditor({ templates, onSave, onCancel }) {
           <Card key={stageKey} className="border-gray-200">
             <button
               onClick={() => setExpandedStage(isExpanded ? null : stageKey)}
-              className="w-full text-right px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              className="w-full text-start px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-gray-800">{stageData.label}</h3>
@@ -957,7 +957,7 @@ function TemplateEditor({ templates, onSave, onCancel }) {
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="outline" onClick={onCancel}>ביטול</Button>
         <Button onClick={() => onSave(editTemplates)} className="bg-purple-600 hover:bg-purple-700">
-          <Save className="w-4 h-4 ml-1" /> שמור תבניות
+          <Save className="w-4 h-4 ms-1" /> שמור תבניות
         </Button>
       </div>
     </div>

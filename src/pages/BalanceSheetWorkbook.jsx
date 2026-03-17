@@ -359,7 +359,7 @@ export default function BalanceSheetWorkbookPage() {
       <div className="flex flex-col items-center justify-center h-96 gap-4">
         <p className="text-lg text-gray-600">לא נמצאה חוברת עבודה</p>
         <Button variant="outline" onClick={() => navigate('/BalanceSheets')}>
-          <ArrowRight className="w-4 h-4 ml-2" />
+          <ArrowRight className="w-4 h-4 ms-2" />
           חזור למאזנים
         </Button>
       </div>
@@ -372,7 +372,7 @@ export default function BalanceSheetWorkbookPage() {
       <div className="flex items-center justify-between p-3 border-b bg-white sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate('/BalanceSheets')}>
-            <ArrowRight className="w-4 h-4 ml-1" />
+            <ArrowRight className="w-4 h-4 ms-1" />
             חזור
           </Button>
           <div className="h-6 w-px bg-gray-300" />
@@ -409,7 +409,7 @@ export default function BalanceSheetWorkbookPage() {
               value="trial_balance"
               className="rounded-t-md rounded-b-none border border-b-0 border-gray-300 px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-green-800 data-[state=active]:border-b-white data-[state=active]:shadow-none bg-gray-200 text-gray-600"
             >
-              <FileSpreadsheet className="w-4 h-4 ml-1" />
+              <FileSpreadsheet className="w-4 h-4 ms-1" />
               בוחן והפניות
             </TabsTrigger>
 
@@ -429,7 +429,7 @@ export default function BalanceSheetWorkbookPage() {
               value="pdf_appendices"
               className="rounded-t-md rounded-b-none border border-b-0 border-gray-300 px-3 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-800 data-[state=active]:border-b-white data-[state=active]:shadow-none bg-gray-200 text-gray-600"
             >
-              <FileText className="w-4 h-4 ml-1" />
+              <FileText className="w-4 h-4 ms-1" />
               נספחי PDF
             </TabsTrigger>
 
@@ -438,7 +438,7 @@ export default function BalanceSheetWorkbookPage() {
               value="output"
               className="rounded-t-md rounded-b-none border border-b-0 border-gray-300 px-3 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-orange-800 data-[state=active]:border-b-white data-[state=active]:shadow-none bg-gray-200 text-gray-600"
             >
-              <Send className="w-4 h-4 ml-1" />
+              <Send className="w-4 h-4 ms-1" />
               פלט לשליחה
             </TabsTrigger>
           </TabsList>
@@ -579,7 +579,7 @@ function TrialBalanceGroup({
           <span className="font-bold text-sm">{group.group_code}</span>
           <span className="font-semibold text-sm">{group.label}</span>
           {group.accounts.length > 0 && (
-            <span className="text-xs text-gray-300 mr-2">({group.accounts.length} חשבונות)</span>
+            <span className="text-xs text-gray-300 me-2">({group.accounts.length} חשבונות)</span>
           )}
           {(group.attachments || []).length > 0 && (
             <span className="flex items-center gap-1 text-xs text-gray-300">
@@ -604,13 +604,13 @@ function TrialBalanceGroup({
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-100 text-gray-600">
-                <th className="px-2 py-1.5 text-right font-medium w-24">חשבון</th>
-                <th className="px-2 py-1.5 text-right font-medium">שם חשבון</th>
-                <th className="px-2 py-1.5 text-left font-medium w-28">חובה</th>
-                <th className="px-2 py-1.5 text-left font-medium w-28">זכות</th>
-                <th className="px-2 py-1.5 text-left font-medium w-28">הפרש</th>
-                <th className="px-2 py-1.5 text-right font-medium w-40">סטטוס הפניה</th>
-                <th className="px-2 py-1.5 text-right font-medium w-48">הערת הפניה</th>
+                <th className="px-2 py-1.5 text-end font-medium w-24">חשבון</th>
+                <th className="px-2 py-1.5 text-end font-medium">שם חשבון</th>
+                <th className="px-2 py-1.5 text-start font-medium w-28">חובה</th>
+                <th className="px-2 py-1.5 text-start font-medium w-28">זכות</th>
+                <th className="px-2 py-1.5 text-start font-medium w-28">הפרש</th>
+                <th className="px-2 py-1.5 text-end font-medium w-40">סטטוס הפניה</th>
+                <th className="px-2 py-1.5 text-end font-medium w-48">הערת הפניה</th>
                 <th className="px-2 py-1.5 w-10" />
               </tr>
             </thead>
@@ -638,7 +638,7 @@ function TrialBalanceGroup({
                       type="number"
                       value={acc.debit || ''}
                       onChange={e => onUpdateAccount(acc.id, 'debit', parseFloat(e.target.value) || 0)}
-                      className="h-7 text-sm border-transparent hover:border-gray-300 focus:border-green-500 text-left"
+                      className="h-7 text-sm border-transparent hover:border-gray-300 focus:border-green-500 text-start"
                       dir="ltr"
                     />
                   </td>
@@ -647,12 +647,12 @@ function TrialBalanceGroup({
                       type="number"
                       value={acc.credit || ''}
                       onChange={e => onUpdateAccount(acc.id, 'credit', parseFloat(e.target.value) || 0)}
-                      className="h-7 text-sm border-transparent hover:border-gray-300 focus:border-green-500 text-left"
+                      className="h-7 text-sm border-transparent hover:border-gray-300 focus:border-green-500 text-start"
                       dir="ltr"
                     />
                   </td>
                   <td className="px-1 py-0.5">
-                    <span className={`block text-left text-sm px-2 py-1 ${
+                    <span className={`block text-start text-sm px-2 py-1 ${
                       acc.difference > 0 ? 'text-red-600' : acc.difference < 0 ? 'text-blue-600' : 'text-gray-400'
                     }`} dir="ltr">
                       {formatNumber(acc.difference)}
@@ -700,9 +700,9 @@ function TrialBalanceGroup({
           <div className="flex items-center bg-cyan-50 border-t border-cyan-200 px-2 py-1.5 text-sm font-semibold">
             <span className="w-24 px-2" />
             <span className="flex-1 px-2 text-cyan-800">סה"כ {group.label}</span>
-            <span className="w-28 text-left px-2 text-cyan-900" dir="ltr">{formatNumber(group.summary?.debit)}</span>
-            <span className="w-28 text-left px-2 text-cyan-900" dir="ltr">{formatNumber(group.summary?.credit)}</span>
-            <span className="w-28 text-left px-2 text-cyan-900" dir="ltr">{formatNumber(group.summary?.difference)}</span>
+            <span className="w-28 text-start px-2 text-cyan-900" dir="ltr">{formatNumber(group.summary?.debit)}</span>
+            <span className="w-28 text-start px-2 text-cyan-900" dir="ltr">{formatNumber(group.summary?.credit)}</span>
+            <span className="w-28 text-start px-2 text-cyan-900" dir="ltr">{formatNumber(group.summary?.difference)}</span>
             <span className="w-40 px-2" />
             <span className="w-48 px-2" />
             <span className="w-10" />

@@ -140,9 +140,286 @@ function getPhaseFromStatus(status) {
   }
 }
 
-/* ────────────────────────────────────────────── */
-/*  Main Page                                     */
-/* ────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────
+ *  Phase Card Component
+ * ──────────────────────────────────────────────────────────────── */
+function PhaseCard({ phase, phaseIndex, isCurrentPhase, isCompleted, isLocked, isExpanded, onToggle, checkedItems, onToggleItem }) {
+  const Icon = phase.icon;
+  const totalItems = phase.checklist.length;
+  const doneItems = phase.checklist.filter(c => checkedItems[c.key]).length;
+  const progress = totalItems > 0 ? (doneItems / totalItems) * 100 : 0;
+  const isAllDone = doneItems === totalItems;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: phaseIndex * 0.06, type: 'spring', stiffness: 200, damping: 20 }}
+    >
+      <div
+        className="rounded-[28px] overflow-hidden transition-all duration-300"
+        style={{
+          border: isCurrentPhase
+            ? `2px solid ${phase.color}`
+            : isCompleted
+            ? '2px solid #10B98140'
+            : '1px solid #E2E8F0',
+          boxShadow: isCurrentPhase
+            ? `0 8px 32px ${phase.color}20, 0 0 0 4px ${phase.color}08`
+            : isCompleted
+            ? '0 2px 8px #10B98110'
+            : '0 2px 8px rgba(0,0,0,0.03)',
+          opacity: isLocked ? 0.55 : 1,
+        }}
+      >
+        {/* ── Phase Header ── */}
+        <button
+          onClick={onToggle}
+          className="w-full flex items-center gap-3 p-4 text-end transition-colors"
+          style={{
+            background: isCurrentPhase
+              ? `linear-gradient(135deg, ${phase.color}12, ${phase.color}06)`
+              : isCompleted
+              ? 'linear-gradient(135deg, #10B98108, #10B98104)'
+              : '#FAFBFC',
+          }}
+        >
+          {/* Phase number bubble */}
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg"
+            style={{
+              background: isCompleted
+                ? 'linear-gradient(135deg, #10B981, #059669)'
+                : isCurrentPhase
+                ? `linear-gradient(135deg, ${phase.color}, ${phase.color}CC)`
+                : '#E2E8F0',
+            }}
+          >
+            {isCompleted ? (
+              <CheckCircle2 className="w-5 h-5 text-white" />
+            ) : isLocked ? (
+              <Lock className="w-4 h-4 text-gray-500" />
+            ) : (
+              <span className="text-white font-bold text-sm">{phaseIndex + 1}</span>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{phase.emoji}</span>
+              <span className="font-bold text-gray-900 text-[15px]">{phase.title}</span>
+              {isCurrentPhase && (
+                <Badge
+                  className="text-[10px] px-2 py-0.5 rounded-full font-bold animate-pulse"
+                  style={{ background: `${phase.color}20`, color: phase.color }}
+                >
+                  את כאן ←
+                </Badge>
+              )}
+              {isAllDone && !isCompleted && (
+                <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">
+                  מוכן!
+                </Badge>
+              )}
+            </div>
+            <p className="text-[12px] text-gray-500 mt-0.5">{phase.tagline}</p>
+          </div>
+
+          {/* Progress ring */}
+          <div className="relative w-10 h-10 shrink-0">
+            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+              <circle cx="18" cy="18" r="15" fill="none" stroke="#E2E8F0" strokeWidth="3" />
+              <circle
+                cx="18" cy="18" r="15" fill="none"
+                stroke={isCompleted ? '#10B981' : phase.color}
+                strokeWidth="3"
+                strokeDasharray={`${progress * 0.942} 100`}
+                strokeLinecap="round"
+                className="transition-all duration-500"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color: isCompleted ? '#10B981' : phase.color }}>
+              {doneItems}/{totalItems}
+            </span>
+          </div>
+
+          <ChevronDown
+            className="w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200"
+            style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          />
+        </button>
+
+        {/* ── Phase Content (Expanded) ── */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="overflow-hidden"
+            >
+              <div className="px-5 pb-5 space-y-4">
+                {/* Description */}
+                <div className="rounded-2xl p-4 bg-white border border-gray-100">
+                  <p className="text-[13px] text-gray-700 leading-relaxed">{phase.description}</p>
+                </div>
+
+                {/* What I need */}
+                <div>
+                  <h4 className="text-[12px] font-bold text-gray-500 mb-2 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" style={{ color: phase.color }} />
+                    מה צריך לפני שמתחילים?
+                  </h4>
+                  <div className="space-y-1.5">
+                    {phase.whatINeed.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2 text-[12px] text-gray-600">
+                        <Star className="w-3 h-3 mt-0.5 shrink-0" style={{ color: phase.color }} />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Checklist */}
+                <div>
+                  <h4 className="text-[12px] font-bold text-gray-500 mb-2 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" style={{ color: phase.color }} />
+                    צ'קליסט
+                  </h4>
+                  <div className="space-y-2">
+                    {phase.checklist.map((item) => {
+                      const checked = checkedItems[item.key] || false;
+                      return (
+                        <motion.button
+                          key={item.key}
+                          onClick={() => onToggleItem(item.key)}
+                          whileTap={{ scale: 0.98 }}
+                          className={`w-full flex items-center gap-3 p-3 rounded-2xl text-end transition-all duration-200 ${
+                            checked
+                              ? 'bg-emerald-50 border border-emerald-200'
+                              : 'bg-gray-50 border border-gray-100 hover:bg-gray-100'
+                          }`}
+                        >
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                            checked ? 'bg-emerald-500' : 'border-2 border-gray-300'
+                          }`}>
+                            {checked && <CheckCircle2 className="w-4 h-4 text-white" />}
+                          </div>
+                          <span className={`text-[13px] flex-1 ${
+                            checked ? 'text-emerald-700 line-through' : 'text-gray-700'
+                          }`}>
+                            {item.label}
+                          </span>
+                          {checked && <Sparkles className="w-3.5 h-3.5 text-emerald-500" />}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Done criteria */}
+                <div
+                  className="rounded-2xl p-3 border"
+                  style={{
+                    background: `${phase.color}06`,
+                    borderColor: `${phase.color}20`,
+                  }}
+                >
+                  <h4 className="text-[12px] font-bold mb-1 flex items-center gap-1.5" style={{ color: phase.color }}>
+                    <Eye className="w-3.5 h-3.5" />
+                    סיימתי כשאני יכולה לומר:
+                  </h4>
+                  <p className="text-[12px] text-gray-600">{phase.doneWhen}</p>
+                </div>
+
+                {/* Next step hint */}
+                <div className="rounded-2xl p-3 bg-purple-50/50 border border-purple-100">
+                  <h4 className="text-[12px] font-bold text-purple-600 mb-1 flex items-center gap-1.5">
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    השלב הבא
+                  </h4>
+                  <p className="text-[12px] text-purple-600/80">{phase.nextHint}</p>
+                </div>
+
+                {/* Celebration on all done */}
+                {isAllDone && (
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="rounded-2xl p-4 bg-gradient-to-l from-emerald-50 to-green-50 border border-emerald-200 text-center"
+                  >
+                    <PartyPopper className="w-8 h-8 mx-auto text-emerald-500 mb-2" />
+                    <p className="text-sm font-bold text-emerald-700">כל הסעיפים הושלמו! 🎉</p>
+                    <p className="text-[12px] text-emerald-600 mt-1">אפשר לעבור לשלב הבא</p>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────
+ *  Bird's Eye Progress Bar (top of page)
+ * ──────────────────────────────────────────────────────────────── */
+function BirdEyeProgress({ phases, checkedItems, currentPhaseId }) {
+  return (
+    <div className="flex items-center gap-1 overflow-x-auto pb-1">
+      {phases.map((phase, i) => {
+        const total = phase.checklist.length;
+        const done = phase.checklist.filter(c => checkedItems[c.key]).length;
+        const isCurrent = phase.id === currentPhaseId;
+        const isComplete = done === total;
+
+        return (
+          <React.Fragment key={phase.id}>
+            {i > 0 && (
+              <div
+                className="w-6 h-0.5 shrink-0"
+                style={{ background: isComplete ? '#10B981' : '#E2E8F0' }}
+              />
+            )}
+            <div
+              className="flex flex-col items-center gap-1 shrink-0 px-1"
+              title={`${phase.title}: ${done}/${total}`}
+            >
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all"
+                style={{
+                  background: isComplete
+                    ? '#10B981'
+                    : isCurrent
+                    ? phase.color
+                    : '#E2E8F0',
+                  boxShadow: isCurrent ? `0 0 0 3px ${phase.color}30` : 'none',
+                }}
+              >
+                {isComplete ? (
+                  <CheckCircle2 className="w-4 h-4 text-white" />
+                ) : (
+                  <span className="text-xs">{phase.emoji}</span>
+                )}
+              </div>
+              <span className={`text-[9px] font-semibold whitespace-nowrap ${
+                isCurrent ? 'text-gray-900' : 'text-gray-400'
+              }`}>
+                {phase.title}
+              </span>
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────
+ *  Main ProjectWorkbook Page
+ * ──────────────────────────────────────────────────────────────── */
 export default function ProjectWorkbook() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -215,17 +492,16 @@ export default function ProjectWorkbook() {
   if (!project) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5 p-1">
-        <h1 className="text-2xl font-extrabold bg-clip-text text-transparent"
-          style={{ backgroundImage: `linear-gradient(135deg, ${ACCENT}, #6D28D9)` }}>
+        <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">
           דאשבורד פרויקטים
         </h1>
-        <p className="text-sm text-gray-500">בחרי פרויקט כדי לפתוח את חוברת הפיתוח שלו</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">בחרי פרויקט כדי לפתוח את חוברת הפיתוח שלו</p>
         {allProjects.length === 0 ? (
           <div className="rounded-[24px] border-2 border-dashed p-12 text-center" style={{ borderColor: `${ACCENT}30` }}>
             <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: `${ACCENT}40` }} />
-            <p className="text-gray-500 font-bold">אין פרויקטים עדיין</p>
+            <p className="text-gray-500 dark:text-gray-400 font-bold">אין פרויקטים עדיין</p>
             <Button onClick={() => navigate('/Projects')} className="mt-4 rounded-xl text-white" style={{ background: ACCENT }}>
-              <Plus className="w-4 h-4 ml-2" /> צרי פרויקט חדש
+              <Plus className="w-4 h-4 ms-2" /> צרי פרויקט חדש
             </Button>
           </div>
         ) : (
@@ -235,13 +511,13 @@ export default function ProjectWorkbook() {
               return (
                 <motion.button key={proj.id} onClick={() => selectProject(proj)}
                   whileHover={{ y: -3 }} whileTap={{ scale: 0.98 }}
-                  className="text-right rounded-[20px] p-4 bg-white border border-gray-100 hover:border-purple-200 transition-all"
+                  className="text-end rounded-[20px] p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-purple-200 transition-all"
                   style={{ boxShadow: `0 2px 12px ${ACCENT}08` }}>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0"
                       style={{ background: `${sc.color}15` }}>{sc.emoji}</div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-gray-900 text-sm truncate">{proj.name}</h3>
+                      <h3 className="font-bold text-gray-900 dark:text-white text-sm truncate">{proj.name}</h3>
                       <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
                         style={{ background: `${sc.color}15`, color: sc.color }}>{sc.label}</span>
                     </div>
@@ -262,17 +538,17 @@ export default function ProjectWorkbook() {
   const phaseComplete = (phase) => phaseDone(phase) === phaseTotal(phase);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto space-y-6 p-1 dark:bg-gray-900">
       {/* ── Header row ── */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/Projects')}
-          className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors">
+        <Button variant="ghost" size="icon"
+          onClick={() => navigate('/Projects')}
+          className="rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors">
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-extrabold bg-clip-text text-transparent truncate"
-            style={{ backgroundImage: `linear-gradient(135deg, ${ACCENT}, #6D28D9)` }}>
-            {project.name}
+          <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white truncate">
+            חוברת פיתוח: {project.name}
           </h1>
           <div className="flex items-center gap-2 mt-0.5 text-[12px] text-gray-500">
             <span className="px-2 py-0.5 rounded-full font-semibold text-[11px]"

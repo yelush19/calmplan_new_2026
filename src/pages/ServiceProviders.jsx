@@ -185,16 +185,16 @@ export default function ServiceProvidersPage() {
 
   return (
     <UnifiedAyoaLayout tasks={[]} centerLabel="ספקי שירות" accentColor="#0D9488" isLoading={false}>
-    <div className="p-6 bg-gray-50" dir="rtl">
+    <div className="p-6 bg-gray-50 dark:bg-gray-900" dir="rtl">
       <Card className="max-w-7xl mx-auto">
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>ניהול ספקים ונותני שירות</CardTitle>
+            <CardTitle className="text-xl font-bold text-[#1E3A5F] dark:text-white">ניהול ספקים ונותני שירות</CardTitle>
             <div>
               {activeTab === TABS.PROVIDERS ? (
-                <Button onClick={handleAddProvider}><Plus className="ml-2 h-4 w-4" /> הוסף נותן שירות</Button>
+                <Button onClick={handleAddProvider}><Plus className="ms-2 h-4 w-4" /> הוסף נותן שירות</Button>
               ) : (
-                <Button onClick={handleAddCompany}><Plus className="ml-2 h-4 w-4" /> הוסף חברת שירות</Button>
+                <Button onClick={handleAddCompany}><Plus className="ms-2 h-4 w-4" /> הוסף חברת שירות</Button>
               )}
             </div>
           </div>
@@ -235,12 +235,12 @@ export default function ServiceProvidersPage() {
             <>
               <div className="mb-4 flex gap-4">
                 <div className="relative w-full">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input 
                     placeholder="חיפוש..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="ps-10"
                   />
                 </div>
                 {activeTab === TABS.PROVIDERS && (

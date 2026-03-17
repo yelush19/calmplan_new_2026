@@ -157,7 +157,7 @@ export default function PrintPage() {
                   {dayEvents.length > 0 ? (
                     <div className="space-y-3">
                       {dayEvents.map((event) => (
-                        <div key={event.id} className="border-r-4 border-r-blue-500 pr-4 py-2">
+                        <div key={event.id} className="border-e-4 border-e-blue-500 pe-4 py-2">
                           <h3 className="font-semibold text-lg">{event.title}</h3>
                           {event.description && (
                             <p className="text-gray-600 text-sm mt-1">{event.description}</p>
@@ -256,7 +256,7 @@ export default function PrintPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 bg-gray-50 dark:bg-gray-900 min-h-screen p-4" dir="rtl">
       <style>
         {`
           @media print {
@@ -287,7 +287,7 @@ export default function PrintPage() {
       >
         <Card className="shadow-xl border-gray-100">
           <CardHeader className="bg-gradient-to-l from-mint-50 to-blue-50 border-b border-mint-200">
-            <CardTitle className="flex items-center gap-3 text-2xl text-gray-800">
+            <CardTitle className="flex items-center gap-3 text-xl font-bold text-[#1E3A5F] dark:text-white">
               <div className="w-8 h-8 bg-mint-500 rounded-full flex items-center justify-center">
                 <Printer className="w-5 h-5 text-white" />
               </div>
@@ -330,7 +330,7 @@ export default function PrintPage() {
                   onClick={handlePrint}
                   className="w-full py-4 text-lg bg-mint-500 hover:bg-mint-600 rounded-xl shadow-lg transition-all duration-300"
                 >
-                  <Printer className="w-5 h-5 ml-2" />
+                  <Printer className="w-5 h-5 ms-2" />
                   הדפס
                 </Button>
               </div>

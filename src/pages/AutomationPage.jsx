@@ -11,8 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { getFollowUpRules, registerFollowUpRule } from '@/engines/TaskInjectionEngine';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
+import { SystemConfig } from '@/api/entities';
+import { toast } from 'sonner';
 
 const DEFAULT_DELAY = 7;
+const RULES_CONFIG_KEY = 'automation_followup_rules';
 
 function RuleCard({ serviceKey, rule, onToggle, onDelete }) {
   const [enabled, setEnabled] = useState(true);
@@ -84,10 +87,66 @@ export default function AutomationPage() {
   const [newService, setNewService] = useState('');
   const [newDelay, setNewDelay] = useState(DEFAULT_DELAY);
   const [newCategory, setNewCategory] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [configId, setConfigId] = useState(null);
 
   useEffect(() => {
-    setRules(getFollowUpRules());
+    loadRules();
   }, []);
+
+  const loadRules = async () => {
+    try {
+      // Load persisted rules from SystemConfig
+      const configs = await SystemConfig.filter({ key: RULES_CONFIG_KEY });
+      if (configs.length > 0 && configs[0].value?.rules) {
+        const savedRules = configs[0].value.rules;
+        setConfigId(configs[0].id);
+        // Re-register saved rules in the engine
+        Object.entries(savedRules).forEach(([key, rule]) => {
+          registerFollowUpRule(key, {
+            ...rule,
+            newTitle: (src) => `${src.client_name} — ${rule.newCategory || key} (מעקב)`,
+          });
+        });
+        setRules({ ...getFollowUpRules() });
+      } else {
+        setRules(getFollowUpRules());
+      }
+    } catch (err) {
+      console.error('Failed to load automation rules:', err);
+      setRules(getFollowUpRules());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const persistRules = async (updatedRules) => {
+    try {
+      // Serialize rules (strip functions)
+      const serializable = {};
+      Object.entries(updatedRules).forEach(([key, rule]) => {
+        serializable[key] = {
+          trigger: rule.trigger,
+          delayDays: rule.delayDays,
+          newCategory: rule.newCategory,
+          newBranch: rule.newBranch,
+          newPriority: rule.newPriority,
+          newDescription: rule.newDescription,
+          newTags: rule.newTags,
+        };
+      });
+      const payload = { key: RULES_CONFIG_KEY, value: { rules: serializable } };
+      if (configId) {
+        await SystemConfig.update(configId, payload);
+      } else {
+        const created = await SystemConfig.create(payload);
+        setConfigId(created.id);
+      }
+    } catch (err) {
+      console.error('Failed to persist rules:', err);
+      toast.error('שגיאה בשמירת הכללים');
+    }
+  };
 
   const handleAdd = useCallback(() => {
     if (!newService.trim()) return;
@@ -103,7 +162,10 @@ export default function AutomationPage() {
       newTags: ['auto-followup', 'custom-rule'],
     };
     registerFollowUpRule(key, rule);
-    setRules((prev) => ({ ...prev, [key]: rule }));
+    const updated = { ...rules, [key]: rule };
+    setRules(updated);
+    persistRules(updated);
+    toast.success('כלל חדש נוסף ונשמר');
     setShowAdd(false);
     setNewService('');
     setNewDelay(DEFAULT_DELAY);
@@ -114,11 +176,27 @@ export default function AutomationPage() {
     setRules((prev) => {
       const copy = { ...prev };
       delete copy[key];
+      persistRules(copy);
       return copy;
     });
-  }, []);
+    toast.success('הכלל הוסר');
+  }, [configId]);
 
   const ruleEntries = Object.entries(rules);
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto space-y-6" dir="rtl">
+        <h1 className="text-xl font-bold text-[#1E3A5F] flex items-center gap-2">
+          <Zap className="w-6 h-6 text-amber-500" />
+          אוטומציות P3
+        </h1>
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6" dir="rtl">
