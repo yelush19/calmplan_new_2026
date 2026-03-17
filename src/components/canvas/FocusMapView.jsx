@@ -96,7 +96,7 @@ export default function FocusMapView({
         <div className="text-center">
           <div className="text-4xl mb-3">🎯</div>
           <div className="text-sm font-bold" style={{ color: 'var(--cp-text-secondary, #64748B)' }}>
-            טוען מפת פוקוס...
+            אין משימות להציג
           </div>
         </div>
       </div>
@@ -306,10 +306,10 @@ export default function FocusMapView({
 
         {/* Zone labels */}
         <text x={CX + RINGS.unlocked + 8} y={CY - 8} fontSize="9" fontWeight="700" fill="#E65100" opacity="0.6">
-          פעיל
+          אפשר לעשות עכשיו
         </text>
         <text x={CX + RINGS.locked + 8} y={CY - 8} fontSize="8" fontWeight="600" fill="#90A4AE" opacity="0.5">
-          נעול
+          ממתין לתנאי קדם
         </text>
 
         {/* ── Branches: center → categories (uses Design Engine) ── */}
@@ -357,10 +357,10 @@ export default function FocusMapView({
           {centerLabel}
         </text>
         <text x={CX} y={CY + 4} textAnchor="middle" fill="white" fontSize="12" fontWeight="700">
-          {stats.unlockedCount} פעילות
+          {stats.unlockedCount} משימות פתוחות
         </text>
         <text x={CX} y={CY + 18} textAnchor="middle" fill="#FFFFFF90" fontSize="10" fontWeight="600">
-          ~{stats.totalMinutes} דק׳
+          ~{stats.totalMinutes} דק׳ עבודה
         </text>
 
         {/* ── Category nodes (uses Design Engine shape) ── */}
@@ -473,7 +473,7 @@ export default function FocusMapView({
         <button onClick={() => setFocusedNode(null)}
           className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-white shadow-lg border text-xs font-bold hover:bg-gray-50 transition-all"
           style={{ color: '#FF9800' }}>
-          ✕ נקה מיקוד
+          ✕ הצג הכל
         </button>
       )}
 
@@ -481,7 +481,7 @@ export default function FocusMapView({
       <div className="absolute bottom-3 right-3 flex flex-col gap-1.5 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-amber-100">
         <div className="flex items-center gap-2 text-[12px] font-bold text-amber-800">
           <div className="w-3 h-3 rounded-full" style={{ background: 'linear-gradient(135deg, #FFC107, #FF9800)' }} />
-          מפת פוקוס דינמית
+          גודל = מורכבות המשימה
         </div>
         <div className="flex items-center gap-3">
           {[0, 1, 2, 3].map(tier => {

@@ -221,7 +221,7 @@ export default function MyFocus() {
           </div>
         ) : viewMode === 'focus' ? (
           <div className="h-full rounded-2xl overflow-hidden border border-amber-100" style={{ minHeight: '450px', background: 'linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%)' }}>
-            <FocusMapView tasks={todayTasks} allTasks={tasks} centerLabel="הפוקוס שלי" centerSub={`${todayTasks.length} משימות`} />
+            <FocusMapView tasks={todayTasks} allTasks={tasks} centerLabel="מה לעשות היום" centerSub={`${todayTasks.length} משימות`} />
           </div>
         ) : viewMode === 'workflow' ? (
           <div className="h-full rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '450px' }}>
