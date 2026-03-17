@@ -553,17 +553,17 @@ export default function HomePage() {
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
-        {/* ═══ 3. "מה אפשר לעשות היום" — AYOA-style bubble cards ═══ */}
-        <div>
-          <h3 className="text-sm font-bold text-slate-700 mb-3 px-1">מה אפשר לעשות היום</h3>
+        {/* ═══ 3. "מה אפשר לעשות היום" — AYOA-style mini-canvas ═══ */}
+        <div className="py-4">
+          <h3 className="text-sm font-bold text-slate-700 mb-4 px-1 text-center">מה אפשר לעשות היום</h3>
           {calmTasks.length === 0 ? (
             <Card className="border-sky-100">
               <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />} text="אין משימות להיום — כל הכבוד!" />
             </Card>
           ) : (
-            <div className="flex flex-wrap gap-3 justify-center">
-              {calmTasks.map(task => (
-                <CalmBubble key={task.id} task={task} onEdit={setEditingTask} />
+            <div className="relative mx-auto" style={{ maxWidth: 380, height: calmTasks.length <= 2 ? 160 : 260 }}>
+              {calmTasks.map((task, i) => (
+                <CalmBubble key={task.id} task={task} onEdit={setEditingTask} posStyle={BUBBLE_POSITIONS[i]} />
               ))}
             </div>
           )}
@@ -647,18 +647,27 @@ function EmptyState({ icon, text }) {
 
 // ─── AYOA-style bubble card for the calm "מה אפשר לעשות היום" section ───
 const BUBBLE_COLORS = {
-  urgent: { bg: '#FFF8E7', border: '#E8C46C', ring: '#F5A623' },
-  high:   { bg: '#FEF3F2', border: '#E0A89E', ring: '#D4725E' },
-  medium: { bg: '#F0F7FA', border: '#A8CBDB', ring: '#5A9EB5' },
-  low:    { bg: '#F0FAF4', border: '#A3D4B5', ring: '#6BAF82' },
+  urgent: { bg: '#FFF8E7', border: '#E8C46C', ring: '#F5A623' },   // soft amber
+  high:   { bg: '#FFF4EC', border: '#E8BFA0', ring: '#D4925E' },   // warm orange
+  medium: { bg: '#F0F7FA', border: '#A8CBDB', ring: '#5A9EB5' },   // sky blue
+  low:    { bg: '#F0FAF4', border: '#A3D4B5', ring: '#6BAF82' },   // emerald
 };
+
+// Scattered positions for up to 5 bubbles — gives a mini-canvas feel
+const BUBBLE_POSITIONS = [
+  { top: 0, left: '50%', transform: 'translateX(-50%)' },          // top-center
+  { top: 30, left: '8%' },                                          // mid-left
+  { top: 45, left: '68%' },                                         // mid-right
+  { top: 110, left: '22%' },                                        // bottom-left
+  { top: 120, left: '58%' },                                        // bottom-right
+];
 
 const CONTEXT_BADGE = {
   work: { label: 'עבודה', icon: Briefcase, color: ZERO_PANIC.blue },
   home: { label: 'בית', icon: HomeIcon, color: ZERO_PANIC.green },
 };
 
-function CalmBubble({ task, onEdit }) {
+function CalmBubble({ task, onEdit, posStyle }) {
   const ctx = getTaskContext(task);
   const colors = BUBBLE_COLORS[task.priority] || BUBBLE_COLORS.medium;
   const badge = CONTEXT_BADGE[ctx];
@@ -667,13 +676,14 @@ function CalmBubble({ task, onEdit }) {
   return (
     <button
       onClick={() => onEdit(task)}
-      className="flex flex-col items-center text-center rounded-full p-4 transition-shadow hover:shadow-md cursor-pointer"
+      className="absolute flex flex-col items-center text-center rounded-full p-4 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
       style={{
         width: 130,
         height: 130,
         backgroundColor: colors.bg,
         border: `3px solid ${colors.border}`,
         boxShadow: `0 0 0 2px ${colors.ring}22`,
+        ...posStyle,
       }}
     >
       {/* Title — 2 lines max */}
