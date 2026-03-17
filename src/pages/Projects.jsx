@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Project } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,18 +11,23 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Pencil, Trash2, ExternalLink, GitBranch, Globe, Server,
   FolderKanban, X, Check, Database, BarChart3, HardDrive, TrainFront,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Cpu, Layers, Rocket
 } from 'lucide-react';
 import { loadPlatformConfig } from '@/config/platformConfig';
 import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
 
+/* ── DNA Color ── */
+const ACCENT = '#7C3AED';
+
+/* ── Status pipeline ── */
 const statusOptions = [
-  { value: 'planning', label: 'תכנון', color: 'bg-gray-200 text-gray-800' },
-  { value: 'in_development', label: 'בפיתוח', color: 'bg-blue-200 text-blue-800' },
-  { value: 'testing', label: 'בדיקות', color: 'bg-yellow-200 text-yellow-800' },
-  { value: 'deployed', label: 'באוויר', color: 'bg-green-200 text-green-800' },
-  { value: 'maintenance', label: 'תחזוקה', color: 'bg-purple-200 text-purple-800' },
-  { value: 'archived', label: 'ארכיון', color: 'bg-gray-300 text-gray-600' },
+  { value: 'planning',       label: 'תכנון',    color: 'bg-slate-100 text-slate-700',  accent: '#94A3B8', icon: '📋' },
+  { value: 'in_development', label: 'בפיתוח',   color: 'bg-blue-100 text-blue-700',    accent: '#3B82F6', icon: '🔨' },
+  { value: 'testing',        label: 'בדיקות',   color: 'bg-amber-100 text-amber-700',  accent: '#F59E0B', icon: '🧪' },
+  { value: 'deployed',       label: 'באוויר',   color: 'bg-emerald-100 text-emerald-700', accent: '#10B981', icon: '🚀' },
+  { value: 'maintenance',    label: 'תחזוקה',   color: 'bg-purple-100 text-purple-700', accent: '#8B5CF6', icon: '🔧' },
+  { value: 'archived',       label: 'ארכיון',   color: 'bg-gray-200 text-gray-500',    accent: '#9CA3AF', icon: '📦' },
 ];
 
 const systemTypes = [
@@ -48,20 +54,199 @@ function getPlatformIcon(iconName) {
 }
 
 const emptyProject = {
-  name: '',
-  description: '',
-  status: 'planning',
-  system_type: 'web_app',
-  platform: '',
-  platform_data: {},
-  git_repo: '',
-  supabase_url: '',
-  subdomain: '',
-  production_url: '',
-  tech_stack: '',
-  notes: '',
+  name: '', description: '', status: 'planning', system_type: 'web_app',
+  platform: '', platform_data: {}, git_repo: '', supabase_url: '',
+  subdomain: '', production_url: '', tech_stack: '', notes: '',
 };
 
+/* ── Animations ── */
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1, y: 0, scale: 1,
+    transition: { delay: i * 0.04, type: 'spring', stiffness: 260, damping: 24 },
+  }),
+};
+
+const groupVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.03 } },
+};
+
+/* ────────────────────────────────────────────── */
+/*  Project Card Component                        */
+/* ────────────────────────────────────────────── */
+function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelete }) {
+  const PlatIcon = platform ? getPlatformIcon(platform.icon) : null;
+  const getSystemTypeLabel = (type) => systemTypes.find(s => s.value === type)?.label || type;
+
+  return (
+    <motion.div
+      variants={cardVariants}
+      whileHover={{ y: -4, boxShadow: `0 12px 32px ${ACCENT}18` }}
+      className="group"
+    >
+      <div
+        className="relative rounded-[32px] bg-white/90 backdrop-blur-sm border border-white/60 overflow-hidden transition-all duration-300"
+        style={{ boxShadow: `0 4px 20px ${ACCENT}10, 0 1px 3px rgba(0,0,0,0.04)` }}
+      >
+        {/* Top accent stripe */}
+        <div
+          className="h-1 w-full"
+          style={{ background: `linear-gradient(90deg, ${statusConf.accent}, ${ACCENT}60)` }}
+        />
+
+        <div className="p-5">
+          {/* Header row */}
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-bold text-gray-900 truncate">{project.name}</h3>
+              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                <Badge
+                  className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold"
+                  style={{
+                    background: `${statusConf.accent}18`,
+                    color: statusConf.accent,
+                    border: `1px solid ${statusConf.accent}30`,
+                  }}
+                >
+                  {statusConf.icon} {statusConf.label}
+                </Badge>
+                {platform && (
+                  <Badge
+                    className="text-[11px] px-2 py-0.5 rounded-full gap-1"
+                    style={{ background: '#F1F5F9', color: '#475569' }}
+                  >
+                    {PlatIcon && <PlatIcon className="w-3 h-3" />}
+                    {platform.name}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => onEdit(project)}
+                className="p-1.5 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => onDelete(project.id)}
+                className="p-1.5 rounded-xl hover:bg-amber-50 text-gray-400 hover:text-amber-500 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* System type */}
+          <div className="flex items-center gap-2 text-[12px] text-gray-500 mb-2">
+            <Cpu className="w-3.5 h-3.5" />
+            {getSystemTypeLabel(project.system_type)}
+          </div>
+
+          {/* Description */}
+          {project.description && (
+            <p className="text-[12px] text-gray-500 leading-relaxed mb-3 line-clamp-2">
+              {project.description}
+            </p>
+          )}
+
+          {/* Tech Stack */}
+          {project.tech_stack && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {project.tech_stack.split(',').map((tech, i) => (
+                <span
+                  key={i}
+                  className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                  style={{ background: `${ACCENT}10`, color: ACCENT }}
+                >
+                  {tech.trim()}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Platform-specific fields */}
+          {platform && project.platform_data && Object.keys(project.platform_data).some(k => project.platform_data[k]) && (
+            <div className="rounded-2xl p-2.5 space-y-1 text-[11px] bg-gray-50/80 border border-gray-100 mb-3" dir="ltr">
+              {platform.fields.map(field => {
+                const val = project.platform_data?.[field.key];
+                if (!val) return null;
+                return field.type === 'url' ? (
+                  <a key={field.key} href={val} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-purple-600 hover:text-purple-800 hover:underline transition-colors">
+                    {PlatIcon && <PlatIcon className="w-3 h-3" />}
+                    <span className="truncate">{val.replace('https://', '')}</span>
+                  </a>
+                ) : (
+                  <div key={field.key} className="flex items-center gap-1 text-gray-500">
+                    <span className="text-gray-400">{field.label}:</span> {val}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Links row */}
+          {(project.git_repo || project.production_url || project.supabase_url || project.subdomain) && (
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+              {project.production_url && (
+                <a
+                  href={project.production_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors"
+                  style={{ background: `${ACCENT}10`, color: ACCENT }}
+                >
+                  <Rocket className="w-3 h-3" />
+                  Production
+                </a>
+              )}
+              {project.git_repo && (
+                <a
+                  href={project.git_repo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors font-medium"
+                >
+                  <GitBranch className="w-3 h-3" />
+                  Git
+                </a>
+              )}
+              {project.supabase_url && (
+                <a
+                  href={project.supabase_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors font-medium"
+                >
+                  <Database className="w-3 h-3" />
+                  DB
+                </a>
+              )}
+              {project.subdomain && (
+                <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 font-medium">
+                  <Globe className="w-3 h-3" />
+                  {project.subdomain}
+                </span>
+              )}
+            </div>
+          )}
+
+          {project.notes && (
+            <p className="text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-100 line-clamp-1">
+              {project.notes}
+            </p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ────────────────────────────────────────────── */
+/*  Main Projects Page                            */
+/* ────────────────────────────────────────────── */
 export default function Projects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -161,9 +346,6 @@ export default function Projects() {
   const getStatusConfig = (status) =>
     statusOptions.find(s => s.value === status) || statusOptions[0];
 
-  const getSystemTypeLabel = (type) =>
-    systemTypes.find(s => s.value === type)?.label || type;
-
   const selectedPlatform = platforms.find(p => p.id === formData.platform);
 
   const updatePlatformField = (fieldKey, value) => {
@@ -176,326 +358,416 @@ export default function Projects() {
   const getPlatformForProject = (project) =>
     platforms.find(p => p.id === project.platform) || null;
 
+  /* ── Pseudo-tasks for Ayoa views ── */
   const pseudoTasks = useMemo(() =>
     projects.map(p => ({
       id: p.id,
       title: p.name || p.title || 'פרויקט',
-      category: p.type || p.status || 'project',
-      status: p.status === 'active' ? 'not_started' : p.status === 'completed' ? 'production_completed' : 'not_started',
+      category: getStatusConfig(p.status)?.label || 'תכנון',
+      status: p.status === 'deployed' ? 'production_completed'
+        : p.status === 'in_development' ? 'not_started'
+        : p.status === 'testing' ? 'not_started'
+        : 'not_started',
       due_date: p.deadline || p.due_date,
+      scheduled_start: p.created_date,
     })), [projects]);
+
+  /* ── Status pipeline summary ── */
+  const statusCounts = useMemo(() => {
+    const counts = {};
+    statusOptions.forEach(s => { counts[s.value] = 0; });
+    projects.forEach(p => {
+      const key = p.status || 'planning';
+      if (counts[key] !== undefined) counts[key]++;
+    });
+    return counts;
+  }, [projects]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-t-transparent" style={{ borderColor: `${ACCENT}40`, borderTopColor: 'transparent' }} />
+        <span className="text-sm font-medium text-gray-500">טוען פרויקטים...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6 p-1"
+    >
+      {/* ── Page Header ── */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">פרויקטים</h1>
+        <div>
+          <h1
+            className="text-3xl font-extrabold bg-clip-text text-transparent"
+            style={{ backgroundImage: `linear-gradient(135deg, ${ACCENT}, #6D28D9)` }}
+          >
+            פרויקטים
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">ניהול וצפייה בכל הפרויקטים שלך</p>
+        </div>
         {!isCreating && (
-          <Button onClick={startCreate} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            פרויקט חדש
-          </Button>
+          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+            <Button
+              onClick={startCreate}
+              className="flex items-center gap-2 rounded-2xl px-5 py-2.5 text-white shadow-lg font-semibold"
+              style={{
+                background: `linear-gradient(135deg, ${ACCENT}, #6D28D9)`,
+                boxShadow: `0 6px 20px ${ACCENT}40`,
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              פרויקט חדש
+            </Button>
+          </motion.div>
         )}
       </div>
 
-      {/* Create/Edit Form */}
-      {isCreating && (
-        <Card className="border-2 border-primary/30">
-          <CardHeader>
-            <CardTitle>{editingProject ? `עריכת פרויקט: ${editingProject.name}` : 'פרויקט חדש'}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>שם הפרויקט</Label>
-                <Input value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} placeholder="שם הפרויקט" />
-              </div>
-              <div>
-                <Label>סוג מערכת</Label>
-                <Select value={formData.system_type} onValueChange={(v) => setFormData(p => ({ ...p, system_type: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {systemTypes.map(t => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>סטטוס</Label>
-                <Select value={formData.status} onValueChange={(v) => setFormData(p => ({ ...p, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map(s => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>טכנולוגיות (Tech Stack)</Label>
-                <Input value={formData.tech_stack} onChange={(e) => setFormData(p => ({ ...p, tech_stack: e.target.value }))} placeholder="React, Node.js, Supabase..." />
-              </div>
+      {/* ── Status Pipeline Bar ── */}
+      {projects.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex items-center gap-2 overflow-x-auto pb-1"
+        >
+          {statusOptions.filter(s => s.value !== 'archived').map((s) => (
+            <div
+              key={s.value}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[12px] font-semibold whitespace-nowrap transition-all"
+              style={{
+                background: statusCounts[s.value] > 0 ? `${s.accent}15` : '#F8FAFC',
+                color: statusCounts[s.value] > 0 ? s.accent : '#94A3B8',
+                border: `1px solid ${statusCounts[s.value] > 0 ? `${s.accent}30` : '#E2E8F0'}`,
+              }}
+            >
+              <span>{s.icon}</span>
+              {s.label}
+              <span
+                className="px-1.5 py-0.5 rounded-full text-[10px] font-bold min-w-[18px] text-center"
+                style={{
+                  background: statusCounts[s.value] > 0 ? `${s.accent}20` : '#F1F5F9',
+                  color: statusCounts[s.value] > 0 ? s.accent : '#94A3B8',
+                }}
+              >
+                {statusCounts[s.value]}
+              </span>
             </div>
-
-            <div>
-              <Label>תיאור</Label>
-              <Textarea value={formData.description} onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))} placeholder="תיאור קצר של הפרויקט" rows={2} />
-            </div>
-
-            {/* Platform Section */}
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-3">פלטפורמת הרצה</h4>
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Badge
-                  variant={!formData.platform ? 'default' : 'outline'}
-                  className="cursor-pointer px-3 py-1.5 text-sm"
-                  onClick={() => setFormData(p => ({ ...p, platform: '', platform_data: {} }))}
-                >
-                  ללא
-                </Badge>
-                {platforms.map(plat => {
-                  const Icon = getPlatformIcon(plat.icon);
-                  const isActive = formData.platform === plat.id;
-                  return (
-                    <Badge
-                      key={plat.id}
-                      variant={isActive ? 'default' : 'outline'}
-                      className={`cursor-pointer px-3 py-1.5 text-sm gap-1.5 ${isActive ? plat.color : 'hover:bg-gray-100'}`}
-                      onClick={() => setFormData(p => ({ ...p, platform: plat.id, platform_data: isActive ? p.platform_data : {} }))}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      {plat.name}
-                    </Badge>
-                  );
-                })}
-              </div>
-
-              {/* Dynamic fields for selected platform */}
-              {selectedPlatform && selectedPlatform.fields.length > 0 && (
-                <div className="grid md:grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg border">
-                  {selectedPlatform.fields.map(field => (
-                    <div key={field.key}>
-                      <Label className="text-xs">{field.label}</Label>
-                      <Input
-                        value={formData.platform_data?.[field.key] || ''}
-                        onChange={(e) => updatePlatformField(field.key, e.target.value)}
-                        placeholder={field.placeholder}
-                        dir="ltr"
-                        className="text-sm"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Infrastructure */}
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-3">תשתית ולינקים</h4>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="flex items-center gap-1"><GitBranch className="w-4 h-4" /> Git Repository</Label>
-                  <Input value={formData.git_repo} onChange={(e) => setFormData(p => ({ ...p, git_repo: e.target.value }))} placeholder="https://github.com/user/repo" dir="ltr" />
-                </div>
-                <div>
-                  <Label className="flex items-center gap-1"><Database className="w-4 h-4" /> Supabase URL</Label>
-                  <Input value={formData.supabase_url} onChange={(e) => setFormData(p => ({ ...p, supabase_url: e.target.value }))} placeholder="https://xxxxx.supabase.co" dir="ltr" />
-                </div>
-                <div>
-                  <Label className="flex items-center gap-1"><Globe className="w-4 h-4" /> Subdomain</Label>
-                  <Input value={formData.subdomain} onChange={(e) => setFormData(p => ({ ...p, subdomain: e.target.value }))} placeholder="app.example.com" dir="ltr" />
-                </div>
-                <div>
-                  <Label className="flex items-center gap-1"><ExternalLink className="w-4 h-4" /> Production URL</Label>
-                  <Input value={formData.production_url} onChange={(e) => setFormData(p => ({ ...p, production_url: e.target.value }))} placeholder="https://www.example.com" dir="ltr" />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label>הערות</Label>
-              <Textarea value={formData.notes} onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))} placeholder="הערות נוספות..." rows={2} />
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={cancelEdit} className="flex items-center gap-1">
-                <X className="w-4 h-4" /> ביטול
-              </Button>
-              <Button onClick={handleSave} disabled={!formData.name} className="flex items-center gap-1">
-                <Check className="w-4 h-4" /> {editingProject ? 'עדכן' : 'צור פרויקט'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          ))}
+        </motion.div>
       )}
 
-      {/* Projects Grid - Grouped by Status */}
-      <UnifiedAyoaLayout tasks={pseudoTasks} isLoading={loading} centerLabel="פרויקטים" centerSub="P6" accentColor="#7C3AED">
-      {projects.length === 0 && !isCreating ? (
-        <Card>
-          <CardContent className="p-12 text-center text-muted-foreground">
-            <FolderKanban className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-lg">אין פרויקטים עדיין</p>
-            <p className="text-sm">לחצי על "פרויקט חדש" כדי להתחיל</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="flex items-center justify-end mb-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (allExpanded) {
-                  const collapsed = {};
-                  statusOptions.forEach(s => { collapsed[s.value] = true; });
-                  setCollapsedGroups(collapsed);
-                  setAllExpanded(false);
-                } else {
-                  setCollapsedGroups({});
-                  setAllExpanded(true);
-                }
+      {/* ── Create/Edit Form ── */}
+      <AnimatePresence>
+        {isCreating && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          >
+            <Card
+              className="rounded-[32px] border-2 overflow-hidden"
+              style={{
+                borderColor: `${ACCENT}30`,
+                boxShadow: `0 8px 32px ${ACCENT}12`,
               }}
-              className="text-xs gap-1"
             >
-              {allExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
-            </Button>
-          </div>
-          <div className="space-y-3">
-            {statusOptions.map(statusOpt => {
-              const groupProjects = projects.filter(p => (p.status || 'planning') === statusOpt.value);
-              if (groupProjects.length === 0) return null;
-              const groupKey = statusOpt.value;
-              return (
-                <div key={groupKey} className="mb-2">
-                  <button
-                    onClick={() => setCollapsedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }))}
-                    className="w-full flex items-center justify-between p-2 rounded-lg bg-[#F5F5F5] hover:bg-[#E0E0E0] transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className={`w-4 h-4 transition-transform ${collapsedGroups[groupKey] ? '-rotate-90' : ''}`} />
-                      <span className="font-bold text-[#000000] text-sm">{statusOpt.label}</span>
-                      <span className="text-xs text-[#455A64]">({groupProjects.length} פרויקטים)</span>
-                    </div>
-                  </button>
-                  {!collapsedGroups[groupKey] && (
-                    <div className="mt-1 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {groupProjects.map((project) => {
-                        const statusConf = getStatusConfig(project.status);
-                        const plat = getPlatformForProject(project);
-                        const PlatIcon = plat ? getPlatformIcon(plat.icon) : null;
-                        return (
-                          <Card key={project.id} className="hover:shadow-md transition-shadow">
-                            <CardHeader className="pb-3">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <CardTitle className="text-lg">{project.name}</CardTitle>
-                                  <div className="flex items-center gap-1.5 mt-1">
-                                    <Badge className={statusConf.color}>{statusConf.label}</Badge>
-                                    {plat && (
-                                      <Badge className={`text-[12px] gap-1 ${plat.color}`}>
-                                        {PlatIcon && <PlatIcon className="w-3 h-3" />}
-                                        {plat.name}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex gap-1">
-                                  <Button variant="ghost" size="icon" onClick={() => startEdit(project)}>
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" onClick={() => handleDelete(project.id)} className="text-amber-500 hover:text-amber-700">
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <FolderKanban className="w-4 h-4" />
-                                {getSystemTypeLabel(project.system_type)}
-                              </div>
+              <CardHeader
+                className="pb-3"
+                style={{ background: `linear-gradient(135deg, ${ACCENT}08, ${ACCENT}04)` }}
+              >
+                <CardTitle className="text-lg" style={{ color: ACCENT }}>
+                  {editingProject ? `עריכת: ${editingProject.name}` : 'פרויקט חדש'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>שם הפרויקט</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
+                      placeholder="שם הפרויקט"
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <Label>סוג מערכת</Label>
+                    <Select value={formData.system_type} onValueChange={(v) => setFormData(p => ({ ...p, system_type: v }))}>
+                      <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {systemTypes.map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>סטטוס</Label>
+                    <Select value={formData.status} onValueChange={(v) => setFormData(p => ({ ...p, status: v }))}>
+                      <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map(s => (
+                          <SelectItem key={s.value} value={s.value}>{s.icon} {s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>טכנולוגיות (Tech Stack)</Label>
+                    <Input
+                      value={formData.tech_stack}
+                      onChange={(e) => setFormData(p => ({ ...p, tech_stack: e.target.value }))}
+                      placeholder="React, Node.js, Supabase..."
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
 
-                              {project.description && (
-                                <p className="text-sm text-muted-foreground">{project.description}</p>
-                              )}
+                <div>
+                  <Label>תיאור</Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
+                    placeholder="תיאור קצר של הפרויקט"
+                    rows={2}
+                    className="rounded-xl"
+                  />
+                </div>
 
-                              {project.tech_stack && (
-                                <div className="flex flex-wrap gap-1">
-                                  {project.tech_stack.split(',').map((tech, i) => (
-                                    <Badge key={i} variant="outline" className="text-xs">{tech.trim()}</Badge>
-                                  ))}
-                                </div>
-                              )}
+                {/* Platform Section */}
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3 text-sm">פלטפורמת הרצה</h4>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <Badge
+                      variant={!formData.platform ? 'default' : 'outline'}
+                      className="cursor-pointer px-3 py-1.5 text-sm rounded-xl"
+                      onClick={() => setFormData(p => ({ ...p, platform: '', platform_data: {} }))}
+                    >
+                      ללא
+                    </Badge>
+                    {platforms.map(plat => {
+                      const Icon = getPlatformIcon(plat.icon);
+                      const isActive = formData.platform === plat.id;
+                      return (
+                        <Badge
+                          key={plat.id}
+                          variant={isActive ? 'default' : 'outline'}
+                          className={`cursor-pointer px-3 py-1.5 text-sm gap-1.5 rounded-xl ${isActive ? plat.color : 'hover:bg-gray-100'}`}
+                          onClick={() => setFormData(p => ({ ...p, platform: plat.id, platform_data: isActive ? p.platform_data : {} }))}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          {plat.name}
+                        </Badge>
+                      );
+                    })}
+                  </div>
 
-                              {/* Platform-specific fields */}
-                              {plat && project.platform_data && Object.keys(project.platform_data).some(k => project.platform_data[k]) && (
-                                <div className="border rounded-md p-2 space-y-1 text-xs bg-gray-50" dir="ltr">
-                                  {plat.fields.map(field => {
-                                    const val = project.platform_data?.[field.key];
-                                    if (!val) return null;
-                                    return field.type === 'url' ? (
-                                      <a key={field.key} href={val} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
-                                        {PlatIcon && <PlatIcon className="w-3 h-3" />}
-                                        <span className="truncate">{val.replace('https://', '')}</span>
-                                      </a>
-                                    ) : (
-                                      <div key={field.key} className="flex items-center gap-1 text-muted-foreground">
-                                        <span className="text-gray-400">{field.label}:</span> {val}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-
-                              <div className="border-t pt-2 space-y-1 text-xs" dir="ltr">
-                                {project.git_repo && (
-                                  <a href={project.git_repo} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
-                                    <GitBranch className="w-3 h-3" /> {project.git_repo.replace('https://github.com/', '')}
-                                  </a>
-                                )}
-                                {project.supabase_url && (
-                                  <a href={project.supabase_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-600 hover:underline">
-                                    <Database className="w-3 h-3" /> {project.supabase_url.replace('https://', '')}
-                                  </a>
-                                )}
-                                {project.subdomain && (
-                                  <div className="flex items-center gap-1 text-muted-foreground">
-                                    <Globe className="w-3 h-3" /> {project.subdomain}
-                                  </div>
-                                )}
-                                {project.production_url && (
-                                  <a href={project.production_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
-                                    <ExternalLink className="w-3 h-3" /> {project.production_url.replace('https://', '')}
-                                  </a>
-                                )}
-                              </div>
-
-                              {project.notes && (
-                                <p className="text-xs text-muted-foreground border-t pt-2">{project.notes}</p>
-                              )}
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
+                  {selectedPlatform && selectedPlatform.fields.length > 0 && (
+                    <div className="grid md:grid-cols-2 gap-4 p-3 bg-gray-50 rounded-2xl border">
+                      {selectedPlatform.fields.map(field => (
+                        <div key={field.key}>
+                          <Label className="text-xs">{field.label}</Label>
+                          <Input
+                            value={formData.platform_data?.[field.key] || ''}
+                            onChange={(e) => updatePlatformField(field.key, e.target.value)}
+                            placeholder={field.placeholder}
+                            dir="ltr"
+                            className="text-sm rounded-xl"
+                          />
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+
+                {/* Infrastructure */}
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3 text-sm">תשתית ולינקים</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="flex items-center gap-1"><GitBranch className="w-4 h-4" /> Git Repository</Label>
+                      <Input value={formData.git_repo} onChange={(e) => setFormData(p => ({ ...p, git_repo: e.target.value }))} placeholder="https://github.com/user/repo" dir="ltr" className="rounded-xl" />
+                    </div>
+                    <div>
+                      <Label className="flex items-center gap-1"><Database className="w-4 h-4" /> Supabase URL</Label>
+                      <Input value={formData.supabase_url} onChange={(e) => setFormData(p => ({ ...p, supabase_url: e.target.value }))} placeholder="https://xxxxx.supabase.co" dir="ltr" className="rounded-xl" />
+                    </div>
+                    <div>
+                      <Label className="flex items-center gap-1"><Globe className="w-4 h-4" /> Subdomain</Label>
+                      <Input value={formData.subdomain} onChange={(e) => setFormData(p => ({ ...p, subdomain: e.target.value }))} placeholder="app.example.com" dir="ltr" className="rounded-xl" />
+                    </div>
+                    <div>
+                      <Label className="flex items-center gap-1"><ExternalLink className="w-4 h-4" /> Production URL</Label>
+                      <Input value={formData.production_url} onChange={(e) => setFormData(p => ({ ...p, production_url: e.target.value }))} placeholder="https://www.example.com" dir="ltr" className="rounded-xl" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>הערות</Label>
+                  <Textarea value={formData.notes} onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))} placeholder="הערות נוספות..." rows={2} className="rounded-xl" />
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={cancelEdit} className="flex items-center gap-1 rounded-xl">
+                    <X className="w-4 h-4" /> ביטול
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={!formData.name}
+                    className="flex items-center gap-1 rounded-xl text-white"
+                    style={{ background: `linear-gradient(135deg, ${ACCENT}, #6D28D9)` }}
+                  >
+                    <Check className="w-4 h-4" /> {editingProject ? 'עדכן' : 'צור פרויקט'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Projects Grid wrapped in UnifiedAyoaLayout ── */}
+      <UnifiedAyoaLayout
+        tasks={pseudoTasks}
+        isLoading={loading}
+        centerLabel="פרויקטים"
+        centerSub="P6"
+        accentColor={ACCENT}
+        branch="P6"
+        currentMonth={new Date()}
+        onEditTask={(task) => {
+          const proj = projects.find(p => p.id === task.id);
+          if (proj) startEdit(proj);
+        }}
+      >
+        {projects.length === 0 && !isCreating ? (
+          /* ── Empty State ── */
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="rounded-[32px] border-2 border-dashed p-16 text-center"
+            style={{ borderColor: `${ACCENT}30` }}
+          >
+            <div
+              className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${ACCENT}15, ${ACCENT}08)` }}
+            >
+              <FolderKanban className="w-10 h-10" style={{ color: `${ACCENT}60` }} />
+            </div>
+            <p className="text-lg font-bold text-gray-700">אין פרויקטים עדיין</p>
+            <p className="text-sm text-gray-400 mt-1">לחצי על "פרויקט חדש" כדי להתחיל</p>
+          </motion.div>
+        ) : (
+          <>
+            {/* ── Expand/Collapse All ── */}
+            <div className="flex items-center justify-end mb-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (allExpanded) {
+                    const collapsed = {};
+                    statusOptions.forEach(s => { collapsed[s.value] = true; });
+                    setCollapsedGroups(collapsed);
+                    setAllExpanded(false);
+                  } else {
+                    setCollapsedGroups({});
+                    setAllExpanded(true);
+                  }
+                }}
+                className="text-xs gap-1 rounded-xl"
+              >
+                {allExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
+              </Button>
+            </div>
+
+            {/* ── Status Groups ── */}
+            <div className="space-y-4">
+              {statusOptions.map(statusOpt => {
+                const groupProjects = projects.filter(p => (p.status || 'planning') === statusOpt.value);
+                if (groupProjects.length === 0) return null;
+                const groupKey = statusOpt.value;
+                const isCollapsed = collapsedGroups[groupKey];
+
+                return (
+                  <motion.div
+                    key={groupKey}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mb-1"
+                  >
+                    {/* Group header */}
+                    <button
+                      onClick={() => setCollapsedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }))}
+                      className="w-full flex items-center justify-between p-3 rounded-2xl transition-all hover:shadow-sm"
+                      style={{
+                        background: `linear-gradient(135deg, ${statusOpt.accent}08, ${statusOpt.accent}04)`,
+                        border: `1px solid ${statusOpt.accent}15`,
+                      }}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <ChevronDown
+                          className="w-4 h-4 transition-transform duration-200"
+                          style={{
+                            color: statusOpt.accent,
+                            transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                          }}
+                        />
+                        <span className="text-sm">{statusOpt.icon}</span>
+                        <span className="font-bold text-sm" style={{ color: statusOpt.accent }}>
+                          {statusOpt.label}
+                        </span>
+                        <span
+                          className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
+                          style={{
+                            background: `${statusOpt.accent}15`,
+                            color: statusOpt.accent,
+                          }}
+                        >
+                          {groupProjects.length}
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* Cards grid */}
+                    <AnimatePresence>
+                      {!isCollapsed && (
+                        <motion.div
+                          variants={groupVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-2 grid md:grid-cols-2 lg:grid-cols-3 gap-4"
+                        >
+                          {groupProjects.map((project, idx) => (
+                            <ProjectCard
+                              key={project.id}
+                              project={project}
+                              statusConf={getStatusConfig(project.status)}
+                              platform={getPlatformForProject(project)}
+                              platforms={platforms}
+                              onEdit={startEdit}
+                              onDelete={handleDelete}
+                              custom={idx}
+                            />
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </UnifiedAyoaLayout>
-    </div>
+    </motion.div>
   );
 }
