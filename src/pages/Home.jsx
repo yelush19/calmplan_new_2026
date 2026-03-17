@@ -705,30 +705,61 @@ const BUBBLE_SLOTS = [
   { x: 350, y: 120, ring: 'A' },
 ];
 
-// Which rings to show based on how many tasks
-function getRingsForCount(count) {
-  if (count <= 2) return AYOA_RINGS.filter(r => r.key === 'A');
-  if (count <= 3) return AYOA_RINGS.filter(r => r.key === 'A' || r.key === 'B');
-  if (count <= 4) return AYOA_RINGS.filter(r => r.key !== 'D');
-  return AYOA_RINGS;
+// ── Context-aware placement ─────────────────────────────────────
+// Work slots: inside Ring A and Ring B (+ AB intersection)
+const WORK_SLOTS = [
+  BUBBLE_SLOTS[0],  // Ring A upper — large
+  BUBBLE_SLOTS[1],  // Ring A lower-left — large
+  BUBBLE_SLOTS[5],  // Ring A left — small
+  BUBBLE_SLOTS[2],  // AB intersection — medium
+  BUBBLE_SLOTS[3],  // Ring B upper — medium
+  BUBBLE_SLOTS[8],  // Ring A top — small
+];
+// Home slots: inside Ring C and Ring D
+const HOME_SLOTS = [
+  BUBBLE_SLOTS[4],  // Ring C center — medium
+  BUBBLE_SLOTS[6],  // Ring C lower — small
+  BUBBLE_SLOTS[7],  // Ring D center — tiny
+];
+
+// Assign tasks to positions based on their context (work/home)
+function assignSlots(tasks) {
+  let wi = 0, hi = 0;
+  return tasks.map(task => {
+    const ctx = getTaskContext(task);
+    if (ctx === 'home' && hi < HOME_SLOTS.length) {
+      return HOME_SLOTS[hi++];
+    }
+    // work, other, or home overflow → work slots
+    if (wi < WORK_SLOTS.length) return WORK_SLOTS[wi++];
+    // absolute fallback
+    return BUBBLE_SLOTS[wi++ % BUBBLE_SLOTS.length];
+  });
 }
 
-// Assign tasks to slots based on count
-function getSlots(count) {
-  // For each count, pick specific slots that look best
-  const slotPicks = {
-    1: [0],
-    2: [0, 2],
-    3: [0, 2, 4],
-    4: [0, 1, 3, 4],
-    5: [0, 1, 2, 3, 4],
-  };
-  return (slotPicks[count] || slotPicks[5]).map(i => BUBBLE_SLOTS[i]);
+// Which rings to show based on task contexts
+function getRingsForTasks(tasks) {
+  const hasWork = tasks.some(t => getTaskContext(t) !== 'home');
+  const hasHome = tasks.some(t => getTaskContext(t) === 'home');
+  const rings = [];
+  if (hasWork) {
+    rings.push(AYOA_RINGS[0]); // Ring A
+    if (tasks.length >= 3) rings.push(AYOA_RINGS[1]); // Ring B
+  }
+  if (hasHome) {
+    rings.push(AYOA_RINGS[2]); // Ring C
+    if (tasks.filter(t => getTaskContext(t) === 'home').length >= 2) {
+      rings.push(AYOA_RINGS[3]); // Ring D
+    }
+  }
+  // Always show at least Ring A
+  if (rings.length === 0) rings.push(AYOA_RINGS[0]);
+  return rings;
 }
 
 function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
-  const slots = useMemo(() => getSlots(tasks.length), [tasks.length]);
-  const rings = useMemo(() => getRingsForCount(tasks.length), [tasks.length]);
+  const slots = useMemo(() => assignSlots(tasks), [tasks]);
+  const rings = useMemo(() => getRingsForTasks(tasks), [tasks]);
   const bubbleSizes = tasks.map(t => BUBBLE_SIZE[t.priority] || 95);
 
   return (
