@@ -188,11 +188,22 @@ function DraggableFab({ storageKey, children, className = '' }) {
   const fullKey = `calmplan_drag_${storageKey}`;
   const didDrag = React.useRef(false);
 
-  // Read saved position once on mount via useMemo (stable across re-renders)
+  // Read saved position once on mount — auto-reset if off-screen
   const initPos = React.useMemo(() => {
     try {
       const s = localStorage.getItem(fullKey);
-      if (s) { const p = JSON.parse(s); if (typeof p.x === 'number') return p; }
+      if (s) {
+        const p = JSON.parse(s);
+        if (typeof p.x === 'number') {
+          const vw = window.innerWidth || 800;
+          const vh = window.innerHeight || 600;
+          if (Math.abs(p.x) > vw * 0.8 || Math.abs(p.y) > vh * 0.8) {
+            localStorage.removeItem(fullKey);
+            return { x: 0, y: 0 };
+          }
+          return p;
+        }
+      }
     } catch { /* ignore */ }
     return { x: 0, y: 0 };
   }, [fullKey]);
@@ -221,11 +232,24 @@ function DraggableFab({ storageKey, children, className = '' }) {
     handler?.(e);
   }, []);
 
+  const constraintsRef = React.useRef(null);
+
+  // Set drag constraints to keep FAB within viewport
+  React.useEffect(() => {
+    constraintsRef.current = {
+      top: -(window.innerHeight - 80),
+      bottom: 60,
+      left: -(window.innerWidth - 80),
+      right: window.innerWidth - 80,
+    };
+  }, []);
+
   return (
     <motion.div
       drag
       dragMomentum={false}
       dragElastic={0}
+      dragConstraints={constraintsRef.current || { top: -500, bottom: 60, left: -500, right: 500 }}
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
@@ -1167,7 +1191,7 @@ function LayoutInner({ children }) {
       <DesignFloatingTab />
 
       {/* Floating Add Event FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_add_event" className="fixed bottom-5 left-[8.5rem] z-[9999]">
+      <DraggableFab storageKey="fab_add_event" className="fixed bottom-5 left-[8.5rem] z-[10001]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => navigate(createPageUrl("NewEvent")))}
@@ -1180,7 +1204,7 @@ function LayoutInner({ children }) {
       </DraggableFab>
 
       {/* Floating Quick Add Task FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_quick_add" className="fixed bottom-5 left-[4.5rem] z-[9999]">
+      <DraggableFab storageKey="fab_quick_add" className="fixed bottom-5 left-[4.5rem] z-[10001]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => setShowQuickAdd(true))}
@@ -1193,7 +1217,7 @@ function LayoutInner({ children }) {
       </DraggableFab>
 
       {/* Floating Sticky Notes FAB — draggable, always visible */}
-      <DraggableFab storageKey="fab_notes" className="fixed bottom-5 left-5 z-[9999]">
+      <DraggableFab storageKey="fab_notes" className="fixed bottom-5 left-5 z-[10001]">
         {({ guardClick }) => (
           <button
             onClick={guardClick(() => setNotesOpen(!notesOpen))}
