@@ -357,7 +357,9 @@ export default function HomePage() {
   const calmTasks = useMemo(() => {
     if (!data) return [];
     const merged = [...(data.overdue || []), ...(data.today || [])];
-    return sortByPriority(merged).slice(0, 5);
+    const result = sortByPriority(merged).slice(0, 5);
+    console.log('[Home] calmTasks computed:', { mergedLen: merged.length, resultLen: result.length, overdueLen: (data.overdue || []).length, todayLen: (data.today || []).length, sample: result[0] ? { id: result[0].id, title: result[0].title, status: result[0].status } : null });
+    return result;
   }, [data]);
 
   if (isLoading || !data) {
@@ -554,6 +556,8 @@ export default function HomePage() {
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
         {/* ═══ 3. "מה אפשר לעשות היום" — AYOA-style mini-canvas ═══ */}
+        {/* DEBUG: confirm rendering branch */}
+        {(() => { console.log('[Home] calmTasks.length for render branch:', calmTasks.length); return null; })()}
         {calmTasks.length === 0 ? (
           <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
             <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
@@ -949,6 +953,7 @@ function taskToRingId(task) {
 }
 
 function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChange, onShowFullMap }) {
+  console.log('[AyoaMiniCanvas] RENDER called, tasks:', tasks?.length, 'allTasks:', allTasks?.length);
   const safeTasks = tasks || [];
   const safeAllTasks = allTasks || [];
   const { layout, persist, loaded } = useCircleMapLayout(safeTasks);
@@ -985,51 +990,29 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
     return counts;
   }, [safeTasks, safeAllTasks, layout.bubbles]);
 
-  if (!loaded) return null;
+  if (!loaded) {
+    console.log('[AyoaMiniCanvas] NOT loaded yet — returning null');
+    return null;
+  }
+
+  console.log('[AyoaMiniCanvas] LOADED, rendering. bubbles:', Object.keys(layout.bubbles || {}).length,
+    'safeTasks:', safeTasks.length, 'rings:', Object.keys(layout.rings || {}));
 
   const ringEntries = ['A', 'B', 'C', 'D'].map(id => ({ id, ...layout.rings[id] }));
 
   return (
     <div style={{ backgroundColor: '#FFFFFF', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
+      {/* DEBUG: visible marker to confirm component mounts */}
+      <div data-testid="ayoa-debug" style={{ fontSize: 10, color: '#94A3B8', textAlign: 'center' }}>
+        [DEBUG] AyoaMiniCanvas mounted — {safeTasks.length} tasks, {Object.keys(layout.bubbles || {}).length} bubbles
+      </div>
       <div ref={canvasRef} className="relative w-full" style={{ aspectRatio: `${VB_W} / ${VB_H}` }}>
-        {/* SVG layer — glass rings + per-ring count labels */}
+        {/* SVG layer — glass rings */}
         <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet">
           <GlassRingDefs />
           {ringEntries.map(ring => (
             <DraggableRing key={ring.id} ring={ring} canvasRef={canvasRef} onDragEnd={handleRingDragEnd(ring.id)} />
           ))}
-          {/* Per-ring count labels */}
-          {ringEntries.map(ring => {
-            const c = ringCounts[ring.id];
-            if (!c || c.total === 0) return null;
-            // Position label at top of ring
-            const labelX = ring.cx;
-            const labelY = ring.cy - ring.r - 8;
-            return (
-              <g key={`label-${ring.id}`}>
-                {/* Background pill */}
-                <rect
-                  x={labelX - 36} y={labelY - 11}
-                  width={72} height={22} rx={11}
-                  fill="rgba(255,255,255,0.85)"
-                  stroke={RING_COLOR[ring.id]}
-                  strokeWidth={1}
-                  style={{ pointerEvents: 'none' }}
-                />
-                <text
-                  x={labelX} y={labelY + 4}
-                  textAnchor="middle"
-                  fill={RING_COLOR[ring.id]}
-                  fontSize={11}
-                  fontWeight={600}
-                  fontFamily="inherit"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {RING_LABEL[ring.id]} {c.visible}/{c.total}
-                </text>
-              </g>
-            );
-          })}
         </svg>
 
         {/* HTML layer — draggable bubbles (percentage-positioned) */}
@@ -1047,6 +1030,28 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
           })}
         </AnimatePresence>
       </div>
+
+      {/* Per-ring counts — HTML below canvas */}
+      {(() => {
+        const activeRings = ringEntries.filter(ring => {
+          const c = ringCounts[ring.id];
+          return c && c.total > 0;
+        });
+        if (activeRings.length === 0) return null;
+        return (
+          <div className="flex justify-center gap-3 mt-1.5 flex-wrap">
+            {activeRings.map(ring => {
+              const c = ringCounts[ring.id];
+              return (
+                <span key={ring.id} className="inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2.5 py-0.5"
+                  style={{ color: RING_COLOR[ring.id], backgroundColor: `${RING_COLOR[ring.id]}10`, border: `1px solid ${RING_COLOR[ring.id]}30` }}>
+                  {RING_LABEL[ring.id]} {c.visible}/{c.total}
+                </span>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {totalExtra > 0 && (
         <button
