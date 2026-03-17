@@ -937,7 +937,7 @@ function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
 
   return (
     <div style={{ backgroundColor: '#FFFFFF' }}>
-      <div ref={canvasRef} className="relative w-full" style={{ aspectRatio: `${VB_W} / ${VB_H}` }}>
+      <div ref={canvasRef} className="relative" style={{ maxWidth: 1100, width: '100%', margin: '0 auto', aspectRatio: `${VB_W} / ${VB_H}` }}>
         {/* SVG layer — glass rings */}
         <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet">
           <GlassRingDefs />
