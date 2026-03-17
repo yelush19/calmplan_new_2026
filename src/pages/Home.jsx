@@ -18,7 +18,7 @@ import {
   Map, ArrowRight,
 } from "lucide-react";
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
-import TaskEditDialog from "@/components/tasks/TaskEditDialog";
+import TaskSidePanel from "@/components/tasks/TaskSidePanel";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Pencil, Trash2, Pin } from "lucide-react";
 import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
@@ -487,7 +487,7 @@ export default function HomePage() {
 
         {/* Dialogs */}
         <QuickAddTaskDialog open={showQuickAdd} onOpenChange={setShowQuickAdd} onCreated={loadData} />
-        <TaskEditDialog task={editingTask} open={!!editingTask} onClose={() => setEditingTask(null)} onSave={handleEditTask} onDelete={handleDeleteTask} />
+        <TaskSidePanel task={editingTask} open={!!editingTask} onClose={() => setEditingTask(null)} onSave={handleEditTask} onDelete={handleDeleteTask} />
         <TaskToNoteDialog task={noteTask} open={!!noteTask} onClose={() => setNoteTask(null)} />
         {ConfirmDialogComponent}
       </div>
@@ -625,7 +625,7 @@ export default function HomePage() {
 
       {/* Dialogs */}
       <QuickAddTaskDialog open={showQuickAdd} onOpenChange={setShowQuickAdd} onCreated={loadData} />
-      <TaskEditDialog task={editingTask} open={!!editingTask} onClose={() => setEditingTask(null)} onSave={handleEditTask} onDelete={handleDeleteTask} />
+      <TaskSidePanel task={editingTask} open={!!editingTask} onClose={() => setEditingTask(null)} onSave={handleEditTask} onDelete={handleDeleteTask} />
       <TaskToNoteDialog task={noteTask} open={!!noteTask} onClose={() => setNoteTask(null)} />
       {ConfirmDialogComponent}
     </div>
@@ -642,27 +642,20 @@ function EmptyState({ icon, text }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// AYOA Circle Map — v3: ring-coloured bubbles + drag-and-drop
-// ═══════════════════════════════════════════════════════════════════
-//
-// Data model: CircleMapLayout { rings, bubbles }
-//   Persisted in SystemConfig (config_key = 'circle_map_layout').
-//   All positions read from this structure; nothing is hard-coded at render time.
-//
-// Bubble colours derive from the ring they belong to.
-// Drag-and-drop: pointer-events on both rings and bubbles.
+// AYOA Circle Map — v4
+//   Full-width responsive canvas (viewBox coordinate system)
+//   Glass/diamond rings with animated shimmer
+//   Ring-coloured bubbles, drag-and-drop, persisted via SystemConfig
+//   Overlap rule: smallest-radius ring wins + 12px nudge toward centre
 // ═══════════════════════════════════════════════════════════════════
 
-const CANVAS_W = 900;
-const CANVAS_H = 600;
+// ViewBox coordinate system — abstract, not pixel sizes.
+// The SVG + HTML layers scale to fill available width via aspect-ratio.
+const VB_W = 900;
+const VB_H = 600;
 
-// ── Ring visual constants (colour + stroke) ────────────────────
-const RING_STYLE = {
-  A: { color: '#F97316', sw: 2.5 },
-  B: { color: '#EC4899', sw: 2.5 },
-  C: { color: '#06B6D4', sw: 2.5 },
-  D: { color: '#F97316', sw: 2.5 },
-};
+// ── Ring colours ───────────────────────────────────────────────
+const RING_COLOR = { A: '#F97316', B: '#EC4899', C: '#06B6D4', D: '#F97316' };
 
 // ── Bubble colour palettes per ring ────────────────────────────
 const RING_PALETTE = {
@@ -671,7 +664,7 @@ const RING_PALETTE = {
   B: { fill: '#FCE7F3', border: '#EC4899' },
   C: { fill: '#E0F2FE', border: '#06B6D4' },
 };
-const NEUTRAL_PALETTE = { fill: '#FFF7ED', border: '#FED7AA' }; // fallback
+const NEUTRAL_PALETTE = { fill: '#FFF7ED', border: '#FED7AA' };
 
 // ── Bubble sizes ───────────────────────────────────────────────
 const SIZE_BY_PRIORITY = { urgent: 160, high: 125, medium: 95, low: 70 };
@@ -689,7 +682,7 @@ const STATUS_DOT = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// §1  CircleMapLayout — default values (used on first load)
+// §1  CircleMapLayout defaults
 // ═══════════════════════════════════════════════════════════════════
 
 const DEFAULT_RINGS = {
@@ -699,11 +692,10 @@ const DEFAULT_RINGS = {
   D: { id: 'D', cx:  70, cy: 420, r:  80 },
 };
 
-// Auto-placement slots for new tasks (context → ring)
 const AUTO_SLOTS_WORK = [
   { cx: 260, cy: 250, ringId: 'A' },
   { cx: 160, cy: 410, ringId: 'A' },
-  { cx: 430, cy: 200, ringId: 'A' },   // near A↔B intersection
+  { cx: 430, cy: 200, ringId: 'A' },
   { cx: 160, cy: 190, ringId: 'A' },
   { cx: 570, cy: 150, ringId: 'B' },
   { cx: 340, cy: 115, ringId: 'A' },
@@ -717,7 +709,7 @@ const AUTO_SLOTS_HOME = [
 const LAYOUT_CONFIG_KEY = 'circle_map_layout';
 
 // ═══════════════════════════════════════════════════════════════════
-// §2  Persistence: load / save CircleMapLayout via SystemConfig
+// §2  Persistence
 // ═══════════════════════════════════════════════════════════════════
 
 async function loadCircleMapLayout() {
@@ -731,22 +723,15 @@ async function loadCircleMapLayout() {
 async function saveCircleMapLayout(layout, existingId) {
   const payload = { config_key: LAYOUT_CONFIG_KEY, data: layout };
   try {
-    if (existingId) {
-      await SystemConfig.update(existingId, payload);
-    } else {
-      const created = await SystemConfig.create(payload);
-      return created.id;
-    }
-  } catch (err) {
-    console.warn('[CircleMap] persist failed, falling back to localStorage', err);
-  }
-  // localStorage fallback
+    if (existingId) { await SystemConfig.update(existingId, payload); }
+    else { const c = await SystemConfig.create(payload); return c.id; }
+  } catch (err) { console.warn('[CircleMap] persist failed', err); }
   localStorage.setItem('calmplan_circle_map_layout', JSON.stringify(layout));
   return existingId;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// §3  useCircleMapLayout — React hook
+// §3  useCircleMapLayout hook
 // ═══════════════════════════════════════════════════════════════════
 
 function useCircleMapLayout(tasks) {
@@ -754,25 +739,18 @@ function useCircleMapLayout(tasks) {
   const [configId, setConfigId] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
-  // Load persisted layout on mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const record = await loadCircleMapLayout();
       if (cancelled) return;
       if (record?.data) {
-        // Merge defaults for any missing ring
-        const rings = { ...DEFAULT_RINGS, ...record.data.rings };
-        setLayout({ rings, bubbles: record.data.bubbles || {} });
+        setLayout({ rings: { ...DEFAULT_RINGS, ...record.data.rings }, bubbles: record.data.bubbles || {} });
         setConfigId(record.id);
       } else {
-        // Try localStorage fallback
         try {
           const ls = localStorage.getItem('calmplan_circle_map_layout');
-          if (ls) {
-            const parsed = JSON.parse(ls);
-            setLayout({ rings: { ...DEFAULT_RINGS, ...parsed.rings }, bubbles: parsed.bubbles || {} });
-          }
+          if (ls) { const p = JSON.parse(ls); setLayout({ rings: { ...DEFAULT_RINGS, ...p.rings }, bubbles: p.bubbles || {} }); }
         } catch { /* ignore */ }
       }
       setLoaded(true);
@@ -780,79 +758,76 @@ function useCircleMapLayout(tasks) {
     return () => { cancelled = true; };
   }, []);
 
-  // Auto-place tasks that have no saved BubbleLayout yet
   useEffect(() => {
     if (!loaded) return;
     let changed = false;
     const newBubbles = { ...layout.bubbles };
-    let wi = 0, hi = 0;
-
-    // Count how many existing bubbles use each slot to avoid overlap
-    const usedWork = Object.values(newBubbles).filter(b => b.ringId === 'A' || b.ringId === 'B').length;
-    const usedHome = Object.values(newBubbles).filter(b => b.ringId === 'C' || b.ringId === 'D').length;
-    wi = usedWork;
-    hi = usedHome;
+    let wi = Object.values(newBubbles).filter(b => b.ringId === 'A' || b.ringId === 'B').length;
+    let hi = Object.values(newBubbles).filter(b => b.ringId === 'C' || b.ringId === 'D').length;
 
     for (const task of tasks) {
-      if (newBubbles[task.id]) continue; // already placed
+      if (newBubbles[task.id]) continue;
       changed = true;
       const ctx = getTaskContext(task);
       let slot;
-      if (ctx === 'home' && hi < AUTO_SLOTS_HOME.length) {
-        slot = AUTO_SLOTS_HOME[hi++];
-      } else if (wi < AUTO_SLOTS_WORK.length) {
-        slot = AUTO_SLOTS_WORK[wi++];
-      } else {
-        slot = AUTO_SLOTS_WORK[wi % AUTO_SLOTS_WORK.length];
-        wi++;
-      }
+      if (ctx === 'home' && hi < AUTO_SLOTS_HOME.length) { slot = AUTO_SLOTS_HOME[hi++]; }
+      else if (wi < AUTO_SLOTS_WORK.length) { slot = AUTO_SLOTS_WORK[wi++]; }
+      else { slot = AUTO_SLOTS_WORK[wi % AUTO_SLOTS_WORK.length]; wi++; }
       newBubbles[task.id] = { taskId: task.id, cx: slot.cx, cy: slot.cy, ringId: slot.ringId };
     }
     if (changed) {
-      const newLayout = { ...layout, bubbles: newBubbles };
-      setLayout(newLayout);
-      saveCircleMapLayout(newLayout, configId).then(id => { if (id && !configId) setConfigId(id); });
+      const nl = { ...layout, bubbles: newBubbles };
+      setLayout(nl);
+      saveCircleMapLayout(nl, configId).then(id => { if (id && !configId) setConfigId(id); });
     }
   }, [tasks, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Persist helper
-  const persist = useCallback((newLayout) => {
-    setLayout(newLayout);
-    saveCircleMapLayout(newLayout, configId).then(id => { if (id && !configId) setConfigId(id); });
+  const persist = useCallback((nl) => {
+    setLayout(nl);
+    saveCircleMapLayout(nl, configId).then(id => { if (id && !configId) setConfigId(id); });
   }, [configId]);
 
   return { layout, persist, loaded };
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// §4  Ring-ID detection: which ring contains a point?
+// §4  Ring detection — smallest-radius wins + 12px nudge
 // ═══════════════════════════════════════════════════════════════════
-const RING_TOLERANCE = 20; // px beyond radius still counts
+const RING_TOLERANCE = 20;
+const NUDGE_PX = 12;
 
-function detectRing(px, py, rings) {
-  // Return the ring whose center is closest, provided the point is within r + tolerance
-  let best = null;
-  let bestDist = Infinity;
+function detectRingAndNudge(px, py, rings) {
+  const candidates = [];
   for (const rid of ['A', 'B', 'C', 'D']) {
     const ring = rings[rid];
-    const dx = px - ring.cx;
-    const dy = py - ring.cy;
+    const dx = px - ring.cx, dy = py - ring.cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist <= ring.r + RING_TOLERANCE && dist < bestDist) {
-      best = rid;
-      bestDist = dist;
+    if (dist <= ring.r + RING_TOLERANCE) {
+      candidates.push({ rid, ring, dist });
     }
   }
-  return best; // null if outside all rings
+  if (candidates.length === 0) return { ringId: null, cx: px, cy: py };
+
+  // Smallest radius wins (most specific group)
+  candidates.sort((a, b) => a.ring.r - b.ring.r);
+  const winner = candidates[0];
+
+  // Nudge 12px towards winner's centre
+  const dx = winner.ring.cx - px;
+  const dy = winner.ring.cy - py;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  let nx = px, ny = py;
+  if (d > 1) { nx = px + (dx / d) * NUDGE_PX; ny = py + (dy / d) * NUDGE_PX; }
+
+  return { ringId: winner.rid, cx: nx, cy: ny };
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// §5  Pointer-drag hook (works for both rings and bubbles)
+// §5  Pointer-drag hook
 // ═══════════════════════════════════════════════════════════════════
 
 function usePointerDrag(onDragEnd) {
   const [dragging, setDragging] = useState(false);
-  const [offset, setOffset] = useState({ dx: 0, dy: 0 });
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
 
@@ -861,29 +836,23 @@ function usePointerDrag(onDragEnd) {
     e.stopPropagation();
     containerRef.current = containerEl;
     const rect = containerEl.getBoundingClientRect();
-    // Convert page coords to SVG/canvas coords
-    const scaleX = CANVAS_W / rect.width;
-    const scaleY = CANVAS_H / rect.height;
-    const canvasX = (e.clientX - rect.left) * scaleX;
-    const canvasY = (e.clientY - rect.top) * scaleY;
-    setOffset({ dx: startX - canvasX, dy: startY - canvasY });
+    const scaleX = VB_W / rect.width;
+    const scaleY = VB_H / rect.height;
+    const offX = startX - (e.clientX - rect.left) * scaleX;
+    const offY = startY - (e.clientY - rect.top) * scaleY;
     setPos({ x: startX, y: startY });
     setDragging(true);
 
-    const onMove = (ev) => {
-      const mx = (ev.clientX - rect.left) * scaleX;
-      const my = (ev.clientY - rect.top) * scaleY;
-      const nx = Math.max(0, Math.min(CANVAS_W, mx + (startX - canvasX)));
-      const ny = Math.max(0, Math.min(CANVAS_H, my + (startY - canvasY)));
-      setPos({ x: nx, y: ny });
-    };
+    const toCanvas = (ev) => ({
+      x: Math.max(0, Math.min(VB_W, (ev.clientX - rect.left) * scaleX + offX)),
+      y: Math.max(0, Math.min(VB_H, (ev.clientY - rect.top) * scaleY + offY)),
+    });
+
+    const onMove = (ev) => { const p = toCanvas(ev); setPos(p); };
     const onUp = (ev) => {
-      const mx = (ev.clientX - rect.left) * scaleX;
-      const my = (ev.clientY - rect.top) * scaleY;
-      const nx = Math.max(0, Math.min(CANVAS_W, mx + (startX - canvasX)));
-      const ny = Math.max(0, Math.min(CANVAS_H, my + (startY - canvasY)));
+      const p = toCanvas(ev);
       setDragging(false);
-      onDragEnd(nx, ny);
+      onDragEnd(p.x, p.y);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
@@ -895,27 +864,71 @@ function usePointerDrag(onDragEnd) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// §6  AyoaMiniCanvas — main component
+// §6  Glass ring SVG defs (glow + shimmer keyframes)
+// ═══════════════════════════════════════════════════════════════════
+
+const SHIMMER_CSS = `
+@keyframes cm-shimmer {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -2000; }
+}
+`;
+
+function GlassRingDefs() {
+  return (
+    <defs>
+      <filter id="cm-glow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+      <style>{SHIMMER_CSS}</style>
+    </defs>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// §7  DraggableRing — glass/diamond style with shimmer
+// ═══════════════════════════════════════════════════════════════════
+
+function DraggableRing({ ring, canvasRef, onDragEnd }) {
+  const { dragging, pos, onPointerDown } = usePointerDrag(onDragEnd);
+  const cx = dragging ? pos.x : ring.cx;
+  const cy = dragging ? pos.y : ring.cy;
+  const color = RING_COLOR[ring.id];
+  const circumference = 2 * Math.PI * ring.r;
+
+  return (
+    <g>
+      {/* Layer 1: soft glow */}
+      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke={color} strokeWidth={6} opacity={0.15} filter="url(#cm-glow)" style={{ pointerEvents: 'none' }} />
+      {/* Layer 2: glass stroke — white core + coloured edge */}
+      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={3} style={{ pointerEvents: 'none' }} />
+      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke={color} strokeWidth={2} opacity={0.55}
+        style={{ cursor: 'grab', pointerEvents: 'stroke' }}
+        onPointerDown={e => onPointerDown(e, ring.cx, ring.cy, canvasRef.current)} />
+      {/* Layer 3: shimmer — bright dash travelling along ring */}
+      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={3}
+        strokeDasharray={`${circumference * 0.08} ${circumference * 0.92}`} strokeLinecap="round"
+        style={{ animation: 'cm-shimmer 10s linear infinite', pointerEvents: 'none' }} />
+    </g>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// §8  AyoaMiniCanvas — full-width responsive
 // ═══════════════════════════════════════════════════════════════════
 
 function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
   const { layout, persist, loaded } = useCircleMapLayout(tasks);
   const canvasRef = useRef(null);
 
-  // ── Ring drag handler factory ──
   const handleRingDragEnd = useCallback((ringId) => (nx, ny) => {
-    const newRings = { ...layout.rings, [ringId]: { ...layout.rings[ringId], cx: nx, cy: ny } };
-    persist({ ...layout, rings: newRings, bubbles: layout.bubbles });
+    persist({ ...layout, rings: { ...layout.rings, [ringId]: { ...layout.rings[ringId], cx: nx, cy: ny } } });
   }, [layout, persist]);
 
-  // ── Bubble drag handler factory ──
   const handleBubbleDragEnd = useCallback((taskId) => (nx, ny) => {
-    const newRingId = detectRing(nx, ny, layout.rings);
-    const newBubbles = {
-      ...layout.bubbles,
-      [taskId]: { taskId, cx: nx, cy: ny, ringId: newRingId },
-    };
-    persist({ ...layout, rings: layout.rings, bubbles: newBubbles });
+    const { ringId, cx, cy } = detectRingAndNudge(nx, ny, layout.rings);
+    persist({ ...layout, bubbles: { ...layout.bubbles, [taskId]: { taskId, cx, cy, ringId } } });
   }, [layout, persist]);
 
   if (!loaded) return null;
@@ -924,29 +937,16 @@ function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
 
   return (
     <div style={{ backgroundColor: '#FFFFFF' }}>
-      <div
-        ref={canvasRef}
-        className="relative mx-auto"
-        style={{ width: CANVAS_W, maxWidth: '100%', height: CANVAS_H }}
-      >
-        {/* SVG layer — draggable ring outlines */}
-        <svg
-          className="absolute inset-0 w-full h-full"
-          viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
-          preserveAspectRatio="xMidYMid meet"
-        >
+      <div ref={canvasRef} className="relative w-full" style={{ aspectRatio: `${VB_W} / ${VB_H}` }}>
+        {/* SVG layer — glass rings */}
+        <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet">
+          <GlassRingDefs />
           {ringEntries.map(ring => (
-            <DraggableRing
-              key={ring.id}
-              ring={ring}
-              style={RING_STYLE[ring.id]}
-              canvasRef={canvasRef}
-              onDragEnd={handleRingDragEnd(ring.id)}
-            />
+            <DraggableRing key={ring.id} ring={ring} canvasRef={canvasRef} onDragEnd={handleRingDragEnd(ring.id)} />
           ))}
         </svg>
 
-        {/* HTML layer — draggable interactive bubbles */}
+        {/* HTML layer — draggable bubbles (percentage-positioned) */}
         <AnimatePresence>
           {tasks.map(task => {
             const bl = layout.bubbles[task.id];
@@ -954,18 +954,9 @@ function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
             const size = SIZE_BY_PRIORITY[task.priority] || 95;
             const palette = bl.ringId ? (RING_PALETTE[bl.ringId] || NEUTRAL_PALETTE) : NEUTRAL_PALETTE;
             return (
-              <CircleBubble
-                key={task.id}
-                task={task}
-                size={size}
-                cx={bl.cx}
-                cy={bl.cy}
-                palette={palette}
-                canvasRef={canvasRef}
-                onEdit={onEdit}
-                onStatusChange={onStatusChange}
-                onDragEnd={handleBubbleDragEnd(task.id)}
-              />
+              <CircleBubble key={task.id} task={task} size={size} cx={bl.cx} cy={bl.cy}
+                palette={palette} canvasRef={canvasRef} onEdit={onEdit} onStatusChange={onStatusChange}
+                onDragEnd={handleBubbleDragEnd(task.id)} />
             );
           })}
         </AnimatePresence>
@@ -981,28 +972,7 @@ function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// §7  DraggableRing — SVG circle with pointer-drag
-// ═══════════════════════════════════════════════════════════════════
-
-function DraggableRing({ ring, style, canvasRef, onDragEnd }) {
-  const { dragging, pos, onPointerDown } = usePointerDrag(onDragEnd);
-  const cx = dragging ? pos.x : ring.cx;
-  const cy = dragging ? pos.y : ring.cy;
-
-  return (
-    <circle
-      cx={cx} cy={cy} r={ring.r}
-      fill="none"
-      stroke={style.color}
-      strokeWidth={style.sw}
-      style={{ cursor: 'grab', pointerEvents: 'stroke' }}
-      onPointerDown={e => onPointerDown(e, ring.cx, ring.cy, canvasRef.current)}
-    />
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §8  CircleBubble — draggable, ring-coloured bubble
+// §9  CircleBubble — percentage-positioned, ring-coloured, draggable
 // ═══════════════════════════════════════════════════════════════════
 
 function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatusChange, onDragEnd }) {
@@ -1011,21 +981,21 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
   const { dragging, pos, onPointerDown } = usePointerDrag(onDragEnd);
   const sCfg   = statusConfig[task.status] || statusConfig.not_started;
   const dotClr = STATUS_DOT[task.status] || '#94A3B8';
-  const half   = size / 2;
 
   const bx = dragging ? pos.x : cx;
   const by = dragging ? pos.y : cy;
 
-  // Track whether this was a drag vs. a click
+  // Convert viewBox coords to percentages for the HTML layer
+  const leftPct = (bx / VB_W) * 100;
+  const topPct  = (by / VB_H) * 100;
+  const half = size / 2;
+
   const dragStartRef = useRef(null);
 
   const changeStatus = (e, ns) => {
-    e.stopPropagation();
-    setPicker(false);
-    if (ns === 'production_completed') {
-      setFading(true);
-      setTimeout(() => onStatusChange(task, ns), 400);
-    } else { onStatusChange(task, ns); }
+    e.stopPropagation(); setPicker(false);
+    if (ns === 'production_completed') { setFading(true); setTimeout(() => onStatusChange(task, ns), 400); }
+    else onStatusChange(task, ns);
   };
 
   const titlePx  = size >= 160 ? 15 : size >= 125 ? 13 : size >= 95 ? 11 : 10;
@@ -1036,13 +1006,11 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     onPointerDown(e, cx, cy, canvasRef.current);
   };
-
   const handleClick = (e) => {
-    // Only fire onEdit if the pointer barely moved (not a drag)
     if (dragStartRef.current) {
       const dx = Math.abs(e.clientX - dragStartRef.current.x);
       const dy = Math.abs(e.clientY - dragStartRef.current.y);
-      if (dx > 5 || dy > 5) return; // was a drag, ignore click
+      if (dx > 5 || dy > 5) return;
     }
     onEdit(task);
   };
@@ -1055,7 +1023,8 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
       className="absolute"
       style={{
-        left: bx - half, top: by - half,
+        left: `calc(${leftPct}% - ${half}px)`,
+        top:  `calc(${topPct}%  - ${half}px)`,
         width: size, height: size,
         zIndex: dragging ? 50 : 10,
         cursor: dragging ? 'grabbing' : 'grab',
@@ -1063,22 +1032,15 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
       }}
       onPointerDown={handlePointerDown}
     >
-      <div
-        onClick={handleClick}
+      <div onClick={handleClick}
         className="w-full h-full rounded-full flex flex-col items-center justify-center text-center transition-shadow hover:shadow-md p-2 select-none"
-        style={{ backgroundColor: palette.fill, border: `2px solid ${palette.border}` }}
-      >
-        <span className="font-bold leading-tight line-clamp-2"
-          style={{ fontSize: titlePx, color: '#000', maxWidth: textMaxW }}>
+        style={{ backgroundColor: palette.fill, border: `2px solid ${palette.border}` }}>
+        <span className="font-bold leading-tight line-clamp-2" style={{ fontSize: titlePx, color: '#000', maxWidth: textMaxW }}>
           {task.title}
         </span>
-
         {size >= 95 ? (
-          <span
-            className="mt-1 flex items-center gap-1 hover:bg-white/50 rounded-full px-1.5 py-0.5 transition-colors"
-            onClick={e => { e.stopPropagation(); setPicker(!picker); }}
-            title="שנה סטטוס"
-          >
+          <span className="mt-1 flex items-center gap-1 hover:bg-white/50 rounded-full px-1.5 py-0.5 transition-colors"
+            onClick={e => { e.stopPropagation(); setPicker(!picker); }} title="שנה סטטוס">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: dotClr }} />
             <span style={{ fontSize: labelPx, color: '#000' }}>{sCfg.text}</span>
             <ChevronDown className="w-2.5 h-2.5" style={{ color: '#000' }} />
@@ -1090,19 +1052,15 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
 
       <AnimatePresence>
         {picker && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
             className="absolute left-1/2 -translate-x-1/2 z-50 rounded-xl shadow-lg py-1.5 px-1"
-            style={{ top: size + 4, minWidth: 150, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
-          >
+            style={{ top: size + 4, minWidth: 150, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}>
             {QUICK_STATUSES.map(s => (
-              <button key={s.key}
-                onClick={e => changeStatus(e, s.key)}
+              <button key={s.key} onClick={e => changeStatus(e, s.key)}
                 className={`flex items-center gap-2 w-full text-right px-3 py-1.5 rounded-lg transition-colors ${task.status === s.key ? 'font-bold' : ''}`}
                 style={{ fontSize: 13, color: '#000', backgroundColor: task.status === s.key ? '#F7F7F7' : undefined }}
                 onMouseEnter={e => { if (task.status !== s.key) e.currentTarget.style.backgroundColor = '#F7F7F7'; }}
-                onMouseLeave={e => { if (task.status !== s.key) e.currentTarget.style.backgroundColor = ''; }}
-              >
+                onMouseLeave={e => { if (task.status !== s.key) e.currentTarget.style.backgroundColor = ''; }}>
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.dot }} />
                 <span>{s.label}</span>
                 {s.key === 'production_completed' && <CheckCircle className="w-3 h-3 mr-auto" style={{ color: '#10B981' }} />}
@@ -1114,7 +1072,6 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
     </motion.div>
   );
 }
-
 function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
   const [collapsedClients, setCollapsedClients] = useState({});
   const [allExpanded, setAllExpanded] = useState(false);
