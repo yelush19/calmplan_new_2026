@@ -1198,8 +1198,8 @@ function LayoutInner({ children }) {
       <RealityCheck />
       <CompletionFeedback />
 
-      {/* Aggressive Reminder System — global deadline notifications */}
-      <AggressiveReminderSystem />
+      {/* Aggressive Reminder System — disabled (too noisy) */}
+      {/* <AggressiveReminderSystem /> */}
 
       {/* Design Engine Floating Tab — persistent across all pages */}
       <DesignFloatingTab />

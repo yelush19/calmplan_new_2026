@@ -467,6 +467,11 @@ export default function ProjectWorkbook() {
   const [checkedItems, setCheckedItems] = useState({});
   const [expandedPhase, setExpandedPhase] = useState(null);
 
+  /* ── Scroll to top on mount ── */
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [projectId]);
+
   /* ── Load project data ── */
   useEffect(() => {
     if (!projectId) {
