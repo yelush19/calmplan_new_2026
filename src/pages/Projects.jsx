@@ -88,7 +88,8 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
       className="group"
     >
       <div
-        className="relative rounded-[32px] bg-white/90 backdrop-blur-sm border border-white/60 overflow-hidden transition-all duration-300"
+        onClick={() => onOpenWorkbook(project)}
+        className="relative rounded-[32px] bg-white/90 backdrop-blur-sm border border-white/60 overflow-hidden transition-all duration-300 cursor-pointer"
         style={{ boxShadow: `0 4px 20px ${ACCENT}10, 0 1px 3px rgba(0,0,0,0.04)` }}
       >
         {/* Top accent stripe */}
@@ -126,20 +127,14 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
             </div>
             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
-                onClick={() => onOpenWorkbook(project)}
+                onClick={(e) => { e.stopPropagation(); onEdit(project); }}
                 className="p-1.5 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
-                title="חוברת פיתוח"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => onEdit(project)}
-                className="p-1.5 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
+                title="עריכה"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => onDelete(project.id)}
+                onClick={(e) => { e.stopPropagation(); onDelete(project.id); }}
                 className="p-1.5 rounded-xl hover:bg-amber-50 text-gray-400 hover:text-amber-500 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -197,7 +192,7 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
 
           {/* Links row */}
           {(project.git_repo || project.production_url || project.supabase_url || project.subdomain) && (
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
               {project.production_url && (
                 <a
                   href={project.production_url}
