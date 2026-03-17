@@ -352,6 +352,14 @@ export default function HomePage() {
     return calculateCapacity(data.activeTasks || []);
   }, [data]);
 
+  // ── Top 5 tasks for the calm "מה אפשר לעשות היום" section ──
+  // Must be above the early return so hook count is stable across renders
+  const calmTasks = useMemo(() => {
+    if (!data) return [];
+    const merged = [...(data.overdue || []), ...(data.today || [])];
+    return sortByPriority(merged).slice(0, 5);
+  }, [data]);
+
   if (isLoading || !data) {
     return (
       <div className="space-y-6 p-6">
@@ -448,13 +456,6 @@ export default function HomePage() {
 
   const todayTotal = data.today.length + (data.overdue?.length || 0);
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
-
-  // ── Top 5 tasks for the calm "מה אפשר לעשות היום" section ──
-  // Merge overdue + today, sorted by priority, capped at 5
-  const calmTasks = useMemo(() => {
-    const merged = [...(data.overdue || []), ...(data.today || [])];
-    return sortByPriority(merged).slice(0, 5);
-  }, [data.overdue, data.today]);
 
   // ── Full Map View ──
   if (showFullMap) {
