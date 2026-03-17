@@ -641,14 +641,12 @@ function EmptyState({ icon, text }) {
   );
 }
 
-// ─── AYOA Mini-Canvas ───────────────────────────────────────────
-// Renders a big central ring, optional category rings, and sized task bubbles.
+// ─── AYOA-style Circle Map ──────────────────────────────────────
+// 4 colored category rings + dramatically-sized task bubbles
 
 const BUBBLE_FILL = '#FFF7ED';
 const BUBBLE_BORDER = '#FED7AA';
-const RING_STROKE = '#E5E7EB';
 
-// Status dot colors — strict palette: emerald / indigo / orange only
 const QUICK_STATUSES = [
   { key: 'production_completed',   label: 'הושלם',           dotColor: '#10B981' },
   { key: 'waiting_for_materials',  label: 'ממתין לחומרים',   dotColor: '#6366F1' },
@@ -664,81 +662,93 @@ const STATUS_DOT_COLOR = {
   not_started:           '#94A3B8',
 };
 
-// Bubble diameter by priority (hierarchy: bigger = more important)
-// Approved sizes: urgent=140, high=130, medium=115, low=95
-const BUBBLE_SIZE = { urgent: 140, high: 130, medium: 115, low: 95 };
+// ── Bubble sizes — 4 dramatically different tiers ───────────────
+const BUBBLE_SIZE = { urgent: 160, high: 125, medium: 95, low: 70 };
 
-// ── Approved 2-ring layout ──────────────────────────────────────
-// Canvas: 520×420, white background
-// Ring A (large): cx=200, cy=200, r=155
-// Ring B (medium): cx=340, cy=180, r=110 — overlaps Ring A by ~40px
-const CANVAS_W = 520;
-const CANVAS_H = 420;
-const RING_A = { cx: 200, cy: 200, r: 155 };
-const RING_B = { cx: 340, cy: 180, r: 110 };
+// ── Canvas dimensions — large, fills central area ───────────────
+const CANVAS_W = 900;
+const CANVAS_H = 600;
 
-// Exact bubble positions for 1–5 tasks (approved layout)
-function computeCanvasPositions(count) {
-  // 5 tasks: full approved layout
-  const pos5 = [
-    { x: 180, y: 175 },  // #1 largest — inside Ring A, upper-center
-    { x: 120, y: 300 },  // #2 high — inside Ring A, lower-left, touching edge
-    { x: 310, y: 140 },  // #3 medium — inside Ring B, upper, near intersection
-    { x: 345, y: 275 },  // #4 medium — inside Ring B, lower-right
-    { x: 230, y: 330 },  // #5 small — between both rings, bottom-center
-  ];
-  // 4 tasks: drop #5
-  const pos4 = pos5.slice(0, 4);
-  // 3 tasks: #1 and #2 in Ring A, #3 in Ring B
-  const pos3 = [pos5[0], pos5[1], pos5[2]];
-  // 2 tasks: both inside Ring A
-  const pos2 = [
-    { x: 170, y: 165 },
-    { x: 220, y: 280 },
-  ];
-  // 1 task: centered in Ring A
-  const pos1 = [{ x: 200, y: 195 }];
+// ── 4 AYOA-style category rings ─────────────────────────────────
+// Ring A: Big orange — left-center, dominant ring
+// Ring B: Pink/magenta — upper-center-right, overlaps Ring A
+// Ring C: Cyan/turquoise — lower-center-right ("Construction")
+// Ring D: Smaller orange — far left ("Catering")
+const AYOA_RINGS = [
+  { key: 'A', color: '#F97316', cx: 310, cy: 300, r: 220, strokeWidth: 2.5 },
+  { key: 'B', color: '#EC4899', cx: 580, cy: 180, r: 150, strokeWidth: 2.5 },
+  { key: 'C', color: '#06B6D4', cx: 620, cy: 430, r: 140, strokeWidth: 2.5 },
+  { key: 'D', color: '#F97316', cx: 90,  cy: 440, r: 80,  strokeWidth: 2.5 },
+];
 
-  const layouts = { 1: pos1, 2: pos2, 3: pos3, 4: pos4, 5: pos5 };
-  return layouts[count] || pos5;
+// ── Bubble placement slots — organic, spread across rings ───────
+// Each slot: { x, y, ring } — ring indicates which ring this slot belongs to
+// Positions designed to feel like AYOA: spread, not clustered
+const BUBBLE_SLOTS = [
+  // Slot 0: Large bubble, inside Ring A upper area (like "Venue refurbishment")
+  { x: 280, y: 240, ring: 'A' },
+  // Slot 1: Large bubble, inside Ring A lower-left (like "Payments")
+  { x: 170, y: 400, ring: 'A' },
+  // Slot 2: Medium bubble, at intersection of Ring A and Ring B (like "Print campa…")
+  { x: 440, y: 210, ring: 'AB' },
+  // Slot 3: Medium bubble, inside Ring B upper (like "Social media")
+  { x: 580, y: 140, ring: 'B' },
+  // Slot 4: Medium bubble, inside Ring C (like "Pre-event storage")
+  { x: 590, y: 380, ring: 'C' },
+  // Slot 5: Small bubble, inside Ring A left (like "Book artists")
+  { x: 190, y: 200, ring: 'A' },
+  // Slot 6: Small bubble, inside Ring C lower (like "Stage & production")
+  { x: 630, y: 490, ring: 'C' },
+  // Slot 7: Tiny bubble, inside Ring D (like "Catering")
+  { x: 90, y: 440, ring: 'D' },
+  // Slot 8: Small bubble, top of Ring A (like "Spread the word")
+  { x: 350, y: 120, ring: 'A' },
+];
+
+// Which rings to show based on how many tasks
+function getRingsForCount(count) {
+  if (count <= 2) return AYOA_RINGS.filter(r => r.key === 'A');
+  if (count <= 3) return AYOA_RINGS.filter(r => r.key === 'A' || r.key === 'B');
+  if (count <= 4) return AYOA_RINGS.filter(r => r.key !== 'D');
+  return AYOA_RINGS;
 }
 
-// Which rings to show based on task count
-function getRingsForCount(count) {
-  if (count <= 2) return [RING_A]; // only Ring A
-  return [RING_A, RING_B]; // both rings
+// Assign tasks to slots based on count
+function getSlots(count) {
+  // For each count, pick specific slots that look best
+  const slotPicks = {
+    1: [0],
+    2: [0, 2],
+    3: [0, 2, 4],
+    4: [0, 1, 3, 4],
+    5: [0, 1, 2, 3, 4],
+  };
+  return (slotPicks[count] || slotPicks[5]).map(i => BUBBLE_SLOTS[i]);
 }
 
 function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
-  const positions = useMemo(() => computeCanvasPositions(tasks.length), [tasks.length]);
+  const slots = useMemo(() => getSlots(tasks.length), [tasks.length]);
   const rings = useMemo(() => getRingsForCount(tasks.length), [tasks.length]);
-
-  // For 3 tasks, shrink Ring B slightly (r=95 as approved)
-  const adjustedRings = rings.map(ring => {
-    if (ring === RING_B && tasks.length === 3) return { ...ring, r: 95 };
-    return ring;
-  });
-
-  // Assign sizes: tasks are already sorted by priority.
-  // Map index → size: first gets largest available for its priority.
-  const bubbleSizes = tasks.map(t => BUBBLE_SIZE[t.priority] || 115);
+  const bubbleSizes = tasks.map(t => BUBBLE_SIZE[t.priority] || 95);
 
   return (
-    <div className="rounded-2xl py-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+    <div className="py-4" style={{ backgroundColor: '#FFFFFF' }}>
       <div className="relative mx-auto" style={{ width: CANVAS_W, maxWidth: '100%', height: CANVAS_H }}>
-        {/* SVG layer: 2 grey rings */}
+        {/* SVG layer: colored category rings */}
         <svg
           className="absolute inset-0 w-full h-full"
           viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
+          preserveAspectRatio="xMidYMid meet"
           style={{ overflow: 'visible' }}
         >
-          {adjustedRings.map((ring, i) => (
+          {rings.map(ring => (
             <circle
-              key={i}
+              key={ring.key}
               cx={ring.cx} cy={ring.cy} r={ring.r}
               fill="none"
-              stroke={RING_STROKE}
-              strokeWidth={i === 0 ? 2 : 1.5}
+              stroke={ring.color}
+              strokeWidth={ring.strokeWidth}
+              opacity={0.7}
             />
           ))}
         </svg>
@@ -746,14 +756,14 @@ function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
         {/* HTML layer: interactive bubbles */}
         <AnimatePresence>
           {tasks.map((task, i) => {
-            const pos = positions[i];
+            const slot = slots[i];
             return (
               <CanvasBubble
                 key={task.id}
                 task={task}
                 size={bubbleSizes[i]}
-                x={pos.x}
-                y={pos.y}
+                x={slot.x}
+                y={slot.y}
                 onEdit={onEdit}
                 onStatusChange={onStatusChange}
               />
@@ -811,24 +821,33 @@ function CanvasBubble({ task, size, x, y, onEdit, onStatusChange }) {
           border: `2.5px solid ${BUBBLE_BORDER}`,
         }}
       >
-        {/* Title — 15px bold black, max 2 lines */}
+        {/* Title — scales with bubble size */}
         <span
           className="font-bold leading-tight line-clamp-2"
-          style={{ fontSize: size >= 135 ? 15 : 13, color: '#000000', maxWidth: maxTextW }}
+          style={{
+            fontSize: size >= 140 ? 15 : size >= 110 ? 13 : size >= 85 ? 11 : 10,
+            color: '#000000',
+            maxWidth: maxTextW,
+          }}
         >
           {task.title}
         </span>
 
-        {/* Status dot + label — 13px regular black */}
-        <span
-          className="mt-1 flex items-center gap-1 hover:bg-white/50 rounded-full px-1.5 py-0.5 transition-colors"
-          onClick={(e) => { e.stopPropagation(); setShowStatus(!showStatus); }}
-          title="שנה סטטוס"
-        >
-          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
-          <span style={{ fontSize: size >= 135 ? 13 : 11, color: '#000000' }}>{statusCfg.text}</span>
-          <ChevronDown className="w-2.5 h-2.5" style={{ color: '#000000' }} />
-        </span>
+        {/* Status dot + label — hidden on tiny bubbles */}
+        {size >= 85 && (
+          <span
+            className="mt-1 flex items-center gap-1 hover:bg-white/50 rounded-full px-1.5 py-0.5 transition-colors"
+            onClick={(e) => { e.stopPropagation(); setShowStatus(!showStatus); }}
+            title="שנה סטטוס"
+          >
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+            <span style={{ fontSize: size >= 140 ? 13 : 11, color: '#000000' }}>{statusCfg.text}</span>
+            <ChevronDown className="w-2.5 h-2.5" style={{ color: '#000000' }} />
+          </span>
+        )}
+        {size < 85 && (
+          <span className="w-2 h-2 rounded-full mt-1" style={{ backgroundColor: dotColor }} />
+        )}
       </button>
 
       {/* Quick status picker */}
