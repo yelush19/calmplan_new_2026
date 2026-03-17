@@ -163,7 +163,7 @@ const getSidebarSections = () => ({
     tabColor: 'border-[#7C3AED]',
     items: [
       { name: "פרוייקטים", href: createPageUrl("Projects"), icon: FolderKanban },
-      { name: "חוברת פיתוח", href: createPageUrl("ProjectWorkbook"), icon: BookOpen },
+      { name: "דאשבורד פרויקט", href: createPageUrl("ProjectWorkbook"), icon: BookOpen },
     ]
   },
 });
