@@ -490,7 +490,7 @@ function LayoutInner({ children }) {
   }, [sidebarSearchLower, matchesSidebarSearch]);
 
   const findPageTitle = () => {
-    if (location.pathname === createPageUrl("Home")) return 'פוקוס יומי';
+    if (location.pathname === createPageUrl("Home")) return 'מה לעשות היום';
     for (const section of Object.values(sidebarSections)) {
       for (const item of section.items) {
         if (item.href && location.pathname.startsWith(item.href)) return item.name;
@@ -677,7 +677,7 @@ function LayoutInner({ children }) {
                   className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors mb-2
                     ${isActive(createPageUrl("Home")) ? 'bg-[#E8F5F7] text-[#4682B4]' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
                   <Eye className="w-4 h-4" />
-                  פוקוס יומי
+                  מה לעשות היום
                 </Link>
                 {Object.entries(sidebarSections)
                   .filter(([key]) => getVisibleSections(workMode).includes(key))
@@ -980,7 +980,7 @@ function LayoutInner({ children }) {
                             boxShadow: '0 4px 15px #00A3E040',
                           } : {}}>
                           <Eye className="w-4 h-4" style={{ color: isActive(createPageUrl("Home")) ? 'white' : '#00A3E0' }} />
-                          פוקוס יומי
+                          מה לעשות היום
                           {dailyFocusTasks.length > 0 && (
                             <Badge className="text-[12px] bg-amber-100 text-amber-700 px-1.5 py-0">{dailyFocusTasks.length}</Badge>
                           )}
@@ -996,7 +996,7 @@ function LayoutInner({ children }) {
                             boxShadow: '0 4px 15px #FFC10740',
                           } : {}}>
                           <Target className="w-4 h-4" style={{ color: isActive(createPageUrl("MyFocus")) ? 'white' : '#FFC107' }} />
-                          הפוקוס שלי
+                          התמונה המלאה
                         </Link>
 
                         {Object.entries(sidebarSections)
