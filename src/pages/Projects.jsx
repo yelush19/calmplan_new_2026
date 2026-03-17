@@ -17,6 +17,7 @@ import {
 import { loadPlatformConfig } from '@/config/platformConfig';
 import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
+import ProjectAyoaMindMap from '@/components/canvas/ProjectAyoaMindMap';
 
 /* ── DNA Color ── */
 const ACCENT = '#7C3AED';
@@ -653,6 +654,12 @@ export default function Projects() {
           const proj = projects.find(p => p.id === task.id);
           if (proj) startEdit(proj);
         }}
+        customMapView={
+          <ProjectAyoaMindMap
+            projects={projects}
+            onClickProject={openWorkbook}
+          />
+        }
       >
         {projects.length === 0 && !isCreating ? (
           /* ── Empty State ── */
