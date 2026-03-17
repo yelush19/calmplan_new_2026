@@ -73,7 +73,7 @@ const STATUS_COLORS = {
 export default function FocusMapView({
   tasks = [],
   allTasks,
-  centerLabel = 'פוקוס יומי',
+  centerLabel = 'מה לעשות עכשיו',
   centerSub = '',
 }) {
   const svgRef = useRef(null);

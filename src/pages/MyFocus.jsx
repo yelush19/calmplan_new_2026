@@ -203,11 +203,11 @@ export default function MyFocus() {
           </Card>
         ) : viewMode === 'radial' ? (
           <div className="h-full rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '450px' }}>
-            <AyoaRadialView tasks={todayTasks} centerLabel="הפוקוס שלי" centerSub={`${todayTasks.length} משימות`} />
+            <AyoaRadialView tasks={todayTasks} centerLabel="התמונה המלאה" centerSub={`${todayTasks.length} משימות`} />
           </div>
         ) : viewMode === 'map' ? (
           <div className="h-full rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '450px' }}>
-            <AyoaMapView tasks={todayTasks} centerLabel="הפוקוס שלי" centerSub={`${todayTasks.length} משימות`} />
+            <AyoaMapView tasks={todayTasks} centerLabel="התמונה המלאה" centerSub={`${todayTasks.length} משימות`} />
           </div>
         ) : viewMode === 'gantt' ? (
           <Card className="h-full overflow-auto">
@@ -230,7 +230,7 @@ export default function MyFocus() {
         ) : (
           /* fallback: show radial as default view */
           <div className="h-full rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '450px' }}>
-            <AyoaRadialView tasks={todayTasks} centerLabel="הפוקוס שלי" centerSub={`${todayTasks.length} משימות`} />
+            <AyoaRadialView tasks={todayTasks} centerLabel="התמונה המלאה" centerSub={`${todayTasks.length} משימות`} />
           </div>
         )}
       </div>

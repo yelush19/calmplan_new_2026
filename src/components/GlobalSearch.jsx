@@ -162,10 +162,10 @@ export default function GlobalSearch() {
     },
     {
       key: 'focus',
-      label: 'פוקוס יומי',
+      label: 'מה לעשות היום',
       icon: Eye,
       color: 'text-sky-600',
-      keywords: ['ריכוז', 'פוקוס', 'focus', 'יומי'],
+      keywords: ['ריכוז', 'פוקוס', 'focus', 'יומי', 'מה לעשות'],
       action: () => navigate(createPageUrl('Home')),
     },
     {
