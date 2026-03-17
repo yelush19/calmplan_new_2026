@@ -250,7 +250,7 @@ export default function HomeTaskGeneratorPage() {
   const timeEstimate = getTotalEstimatedTime();
 
   return (
-    <div className="space-y-8 w-full">
+    <div className="space-y-8 w-full dark:bg-gray-900 dark:text-white">
       {/* כותרת */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -261,7 +261,7 @@ export default function HomeTaskGeneratorPage() {
           <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
             <Home className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-800">יוצר משימות בית</h1>
+          <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">יוצר משימות בית</h1>
         </div>
         <p className="text-xl text-gray-600">
           בחר משימות טיפוסיות או הוסף משימות מותאמות אישית למשק הבית שלך
@@ -269,7 +269,7 @@ export default function HomeTaskGeneratorPage() {
       </motion.div>
 
       {/* סיכום */}
-      <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200">
+      <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200 dark:border-gray-700">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div>
@@ -339,7 +339,7 @@ export default function HomeTaskGeneratorPage() {
               onChange={(e) => setNewCustomTask(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
             />
             <Button onClick={handleAddCustomTask} disabled={!newCustomTask.title.trim()}>
-              <Plus className="w-4 h-4 ml-2" />
+              <Plus className="w-4 h-4 ms-2" />
               הוסף
             </Button>
           </div>
@@ -385,12 +385,12 @@ export default function HomeTaskGeneratorPage() {
         >
           {isGenerating ? (
             <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white ml-2"></div>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white ms-2"></div>
               יוצר משימות...
             </>
           ) : (
             <>
-              <CheckCircle className="w-5 h-5 ml-2" />
+              <CheckCircle className="w-5 h-5 ms-2" />
               צור {getTotalSelectedTasks()} משימות בית ({timeEstimate.hours}:{timeEstimate.minutes.toString().padStart(2, '0')} שעות)
             </>
           )}

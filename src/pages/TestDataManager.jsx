@@ -11,7 +11,7 @@ import { seedData } from '@/api/functions';
 import { Task, Event, Client, WeeklySchedule } from '@/api/entities';
 
 const StatCard = ({ title, count, icon: Icon, color }) => (
-  <Card className={`border-l-4 ${color}`}>
+  <Card className={`border-s-4 ${color}`}>
     <CardContent className="p-4 flex items-center justify-between">
       <div>
         <p className="text-sm text-gray-500">{title}</p>
@@ -345,9 +345,9 @@ export default function TestDataManager() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="max-w-4xl mx-auto p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen" dir="rtl">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">🧪 ניהול נתוני בדיקה</h1>
+        <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white mb-4">🧪 ניהול נתוני בדיקה</h1>
         <p className="text-gray-600 text-lg">ממשק בטוח ליצירה, מחיקה ושחזור של נתוני דמו.</p>
       </motion.div>
 
@@ -368,7 +368,7 @@ export default function TestDataManager() {
           variant={activeTab === 'management' ? 'default' : 'outline'}
           onClick={() => setActiveTab('management')}
         >
-          <Database className="w-4 h-4 mr-2" />
+          <Database className="w-4 h-4 me-2" />
           ניהול נתונים
         </Button>
         <Button 
@@ -376,7 +376,7 @@ export default function TestDataManager() {
           onClick={() => setActiveTab('recovery')}
           className="text-amber-600 border-amber-200"
         >
-          <AlertTriangle className="w-4 h-4 mr-2" />
+          <AlertTriangle className="w-4 h-4 me-2" />
           שחזור חירום
         </Button>
       </div>
@@ -408,17 +408,17 @@ export default function TestDataManager() {
                     size="lg" 
                     className="bg-amber-500 hover:bg-amber-600 text-white px-8 py-4 text-lg"
                   >
-                    {isDeleting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Trash2 className="w-5 h-5 mr-2" />}
+                    {isDeleting ? <Loader2 className="w-5 h-5 me-2 animate-spin" /> : <Trash2 className="w-5 h-5 me-2" />}
                     מחק כפילויות ({stats.real})
                   </Button>
                   
                   <Button onClick={handleDeleteDemoData} disabled={isDeleting || isLoading || stats.demo === 0} size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg">
-                    {isDeleting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Trash2 className="w-5 h-5 mr-2" />}
+                    {isDeleting ? <Loader2 className="w-5 h-5 me-2 animate-spin" /> : <Trash2 className="w-5 h-5 me-2" />}
                     מחק רק נתוני דמו ({stats.demo})
                   </Button>
                   
                   <Button onClick={handleCreateDemoData} disabled={isLoading || isDeleting} size="lg" className="bg-primary hover:bg-accent text-white px-8 py-4 text-lg">
-                    {isLoading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <PlusCircle className="w-5 h-5 mr-2" />}
+                    {isLoading ? <Loader2 className="w-5 h-5 me-2 animate-spin" /> : <PlusCircle className="w-5 h-5 me-2" />}
                     צור נתוני דמו
                   </Button>
                 </div>
@@ -460,12 +460,12 @@ export default function TestDataManager() {
                   >
                     {isScanning ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-4 h-4 me-2 animate-spin" />
                         סורק את הדפדפן...
                       </>
                     ) : (
                       <>
-                        <Search className="w-4 h-4 mr-2" />
+                        <Search className="w-4 h-4 me-2" />
                         בדוק גיבויים בדפדפן
                       </>
                     )}
@@ -522,7 +522,7 @@ export default function TestDataManager() {
                     onChange={(e) => setManualData(prev => ({ ...prev, notes: e.target.value }))}
                   />
                   <Button onClick={handleManualSave} className="w-full">
-                    <Database className="w-4 h-4 mr-2" />
+                    <Database className="w-4 h-4 me-2" />
                     שמור לקוח
                   </Button>
                 </div>
@@ -542,7 +542,7 @@ export default function TestDataManager() {
               <CardContent>
                 <div className="max-h-40 overflow-y-auto space-y-2">
                   {recoveryLog.map((log, index) => (
-                    <div key={index} className="text-sm bg-green-50 p-2 rounded border-r-4 border-green-500">
+                    <div key={index} className="text-sm bg-green-50 p-2 rounded border-e-4 border-green-500">
                       ✅ {log}
                     </div>
                   ))}

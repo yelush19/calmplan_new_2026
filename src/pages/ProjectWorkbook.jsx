@@ -212,7 +212,7 @@ function PhaseCard({ phase, phaseIndex, isCurrentPhase, isCompleted, isLocked, i
         {/* ── Phase Header ── */}
         <button
           onClick={onToggle}
-          className="w-full flex items-center gap-3 p-4 text-right transition-colors"
+          className="w-full flex items-center gap-3 p-4 text-end transition-colors"
           style={{
             background: isCurrentPhase
               ? `linear-gradient(135deg, ${phase.color}12, ${phase.color}06)`
@@ -332,7 +332,7 @@ function PhaseCard({ phase, phaseIndex, isCurrentPhase, isCompleted, isLocked, i
                           key={item.key}
                           onClick={() => onToggleItem(item.key)}
                           whileTap={{ scale: 0.98 }}
-                          className={`w-full flex items-center gap-3 p-3 rounded-2xl text-right transition-all duration-200 ${
+                          className={`w-full flex items-center gap-3 p-3 rounded-2xl text-end transition-all duration-200 ${
                             checked
                               ? 'bg-emerald-50 border border-emerald-200'
                               : 'bg-gray-50 border border-gray-100 hover:bg-gray-100'
@@ -543,7 +543,7 @@ export default function ProjectWorkbook() {
         <BookOpen className="w-16 h-16 text-gray-300" />
         <p className="text-lg font-bold text-gray-500">לא נבחר פרויקט</p>
         <Button onClick={() => navigate('/Projects')} className="rounded-xl" style={{ background: ACCENT }}>
-          <ArrowRight className="w-4 h-4 ml-2" />
+          <ArrowRight className="w-4 h-4 ms-2" />
           חזרה לפרויקטים
         </Button>
       </div>
@@ -554,16 +554,18 @@ export default function ProjectWorkbook() {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-3xl mx-auto space-y-6 p-1"
+      className="max-w-3xl mx-auto space-y-6 p-1 dark:bg-gray-900"
     >
       {/* ── Header ── */}
       <div className="flex items-center gap-3">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => navigate('/Projects')}
-          className="p-2 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
+          className="rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
         >
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="flex-1">
           <h1
             className="text-2xl font-extrabold bg-clip-text text-transparent"

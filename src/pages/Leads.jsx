@@ -257,9 +257,9 @@ export default function LeadsPage() {
                   className="bg-green-600 hover:bg-green-700"
                 >
                   {isConverting ? (
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    <RefreshCw className="w-4 h-4 me-2 animate-spin" />
                   ) : (
-                    <UserPlus className="w-4 h-4 mr-2" />
+                    <UserPlus className="w-4 h-4 me-2" />
                   )}
                   המר ללקוח
                 </Button>
@@ -280,7 +280,7 @@ export default function LeadsPage() {
             <Users className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">
               ניהול לידים ({filteredLeads.length})
             </h1>
             <p className="text-gray-600">מעקב אחר פניות ולקוחות פוטנציאליים</p>
@@ -304,12 +304,12 @@ export default function LeadsPage() {
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute end-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="חפש ליד..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10"
+                className="pe-10"
               />
             </div>
             <MultiStatusFilter
@@ -366,7 +366,7 @@ export default function LeadsPage() {
             return (
               <div key={statusKey} className="border rounded-lg overflow-hidden">
                 <button
-                  className={`w-full flex items-center gap-3 px-4 py-3 ${statusColors[statusKey]} hover:opacity-90 transition-all text-right`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 ${statusColors[statusKey]} hover:opacity-90 transition-all text-start`}
                   onClick={() => setCollapsedStatuses(prev => {
                     const next = new Set(prev);
                     if (next.has(statusKey)) next.delete(statusKey); else next.add(statusKey);
@@ -378,7 +378,7 @@ export default function LeadsPage() {
                   <Badge variant="outline" className="text-xs">{statusLeads.length}</Badge>
                 </button>
                 {isOpen && (
-                  <div className="p-3 bg-white space-y-3">
+                  <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
                     <AnimatePresence>
                       {statusLeads.map((lead) => (
                         <motion.div
@@ -387,7 +387,7 @@ export default function LeadsPage() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0 }}
                         >
-                          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                          <Card className="rounded-xl shadow-sm border hover:shadow-md transition-shadow cursor-pointer">
                             <CardContent className="p-4">
                               <div className="flex justify-between items-start">
                                 <div className="flex-1">
@@ -416,14 +416,14 @@ export default function LeadsPage() {
                                       </Badge>
                                     )}
                                     <Badge variant="outline" className="text-xs">
-                                      <Calendar className="w-3 h-3 mr-1" />
+                                      <Calendar className="w-3 h-3 me-1" />
                                       {format(parseISO(lead.created_date), 'dd/MM/yyyy', { locale: he })}
                                     </Badge>
                                   </div>
                                 </div>
-                                <div className="flex flex-col gap-2 mr-4">
+                                <div className="flex flex-col gap-2 me-4">
                                   <Button variant="outline" size="sm" onClick={() => setSelectedLead(lead)}>
-                                    <Eye className="w-4 h-4 mr-2" /> צפייה
+                                    <Eye className="w-4 h-4 me-2" /> צפייה
                                   </Button>
                                   {lead.status !== 'client_active' && lead.status !== 'closed_lost' && (
                                     <Select value={lead.status} onValueChange={(newStatus) => handleStatusUpdate(lead.id, newStatus)}>

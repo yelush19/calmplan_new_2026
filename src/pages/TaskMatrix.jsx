@@ -4,14 +4,15 @@ import { motion } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Target, Clock, Home, Briefcase, Pencil, Trash2 } from 'lucide-react';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 const importanceColors = {
-    high: 'border-r-4 border-amber-500',
-    medium: 'border-r-4 border-orange-500',
-    low: 'border-r-4 border-blue-500',
+    high: 'border-e-4 border-amber-500',
+    medium: 'border-e-4 border-orange-500',
+    low: 'border-e-4 border-blue-500',
 };
 
 const priorityColors = {
@@ -29,25 +30,24 @@ const DraggableTaskItem = ({ task, index, onEdit, onDelete }) => {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`group p-3 mb-2 rounded-lg shadow-sm cursor-grab ${snapshot.isDragging ? 'opacity-50' : 'opacity-100'} ${importanceColors[task.importance]}`}
+          className={`group p-3 mb-2 rounded-lg shadow-sm cursor-grab bg-white dark:bg-gray-800 ${snapshot.isDragging ? 'opacity-50' : 'opacity-100'} ${importanceColors[task.importance]}`}
           style={{
-            backgroundColor: '#FFFFFF',
             ...provided.draggableProps.style,
           }}
         >
           <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-gray-800">{task.title}</h4>
+            <h4 className="font-semibold text-gray-800 dark:text-white">{task.title}</h4>
             <div className="flex items-center gap-1">
               <div className="hidden group-hover:flex items-center gap-1">
                 {onEdit && (
-                  <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1 rounded hover:bg-blue-100 transition-colors" title="עריכת משימה">
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="h-7 w-7 hover:bg-blue-100 dark:hover:bg-blue-900" title="עריכת משימה">
                     <Pencil className="w-3.5 h-3.5 text-gray-400 hover:text-blue-600" />
-                  </button>
+                  </Button>
                 )}
                 {onDelete && (
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(task); }} className="p-1 rounded hover:bg-amber-100 transition-colors" title="מחק משימה">
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(task); }} className="h-7 w-7 hover:bg-amber-100 dark:hover:bg-amber-900" title="מחק משימה">
                     <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-amber-600" />
-                  </button>
+                  </Button>
                 )}
               </div>
               {task.context === 'work' ? <Briefcase className="w-4 h-4 text-blue-500"/> : <Home className="w-4 h-4 text-green-500"/>}
@@ -65,7 +65,7 @@ const DraggableTaskItem = ({ task, index, onEdit, onDelete }) => {
 
 const DroppableQuadrant = ({ quadrant, tasks, onEdit, onDelete }) => {
   return (
-    <div className={`rounded-xl shadow-lg h-[400px] flex flex-col bg-white`}>
+    <div className={`rounded-xl shadow-sm border hover:shadow-md transition-shadow h-[400px] flex flex-col bg-white dark:bg-gray-900 dark:border-gray-700`}>
       <CardHeader className={`border-b-4 border-${quadrant.color}-400 rounded-t-xl`}>
         <CardTitle className={`text-xl font-bold text-${quadrant.color}-700`}>{quadrant.title}</CardTitle>
         <p className="text-sm text-gray-500">{quadrant.description}</p>
@@ -177,14 +177,14 @@ export default function TaskMatrixPage() {
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-50 to-blue-50"
+        className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800"
       >
         <div className="text-center mb-8">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
-                <Target className="w-10 h-10 text-blue-600"/>
+            <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white mb-2 flex items-center justify-center gap-3">
+                <Target className="w-6 h-6 text-blue-600"/>
                 מטריצת ניהול משימות
             </h1>
-            <p className="text-lg text-gray-600">גרור משימות בין הרבעונים כדי לתעדף אותן מחדш</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">גרור משימות בין הרבעונים כדי לתעדף אותן מחדש</p>
         </div>
         {isLoading ? (
           <div className="text-center text-lg">טוען משימות...</div>

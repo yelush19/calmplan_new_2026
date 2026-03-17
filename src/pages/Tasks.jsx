@@ -606,7 +606,7 @@ export default function TasksPage() {
     return (
       <th
         onClick={() => toggleSort(field)}
-        className="px-3 py-2.5 text-right text-xs font-bold text-[#37474F] cursor-pointer hover:bg-[#F0F0F0] select-none whitespace-nowrap bg-[#FAFBFC]"
+        className="px-3 py-2.5 text-end text-xs font-bold text-[#37474F] cursor-pointer hover:bg-[#F0F0F0] select-none whitespace-nowrap bg-[#FAFBFC]"
       >
         <div className="flex items-center gap-1">
           {children}
@@ -622,13 +622,12 @@ export default function TasksPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-600 flex items-center justify-center mb-4">
-            <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
-          </div>
-          <p className="text-lg text-gray-500">טוען משימות...</p>
+      <div className="space-y-6 p-6">
+        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />)}
         </div>
+        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
       </div>
     );
   }
@@ -640,14 +639,14 @@ export default function TasksPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-800">כל המשימות</h1>
+            <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">כל המשימות</h1>
             {contextFilter !== 'all' && (
               <Badge className={`text-sm px-2.5 py-1 gap-1.5 ${contextFilter === 'work' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                 {contextFilter === 'work' ? <Briefcase className="w-3.5 h-3.5" /> : <HomeIcon className="w-3.5 h-3.5" />}
                 {contextFilter === 'work' ? 'עבודה' : 'בית'}
-                <button onClick={() => setContextFilter('all')} className="hover:bg-[#F5F5F5] rounded-full p-0.5 mr-0.5">
+                <Button variant="ghost" size="sm" onClick={() => setContextFilter('all')} className="hover:bg-[#F5F5F5] rounded-full p-0.5 me-0.5 h-auto">
                   <X className="w-3 h-3" />
-                </button>
+                </Button>
               </Badge>
             )}
           </div>
@@ -779,10 +778,11 @@ export default function TasksPage() {
             }
           }).length;
           return (
-            <button
+            <Button
+              variant={isActive ? 'default' : 'outline'}
               key={tab.key}
               onClick={() => setTimeTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap border ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap border h-auto ${
                 isActive
                   ? 'bg-primary text-white border-primary shadow-md'
                   : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -793,7 +793,7 @@ export default function TasksPage() {
               <Badge className={`text-[12px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? 'bg-[#F5F5F5] text-white' : 'bg-gray-100 text-gray-500'}`}>
                 {count}
               </Badge>
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -803,12 +803,12 @@ export default function TasksPage() {
         <CardContent className="p-3">
           <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
-              <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search className="w-4 h-4 absolute end-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <Input
                 placeholder="חיפוש לפי שם משימה, לקוח..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10 rounded-xl"
+                className="pe-10 rounded-xl"
               />
             </div>
             <MultiStatusFilter
@@ -856,16 +856,18 @@ export default function TasksPage() {
             { key: 'mindmap', label: 'מיינדמפ', icon: Network },
             { key: 'gantt', label: 'גאנט', icon: BarChart3 },
           ].map(({ key, label, icon: Icon }) => (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               key={key}
               onClick={() => setView(key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors h-auto ${
                 view === key ? 'bg-primary/10 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -881,16 +883,18 @@ export default function TasksPage() {
               { key: 'client', label: 'לקוח' },
               { key: 'p_branch', label: 'ענף (P1-P5)' },
             ].map(opt => (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 key={opt.key}
                 onClick={() => setGroupBy(opt.key)}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${groupBy === opt.key ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`px-3 py-1.5 rounded-md font-medium transition-colors h-auto ${groupBy === opt.key ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 {opt.label}
-              </button>
+              </Button>
             ))}
           </div>
-          <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs mr-2">
+          <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs me-2">
             <button onClick={expandAllGroups} className="px-2.5 py-1.5 rounded-md text-[#000000] hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors">
               הרחב הכל
             </button>
@@ -994,11 +998,11 @@ export default function TasksPage() {
                   )}
                   <SortHeader field="client_name">לקוח</SortHeader>
                   <SortHeader field="category">סוג דיווח</SortHeader>
-                  <th className="px-3 py-2.5 text-right text-xs font-bold text-[#37474F] bg-[#FAFBFC]">תיאור</th>
+                  <th className="px-3 py-2.5 text-end text-xs font-bold text-[#37474F] bg-[#FAFBFC]">תיאור</th>
                   <SortHeader field="due_date">תאריך יעד</SortHeader>
                   <SortHeader field="status">סטטוס</SortHeader>
                   <SortHeader field="priority">עדיפות</SortHeader>
-                  <th className="px-3 py-2.5 text-right text-xs font-bold text-[#37474F] bg-[#FAFBFC] w-10"></th>
+                  <th className="px-3 py-2.5 text-end text-xs font-bold text-[#37474F] bg-[#FAFBFC] w-10"></th>
                 </tr>
               </thead>
               <tbody>
@@ -1093,7 +1097,7 @@ export default function TasksPage() {
                             )}
                             {/* Client */}
                             <td className="px-3 py-2">
-                              <div className="flex items-center gap-1.5" style={{ paddingRight: `${indentPx}px` }}>
+                              <div className="flex items-center gap-1.5" style={{ paddingInlineStart: `${indentPx}px` }}>
                                 {hasChildren && (
                                   <button
                                     onClick={() => toggleParentCollapse(task.id)}
@@ -1311,7 +1315,7 @@ export default function TasksPage() {
             disabled={isClearing}
             className="text-xs text-gray-400 hover:text-amber-500"
           >
-            <Trash2 className="w-3 h-3 ml-1" />
+            <Trash2 className="w-3 h-3 ms-1" />
             {isClearing ? 'מוחק...' : 'מחק הכל'}
           </Button>
         </div>

@@ -66,15 +66,16 @@ function DayCell({ day, dateKey, tasks, isToday, onSelect }) {
   const hasUrgent = dayTasks.some((t) => t.priority === 'urgent' || t.priority === 'high');
 
   return (
-    <button
+    <Button
+      variant="ghost"
       onClick={() => onSelect(dateKey, dayTasks)}
       className={`
-        relative min-h-[72px] p-1.5 border rounded-lg text-right transition-colors
-        ${isToday ? 'border-blue-400 bg-blue-50/50 ring-1 ring-blue-300' : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'}
+        relative min-h-[72px] p-1.5 border rounded-lg text-end transition-colors dark:border-gray-700 dark:hover:border-gray-600 h-auto flex flex-col items-stretch
+        ${isToday ? 'border-blue-400 bg-blue-50/50 ring-1 ring-blue-300 dark:bg-blue-900/30' : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'}
         ${hasTasks ? 'cursor-pointer' : 'cursor-default'}
       `}
     >
-      <span className={`text-xs font-medium ${isToday ? 'text-blue-700' : 'text-gray-600'}`}>
+      <span className={`text-xs font-medium ${isToday ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>
         {day}
       </span>
       {hasTasks && (
@@ -82,7 +83,7 @@ function DayCell({ day, dateKey, tasks, isToday, onSelect }) {
           {dayTasks.slice(0, 3).map((t) => (
             <div key={t.id} className="flex items-center gap-1">
               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${PRIORITY_DOTS[t.priority] || PRIORITY_DOTS.medium}`} />
-              <span className="text-[12px] text-gray-700 truncate leading-tight">{t.title}</span>
+              <span className="text-[12px] text-gray-700 dark:text-gray-300 truncate leading-tight">{t.title}</span>
             </div>
           ))}
           {dayTasks.length > 3 && (
@@ -91,9 +92,9 @@ function DayCell({ day, dateKey, tasks, isToday, onSelect }) {
         </div>
       )}
       {hasUrgent && (
-        <span className="absolute top-1 left-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+        <span className="absolute top-1 start-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
       )}
-    </button>
+    </Button>
   );
 }
 
@@ -107,10 +108,10 @@ function TaskDetailPanel({ dateKey, tasks, onClose }) {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="w-80 border-r pr-4"
+      className="w-80 border-e pe-4"
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-900 text-sm">{label}</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{label}</h3>
         <Button variant="ghost" size="sm" onClick={onClose}>✕</Button>
       </div>
       {tasks.length === 0 ? (
@@ -118,11 +119,11 @@ function TaskDetailPanel({ dateKey, tasks, onClose }) {
       ) : (
         <div className="space-y-2">
           {tasks.map((t) => (
-            <Card key={t.id} className="border-gray-200">
+            <Card key={t.id} className="border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-3 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${PRIORITY_DOTS[t.priority] || PRIORITY_DOTS.medium}`} />
-                  <span className="text-sm font-medium text-gray-900 truncate">{t.title}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{t.title}</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {t.client_name && <Badge variant="outline" className="text-[12px]">{t.client_name}</Badge>}
@@ -194,15 +195,15 @@ export default function CalendarView() {
   const urgentCount = monthTasks.filter((t) => t.priority === 'urgent' || t.priority === 'high').length;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto" dir="rtl">
+    <div className="p-6 max-w-5xl mx-auto dark:bg-gray-900" dir="rtl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white flex items-center gap-2">
             <CalendarIcon className="w-6 h-6 text-blue-500" />
             תצוגת לוח שנה
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {monthTasks.length} משימות · {completedCount} הושלמו · {urgentCount} דחופות
           </p>
         </div>
