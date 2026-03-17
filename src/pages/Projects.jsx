@@ -26,7 +26,7 @@ const ACCENT = '#7C3AED';
 const statusOptions = [
   { value: 'planning',       label: 'תכנון',    color: 'bg-slate-100 text-slate-700',  accent: '#94A3B8', icon: '📋' },
   { value: 'in_development', label: 'בפיתוח',   color: 'bg-blue-100 text-blue-700',    accent: '#3B82F6', icon: '🔨' },
-  { value: 'testing',        label: 'בדיקות',   color: 'bg-amber-100 text-amber-700',  accent: '#F59E0B', icon: '🧪' },
+  { value: 'testing',        label: 'בדיקות',   color: 'bg-teal-100 text-teal-700',    accent: '#0D9488', icon: '🧪' },
   { value: 'deployed',       label: 'באוויר',   color: 'bg-emerald-100 text-emerald-700', accent: '#10B981', icon: '🚀' },
   { value: 'maintenance',    label: 'תחזוקה',   color: 'bg-purple-100 text-purple-700', accent: '#8B5CF6', icon: '🔧' },
   { value: 'archived',       label: 'ארכיון',   color: 'bg-gray-200 text-gray-500',    accent: '#9CA3AF', icon: '📦' },
@@ -61,6 +61,39 @@ const emptyProject = {
   subdomain: '', production_url: '', tech_stack: '', notes: '',
 };
 
+/* ── Redesign Seed Data ── */
+const REDESIGN_SEED_KEY = 'calmplan_redesign_seeded';
+const REDESIGN_CARDS = [
+  { name: 'עמוד הבית — Home', description: 'באנר, KPI, תצוגת AYOA, שעון ביולוגי, פתקים', status: 'in_development', system_type: 'web_app', tech_stack: 'React, FocusMapView, BioClock', notes: 'P1 priority — UX feedback received' },
+  { name: 'P1 — שכר ומשכורות', description: 'עמוד שכר — סקירת UX טרם בוצעה', status: 'planning', system_type: 'web_app', tech_stack: 'React', notes: 'ממתין לסקירה' },
+  { name: 'P2 — הנהלת חשבונות', description: 'עמוד הנה"ח — סקירת UX טרם בוצעה', status: 'planning', system_type: 'web_app', tech_stack: 'React', notes: 'ממתין לסקירה' },
+  { name: 'P3 — מרכז לקוחות', description: 'Hub — סקירת UX טרם בוצעה', status: 'planning', system_type: 'web_app', tech_stack: 'React', notes: 'ממתין לסקירה' },
+  { name: 'P4 — בית ואישי', description: 'אזור אישי — סקירת UX טרם בוצעה', status: 'planning', system_type: 'web_app', tech_stack: 'React', notes: 'ממתין לסקירה' },
+  { name: 'P5 — שנתי', description: 'עמוד שנתי — סקירת UX טרם בוצעה', status: 'planning', system_type: 'web_app', tech_stack: 'React', notes: 'ממתין לסקירה' },
+  { name: 'P6 — פרויקטים', description: 'עמוד זה — תצוגת AYOA, ניווט ADHD, צבעים רגועים', status: 'in_development', system_type: 'web_app', tech_stack: 'React, UnifiedAyoaLayout', notes: 'בעבודה כעת' },
+  { name: 'Layout ותפריט', description: 'סרגל צד, header, לוגו LITAY, סלוגן', status: 'deployed', system_type: 'web_app', tech_stack: 'React', notes: 'שינויים בוצעו — לוגו + צבעים' },
+];
+
+async function seedRedesignProject() {
+  if (localStorage.getItem(REDESIGN_SEED_KEY)) return false;
+  try {
+    const existing = await Project.list(null, 500);
+    const hasRedesign = existing.some(p => p.name && p.name.includes('עמוד הבית — Home'));
+    if (hasRedesign) {
+      localStorage.setItem(REDESIGN_SEED_KEY, 'true');
+      return false;
+    }
+    for (const card of REDESIGN_CARDS) {
+      await Project.create(card);
+    }
+    localStorage.setItem(REDESIGN_SEED_KEY, 'true');
+    return true;
+  } catch (e) {
+    console.error('Failed to seed redesign projects:', e);
+    return false;
+  }
+}
+
 /* ── Animations ── */
 const cardVariants = {
   hidden: { opacity: 0, y: 20, scale: 0.97 },
@@ -90,7 +123,7 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
     >
       <div
         onClick={() => onOpenWorkbook(project)}
-        className="relative rounded-[32px] bg-white/90 dark:bg-gray-900 backdrop-blur-sm border border-white/60 dark:border-gray-700 overflow-hidden transition-all duration-300 cursor-pointer"
+        className="relative rounded-[32px] bg-white border border-gray-100 overflow-hidden transition-all duration-300 cursor-pointer"
         style={{ boxShadow: `0 4px 20px ${ACCENT}10, 0 1px 3px rgba(0,0,0,0.04)` }}
       >
         {/* Top accent stripe */}
@@ -103,7 +136,7 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
           {/* Header row */}
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
-              <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{project.name}</h3>
+              <h3 className="text-base font-bold text-gray-900 truncate">{project.name}</h3>
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 <Badge
                   className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold"
@@ -131,7 +164,7 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
                 variant="ghost"
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); onEdit(project); }}
-                className="p-1.5 h-7 w-7 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900 text-gray-400 hover:text-purple-600 transition-colors"
+                className="p-1.5 h-7 w-7 rounded-xl hover:bg-purple-50 text-gray-400 hover:text-purple-600 transition-colors"
                 title="עריכה"
               >
                 <Pencil className="w-3.5 h-3.5" />
@@ -140,7 +173,7 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
                 variant="ghost"
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); onDelete(project.id); }}
-                className="p-1.5 h-7 w-7 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900 text-gray-400 hover:text-amber-500 transition-colors"
+                className="p-1.5 h-7 w-7 rounded-xl hover:bg-slate-50 text-gray-400 hover:text-slate-500 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
@@ -264,11 +297,10 @@ export default function Projects() {
   const [isCreating, setIsCreating] = useState(false);
   const [platforms, setPlatforms] = useState([]);
   const [collapsedGroups, setCollapsedGroups] = useState(() => {
-    const init = {};
-    statusOptions.forEach(s => { init[s.value] = true; });
-    return init;
+    // Only collapse 'archived' by default — show active projects immediately (ADHD-friendly)
+    return { archived: true };
   });
-  const [allExpanded, setAllExpanded] = useState(false);
+  const [allExpanded, setAllExpanded] = useState(true);
 
   useEffect(() => {
     loadProjects();
@@ -278,6 +310,7 @@ export default function Projects() {
   const loadProjects = async () => {
     setLoading(true);
     try {
+      const seeded = await seedRedesignProject();
       const data = await Project.list(null, 500);
       setProjects(data);
     } catch (e) {
@@ -415,11 +448,11 @@ export default function Projects() {
       <div className="flex items-center justify-between">
         <div>
           <h1
-            className="text-xl font-bold text-[#1E3A5F] dark:text-white"
+            className="text-xl font-bold text-[#1E3A5F]"
           >
             פרויקטים
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">ניהול וצפייה בכל הפרויקטים שלך</p>
+          <p className="text-sm text-gray-500 mt-0.5">ניהול וצפייה בכל הפרויקטים שלך</p>
         </div>
         {!isCreating && (
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
@@ -678,8 +711,8 @@ export default function Projects() {
             >
               <FolderKanban className="w-10 h-10" style={{ color: `${ACCENT}60` }} />
             </div>
-            <p className="text-lg font-bold text-gray-700 dark:text-white">אין פרויקטים עדיין</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">לחצי על "פרויקט חדש" כדי להתחיל</p>
+            <p className="text-lg font-bold text-gray-700">אין פרויקטים עדיין</p>
+            <p className="text-sm text-gray-400 mt-1">לחצי על "פרויקט חדש" כדי להתחיל</p>
           </motion.div>
         ) : (
           <>
