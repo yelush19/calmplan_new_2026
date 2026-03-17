@@ -561,7 +561,7 @@ export default function HomePage() {
         ) : (
           <AyoaMiniCanvas
             tasks={calmTasks}
-            allTasks={data.activeTasks}
+            allTasks={data.activeTasks || []}
             totalExtra={(data.overdue.length + data.today.length) - calmTasks.length}
             onEdit={setEditingTask}
             onStatusChange={handleStatusChange}
@@ -941,6 +941,7 @@ const RING_LABEL = { A: 'עבודה', B: 'דחוף', C: 'בית', D: 'מהיר' 
 
 // Map each task to a ring ID based on context
 function taskToRingId(task) {
+  if (!task) return 'A';
   const ctx = getTaskContext(task);
   if (ctx === 'home') return 'C';
   if (task.priority === 'urgent') return 'B';
@@ -948,8 +949,15 @@ function taskToRingId(task) {
 }
 
 function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChange, onShowFullMap }) {
-  const { layout, persist, loaded } = useCircleMapLayout(tasks);
+  const safeTasks = tasks || [];
+  const safeAllTasks = allTasks || [];
+  const { layout, persist, loaded } = useCircleMapLayout(safeTasks);
   const canvasRef = useRef(null);
+
+  // Debug log — remove after confirming fix
+  useEffect(() => {
+    console.log('[AyoaMiniCanvas]', { tasksLen: safeTasks.length, allTasksLen: safeAllTasks.length, loaded, bubblesCount: Object.keys(layout.bubbles || {}).length });
+  }, [safeTasks.length, safeAllTasks.length, loaded, layout.bubbles]);
 
   const handleRingDragEnd = useCallback((ringId) => (nx, ny) => {
     persist({ ...layout, rings: { ...layout.rings, [ringId]: { ...layout.rings[ringId], cx: nx, cy: ny } } });
@@ -963,18 +971,19 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
   // Per-ring counts: visible bubbles vs total tasks in that ring's context
   const ringCounts = useMemo(() => {
     const counts = { A: { visible: 0, total: 0 }, B: { visible: 0, total: 0 }, C: { visible: 0, total: 0 }, D: { visible: 0, total: 0 } };
+    const bubbles = layout.bubbles || {};
     // Count visible bubbles by their assigned ring
-    for (const task of tasks) {
-      const bl = layout.bubbles[task.id];
+    for (const task of safeTasks) {
+      const bl = bubbles[task.id];
       if (bl?.ringId && counts[bl.ringId]) counts[bl.ringId].visible++;
     }
     // Count total tasks by ring context
-    for (const task of allTasks) {
+    for (const task of safeAllTasks) {
       const rid = taskToRingId(task);
       if (counts[rid]) counts[rid].total++;
     }
     return counts;
-  }, [tasks, allTasks, layout.bubbles]);
+  }, [safeTasks, safeAllTasks, layout.bubbles]);
 
   if (!loaded) return null;
 
@@ -1025,8 +1034,8 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
 
         {/* HTML layer — draggable bubbles (percentage-positioned) */}
         <AnimatePresence>
-          {tasks.map(task => {
-            const bl = layout.bubbles[task.id];
+          {safeTasks.map(task => {
+            const bl = (layout.bubbles || {})[task.id];
             if (!bl) return null;
             const size = SIZE_BY_PRIORITY[task.priority] || 95;
             const palette = bl.ringId ? (RING_PALETTE[bl.ringId] || NEUTRAL_PALETTE) : NEUTRAL_PALETTE;
