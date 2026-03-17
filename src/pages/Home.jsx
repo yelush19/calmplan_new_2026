@@ -554,37 +554,18 @@ export default function HomePage() {
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
         {/* ═══ 3. "מה אפשר לעשות היום" — AYOA-style mini-canvas ═══ */}
-        <div className="py-6">
-          <h3 className="text-sm font-bold text-slate-700 mb-5 px-1 text-center">מה אפשר לעשות היום</h3>
-          {calmTasks.length === 0 ? (
-            <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-              <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
-            </div>
-          ) : (() => {
-            const positions = computeBubbleLayout(calmTasks.length);
-            const canvasH = calmTasks.length <= 2 ? 180 : calmTasks.length <= 3 ? 260 : 310;
-            return (
-              <div className="relative mx-auto" style={{ maxWidth: 420, height: canvasH }}>
-                <AnimatePresence>
-                  {calmTasks.map((task, i) => (
-                    <CalmBubble
-                      key={task.id}
-                      task={task}
-                      onEdit={setEditingTask}
-                      onStatusChange={handleStatusChange}
-                      posStyle={positions[i]}
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
-            );
-          })()}
-          {(data.overdue.length + data.today.length) > 5 && (
-            <p className="text-[11px] text-slate-400 mt-4 text-center">
-              +{(data.overdue.length + data.today.length) - 5} משימות נוספות במפה המלאה
-            </p>
-          )}
-        </div>
+        {calmTasks.length === 0 ? (
+          <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+            <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
+          </div>
+        ) : (
+          <AyoaMiniCanvas
+            tasks={calmTasks}
+            totalExtra={(data.overdue.length + data.today.length) - calmTasks.length}
+            onEdit={setEditingTask}
+            onStatusChange={handleStatusChange}
+          />
+        )}
 
         {/* ═══ 4. Sticky Notes — max 3 ═══ */}
         {stickyNotes.length > 0 && (
@@ -630,7 +611,10 @@ export default function HomePage() {
         <Button
           variant="outline"
           onClick={() => setShowFullMap(true)}
-          className="w-full gap-2 py-5 text-sm font-semibold text-slate-600 border-sky-200 hover:bg-sky-50 rounded-xl"
+          className="w-full gap-2 py-5 text-sm font-semibold text-slate-600 rounded-xl"
+          style={{ border: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F7F7F7'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
         >
           <Map className="w-4 h-4" style={{ color: ZERO_PANIC.blue }} />
           הצג מפה מלאה
@@ -657,40 +641,12 @@ function EmptyState({ icon, text }) {
   );
 }
 
-// ─── AYOA-style bubble — strict visual spec ───
-// All bubbles share ONE warm-peach fill. No per-priority color variation.
-const BUBBLE_STYLE = { bg: '#FFF7ED', border: '#FED7AA' };
+// ─── AYOA Mini-Canvas ───────────────────────────────────────────
+// Renders a big central ring, optional category rings, and sized task bubbles.
 
-// Compute scattered bubble positions dynamically based on task count
-function computeBubbleLayout(count) {
-  // Predefined organic layouts for 1–5 items
-  const layouts = {
-    1: [{ top: '15%', left: '50%', transform: 'translateX(-50%)' }],
-    2: [
-      { top: '10%', left: '25%' },
-      { top: '20%', left: '60%' },
-    ],
-    3: [
-      { top: '0%',  left: '38%' },
-      { top: '42%', left: '8%' },
-      { top: '38%', left: '62%' },
-    ],
-    4: [
-      { top: '0%',  left: '42%' },
-      { top: '30%', left: '5%' },
-      { top: '25%', left: '62%' },
-      { top: '58%', left: '30%' },
-    ],
-    5: [
-      { top: '0%',  left: '38%' },
-      { top: '22%', left: '4%' },
-      { top: '18%', left: '65%' },
-      { top: '52%', left: '18%' },
-      { top: '55%', left: '55%' },
-    ],
-  };
-  return layouts[count] || layouts[5];
-}
+const BUBBLE_FILL = '#FFF7ED';
+const BUBBLE_BORDER = '#FED7AA';
+const RING_STROKE = '#E5E7EB';
 
 // Status dot colors — strict palette: emerald / indigo / orange only
 const QUICK_STATUSES = [
@@ -700,7 +656,6 @@ const QUICK_STATUSES = [
   { key: 'not_started',            label: 'לבצע',            dotColor: '#94A3B8' },
 ];
 
-// Map task status → spec dot color
 const STATUS_DOT_COLOR = {
   production_completed:  '#10B981',
   waiting_for_materials: '#6366F1',
@@ -709,12 +664,158 @@ const STATUS_DOT_COLOR = {
   not_started:           '#94A3B8',
 };
 
+// Bubble diameter by priority (hierarchy: bigger = more important)
+const BUBBLE_SIZE = { urgent: 150, high: 135, medium: 120, low: 100 };
 
-function CalmBubble({ task, onEdit, onStatusChange, posStyle }) {
+// Category ring definitions — labels appear on the ring
+const CATEGORY_RINGS = [
+  { key: 'work',    label: 'עבודה',     cx: -90, cy: -60,  r: 110 },
+  { key: 'home',    label: 'בית',       cx: 100, cy: 70,   r: 95  },
+];
+
+function getCategoryKey(task) {
+  const ctx = getTaskContext(task);
+  if (ctx === 'work') return 'work';
+  if (ctx === 'home') return 'home';
+  return null;
+}
+
+// Compute radial bubble positions around the center of the canvas
+function computeCanvasPositions(tasks) {
+  const cx = 230, cy = 220; // canvas center
+  const mainR = 140; // main circle radius
+
+  if (tasks.length === 1) {
+    return [{ x: cx, y: cy - 10 }];
+  }
+
+  // Place bubbles at angles around the center, with slight radial offsets
+  // First task (highest priority) goes near top-center, rest distributed
+  const angleOffsets = {
+    2: [-0.3, 0.5],
+    3: [-0.4, 0.6, -1.2],
+    4: [-0.3, 0.5, -1.1, 1.2],
+    5: [-0.3, 0.55, -1.0, 1.1, -1.7],
+  };
+  const radialDistances = {
+    2: [40, 65],
+    3: [30, 70, 75],
+    4: [25, 70, 80, 65],
+    5: [20, 68, 72, 85, 80],
+  };
+
+  const angles = angleOffsets[tasks.length] || angleOffsets[5];
+  const radii = radialDistances[tasks.length] || radialDistances[5];
+
+  return tasks.map((_, i) => {
+    const angle = angles[i] ?? (i * 1.2 - 0.5);
+    const dist = radii[i] ?? 70;
+    return {
+      x: cx + Math.cos(angle) * dist,
+      y: cy + Math.sin(angle) * dist,
+    };
+  });
+}
+
+function AyoaMiniCanvas({ tasks, totalExtra, onEdit, onStatusChange }) {
+  const canvasW = 460, canvasH = 460;
+  const cx = 230, cy = 220;
+  const mainR = 140;
+
+  const positions = useMemo(() => computeCanvasPositions(tasks), [tasks]);
+
+  // Determine which category rings to show based on task contexts
+  const activeCategories = useMemo(() => {
+    const cats = new Set();
+    tasks.forEach(t => {
+      const k = getCategoryKey(t);
+      if (k) cats.add(k);
+    });
+    return CATEGORY_RINGS.filter(r => cats.has(r.key));
+  }, [tasks]);
+
+  return (
+    <div className="rounded-2xl py-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+      <div className="relative mx-auto" style={{ width: canvasW, maxWidth: '100%', height: canvasH }}>
+        {/* SVG layer: main circle + category rings */}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox={`0 0 ${canvasW} ${canvasH}`}
+          style={{ overflow: 'visible' }}
+        >
+          {/* Main circle — big dashed ring */}
+          <circle
+            cx={cx} cy={cy} r={mainR}
+            fill="none"
+            stroke={RING_STROKE}
+            strokeWidth="2"
+            strokeDasharray="6 4"
+          />
+          {/* Center label */}
+          <text x={cx} y={cy + mainR + 22} textAnchor="middle" fill="#94A3B8" fontSize="12" fontFamily="Heebo, Assistant, sans-serif">
+            מה אפשר לעשות היום
+          </text>
+
+          {/* Category rings */}
+          {activeCategories.map(ring => (
+            <g key={ring.key}>
+              <circle
+                cx={cx + ring.cx} cy={cy + ring.cy} r={ring.r}
+                fill="none"
+                stroke={RING_STROKE}
+                strokeWidth="1.5"
+              />
+              {/* Ring label — positioned at top of ring */}
+              <text
+                x={cx + ring.cx}
+                y={cy + ring.cy - ring.r - 6}
+                textAnchor="middle"
+                fill="#94A3B8"
+                fontSize="11"
+                fontFamily="Heebo, Assistant, sans-serif"
+              >
+                {ring.label}
+              </text>
+            </g>
+          ))}
+        </svg>
+
+        {/* HTML layer: interactive bubbles */}
+        <AnimatePresence>
+          {tasks.map((task, i) => {
+            const size = BUBBLE_SIZE[task.priority] || 120;
+            const pos = positions[i];
+            return (
+              <CanvasBubble
+                key={task.id}
+                task={task}
+                size={size}
+                x={pos.x}
+                y={pos.y}
+                onEdit={onEdit}
+                onStatusChange={onStatusChange}
+              />
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {totalExtra > 0 && (
+        <p className="text-[11px] text-center mt-1" style={{ color: '#94A3B8' }}>
+          +{totalExtra} משימות נוספות במפה המלאה
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Single bubble on the AYOA canvas — variable size
+function CanvasBubble({ task, size, x, y, onEdit, onStatusChange }) {
   const [showStatus, setShowStatus] = useState(false);
   const [fading, setFading] = useState(false);
   const statusCfg = statusConfig[task.status] || statusConfig.not_started;
   const dotColor = STATUS_DOT_COLOR[task.status] || '#94A3B8';
+  const half = size / 2;
 
   const handleQuickStatus = (e, newStatus) => {
     e.stopPropagation();
@@ -727,52 +828,56 @@ function CalmBubble({ task, onEdit, onStatusChange, posStyle }) {
     }
   };
 
+  // Max text width scales with bubble size
+  const maxTextW = size - 36;
+
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.7 }}
-      animate={{ opacity: fading ? 0 : 1, scale: fading ? 0.5 : 1 }}
-      exit={{ opacity: 0, scale: 0.5 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      initial={{ opacity: 0, scale: 0.6 }}
+      animate={{ opacity: fading ? 0 : 1, scale: fading ? 0.4 : 1 }}
+      exit={{ opacity: 0, scale: 0.4 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 22 }}
       className="absolute"
-      style={posStyle}
+      style={{ left: x - half, top: y - half, width: size, height: size, zIndex: 10 }}
     >
       <button
         onClick={() => onEdit(task)}
-        className="relative flex flex-col items-center text-center rounded-full p-4 transition-shadow hover:shadow-lg cursor-pointer"
+        className="w-full h-full rounded-full flex flex-col items-center justify-center text-center transition-shadow hover:shadow-md cursor-pointer p-2"
         style={{
-          width: 130,
-          height: 130,
-          backgroundColor: BUBBLE_STYLE.bg,
-          border: `2px solid ${BUBBLE_STYLE.border}`,
+          backgroundColor: BUBBLE_FILL,
+          border: `2.5px solid ${BUBBLE_BORDER}`,
         }}
       >
-        {/* Title — spec: 15px bold black, max 2 lines */}
-        <span className="font-bold leading-tight mt-2 line-clamp-2 max-w-[100px]" style={{ fontSize: 15, color: '#000000' }}>
+        {/* Title — 15px bold black, max 2 lines */}
+        <span
+          className="font-bold leading-tight line-clamp-2"
+          style={{ fontSize: size >= 135 ? 15 : 13, color: '#000000', maxWidth: maxTextW }}
+        >
           {task.title}
         </span>
 
-        {/* Status dot + label — spec: 13px regular black */}
+        {/* Status dot + label — 13px regular black */}
         <span
-          className="mt-auto mb-1 flex items-center gap-1.5 hover:bg-white/50 rounded-full px-2 py-0.5 transition-colors"
+          className="mt-1 flex items-center gap-1 hover:bg-white/50 rounded-full px-1.5 py-0.5 transition-colors"
           onClick={(e) => { e.stopPropagation(); setShowStatus(!showStatus); }}
           title="שנה סטטוס"
         >
-          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
-          <span style={{ fontSize: 13, color: '#000000' }}>{statusCfg.text}</span>
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+          <span style={{ fontSize: size >= 135 ? 13 : 11, color: '#000000' }}>{statusCfg.text}</span>
           <ChevronDown className="w-2.5 h-2.5" style={{ color: '#000000' }} />
         </span>
       </button>
 
-      {/* Quick status picker — floats below bubble */}
+      {/* Quick status picker */}
       <AnimatePresence>
         {showStatus && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
+            exit={{ opacity: 0, y: -6 }}
             className="absolute left-1/2 -translate-x-1/2 z-50 rounded-xl shadow-lg py-1.5 px-1"
-            style={{ top: 136, minWidth: 150, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}
+            style={{ top: size + 4, minWidth: 150, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}
           >
             {QUICK_STATUSES.map(s => (
               <button
