@@ -115,13 +115,13 @@ export default function CognitiveCapacityHeader({ tasks = [], onFilterTier }) {
 
               {/* Label below bar */}
               <div className="flex items-center gap-0.5">
-                <span className="text-[10px]">{cfg.icon}</span>
-                <span className="text-[10px] font-medium text-slate-600">{cfg.label}</span>
+                <span className="text-[12px]">{cfg.icon}</span>
+                <span className="text-[12px] font-medium text-slate-600">{cfg.label}</span>
               </div>
 
               {/* Minutes */}
               {count > 0 && (
-                <span className="text-[9px] text-slate-400">{mins} דק'</span>
+                <span className="text-[12px] text-slate-400">{mins} דק'</span>
               )}
             </button>
           );

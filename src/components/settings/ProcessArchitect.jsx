@@ -127,7 +127,7 @@ function SubStepsEditor({ subSteps = [], onChange }) {
       {subSteps.map((sub, si) => (
         <div key={sub.key || si} className="flex items-center gap-2 group/sub bg-amber-50 rounded-md px-2.5 py-1.5 border border-amber-100">
           <GripVertical className="w-3.5 h-3.5 text-amber-200 cursor-grab" />
-          <span className="text-[10px] font-bold text-amber-500 w-5 text-center">{si + 1}</span>
+          <span className="text-[12px] font-bold text-amber-500 w-5 text-center">{si + 1}</span>
           <InlineEdit
             value={sub.label}
             onSave={(val) => renameSub(si, val)}
@@ -208,7 +208,7 @@ function StepsEditor({ steps, onChange }) {
                 title="תתי-שלבים"
               >
                 <Layers className="w-3.5 h-3.5" />
-                {subCount > 0 && <span className="text-[10px] font-bold">{subCount}</span>}
+                {subCount > 0 && <span className="text-[12px] font-bold">{subCount}</span>}
               </button>
               <button
                 onClick={() => removeStep(idx)}
@@ -1228,10 +1228,10 @@ export default function ProcessArchitect() {
       </Sheet>
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-row-reverse p-4 rounded-2xl bg-gradient-to-l from-pink-50/50 to-amber-50/30 border-2 border-gray-100">
+      <div className="flex items-center justify-between flex-row-reverse p-4 rounded-2xl bg-gradient-to-l from-indigo-50/50 to-amber-50/30 border-2 border-gray-100">
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-[#E91E6320] to-[#FFC10720]">
-            <Network className="w-7 h-7 text-[#E91E63]" />
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-[#6366F120] to-[#FFC10720]">
+            <Network className="w-7 h-7 text-[#6366F1]" />
           </div>
           <div>
             <h3 className="text-xl font-black text-gray-800">אדריכל תהליכים</h3>

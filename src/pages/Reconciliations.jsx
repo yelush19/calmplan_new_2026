@@ -28,7 +28,7 @@ const statusConfig = {
   waiting_for_materials:  { label: 'ממתין לחומרים',   pill: 'bg-amber-100 text-amber-800 border border-amber-200',            icon: AlertCircle },
   in_progress:            { label: 'בתהליך',          pill: 'bg-[#4682B4]/10 text-[#4682B4] border border-[#4682B4]',         icon: Clock },
   completed:              { label: 'הושלם',           pill: 'bg-teal-100 text-teal-800 border border-teal-200',               icon: CheckCircle },
-  issues:                 { label: 'בעיות',           pill: 'bg-rose-100 text-rose-800 border border-rose-200',               icon: AlertCircle },
+  issues:                 { label: 'בעיות',           pill: 'bg-amber-100 text-amber-800 border border-amber-200',               icon: AlertCircle },
 };
 
 const frequencyLabels = {
@@ -61,7 +61,7 @@ const lagSeverityConfig = {
   low:      { dot: 'bg-sky-400',   glow: '',                                                    text: 'text-sky-600' },
   medium:   { dot: 'bg-amber-400', glow: 'shadow-[0_0_8px_rgba(245,158,11,0.5)]',               text: 'text-amber-600' },
   high:     { dot: 'bg-orange-500',glow: 'shadow-[0_0_10px_rgba(249,115,22,0.6)]',              text: 'text-orange-600' },
-  critical: { dot: 'bg-rose-500',  glow: 'shadow-[0_0_12px_rgba(244,63,94,0.6)] animate-pulse', text: 'text-rose-600' },
+  critical: { dot: 'bg-orange-600',  glow: 'shadow-[0_0_12px_rgba(234,88,12,0.6)] animate-pulse', text: 'text-orange-700' },
 };
 
 // ─── Pre-set lag filter options ────────────────────────────────
@@ -142,11 +142,11 @@ function ClientDrawer({ client, tasks, open, onClose }) {
               <div key={task.id} className="p-3 bg-white  rounded-[16px] shadow-sm border border-[#E0E0E0]">
                 <p className="font-medium text-sm text-slate-800">{task.title}</p>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <Badge className={`text-[10px] rounded-full px-2 ${statusConfig[task.status]?.pill || statusConfig.not_started.pill}`}>
+                  <Badge className={`text-[12px] rounded-full px-2 ${statusConfig[task.status]?.pill || statusConfig.not_started.pill}`}>
                     {statusConfig[task.status]?.label || task.status}
                   </Badge>
                   {task.due_date && (
-                    <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                    <span className="text-[12px] text-slate-400 flex items-center gap-0.5">
                       <Calendar className="w-2.5 h-2.5" /> {formatDate(task.due_date)}
                     </span>
                   )}
@@ -380,20 +380,20 @@ function ClientGroupHeader({
           {clientName}
         </button>
         <div className="flex items-center gap-2">
-          <Badge className="text-[10px] rounded-full bg-[#4682B4]/10 text-[#4682B4] border border-[#4682B4]/20 px-2">
+          <Badge className="text-[12px] rounded-full bg-[#4682B4]/10 text-[#4682B4] border border-[#4682B4]/20 px-2">
             {totalAccounts} חשבונות
           </Badge>
           {laggingCount > 0 && (
-            <Badge className={`text-[10px] rounded-full px-2 ${
+            <Badge className={`text-[12px] rounded-full px-2 ${
               worstSeverity === 'critical' || worstSeverity === 'high'
-                ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                ? 'bg-orange-100 text-orange-700 border border-orange-200'
                 : 'bg-amber-100 text-amber-700 border border-amber-200'
             }`}>
               {laggingCount} בפיגור
             </Badge>
           )}
           {completedCount === totalAccounts && totalAccounts > 0 && (
-            <Badge className="text-[10px] rounded-full bg-teal-100 text-teal-700 border border-teal-200 px-2">
+            <Badge className="text-[12px] rounded-full bg-teal-100 text-teal-700 border border-teal-200 px-2">
               הכל מעודכן
             </Badge>
           )}
@@ -923,7 +923,7 @@ export default function ReconciliationsPage() {
                                     isChecked
                                       ? 'bg-[#4682B4]/5'
                                       : row.daysOverdue > 30
-                                        ? 'bg-rose-50 hover:bg-rose-50'
+                                        ? 'bg-orange-50 hover:bg-orange-50'
                                         : row.daysOverdue > 0
                                           ? 'bg-amber-50 hover:bg-amber-50'
                                           : 'bg-[#F5F5F5] hover:bg-white'
@@ -947,13 +947,13 @@ export default function ReconciliationsPage() {
                                   </td>
                                   {/* Type */}
                                   <td className="p-3 text-center">
-                                    <Badge className="text-[10px] rounded-full bg-white text-slate-600 border border-[#E0E0E0]">
+                                    <Badge className="text-[12px] rounded-full bg-white text-slate-600 border border-[#E0E0E0]">
                                       {accountTypeLabels[row.accountType] || row.accountType}
                                     </Badge>
                                   </td>
                                   {/* Frequency */}
                                   <td className="p-3 text-center">
-                                    <Badge className="text-[10px] rounded-full bg-white text-slate-600 border border-[#E0E0E0]">
+                                    <Badge className="text-[12px] rounded-full bg-white text-slate-600 border border-[#E0E0E0]">
                                       {frequencyLabels[row.frequency] || 'חודשי'}
                                     </Badge>
                                   </td>
@@ -970,7 +970,7 @@ export default function ReconciliationsPage() {
                                     {row.daysOverdue > 0 ? (
                                       <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                                         row.daysOverdue > 30
-                                          ? 'bg-rose-100 text-rose-700'
+                                          ? 'bg-orange-100 text-orange-700'
                                           : 'bg-amber-100 text-amber-700'
                                       }`}>
                                         {row.daysOverdue} ימים
@@ -982,7 +982,7 @@ export default function ReconciliationsPage() {
                                   {/* Status — Interactive Glass Button */}
                                   <td className="p-3 text-center">
                                     <button
-                                      className={`inline-flex items-center gap-1.5 text-[10px] rounded-full px-3 py-1.5 font-medium  border shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ${stsCfg.pill}`}
+                                      className={`inline-flex items-center gap-1.5 text-[12px] rounded-full px-3 py-1.5 font-medium  border shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ${stsCfg.pill}`}
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         const statusCycle = ['not_started', 'in_progress', 'completed'];
@@ -1018,7 +1018,7 @@ export default function ReconciliationsPage() {
                                     <div className="flex items-center justify-center gap-1.5">
                                       <Button
                                         size="sm"
-                                        className="text-[10px] gap-1 rounded-full  bg-white hover:bg-[#4682B4] text-[#4682B4] hover:text-white border border-[#4682B4]/30 hover:border-transparent shadow-sm hover:shadow-lg transition-all"
+                                        className="text-[12px] gap-1 rounded-full  bg-white hover:bg-[#4682B4] text-[#4682B4] hover:text-white border border-[#4682B4]/30 hover:border-transparent shadow-sm hover:shadow-lg transition-all"
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           try {

@@ -353,7 +353,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
               <ChevronRight className="w-4 h-4" />
             </Button>
             <div className="text-center w-32">
-              <div className="text-[10px] text-slate-400 leading-none">חודש</div>
+              <div className="text-[12px] text-slate-400 leading-none">חודש</div>
               <div className="font-semibold text-sm text-slate-700">
                 {format(selectedMonth, 'MMMM yyyy', { locale: he })}
               </div>

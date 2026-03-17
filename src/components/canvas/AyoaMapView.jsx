@@ -424,13 +424,13 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
       {/* ── Control Bar: Auto-Layout, Zoom-to-Fit, Zoom level ── */}
       <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
         <button onClick={handleAutoLayout}
-          className="px-3 py-1.5 rounded-xl bg-white shadow-lg border text-[10px] font-bold hover:bg-gray-50 transition-all"
+          className="px-3 py-1.5 rounded-xl bg-white shadow-lg border text-[12px] font-bold hover:bg-gray-50 transition-all"
           style={{ borderColor: '#E2E8F0', color: '#475569' }}
           title="סידור אוטומטי">
           סדר מחדש
         </button>
         <button onClick={handleZoomToFit}
-          className="px-3 py-1.5 rounded-xl bg-white shadow-lg border text-[10px] font-bold hover:bg-gray-50 transition-all"
+          className="px-3 py-1.5 rounded-xl bg-white shadow-lg border text-[12px] font-bold hover:bg-gray-50 transition-all"
           style={{ borderColor: '#E2E8F0', color: '#475569' }}
           title="התאם לגודל">
           התאם תצוגה
@@ -438,7 +438,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
         <div className="flex items-center gap-1 bg-white rounded-xl shadow-lg border px-2 py-1" style={{ borderColor: '#E2E8F0' }}>
           <button onClick={() => setZoom(z => Math.max(0.3, z - 0.15))}
             className="w-6 h-6 rounded-lg text-sm font-bold hover:bg-gray-100 transition-colors text-gray-600">-</button>
-          <span className="text-[10px] font-bold text-gray-500 w-10 text-center">{Math.round(zoom * 100)}%</span>
+          <span className="text-[12px] font-bold text-gray-500 w-10 text-center">{Math.round(zoom * 100)}%</span>
           <button onClick={() => setZoom(z => Math.min(3, z + 0.15))}
             className="w-6 h-6 rounded-lg text-sm font-bold hover:bg-gray-100 transition-colors text-gray-600">+</button>
         </div>
@@ -452,7 +452,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
         onClick={() => setSelectedNode(null)}>
         <defs>
           <filter id="map-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#E91E63" floodOpacity="0.2" />
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#6366F1" floodOpacity="0.2" />
           </filter>
           <filter id="map-blur">
             <feGaussianBlur stdDeviation="4" />
@@ -461,7 +461,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.08" />
           </filter>
           <filter id="sel-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#E91E63" floodOpacity="0.35" />
+            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#6366F1" floodOpacity="0.35" />
           </filter>
           <radialGradient id="map-center-grad">
             <stop offset="0%" stopColor="#FFC107" />
@@ -659,7 +659,7 @@ export default function AyoaMapView({ tasks = [], centerLabel = 'מרכז', cent
       {focusedNode !== null && (
         <button onClick={() => setFocusedNode(null)}
           className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-white shadow-lg border text-xs font-bold hover:bg-gray-50 transition-all"
-          style={{ color: '#E91E63' }}>
+          style={{ color: '#6366F1' }}>
           ✕ נקה מיקוד
         </button>
       )}

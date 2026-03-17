@@ -351,7 +351,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
               return (
                 <div key={tier} className="flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: `${lc.color}15`, border: `1px solid ${lc.color}30` }}>
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: lc.color, boxShadow: `0 0 4px ${lc.color}60` }} />
-                  <span className="text-[10px] font-medium" style={{ color: lc.color }}>{lc.label}</span>
+                  <span className="text-[12px] font-medium" style={{ color: lc.color }}>{lc.label}</span>
                 </div>
               );
             })}
@@ -575,7 +575,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
 
                           {/* Task title */}
                           {pos.durationDays >= 2 && (
-                            <span className="text-[10px] font-semibold text-white truncate leading-tight" style={{
+                            <span className="text-[12px] font-semibold text-white truncate leading-tight" style={{
                               textShadow: '0 1px 2px rgba(0,0,0,0.2)',
                               letterSpacing: '0.01em',
                             }}>
@@ -585,7 +585,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
 
                           {/* Duration badge (DNA minutes) — only on wider capsules */}
                           {pos.durationDays >= 3 && (
-                            <span className="flex-shrink-0 text-[8px] font-medium rounded-full px-1.5 py-0.5 mr-auto" style={{
+                            <span className="flex-shrink-0 text-[11px] font-medium rounded-full px-1.5 py-0.5 mr-auto" style={{
                               background: 'rgba(255,255,255,0.25)',
                               color: 'rgba(255,255,255,0.95)',
                               backdropFilter: 'blur(4px)',
@@ -623,7 +623,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                       <div className="flex items-center gap-2 mt-1">
                         <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: loadColor.color, boxShadow: `0 0 4px ${loadColor.color}80` }} />
                         <span className="text-xs !text-[#B0BEC5]">{loadColor.label}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: `${statusColor.bg}30`, color: statusColor.bg }}>
+                        <span className="text-[12px] px-1.5 py-0.5 rounded-full" style={{ background: `${statusColor.bg}30`, color: statusColor.bg }}>
                           {STATUS_LABELS[task.status] || task.status}
                         </span>
                       </div>
@@ -632,15 +632,15 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                         {` \u2022 ${dnaMinutes} דק׳ (DNA)`}
                       </p>
                       {pos.durationDays > 1 && (
-                        <p className="text-[10px] !text-[#78909C]">{pos.durationDays} ימי עבודה</p>
+                        <p className="text-[12px] !text-[#78909C]">{pos.durationDays} ימי עבודה</p>
                       )}
                       {showBalanceGlow && (
-                        <p className="text-[10px] mt-0.5" style={{ color: '#800000' }}>מאזן לקוח לא בריא</p>
+                        <p className="text-[12px] mt-0.5" style={{ color: '#800000' }}>מאזן לקוח לא בריא</p>
                       )}
                       {(task.reschedule_count || 0) > 0 && (
-                        <p className="text-[10px] text-amber-400">נדחה {task.reschedule_count} פעמים</p>
+                        <p className="text-[12px] text-amber-400">נדחה {task.reschedule_count} פעמים</p>
                       )}
-                      <p className="text-[10px] text-[#607D8B] mt-1 opacity-70">לחץ לעריכה | גרור לשינוי תאריך</p>
+                      <p className="text-[12px] text-[#607D8B] mt-1 opacity-70">לחץ לעריכה | גרור לשינוי תאריך</p>
                     </TooltipContent>
                   </Tooltip>
                 );

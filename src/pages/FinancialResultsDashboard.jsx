@@ -239,7 +239,7 @@ export default function FinancialResultsDashboard() {
               <ChevronRight className="w-4 h-4" />
             </Button>
             <div className="text-center w-32">
-              <div className="text-[10px] text-gray-400">חודש דיווח</div>
+              <div className="text-[12px] text-gray-400">חודש דיווח</div>
               <div className="font-semibold text-sm text-gray-700">
                 {format(selectedMonth, 'MMMM yyyy', { locale: he })}
               </div>
@@ -321,7 +321,7 @@ export default function FinancialResultsDashboard() {
                   </th>
                   <th className="text-center p-2 font-semibold min-w-[130px] bg-teal-50">
                     <div className="text-xs">ייצור הנה"ח</div>
-                    <div className="text-[10px] text-gray-400 font-normal">תנאי מקדים</div>
+                    <div className="text-[12px] text-gray-400 font-normal">תנאי מקדים</div>
                   </th>
                   <th className="text-center p-2 font-semibold min-w-[120px] bg-emerald-50">
                     <div className="text-xs">רווח והפסד</div>
@@ -366,7 +366,7 @@ export default function FinancialResultsDashboard() {
                           <td className="text-center p-2">
                             <StatusBadge status={row.productionStatus} />
                             {row.totalProd > 0 && (
-                              <div className="text-[10px] text-gray-400 mt-1">
+                              <div className="text-[12px] text-gray-400 mt-1">
                                 {row.doneProd}/{row.totalProd}
                               </div>
                             )}

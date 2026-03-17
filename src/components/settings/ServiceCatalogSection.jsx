@@ -222,20 +222,20 @@ export default function ServiceCatalogSection() {
               קטלוג שירותים — Service Catalog
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Badge className="bg-indigo-100 text-indigo-700 text-[10px]">
+              <Badge className="bg-indigo-100 text-indigo-700 text-[12px]">
                 {counts.total} שירותים
               </Badge>
-              <Badge className="bg-green-100 text-green-700 text-[10px]">
+              <Badge className="bg-green-100 text-green-700 text-[12px]">
                 {counts.active} פעילים
               </Badge>
               {counts.fromDb && (
-                <Badge className="bg-blue-100 text-blue-700 text-[10px]">
+                <Badge className="bg-blue-100 text-blue-700 text-[12px]">
                   <Database className="w-3 h-3 ml-1" />
                   Supabase
                 </Badge>
               )}
               {!counts.fromDb && (
-                <Badge className="bg-amber-100 text-amber-700 text-[10px]">
+                <Badge className="bg-amber-100 text-amber-700 text-[12px]">
                   <AlertTriangle className="w-3 h-3 ml-1" />
                   טרם נשמר
                 </Badge>
@@ -273,7 +273,7 @@ export default function ServiceCatalogSection() {
               אפס לברירת מחדל
             </Button>
             {dirty && (
-              <Badge className="bg-amber-100 text-amber-700 text-[10px] flex items-center gap-1">
+              <Badge className="bg-amber-100 text-amber-700 text-[12px] flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
                 יש שינויים שלא נשמרו
               </Badge>
@@ -292,8 +292,8 @@ export default function ServiceCatalogSection() {
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                  <Badge className={`text-[10px] ${group.badge}`}>{group.label}</Badge>
-                  <span className="text-[10px] text-gray-400">{groupServices.length} שירותים</span>
+                  <Badge className={`text-[12px] ${group.badge}`}>{group.label}</Badge>
+                  <span className="text-[12px] text-gray-400">{groupServices.length} שירותים</span>
                 </h3>
               </div>
             </CardHeader>
@@ -321,26 +321,26 @@ export default function ServiceCatalogSection() {
 
                       <span className="text-sm font-medium text-gray-800 flex-1">{svc.label}</span>
 
-                      <Badge className="bg-gray-100 text-gray-500 text-[9px]">{svc.service_key}</Badge>
+                      <Badge className="bg-gray-100 text-gray-500 text-[12px]">{svc.service_key}</Badge>
 
                       <div className="flex items-center gap-1">
                         {svc.steps.map((step, i) => (
                           <span
                             key={i}
-                            className="px-1.5 py-0.5 text-[8px] rounded bg-indigo-50 text-indigo-600 font-mono"
+                            className="px-1.5 py-0.5 text-[11px] rounded bg-indigo-50 text-indigo-600 font-mono"
                             title={step.label}
                           >
                             {STEP_ICON_LABELS[step.icon] || step.icon?.slice(0,3).toUpperCase() || (i + 1)}
                           </span>
                         ))}
-                        <span className="text-[9px] text-gray-400 mr-1">{svc.steps.length} שלבים</span>
+                        <span className="text-[12px] text-gray-400 mr-1">{svc.steps.length} שלבים</span>
                       </div>
 
                       {svc.task_type === 'authority' && (
-                        <Badge className="bg-rose-50 text-rose-600 text-[8px]">דיווח+תשלום</Badge>
+                        <Badge className="bg-violet-50 text-violet-600 text-[11px]">דיווח+תשלום</Badge>
                       )}
                       {svc.sequential_steps && (
-                        <Badge className="bg-amber-50 text-amber-600 text-[8px]">סדרתי</Badge>
+                        <Badge className="bg-amber-50 text-amber-600 text-[11px]">סדרתי</Badge>
                       )}
 
                       {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
@@ -351,7 +351,7 @@ export default function ServiceCatalogSection() {
                       <div className="border-t bg-gray-50/50 p-3 space-y-2">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-bold text-gray-600">שלבי Workflow</span>
-                          <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                          <div className="flex items-center gap-2 text-[12px] text-gray-400">
                             <span>סוג: {svc.task_type || 'linear'}</span>
                             <span>קטגוריה: {svc.category}</span>
                             <span>דשבורד: {svc.dashboard}</span>
@@ -365,9 +365,9 @@ export default function ServiceCatalogSection() {
                               key={idx}
                               className="flex items-center gap-2 p-2 rounded border bg-white group"
                             >
-                              <span className="text-[10px] text-gray-400 w-5 text-center font-mono">{idx + 1}</span>
+                              <span className="text-[12px] text-gray-400 w-5 text-center font-mono">{idx + 1}</span>
 
-                              <span className="px-1.5 py-0.5 text-[8px] rounded bg-indigo-100 text-indigo-600 font-mono w-10 text-center">
+                              <span className="px-1.5 py-0.5 text-[11px] rounded bg-indigo-100 text-indigo-600 font-mono w-10 text-center">
                                 {STEP_ICON_LABELS[step.icon] || step.icon?.slice(0,3).toUpperCase()}
                               </span>
 
@@ -384,7 +384,7 @@ export default function ServiceCatalogSection() {
                                 <span className="text-xs text-gray-700 flex-1">{step.label}</span>
                               )}
 
-                              <span className="text-[9px] text-gray-300 font-mono">{step.key}</span>
+                              <span className="text-[12px] text-gray-300 font-mono">{step.key}</span>
 
                               {step.requires_prev && (
                                 <Badge className="bg-amber-50 text-amber-600 text-[7px]">REQ</Badge>
@@ -434,7 +434,7 @@ export default function ServiceCatalogSection() {
                           size="sm"
                           variant="outline"
                           onClick={() => addStep(svc.service_key)}
-                          className="gap-1 text-[10px] border-dashed border-gray-300 text-gray-500 hover:bg-gray-100 w-full h-7"
+                          className="gap-1 text-[12px] border-dashed border-gray-300 text-gray-500 hover:bg-gray-100 w-full h-7"
                         >
                           <Plus className="w-3 h-3" />
                           הוסף שלב
@@ -442,14 +442,14 @@ export default function ServiceCatalogSection() {
 
                         {svc.high_complexity_steps?.length > 0 && (
                           <details className="mt-2">
-                            <summary className="text-[10px] text-purple-600 cursor-pointer hover:text-purple-800">
+                            <summary className="text-[12px] text-purple-600 cursor-pointer hover:text-purple-800">
                               שלבים מורכבים (High Complexity) — {svc.high_complexity_steps.length} שלבים
                             </summary>
                             <div className="mt-1 space-y-1 p-2 border border-purple-100 rounded bg-purple-50/50">
                               {svc.high_complexity_steps.map((step, idx) => (
                                 <div key={idx} className="flex items-center gap-2 text-xs">
-                                  <span className="text-[10px] text-purple-400 w-5 text-center">{idx + 1}</span>
-                                  <span className="px-1 py-0.5 text-[8px] rounded bg-purple-100 text-purple-600 font-mono">
+                                  <span className="text-[12px] text-purple-400 w-5 text-center">{idx + 1}</span>
+                                  <span className="px-1 py-0.5 text-[11px] rounded bg-purple-100 text-purple-600 font-mono">
                                     {STEP_ICON_LABELS[step.icon] || step.icon?.slice(0,3).toUpperCase()}
                                   </span>
                                   <span className="text-purple-700">{step.label}</span>
@@ -469,7 +469,7 @@ export default function ServiceCatalogSection() {
       })}
 
       {/* ── Summary footer ── */}
-      <div className="text-center text-[10px] text-gray-400 py-2">
+      <div className="text-center text-[12px] text-gray-400 py-2">
         {catalog.length} שירותים בקטלוג &bull; {catalog.filter(s => s.is_active).length} פעילים &bull;{' '}
         {catalog.reduce((sum, s) => sum + s.steps.length, 0)} שלבי workflow
       </div>

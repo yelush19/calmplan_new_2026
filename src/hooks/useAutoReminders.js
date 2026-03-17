@@ -88,7 +88,7 @@ export default function useAutoReminders() {
 
           if (daysUntilDue <= 3) {
             const urgency = daysUntilDue <= 0 ? 'urgent' : daysUntilDue <= 1 ? 'high' : 'medium';
-            const colorMap = { urgent: 'pink', high: 'pink', medium: 'yellow' };
+            const colorMap = { urgent: 'purple', high: 'purple', medium: 'yellow' };
             const prefix = daysUntilDue < 0
               ? `⚠️ באיחור ${Math.abs(daysUntilDue)} ימים!`
               : daysUntilDue === 0

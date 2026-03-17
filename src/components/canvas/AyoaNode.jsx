@@ -28,25 +28,25 @@ import React from 'react';
 
 // -- AYOA Hex Bible -- Full Vibrant Spectrum --
 export const AYOA_PALETTE = {
-  magenta:  '#E91E63',
+  magenta:  '#6366F1',
   mustard:  '#FFC107',
   skyBlue:  '#00A3E0',
   sage:     '#B2AC88',
-  neonPink: '#FF6B9D',
+  neonPink: '#818CF8',
   lime:     '#8BC34A',
   turquoise:'#00BCD4',
   orange:   '#FF9800',
   purple:   '#9C27B0',
   indigo:   '#7C4DFF',
   lightBlue:'#81D4FA',
-  softPink: '#F8BBD0',
+  softPink: '#C7D2FE',
   softGreen:'#C5E1A5',
   softGold: '#FFE082',
-  liveRed:  '#FF5252',
+  liveRed:  '#F59E0B',
   steel:    '#4682B4',
-  fuchsia:  '#E040FB',
+  fuchsia:  '#8B5CF6',
   neonGreen:'#00E676',
-  coral:    '#FF6E40',
+  coral:    '#F59E0B',
   mint:     '#1DE9B6',
 };
 

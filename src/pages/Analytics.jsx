@@ -14,6 +14,7 @@ import {
 import { motion } from "framer-motion";
 import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { he } from "date-fns/locale";
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import { 
   BarChart, 
   Bar, 
@@ -179,6 +180,13 @@ export default function AnalyticsPage() {
   const recommendations = getRecommendations();
 
   return (
+    <UnifiedAyoaLayout
+      tasks={tasks}
+      clients={[]}
+      centerLabel="אנליטיקה"
+      accentColor="#4682B4"
+      isLoading={isLoading}
+    >
     <div className="space-y-8">
       {/* כותרת */}
       <motion.div 
@@ -378,5 +386,6 @@ export default function AnalyticsPage() {
         </Card>
       </motion.div>
     </div>
+    </UnifiedAyoaLayout>
   );
 }

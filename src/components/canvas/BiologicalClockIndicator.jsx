@@ -39,7 +39,7 @@ export default function BiologicalClockIndicator() {
       >
         <span className="text-base">{currentZone.icon}</span>
         <span>{currentZone.label}</span>
-        <span className="text-[10px] opacity-70">{currentZone.start}-{currentZone.end}</span>
+        <span className="text-[12px] opacity-70">{currentZone.start}-{currentZone.end}</span>
         {/* Progress bar */}
         <div className="w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden">
           <div
@@ -66,7 +66,7 @@ export default function BiologicalClockIndicator() {
                 <span className="text-sm font-bold text-gray-800">שעון ביולוגי</span>
                 <button
                   onClick={toggleDynamicVisibility}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-[12px] font-medium transition-colors ${
                     dynamicVisibility
                       ? 'bg-green-100 text-green-700'
                       : 'bg-gray-100 text-gray-500'
@@ -101,16 +101,16 @@ export default function BiologicalClockIndicator() {
                       <div className="flex items-center gap-1">
                         <span style={{ color: isActive ? zone.color : '#374151' }}>{zone.label}</span>
                         {isOverride && (
-                          <span className="text-[8px] bg-amber-100 text-amber-700 px-1 rounded">ידני</span>
+                          <span className="text-[11px] bg-amber-100 text-amber-700 px-1 rounded">ידני</span>
                         )}
                       </div>
-                      <span className="text-[10px] text-gray-400">{zone.start} — {zone.end}</span>
+                      <span className="text-[12px] text-gray-400">{zone.start} — {zone.end}</span>
                     </div>
                     <div className="flex gap-0.5">
                       {zone.activeBranches.map(b => (
                         <span
                           key={b}
-                          className="text-[8px] px-1 py-0.5 rounded bg-gray-100 text-gray-600"
+                          className="text-[11px] px-1 py-0.5 rounded bg-gray-100 text-gray-600"
                         >
                           {b}
                         </span>

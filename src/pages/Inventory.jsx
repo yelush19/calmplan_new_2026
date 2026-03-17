@@ -219,7 +219,7 @@ export default function Inventory() {
             <span className="text-lg">{cat.icon}</span>
             {cat.label}
             {stats.byCategory[key] && (
-              <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded-full">
+              <span className="text-[12px] bg-gray-100 text-gray-600 px-1.5 rounded-full">
                 {stats.byCategory[key].out > 0 && `🔴${stats.byCategory[key].out}`}
                 {stats.byCategory[key].low > 0 && ` 🟡${stats.byCategory[key].low}`}
               </span>
@@ -251,7 +251,7 @@ export default function Inventory() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-gray-800">{item.name}</span>
                   <span
-                    className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                    className="text-[12px] px-2 py-0.5 rounded-full font-medium"
                     style={{ backgroundColor: `${statusColor}20`, color: statusColor }}
                   >
                     {getStatusLabel(status)}
@@ -262,7 +262,7 @@ export default function Inventory() {
                     קו אדום: {item.redLine} {item.unit}
                   </span>
                   {item.isCustom && (
-                    <span className="text-[8px] bg-purple-100 text-purple-600 px-1 rounded">מותאם</span>
+                    <span className="text-[11px] bg-purple-100 text-purple-600 px-1 rounded">מותאם</span>
                   )}
                 </div>
               </div>

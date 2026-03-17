@@ -258,7 +258,7 @@ export default function ServiceCatalog({ overrides, customServices }) {
               {saveResult.integrityOk ? 'INTEGRITY OK • sort_order locked' : `${saveResult.issues?.length} integrity issues`}
             </span>
           </div>
-          <span className="text-[10px] text-green-500">
+          <span className="text-[12px] text-green-500">
             <Clock className="w-3 h-3 inline mr-0.5" />
             {new Date(saveResult.timestamp).toLocaleTimeString('he-IL')}
           </span>
@@ -280,7 +280,7 @@ export default function ServiceCatalog({ overrides, customServices }) {
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: branch.color }} />
                   <span className="text-sm font-bold" style={{ color: branch.color }}>{branch.label}</span>
                 </div>
-                <Badge variant="outline" className="text-[10px]" style={{ borderColor: branch.color + '40', color: branch.color }}>
+                <Badge variant="outline" className="text-[12px]" style={{ borderColor: branch.color + '40', color: branch.color }}>
                   0 שירותים
                 </Badge>
               </div>
@@ -303,7 +303,7 @@ export default function ServiceCatalog({ overrides, customServices }) {
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: branch.color }} />
                 <span className="text-sm font-bold" style={{ color: branch.color }}>{branch.label}</span>
               </div>
-              <Badge variant="outline" className="text-[10px]" style={{ borderColor: branch.color + '40', color: branch.color }}>
+              <Badge variant="outline" className="text-[12px]" style={{ borderColor: branch.color + '40', color: branch.color }}>
                 {services.length} שירותים
               </Badge>
             </div>
@@ -326,19 +326,19 @@ export default function ServiceCatalog({ overrides, customServices }) {
 
                       {/* Type badge */}
                       {typeBadge && (
-                        <Badge className="text-[9px] h-5 px-1.5" style={{ backgroundColor: typeBadge.color + '15', color: typeBadge.color, border: `1px solid ${typeBadge.color}30` }}>
+                        <Badge className="text-[12px] h-5 px-1.5" style={{ backgroundColor: typeBadge.color + '15', color: typeBadge.color, border: `1px solid ${typeBadge.color}30` }}>
                           {typeBadge.label}
                         </Badge>
                       )}
 
                       {/* Step count */}
-                      <span className="text-[10px] text-gray-400 min-w-[50px]">{steps.length} שלבים</span>
+                      <span className="text-[12px] text-gray-400 min-w-[50px]">{steps.length} שלבים</span>
 
                       {/* Step badges (abbreviations) */}
                       <div className="flex items-center gap-0.5">
                         {steps.map((step, i) => (
                           <Badge key={`${step.key}-${i}`} variant="outline"
-                            className="text-[8px] h-4 px-1 font-mono rounded"
+                            className="text-[11px] h-4 px-1 font-mono rounded"
                             style={{ borderColor: branch.color + '30', color: branch.color + 'CC' }}>
                             {getStepBadge(step)}
                           </Badge>
@@ -346,7 +346,7 @@ export default function ServiceCatalog({ overrides, customServices }) {
                       </div>
 
                       {/* Service key */}
-                      <span className="text-[10px] text-gray-400 font-mono">{svc.key}</span>
+                      <span className="text-[12px] text-gray-400 font-mono">{svc.key}</span>
 
                       {/* Spacer */}
                       <div className="flex-1" />
@@ -364,13 +364,13 @@ export default function ServiceCatalog({ overrides, customServices }) {
                         <div className="bg-gray-50 rounded-lg p-3 space-y-1">
                           {steps.map((step, i) => (
                             <div key={`${step.key}-${i}`} className="flex items-center gap-3 text-xs">
-                              <span className="w-5 h-5 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+                              <span className="w-5 h-5 rounded-full text-[12px] font-bold text-white flex items-center justify-center"
                                 style={{ backgroundColor: branch.color }}>
                                 {i + 1}
                               </span>
                               <span className="font-medium text-gray-700">{step.label}</span>
-                              <span className="text-[9px] text-gray-400 font-mono">sort_order: {i}</span>
-                              <span className="text-[9px] text-gray-400 font-mono">parent: {svc.key}</span>
+                              <span className="text-[12px] text-gray-400 font-mono">sort_order: {i}</span>
+                              <span className="text-[12px] text-gray-400 font-mono">parent: {svc.key}</span>
                             </div>
                           ))}
                         </div>

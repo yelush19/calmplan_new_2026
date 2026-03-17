@@ -286,7 +286,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
       >
         <defs>
           <filter id="radial-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#E91E63" floodOpacity="0.2" />
+            <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#6366F1" floodOpacity="0.2" />
           </filter>
           <filter id="radial-blur">
             <feGaussianBlur stdDeviation="4" />
@@ -460,14 +460,14 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
       {focusedNode !== null && (
         <button onClick={() => setFocusedNode(null)}
           className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-white shadow-lg border text-xs font-bold hover:bg-gray-50 transition-all"
-          style={{ color: '#E91E63' }}>
+          style={{ color: '#6366F1' }}>
           ✕ נקה מיקוד
         </button>
       )}
 
       {/* DNA Legend — Architect Map identity (cool tones, full database) */}
       <div className="absolute bottom-3 right-3 flex flex-col gap-1 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-sky-100">
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-sky-800">
+        <div className="flex items-center gap-1.5 text-[12px] font-bold text-sky-800">
           <div className="w-3 h-3 rounded-full" style={{ background: 'linear-gradient(135deg, #00A3E0, #0077B6)' }} />
           מפת ארכיטקט (מסד נתונים מלא)
         </div>
@@ -481,7 +481,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className="text-[10px] font-bold" style={{ color: item.color }}>{item.label}</span>
+              <span className="text-[12px] font-bold" style={{ color: item.color }}>{item.label}</span>
             </div>
           ))}
         </div>

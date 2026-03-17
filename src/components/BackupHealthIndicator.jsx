@@ -108,12 +108,12 @@ export default function BackupHealthIndicator({ health }) {
             </div>
             <p className="text-xs font-medium">{health.message}</p>
             {health.lastBackup && (
-              <p className="text-[10px] mt-1.5 opacity-75">גיבוי אחרון: {lastBackupDisplay}</p>
+              <p className="text-[12px] mt-1.5 opacity-75">גיבוי אחרון: {lastBackupDisplay}</p>
             )}
             {nextBackupDisplay && (
-              <p className="text-[10px] mt-0.5 opacity-75">גיבוי הבא: {nextBackupDisplay}</p>
+              <p className="text-[12px] mt-0.5 opacity-75">גיבוי הבא: {nextBackupDisplay}</p>
             )}
-            <p className="text-[10px] mt-1.5 opacity-60">בדיקה כל 10 דקות, גיבוי כל שעה</p>
+            <p className="text-[12px] mt-1.5 opacity-60">בדיקה כל 10 דקות, גיבוי כל שעה</p>
           </div>
         </>
       )}

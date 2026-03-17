@@ -8,6 +8,7 @@ import { ServiceProvider } from '@/api/entities';
 import { ServiceCompany } from '@/api/entities';
 import ServiceProviderForm from '../components/service-providers/ServiceProviderForm';
 import ServiceCompanyForm from '../components/service-providers/ServiceCompanyForm';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 const TABS = {
   PROVIDERS: 'נותני שירות',
@@ -183,6 +184,7 @@ export default function ServiceProvidersPage() {
   };
 
   return (
+    <UnifiedAyoaLayout tasks={[]} centerLabel="ספקי שירות" accentColor="#0D9488" isLoading={false}>
     <div className="p-6 bg-gray-50" dir="rtl">
       <Card className="max-w-7xl mx-auto">
         <CardHeader>
@@ -363,5 +365,6 @@ export default function ServiceProvidersPage() {
         </CardContent>
       </Card>
     </div>
+    </UnifiedAyoaLayout>
   );
 }

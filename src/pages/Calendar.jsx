@@ -20,6 +20,7 @@ import { createPageUrl } from "@/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import EventDetailsModal from "../components/calendar/EventDetailsModal";
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 const DAYS_HE = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 const DAYS_FULL = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -181,6 +182,13 @@ export default function CalendarPage() {
   }
 
   return (
+    <UnifiedAyoaLayout
+      tasks={tasks}
+      clients={[]}
+      centerLabel="לוח שנה"
+      accentColor="#F59E0B"
+      isLoading={isLoading}
+    >
     <div className="space-y-4">
       {/* Summary Strip - ADHD friendly quick overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -357,6 +365,7 @@ export default function CalendarPage() {
         onClose={() => setNoteTask(null)}
       />
     </div>
+    </UnifiedAyoaLayout>
   );
 }
 
@@ -438,7 +447,7 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
                             );
                           })}
                           {items.length > MAX_DOTS && (
-                            <span className="text-[9px] text-gray-400 leading-none">+{items.length - MAX_DOTS}</span>
+                            <span className="text-[12px] text-gray-400 leading-none">+{items.length - MAX_DOTS}</span>
                           )}
                         </div>
                       )}
@@ -510,7 +519,7 @@ function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, ge
                       {format(day, 'd')}
                     </span>
                     {items.length > 0 && (
-                      <span className="text-[9px] text-gray-400 font-medium">{items.length}</span>
+                      <span className="text-[12px] text-gray-400 font-medium">{items.length}</span>
                     )}
                   </div>
                   {/* Item pills */}
@@ -521,7 +530,7 @@ function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, ge
                       return (
                         <div
                           key={item.id}
-                          className={`flex items-center gap-1 px-1 py-0.5 rounded text-[10px] leading-tight truncate ${config.bg} ${config.text} cursor-pointer`}
+                          className={`flex items-center gap-1 px-1 py-0.5 rounded text-[12px] leading-tight truncate ${config.bg} ${config.text} cursor-pointer`}
                           onClick={(e) => { e.stopPropagation(); onItemClick(item); }}
                         >
                           <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${config.dot}`} />
@@ -530,7 +539,7 @@ function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, ge
                       );
                     })}
                     {items.length > MAX_VISIBLE && (
-                      <span className="text-[9px] text-gray-400 block text-center">+{items.length - MAX_VISIBLE}</span>
+                      <span className="text-[12px] text-gray-400 block text-center">+{items.length - MAX_VISIBLE}</span>
                     )}
                   </div>
                 </button>
@@ -628,7 +637,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
                   >
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
                     <span className="flex-1 text-sm font-medium truncate">{item.title}</span>
-                    {item.client_name && <span className="text-[10px] text-gray-400">{item.client_name}</span>}
+                    {item.client_name && <span className="text-[12px] text-gray-400">{item.client_name}</span>}
                     {item.itemType === 'task' && (
                       <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white"><Pin className="w-3 h-3 text-amber-600" /></button>
                     )}
@@ -651,7 +660,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
                 className="flex border-b border-[#E0E0E0]"
                 style={{ height: HOUR_HEIGHT }}
               >
-                <div className="w-14 shrink-0 text-[10px] font-semibold text-[#4682B4] text-center pt-1 border-l border-[#E0E0E0]">
+                <div className="w-14 shrink-0 text-[12px] font-semibold text-[#4682B4] text-center pt-1 border-l border-[#E0E0E0]">
                   {String(h).padStart(2, '0')}:00
                 </div>
                 <div className="flex-1 relative">
@@ -667,7 +676,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
                       >
                         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${config.dot}`} />
                         <span className="flex-1 text-sm font-medium truncate">{item.title}</span>
-                        {item.client_name && <span className="text-[10px] text-gray-400 hidden md:inline">{item.client_name}</span>}
+                        {item.client_name && <span className="text-[12px] text-gray-400 hidden md:inline">{item.client_name}</span>}
                         {item.itemType === 'task' && (
                           <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white"><Pin className="w-3 h-3 text-amber-600" /></button>
                         )}

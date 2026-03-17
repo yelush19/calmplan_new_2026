@@ -251,16 +251,16 @@ export default function TemplatePanel({ service, onClose }) {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-gray-800">עורך שירות</h3>
-                <span className="text-[10px] text-gray-400">
+                <span className="text-[12px] text-gray-400">
                   {service.key} • {editDashboard}
-                  {isCustom && <Badge className="text-[8px] h-3 px-1 bg-green-100 text-green-700 mr-1">מותאם</Badge>}
+                  {isCustom && <Badge className="text-[11px] h-3 px-1 bg-green-100 text-green-700 mr-1">מותאם</Badge>}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-1">
               {hasChanges && (
                 <Button size="sm" onClick={handleSave}
-                  className="h-7 px-2 text-[10px] gap-1"
+                  className="h-7 px-2 text-[12px] gap-1"
                   style={{ backgroundColor: pColor }}>
                   <Save className="w-3 h-3" />
                   שמור
@@ -268,7 +268,7 @@ export default function TemplatePanel({ service, onClose }) {
               )}
               <Button size="sm" onClick={handleSaveToDb}
                 disabled={savingToDb}
-                className="h-7 px-2 text-[10px] gap-1 bg-green-600 hover:bg-green-700 text-white">
+                className="h-7 px-2 text-[12px] gap-1 bg-green-600 hover:bg-green-700 text-white">
                 {savingToDb ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 {savingToDb ? 'שומר...' : 'שמור ל-DB'}
               </Button>
@@ -281,7 +281,7 @@ export default function TemplatePanel({ service, onClose }) {
 
         {/* Service Name */}
         <div className="px-4 py-3 border-b">
-          <label className="text-[10px] font-bold text-gray-500 mb-1 block">שם שירות</label>
+          <label className="text-[12px] font-bold text-gray-500 mb-1 block">שם שירות</label>
           <Input
             value={editLabel}
             onChange={(e) => { setEditLabel(e.target.value); markChanged(); }}
@@ -386,7 +386,7 @@ export default function TemplatePanel({ service, onClose }) {
               {/* ── Section 2: Manual Board Override (DECOUPLED from hierarchy) ── */}
               <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #e88' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                  <Layers style={{ width: '14px', height: '14px', color: '#E91E63' }} />
+                  <Layers style={{ width: '14px', height: '14px', color: '#6366F1' }} />
                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>שינוי לוח ראשי</span>
                   <span style={{ fontSize: '9px', color: '#999' }}>(לא תלוי בהיררכיה)</span>
                 </div>
@@ -487,13 +487,13 @@ export default function TemplatePanel({ service, onClose }) {
 
               {/* Next Steps Multi-Select */}
               <div className="mb-3">
-                <label className="text-[10px] font-bold text-gray-500 mb-1 block">שלבים הבאים (בחר מרובה)</label>
+                <label className="text-[12px] font-bold text-gray-500 mb-1 block">שלבים הבאים (בחר מרובה)</label>
                 {editNextStepIds.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-1.5">
                     {editNextStepIds.map(id => {
                       const n = allNodes.find(x => x.id === id);
                       return n ? (
-                        <span key={id} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                        <span key={id} className="inline-flex items-center gap-1 text-[12px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                           <ArrowRight className="w-2.5 h-2.5" />
                           {n.label || n.id}
                           <button onClick={() => toggleNextStep(id)} className="hover:text-red-500">
@@ -541,12 +541,12 @@ export default function TemplatePanel({ service, onClose }) {
                   }} />
                 </button>
                 <GitMerge className="w-3.5 h-3.5" style={{ color: editIsParallel ? '#4CAF50' : '#999' }} />
-                <span className="text-[10px] font-medium" style={{ color: editIsParallel ? '#4CAF50' : '#999' }}>
+                <span className="text-[12px] font-medium" style={{ color: editIsParallel ? '#4CAF50' : '#999' }}>
                   בצע במקביל (Parallel)
                 </span>
               </div>
               {editIsParallel && (
-                <div className="mt-1.5 text-[9px] text-green-600 bg-green-50 px-2 py-1 rounded-md">
+                <div className="mt-1.5 text-[12px] text-green-600 bg-green-50 px-2 py-1 rounded-md">
                   צומת זה יתבצע במקביל לצמתים אחים באותו ענף אב
                 </div>
               )}
@@ -559,7 +559,7 @@ export default function TemplatePanel({ service, onClose }) {
           <div className="flex items-center gap-2 mb-3">
             <FileText className="w-3.5 h-3.5" style={{ color: pColor }} />
             <span className="text-xs font-bold text-gray-700">שלבי תהליך</span>
-            <Badge variant="outline" className="text-[9px] h-4 px-1.5" style={{ borderColor: pColor, color: pColor }}>
+            <Badge variant="outline" className="text-[12px] h-4 px-1.5" style={{ borderColor: pColor, color: pColor }}>
               {editSteps.length}
             </Badge>
           </div>
@@ -568,7 +568,7 @@ export default function TemplatePanel({ service, onClose }) {
             {editSteps.map((step, i) => (
               <div key={`${step.key}-${i}`}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50 group">
-                <div className="w-5 h-5 rounded-full text-[9px] font-bold text-white shrink-0 flex items-center justify-center"
+                <div className="w-5 h-5 rounded-full text-[12px] font-bold text-white shrink-0 flex items-center justify-center"
                   style={{ backgroundColor: pColor }}>{i + 1}</div>
                 <span className="text-xs font-medium text-gray-700 flex-1">{step.label}</span>
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -599,18 +599,18 @@ export default function TemplatePanel({ service, onClose }) {
           </div>
           <div className="space-y-2">
             <div>
-              <label className="text-[10px] text-gray-500 block mb-1">משך (דקות)</label>
+              <label className="text-[12px] text-gray-500 block mb-1">משך (דקות)</label>
               <Input type="number" value={editDuration}
                 onChange={(e) => { setEditDuration(Number(e.target.value)); markChanged(); }}
                 className="h-8 text-xs w-24" min={5} max={120} step={5} />
             </div>
             <div>
-              <label className="text-[10px] text-gray-500 block mb-1">מורכבות</label>
+              <label className="text-[12px] text-gray-500 block mb-1">מורכבות</label>
               <div className="flex gap-1">
                 {COGNITIVE_TIERS.map(tier => (
                   <button key={tier.value}
                     onClick={() => { setEditCogLoad(tier.value); markChanged(); }}
-                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all border ${
+                    className={`flex-1 py-1.5 rounded-lg text-[12px] font-medium transition-all border ${
                       editCogLoad === tier.value ? 'text-white shadow-sm border-transparent' : 'border-gray-100 text-gray-500'
                     }`}
                     style={editCogLoad === tier.value ? { backgroundColor: tier.color } : {}}
@@ -642,7 +642,7 @@ export default function TemplatePanel({ service, onClose }) {
 
         {/* Metadata */}
         <div className="px-4 py-3 border-b bg-gray-50/50">
-          <div className="text-[9px] text-gray-400 space-y-0.5">
+          <div className="text-[12px] text-gray-400 space-y-0.5">
             <div>מפתח: <span className="font-mono">{service.key}</span></div>
             {service.taskType && <div>סוג: <span className="font-mono">{service.taskType}</span></div>}
             {service.sequentialSteps && <div className="text-amber-600">סדרתי — כל שלב דורש השלמת הקודם</div>}
@@ -655,13 +655,13 @@ export default function TemplatePanel({ service, onClose }) {
           <div className="px-4 py-3 border-b">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-3 h-3 text-amber-500" />
-              <span className="text-[10px] font-bold text-gray-500">שלבים למורכבות גבוהה</span>
+              <span className="text-[12px] font-bold text-gray-500">שלבים למורכבות גבוהה</span>
             </div>
             <div className="space-y-1">
               {service.highComplexitySteps.map((step, i) => (
                 <div key={step.key} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-amber-100 bg-amber-50/30">
-                  <div className="w-4 h-4 rounded-full text-[8px] font-bold flex items-center justify-center bg-amber-200 text-amber-700">{i + 1}</div>
-                  <span className="text-[10px] text-gray-600">{step.label}</span>
+                  <div className="w-4 h-4 rounded-full text-[11px] font-bold flex items-center justify-center bg-amber-200 text-amber-700">{i + 1}</div>
+                  <span className="text-[12px] text-gray-600">{step.label}</span>
                 </div>
               ))}
             </div>
@@ -676,10 +676,10 @@ export default function TemplatePanel({ service, onClose }) {
                 {isCustom ? 'למחוק לצמיתות?' : 'להסתיר שירות זה?'}
               </p>
               <div className="flex gap-2">
-                <Button size="sm" variant="destructive" onClick={handleDelete} className="h-7 text-[10px] gap-1">
+                <Button size="sm" variant="destructive" onClick={handleDelete} className="h-7 text-[12px] gap-1">
                   <Trash2 className="w-3 h-3" />{isCustom ? 'מחק' : 'הסתר'}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setShowDeleteConfirm(false)} className="h-7 text-[10px]">ביטול</Button>
+                <Button size="sm" variant="outline" onClick={() => setShowDeleteConfirm(false)} className="h-7 text-[12px]">ביטול</Button>
               </div>
             </div>
           ) : (
@@ -813,7 +813,7 @@ function CategoryEditor({ categories, allNodes, allServices, pColor, onAdd, onRe
       <div className="flex flex-wrap gap-1 mb-2">
         {categories.map((cat, i) => (
           <Badge key={`${cat}-${i}`} variant="outline"
-            className="text-[9px] px-2 py-0.5 rounded-full group cursor-default"
+            className="text-[12px] px-2 py-0.5 rounded-full group cursor-default"
             style={{ borderColor: pColor + '40', color: pColor }}>
             {resolveCategoryLabel(cat)}
             <button onClick={() => onRemove(i)}
@@ -825,7 +825,7 @@ function CategoryEditor({ categories, allNodes, allServices, pColor, onAdd, onRe
       {/* Select from existing categories */}
       <button
         onClick={() => setShowExisting(!showExisting)}
-        className="w-full mb-1.5 flex items-center justify-center gap-1 px-2 py-1 rounded-lg border border-dashed text-[10px] font-medium transition-all hover:bg-gray-50"
+        className="w-full mb-1.5 flex items-center justify-center gap-1 px-2 py-1 rounded-lg border border-dashed text-[12px] font-medium transition-all hover:bg-gray-50"
         style={{ borderColor: pColor + '40', color: pColor }}>
         <Search className="w-3 h-3" />
         {showExisting ? 'הסתר קטגוריות קיימות' : 'בחר מקטגוריות קיימות'}
@@ -838,17 +838,17 @@ function CategoryEditor({ categories, allNodes, allServices, pColor, onAdd, onRe
             value={catSearch}
             onChange={(e) => setCatSearch(e.target.value)}
             placeholder="חפש קטגוריה..."
-            className="w-full px-2 py-1 text-[10px] border rounded-lg mb-1"
+            className="w-full px-2 py-1 text-[12px] border rounded-lg mb-1"
             style={{ borderColor: pColor + '30', direction: 'rtl' }}
           />
           <div style={{ maxHeight: '100px', overflowY: 'auto', border: `1px solid ${pColor}30`, borderRadius: '8px' }}>
             {filteredExisting.length === 0 && (
-              <div className="text-[9px] text-gray-400 p-2 text-center">אין קטגוריות נוספות</div>
+              <div className="text-[12px] text-gray-400 p-2 text-center">אין קטגוריות נוספות</div>
             )}
             {filteredExisting.map(cat => (
               <button key={cat}
                 onClick={() => { onAdd(cat); setCatSearch(''); }}
-                className="w-full text-right px-2.5 py-1.5 text-[10px] hover:bg-blue-50 transition-all"
+                className="w-full text-right px-2.5 py-1.5 text-[12px] hover:bg-blue-50 transition-all"
                 style={{ borderBottom: '1px solid #f0f0f0', direction: 'rtl' }}>
                 + {resolveCategoryLabel(cat)}
               </button>
@@ -860,10 +860,10 @@ function CategoryEditor({ categories, allNodes, allServices, pColor, onAdd, onRe
       {/* Add new category */}
       <div className="flex items-center gap-1.5">
         <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)}
-          placeholder="קטגוריה חדשה..." className="h-7 text-[10px] flex-1"
+          placeholder="קטגוריה חדשה..." className="h-7 text-[12px] flex-1"
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
         <Button size="sm" onClick={handleAdd} disabled={!newCategory.trim()}
-          className="h-7 px-2 text-[10px]" variant="outline"
+          className="h-7 px-2 text-[12px]" variant="outline"
           style={{ borderColor: pColor + '30', color: pColor }}><Plus className="w-3 h-3" /></Button>
       </div>
     </div>
@@ -897,7 +897,7 @@ function SearchableNextStepsList({ candidates, selectedIds, buildPath, onToggle 
       </div>
       <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1.5px solid #90CAF9', borderRadius: '8px', backgroundColor: 'white' }}>
         {filtered.length === 0 && (
-          <div className="text-[10px] text-gray-400 p-2 text-center">אין צמתים זמינים</div>
+          <div className="text-[12px] text-gray-400 p-2 text-center">אין צמתים זמינים</div>
         )}
         {filtered.map(n => {
           const isChecked = selectedIds.includes(n.id);
@@ -910,7 +910,7 @@ function SearchableNextStepsList({ candidates, selectedIds, buildPath, onToggle 
               <span className={isChecked ? 'font-bold text-blue-700' : 'text-gray-600'}>
                 {n.label || n.id}
               </span>
-              <span className="text-[9px] text-gray-400 mr-auto">{buildPath(n.id)}</span>
+              <span className="text-[12px] text-gray-400 mr-auto">{buildPath(n.id)}</span>
             </label>
           );
         })}

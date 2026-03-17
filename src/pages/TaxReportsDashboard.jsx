@@ -369,7 +369,7 @@ export default function TaxReportsDashboardPage() {
               <ChevronRight className="w-4 h-4" />
             </Button>
             <div className="text-center w-32">
-              <div className="text-[10px] text-slate-400 leading-none">חודש דיווח</div>
+              <div className="text-[12px] text-slate-400 leading-none">חודש דיווח</div>
               <div className="font-semibold text-sm text-slate-700">
                 {format(selectedMonth, 'MMMM yyyy', { locale: he })}
               </div>
@@ -415,7 +415,7 @@ export default function TaxReportsDashboardPage() {
           </div>
           <div>
             <div className="text-2xl font-black text-slate-700">{stats.total}</div>
-            <div className="text-[10px] text-slate-400 font-medium tracking-wide">סה"כ דיווחים</div>
+            <div className="text-[12px] text-slate-400 font-medium tracking-wide">סה"כ דיווחים</div>
           </div>
         </div>
         {/* Completion Rate */}
@@ -427,7 +427,7 @@ export default function TaxReportsDashboardPage() {
           </div>
           <div>
             <div className="text-2xl font-black" style={{ color: '#2E7D32' }}>{stats.pct}%</div>
-            <div className="text-[10px] text-slate-400 font-medium tracking-wide">{stats.completed}/{stats.total} הושלמו</div>
+            <div className="text-[12px] text-slate-400 font-medium tracking-wide">{stats.completed}/{stats.total} הושלמו</div>
           </div>
         </div>
         {/* Steps Progress */}
@@ -439,7 +439,7 @@ export default function TaxReportsDashboardPage() {
           </div>
           <div>
             <div className="text-2xl font-black" style={{ color: '#1565C0' }}>{stats.stepsPct}%</div>
-            <div className="text-[10px] text-slate-400 font-medium tracking-wide">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
+            <div className="text-[12px] text-slate-400 font-medium tracking-wide">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
           </div>
         </div>
         {/* Cognitive Load DNA */}
@@ -458,14 +458,14 @@ export default function TaxReportsDashboardPage() {
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: lc.color, boxShadow: `0 0 8px ${lc.color}40` }}>
                     {taskCount}
                   </div>
-                  <span className="text-[8px] mt-0.5" style={{ color: lc.color }}>{lc.label}</span>
+                  <span className="text-[11px] mt-0.5" style={{ color: lc.color }}>{lc.label}</span>
                 </div>
               );
             })}
           </div>
           <div>
             <div className="text-xs font-bold text-slate-600">עומס קוגניטיבי</div>
-            <div className="text-[10px] text-slate-400">DNA Mix</div>
+            <div className="text-[12px] text-slate-400">DNA Mix</div>
           </div>
         </div>
       </div>
@@ -505,7 +505,7 @@ export default function TaxReportsDashboardPage() {
               <div className="flex items-center gap-2">
                 <Flame className="w-5 h-5 text-amber-600" />
                 <h3 className="font-bold text-amber-800">Filing Sprint</h3>
-                <Badge className="bg-amber-200 text-amber-800 text-[10px]">
+                <Badge className="bg-amber-200 text-amber-800 text-[12px]">
                   {filingSprintIdx + 1} / {filingSprintTasks.length}
                 </Badge>
               </div>
@@ -544,10 +544,10 @@ export default function TaxReportsDashboardPage() {
             )}
             {/* Upcoming queue */}
             {filingSprintTasks.length > filingSprintIdx + 1 && (
-              <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-600">
+              <div className="mt-2 flex items-center gap-1 text-[12px] text-amber-600">
                 <span>בתור:</span>
                 {filingSprintTasks.slice(filingSprintIdx + 1, filingSprintIdx + 4).map(t => (
-                  <Badge key={t.id} className="bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0">{t.client_name}</Badge>
+                  <Badge key={t.id} className="bg-amber-100 text-amber-700 text-[12px] px-1.5 py-0">{t.client_name}</Badge>
                 ))}
                 {filingSprintTasks.length > filingSprintIdx + 4 && (
                   <span>+{filingSprintTasks.length - filingSprintIdx - 4} נוספים</span>
@@ -636,9 +636,9 @@ export default function TaxReportsDashboardPage() {
                         />
                       </div>
                       <div className="text-base mb-0.5">{phase.icon}</div>
-                      <div className="text-[10px] font-bold tracking-wide" style={{ color: phase.color }}>{phase.label}</div>
+                      <div className="text-[12px] font-bold tracking-wide" style={{ color: phase.color }}>{phase.label}</div>
                       <div className="text-xl font-black mt-0.5" style={{ color: isActive ? phase.color : '#B0BEC5' }}>{count}</div>
-                      <div className="text-[9px] mt-0.5" style={{ color: isActive ? phase.color + 'AA' : '#ccc' }}>{pct}%</div>
+                      <div className="text-[12px] mt-0.5" style={{ color: isActive ? phase.color + 'AA' : '#ccc' }}>{pct}%</div>
                     </motion.div>
                   </div>
                 );

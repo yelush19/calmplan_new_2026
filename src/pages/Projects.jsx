@@ -338,7 +338,7 @@ export default function Projects() {
       )}
 
       {/* Projects Grid - Grouped by Status */}
-      <UnifiedAyoaLayout tasks={pseudoTasks} isLoading={isLoading} centerLabel="פרויקטים" centerSub="P3" accentColor="#E91E63">
+      <UnifiedAyoaLayout tasks={pseudoTasks} isLoading={isLoading} centerLabel="פרויקטים" centerSub="P3" accentColor="#6366F1">
       {projects.length === 0 && !isCreating ? (
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
@@ -402,7 +402,7 @@ export default function Projects() {
                                   <div className="flex items-center gap-1.5 mt-1">
                                     <Badge className={statusConf.color}>{statusConf.label}</Badge>
                                     {plat && (
-                                      <Badge className={`text-[10px] gap-1 ${plat.color}`}>
+                                      <Badge className={`text-[12px] gap-1 ${plat.color}`}>
                                         {PlatIcon && <PlatIcon className="w-3 h-3" />}
                                         {plat.name}
                                       </Badge>

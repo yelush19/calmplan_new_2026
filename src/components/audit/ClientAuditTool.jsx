@@ -248,18 +248,18 @@ function FixRow({ result, onSave, onDeleteVatTasks }) {
       <td className="px-3 py-2 text-[11px] font-bold" style={{ color: 'var(--cp-text)' }}>
         {result.clientName}
       </td>
-      <td className="px-3 py-2 text-[10px]" style={{ color: 'var(--cp-text-secondary)' }}>
+      <td className="px-3 py-2 text-[12px]" style={{ color: 'var(--cp-text-secondary)' }}>
         {result.businessType}
       </td>
       {/* VAT-specific columns */}
       {result.vatTaskCount !== undefined && (
         <>
-          <td className="px-3 py-2 text-[10px] font-bold text-red-600">
+          <td className="px-3 py-2 text-[12px] font-bold text-red-600">
             {result.vatTaskCount} משימות מע"מ
           </td>
-          <td className="px-3 py-2 text-[10px]">
+          <td className="px-3 py-2 text-[12px]">
             {result.hasVatService && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[9px] font-bold">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[12px] font-bold">
                 <XCircle className="w-3 h-3" /> vat_reporting בשירותים
               </span>
             )}
@@ -267,7 +267,7 @@ function FixRow({ result, onSave, onDeleteVatTasks }) {
           <td className="px-3 py-2">
             {result.vatTaskCount > 0 && onDeleteVatTasks && (
               <button onClick={() => onDeleteVatTasks(result)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-bold bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
                 <Trash2 className="w-3 h-3" /> מחק משימות מע"מ
               </button>
             )}
@@ -277,33 +277,33 @@ function FixRow({ result, onSave, onDeleteVatTasks }) {
       {/* Missing fields columns */}
       {result.missingFields && !result.vatTaskCount && (
         <>
-          <td className="px-3 py-2 text-[10px]">
+          <td className="px-3 py-2 text-[12px]">
             {result.missingFields.map(f => (
               <div key={f.field} className="flex items-center gap-1 mb-0.5">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[9px] font-bold">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[12px] font-bold">
                   <AlertTriangle className="w-3 h-3" /> {f.label}
                 </span>
-                <span className="text-[8px] text-gray-400">← {f.requiredBy}</span>
+                <span className="text-[11px] text-gray-400">← {f.requiredBy}</span>
               </div>
             ))}
           </td>
           <td className="px-3 py-2">
             {saved ? (
-              <span className="flex items-center gap-1 text-green-600 text-[10px] font-bold">
+              <span className="flex items-center gap-1 text-green-600 text-[12px] font-bold">
                 <CheckCircle className="w-3.5 h-3.5" /> נשמר
               </span>
             ) : editing ? (
               <div className="flex flex-col gap-1.5">
                 {result.missingFields.map(f => (
                   <div key={f.field} className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-bold w-24 text-right" style={{ color: 'var(--cp-text-secondary)' }}>
+                    <span className="text-[12px] font-bold w-24 text-right" style={{ color: 'var(--cp-text-secondary)' }}>
                       {f.label}:
                     </span>
                     <input
                       type="text"
                       value={values[f.field] || ''}
                       onChange={(e) => setValues(prev => ({ ...prev, [f.field]: e.target.value }))}
-                      className="w-28 px-2 py-1 rounded-lg border text-[10px]"
+                      className="w-28 px-2 py-1 rounded-lg border text-[12px]"
                       style={{ borderColor: 'var(--cp-border)', color: 'var(--cp-text)' }}
                       placeholder="הזן מספר תיק"
                       dir="ltr"
@@ -311,13 +311,13 @@ function FixRow({ result, onSave, onDeleteVatTasks }) {
                   </div>
                 ))}
                 <button onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-bold bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
                   <Save className="w-3 h-3" /> {saving ? 'שומר...' : 'שמור'}
                 </button>
               </div>
             ) : (
               <button onClick={handleEdit}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
                 <Edit3 className="w-3 h-3" /> עדכן כרטיס
               </button>
             )}
@@ -451,7 +451,7 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
           <h3 className="text-sm font-bold" style={{ color: 'var(--cp-text)' }}>
             דוח תקינות מערכת-לקוח
           </h3>
-          <p className="text-[10px]" style={{ color: 'var(--cp-text-secondary)' }}>
+          <p className="text-[12px]" style={{ color: 'var(--cp-text-secondary)' }}>
             {clients.length} לקוחות · {totalIssues === 0
               ? 'אין חריגות — המערכת תקינה'
               : `${totalIssues} חריגות נמצאו`}
@@ -462,7 +462,7 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
             const Icon = t.icon;
             return (
               <button key={t.key} onClick={() => setActiveTab(t.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all border ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all border ${
                   activeTab === t.key ? 'shadow-sm' : 'border-transparent hover:bg-gray-50'
                 }`}
                 style={{
@@ -472,7 +472,7 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
                 }}>
                 <Icon className="w-3.5 h-3.5" />
                 {t.count > 0 && (
-                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-white"
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-black text-white"
                     style={{ backgroundColor: t.color }}>
                     {t.count}
                   </span>
@@ -505,7 +505,7 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
                   : 'כל התהליכים תקינים — אין תת-שירות ללא הורה'}
               </span>
             </div>
-            <p className="text-[9px] mt-0.5" style={{ color: 'var(--cp-text-secondary)' }}>
+            <p className="text-[12px] mt-0.5" style={{ color: 'var(--cp-text-secondary)' }}>
               בודק: אם ללקוח מוגדר תת-תהליך (למשל ביטוח לאומי) אך לא השירות הראשי (שכר) — זו שגיאת הגדרה.
             </p>
           </div>
@@ -514,10 +514,10 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
             <table className="w-full text-right">
               <thead>
                 <tr className="bg-gray-50/50">
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>לקוח</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>סוג עסק</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>שגיאת הגדרה</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>פעולה</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>לקוח</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>סוג עסק</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>שגיאת הגדרה</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>פעולה</th>
                 </tr>
               </thead>
               <tbody>
@@ -527,17 +527,17 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
                     <td className="px-3 py-2 text-[11px] font-bold" style={{ color: 'var(--cp-text)' }}>
                       {r.clientName}
                     </td>
-                    <td className="px-3 py-2 text-[10px]" style={{ color: 'var(--cp-text-secondary)' }}>
+                    <td className="px-3 py-2 text-[12px]" style={{ color: 'var(--cp-text-secondary)' }}>
                       {r.businessType}
                     </td>
                     <td className="px-3 py-2">
                       {r.violations.map((v, i) => (
                         <div key={i} className="flex items-center gap-1.5 mb-1">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[9px] font-bold">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[12px] font-bold">
                             <XCircle className="w-3 h-3" /> {v.childLabel}
                           </span>
-                          <span className="text-[9px] text-gray-400">ללא</span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[9px] font-bold">
+                          <span className="text-[12px] text-gray-400">ללא</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[12px] font-bold">
                             {v.parentLabel}
                             {v.altParentLabel && ` / ${v.altParentLabel}`}
                           </span>
@@ -550,13 +550,13 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
                           <div key={i} className="flex items-center gap-1">
                             <button
                               onClick={() => handleAddParentService(r.clientId, v.parent)}
-                              className="px-2 py-0.5 rounded-lg text-[9px] font-bold bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+                              className="px-2 py-0.5 rounded-lg text-[12px] font-bold bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
                               title={`הוסף ${v.parentLabel}`}>
                               + {v.parentLabel}
                             </button>
                             <button
                               onClick={() => handleRemoveChildService(r.clientId, v.child)}
-                              className="px-2 py-0.5 rounded-lg text-[9px] font-bold bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+                              className="px-2 py-0.5 rounded-lg text-[12px] font-bold bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
                               title={`הסר ${v.childLabel}`}>
                               - {v.childLabel}
                             </button>
@@ -593,7 +593,7 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
                   : 'כל השדות הנדרשים מולאו — תקין'}
               </span>
             </div>
-            <p className="text-[9px] mt-0.5" style={{ color: 'var(--cp-text-secondary)' }}>
+            <p className="text-[12px] mt-0.5" style={{ color: 'var(--cp-text-secondary)' }}>
               בדיקה מותנית: שדה נדרש רק אם השירות התואם מסומן בכרטיס הלקוח. לא מציג שגיאות "רפאים" לשירותים שלא נבחרו.
             </p>
           </div>
@@ -602,10 +602,10 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
             <table className="w-full text-right">
               <thead>
                 <tr className="bg-gray-50/50">
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>לקוח</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>סוג עסק</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>שדות חסרים (← שירות דורש)</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>פעולה</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>לקוח</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>סוג עסק</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>שדות חסרים (← שירות דורש)</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>פעולה</th>
                 </tr>
               </thead>
               <tbody>
@@ -639,7 +639,7 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
                   : 'אין עוסקים פטורים עם משימות מע"מ — תקין'}
               </span>
             </div>
-            <p className="text-[9px] mt-0.5" style={{ color: 'var(--cp-text-secondary)' }}>
+            <p className="text-[12px] mt-0.5" style={{ color: 'var(--cp-text-secondary)' }}>
               עוסק פטור אינו מחויב בדיווח מע"מ. משימות אלו הוזרקו בטעות ויש למחוק אותן.
             </p>
           </div>
@@ -648,11 +648,11 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
             <table className="w-full text-right">
               <thead>
                 <tr className="bg-gray-50/50">
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>לקוח</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>סוג עסק</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>משימות מע"מ</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>שירות</th>
-                  <th className="px-3 py-2 text-[9px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>פעולה</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>לקוח</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>סוג עסק</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>משימות מע"מ</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>שירות</th>
+                  <th className="px-3 py-2 text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>פעולה</th>
                 </tr>
               </thead>
               <tbody>
@@ -668,12 +668,12 @@ export default function ClientAuditTool({ clients = [], tasks = [], onRefresh })
       {/* ── Action Log ── */}
       {actionLog.length > 0 && (
         <div className="rounded-xl border p-3 space-y-1" style={{ borderColor: 'var(--cp-border)' }}>
-          <h4 className="text-[10px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>
+          <h4 className="text-[12px] font-bold" style={{ color: 'var(--cp-text-secondary)' }}>
             יומן פעולות
           </h4>
           {actionLog.map((log, i) => (
-            <div key={i} className="flex items-center gap-2 text-[10px]">
-              <span className="text-[9px] font-mono" style={{ color: 'var(--cp-text-secondary)' }}>{log.time}</span>
+            <div key={i} className="flex items-center gap-2 text-[12px]">
+              <span className="text-[12px] font-mono" style={{ color: 'var(--cp-text-secondary)' }}>{log.time}</span>
               {log.type === 'success' ? (
                 <CheckCircle className="w-3 h-3 text-green-500 shrink-0" />
               ) : (

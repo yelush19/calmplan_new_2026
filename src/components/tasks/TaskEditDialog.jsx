@@ -97,7 +97,7 @@ function ExecutionTimeline({ startDate, dueDate }) {
           style={{ width: `${progress}%` }}
         />
       </div>
-      <div className="flex justify-between text-[10px] text-[#546E7A]">
+      <div className="flex justify-between text-[12px] text-[#546E7A]">
         <span>התחלה: {format(start, 'd/M')}</span>
         <span>{totalDays} ימים סה"כ</span>
         <span>סיום: {format(end, 'd/M')}</span>
@@ -369,7 +369,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                       toast.info('לא נמצאה תבנית לקטגוריה זו');
                     }
                   }}
-                  className="text-[10px] text-violet-600 hover:text-violet-800 flex items-center gap-1 hover:bg-violet-50 px-1.5 py-0.5 rounded"
+                  className="text-[12px] text-violet-600 hover:text-violet-800 flex items-center gap-1 hover:bg-violet-50 px-1.5 py-0.5 rounded"
                 >
                   <Wand2 className="w-3 h-3" />
                   מלא מתבנית
@@ -378,7 +378,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <span className="text-[10px] text-[#455A64]">תאריך התחלה</span>
+                <span className="text-[12px] text-[#455A64]">תאריך התחלה</span>
                 <Input
                   type="date"
                   value={editData.scheduled_start}
@@ -389,7 +389,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] text-[#455A64]">תאריך יעד (דדליין)</span>
+                <span className="text-[12px] text-[#455A64]">תאריך יעד (דדליין)</span>
                 <Input
                   type="date"
                   value={editData.due_date}
@@ -403,7 +403,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             {/* Time + Duration */}
             <div className="grid grid-cols-2 gap-3 mt-2">
               <div className="space-y-1">
-                <span className="text-[10px] text-[#455A64] flex items-center gap-1">
+                <span className="text-[12px] text-[#455A64] flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   שעה
                 </span>
@@ -416,7 +416,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] text-[#455A64] flex items-center gap-1">
+                <span className="text-[12px] text-[#455A64] flex items-center gap-1">
                   <Timer className="w-3 h-3" />
                   משך משימה (דקות)
                 </span>
@@ -487,12 +487,12 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                         {st.title}
                       </span>
                       {st.due_time && (
-                        <span className="text-[10px] text-blue-400 flex items-center gap-0.5">
+                        <span className="text-[12px] text-blue-400 flex items-center gap-0.5">
                           <Clock className="w-2.5 h-2.5" />{st.due_time}
                         </span>
                       )}
                       {st.due_date && (
-                        <span className="text-[10px] text-[#546E7A]">{st.due_date}</span>
+                        <span className="text-[12px] text-[#546E7A]">{st.due_date}</span>
                       )}
                       <button
                         onClick={() => handleDeleteSubTask(st.id)}
@@ -593,7 +593,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                       <div key={child.id} className="flex items-center gap-2 p-2 rounded-lg bg-[#F5F5F5] hover:bg-[#EEEEEE] transition-colors">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${childStatus.dot}`} />
                         <span className="text-xs text-[#263238] flex-1 truncate">{child.title}</span>
-                        <Badge className={`${childStatus.color} text-[9px] px-1.5 py-0`}>
+                        <Badge className={`${childStatus.color} text-[12px] px-1.5 py-0`}>
                           {childStatus.text}
                         </Badge>
                       </div>

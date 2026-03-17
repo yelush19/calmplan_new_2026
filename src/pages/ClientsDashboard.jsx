@@ -22,6 +22,7 @@ import { isBimonthlyOffMonth, STATUS_CONFIG, getServiceForTask, ALL_SERVICES, ge
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import { processTaskCascade, PHASE_B_SERVICES, PHASE_C_SERVICES, P2_PHASE_B_SERVICES, P2_PHASE_C_SERVICES } from '@/engines/taskCascadeEngine';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 // === Column Groups — P2 ONLY: Tax + Bookkeeping services ===
 // Payroll columns (שכר, ביט"ל, ניכויים) belong to P1 (PayrollDashboard).
@@ -533,6 +534,13 @@ export default function ClientsDashboardPage() {
   }, [isUpdating]);
 
   return (
+    <UnifiedAyoaLayout
+      tasks={tasks}
+      clients={clients}
+      centerLabel="לקוחות"
+      accentColor="#0891B2"
+      isLoading={isLoading}
+    >
     <div className="p-4 md:p-6 space-y-4 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
@@ -552,7 +560,7 @@ export default function ClientsDashboardPage() {
               <ChevronRight className="w-4 h-4" />
             </Button>
             <div className="text-center w-32">
-              <div className="text-[10px] text-slate-400 leading-none">חודש דיווח</div>
+              <div className="text-[12px] text-slate-400 leading-none">חודש דיווח</div>
               <div className="font-semibold text-sm text-slate-700">
                 {format(selectedMonth, 'MMMM yyyy', { locale: he })}
               </div>
@@ -716,7 +724,7 @@ export default function ClientsDashboardPage() {
                             style={colW ? { width: colW, minWidth: 60 } : { minWidth: 60 }}
                           >
                             <div>{col.label}</div>
-                            <div className="text-[10px] font-normal text-slate-400 mt-0.5">{colStats.pct}% ({colStats.done}/{colStats.total})</div>
+                            <div className="text-[12px] font-normal text-slate-400 mt-0.5">{colStats.pct}% ({colStats.done}/{colStats.total})</div>
                             {/* Resize handle */}
                             <div
                               className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-emerald-400 transition-colors z-10"
@@ -752,7 +760,7 @@ export default function ClientsDashboardPage() {
                                 {client.name}
                               </Link>
                               {clientTotal > 0 && (
-                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                <div className="text-[12px] text-slate-400 mt-0.5">
                                   {clientDone}/{clientTotal} הושלמו
                                 </div>
                               )}
@@ -777,7 +785,7 @@ export default function ClientsDashboardPage() {
                             if (!clientNeedsService(client, col, group)) {
                               return (
                                 <td key={col.key} className={`px-1 py-1.5 text-center ${colIdx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'}`}>
-                                  <div className="bg-gray-100 text-slate-400 rounded py-1.5 text-[10px] font-medium mx-0.5">
+                                  <div className="bg-gray-100 text-slate-400 rounded py-1.5 text-[12px] font-medium mx-0.5">
                                     לא רלוונטי
                                   </div>
                                 </td>
@@ -824,7 +832,7 @@ export default function ClientsDashboardPage() {
                                 >
                                   {config.label}
                                   {cellTasks.length > 1 && (
-                                    <span className="text-[9px] opacity-70 mr-1">({cellTasks.length})</span>
+                                    <span className="text-[12px] opacity-70 mr-1">({cellTasks.length})</span>
                                   )}
                                 </button>
                               </td>
@@ -847,7 +855,7 @@ export default function ClientsDashboardPage() {
                         return (
                           <td key={col.key} className={`px-2 py-2.5 text-center ${colIdx === 0 ? 'border-r-2 border-[#E0E0E0]' : 'border-r border-[#E0E0E0]'}`}>
                             <div className="text-sm font-bold text-slate-700">{colStats.pct}%</div>
-                            <div className="text-[10px] text-slate-500">{colStats.done}/{colStats.total}</div>
+                            <div className="text-[12px] text-slate-500">{colStats.done}/{colStats.total}</div>
                             <div className="w-full bg-white rounded-full h-1.5 mt-1">
                               <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${colStats.pct}%` }} />
                             </div>
@@ -981,5 +989,6 @@ export default function ClientsDashboardPage() {
         ))}
       </div>
     </div>
+    </UnifiedAyoaLayout>
   );
 }

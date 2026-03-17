@@ -52,7 +52,7 @@ const WorkflowProgress = ({ currentStage }) => {
             <div className={`h-2 w-full rounded-full transition-colors ${
               isCompleted ? 'bg-green-500' : isCurrent ? 'bg-blue-500' : 'bg-gray-200'
             }`} />
-            <span className={`text-[10px] mt-1 text-center leading-tight ${
+            <span className={`text-[12px] mt-1 text-center leading-tight ${
               isCurrent ? 'font-bold text-blue-700' : isCompleted ? 'text-green-700' : 'text-gray-400'
             }`}>{stage.label}</span>
           </div>
@@ -728,7 +728,7 @@ export default function BalanceSheetsPage() {
                       className="w-4 h-4 rounded accent-purple-600"
                     />
                     <span className="font-semibold text-sm text-gray-800">{stageData.label}</span>
-                    <Badge variant="outline" className="text-[10px] mr-auto">
+                    <Badge variant="outline" className="text-[12px] mr-auto">
                       {stageTasks.filter(t => selectedTemplateTasks[`${stageKey}::${t.key}`]).length}/{stageTasks.length}
                     </Badge>
                   </label>

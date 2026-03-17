@@ -26,7 +26,7 @@ import { LOAD_COLORS } from '@/engines/capacityEngine';
 
 // ── AYOA Color Palette ──
 const AYOA_COLORS = {
-  personal:  { color: '#E91E63', label: 'אישי',   bg: '#FCE4EC' },
+  personal:  { color: '#7C3AED', label: 'אישי',   bg: '#EDE9FE' },
   folders:   { color: '#00A3E0', label: 'תיקיות', bg: '#E0F4FF' },
   tasks:     { color: '#FFC107', label: 'משימות', bg: '#FFF8E1' },
   admin:     { color: '#9C27B0', label: 'ניהול',  bg: '#F3E5F5' },
@@ -372,7 +372,7 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
             <button
               key={key}
               onClick={() => switchLayout(key)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[12px] font-medium transition-all ${
                 layout === key ? 'bg-white shadow text-[#4682B4] font-bold' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -388,7 +388,7 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
         <div className="flex items-center gap-1">
           <button onClick={() => setZoom(z => Math.max(0.3, z - 0.2))}
             className="p-1 rounded hover:bg-gray-100 text-gray-500"><ZoomOut className="w-4 h-4" /></button>
-          <span className="text-[10px] text-gray-400 font-mono min-w-[32px] text-center">{Math.round(zoom * 100)}%</span>
+          <span className="text-[12px] text-gray-400 font-mono min-w-[32px] text-center">{Math.round(zoom * 100)}%</span>
           <button onClick={() => setZoom(z => Math.min(3, z + 0.2))}
             className="p-1 rounded hover:bg-gray-100 text-gray-500"><ZoomIn className="w-4 h-4" /></button>
         </div>
@@ -397,13 +397,13 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
 
         {/* Add Node */}
         <button onClick={addNode}
-          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#E91E63]/10 text-[#E91E63] text-[10px] font-medium hover:bg-[#E91E63]/20 transition-all">
+          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#7C3AED]/10 text-[#7C3AED] text-[12px] font-medium hover:bg-[#7C3AED]/20 transition-all">
           <Plus className="w-3.5 h-3.5" /> ענף חדש
         </button>
 
         {/* Link Mode */}
         <button onClick={() => { setLinkMode(!linkMode); setLinkFrom(null); }}
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
+          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[12px] font-medium transition-all ${
             linkMode ? 'bg-[#00A3E0]/20 text-[#00A3E0]' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
           }`}>
           {linkMode ? <Unlink className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
@@ -412,7 +412,7 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
 
         {/* Focus Blur Toggle */}
         <button onClick={() => { setShowBlur(!showBlur); if (!showBlur) setFocusedNode(null); }}
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
+          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[12px] font-medium transition-all ${
             showBlur ? 'bg-[#9C27B0]/10 text-[#9C27B0]' : 'bg-gray-50 text-gray-500'
           }`}>
           {showBlur ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -560,7 +560,7 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
 
         {/* Magnifying glass zoom indicator */}
         {zoom > 1.5 && (
-          <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 shadow text-[10px] text-gray-500">
+          <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 shadow text-[12px] text-gray-500">
             <Search className="w-3 h-3" /> זום ×{zoom.toFixed(1)}
           </div>
         )}
@@ -582,13 +582,13 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
               <X className="w-3.5 h-3.5" />
             </button>
 
-            <div className="text-[10px] font-bold text-gray-400 mb-2 flex items-center gap-1">
+            <div className="text-[12px] font-bold text-gray-400 mb-2 flex items-center gap-1">
               <Palette className="w-3 h-3" /> סגנון ענף
             </div>
 
             {/* Shape Picker */}
             <div className="mb-2">
-              <div className="text-[9px] text-gray-400 mb-1">צורה</div>
+              <div className="text-[12px] text-gray-400 mb-1">צורה</div>
               <div className="flex items-center gap-1">
                 {SHAPE_KEYS.map(key => {
                   const s = SHAPES[key];
@@ -610,7 +610,7 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
 
             {/* Color Picker */}
             <div className="mb-2">
-              <div className="text-[9px] text-gray-400 mb-1">צבע</div>
+              <div className="text-[12px] text-gray-400 mb-1">צבע</div>
               <div className="flex items-center gap-1 flex-wrap">
                 {COLOR_LIST.map((c, i) => (
                   <button key={i}
@@ -626,7 +626,7 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
 
             {/* Size Slider */}
             <div className="mb-2">
-              <div className="text-[9px] text-gray-400 mb-1">גודל</div>
+              <div className="text-[12px] text-gray-400 mb-1">גודל</div>
               <input type="range" min="18" max="60" value={selectedNodeData.size}
                 onChange={(e) => updateNodeProp('size', parseInt(e.target.value))}
                 className="w-full h-1 accent-[#4682B4]" />
@@ -634,7 +634,7 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
 
             {/* Label Edit */}
             <div className="mb-2">
-              <div className="text-[9px] text-gray-400 mb-1">שם</div>
+              <div className="text-[12px] text-gray-400 mb-1">שם</div>
               <input
                 type="text"
                 value={selectedNodeData.label}
@@ -646,7 +646,7 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
 
             {/* Task Info (if linked to task) */}
             {selectedNodeData._task && (
-              <div className="text-[9px] text-gray-400 border-t pt-1 mt-1 flex items-center gap-2">
+              <div className="text-[12px] text-gray-400 border-t pt-1 mt-1 flex items-center gap-2">
                 <span style={{ color: selectedNodeData._loadColor?.color }}>●</span>
                 {selectedNodeData._loadColor?.label} • {selectedNodeData._duration}דק׳
                 {selectedNodeData._task.client_name && ` • ${selectedNodeData._task.client_name}`}
@@ -655,7 +655,7 @@ export default function DesignCanvas({ tasks = [], clients = [], onTaskUpdate })
 
             {/* Delete */}
             <button onClick={deleteNode}
-              className="mt-2 w-full flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-red-50 text-red-500 text-[10px] font-medium hover:bg-red-100 transition-all">
+              className="mt-2 w-full flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-red-50 text-red-500 text-[12px] font-medium hover:bg-red-100 transition-all">
               <Trash2 className="w-3 h-3" /> מחק ענף
             </button>
           </motion.div>

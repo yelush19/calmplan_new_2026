@@ -417,11 +417,11 @@ export default function CleanupTool({ rules = [] }) {
                             }
                             <User className="w-4 h-4 text-gray-500" />
                             <span className="font-bold text-gray-800 text-sm">{clientName}</span>
-                            <Badge className="bg-amber-100 text-amber-700 text-[10px] border border-amber-200">
+                            <Badge className="bg-amber-100 text-amber-700 text-[12px] border border-amber-200">
                               {group.items.length} אי-התאמות
                             </Badge>
                             <div className="flex-1" />
-                            <span className="text-[10px] text-gray-400 truncate max-w-[200px]">
+                            <span className="text-[12px] text-gray-400 truncate max-w-[200px]">
                               שירותים: {clientServices.length > 0 ? clientServices.join(', ') : 'ללא'}
                             </span>
                           </div>
@@ -447,7 +447,7 @@ export default function CleanupTool({ rules = [] }) {
                                         <span className="font-medium text-gray-700 truncate max-w-[250px]">
                                           {item.task.title}
                                         </span>
-                                        <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                                        <Badge variant="outline" className="text-[12px] px-1.5 py-0">
                                           {resolveCategoryLabel(item.task.category)}
                                         </Badge>
                                         {item.task.due_date && (
@@ -456,13 +456,13 @@ export default function CleanupTool({ rules = [] }) {
                                             {new Date(item.task.due_date).toLocaleDateString('he-IL', { month: 'short', year: 'numeric' })}
                                           </span>
                                         )}
-                                        <Badge className={`text-[9px] px-1.5 py-0 border ${REASON_COLORS[item.reason]}`}>
+                                        <Badge className={`text-[12px] px-1.5 py-0 border ${REASON_COLORS[item.reason]}`}>
                                           {REASON_LABELS[item.reason]}
                                         </Badge>
                                       </div>
                                       <p className="text-gray-500 mt-0.5">{item.detail}</p>
                                     </div>
-                                    <span className="text-[10px] text-gray-300 whitespace-nowrap">
+                                    <span className="text-[12px] text-gray-300 whitespace-nowrap">
                                       סטטוס: {item.task.status}
                                     </span>
                                   </div>

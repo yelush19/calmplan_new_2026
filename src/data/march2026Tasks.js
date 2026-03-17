@@ -292,9 +292,9 @@ export const P4_HOME_STRUCTURE = {
     icon: '👤',
     color: '#7B1FA2',
     children: {
-      medical: { label: 'רפואי', icon: '🏥', color: '#EF5350' },
+      medical: { label: 'רפואי', icon: '🏥', color: '#F59E0B' },
       legal: { label: 'משפטי/ביטוח', icon: '⚖️', color: '#5C6BC0' },
-      family: { label: 'משפחה', icon: '👨‍👩‍👧‍👦', color: '#EC407A' },
+      family: { label: 'משפחה', icon: '👨‍👩‍👧‍👦', color: '#8B5CF6' },
     },
   },
   inventory: {

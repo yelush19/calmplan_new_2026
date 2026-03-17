@@ -43,6 +43,7 @@ import {
   FolderKanban
 } from 'lucide-react';
 import { Client, Project, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount, Lead } from '@/api/entities';
+import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 // mondayApi removed (Kill Monday directive)
 import { exportClientsToExcel, exportCustomerServicesCSV } from '@/api/functions';
 import { importClientsFromExcel } from '@/api/functions';
@@ -856,6 +857,13 @@ export default function ClientManagementPage() {
   };
 
   return (
+    <UnifiedAyoaLayout
+      tasks={[]}
+      clients={clients}
+      centerLabel="ניהול לקוח"
+      accentColor="#059669"
+      isLoading={isLoading}
+    >
     <div className="p-4 md:p-6 space-y-6">
 
       {/* Debug section removed for production */}
@@ -1143,7 +1151,7 @@ export default function ClientManagementPage() {
                       >
                         <ChevronDown className={`w-4 h-4 text-[#455A64] transition-transform ${collapsedGroups.has(group.status) ? '-rotate-90' : ''}`} />
                         <span className="text-sm font-semibold text-[#263238]">{group.label}</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{group.clients.length}</Badge>
+                        <Badge variant="outline" className="text-[12px] px-1.5 py-0">{group.clients.length}</Badge>
                       </button>
                       {!collapsedGroups.has(group.status) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -1184,7 +1192,7 @@ export default function ClientManagementPage() {
                       >
                         <ChevronDown className={`w-4 h-4 text-[#455A64] transition-transform ${collapsedGroups.has(group.status) ? '-rotate-90' : ''}`} />
                         <span className="text-sm font-semibold text-[#263238]">{group.label}</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{group.clients.length}</Badge>
+                        <Badge variant="outline" className="text-[12px] px-1.5 py-0">{group.clients.length}</Badge>
                       </button>
                       {!collapsedGroups.has(group.status) && (
                         <CardContent className="p-0">
@@ -1411,5 +1419,6 @@ export default function ClientManagementPage() {
 
       {/* Monday Data Import Dialog — removed (Kill Monday directive) */}
     </div>
+    </UnifiedAyoaLayout>
   );
 }

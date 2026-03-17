@@ -16,12 +16,12 @@ const URGENCY_OPTIONS = [
   { value: 'low', label: 'נמוך', color: 'bg-blue-100 text-blue-700', icon: '🔵' },
   { value: 'medium', label: 'בינוני', color: 'bg-amber-100 text-amber-700', icon: '🟡' },
   { value: 'high', label: 'גבוה', color: 'bg-orange-100 text-orange-700', icon: '🟠' },
-  { value: 'urgent', label: 'דחוף', color: 'bg-rose-100 text-rose-700', icon: '🔴' },
+  { value: 'urgent', label: 'דחוף', color: 'bg-amber-100 text-amber-700', icon: '🟠' },
 ];
 
 const COLOR_MAP = {
-  urgent: 'pink',
-  high: 'pink',
+  urgent: 'purple',
+  high: 'purple',
   medium: 'yellow',
   low: 'blue',
 };
