@@ -612,6 +612,28 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   const draggingNode = useRef(null); // { key, startX, startY, origX, origY }
   const nodeHasDragged = useRef(false);
 
+  // ── Position Undo/Redo Stack ──
+  const positionUndoStack = useRef([]);
+  const positionRedoStack = useRef([]);
+  const pushPositionUndo = useCallback((positions) => {
+    positionUndoStack.current = [...positionUndoStack.current.slice(-29), { ...positions }];
+    positionRedoStack.current = [];
+  }, []);
+  const undoPosition = useCallback(() => {
+    if (positionUndoStack.current.length === 0) return;
+    const prev = positionUndoStack.current.pop();
+    positionRedoStack.current.push({ ...manualPositions });
+    setManualPositions(prev);
+    try { localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(prev)); } catch {}
+  }, [manualPositions]);
+  const redoPosition = useCallback(() => {
+    if (positionRedoStack.current.length === 0) return;
+    const next = positionRedoStack.current.pop();
+    positionUndoStack.current.push({ ...manualPositions });
+    setManualPositions(next);
+    try { localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(next)); } catch {}
+  }, [manualPositions]);
+
   // PERSISTENCE: Save to localStorage on EVERY position change (immediate)
   const savePositionsToStorage = useCallback((positions) => {
     try { localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(positions)); } catch {}
@@ -1563,6 +1585,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // ── Node drag handlers ──
   const handleNodePointerDown = useCallback((e, nodeKey, currentX, currentY) => {
     e.stopPropagation();
+    pushPositionUndo(manualPositions);
     nodeHasDragged.current = false;
     draggingNode.current = {
       key: nodeKey,
@@ -1571,7 +1594,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       origX: currentX,
       origY: currentY,
     };
-  }, []);
+  }, [manualPositions, pushPositionUndo]);
 
   const nodeClickTimerRef = useRef(null);
   const handleNodePointerUp = useCallback((e, client, department) => {
@@ -1610,6 +1633,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // ── Meta-folder drag handlers: move all sub-folders + department branches + their children ──
   const handleMetaPointerDown = useCallback((e, metaKey, currentX, currentY) => {
     e.stopPropagation();
+    pushPositionUndo(manualPositions);
     nodeHasDragged.current = false;
     const metaName = metaKey.replace('meta-', '');
     // Gather ALL descendant positions: sub-folder circles, department folders, client pills
@@ -1641,11 +1665,12 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       key: metaKey, startX: e.clientX, startY: e.clientY,
       origX: currentX, origY: currentY, isFolder: true, childPositions,
     };
-  }, [layout]);
+  }, [layout, manualPositions, pushPositionUndo]);
 
   // ── Folder drag handlers ──
   const handleFolderPointerDown = useCallback((e, folderKey, currentX, currentY) => {
     e.stopPropagation();
+    pushPositionUndo(manualPositions);
     nodeHasDragged.current = false;
     const category = folderKey.replace('folder-', '');
     const branch = layout.branchPositions.find(b => b.category === category);
@@ -1668,7 +1693,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       key: folderKey, startX: e.clientX, startY: e.clientY,
       origX: currentX, origY: currentY, isFolder: true, childPositions,
     };
-  }, [layout]);
+  }, [layout, manualPositions, pushPositionUndo]);
 
   const handleFolderPointerUp = useCallback((e, category) => {
     const wasDragging = nodeHasDragged.current;
@@ -2614,7 +2639,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                   // Tier sub-node drag: move this tier + all its client children
                   e.stopPropagation();
                   e.preventDefault();
-                  e.currentTarget.setPointerCapture(e.pointerId);
+                  // Capture pointer on CONTAINER so container's onPointerMove fires
+                  if (containerRef.current) containerRef.current.setPointerCapture(e.pointerId);
+                  pushPositionUndo(manualPositions);
                   nodeHasDragged.current = false;
                   const tierKey = sub.key.startsWith('tier-') ? sub.key : `tier-${branch.category}-${sub.key}`;
                   const childPositions = [];
@@ -2690,7 +2717,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  e.currentTarget.setPointerCapture(e.pointerId);
+                  // Capture pointer on CONTAINER so container's onPointerMove fires
+                  if (containerRef.current) containerRef.current.setPointerCapture(e.pointerId);
+                  pushPositionUndo(manualPositions);
                   nodeHasDragged.current = false;
                   const childPositions = [];
                   branch.clientPositions.forEach(cp => {
@@ -3221,16 +3250,42 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           🎨
         </button>
 
-        {/* Reset manual positions button */}
-        {Object.keys(manualPositions).length > 0 && (
+        {/* Undo/Redo position buttons */}
+        <div className="flex flex-col items-center gap-1 bg-white rounded-2xl shadow-lg border-2 border-[#B0BEC5] px-1.5 py-1.5">
           <button
-            onClick={(e) => { e.stopPropagation(); setManualPositions({}); setAutoFitDone(false); localStorage.removeItem(POSITIONS_STORAGE_KEY); }}
-            className="flex items-center justify-center w-9 h-9 rounded-[32px] bg-white shadow-lg border-2 border-[#B0BEC5] text-[#455A64] hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all text-[12px] font-medium"
-            title="איפוס מיקומים ידניים"
+            onClick={(e) => { e.stopPropagation(); undoPosition(); }}
+            disabled={positionUndoStack.current.length === 0}
+            className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all text-sm ${
+              positionUndoStack.current.length > 0
+                ? 'text-[#455A64] hover:bg-blue-50 hover:text-blue-600'
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            title="בטל הזזה (Undo)"
           >
-            ↺
+            ↶
           </button>
-        )}
+          <button
+            onClick={(e) => { e.stopPropagation(); redoPosition(); }}
+            disabled={positionRedoStack.current.length === 0}
+            className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all text-sm ${
+              positionRedoStack.current.length > 0
+                ? 'text-[#455A64] hover:bg-blue-50 hover:text-blue-600'
+                : 'text-gray-300 cursor-not-allowed'
+            }`}
+            title="חזור על הזזה (Redo)"
+          >
+            ↷
+          </button>
+          {Object.keys(manualPositions).length > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); pushPositionUndo(manualPositions); setManualPositions({}); setAutoFitDone(false); localStorage.removeItem(POSITIONS_STORAGE_KEY); }}
+              className="flex items-center justify-center w-7 h-7 rounded-lg text-[#455A64] hover:bg-orange-50 hover:text-orange-600 transition-all text-[11px]"
+              title="איפוס כל המיקומים"
+            >
+              ↺
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Legends removed — node colors and sizes are self-explanatory via tooltip */}
