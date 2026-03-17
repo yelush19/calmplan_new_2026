@@ -28,6 +28,8 @@ import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import AyoaWorkflowView from '@/components/canvas/AyoaWorkflowView';
+import ProcessTreeFocusMap from '@/components/canvas/ProcessTreeFocusMap';
 import { useAyoaView } from '@/contexts/AyoaViewContext';
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import useRealtimeRefresh from '@/hooks/useRealtimeRefresh';
@@ -73,13 +75,13 @@ export default function MyFocus() {
   const energy = getEnergyProfile();
   const EnergyIcon = energy.icon;
 
-  // Active tasks for focus view: overdue + due today + upcoming this month
+  // Active tasks for focus view: overdue + due today + upcoming this month + tasks without dates
   const todayTasks = useMemo(() => {
     const now = new Date();
     const monthEnd = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd');
     return tasks.filter(t =>
       t.status !== 'production_completed' &&
-      t.due_date && t.due_date <= monthEnd
+      (!t.due_date || t.due_date <= monthEnd)
     );
   }, [tasks]);
 
@@ -217,13 +219,19 @@ export default function MyFocus() {
           <div className="h-full">
             <AyoaFeedView tasks={todayTasks} />
           </div>
+        ) : viewMode === 'focus' ? (
+          <div className="h-full rounded-2xl overflow-hidden border border-amber-100" style={{ minHeight: '450px', background: 'linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%)' }}>
+            <ProcessTreeFocusMap tasks={todayTasks} clients={clients} centerLabel="הפוקוס שלי" />
+          </div>
+        ) : viewMode === 'workflow' ? (
+          <div className="h-full rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '450px' }}>
+            <AyoaWorkflowView tasks={todayTasks} />
+          </div>
         ) : (
-          /* fallback: show gantt as default table view */
-          <Card className="h-full overflow-auto">
-            <CardContent className="p-2">
-              <GanttView tasks={todayTasks} clients={clients} />
-            </CardContent>
-          </Card>
+          /* fallback: show radial as default view */
+          <div className="h-full rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '450px' }}>
+            <AyoaRadialView tasks={todayTasks} centerLabel="הפוקוס שלי" centerSub={`${todayTasks.length} משימות`} />
+          </div>
         )}
       </div>
     </div>
