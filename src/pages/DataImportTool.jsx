@@ -223,9 +223,9 @@ export default function DataImportTool() {
   );
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto dark:bg-gray-900 dark:text-white">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">ייבוא נתונים</h1>
+        <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">ייבוא נתונים</h1>
         <p className="text-gray-500 mt-1">ייבוא לקוחות, חשבונות בנק, ומחיקת משימות ישנות</p>
       </div>
 
@@ -259,7 +259,7 @@ export default function DataImportTool() {
       {/* Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Import Clients */}
-        <Card className="border-sky-200">
+        <Card className="border-sky-200 dark:border-gray-700">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Users className="w-5 h-5 text-sky-600" />
@@ -277,12 +277,12 @@ export default function DataImportTool() {
               disabled={isImporting}
               className="w-full bg-sky-600 hover:bg-sky-700"
             >
-              {isImporting ? <RefreshCw className="w-4 h-4 ml-2 animate-spin" /> : <Upload className="w-4 h-4 ml-2" />}
+              {isImporting ? <RefreshCw className="w-4 h-4 ms-2 animate-spin" /> : <Upload className="w-4 h-4 ms-2" />}
               ייבא {importData.clients.length} לקוחות
             </Button>
             {status.clients && (
               <div className="mt-3 p-2 bg-sky-50 rounded-lg text-sm text-sky-800">
-                <CheckCircle className="w-4 h-4 inline ml-1" />
+                <CheckCircle className="w-4 h-4 inline ms-1" />
                 {status.clients.created} חדשים, {status.clients.updated} עודכנו
               </div>
             )}
@@ -290,7 +290,7 @@ export default function DataImportTool() {
         </Card>
 
         {/* Import Bank Accounts */}
-        <Card className="border-emerald-200">
+        <Card className="border-emerald-200 dark:border-gray-700">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-emerald-600" />
@@ -307,12 +307,12 @@ export default function DataImportTool() {
               disabled={isImporting}
               className="w-full bg-emerald-600 hover:bg-emerald-700"
             >
-              {isImporting ? <RefreshCw className="w-4 h-4 ml-2 animate-spin" /> : <Upload className="w-4 h-4 ml-2" />}
+              {isImporting ? <RefreshCw className="w-4 h-4 ms-2 animate-spin" /> : <Upload className="w-4 h-4 ms-2" />}
               ייבא {importData.bankAccounts.length} חשבונות
             </Button>
             {status.accounts && (
               <div className="mt-3 p-2 bg-emerald-50 rounded-lg text-sm text-emerald-800">
-                <CheckCircle className="w-4 h-4 inline ml-1" />
+                <CheckCircle className="w-4 h-4 inline ms-1" />
                 {status.accounts.created} חדשים, {status.accounts.skipped} דולגו
               </div>
             )}
@@ -320,7 +320,7 @@ export default function DataImportTool() {
         </Card>
 
         {/* Delete Zombie Tasks */}
-        <Card className="border-amber-200">
+        <Card className="border-amber-200 dark:border-gray-700">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Trash2 className="w-5 h-5 text-amber-600" />
@@ -340,12 +340,12 @@ export default function DataImportTool() {
               variant="outline"
               className="w-full text-amber-700 border-amber-200 hover:bg-amber-50"
             >
-              {isDeleting ? <RefreshCw className="w-4 h-4 ml-2 animate-spin" /> : <Trash2 className="w-4 h-4 ml-2" />}
+              {isDeleting ? <RefreshCw className="w-4 h-4 ms-2 animate-spin" /> : <Trash2 className="w-4 h-4 ms-2" />}
               מחק {zombieTasks.length} משימות
             </Button>
             {status.tasks && (
               <div className="mt-3 p-2 bg-amber-50 rounded-lg text-sm text-amber-800">
-                <CheckCircle className="w-4 h-4 inline ml-1" />
+                <CheckCircle className="w-4 h-4 inline ms-1" />
                 נמחקו {status.tasks.deleted} מתוך {status.tasks.total}
               </div>
             )}
@@ -370,7 +370,7 @@ export default function DataImportTool() {
               variant="outline"
               className="w-full text-gray-500 border-gray-200 hover:bg-gray-50"
             >
-              <Trash2 className="w-4 h-4 ml-2" />
+              <Trash2 className="w-4 h-4 ms-2" />
               מחק הכל ({existingTasks.length})
             </Button>
           </CardContent>

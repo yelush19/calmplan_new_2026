@@ -231,10 +231,10 @@ function EditReportDialog({ report, open, onClose, onSave }) {
           {/* Actions */}
           <div className="flex gap-2 justify-end pt-3 border-t">
             <Button variant="outline" onClick={onClose}>
-              <X className="w-4 h-4 ml-1" /> ביטול
+              <X className="w-4 h-4 ms-1" /> ביטול
             </Button>
             <Button onClick={() => { onSave(report.id, editData); onClose(); }} className="bg-primary">
-              <Save className="w-4 h-4 ml-1" /> שמור
+              <Save className="w-4 h-4 ms-1" /> שמור
             </Button>
           </div>
         </div>
@@ -305,7 +305,7 @@ function BulkStatusDialog({ open, onClose, selectedCount, columns, onApply }) {
               disabled={!bulkColumn}
               className="bg-primary"
             >
-              <Check className="w-4 h-4 ml-1" />
+              <Check className="w-4 h-4 ms-1" />
               עדכן {selectedCount} לקוחות
             </Button>
           </div>
@@ -600,7 +600,7 @@ export default function PeriodicSummaryReports() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
+    <div className="space-y-6 p-4 md:p-6 bg-white dark:bg-gray-900 border border-[#E0E0E0] dark:border-gray-700 shadow-xl rounded-[32px]">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -608,7 +608,7 @@ export default function PeriodicSummaryReports() {
             <FileText className="w-8 h-8 text-indigo-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">דיווחים מרכזים תקופתיים</h1>
+            <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">דיווחים מרכזים תקופתיים</h1>
             <p className="text-sm text-gray-600">מעקב טפסי 126 — ביטוח לאומי ומ"ה ניכויים</p>
           </div>
         </div>
@@ -688,7 +688,7 @@ export default function PeriodicSummaryReports() {
             placeholder="חיפוש לקוח..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pr-10"
+            className="pe-10"
           />
         </div>
 
@@ -704,7 +704,7 @@ export default function PeriodicSummaryReports() {
             setAllGroupsExpanded(true);
           }
         }}>
-          {allGroupsExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+          {allGroupsExpanded ? <ChevronUp className="w-4 h-4 ms-1" /> : <ChevronDown className="w-4 h-4 ms-1" />}
           {allGroupsExpanded ? 'כווץ הכל' : 'הרחב הכל'}
         </Button>
 
@@ -736,7 +736,7 @@ export default function PeriodicSummaryReports() {
                       onCheckedChange={handleToggleAll}
                     />
                   </th>
-                  <th className="text-right p-3 font-semibold sticky right-10 bg-gray-100 z-30 min-w-[160px] border-l">
+                  <th className="text-start p-3 font-semibold sticky right-10 bg-gray-100 z-30 min-w-[160px] border-l">
                     לקוח
                   </th>
                   {columns.map(col => (
@@ -826,7 +826,7 @@ export default function PeriodicSummaryReports() {
             <span className="text-gray-600">{s.label}</span>
           </div>
         ))}
-        <div className="flex items-center gap-1.5 mr-4">
+        <div className="flex items-center gap-1.5 me-4">
           <div className="flex gap-0.5">
             <div className="w-2 h-2 rounded-full bg-green-500" />
             <div className="w-2 h-2 rounded-full bg-gray-300" />
@@ -867,7 +867,7 @@ export default function PeriodicSummaryReports() {
                 placeholder="חיפוש לקוח..."
                 value={addClientSearch}
                 onChange={(e) => setAddClientSearch(e.target.value)}
-                className="pr-10"
+                className="pe-10"
                 autoFocus
               />
             </div>
@@ -876,7 +876,7 @@ export default function PeriodicSummaryReports() {
                 <button
                   key={client.id}
                   onClick={() => handleAddClient(client)}
-                  className="w-full text-right px-3 py-2 rounded-md hover:bg-primary/10 transition-colors text-sm"
+                  className="w-full text-start px-3 py-2 rounded-md hover:bg-primary/10 transition-colors text-sm"
                 >
                   {client.name}
                 </button>

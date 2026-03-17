@@ -257,11 +257,11 @@ export default function NewEventPage() {
     <motion.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto space-y-8 p-4"
+      className="max-w-4xl mx-auto space-y-8 p-4 dark:bg-gray-900 dark:text-white"
     >
-      <Card className="shadow-xl border-border">
+      <Card className="shadow-xl border-border dark:border-gray-700">
         <CardHeader className="bg-[#F5F5F5] border-b border-border">
-          <CardTitle className="flex items-center gap-3 text-3xl font-bold text-neutral-dark">
+          <CardTitle className="flex items-center gap-3 text-xl font-bold text-[#1E3A5F] dark:text-white">
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
               <Calendar className="w-5 h-5 text-white" />
             </div>
@@ -478,7 +478,7 @@ export default function NewEventPage() {
                     תזכורות
                   </h3>
                   <Button type="button" onClick={addReminder} variant="outline" size="sm">
-                    <Plus className="w-4 h-4 ml-1" />
+                    <Plus className="w-4 h-4 ms-1" />
                     הוסף תזכורת
                   </Button>
                 </div>
@@ -528,7 +528,7 @@ export default function NewEventPage() {
                     משימות קשורות לאירוע
                   </h3>
                   <Button type="button" onClick={() => setShowTaskForm(!showTaskForm)} variant="outline" size="sm">
-                    <Plus className="w-4 h-4 ml-1" />
+                    <Plus className="w-4 h-4 ms-1" />
                     הוסף משימה
                   </Button>
                 </div>

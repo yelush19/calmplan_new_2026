@@ -175,8 +175,13 @@ export default function CalendarPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader className="w-8 h-8 animate-spin text-emerald-500" />
-        <span className="mr-3 text-gray-500 text-lg">טוען לוח שנה...</span>
+        <div className="space-y-4 w-full max-w-2xl px-6">
+          <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />)}
+          </div>
+          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+        </div>
       </div>
     );
   }
@@ -234,12 +239,12 @@ export default function CalendarPage() {
       <div className="space-y-4">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="חיפוש לפי שם לקוח, אירוע, משימה..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 h-9"
+              className="pe-10 h-9"
             />
           </div>
 
@@ -254,17 +259,19 @@ export default function CalendarPage() {
                     { key: 'week', label: 'שבועי' },
                     { key: 'month', label: 'חודשי' },
                   ].map(v => (
-                    <button
+                    <Button
                       key={v.key}
+                      variant={view === v.key ? 'default' : 'ghost'}
+                      size="sm"
                       onClick={() => setView(v.key)}
                       className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                         view === v.key
-                          ? 'bg-emerald-500 text-white shadow-sm'
+                          ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600'
                           : 'text-gray-600 hover:bg-gray-200'
                       }`}
                     >
                       {v.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
 
@@ -284,7 +291,7 @@ export default function CalendarPage() {
                   <Button variant="ghost" size="sm" onClick={navigatePrev} className="p-2">
                     <ChevronLeft className="w-5 h-5" />
                   </Button>
-                  <span className="text-base font-bold text-gray-700 mr-2">
+                  <span className="text-base font-bold text-gray-700 me-2">
                     {view === 'month' && format(currentDate, 'MMMM yyyy', { locale: he })}
                     {view === 'week' && (
                       <>
@@ -341,7 +348,7 @@ export default function CalendarPage() {
       <Link to={createPageUrl("NewEvent")}>
         <Button
           size="lg"
-          className="fixed bottom-8 left-20 w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 shadow-2xl z-50 transition-all duration-300 hover:scale-110"
+          className="fixed bottom-8 start-20 w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 shadow-2xl z-50 transition-all duration-300 hover:scale-110"
         >
           <Plus className="w-7 h-7 text-white" />
         </Button>
@@ -397,12 +404,12 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
     >
-      <Card className="shadow-sm overflow-hidden bg-white border-[#E0E0E0] rounded-[32px]">
+      <Card className="shadow-sm overflow-hidden bg-white dark:bg-gray-900 border-[#E0E0E0] dark:border-gray-700 rounded-[32px]">
         <CardContent className="p-0" style={{ height: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
           {/* Day headers */}
-          <div className="grid grid-cols-7 border-b border-[#E0E0E0] shrink-0">
+          <div className="grid grid-cols-7 border-b border-[#E0E0E0] dark:border-gray-700 shrink-0">
             {DAYS_HE.map((d, i) => (
-              <div key={i} className="p-2 text-center text-xs font-semibold text-[#4682B4] bg-[#F5F5F5]">
+              <div key={i} className="p-2 text-center text-xs font-semibold text-[#4682B4] bg-[#F5F5F5] dark:bg-gray-800 dark:text-blue-300">
                 {d}
               </div>
             ))}
@@ -422,7 +429,7 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
                     <button
                       key={di}
                       onClick={() => onSelectDate(d)}
-                      className={`relative p-1.5 border-l border-[#E0E0E0] first:border-l-0 text-right transition-colors overflow-hidden rounded-lg m-0.5 ${
+                      className={`relative p-1.5 border-s border-[#E0E0E0] first:border-s-0 text-end transition-colors overflow-hidden rounded-lg m-0.5 ${
                         !inMonth ? 'bg-[#F5F5F5] opacity-40' :
                         isSelected ? 'bg-emerald-100 ' :
                         isTodayDate ? 'bg-amber-50 ' :
@@ -453,7 +460,7 @@ function MonthGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, g
                       )}
                       {/* Capacity indicator for work days */}
                       {inMonth && items.length >= 5 && (
-                        <div className="absolute bottom-0.5 left-0.5 right-0.5">
+                        <div className="absolute bottom-0.5 start-0.5 end-0.5">
                           <div className="h-0.5 bg-amber-400 rounded-full" />
                         </div>
                       )}
@@ -483,12 +490,12 @@ function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, ge
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
     >
-      <Card className="shadow-sm overflow-hidden bg-white border-[#E0E0E0] rounded-[32px]">
+      <Card className="shadow-sm overflow-hidden bg-white dark:bg-gray-900 border-[#E0E0E0] dark:border-gray-700 rounded-[32px]">
         <CardContent className="p-0" style={{ height: 'calc(100vh - 280px)', display: 'flex', flexDirection: 'column' }}>
           {/* Day headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }} className="border-b border-[#E0E0E0] shrink-0">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }} className="border-b border-[#E0E0E0] dark:border-gray-700 shrink-0">
             {DAYS_HE.map((d, i) => (
-              <div key={i} className="p-2 text-center text-xs font-semibold text-[#4682B4] bg-[#F5F5F5]">
+              <div key={i} className="p-2 text-center text-xs font-semibold text-[#4682B4] bg-[#F5F5F5] dark:bg-gray-800 dark:text-blue-300">
                 {d}
               </div>
             ))}
@@ -504,7 +511,7 @@ function WeekGrid({ currentDate, selectedDate, onSelectDate, getItemsForDate, ge
                 <button
                   key={idx}
                   onClick={() => onSelectDate(day)}
-                  className={`flex flex-col p-1.5 border-l border-[#E0E0E0] first:border-l-0 transition-colors overflow-hidden ${
+                  className={`flex flex-col p-1.5 border-s border-[#E0E0E0] first:border-s-0 transition-colors overflow-hidden ${
                     isTodayDate ? 'bg-emerald-100 ' :
                     isWeekend ? 'bg-[#F5F5F5] opacity-60' :
                     'bg-[#F5F5F5] hover:bg-[#F5F5F5] '
@@ -605,9 +612,9 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
       className="space-y-3"
     >
       {/* Day header */}
-      <Card className={`shadow-sm bg-white border-[#E0E0E0] rounded-[32px] ${isTodayDate ? 'ring-1 ring-emerald-200' : ''}`}>
+      <Card className={`shadow-sm bg-white dark:bg-gray-900 border-[#E0E0E0] dark:border-gray-700 rounded-[32px] ${isTodayDate ? 'ring-1 ring-emerald-200' : ''}`}>
         <CardContent className="p-4 text-center">
-          <h2 className="text-xl font-bold text-gray-800">
+          <h2 className="text-xl font-bold text-[#1E3A5F] dark:text-white">
             {format(date, 'EEEE', { locale: he })}
           </h2>
           <p className="text-sm text-gray-500">
@@ -622,7 +629,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
 
       {/* All-day items */}
       {allDayItems.length > 0 && (
-        <Card className="shadow-sm bg-white border-[#E0E0E0] rounded-[24px]">
+        <Card className="shadow-sm bg-white dark:bg-gray-900 border-[#E0E0E0] dark:border-gray-700 rounded-[24px]">
           <CardContent className="p-3">
             <p className="text-xs font-bold text-[#4682B4] mb-2">כל היום</p>
             <div className="space-y-1.5">
@@ -639,7 +646,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
                     <span className="flex-1 text-sm font-medium truncate">{item.title}</span>
                     {item.client_name && <span className="text-[12px] text-gray-400">{item.client_name}</span>}
                     {item.itemType === 'task' && (
-                      <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white"><Pin className="w-3 h-3 text-amber-600" /></button>
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 h-auto rounded hover:bg-white"><Pin className="w-3 h-3 text-amber-600" /></Button>
                     )}
                   </div>
                 );
@@ -650,7 +657,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
       )}
 
       {/* Time grid */}
-      <Card className="shadow-sm bg-white border-[#E0E0E0] rounded-[24px] overflow-hidden">
+      <Card className="shadow-sm bg-white dark:bg-gray-900 border-[#E0E0E0] dark:border-gray-700 rounded-[24px] overflow-hidden">
         <CardContent className="p-0">
           <div className="relative overflow-y-auto" style={{ height: 'calc(100vh - 380px)' }}>
             {/* Hour rows */}
@@ -660,7 +667,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
                 className="flex border-b border-[#E0E0E0]"
                 style={{ height: HOUR_HEIGHT }}
               >
-                <div className="w-14 shrink-0 text-[12px] font-semibold text-[#4682B4] text-center pt-1 border-l border-[#E0E0E0]">
+                <div className="w-14 shrink-0 text-[12px] font-semibold text-[#4682B4] text-center pt-1 border-s border-[#E0E0E0]">
                   {String(h).padStart(2, '0')}:00
                 </div>
                 <div className="flex-1 relative">
@@ -678,7 +685,7 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
                         <span className="flex-1 text-sm font-medium truncate">{item.title}</span>
                         {item.client_name && <span className="text-[12px] text-gray-400 hidden md:inline">{item.client_name}</span>}
                         {item.itemType === 'task' && (
-                          <button onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white"><Pin className="w-3 h-3 text-amber-600" /></button>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onMoveToNote(item); }} className="opacity-0 group-hover:opacity-100 p-1 h-auto rounded hover:bg-white"><Pin className="w-3 h-3 text-amber-600" /></Button>
                         )}
                       </div>
                     );
@@ -689,10 +696,10 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
             {/* Now indicator */}
             {nowOffset !== null && (
               <div
-                className="absolute left-14 right-0 h-0.5 bg-emerald-500 z-10 pointer-events-none"
+                className="absolute start-14 end-0 h-0.5 bg-emerald-500 z-10 pointer-events-none"
                 style={{ top: nowOffset }}
               >
-                <div className="absolute -left-1.5 -top-1.5 w-3 h-3 rounded-full bg-emerald-500" />
+                <div className="absolute -start-1.5 -top-1.5 w-3 h-3 rounded-full bg-emerald-500" />
               </div>
             )}
           </div>
@@ -700,13 +707,13 @@ function DayDetail({ date, items, getItemContext, onItemClick, onMoveToNote }) {
       </Card>
 
       {items.length === 0 && (
-        <Card className="shadow-sm bg-white border-[#E0E0E0] rounded-[24px]">
+        <Card className="shadow-sm bg-white dark:bg-gray-900 border-[#E0E0E0] dark:border-gray-700 rounded-[24px]">
           <CardContent className="p-8 text-center">
             <CalendarIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p className="text-lg text-gray-400">יום פנוי</p>
             <Link to={createPageUrl("NewEvent")} className="inline-block mt-4">
               <Button variant="outline" className="border-emerald-200 text-emerald-600 hover:bg-emerald-50">
-                <Plus className="w-4 h-4 ml-1" />
+                <Plus className="w-4 h-4 ms-1" />
                 הוסף אירוע
               </Button>
             </Link>

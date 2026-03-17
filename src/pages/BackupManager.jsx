@@ -199,7 +199,7 @@ export default function BackupManager() {
                 });
               }}
             >
-              <RefreshCw className="w-4 h-4 ml-2" />
+              <RefreshCw className="w-4 h-4 ms-2" />
               נסה שוב
             </Button>
           </CardContent>
@@ -228,9 +228,9 @@ export default function BackupManager() {
   }
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto" dir="rtl">
+    <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen" dir="rtl">
       <div className="text-center mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
+        <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white mb-2 flex items-center justify-center gap-3">
           <Shield className="w-8 h-8 text-blue-600" />
           גיבוי ושחזור
         </h1>
@@ -252,7 +252,7 @@ export default function BackupManager() {
            lastAction.type === 'error' ? <AlertTriangle className="w-5 h-5 flex-shrink-0" /> :
            <Clock className="w-5 h-5 flex-shrink-0" />}
           <span className="font-medium">{lastAction.message}</span>
-          <button onClick={() => setLastAction(null)} className="mr-auto text-sm underline opacity-60 hover:opacity-100">סגור</button>
+          <button onClick={() => setLastAction(null)} className="me-auto text-sm underline opacity-60 hover:opacity-100">סגור</button>
         </div>
       )}
 
@@ -310,7 +310,7 @@ export default function BackupManager() {
           <CardTitle className="flex items-center gap-2">
             <HardDrive className="w-5 h-5 text-gray-600" />
             גיבויים זמינים
-            <Badge variant="outline" className="mr-2">{snapshots.length} גיבויים</Badge>
+            <Badge variant="outline" className="me-2">{snapshots.length} גיבויים</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -351,7 +351,7 @@ export default function BackupManager() {
                     disabled={isRestoring}
                     onClick={() => handleRestore(snap)}
                   >
-                    <RotateCcw className="w-4 h-4 ml-1" />
+                    <RotateCcw className="w-4 h-4 ms-1" />
                     שחזור
                   </Button>
                 </div>

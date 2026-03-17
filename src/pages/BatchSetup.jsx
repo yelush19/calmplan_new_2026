@@ -151,14 +151,14 @@ export default function BatchSetupPage() {
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="mr-3 text-muted-foreground">טוען נתוני לקוחות...</span>
+        <span className="me-3 text-muted-foreground">טוען נתוני לקוחות...</span>
       </div>
     );
   }
 
   return (
     <motion.div
-      className="space-y-6"
+      className="space-y-6 dark:bg-gray-900 dark:text-white"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
@@ -166,7 +166,7 @@ export default function BatchSetupPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white flex items-center gap-2">
             <Zap className="w-6 h-6 text-amber-500" />
             אשף מוכנות - הגדרת מורכבות לקוחות
           </h1>
@@ -178,7 +178,7 @@ export default function BatchSetupPage() {
         <div className="flex items-center gap-3">
           {missingDataCount > 0 && (
             <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
-              <AlertTriangle className="w-3 h-3 ml-1" />
+              <AlertTriangle className="w-3 h-3 ms-1" />
               {missingDataCount} לקוחות חסרי נתונים
             </Badge>
           )}
@@ -205,12 +205,12 @@ export default function BatchSetupPage() {
           >
             {isSaving ? (
               <>
-                <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                <Loader2 className="w-4 h-4 ms-2 animate-spin" />
                 שומר...
               </>
             ) : (
               <>
-                <Save className="w-4 h-4 ml-2" />
+                <Save className="w-4 h-4 ms-2" />
                 שמור שינויים {changedCount > 0 ? `(${changedCount})` : ''}
               </>
             )}
@@ -234,13 +234,13 @@ export default function BatchSetupPage() {
             setAllExpanded(true);
           }
         }}>
-          {allExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+          {allExpanded ? <ChevronUp className="w-4 h-4 ms-1" /> : <ChevronDown className="w-4 h-4 ms-1" />}
           {allExpanded ? 'כווץ הכל' : 'הרחב הכל'}
         </Button>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border bg-card shadow-sm">
+      <div className="rounded-xl border dark:border-gray-700 bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
@@ -312,7 +312,7 @@ export default function BatchSetupPage() {
                         <TableCell className="font-medium">
                           {client.name}
                           {isEdited && (
-                            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 mr-2" />
+                            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 me-2" />
                           )}
                         </TableCell>
 

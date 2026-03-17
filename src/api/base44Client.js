@@ -95,6 +95,10 @@ function _cacheToLocal(entityName, items) {
       FileMetadata: 'file_metadata',
       ServiceCatalog: 'service_catalog',
       UserPreferences: 'user_preferences',
+      MealPlan: 'meal_plans',
+      InspirationItem: 'inspiration_items',
+      InventoryItem: 'inventory_items',
+      Treatment: 'treatments',
     };
     const collName = collectionMap[entityName];
     if (collName) {

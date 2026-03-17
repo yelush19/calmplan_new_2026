@@ -223,7 +223,7 @@ export default function EmergencyRecovery() {
   };
 
   return (
-    <div className="w-full p-6 space-y-6">
+    <div className="w-full p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen" dir="rtl">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -237,7 +237,7 @@ export default function EmergencyRecovery() {
           </AlertDescription>
         </Alert>
         
-        <h1 className="text-4xl font-bold text-amber-600 mb-4">
+        <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white mb-4">
           🚨 שחזור נתונים חירום
         </h1>
       </motion.div>
@@ -260,12 +260,12 @@ export default function EmergencyRecovery() {
               >
                 {isScanning ? (
                   <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    <RefreshCw className="w-4 h-4 me-2 animate-spin" />
                     סורק...
                   </>
                 ) : (
                   <>
-                    <Search className="w-4 h-4 mr-2" />
+                    <Search className="w-4 h-4 me-2" />
                     סרוק מחדש
                   </>
                 )}
@@ -322,7 +322,7 @@ export default function EmergencyRecovery() {
                 onChange={(e) => setManualData(prev => ({ ...prev, notes: e.target.value }))}
               />
               <Button onClick={handleManualSave} className="w-full">
-                <Database className="w-4 h-4 mr-2" />
+                <Database className="w-4 h-4 me-2" />
                 שמור לקוח
               </Button>
             </div>
@@ -362,7 +362,7 @@ export default function EmergencyRecovery() {
         <CardContent>
           <div className="flex gap-4">
             <Button onClick={exportCurrentData} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-4 h-4 me-2" />
               ייצא גיבוי נוכחי
             </Button>
           </div>

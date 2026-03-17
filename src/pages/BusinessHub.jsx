@@ -377,7 +377,7 @@ export default function BusinessHubPage() {
           <Button asChild variant="outline">
             <Link to={createPageUrl("Tasks?context=work")}>
               כל המשימות
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4" />
             </Link>
           </Button>
         </motion.div>
@@ -439,7 +439,7 @@ export default function BusinessHubPage() {
                 disabled={isGeneratingTasks || isLoadingPreview}
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
               >
-                <Eye className={`w-4 h-4 ml-2 ${isLoadingPreview ? 'animate-spin' : ''}`} />
+                <Eye className={`w-4 h-4 ms-2 ${isLoadingPreview ? 'animate-spin' : ''}`} />
                 {isLoadingPreview ? 'טוען תצוגה מקדימה...' : 'תצוגה מקדימה + יצירה'}
               </Button>
             </CardContent>
@@ -462,7 +462,7 @@ export default function BusinessHubPage() {
                 variant="outline"
                 className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
               >
-                <Calendar className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+                <Calendar className={`w-4 h-4 ms-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
                 צור דיווחים חודשיים
               </Button>
               <Button
@@ -471,7 +471,7 @@ export default function BusinessHubPage() {
                 variant="outline"
                 className="w-full mt-2 border-red-300 text-red-700 hover:bg-red-50"
               >
-                <AlertCircle className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+                <AlertCircle className={`w-4 h-4 ms-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
                 ניקוי משימות לקוחות שנתיים
               </Button>
               <Button
@@ -480,7 +480,7 @@ export default function BusinessHubPage() {
                 variant="outline"
                 className="w-full mt-2 border-orange-300 text-orange-700 hover:bg-orange-50"
               >
-                <AlertCircle className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+                <AlertCircle className={`w-4 h-4 ms-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
                 הסר כפילויות 02.2026
               </Button>
               <Button
@@ -489,7 +489,7 @@ export default function BusinessHubPage() {
                 variant="outline"
                 className="w-full mt-2 border-slate-300 text-slate-700 hover:bg-slate-50"
               >
-                <AlertCircle className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+                <AlertCircle className={`w-4 h-4 ms-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
                 ניקוי משימות רפאים P3
               </Button>
             </CardContent>
@@ -512,7 +512,7 @@ export default function BusinessHubPage() {
                 variant="outline"
                 className="w-full border-red-400 text-red-700 hover:bg-red-100"
               >
-                <Trash2 className={`w-4 h-4 ml-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
+                <Trash2 className={`w-4 h-4 ms-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
                 מחק הכל ואפס 02.2026
               </Button>
             </CardContent>

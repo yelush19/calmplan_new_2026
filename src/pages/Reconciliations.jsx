@@ -124,12 +124,12 @@ function ClientDrawer({ client, tasks, open, onClose }) {
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="right" className="w-[400px] bg-white border-l border-[#E0E0E0] rounded-l-[32px]">
-        <SheetHeader className="text-right">
+        <SheetHeader className="text-end">
           <SheetTitle className="text-lg flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-[#4682B4]" />
             {client.nickname || client.name}
           </SheetTitle>
-          <SheetDescription className="text-right text-sm text-slate-500">
+          <SheetDescription className="text-end text-sm text-slate-500">
             {clientTasks.length} משימות פעילות
           </SheetDescription>
         </SheetHeader>
@@ -374,7 +374,7 @@ function ClientGroupHeader({
           <ChevronDown className="w-4 h-4 text-[#4682B4]" />
         </motion.div>
         <button
-          className="font-bold text-slate-800 text-sm hover:text-[#4682B4] transition-colors text-right"
+          className="font-bold text-slate-800 text-sm hover:text-[#4682B4] transition-colors text-end"
           onClick={(e) => { e.stopPropagation(); onOpenDrawer(client); }}
         >
           {clientName}
@@ -718,7 +718,7 @@ export default function ReconciliationsPage() {
             className="bg-[#4682B4] hover:bg-[#2C3E50] text-white rounded-[16px]"
             onClick={() => { setEditingRec(null); setShowEditDialog(true); }}
           >
-            <Plus className="w-4 h-4 ml-2" />
+            <Plus className="w-4 h-4 ms-2" />
             הוסף התאמה
           </Button>
         </div>
@@ -762,7 +762,7 @@ export default function ReconciliationsPage() {
           {/* Lag Filter */}
           <div className="flex items-center gap-2 flex-wrap">
             <Filter className="w-4 h-4 text-[#4682B4]" />
-            <span className="text-xs font-medium text-slate-600 ml-1">סינון פיגור:</span>
+            <span className="text-xs font-medium text-slate-600 ms-1">סינון פיגור:</span>
             {LAG_FILTER_OPTIONS.map(opt => (
               <button
                 key={opt.key}
@@ -807,7 +807,7 @@ export default function ReconciliationsPage() {
               placeholder="חיפוש לקוח או חשבון..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 rounded-[16px] bg-white border-[#E0E0E0] "
+              className="pe-10 rounded-[16px] bg-white border-[#E0E0E0] "
             />
           </div>
         </div>
@@ -851,7 +851,7 @@ export default function ReconciliationsPage() {
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <Loader className="w-8 h-8 animate-spin text-[#4682B4]" />
-          <span className="mr-3 text-slate-500">טוען נתונים...</span>
+          <span className="me-3 text-slate-500">טוען נתונים...</span>
         </div>
       ) : clientGroups.length === 0 ? (
         <div className="text-center py-16  bg-[#F5F5F5] rounded-[24px] border border-[#E0E0E0]">

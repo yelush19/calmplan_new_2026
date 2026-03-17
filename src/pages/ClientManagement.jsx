@@ -894,22 +894,22 @@ export default function ClientManagementPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 ml-2" />
+                <Download className="w-4 h-4 ms-2" />
                 תבניות
-                <ChevronDown className="w-4 h-4 mr-2" />
+                <ChevronDown className="w-4 h-4 me-2" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={handleDownloadTemplate}>
-                <Download className="w-4 h-4 ml-2" />
+                <Download className="w-4 h-4 ms-2" />
                 תבנית חשבונות בנק
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExport} disabled={isExporting}>
-                <Download className="w-4 h-4 ml-2" />
+                <Download className="w-4 h-4 ms-2" />
                 ייצוא לקוחות
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportCustomerServices} disabled={isExporting}>
-                <Download className="w-4 h-4 ml-2" />
+                <Download className="w-4 h-4 ms-2" />
                 ייצוא שירותי לקוחות (CSV)
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -918,15 +918,15 @@ export default function ClientManagementPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" disabled={isImporting}>
-                <Upload className={`w-4 h-4 ml-2 ${isImporting ? 'animate-spin' : ''}`} />
+                <Upload className={`w-4 h-4 ms-2 ${isImporting ? 'animate-spin' : ''}`} />
                 ייבוא
-                <ChevronDown className="w-4 h-4 mr-2" />
+                <ChevronDown className="w-4 h-4 me-2" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem asChild>
                 <label htmlFor="import-accounts" className="cursor-pointer flex items-center w-full">
-                  <Upload className="w-4 h-4 ml-2" />
+                  <Upload className="w-4 h-4 ms-2" />
                   ייבוא חשבונות בנק
                   <input
                     type="file"
@@ -940,7 +940,7 @@ export default function ClientManagementPage() {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <label htmlFor="import-clients" className="cursor-pointer flex items-center w-full">
-                  <Upload className="w-4 h-4 ml-2" />
+                  <Upload className="w-4 h-4 ms-2" />
                   ייבוא לקוחות
                   <input
                     type="file"
@@ -956,7 +956,7 @@ export default function ClientManagementPage() {
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" onClick={handleAddNewClient} className="bg-primary hover:bg-accent text-white" disabled={isSaving}>
-            <Plus className="w-4 h-4 ml-2" />
+            <Plus className="w-4 h-4 ms-2" />
             הוסף לקוח
           </Button>
         </div>
@@ -991,7 +991,7 @@ export default function ClientManagementPage() {
                   onClick={() => setShowBulkStatusDialog(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  <RefreshCw className="w-4 h-4 ml-2" />
+                  <RefreshCw className="w-4 h-4 ms-2" />
                   שנה סטטוס
                 </Button>
               </div>
@@ -1147,7 +1147,7 @@ export default function ClientManagementPage() {
                     <div key={group.status}>
                       <button
                         onClick={() => toggleGroup(group.status)}
-                        className="flex items-center gap-2 w-full text-right py-2 px-3 rounded-lg hover:bg-[#F5F5F5] transition-colors mb-2"
+                        className="flex items-center gap-2 w-full text-end py-2 px-3 rounded-lg hover:bg-[#F5F5F5] transition-colors mb-2"
                       >
                         <ChevronDown className={`w-4 h-4 text-[#455A64] transition-transform ${collapsedGroups.has(group.status) ? '-rotate-90' : ''}`} />
                         <span className="text-sm font-semibold text-[#263238]">{group.label}</span>
@@ -1188,7 +1188,7 @@ export default function ClientManagementPage() {
                     <Card key={group.status}>
                       <button
                         onClick={() => toggleGroup(group.status)}
-                        className="flex items-center gap-2 w-full text-right py-2.5 px-4 hover:bg-[#F5F5F5] transition-colors"
+                        className="flex items-center gap-2 w-full text-end py-2.5 px-4 hover:bg-[#F5F5F5] transition-colors"
                       >
                         <ChevronDown className={`w-4 h-4 text-[#455A64] transition-transform ${collapsedGroups.has(group.status) ? '-rotate-90' : ''}`} />
                         <span className="text-sm font-semibold text-[#263238]">{group.label}</span>
@@ -1238,7 +1238,7 @@ export default function ClientManagementPage() {
               <h3 className="text-xl font-semibold text-gray-600 mb-2">לא נמצאו לקוחות</h3>
               <p className="text-gray-500 mb-4">התחל על ידי הוספת הלקוח הראשון שלך.</p>
               <Button onClick={handleAddNewClient} className="bg-primary hover:bg-accent text-white">
-                <Plus className="w-4 h-4 ml-2" />
+                <Plus className="w-4 h-4 ms-2" />
                 הוסף לקוח ראשון
               </Button>
             </Card>
@@ -1294,12 +1294,12 @@ export default function ClientManagementPage() {
             >
               {isBulkUpdating ? (
                 <>
-                  <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
+                  <RefreshCw className="w-4 h-4 ms-2 animate-spin" />
                   מעדכן...
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-4 h-4 ml-2" />
+                  <CheckCircle className="w-4 h-4 ms-2" />
                   עדכן סטטוס
                 </>
               )}

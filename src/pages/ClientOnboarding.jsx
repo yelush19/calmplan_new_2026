@@ -285,7 +285,7 @@ export default function ClientOnboardingPage() {
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">אנשי קשר נוספים</h3>
                   <Button type="button" onClick={addContact} variant="outline" size="sm">
-                    <Plus className="w-4 h-4 ml-2" />
+                    <Plus className="w-4 h-4 ms-2" />
                     הוסף איש קשר
                   </Button>
                 </div>

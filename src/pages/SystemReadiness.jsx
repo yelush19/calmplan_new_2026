@@ -218,7 +218,7 @@ export default function SystemReadiness() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-5" dir="rtl">
+    <div className="p-4 md:p-6 space-y-5 dark:bg-gray-900 dark:text-white" dir="rtl">
       {/* Header */}
       <div className="flex items-center gap-2 flex-wrap">
         <Link to={createPageUrl('Home')}>
@@ -235,7 +235,7 @@ export default function SystemReadiness() {
             <Settings className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">הגדרת מערכת - אשף מהיר</h1>
+            <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">הגדרת מערכת - אשף מהיר</h1>
             <p className="text-gray-500">הגדירי את נתוני הלקוחות בטבלה אחת - Tab למעבר בין שדות, Enter לשורה הבאה</p>
           </div>
         </div>
@@ -295,7 +295,7 @@ export default function SystemReadiness() {
           placeholder="חיפוש לקוח..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pr-10 h-9"
+          className="pe-10 h-9"
         />
       </div>
 
@@ -307,12 +307,12 @@ export default function SystemReadiness() {
       </div>
 
       {/* Main Table */}
-      <Card className="border-gray-200 shadow-sm overflow-hidden">
+      <Card className="border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto" ref={tableRef}>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-right py-2.5 px-4 font-semibold text-gray-600 text-xs sticky right-0 z-10 bg-gray-50 min-w-[180px]">
+                <th className="text-end py-2.5 px-4 font-semibold text-gray-600 text-xs sticky right-0 z-10 bg-gray-50 min-w-[180px]">
                   לקוח
                 </th>
                 <th className="text-center py-2.5 px-3 font-semibold text-gray-600 text-xs min-w-[100px]">
@@ -374,7 +374,7 @@ export default function SystemReadiness() {
                     <td className="py-2 px-3 text-center">
                       <span className="text-xs text-gray-500">{taskCount}</span>
                       {hasPayroll && (
-                        <Badge className="text-[11px] px-1 py-0 bg-gray-100 text-gray-500 mr-1">שכר</Badge>
+                        <Badge className="text-[11px] px-1 py-0 bg-gray-100 text-gray-500 me-1">שכר</Badge>
                       )}
                     </td>
 
@@ -436,7 +436,7 @@ export default function SystemReadiness() {
                             tier.key === 'mid' ? 'bg-amber-100 text-amber-700 border-amber-300' :
                             'bg-purple-100 text-purple-700 border-purple-300'
                           }`}>
-                            {tier.emoji && <span className="ml-0.5">{tier.emoji}</span>}
+                            {tier.emoji && <span className="ms-0.5">{tier.emoji}</span>}
                             {tier.label}
                           </Badge>
                         )}

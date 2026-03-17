@@ -194,8 +194,8 @@ export default function AnalyticsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center space-y-4"
       >
-        <h1 className="text-4xl font-bold text-gray-800">אנליטיקה ותובנות</h1>
-        <p className="text-xl text-gray-600">הבן את דפוסי העבודה שלך ושפר את היעילות</p>
+        <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">אנליטיקה ותובנות</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400">הבן את דפוסי העבודה שלך ושפר את היעילות</p>
       </motion.div>
 
       {/* סיכום כללי */}
@@ -205,7 +205,7 @@ export default function AnalyticsPage() {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-1 md:grid-cols-4 gap-6"
       >
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-green-200 dark:border-green-700 rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-green-800">
               <Target className="w-5 h-5" />
@@ -222,7 +222,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-blue-200 dark:border-blue-700 rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-blue-800">
               <BarChart3 className="w-5 h-5" />
@@ -237,7 +237,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border-purple-200 dark:border-purple-700 rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-purple-800">
               <Clock className="w-5 h-5" />
@@ -254,7 +254,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-orange-200 dark:border-orange-700 rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-orange-800">
               <AlertTriangle className="w-5 h-5" />
@@ -278,9 +278,9 @@ export default function AnalyticsPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card>
+          <Card className="rounded-xl shadow-sm border dark:border-gray-700 dark:bg-gray-900 hover:shadow-md transition-shadow">
             <CardHeader>
-              <CardTitle>התפלגות זמן לפי קטגוריות</CardTitle>
+              <CardTitle className="dark:text-white">התפלגות זמן לפי קטגוריות</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -311,9 +311,9 @@ export default function AnalyticsPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <Card>
+          <Card className="rounded-xl shadow-sm border dark:border-gray-700 dark:bg-gray-900 hover:shadow-md transition-shadow">
             <CardHeader>
-              <CardTitle>פרודוקטיביות לפי שעות היום</CardTitle>
+              <CardTitle className="dark:text-white">פרודוקטיביות לפי שעות היום</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -345,9 +345,9 @@ export default function AnalyticsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <Card>
+        <Card className="rounded-xl shadow-sm border dark:border-gray-700 dark:bg-gray-900 hover:shadow-md transition-shadow">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 dark:text-white">
               <Brain className="w-6 h-6 text-purple-600" />
               המלצות לשיפור היעילות
             </CardTitle>
@@ -356,10 +356,10 @@ export default function AnalyticsPage() {
             {recommendations.length > 0 ? (
               <div className="space-y-4">
                 {recommendations.map((rec, index) => (
-                  <div key={index} className={`p-4 rounded-lg border-r-4 ${
-                    rec.priority === 'high' ? 'border-r-amber-500 bg-amber-50' :
-                    rec.priority === 'medium' ? 'border-r-yellow-500 bg-yellow-50' :
-                    'border-r-green-500 bg-green-50'
+                  <div key={index} className={`p-4 rounded-lg border-e-4 ${
+                    rec.priority === 'high' ? 'border-e-amber-500 bg-amber-50 dark:bg-amber-900/30' :
+                    rec.priority === 'medium' ? 'border-e-yellow-500 bg-yellow-50 dark:bg-yellow-900/30' :
+                    'border-e-green-500 bg-green-50 dark:bg-green-900/30'
                   }`}>
                     <div className="flex items-start gap-3">
                       <rec.icon className={`w-5 h-5 mt-1 ${
@@ -368,8 +368,8 @@ export default function AnalyticsPage() {
                         'text-green-600'
                       }`} />
                       <div>
-                        <h3 className="font-semibold text-gray-800 mb-1">{rec.title}</h3>
-                        <p className="text-gray-600">{rec.description}</p>
+                        <h3 className="font-semibold text-gray-800 dark:text-white mb-1">{rec.title}</h3>
+                        <p className="text-gray-600 dark:text-gray-400">{rec.description}</p>
                       </div>
                     </div>
                   </div>
@@ -378,8 +378,8 @@ export default function AnalyticsPage() {
             ) : (
               <div className="text-center py-8">
                 <Zap className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">כל הכבוד!</h3>
-                <p className="text-gray-600">הביצועים שלך מעולים, המשך כך!</p>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">כל הכבוד!</h3>
+                <p className="text-gray-600 dark:text-gray-400">הביצועים שלך מעולים, המשך כך!</p>
               </div>
             )}
           </CardContent>

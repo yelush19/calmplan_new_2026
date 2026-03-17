@@ -137,10 +137,10 @@ export default function RoadmapPage() {
         <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 sm:p-6 md:p-8"
+            className="p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen"
         >
             <div className="text-center mb-8">
-                <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
+                <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white mb-2 flex items-center justify-center gap-3">
                     <ListTodo className="w-10 h-10 text-primary" />
                     צ'קליסט פיתוח CalmPlan
                 </h1>
@@ -165,11 +165,11 @@ export default function RoadmapPage() {
                         </CardTitle>
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
-                                <Plus className="w-4 h-4 ml-2" />
+                                <Plus className="w-4 h-4 ms-2" />
                                 הוסף פריט
                             </Button>
                             <Button variant="outline" size="sm" onClick={handleReset} disabled={isResetting}>
-                                <RefreshCw className={`w-4 h-4 ml-2 ${isResetting ? 'animate-spin' : ''}`} />
+                                <RefreshCw className={`w-4 h-4 ms-2 ${isResetting ? 'animate-spin' : ''}`} />
                                 עדכן רשימה
                             </Button>
                         </div>
@@ -205,7 +205,7 @@ export default function RoadmapPage() {
                                         id={`item-${item.id}`}
                                         checked={item.status === 'completed'}
                                         onCheckedChange={() => handleStatusToggle(item)}
-                                        className="w-6 h-6 ml-4 mt-1"
+                                        className="w-6 h-6 ms-4 mt-1"
                                     />
                                     <label htmlFor={`item-${item.id}`} className="flex-1 cursor-pointer">
                                         <span className={`font-semibold text-lg ${item.status === 'completed' ? 'text-green-700 line-through' : 'text-gray-800'}`}>
@@ -217,7 +217,7 @@ export default function RoadmapPage() {
                                         <Pencil className="w-4 h-4 text-gray-400 hover:text-gray-700" />
                                     </Button>
                                     {item.status === 'completed' && (
-                                        <div className="text-green-500 ml-2">
+                                        <div className="text-green-500 ms-2">
                                             <CheckSquare className="w-5 h-5" />
                                         </div>
                                     )}

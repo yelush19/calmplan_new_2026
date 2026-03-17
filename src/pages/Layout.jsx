@@ -163,7 +163,7 @@ const getSidebarSections = () => ({
     tabColor: 'border-[#7C3AED]',
     items: [
       { name: "פרוייקטים", href: createPageUrl("Projects"), icon: FolderKanban },
-      { name: "חוברת פיתוח", href: createPageUrl("ProjectWorkbook"), icon: BookOpen },
+      { name: "דאשבורד פרויקט", href: createPageUrl("ProjectWorkbook"), icon: BookOpen },
     ]
   },
 });
@@ -566,15 +566,15 @@ function LayoutInner({ children }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setEnergyLevel('low')}>
-                  <BatteryLow className="w-4 h-4 ml-2 text-amber-500" />
+                  <BatteryLow className="w-4 h-4 ms-2 text-amber-500" />
                   סוללה נמוכה - רק משימות של 5-10 דקות
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setEnergyLevel('medium')}>
-                  <BatteryMedium className="w-4 h-4 ml-2 text-yellow-500" />
+                  <BatteryMedium className="w-4 h-4 ms-2 text-yellow-500" />
                   אנרגיה בינונית - משימות S ו-M
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setEnergyLevel('full')}>
-                  <BatteryFull className="w-4 h-4 ml-2 text-green-500" />
+                  <BatteryFull className="w-4 h-4 ms-2 text-green-500" />
                   אנרגיה מלאה - הכל מוצג
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -719,7 +719,7 @@ function LayoutInner({ children }) {
                           {section.subGroups?.map(sg => {
                             const sgOpen = !collapsedSections.has(sg.key);
                             return (
-                              <div key={sg.key} className="mr-3">
+                              <div key={sg.key} className="me-3">
                                 <button
                                   onClick={() => setCollapsedSections(prev => {
                                     const next = new Set(prev);
@@ -879,7 +879,7 @@ function LayoutInner({ children }) {
                               }
                             }}
                             placeholder="סנן תפריט... (מע״מ, P1...)"
-                            className="w-full h-8 text-xs pr-8 pl-2 rounded-xl border border-gray-200 bg-white/70 focus:outline-none focus:ring-1 focus:ring-[#4682B4] focus:bg-white placeholder:text-gray-400"
+                            className="w-full h-8 text-xs pe-8 ps-2 rounded-xl border border-gray-200 bg-white/70 focus:outline-none focus:ring-1 focus:ring-[#4682B4] focus:bg-white placeholder:text-gray-400"
                           />
                           {sidebarSearch && (
                             <button
@@ -910,7 +910,7 @@ function LayoutInner({ children }) {
                             <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${!collapsedSections.has('personal_tools') ? '' : '-rotate-90'}`} />
                           </button>
                           {!collapsedSections.has('personal_tools') && (
-                            <div className="mr-3 border-r-2 border-[#E0E0E0] pr-1 mt-0.5 mb-1">
+                            <div className="me-3 border-e-2 border-[#E0E0E0] pe-1 mt-0.5 mb-1">
                               {/* Pinned Clients */}
                               {pinnedClients.length > 0 && (
                                 <>
@@ -1041,7 +1041,7 @@ function LayoutInner({ children }) {
                                   <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${isOpen ? '' : '-rotate-90'}`} />
                                 </button>
                                 {isOpen && (
-                                  <div className="mr-3 border-r-2 border-[#E0E0E0] pr-1 mt-0.5 mb-1">
+                                  <div className="me-3 border-e-2 border-[#E0E0E0] pe-1 mt-0.5 mb-1">
                                     {section.items.filter(matchesSidebarSearch).map(item => (
                                       <div key={item.href} className="flex items-center group">
                                         <Link to={item.href}
@@ -1087,7 +1087,7 @@ function LayoutInner({ children }) {
                                             <ChevronDown className={`w-3 h-3 text-[#455A64] transition-transform ${sgOpen ? '' : '-rotate-90'}`} />
                                           </button>
                                           {sgOpen && (
-                                            <div className="mr-3 border-r-2 border-[#E8F5F7] pr-1">
+                                            <div className="me-3 border-e-2 border-[#E8F5F7] pe-1">
                                               {sg.items.filter(matchesSidebarSearch).map(item => (
                                                 <div key={item.href} className="flex items-center group">
                                                   <Link to={item.href}

@@ -69,15 +69,15 @@ function BackupStatusPanel() {
           <span className="font-medium">שמירה:</span>
           <Badge variant="outline">30 יום</Badge>
         </div>
-        <div className="flex gap-2 mr-auto">
+        <div className="flex gap-2 me-auto">
           <Button size="sm" variant="outline" onClick={fetchStatus} disabled={loading}>
-            <RefreshCw className={`w-3 h-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 h-3 me-1 ${loading ? 'animate-spin' : ''}`} />
             בדוק סטטוס
           </Button>
           <Button size="sm" variant="outline" onClick={triggerBackup}
             disabled={triggerResult?.running}
             className="border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-            <HardDrive className={`w-3 h-3 mr-1 ${triggerResult?.running ? 'animate-pulse' : ''}`} />
+            <HardDrive className={`w-3 h-3 me-1 ${triggerResult?.running ? 'animate-pulse' : ''}`} />
             {triggerResult?.running ? 'מגבה...' : 'גיבוי ידני'}
           </Button>
         </div>
@@ -226,8 +226,8 @@ export default function SystemOverviewPage() {
           <h1 className="text-3xl font-bold">מצב המערכת</h1>
           <p className="text-gray-600">ביקורת נתונים ובדיקת תקינות לקוחות</p>
         </div>
-        <Button onClick={loadData} variant="outline" className="mr-auto">
-          <RefreshCw className="w-4 h-4 mr-2" />
+        <Button onClick={loadData} variant="outline" className="me-auto">
+          <RefreshCw className="w-4 h-4 me-2" />
           רענן
         </Button>
       </div>

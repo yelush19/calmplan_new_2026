@@ -1145,10 +1145,10 @@ export default function AutomationRules() {
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 sticky top-0">
                         <tr>
-                          <th className="text-right p-2">סטטוס</th>
-                          <th className="text-right p-2">לקוח</th>
-                          <th className="text-right p-2">סוג</th>
-                          <th className="text-right p-2">פירוט</th>
+                          <th className="text-end p-2">סטטוס</th>
+                          <th className="text-end p-2">לקוח</th>
+                          <th className="text-end p-2">סוג</th>
+                          <th className="text-end p-2">פירוט</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1219,7 +1219,7 @@ export default function AutomationRules() {
               return (
                 <div key={entityKey} className="border rounded-lg overflow-hidden">
                   <button
-                    className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-right"
+                    className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-end"
                     onClick={() => setExpandedSections(prev => {
                       const next = new Set(prev);
                       if (next.has(entityKey)) next.delete(entityKey); else next.add(entityKey);
@@ -1322,7 +1322,7 @@ export default function AutomationRules() {
         <CardContent className="text-sm text-gray-600 space-y-2">
           <p><strong>חוקי סימון שירות:</strong> כשאת בוחרת שירות בכרטיס לקוח, שירותים קשורים יסומנו אוטומטית. למשל: בחירת "שכר" תסמן גם "ביטוח לאומי" ו"ניכויים".</p>
           <p><strong>חוקי יצירה בלוחות:</strong> כששומרים לקוח פעיל עם שירותים מסוימים, נוצרות רשומות אוטומטית:</p>
-          <ul className="list-disc mr-6 space-y-1">
+          <ul className="list-disc me-6 space-y-1">
             <li><strong>דיווחים מרכזים:</strong> שורות 126 (ביטוח לאומי, ניכויים) לפי תקופות</li>
             <li><strong>מאזנים:</strong> שורת מאזן שנתי ללקוח</li>
             <li><strong>התאמות:</strong> שורות התאמה לחשבונות הלקוח</li>
@@ -1506,7 +1506,7 @@ export default function AutomationRules() {
                           <span className="font-medium text-sm">{group.name}</span>
                           <Badge variant="secondary" className="text-xs">{group.items.length} רשומות</Badge>
                         </div>
-                        <div className="pr-6">
+                        <div className="pe-6">
                           {group.items.map(item => (
                             <div
                               key={item.id}

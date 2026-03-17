@@ -41,6 +41,7 @@ export default function UnifiedAyoaLayout({
   centerSub = '',
   accentColor,
   branch,
+  customMapView,
   currentMonth,
   onEditTask,
   isLoading = false,
@@ -120,15 +121,22 @@ export default function UnifiedAyoaLayout({
           )}
 
           {localView === 'map' && (
-            <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white"
-              style={{ minHeight: '450px' }}>
-              <AyoaMapView
-                tasks={tasks}
-                centerLabel={centerLabel}
-                centerSub={centerSub || `${tasks.length} משימות`}
-                accentColor={accent}
-              />
-            </div>
+            customMapView ? (
+              <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white"
+                style={{ minHeight: '500px' }}>
+                {customMapView}
+              </div>
+            ) : (
+              <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white"
+                style={{ minHeight: '450px' }}>
+                <AyoaMapView
+                  tasks={tasks}
+                  centerLabel={centerLabel}
+                  centerSub={centerSub || `${tasks.length} משימות`}
+                  accentColor={accent}
+                />
+              </div>
+            )
           )}
 
           {localView === 'radial' && (

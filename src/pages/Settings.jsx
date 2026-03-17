@@ -435,7 +435,7 @@ function LitaySettings() {
         <span className="text-xs text-gray-400">סוגי שירותים, תדירויות, שלבי מאזן</span>
         {saveStatus === 'saved' && (
           <Badge className="bg-green-100 text-green-700 text-xs mr-auto">
-            <CheckCircle className="w-3 h-3 ml-1" /> נשמר
+            <CheckCircle className="w-3 h-3 ms-1" /> נשמר
           </Badge>
         )}
       </div>
@@ -610,7 +610,7 @@ function LenaSettings() {
               </div>
             </div>
             <Button onClick={saveSchedule} size="sm" className="w-full bg-amber-600 hover:bg-amber-700">
-              <Save className="w-3.5 h-3.5 ml-1" /> שמור שינויים
+              <Save className="w-3.5 h-3.5 ms-1" /> שמור שינויים
             </Button>
           </CardContent>
         </Card>
@@ -817,7 +817,7 @@ function AutomationSettings() {
             {log.length > 0 && (
               <Button variant="ghost" size="sm" onClick={() => { clearAutomationLog(); setLog([]); }}
                 className="text-[12px] text-gray-400 h-6 px-2">
-                <Trash2 className="w-3 h-3 mr-1" /> נקה
+                <Trash2 className="w-3 h-3 me-1" /> נקה
               </Button>
             )}
           </div>
@@ -1644,7 +1644,7 @@ function DataBackupSection() {
           <Database className="w-4 h-4 text-blue-600" />
           גיבוי ושחזור נתונים
           <Badge variant={isSupabaseConfigured ? "default" : "outline"} className={`text-[12px] mr-auto ${isSupabaseConfigured ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-            {isSupabaseConfigured ? <><Cloud className="w-3 h-3 ml-1" /> Supabase</> : <><AlertTriangle className="w-3 h-3 ml-1" /> localStorage</>}
+            {isSupabaseConfigured ? <><Cloud className="w-3 h-3 ms-1" /> Supabase</> : <><AlertTriangle className="w-3 h-3 ms-1" /> localStorage</>}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -1672,7 +1672,7 @@ function DataBackupSection() {
                   : 'טרם בוצע גיבוי'}
               </span>
               <Button onClick={downloadAutoBackup} variant="outline" size="sm" className="h-6 text-[12px] border-blue-300 text-blue-700">
-                <Download className="w-3 h-3 ml-1" /> הורד גיבוי אוטומטי
+                <Download className="w-3 h-3 ms-1" /> הורד גיבוי אוטומטי
               </Button>
             </div>
           )}
@@ -1698,7 +1698,7 @@ function DataBackupSection() {
                   : 'טרם בוצע גיבוי ל-Supabase'}
               </span>
               <Button onClick={handleManualSupaBackup} disabled={isSavingToSupa} variant="outline" size="sm" className="h-6 text-[12px] border-green-300 text-green-700">
-                <Cloud className="w-3 h-3 ml-1" /> {isSavingToSupa ? 'שומר...' : 'גבה עכשיו'}
+                <Cloud className="w-3 h-3 ms-1" /> {isSavingToSupa ? 'שומר...' : 'גבה עכשיו'}
               </Button>
             </div>
             <p className="text-[12px] text-green-600/70">נשמר אוטומטית פעם ביום. שומר 7 גיבויים אחרונים.</p>

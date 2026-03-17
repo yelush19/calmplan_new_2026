@@ -669,7 +669,7 @@ export default function ClientsDashboardPage() {
           <CardContent className="p-0">
             {/* Column visibility toggle bar */}
             <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-[#E0E0E0] flex-wrap">
-              <span className="text-xs font-bold text-slate-500 ml-2">עמודות:</span>
+              <span className="text-xs font-bold text-slate-500 ms-2">עמודות:</span>
               {ALL_COLUMNS.map(col => (
                 <button
                   key={col.key}
@@ -697,7 +697,7 @@ export default function ClientsDashboardPage() {
                 <thead>
                   {/* Group headers */}
                   <tr>
-                    <th rowSpan={2} className="text-right px-4 py-3 font-bold text-slate-700 text-sm bg-white sticky right-0 z-20 border-b-2 border-[#E0E0E0] min-w-[160px]">
+                    <th rowSpan={2} className="text-end px-4 py-3 font-bold text-slate-700 text-sm bg-white sticky right-0 z-20 border-b-2 border-[#E0E0E0] min-w-[160px]">
                       לקוח
                     </th>
                     {visibleColumnGroups.map(group => (
@@ -832,7 +832,7 @@ export default function ClientsDashboardPage() {
                                 >
                                   {config.label}
                                   {cellTasks.length > 1 && (
-                                    <span className="text-[12px] opacity-70 mr-1">({cellTasks.length})</span>
+                                    <span className="text-[12px] opacity-70 me-1">({cellTasks.length})</span>
                                   )}
                                 </button>
                               </td>
@@ -908,7 +908,7 @@ export default function ClientsDashboardPage() {
                   `}
                 >
                   {isCurrent && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
-                  <span className={isCurrent ? '' : 'mr-5'}>{config.label}</span>
+                  <span className={isCurrent ? '' : 'me-5'}>{config.label}</span>
                 </button>
               );
             })}

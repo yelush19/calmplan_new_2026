@@ -86,9 +86,21 @@ export default function DashboardsPage() {
         const totalMinutes = completedWithTime.reduce((sum, t) => sum + t.actual_minutes, 0);
         const avgCompletionTime = completedWithTime.length > 0 ? Math.round(totalMinutes / completedWithTime.length) : 0;
 
+        // Tasks by category
+        const tasksByCategory = tasks.reduce((acc, task) => {
+            const cat = task.category || task.service_type || 'כללי';
+            const existing = acc.find(item => item.name === cat);
+            if (existing) {
+                existing.value += 1;
+            } else {
+                acc.push({ name: cat, value: 1 });
+            }
+            return acc;
+        }, []).sort((a, b) => b.value - a.value).slice(0, 8);
+
         setData({
             taskStatus,
-            tasksByCategory: [], // placeholder for more detailed categories
+            tasksByCategory,
             weeklyCompletion,
             workVsHome: workVsHome.map(item => ({...item, name: item.name === 'work' ? 'עבודה' : 'בית' })),
             stats: { completed, pending, avgCompletionTime }
@@ -97,7 +109,21 @@ export default function DashboardsPage() {
     };
 
     if (isLoading) {
-        return <div className="p-8 text-center">טוען נתונים...</div>
+        return (
+            <div className="p-4 md:p-8 space-y-6" dir="rtl">
+                <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white text-center">דשבורד ניתוח נתונים</h1>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="h-64 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+                    ))}
+                </div>
+            </div>
+        );
     }
 
     return (
