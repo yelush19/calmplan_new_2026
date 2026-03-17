@@ -18,10 +18,22 @@ import { getVatEnergyTier, getPayrollTier } from '@/engines/taskCascadeEngine';
 const STATUS_DISPLAY_ORDER = [
   'waiting_for_materials',   // 1 - ממתין לחומרים
   'not_started',             // 2 - לבצע
-  'sent_for_review',         // 3 - הועבר לעיון
+  'sent_for_review',         // 3 - הועבר לעיון / דווח — ממתין לתשלום
   'needs_corrections',       // 3 - לבצע תיקונים
   'production_completed',    // 5 - הושלם ייצור
 ];
+
+/**
+ * For authority tasks (ביטוח לאומי, מע"מ, ניכויים, מקדמות):
+ * "sent_for_review" actually means "reported — awaiting payment",
+ * NOT "sent to client for review" which is the payroll meaning.
+ */
+function getStatusLabel(statusKey, config, serviceTaskType) {
+  if (statusKey === 'sent_for_review' && serviceTaskType === 'authority') {
+    return 'דווח — ממתין לתשלום';
+  }
+  return config.label;
+}
 
 function ExecutionBar({ startDate, dueDate }) {
   const today = new Date();
@@ -200,7 +212,7 @@ export default function GroupedServiceTable({
                           className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isCollapsed ? 'rotate-[-90deg]' : ''}`}
                         />
                         <div className={`w-2.5 h-2.5 rounded-full ${config.bg} border ${config.border} shrink-0`} />
-                        <span className="font-semibold text-gray-700 text-xs">{config.label}</span>
+                        <span className="font-semibold text-gray-700 text-xs">{getStatusLabel(status, config, service.taskType)}</span>
                         <Badge variant="secondary" className="text-[12px] px-1.5 py-0 bg-gray-100 text-gray-500 font-normal">
                           {rows.length}
                         </Badge>
