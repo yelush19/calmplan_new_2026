@@ -29,6 +29,7 @@ const DNA_ACCENTS = {
   P2: '#B2AC88',
   P3: '#F59E0B',
   P4: '#FACC15',
+  P6: '#7C3AED',
 };
 
 export default function UnifiedAyoaLayout({
