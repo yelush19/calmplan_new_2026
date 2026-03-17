@@ -29,7 +29,7 @@ import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
 import AyoaWorkflowView from '@/components/canvas/AyoaWorkflowView';
-import ProcessTreeFocusMap from '@/components/canvas/ProcessTreeFocusMap';
+import FocusMapView from '@/components/canvas/FocusMapView';
 import { useAyoaView } from '@/contexts/AyoaViewContext';
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import useRealtimeRefresh from '@/hooks/useRealtimeRefresh';
@@ -221,7 +221,7 @@ export default function MyFocus() {
           </div>
         ) : viewMode === 'focus' ? (
           <div className="h-full rounded-2xl overflow-hidden border border-amber-100" style={{ minHeight: '450px', background: 'linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%)' }}>
-            <ProcessTreeFocusMap tasks={todayTasks} clients={clients} centerLabel="הפוקוס שלי" />
+            <FocusMapView tasks={todayTasks} allTasks={tasks} centerLabel="הפוקוס שלי" centerSub={`${todayTasks.length} משימות`} />
           </div>
         ) : viewMode === 'workflow' ? (
           <div className="h-full rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '450px' }}>
