@@ -51,7 +51,7 @@ const WORK_MODES = [
     icon: Zap,
     color: 'bg-emerald-600 text-white',
     description: 'משימות יומיות + דיווחים שוטפים',
-    visibleSections: ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual']
+    visibleSections: ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p6_projects']
   },
   {
     key: 'planning',
@@ -59,7 +59,7 @@ const WORK_MODES = [
     icon: Brain,
     color: 'bg-blue-600 text-white',
     description: 'תכנון שבועי, עומס קוגניטיבי, אוטומציות',
-    visibleSections: ['p3_hub', 'p4_home', 'p5_annual']
+    visibleSections: ['p3_hub', 'p4_home', 'p5_annual', 'p6_projects']
   },
   {
     key: 'admin',
@@ -67,7 +67,7 @@ const WORK_MODES = [
     icon: Settings,
     color: 'bg-purple-700 text-white',
     description: 'לקוחות + ספקים + ניתוח עסקי',
-    visibleSections: ['p3_hub', 'p4_home', 'p5_annual']
+    visibleSections: ['p3_hub', 'p4_home', 'p5_annual', 'p6_projects']
   },
 ];
 
@@ -155,6 +155,15 @@ const getSidebarSections = () => ({
       { name: "דוחות אישיים", href: createPageUrl("BalanceSheets"), icon: FileBarChart },
     ]
   },
+  // ── P6 | מעקב פרוייקטים — Project Tracking ──
+  p6_projects: {
+    title: "P6 | מעקב פרוייקטים",
+    icon: FolderKanban,
+    tabColor: 'border-[#7C3AED]',
+    items: [
+      { name: "פרוייקטים", href: createPageUrl("Projects"), icon: FolderKanban },
+    ]
+  },
 });
 
 // Map sidebar sections to their parent work mode for auto-switching
@@ -164,11 +173,12 @@ const SECTION_TO_MODE = {
   p3_hub: null,    // P3 is a HUB — visible in all modes
   p4_home: null,   // visible in all modes
   p5_annual: null,  // visible in all modes
+  p6_projects: null, // visible in all modes
 };
 
 const getVisibleSections = (mode) => {
   // All 5 pillars always visible — P3 is a HUB layer (Law 1)
-  return ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual'];
+  return ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p6_projects'];
 };
 
 // Deadline countdown
@@ -296,7 +306,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p3_strategy', 'p3_clients', 'p3_system']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p6_projects', 'p3_strategy', 'p3_clients', 'p3_system']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
@@ -1011,6 +1021,7 @@ function LayoutInner({ children }) {
                                         : key === 'p3_hub' ? 'linear-gradient(135deg, #E91E6320, #9C27B020)'
                                         : key === 'p4_home' ? 'linear-gradient(135deg, #FFC10720, #FF980020)'
                                         : key === 'p5_annual' ? 'linear-gradient(135deg, #2E7D3220, #1B5E2020)'
+                                        : key === 'p6_projects' ? 'linear-gradient(135deg, #7C3AED20, #6D28D920)'
                                         : 'linear-gradient(135deg, #54647A20, #37474F20)',
                                     }}>
                                       <section.icon className="w-3.5 h-3.5" style={{
@@ -1019,6 +1030,7 @@ function LayoutInner({ children }) {
                                           : key === 'p3_hub' ? '#E91E63'
                                           : key === 'p4_home' ? '#FFC107'
                                           : key === 'p5_annual' ? '#2E7D32'
+                                          : key === 'p6_projects' ? '#7C3AED'
                                           : '#546E7A',
                                       }} />
                                     </div>
