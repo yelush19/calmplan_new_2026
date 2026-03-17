@@ -5,10 +5,12 @@ import { Project } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  ArrowRight, CheckCircle2, Lightbulb, PenTool, Layout,
-  Hammer, Link2, TestTube2, Rocket, Wrench,
-  Sparkles, Eye, ArrowLeft, BookOpen, MapPin, Star,
-  PartyPopper, Plus, GitBranch, Database, Globe, ExternalLink
+  ArrowRight, CheckCircle2, Circle, Lightbulb, PenTool, Layout,
+  Hammer, Link2, TestTube2, Rocket, Wrench, ChevronDown,
+  Sparkles, Eye, ArrowLeft, BookOpen, MapPin, Star, AlertCircle,
+  PartyPopper, Lock, Plus, Palette, Code2, Brain, Bug, FileSearch,
+  AlertTriangle, CheckCheck, Trash2, Merge, Ghost,
+  GitBranch, Database, Globe, ExternalLink
 } from 'lucide-react';
 
 const ACCENT = '#7C3AED';
@@ -418,6 +420,410 @@ function BirdEyeProgress({ phases, checkedItems, currentPhaseId }) {
 }
 
 /* ────────────────────────────────────────────────────────────────
+ *  Professional Audit Tabs — Claude Updates per discipline
+ *  Design, Programming, Logic, UX, Feynman Summary
+ * ──────────────────────────────────────────────────────────────── */
+const AUDIT_TABS = [
+  {
+    id: 'feynman',
+    label: 'סיכום פיינמן',
+    icon: Brain,
+    color: '#7C3AED',
+    content: {
+      title: 'הסבר כאילו את בת 12',
+      sections: [
+        {
+          heading: 'מה המערכת עושה?',
+          items: [
+            'CalmPlan היא מערכת שעוזרת לנהל משרד הנהלת חשבונות — כל הלקוחות, כל הדיווחים, כל התשלומים — ממקום אחד.',
+            'היא גם עוזרת לנהל את החיים האישיים: ארוחות, שגרות, ובית.',
+            'היא בנויה כך שאפילו ביום קשה (ADHD!) אפשר לדעת מה לעשות הבא — בלי לחץ.',
+          ],
+        },
+        {
+          heading: 'למה היא מסובכת?',
+          items: [
+            'כי יש 6 עולמות שונים (שכר, הנה"ח, ניהול, בית, דוחות שנתיים, פרויקטים) — וכולם מחוברים אחד לשני.',
+            'כי משימה אחת (למשל "שכר לחברת אבג") עוברת 6 שלבים אצל אנשים שונים ברשויות שונות.',
+          ],
+        },
+        {
+          heading: 'הרעיון הכי חכם',
+          items: [
+            'עץ תהליכים (Process Tree V4.3) — במקום לכתוב משימות ידנית, המערכת יודעת מה השלב הבא לפי תבנית של כל שירות.',
+          ],
+        },
+        {
+          heading: 'הבעיה הכי גדולה',
+          items: [
+            'סטטוס "הועבר לעיון" משמש גם לתלושי שכר (שנשלחו ללקוח) וגם לדיווחי רשויות (ביטוח לאומי, מע"מ) — וזה לא אותו דבר בכלל.',
+            'תיקון חלקי בוצע: GroupedServiceTable מציג "דווח — ממתין לתשלום" לסוג authority. דרוש תיקון מלא ב-Engine.',
+          ],
+        },
+        {
+          heading: 'מבנה ASCII',
+          isCode: true,
+          items: [
+            '┌─ CalmPlan ──────────────────────────┐',
+            '│  P1 שכר ──→ ייצור → דיווח → תשלום  │',
+            '│  P2 הנה"ח ─→ קליטה → מע"מ → רוה"ס  │',
+            '│  P3 ניהול ──→ HUB (צופה על P1+P2)   │',
+            '│  P4 בית ───→ ארוחות, שגרות          │',
+            '│  P5 דוחות ──→ מאזנים, ביקורת רו"ח   │',
+            '│  P6 פרויקטים → את כאן! 💜            │',
+            '└─────────────────────────────────────┘',
+          ],
+        },
+      ],
+    },
+  },
+  {
+    id: 'design',
+    label: 'עיצוב',
+    icon: Palette,
+    color: '#EC4899',
+    content: {
+      title: 'ממצאי עיצוב ו-ADHD — עדכון 17.3.2026',
+      sections: [
+        {
+          heading: 'תוקן ע"י מעצב (branch: redesign-calmplan)',
+          severity: 'success',
+          items: [
+            'RTL: תוקנו text-left/right → text-start/end, pl/pr → ps/pe ב-46+ קבצים',
+            'עקביות כותרות: text-xl font-bold text-[#1E3A5F] בכל העמודים',
+            'עקביות כרטיסים: rounded-xl shadow-sm border בכל מקום',
+            'Dark mode: הוספת dark: variants למכלים ראשיים',
+            'Loading: skeleton animations בכל עמוד דינאמי',
+            'אנימציות: Framer Motion AnimatePresence page transitions ל-56 עמודים',
+          ],
+        },
+        {
+          heading: 'הפרות DNA שנותרו — לבדוק',
+          severity: 'warning',
+          items: [
+            'Projects.jsx — לבדוק אם backdrop-blur-sm + bg-white/90 עדיין קיים (הפרת חוק 2: NO TRANSPARENCY)',
+            'Layout.jsx — לבדוק אם text-gray-300/400/500 הוחלף ל-text-black (חוק 3)',
+            'Reconciliations.jsx — animate-pulse על פריטים קריטיים (חוק 1: ZERO PANIC)',
+            'ClientsDashboard.jsx — rgba transparency + gray text (חוקים 2+3)',
+            'TaxReportsDashboard.jsx — SVG transparency (חוק 2)',
+          ],
+        },
+        {
+          heading: 'ADHD — מה עובד',
+          severity: 'success',
+          items: [
+            'חוק 6 (5 סטטוסים בלבד) — מיושם נכון ב-processTemplates.js',
+            'חוק 8 (collapse כברירת מחדל) — PayrollReportsDashboard מקפלת שירותים',
+            'UnifiedAyoaLayout — 11 מתוך 56 עמודים משתמשים בו',
+            'ProjectWorkbook — חוברת עם שלבים ברורים, מצוין ל-ADHD',
+          ],
+        },
+        {
+          heading: 'עדיין לעשות',
+          severity: 'action',
+          items: [
+            'להוסיף UnifiedAyoaLayout ל-45 עמודים שעדיין חסרים',
+            'להוסיף Bad Day Mode לעמוד הבית',
+            'לבדוק שכל ה-dark mode variants עובדים בפועל (לא רק מוגדרים)',
+          ],
+        },
+      ],
+    },
+  },
+  {
+    id: 'programming',
+    label: 'תכנות',
+    icon: Code2,
+    color: '#3B82F6',
+    content: {
+      title: 'ממצאי קוד ומבנה — עדכון 17.3.2026',
+      sections: [
+        {
+          heading: 'תוקן ע"י מעצב (branch: redesign-calmplan)',
+          severity: 'success',
+          items: [
+            'TreatmentInput — מומש מלא עם CRUD, סטטיסטיקות, autocomplete מטפלים (entity: Treatment)',
+            'WeeklyPlanner — מומש מלא עם grid שבועי, משימות/אירועים, ניווט',
+            'AutomationPage — כללים נשמרים עכשיו ב-SystemConfig',
+            'MealPlanner — שומר תפריט שבועי ורשימת קניות ב-Entity API (entity: MealPlan)',
+            'Inspiration — ספרים דרך InspirationItem, פלייליסטים דרך UserPreferences',
+            'Inventory — מיגרציה מ-localStorage ל-InventoryItem entity עם סנכרון',
+            'Dashboards — tasksByCategory מלא מנתונים אמיתיים',
+            'Routes חסרים נרשמו: WeeklyPlanner, TreatmentInput, AutomationPage, CalendarView',
+            '4 entities חדשים: MealPlan, InspirationItem, InventoryItem, Treatment',
+          ],
+        },
+        {
+          heading: 'עמודים יתומים — עדיין אין ניווט מהסיידבר',
+          severity: 'warning',
+          items: [
+            'AdminTasksDashboard — יש route אבל אין בסיידבר',
+            'CalendarView — כפילות עם Calendar, אין ניווט',
+            'Collections — מחובר לנתונים, אין ניווט',
+            'Roadmap, Recommendations, WeeklySummary — עמודי מידע ללא ניווט',
+            'ClientOnboarding, ClientFiles, ClientContracts — sub-pages של ClientManagement',
+            'TestDataManager, EmergencyRecovery, EmergencyReset — כלי dev',
+          ],
+        },
+        {
+          heading: 'כפילויות — לבדוק',
+          severity: 'warning',
+          items: [
+            'Calendar + CalendarView — שני עמודי לוח שנה, Calendar הוא הראשי',
+            'SystemOverview + SystemReadiness — שניהם מראים מצב מערכת',
+            'Tasks + AdminTasksDashboard + WeeklyPlanningDashboard — חפיפה בניהול משימות',
+            'ClientsDashboard (P2) + ClientManagement (P3) — אותם לקוחות, תצוגה שונה',
+            'P5 דוחות אישיים → מפנה ל-BalanceSheets (אותו URL בדיוק!)',
+          ],
+        },
+        {
+          heading: 'מה לעשות',
+          severity: 'action',
+          items: [
+            'לאחד: SystemOverview + SystemReadiness → SystemDashboard אחד',
+            'לאחד: P5 "דוחות אישיים" → טאב בתוך BalanceSheets (לא route נפרד)',
+            'להוסיף לסיידבר: AdminTasksDashboard (או לאחד עם Tasks)',
+            'לוודא 4 entities חדשים (MealPlan, InspirationItem, InventoryItem, Treatment) נוצרו ב-API',
+            'לבדוק Inspiration — memory leak של URL.createObjectURL (האם תוקן?)',
+          ],
+        },
+      ],
+    },
+  },
+  {
+    id: 'logic',
+    label: 'לוגיקה',
+    icon: Bug,
+    color: '#F59E0B',
+    content: {
+      title: 'באגים לוגיים וזרימת נתונים',
+      sections: [
+        {
+          heading: 'באג קריטי: סטטוס "הועבר לעיון" בדיווחי רשויות',
+          severity: 'error',
+          items: [
+            'taskCascadeEngine.js:964 — כשביטוח לאומי דווח (submission=done) ותשלום עדיין לא, הסטטוס הופך ל-sent_for_review ("הועבר לעיון")',
+            'הבעיה: "הועבר לעיון" מתאים לתלושי שכר (payroll) — שנשלחים ללקוח לבדיקה',
+            'עבור רשויות (ביטוח לאומי, מע"מ, ניכויים, מקדמות) — זה דווח. אין "עיון". הדיווח נשלח לרשות ומחכים לתשלום',
+            'תיקון חלקי: GroupedServiceTable מציג "דווח — ממתין לתשלום" ל-taskType=authority (UI בלבד)',
+            'דרוש תיקון מלא: להוסיף status_labels לעץ התהליכים כדי שהסטטוס יהיה context-aware מה-engine',
+          ],
+        },
+        {
+          heading: 'ארכיטקטורה: עץ שולט על הכל (הוחלט)',
+          severity: 'warning',
+          items: [
+            'הוחלט: עץ התהליכים (companyProcessTree) יהיה מקור האמת היחיד',
+            'חסר בעץ: שדה taskType (רק ב-processTemplates, לא בעץ)',
+            'חסר בעץ: שדה status_labels — שם סטטוס לפי סוג שירות',
+            'processTemplates.js ישאר כ-fallback בלבד עד המיגרציה המלאה',
+          ],
+        },
+        {
+          heading: 'בעיות נוספות',
+          severity: 'warning',
+          items: [
+            'processTemplates.js:937 — 5 סטטוסים "זהובים" אבל הלוגיקה מצריכה 6 (חסר: "דווח")',
+            'RecurringTasks.jsx — מערך משימות hardcoded ריק! (ציון: 3/10)',
+            'BusinessHub.jsx — חודש hardcoded ל-2026-02 (לא דינאמי)',
+            'LifeSettings.jsx — חגים hardcoded ל-2024 (לא עודכן)',
+            'evaluateAuthorityStatus עושה submission→sent_for_review גם למע"מ, גם לב"ל, גם לניכויים — בלי הבחנה',
+          ],
+        },
+        {
+          heading: 'תיקונים נדרשים — לפי סדר עדיפות',
+          severity: 'action',
+          items: [
+            '1. להוסיף taskType + status_labels לנודים בעץ התהליכים (companyProcessTree.js)',
+            '2. לעדכן taskCascadeEngine להחזיר status label מהעץ (לא רק status key)',
+            '3. לתקן RecurringTasks — לטעון משימות חוזרות מ-API (לא מערך ריק)',
+            '4. לתקן BusinessHub — חודש דינאמי (new Date())',
+            '5. לתקן LifeSettings — חגים 2025-2026 (או לטעון מ-API)',
+          ],
+        },
+      ],
+    },
+  },
+  {
+    id: 'ux',
+    label: 'UX',
+    icon: FileSearch,
+    color: '#6366F1',
+    content: {
+      title: 'ממצאי חוויית משתמש — עדכון 17.3.2026',
+      sections: [
+        {
+          heading: 'מפת 56 עמודים — מה בסיידבר ומה לא',
+          items: [
+            'בסיידבר: 25 עמודים (P1: 4, P2: 4, P3: 13, P4: 3, P5: 2, P6: 2)',
+            'יתומים (route קיים, אין ניווט): ~20 עמודים',
+            'stubs שהפכו דינאמיים: TreatmentInput, WeeklyPlanner, AutomationPage (תוקן!)',
+            'חדש: 4 עמודים שנרשמו ב-routes (WeeklyPlanner, TreatmentInput, AutomationPage, CalendarView)',
+          ],
+        },
+        {
+          heading: 'ניווט — Information Architecture',
+          severity: 'warning',
+          items: [
+            'P3 ניהול — 13 פריטים ב-3 תת-קבוצות. כבד מדי ל-ADHD',
+            'P5 — "מאזנים" ו"דוחות אישיים" שניהם מפנים לאותו URL',
+            'אין מיקום ברור ל-ClientOnboarding, ClientFiles, ClientContracts — הם sub-tabs של ClientManagement',
+            'Work Modes (ביצוע/תכנון/ניהול) מוגדרים ב-Layout אבל getVisibleSections מחזיר הכל תמיד (שורה 183)',
+          ],
+        },
+        {
+          heading: 'שיפורים מהמעצב — לאמת',
+          severity: 'success',
+          items: [
+            'Framer Motion page transitions בכל 56 העמודים — לבדוק שחלק',
+            'Skeleton loading בכל עמוד דינאמי — לבדוק שנראה טוב',
+            'RTL fixes ב-46+ קבצים — לבדוק שלא שבר layout קיים',
+            'Dashboards.jsx — tasksByCategory מלא מנתונים אמיתיים',
+          ],
+        },
+        {
+          heading: 'המלצות UX',
+          severity: 'action',
+          items: [
+            'P3: לצמצם ל-8 פריטים — להעביר BatchSetup, BackupManager, AutomationRules לתוך Settings כטאבים',
+            'P5: להפוך "דוחות אישיים" לטאב בתוך BalanceSheets — לא לינק נפרד',
+            'להפעיל את Work Modes (כרגע מושבת) — מסתיר P1+P2 בתכנון/ניהול',
+            'להוסיף Home → Focus Mode שמציג רק 3 משימות הבאות (חוק 8)',
+          ],
+        },
+      ],
+    },
+  },
+];
+
+/* ── Severity badge colors ── */
+const SEVERITY_STYLES = {
+  warning: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: AlertTriangle },
+  error: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', icon: Bug },
+  success: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: CheckCheck },
+  action: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: Rocket },
+};
+
+function AuditTabs({ projectName }) {
+  const [activeTab, setActiveTab] = useState('feynman');
+  const [expandedSections, setExpandedSections] = useState(new Set(['0']));
+
+  const activeData = AUDIT_TABS.find(t => t.id === activeTab);
+
+  const toggleSection = (idx) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      const key = String(idx);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Tab header */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {AUDIT_TABS.map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setExpandedSections(new Set(['0'])); }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-[12px] font-bold whitespace-nowrap transition-all"
+              style={{
+                background: isActive ? `${tab.color}15` : '#F8FAFC',
+                color: isActive ? tab.color : '#94A3B8',
+                border: `1px solid ${isActive ? `${tab.color}40` : '#E2E8F0'}`,
+                boxShadow: isActive ? `0 2px 8px ${tab.color}15` : 'none',
+              }}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab content */}
+      <AnimatePresence mode="wait">
+        {activeData && (
+          <motion.div
+            key={activeData.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-3"
+          >
+            <h3 className="text-[14px] font-bold" style={{ color: activeData.color }}>
+              {activeData.content.title}
+            </h3>
+
+            {activeData.content.sections.map((section, idx) => {
+              const sev = section.severity ? SEVERITY_STYLES[section.severity] : null;
+              const isOpen = expandedSections.has(String(idx));
+              const SevIcon = sev?.icon;
+
+              return (
+                <div
+                  key={idx}
+                  className={`rounded-2xl overflow-hidden border transition-all ${
+                    sev ? `${sev.bg} ${sev.border}` : 'bg-white border-gray-100'
+                  }`}
+                >
+                  <button
+                    onClick={() => toggleSection(idx)}
+                    className="w-full flex items-center gap-2 p-3 text-right"
+                  >
+                    <ChevronDown
+                      className="w-3.5 h-3.5 shrink-0 transition-transform duration-200"
+                      style={{ transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)', color: sev?.text?.replace('text-', '#') || activeData.color }}
+                    />
+                    {SevIcon && <SevIcon className={`w-3.5 h-3.5 shrink-0 ${sev.text}`} />}
+                    <span className={`text-[13px] font-bold flex-1 ${sev ? sev.text : 'text-gray-800'}`}>
+                      {section.heading}
+                    </span>
+                    <Badge className="text-[10px] px-1.5 py-0 rounded-full bg-gray-100 text-gray-500">
+                      {section.items.length}
+                    </Badge>
+                  </button>
+
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="overflow-hidden"
+                      >
+                        <div className={`px-4 pb-3 space-y-1.5 ${section.isCode ? 'font-mono' : ''}`}>
+                          {section.items.map((item, i) => (
+                            <div key={i} className={`flex items-start gap-2 text-[12px] ${
+                              section.isCode ? 'text-gray-600 leading-snug' : 'text-gray-700 leading-relaxed'
+                            }`}>
+                              {!section.isCode && (
+                                <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: activeData.color }} />
+                              )}
+                              <span dir={section.isCode ? 'ltr' : 'rtl'}>{item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────
  *  Main ProjectWorkbook Page
  * ──────────────────────────────────────────────────────────────── */
 export default function ProjectWorkbook() {
@@ -733,6 +1139,30 @@ export default function ProjectWorkbook() {
           </div>
         </motion.div>
       </AnimatePresence>
+
+      {/* ── Claude Audit Findings ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="rounded-[28px] p-5 bg-white border border-gray-100"
+        style={{ boxShadow: `0 4px 20px ${ACCENT}08` }}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: `${ACCENT}15` }}>
+            <FileSearch className="w-4 h-4" style={{ color: ACCENT }} />
+          </div>
+          <div>
+            <h3 className="text-[14px] font-bold text-gray-900">עדכונים מקצועיים — Claude</h3>
+            <p className="text-[11px] text-gray-500">ממצאי ביקורת UX, עיצוב, תכנות ולוגיקה</p>
+          </div>
+          <Badge className="text-[10px] px-2 py-0.5 rounded-full mr-auto" style={{ background: `${ACCENT}15`, color: ACCENT }}>
+            17.3.2026
+          </Badge>
+        </div>
+
+        <AuditTabs projectName={project?.name || ''} />
+      </motion.div>
 
       <p className="text-center text-[12px] text-gray-400 py-2">
         💜 צעד אחד בכל פעם. את לא חייבת לגמור הכל היום.
