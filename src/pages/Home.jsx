@@ -553,26 +553,26 @@ export default function HomePage() {
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
-        {/* ═══ 3. "מה אפשר לעשות היום" — max 5 tasks ═══ */}
-        <Card className="overflow-hidden border-sky-100">
-          <div className="px-4 py-3">
-            <h3 className="text-sm font-bold text-slate-700 mb-2">מה אפשר לעשות היום</h3>
-            {calmTasks.length === 0 ? (
+        {/* ═══ 3. "מה אפשר לעשות היום" — AYOA-style bubble cards ═══ */}
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 mb-3 px-1">מה אפשר לעשות היום</h3>
+          {calmTasks.length === 0 ? (
+            <Card className="border-sky-100">
               <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />} text="אין משימות להיום — כל הכבוד!" />
-            ) : (
-              <div className="space-y-2">
-                {calmTasks.map(task => (
-                  <TaskRow key={task.id} task={task} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDeadlineContext />
-                ))}
-              </div>
-            )}
-            {(data.overdue.length + data.today.length) > 5 && (
-              <p className="text-[11px] text-slate-400 mt-2 text-center">
-                +{(data.overdue.length + data.today.length) - 5} משימות נוספות — פתחי את המפה המלאה
-              </p>
-            )}
-          </div>
-        </Card>
+            </Card>
+          ) : (
+            <div className="flex flex-wrap gap-3 justify-center">
+              {calmTasks.map(task => (
+                <CalmBubble key={task.id} task={task} onEdit={setEditingTask} />
+              ))}
+            </div>
+          )}
+          {(data.overdue.length + data.today.length) > 5 && (
+            <p className="text-[11px] text-slate-400 mt-3 text-center">
+              +{(data.overdue.length + data.today.length) - 5} משימות נוספות במפה המלאה
+            </p>
+          )}
+        </div>
 
         {/* ═══ 4. Sticky Notes — max 3 ═══ */}
         {stickyNotes.length > 0 && (
@@ -642,6 +642,59 @@ function EmptyState({ icon, text }) {
       <div className="mb-2">{icon}</div>
       <p className="text-sm text-gray-500">{text}</p>
     </div>
+  );
+}
+
+// ─── AYOA-style bubble card for the calm "מה אפשר לעשות היום" section ───
+const BUBBLE_COLORS = {
+  urgent: { bg: '#FFF8E7', border: '#E8C46C', ring: '#F5A623' },
+  high:   { bg: '#FEF3F2', border: '#E0A89E', ring: '#D4725E' },
+  medium: { bg: '#F0F7FA', border: '#A8CBDB', ring: '#5A9EB5' },
+  low:    { bg: '#F0FAF4', border: '#A3D4B5', ring: '#6BAF82' },
+};
+
+const CONTEXT_BADGE = {
+  work: { label: 'עבודה', icon: Briefcase, color: ZERO_PANIC.blue },
+  home: { label: 'בית', icon: HomeIcon, color: ZERO_PANIC.green },
+};
+
+function CalmBubble({ task, onEdit }) {
+  const ctx = getTaskContext(task);
+  const colors = BUBBLE_COLORS[task.priority] || BUBBLE_COLORS.medium;
+  const badge = CONTEXT_BADGE[ctx];
+  const statusCfg = statusConfig[task.status] || statusConfig.not_started;
+
+  return (
+    <button
+      onClick={() => onEdit(task)}
+      className="flex flex-col items-center text-center rounded-full p-4 transition-shadow hover:shadow-md cursor-pointer"
+      style={{
+        width: 130,
+        height: 130,
+        backgroundColor: colors.bg,
+        border: `3px solid ${colors.border}`,
+        boxShadow: `0 0 0 2px ${colors.ring}22`,
+      }}
+    >
+      {/* Title — 2 lines max */}
+      <span className="text-[13px] font-bold text-slate-700 leading-tight mt-2 line-clamp-2 max-w-[100px]">
+        {task.title}
+      </span>
+
+      {/* Status dot + label */}
+      <span className="mt-auto mb-1 flex items-center gap-1">
+        <span className={`w-2 h-2 rounded-full ${statusCfg.dot}`} />
+        <span className="text-[10px] text-slate-500">{statusCfg.text}</span>
+      </span>
+
+      {/* Context icon */}
+      {badge && (
+        <span className="flex items-center gap-0.5">
+          <badge.icon className="w-3 h-3" style={{ color: badge.color }} />
+          <span className="text-[10px] font-medium" style={{ color: badge.color }}>{badge.label}</span>
+        </span>
+      )}
+    </button>
   );
 }
 
