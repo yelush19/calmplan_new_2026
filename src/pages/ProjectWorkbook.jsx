@@ -8,10 +8,19 @@ import {
   ArrowRight, CheckCircle2, Circle, Lightbulb, PenTool, Layout,
   Hammer, Link2, TestTube2, Rocket, Wrench, ChevronDown,
   Sparkles, Eye, ArrowLeft, BookOpen, MapPin, Star, AlertCircle,
-  PartyPopper, Lock
+  PartyPopper, Lock, Plus
 } from 'lucide-react';
 
 const ACCENT = '#7C3AED';
+
+const PHASES_STATUS_MAP = {
+  planning:       { emoji: '📋', label: 'תכנון',    color: '#94A3B8' },
+  in_development: { emoji: '🔨', label: 'בפיתוח',   color: '#3B82F6' },
+  testing:        { emoji: '🧪', label: 'בדיקות',   color: '#F59E0B' },
+  deployed:       { emoji: '🚀', label: 'באוויר',   color: '#10B981' },
+  maintenance:    { emoji: '🔧', label: 'תחזוקה',   color: '#8B5CF6' },
+  archived:       { emoji: '📦', label: 'ארכיון',   color: '#9CA3AF' },
+};
 
 /* ────────────────────────────────────────────────────────────────
  *  ADHD-Friendly Development Phases
@@ -458,10 +467,11 @@ function BirdEyeProgress({ phases, checkedItems, currentPhaseId }) {
  *  Main ProjectWorkbook Page
  * ──────────────────────────────────────────────────────────────── */
 export default function ProjectWorkbook() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const projectId = searchParams.get('projectId');
 
+  const [allProjects, setAllProjects] = useState([]);
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checkedItems, setCheckedItems] = useState({});
@@ -472,33 +482,37 @@ export default function ProjectWorkbook() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [projectId]);
 
-  /* ── Load project data ── */
+  /* ── Load all projects + selected project ── */
   useEffect(() => {
-    if (!projectId) {
-      setLoading(false);
-      return;
-    }
     (async () => {
+      setLoading(true);
       try {
         const projects = await Project.list(null, 500);
-        const found = projects.find(p => p.id === projectId);
-        if (found) {
-          setProject(found);
-          // Load saved checklist from project notes or a dedicated field
-          const saved = found.workbook_checklist;
-          if (saved && typeof saved === 'object') {
-            setCheckedItems(saved);
+        setAllProjects(projects || []);
+        if (projectId) {
+          const found = projects.find(p => p.id === projectId);
+          if (found) {
+            setProject(found);
+            const saved = found.workbook_checklist;
+            if (saved && typeof saved === 'object') {
+              setCheckedItems(saved);
+            }
+            const currentPhase = getPhaseFromStatus(found.status);
+            setExpandedPhase(currentPhase);
           }
-          // Auto-expand the current phase
-          const currentPhase = getPhaseFromStatus(found.status);
-          setExpandedPhase(currentPhase);
+        } else {
+          setProject(null);
         }
       } catch (e) {
-        console.error('Failed to load project:', e);
+        console.error('Failed to load projects:', e);
       }
       setLoading(false);
     })();
   }, [projectId]);
+
+  const selectProject = (proj) => {
+    setSearchParams({ projectId: proj.id });
+  };
 
   /* ── Save checklist ── */
   const saveChecklist = useCallback(async (newItems) => {
@@ -537,16 +551,74 @@ export default function ProjectWorkbook() {
     );
   }
 
-  if (!projectId || !project) {
+  if (!project) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <BookOpen className="w-16 h-16 text-gray-300" />
-        <p className="text-lg font-bold text-gray-500">לא נבחר פרויקט</p>
-        <Button onClick={() => navigate('/Projects')} className="rounded-xl" style={{ background: ACCENT }}>
-          <ArrowRight className="w-4 h-4 ml-2" />
-          חזרה לפרויקטים
-        </Button>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-3xl mx-auto space-y-6 p-1"
+      >
+        <h1
+          className="text-3xl font-extrabold bg-clip-text text-transparent"
+          style={{ backgroundImage: `linear-gradient(135deg, ${ACCENT}, #6D28D9)` }}
+        >
+          חוברת פיתוח
+        </h1>
+        <p className="text-sm text-gray-500">בחרי פרויקט כדי לפתוח את חוברת הפיתוח שלו</p>
+
+        {allProjects.length === 0 ? (
+          <div className="rounded-[28px] border-2 border-dashed p-12 text-center" style={{ borderColor: `${ACCENT}30` }}>
+            <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: `${ACCENT}40` }} />
+            <p className="text-gray-500 font-bold">אין פרויקטים עדיין</p>
+            <Button onClick={() => navigate('/Projects')} className="mt-4 rounded-xl text-white" style={{ background: ACCENT }}>
+              <Plus className="w-4 h-4 ml-2" />
+              צרי פרויקט חדש
+            </Button>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-3">
+            {allProjects.map((proj) => {
+              const statusConf = PHASES_STATUS_MAP[proj.status] || { emoji: '📋', label: proj.status || 'תכנון', color: '#94A3B8' };
+              return (
+                <motion.button
+                  key={proj.id}
+                  onClick={() => selectProject(proj)}
+                  whileHover={{ y: -3, boxShadow: `0 8px 24px ${ACCENT}15` }}
+                  whileTap={{ scale: 0.98 }}
+                  className="text-right rounded-[24px] p-4 bg-white border border-gray-100 transition-all hover:border-purple-200 cursor-pointer"
+                  style={{ boxShadow: `0 2px 12px ${ACCENT}08` }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg"
+                      style={{ background: `${statusConf.color}18` }}
+                    >
+                      {statusConf.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-gray-900 text-[14px] truncate">{proj.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span
+                          className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
+                          style={{ background: `${statusConf.color}15`, color: statusConf.color }}
+                        >
+                          {statusConf.emoji} {statusConf.label}
+                        </span>
+                        {proj.tech_stack && (
+                          <span className="text-[10px] text-gray-400 truncate">
+                            {proj.tech_stack.split(',').slice(0, 2).join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <ArrowLeft className="w-4 h-4 text-gray-300 shrink-0" />
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
     );
   }
 
@@ -577,6 +649,106 @@ export default function ProjectWorkbook() {
           </p>
         </div>
       </div>
+
+      {/* ── Project Info Card ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="rounded-[28px] p-4 bg-white border border-gray-100"
+        style={{ boxShadow: `0 2px 12px ${ACCENT}06` }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ background: `${PHASES_STATUS_MAP[project.status]?.color || ACCENT}18` }}
+          >
+            <span className="text-sm">{PHASES_STATUS_MAP[project.status]?.emoji || '📋'}</span>
+          </div>
+          <div className="flex-1">
+            <span
+              className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
+              style={{
+                background: `${PHASES_STATUS_MAP[project.status]?.color || ACCENT}15`,
+                color: PHASES_STATUS_MAP[project.status]?.color || ACCENT,
+              }}
+            >
+              {PHASES_STATUS_MAP[project.status]?.label || project.status}
+            </span>
+          </div>
+          <button
+            onClick={() => setSearchParams({})}
+            className="text-[11px] text-gray-400 hover:text-purple-600 transition-colors"
+          >
+            החלף פרויקט
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-[12px]">
+          {project.system_type && (
+            <div className="flex items-center gap-1.5 text-gray-500">
+              <span className="text-gray-400">סוג:</span>
+              {project.system_type === 'web_app' ? 'אפליקציית ווב' :
+               project.system_type === 'mobile_app' ? 'מובייל' :
+               project.system_type === 'api' ? 'API / Backend' :
+               project.system_type === 'landing_page' ? 'דף נחיתה' :
+               project.system_type === 'ecommerce' ? 'חנות אונליין' :
+               project.system_type === 'crm' ? 'CRM' :
+               project.system_type === 'internal_tool' ? 'כלי פנימי' : project.system_type}
+            </div>
+          )}
+          {project.tech_stack && (
+            <div className="flex items-center gap-1.5 text-gray-500 col-span-2">
+              <span className="text-gray-400">טכנולוגיות:</span>
+              <div className="flex flex-wrap gap-1">
+                {project.tech_stack.split(',').map((t, i) => (
+                  <span key={i} className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+                    style={{ background: `${ACCENT}10`, color: ACCENT }}>
+                    {t.trim()}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Links */}
+        {(project.production_url || project.git_repo || project.supabase_url || project.subdomain) && (
+          <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100" dir="ltr">
+            {project.production_url && (
+              <a href={project.production_url} target="_blank" rel="noopener noreferrer"
+                className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ background: `${ACCENT}10`, color: ACCENT }}>
+                Production
+              </a>
+            )}
+            {project.git_repo && (
+              <a href={project.git_repo} target="_blank" rel="noopener noreferrer"
+                className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                Git
+              </a>
+            )}
+            {project.supabase_url && (
+              <a href={project.supabase_url} target="_blank" rel="noopener noreferrer"
+                className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-medium">
+                DB
+              </a>
+            )}
+            {project.subdomain && (
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">
+                {project.subdomain}
+              </span>
+            )}
+          </div>
+        )}
+
+        {project.description && (
+          <p className="text-[12px] text-gray-500 mt-3 pt-3 border-t border-gray-100">{project.description}</p>
+        )}
+
+        {project.notes && (
+          <p className="text-[11px] text-gray-400 mt-2 italic">{project.notes}</p>
+        )}
+      </motion.div>
 
       {/* ── Bird's Eye Progress ── */}
       <motion.div
