@@ -43,7 +43,6 @@ import {
   FolderKanban
 } from 'lucide-react';
 import { Client, Project, PeriodicReport, BalanceSheet, Task, AccountReconciliation, ClientAccount, Lead } from '@/api/entities';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 // mondayApi removed (Kill Monday directive)
 import { exportClientsToExcel, exportCustomerServicesCSV } from '@/api/functions';
 import { importClientsFromExcel } from '@/api/functions';
@@ -857,13 +856,6 @@ export default function ClientManagementPage() {
   };
 
   return (
-    <UnifiedAyoaLayout
-      tasks={[]}
-      clients={clients}
-      centerLabel="ניהול לקוח"
-      accentColor="#059669"
-      isLoading={isLoading}
-    >
     <div className="p-4 md:p-6 space-y-6">
 
       {/* Debug section removed for production */}
@@ -1419,6 +1411,5 @@ export default function ClientManagementPage() {
 
       {/* Monday Data Import Dialog — removed (Kill Monday directive) */}
     </div>
-    </UnifiedAyoaLayout>
   );
 }
