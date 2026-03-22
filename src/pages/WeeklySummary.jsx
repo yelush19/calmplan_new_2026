@@ -26,7 +26,7 @@ import { he } from 'date-fns/locale';
 
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import { getCategoryLabel } from '@/utils/categoryLabels';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+
 
 function ProgressBar({ value, max, color = 'bg-blue-500', label, sublabel }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
@@ -231,14 +231,7 @@ export default function WeeklySummary() {
   const weekLabel = `${format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'dd/MM', { locale: he })} - ${format(endOfWeek(new Date(), { weekStartsOn: 0 }), 'dd/MM', { locale: he })}`;
 
   return (
-    <UnifiedAyoaLayout
-      tasks={rawTasks}
-      clients={clients}
-      centerLabel="סיכום שבועי"
-      accentColor="#0EA5E9"
-      onEditTask={handleEditTask}
-      isLoading={isLoading}
-    >
+    <>
     <div className="space-y-6 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -526,6 +519,6 @@ export default function WeeklySummary() {
       />
       {ConfirmDialogComponent}
     </div>
-    </UnifiedAyoaLayout>
+    </>
   );
 }

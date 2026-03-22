@@ -33,7 +33,6 @@ import {
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 // P1 Payroll extras: masav, payslips, pensions
 const P1_PAYROLL_EXTRAS = [
@@ -415,7 +414,6 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         </Card>
       </div>
 
-      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} isLoading={isLoading} centerLabel="שירותים נוספים" centerSub="P1" branch="P1" accentColor="#00A3E0" onEditTask={setEditingTask}>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
@@ -474,7 +472,6 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           </Link>
         </Card>
       )}
-      </UnifiedAyoaLayout>
 
       <QuickAddTaskDialog
         open={showQuickAdd}

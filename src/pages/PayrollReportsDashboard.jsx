@@ -33,7 +33,6 @@ import {
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 // P1 Reporting: form 102, social security, deductions — the REPORTING step only
 const REPORTING_SERVICES = {
@@ -385,8 +384,7 @@ export default function PayrollReportsDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : (
-        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="דיווחי שכר" centerSub="P1" branch="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
-        {sortedServiceKeys.length > 0 ? (
+        sortedServiceKeys.length > 0 ? (
         viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (
@@ -435,8 +433,7 @@ export default function PayrollReportsDashboardPage() {
           <h3 className="text-xl font-semibold text-slate-600 mb-2">אין דיווחים שוטפים לחודש הנבחר</h3>
           <p className="text-slate-500">נסי לבחור חודש אחר או להפעיל אוטומציות ליצירת דיווחים חודשיים</p>
         </Card>
-        )}
-        </UnifiedAyoaLayout>
+        )
       )}
 
       <QuickAddTaskDialog open={showQuickAdd} onOpenChange={setShowQuickAdd} onCreated={loadData} defaultContext="work" />

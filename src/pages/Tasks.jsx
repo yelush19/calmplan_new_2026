@@ -28,7 +28,6 @@ import KanbanView from "../components/tasks/KanbanView";
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import ResizableTable from '@/components/ui/ResizableTable';
 import useTaskCascade from '@/hooks/useTaskCascade';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 
@@ -986,7 +985,6 @@ export default function TasksPage() {
 
       {/* Content */}
       <ViewErrorBoundary>
-      <UnifiedAyoaLayout tasks={filteredTasks} clients={clientsList} isLoading={isLoading} centerLabel="משימות" centerSub="P3" accentColor="#6366F1" onEditTask={handleEditTask}>
       {view === 'list' ? (
         sortedTasks.length === 0 ? (
           <Card className="border-0 shadow-sm">
@@ -1289,7 +1287,6 @@ export default function TasksPage() {
           onToggleTaskSelection={toggleTaskSelection}
         />
       )}
-      </UnifiedAyoaLayout>
       </ViewErrorBoundary>
 
       <QuickAddTaskDialog

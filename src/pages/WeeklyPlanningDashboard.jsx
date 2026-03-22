@@ -27,7 +27,7 @@ import {
 import { he } from 'date-fns/locale';
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 import { getCategoryLabel } from '@/utils/categoryLabels';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+
 
 const WORK_DAYS = [
   { dayIndex: 0, name: 'ראשון', short: 'א' },
@@ -712,14 +712,7 @@ export default function WeeklyPlanningDashboard() {
   }
 
   return (
-    <UnifiedAyoaLayout
-      tasks={tasks}
-      clients={[]}
-      centerLabel="תכנון שבועי"
-      accentColor="#6366F1"
-      onEditTask={handleEditTask}
-      isLoading={isLoading}
-    >
+    <>
     <div className="space-y-5 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -1146,6 +1139,6 @@ export default function WeeklyPlanningDashboard() {
       />
       {ConfirmDialogComponent}
     </div>
-    </UnifiedAyoaLayout>
+    </>
   );
 }

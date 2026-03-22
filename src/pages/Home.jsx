@@ -33,7 +33,6 @@ import { useBiologicalClock } from "@/contexts/BiologicalClockContext";
 import OverdueAlert from "@/components/tasks/OverdueAlert";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
 import BadDayMode from "@/components/tasks/BadDayMode";
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
 import { StickyNote } from "@/api/entities";
 
@@ -475,16 +474,6 @@ export default function HomePage() {
           </Button>
         </div>
 
-        <UnifiedAyoaLayout
-          tasks={data.activeTasks}
-          allTasks={data.allTasks}
-          clients={clients}
-          isLoading={isLoading}
-          centerLabel="מה אפשר לעשות היום"
-          centerSub={`${data.totalActive} משימות`}
-          accentColor="#00A3E0"
-          onEditTask={setEditingTask}
-        />
 
         {/* Dialogs */}
         <QuickAddTaskDialog open={showQuickAdd} onOpenChange={setShowQuickAdd} onCreated={loadData} />
