@@ -1074,7 +1074,7 @@ export default function ReconciliationsPage() {
       {/* ── Client Drawer ──────────────────────────────────────── */}
       <ClientDrawer
         client={drawerClient}
-        tasks={allTasks}
+        tasks={reconciliationTasks}
         open={!!drawerClient}
         onClose={() => setDrawerClient(null)}
       />

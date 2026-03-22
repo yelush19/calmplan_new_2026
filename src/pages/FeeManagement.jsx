@@ -11,7 +11,6 @@ import {
   Star, Link2, UserX, ChevronDown, ChevronUp, ChevronRight
 } from 'lucide-react';
 import ResizableTable from '@/components/ui/ResizableTable';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 const serviceTypeLabels = {
   bookkeeping: 'הנהלת חשבונות',
@@ -344,13 +343,6 @@ export default function FeeManagement() {
   }
 
   return (
-    <UnifiedAyoaLayout
-      tasks={[]}
-      clients={allClients}
-      centerLabel={'ניהול שכ"ט'}
-      accentColor="#059669"
-      isLoading={loading}
-    >
     <div className="space-y-6 dark:bg-gray-900">
       <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white">מרכז נתוני שכ״ט</h1>
 
@@ -493,6 +485,5 @@ export default function FeeManagement() {
         </TabsContent>
       </Tabs>
     </div>
-    </UnifiedAyoaLayout>
   );
 }

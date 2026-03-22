@@ -1,11 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 export default function RecurringTasksPage() {
   return (
-    <UnifiedAyoaLayout tasks={[]} centerLabel="משימות חוזרות" accentColor="#F59E0B" isLoading={false}>
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -22,6 +20,5 @@ export default function RecurringTasksPage() {
 
       <ClientRecurringTasks />
     </motion.div>
-    </UnifiedAyoaLayout>
   );
 }
