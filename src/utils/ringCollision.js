@@ -86,3 +86,60 @@ export function resolveCollisions(movedRing, otherRings, minGap = MIN_GAP, bound
 export function clampRadius(radius, minR = 40, maxR = 300) {
   return Math.max(minR, Math.min(maxR, radius));
 }
+
+/**
+ * Relocate all bubbles belonging to a ring after the ring moves or resizes.
+ * Each bubble's position is stored as absolute coords. We compute the relative
+ * offset from the OLD ring center, scale by newR/oldR, then apply to the new center.
+ *
+ * @param {Object} bubbles - { [taskId]: { taskId, cx, cy, ringId } }
+ * @param {string} ringId - which ring moved
+ * @param {{ cx, cy, r }} oldRing - previous ring state
+ * @param {{ cx, cy, r }} newRing - new ring state
+ * @returns {Object} updated bubbles map
+ */
+export function relocateBubblesForRing(bubbles, ringId, oldRing, newRing) {
+  const updated = { ...bubbles };
+  const scale = oldRing.r > 0 ? newRing.r / oldRing.r : 1;
+
+  for (const [tid, bl] of Object.entries(updated)) {
+    if (bl.ringId !== ringId) continue;
+
+    // Offset from old ring center
+    const offX = bl.cx - oldRing.cx;
+    const offY = bl.cy - oldRing.cy;
+
+    // Scale and translate to new center
+    updated[tid] = {
+      ...bl,
+      cx: newRing.cx + offX * scale,
+      cy: newRing.cy + offY * scale,
+    };
+  }
+
+  return updated;
+}
+
+/**
+ * Given a list of tasks assigned to a ring, return the top N by priority
+ * and a remainder list for overflow display.
+ *
+ * Priority order: urgent > high > medium > low > none/undefined
+ *
+ * @param {Array} tasks - tasks assigned to this ring
+ * @param {number} maxVisible - how many to show as bubbles (default 3)
+ * @returns {{ visible: Array, overflow: Array }}
+ */
+const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
+
+export function splitVisibleOverflow(tasks, maxVisible = 3) {
+  const sorted = [...tasks].sort((a, b) => {
+    const pa = PRIORITY_ORDER[a.priority] ?? 4;
+    const pb = PRIORITY_ORDER[b.priority] ?? 4;
+    return pa - pb;
+  });
+  return {
+    visible: sorted.slice(0, maxVisible),
+    overflow: sorted.slice(maxVisible),
+  };
+}

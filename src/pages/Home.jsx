@@ -15,10 +15,10 @@ import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   Target, AlertTriangle, ChevronDown, Sparkles,
   Plus, CreditCard, Search, Eye, Sun, Moon, Coffee, Heart,
-  Map, ArrowRight,
+  Map, ArrowRight, X,
 } from "lucide-react";
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
-import { resolveCollisions, clampRadius } from '@/utils/ringCollision';
+import { resolveCollisions, clampRadius, relocateBubblesForRing, splitVisibleOverflow } from '@/utils/ringCollision';
 import TaskSidePanel from "@/components/tasks/TaskSidePanel";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Pencil, Trash2, Pin } from "lucide-react";
@@ -654,8 +654,14 @@ function EmptyState({ icon, text }) {
 
 // ViewBox coordinate system — abstract, not pixel sizes.
 // The SVG + HTML layers scale to fill available width via aspect-ratio.
-const VB_W = 900;
-const VB_H = 600;
+// CANVAS_PAD adds internal margin so rings near edges aren't clipped.
+const VB_W = 1100;
+const VB_H = 650;
+const CANVAS_PAD = 30; // viewBox units of internal padding
+
+// Max visible task bubbles per ring before overflow kicks in.
+// Customize per ring if needed: { A: 3, B: 2, C: 2, D: 2 }
+const MAX_VISIBLE_PER_RING = 3;
 
 // ── Ring colours ───────────────────────────────────────────────
 const RING_COLOR = { A: '#F97316', B: '#EC4899', C: '#06B6D4', D: '#F97316' };
@@ -689,24 +695,24 @@ const STATUS_DOT = {
 // ═══════════════════════════════════════════════════════════════════
 
 const DEFAULT_RINGS = {
-  A: { id: 'A', cx: 280, cy: 310, r: 220 },
-  B: { id: 'B', cx: 550, cy: 190, r: 150 },
-  C: { id: 'C', cx: 600, cy: 420, r: 140 },
-  D: { id: 'D', cx:  70, cy: 420, r:  80 },
+  A: { id: 'A', cx: 340, cy: 320, r: 230 },
+  B: { id: 'B', cx: 700, cy: 200, r: 160 },
+  C: { id: 'C', cx: 780, cy: 460, r: 150 },
+  D: { id: 'D', cx: 100, cy: 480, r:  90 },
 };
 
 const AUTO_SLOTS_WORK = [
-  { cx: 260, cy: 250, ringId: 'A' },
-  { cx: 160, cy: 410, ringId: 'A' },
-  { cx: 430, cy: 200, ringId: 'A' },
-  { cx: 160, cy: 190, ringId: 'A' },
-  { cx: 570, cy: 150, ringId: 'B' },
-  { cx: 340, cy: 115, ringId: 'A' },
+  { cx: 300, cy: 260, ringId: 'A' },
+  { cx: 200, cy: 400, ringId: 'A' },
+  { cx: 480, cy: 220, ringId: 'A' },
+  { cx: 200, cy: 200, ringId: 'A' },
+  { cx: 710, cy: 170, ringId: 'B' },
+  { cx: 400, cy: 130, ringId: 'A' },
 ];
 const AUTO_SLOTS_HOME = [
-  { cx: 580, cy: 380, ringId: 'C' },
-  { cx: 630, cy: 500, ringId: 'C' },
-  { cx:  70, cy: 430, ringId: 'D' },
+  { cx: 760, cy: 420, ringId: 'C' },
+  { cx: 820, cy: 530, ringId: 'C' },
+  { cx: 100, cy: 490, ringId: 'D' },
 ];
 
 const LAYOUT_CONFIG_KEY = 'circle_map_layout';
@@ -850,16 +856,19 @@ function usePointerDrag(onDragEnd) {
     e.stopPropagation();
     containerRef.current = containerEl;
     const rect = containerEl.getBoundingClientRect();
-    const scaleX = VB_W / rect.width;
-    const scaleY = VB_H / rect.height;
-    const offX = startX - (e.clientX - rect.left) * scaleX;
-    const offY = startY - (e.clientY - rect.top) * scaleY;
+    const totalVBW = VB_W + CANVAS_PAD * 2;
+    const totalVBH = VB_H + CANVAS_PAD * 2;
+    const scaleX = totalVBW / rect.width;
+    const scaleY = totalVBH / rect.height;
+    // Map screen pixel to viewBox coord: pixel * scale - CANVAS_PAD
+    const offX = startX - ((e.clientX - rect.left) * scaleX - CANVAS_PAD);
+    const offY = startY - ((e.clientY - rect.top) * scaleY - CANVAS_PAD);
     setPos({ x: startX, y: startY });
     setDragging(true);
 
     const toCanvas = (ev) => ({
-      x: Math.max(0, Math.min(VB_W, (ev.clientX - rect.left) * scaleX + offX)),
-      y: Math.max(0, Math.min(VB_H, (ev.clientY - rect.top) * scaleY + offY)),
+      x: Math.max(0, Math.min(VB_W, (ev.clientX - rect.left) * scaleX - CANVAS_PAD + offX)),
+      y: Math.max(0, Math.min(VB_H, (ev.clientY - rect.top) * scaleY - CANVAS_PAD + offY)),
     });
 
     const onMove = (ev) => { const p = toCanvas(ev); setPos(p); };
@@ -889,22 +898,24 @@ function useResizeDrag(onResizeEnd) {
     e.preventDefault();
     e.stopPropagation();
     const rect = containerEl.getBoundingClientRect();
-    const scaleX = VB_W / rect.width;
-    const scaleY = VB_H / rect.height;
+    const totalVBW = VB_W + CANVAS_PAD * 2;
+    const totalVBH = VB_H + CANVAS_PAD * 2;
+    const scaleX = totalVBW / rect.width;
+    const scaleY = totalVBH / rect.height;
     setLiveRadius(currentR);
     setResizing(true);
 
     const onMove = (ev) => {
-      const mx = (ev.clientX - rect.left) * scaleX;
-      const my = (ev.clientY - rect.top) * scaleY;
+      const mx = (ev.clientX - rect.left) * scaleX - CANVAS_PAD;
+      const my = (ev.clientY - rect.top) * scaleY - CANVAS_PAD;
       const dx = mx - ringCx;
       const dy = my - ringCy;
       const newR = Math.sqrt(dx * dx + dy * dy);
       setLiveRadius(newR);
     };
     const onUp = (ev) => {
-      const mx = (ev.clientX - rect.left) * scaleX;
-      const my = (ev.clientY - rect.top) * scaleY;
+      const mx = (ev.clientX - rect.left) * scaleX - CANVAS_PAD;
+      const my = (ev.clientY - rect.top) * scaleY - CANVAS_PAD;
       const dx = mx - ringCx;
       const dy = my - ringCy;
       const newR = Math.sqrt(dx * dx + dy * dy);
@@ -992,6 +1003,77 @@ function DraggableRing({ ring, canvasRef, onDragEnd, onResize }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// §7b  RingTasksPanel — slide-in panel showing all tasks for a ring
+// ═══════════════════════════════════════════════════════════════════
+
+const PRIORITY_LABEL = { urgent: 'דחוף', high: 'גבוה', medium: 'בינוני', low: 'נמוך' };
+const PRIORITY_DOT   = { urgent: '#EF4444', high: '#F59E0B', medium: '#6366F1', low: '#10B981' };
+
+function RingTasksPanel({ ringId, ringLabel, ringColor, tasks, onClose, onEdit }) {
+  // Sort by priority
+  const sorted = useMemo(() => {
+    const order = { urgent: 0, high: 1, medium: 2, low: 3 };
+    return [...tasks].sort((a, b) => (order[a.priority] ?? 4) - (order[b.priority] ?? 4));
+  }, [tasks]);
+
+  return (
+    <motion.div
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="fixed top-0 right-0 h-full z-50 shadow-2xl flex flex-col"
+      style={{ width: 340, maxWidth: '90vw', backgroundColor: '#FAFAFA', borderLeft: `3px solid ${ringColor}` }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${ringColor}30` }}>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: ringColor }} />
+          <span className="font-bold text-sm" style={{ color: '#1E293B' }}>{ringLabel}</span>
+          <span className="text-[11px] text-slate-400">{sorted.length} משימות</span>
+        </div>
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 transition-colors">
+          <X className="w-4 h-4 text-slate-400" />
+        </button>
+      </div>
+
+      {/* Task list */}
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
+        {sorted.map(task => {
+          const dot = PRIORITY_DOT[task.priority] || '#94A3B8';
+          const label = PRIORITY_LABEL[task.priority] || '';
+          const sCfg = statusConfig[task.status] || statusConfig.not_started;
+          return (
+            <button key={task.id}
+              onClick={() => onEdit(task)}
+              className="w-full text-right p-2.5 rounded-xl transition-colors hover:bg-white group"
+              style={{ border: '1px solid #E5E7EB' }}>
+              <div className="flex items-start gap-2">
+                <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: dot }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate" style={{ color: '#1E293B' }}>{task.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {label && <span className="text-[10px]" style={{ color: dot }}>{label}</span>}
+                    <span className="text-[10px] text-slate-400">{sCfg.text}</span>
+                    {task.due_date && (
+                      <span className="text-[10px] text-slate-400">{task.due_date.slice(5)}</span>
+                    )}
+                  </div>
+                </div>
+                <ChevronDown className="w-3 h-3 text-slate-300 rotate-[-90deg] opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+              </div>
+            </button>
+          );
+        })}
+        {sorted.length === 0 && (
+          <p className="text-center text-xs text-slate-400 py-8">אין משימות בטבעת זו</p>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // §8  AyoaMiniCanvas — full-width responsive
 // ═══════════════════════════════════════════════════════════════════
 
@@ -1012,20 +1094,27 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
   const safeAllTasks = allTasks || [];
   const { layout, persist, loaded } = useCircleMapLayout(safeTasks);
   const canvasRef = useRef(null);
+  const [ringPanel, setRingPanel] = useState(null); // ring ID for side panel
 
   const handleRingDragEnd = useCallback((ringId) => (nx, ny) => {
-    const movedRing = { ...layout.rings[ringId], cx: nx, cy: ny };
+    const oldRing = layout.rings[ringId];
+    const movedRing = { ...oldRing, cx: nx, cy: ny };
     const others = Object.values(layout.rings).filter(r => r.id !== ringId);
     const resolved = resolveCollisions(movedRing, others, 16, { width: VB_W, height: VB_H });
-    persist({ ...layout, rings: { ...layout.rings, [ringId]: { ...layout.rings[ringId], cx: resolved.cx, cy: resolved.cy } } });
+    const newRing = { ...oldRing, cx: resolved.cx, cy: resolved.cy };
+    const newBubbles = relocateBubblesForRing(layout.bubbles, ringId, oldRing, newRing);
+    persist({ ...layout, rings: { ...layout.rings, [ringId]: newRing }, bubbles: newBubbles });
   }, [layout, persist]);
 
   const handleRingResize = useCallback((ringId) => (newRadius) => {
+    const oldRing = layout.rings[ringId];
     const r = clampRadius(newRadius, 40, 300);
-    const ring = { ...layout.rings[ringId], r };
+    const ring = { ...oldRing, r };
     const others = Object.values(layout.rings).filter(o => o.id !== ringId);
     const resolved = resolveCollisions(ring, others, 16, { width: VB_W, height: VB_H });
-    persist({ ...layout, rings: { ...layout.rings, [ringId]: { ...ring, cx: resolved.cx, cy: resolved.cy } } });
+    const newRing = { ...ring, cx: resolved.cx, cy: resolved.cy };
+    const newBubbles = relocateBubblesForRing(layout.bubbles, ringId, oldRing, newRing);
+    persist({ ...layout, rings: { ...layout.rings, [ringId]: newRing }, bubbles: newBubbles });
   }, [layout, persist]);
 
   const handleBubbleDragEnd = useCallback((taskId) => (nx, ny) => {
@@ -1033,32 +1122,50 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
     persist({ ...layout, bubbles: { ...layout.bubbles, [taskId]: { taskId, cx, cy, ringId } } });
   }, [layout, persist]);
 
-  // Per-ring counts: visible bubbles vs total tasks in that ring's context
-  const ringCounts = useMemo(() => {
-    const counts = { A: { visible: 0, total: 0 }, B: { visible: 0, total: 0 }, C: { visible: 0, total: 0 }, D: { visible: 0, total: 0 } };
+  // Per-ring task breakdown: which bubbles to show vs overflow
+  const ringData = useMemo(() => {
     const bubbles = layout.bubbles || {};
-    // Count visible bubbles by their assigned ring
+    // Group visible tasks by ring
+    const byRing = { A: [], B: [], C: [], D: [] };
     for (const task of safeTasks) {
       const bl = bubbles[task.id];
-      if (bl?.ringId && counts[bl.ringId]) counts[bl.ringId].visible++;
+      if (bl?.ringId && byRing[bl.ringId]) byRing[bl.ringId].push(task);
     }
-    // Count total tasks by ring context
+    // Total tasks per ring (from allTasks)
+    const totals = { A: 0, B: 0, C: 0, D: 0 };
     for (const task of safeAllTasks) {
       const rid = taskToRingId(task);
-      if (counts[rid]) counts[rid].total++;
+      if (totals[rid] !== undefined) totals[rid]++;
     }
-    return counts;
+    // Split visible vs overflow per ring
+    const result = {};
+    for (const rid of ['A', 'B', 'C', 'D']) {
+      const { visible, overflow } = splitVisibleOverflow(byRing[rid], MAX_VISIBLE_PER_RING);
+      result[rid] = { visible, overflow, total: totals[rid] };
+    }
+    return result;
   }, [safeTasks, safeAllTasks, layout.bubbles]);
+
+  // Flat set of task IDs that should render as bubbles
+  const visibleTaskIds = useMemo(() => {
+    const ids = new Set();
+    for (const rid of ['A', 'B', 'C', 'D']) {
+      for (const t of ringData[rid].visible) ids.add(t.id);
+    }
+    return ids;
+  }, [ringData]);
 
   if (!loaded) return null;
 
   const ringEntries = ['A', 'B', 'C', 'D'].map(id => ({ id, ...layout.rings[id] }));
 
   return (
-    <div style={{ backgroundColor: '#FFFFFF', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
+    <div style={{ backgroundColor: '#FFFFFF', width: '95%', maxWidth: 1400, margin: '0 auto' }}>
       <div ref={canvasRef} className="relative w-full" style={{ aspectRatio: `${VB_W} / ${VB_H}` }}>
-        {/* SVG layer — glass rings */}
-        <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet">
+        {/* SVG layer — glass rings with padded viewBox */}
+        <svg className="absolute inset-0 w-full h-full"
+          viewBox={`${-CANVAS_PAD} ${-CANVAS_PAD} ${VB_W + CANVAS_PAD * 2} ${VB_H + CANVAS_PAD * 2}`}
+          preserveAspectRatio="xMidYMid meet">
           <GlassRingDefs />
           {ringEntries.map(ring => (
             <DraggableRing key={ring.id} ring={ring} canvasRef={canvasRef}
@@ -1066,9 +1173,10 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
           ))}
         </svg>
 
-        {/* HTML layer — draggable bubbles (percentage-positioned) */}
+        {/* HTML layer — draggable bubbles (only visible ones per ring) */}
         <AnimatePresence>
           {safeTasks.map(task => {
+            if (!visibleTaskIds.has(task.id)) return null;
             const bl = (layout.bubbles || {})[task.id];
             if (!bl) return null;
             const size = SIZE_BY_PRIORITY[task.priority] || 95;
@@ -1080,24 +1188,46 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
             );
           })}
         </AnimatePresence>
+
+        {/* Per-ring "+N more" badges — positioned near each ring */}
+        {ringEntries.map(ring => {
+          const rd = ringData[ring.id];
+          if (!rd || rd.overflow.length === 0) return null;
+          // Position badge at bottom of ring
+          const badgeLeft = ((ring.cx + CANVAS_PAD) / (VB_W + CANVAS_PAD * 2)) * 100;
+          const badgeTop = ((ring.cy + ring.r * 0.7 + CANVAS_PAD) / (VB_H + CANVAS_PAD * 2)) * 100;
+          return (
+            <button key={`overflow-${ring.id}`}
+              onClick={() => setRingPanel(ring.id)}
+              className="absolute z-20 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-all hover:scale-105"
+              style={{
+                left: `${badgeLeft}%`, top: `${badgeTop}%`,
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: '#fff',
+                color: RING_COLOR[ring.id],
+                border: `1.5px solid ${RING_COLOR[ring.id]}`,
+              }}>
+              +{rd.overflow.length} עוד
+            </button>
+          );
+        })}
       </div>
 
-      {/* Per-ring counts — HTML below canvas */}
+      {/* Per-ring count pills */}
       {(() => {
-        const activeRings = ringEntries.filter(ring => {
-          const c = ringCounts[ring.id];
-          return c && c.total > 0;
-        });
+        const activeRings = ringEntries.filter(ring => ringData[ring.id]?.total > 0);
         if (activeRings.length === 0) return null;
         return (
           <div className="flex justify-center gap-3 mt-1.5 flex-wrap">
             {activeRings.map(ring => {
-              const c = ringCounts[ring.id];
+              const rd = ringData[ring.id];
               return (
-                <span key={ring.id} className="inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2.5 py-0.5"
+                <button key={ring.id}
+                  onClick={() => setRingPanel(ring.id)}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2.5 py-0.5 transition-colors hover:opacity-80"
                   style={{ color: RING_COLOR[ring.id], backgroundColor: `${RING_COLOR[ring.id]}10`, border: `1px solid ${RING_COLOR[ring.id]}30` }}>
-                  {RING_LABEL[ring.id]} {c.visible}/{c.total}
-                </span>
+                  {RING_LABEL[ring.id]} {rd.visible.length}/{rd.total}
+                </button>
               );
             })}
           </div>
@@ -1112,6 +1242,18 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
         >
           +{totalExtra} משימות נוספות במפה המלאה →
         </button>
+      )}
+
+      {/* Ring tasks side panel */}
+      {ringPanel && (
+        <RingTasksPanel
+          ringId={ringPanel}
+          ringLabel={RING_LABEL[ringPanel]}
+          ringColor={RING_COLOR[ringPanel]}
+          tasks={safeAllTasks.filter(t => taskToRingId(t) === ringPanel)}
+          onClose={() => setRingPanel(null)}
+          onEdit={onEdit}
+        />
       )}
     </div>
   );
@@ -1132,8 +1274,9 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
   const by = dragging ? pos.y : cy;
 
   // Convert viewBox coords to percentages for the HTML layer
-  const leftPct = (bx / VB_W) * 100;
-  const topPct  = (by / VB_H) * 100;
+  // Account for CANVAS_PAD: viewBox starts at -CANVAS_PAD
+  const leftPct = ((bx + CANVAS_PAD) / (VB_W + CANVAS_PAD * 2)) * 100;
+  const topPct  = ((by + CANVAS_PAD) / (VB_H + CANVAS_PAD * 2)) * 100;
   const half = size / 2;
 
   const dragStartRef = useRef(null);
