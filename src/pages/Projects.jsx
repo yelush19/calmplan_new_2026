@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Project } from '@/api/entities';
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Pencil, Trash2, ExternalLink, GitBranch, Globe, Server,
   FolderKanban, X, Check, Database, BarChart3, HardDrive, TrainFront,
-  ChevronDown, ChevronUp, Cpu, Layers, Rocket, BookOpen
+  ChevronDown, ChevronUp, Cpu, Layers, Rocket, BookOpen, Undo2, Settings2
 } from 'lucide-react';
 import { loadPlatformConfig } from '@/config/platformConfig';
 import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
@@ -108,9 +108,115 @@ const groupVariants = {
 };
 
 /* ────────────────────────────────────────────── */
+/*  Undo Toast — replaces window.confirm          */
+/* ────────────────────────────────────────────── */
+function UndoToast({ message, onUndo, onExpire }) {
+  const [remaining, setRemaining] = useState(5);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          onExpire();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [onExpire]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 40 }}
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg border border-slate-200 bg-white"
+    >
+      <span className="text-sm text-slate-700 font-medium">{message}</span>
+      <span className="text-xs text-slate-400">{remaining}s</span>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          clearInterval(timerRef.current);
+          onUndo();
+        }}
+        className="flex items-center gap-1.5 rounded-xl text-violet-600 border-violet-200 hover:bg-violet-50"
+      >
+        <Undo2 className="w-3.5 h-3.5" />
+        ביטול מחיקה
+      </Button>
+    </motion.div>
+  );
+}
+
+/* ────────────────────────────────────────────── */
+/*  Quick Status Picker — inline on card          */
+/* ────────────────────────────────────────────── */
+function QuickStatusPicker({ currentStatus, statusConf, onChangeStatus }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold cursor-pointer transition-all hover:ring-2 hover:ring-offset-1"
+        style={{
+          background: `${statusConf.accent}18`,
+          color: statusConf.accent,
+          border: `1px solid ${statusConf.accent}30`,
+          '--tw-ring-color': `${statusConf.accent}40`,
+        }}
+      >
+        {statusConf.icon} {statusConf.label}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -4 }}
+            className="absolute top-full mt-1 right-0 z-30 bg-white border border-gray-100 rounded-2xl shadow-lg p-1.5 min-w-[140px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {statusOptions.map(s => (
+              <button
+                key={s.value}
+                onClick={() => { onChangeStatus(s.value); setOpen(false); }}
+                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors text-right ${
+                  s.value === currentStatus ? 'bg-gray-50 font-bold' : 'hover:bg-gray-50'
+                }`}
+                style={{ color: s.accent }}
+              >
+                <span>{s.icon}</span>
+                {s.label}
+                {s.value === currentStatus && <Check className="w-3 h-3 mr-auto" />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────── */
 /*  Project Card Component                        */
 /* ────────────────────────────────────────────── */
-function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelete, onOpenWorkbook }) {
+function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelete, onOpenWorkbook, onQuickStatus }) {
   const PlatIcon = platform ? getPlatformIcon(platform.icon) : null;
   const getSystemTypeLabel = (type) => systemTypes.find(s => s.value === type)?.label || type;
 
@@ -137,16 +243,11 @@ function ProjectCard({ project, statusConf, platform, platforms, onEdit, onDelet
             <div className="flex-1 min-w-0">
               <h3 className="text-base font-bold text-gray-900 truncate">{project.name}</h3>
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                <Badge
-                  className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold"
-                  style={{
-                    background: `${statusConf.accent}18`,
-                    color: statusConf.accent,
-                    border: `1px solid ${statusConf.accent}30`,
-                  }}
-                >
-                  {statusConf.icon} {statusConf.label}
-                </Badge>
+                <QuickStatusPicker
+                  currentStatus={project.status || 'planning'}
+                  statusConf={statusConf}
+                  onChangeStatus={(newStatus) => onQuickStatus(project.id, newStatus)}
+                />
                 {platform && (
                   <Badge
                     className="text-[11px] px-2 py-0.5 rounded-full gap-1"
@@ -294,12 +395,14 @@ export default function Projects() {
   const [editingProject, setEditingProject] = useState(null);
   const [formData, setFormData] = useState({ ...emptyProject });
   const [isCreating, setIsCreating] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [platforms, setPlatforms] = useState([]);
   const [collapsedGroups, setCollapsedGroups] = useState(() => {
     // Only collapse 'archived' by default — show active projects immediately (ADHD-friendly)
     return { archived: true };
   });
   const [allExpanded, setAllExpanded] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState(null); // { id, name, backup }
 
   useEffect(() => {
     loadProjects();
@@ -343,15 +446,41 @@ export default function Projects() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('למחוק את הפרויקט?')) return;
+  const handleDelete = useCallback((id) => {
+    const project = projects.find(p => p.id === id);
+    if (!project) return;
+    // Soft-delete: hide from UI immediately, actually delete after 5s unless undone
+    setPendingDelete({ id, name: project.name, backup: { ...project } });
+    setProjects(prev => prev.filter(p => p.id !== id));
+  }, [projects]);
+
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDelete) return;
     try {
-      await Project.delete(id);
-      await loadProjects();
+      await Project.delete(pendingDelete.id);
     } catch (e) {
       console.error('Failed to delete project:', e);
     }
-  };
+    setPendingDelete(null);
+  }, [pendingDelete]);
+
+  const undoDelete = useCallback(() => {
+    if (!pendingDelete) return;
+    // Restore the project in the list
+    setProjects(prev => [...prev, pendingDelete.backup]);
+    setPendingDelete(null);
+  }, [pendingDelete]);
+
+  const handleQuickStatus = useCallback(async (projectId, newStatus) => {
+    try {
+      await Project.update(projectId, { status: newStatus });
+      setProjects(prev => prev.map(p =>
+        p.id === projectId ? { ...p, status: newStatus } : p
+      ));
+    } catch (e) {
+      console.error('Failed to update status:', e);
+    }
+  }, []);
 
   const startEdit = (project) => {
     setEditingProject(project);
@@ -375,12 +504,14 @@ export default function Projects() {
   const startCreate = () => {
     setEditingProject(null);
     setFormData({ ...emptyProject });
+    setShowAdvanced(false);
     setIsCreating(true);
   };
 
   const cancelEdit = () => {
     setEditingProject(null);
     setIsCreating(false);
+    setShowAdvanced(false);
     setFormData({ ...emptyProject });
   };
 
@@ -529,6 +660,7 @@ export default function Projects() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
+                {/* ── Essential fields (always visible) ── */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <Label>שם הפרויקט</Label>
@@ -537,18 +669,8 @@ export default function Projects() {
                       onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
                       placeholder="שם הפרויקט"
                       className="rounded-xl"
+                      autoFocus
                     />
-                  </div>
-                  <div>
-                    <Label>סוג מערכת</Label>
-                    <Select value={formData.system_type} onValueChange={(v) => setFormData(p => ({ ...p, system_type: v }))}>
-                      <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {systemTypes.map(t => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                   <div>
                     <Label>סטטוס</Label>
@@ -560,15 +682,6 @@ export default function Projects() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div>
-                    <Label>טכנולוגיות (Tech Stack)</Label>
-                    <Input
-                      value={formData.tech_stack}
-                      onChange={(e) => setFormData(p => ({ ...p, tech_stack: e.target.value }))}
-                      placeholder="React, Node.js, Supabase..."
-                      className="rounded-xl"
-                    />
                   </div>
                 </div>
 
@@ -583,79 +696,124 @@ export default function Projects() {
                   />
                 </div>
 
-                {/* Platform Section */}
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3 text-sm">פלטפורמת הרצה</h4>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <Badge
-                      variant={!formData.platform ? 'default' : 'outline'}
-                      className="cursor-pointer px-3 py-1.5 text-sm rounded-xl"
-                      onClick={() => setFormData(p => ({ ...p, platform: '', platform_data: {} }))}
-                    >
-                      ללא
-                    </Badge>
-                    {platforms.map(plat => {
-                      const Icon = getPlatformIcon(plat.icon);
-                      const isActive = formData.platform === plat.id;
-                      return (
-                        <Badge
-                          key={plat.id}
-                          variant={isActive ? 'default' : 'outline'}
-                          className={`cursor-pointer px-3 py-1.5 text-sm gap-1.5 rounded-xl ${isActive ? plat.color : 'hover:bg-gray-100'}`}
-                          onClick={() => setFormData(p => ({ ...p, platform: plat.id, platform_data: isActive ? p.platform_data : {} }))}
-                        >
-                          <Icon className="w-3.5 h-3.5" />
-                          {plat.name}
-                        </Badge>
-                      );
-                    })}
-                  </div>
+                {/* ── "More details" toggle ── */}
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                  {showAdvanced ? 'הסתר פרטים נוספים' : 'עוד פרטים (טכנולוגיות, לינקים, פלטפורמה...)'}
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                </button>
 
-                  {selectedPlatform && selectedPlatform.fields.length > 0 && (
-                    <div className="grid md:grid-cols-2 gap-4 p-3 bg-gray-50 rounded-2xl border">
-                      {selectedPlatform.fields.map(field => (
-                        <div key={field.key}>
-                          <Label className="text-xs">{field.label}</Label>
+                <AnimatePresence>
+                  {showAdvanced && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-4 overflow-hidden"
+                    >
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>סוג מערכת</Label>
+                          <Select value={formData.system_type} onValueChange={(v) => setFormData(p => ({ ...p, system_type: v }))}>
+                            <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {systemTypes.map(t => (
+                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>טכנולוגיות (Tech Stack)</Label>
                           <Input
-                            value={formData.platform_data?.[field.key] || ''}
-                            onChange={(e) => updatePlatformField(field.key, e.target.value)}
-                            placeholder={field.placeholder}
-                            dir="ltr"
-                            className="text-sm rounded-xl"
+                            value={formData.tech_stack}
+                            onChange={(e) => setFormData(p => ({ ...p, tech_stack: e.target.value }))}
+                            placeholder="React, Node.js, Supabase..."
+                            className="rounded-xl"
                           />
                         </div>
-                      ))}
-                    </div>
+                      </div>
+
+                      {/* Platform Section */}
+                      <div className="border-t pt-4">
+                        <h4 className="font-semibold mb-3 text-sm">פלטפורמת הרצה</h4>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <Badge
+                            variant={!formData.platform ? 'default' : 'outline'}
+                            className="cursor-pointer px-3 py-1.5 text-sm rounded-xl"
+                            onClick={() => setFormData(p => ({ ...p, platform: '', platform_data: {} }))}
+                          >
+                            ללא
+                          </Badge>
+                          {platforms.map(plat => {
+                            const Icon = getPlatformIcon(plat.icon);
+                            const isActive = formData.platform === plat.id;
+                            return (
+                              <Badge
+                                key={plat.id}
+                                variant={isActive ? 'default' : 'outline'}
+                                className={`cursor-pointer px-3 py-1.5 text-sm gap-1.5 rounded-xl ${isActive ? plat.color : 'hover:bg-gray-100'}`}
+                                onClick={() => setFormData(p => ({ ...p, platform: plat.id, platform_data: isActive ? p.platform_data : {} }))}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                                {plat.name}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+
+                        {selectedPlatform && selectedPlatform.fields.length > 0 && (
+                          <div className="grid md:grid-cols-2 gap-4 p-3 bg-gray-50 rounded-2xl border">
+                            {selectedPlatform.fields.map(field => (
+                              <div key={field.key}>
+                                <Label className="text-xs">{field.label}</Label>
+                                <Input
+                                  value={formData.platform_data?.[field.key] || ''}
+                                  onChange={(e) => updatePlatformField(field.key, e.target.value)}
+                                  placeholder={field.placeholder}
+                                  dir="ltr"
+                                  className="text-sm rounded-xl"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Infrastructure */}
+                      <div className="border-t pt-4">
+                        <h4 className="font-semibold mb-3 text-sm">תשתית ולינקים</h4>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <Label className="flex items-center gap-1"><GitBranch className="w-4 h-4" /> Git Repository</Label>
+                            <Input value={formData.git_repo} onChange={(e) => setFormData(p => ({ ...p, git_repo: e.target.value }))} placeholder="https://github.com/user/repo" dir="ltr" className="rounded-xl" />
+                          </div>
+                          <div>
+                            <Label className="flex items-center gap-1"><Database className="w-4 h-4" /> Supabase URL</Label>
+                            <Input value={formData.supabase_url} onChange={(e) => setFormData(p => ({ ...p, supabase_url: e.target.value }))} placeholder="https://xxxxx.supabase.co" dir="ltr" className="rounded-xl" />
+                          </div>
+                          <div>
+                            <Label className="flex items-center gap-1"><Globe className="w-4 h-4" /> Subdomain</Label>
+                            <Input value={formData.subdomain} onChange={(e) => setFormData(p => ({ ...p, subdomain: e.target.value }))} placeholder="app.example.com" dir="ltr" className="rounded-xl" />
+                          </div>
+                          <div>
+                            <Label className="flex items-center gap-1"><ExternalLink className="w-4 h-4" /> Production URL</Label>
+                            <Input value={formData.production_url} onChange={(e) => setFormData(p => ({ ...p, production_url: e.target.value }))} placeholder="https://www.example.com" dir="ltr" className="rounded-xl" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>הערות</Label>
+                        <Textarea value={formData.notes} onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))} placeholder="הערות נוספות..." rows={2} className="rounded-xl" />
+                      </div>
+                    </motion.div>
                   )}
-                </div>
-
-                {/* Infrastructure */}
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3 text-sm">תשתית ולינקים</h4>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="flex items-center gap-1"><GitBranch className="w-4 h-4" /> Git Repository</Label>
-                      <Input value={formData.git_repo} onChange={(e) => setFormData(p => ({ ...p, git_repo: e.target.value }))} placeholder="https://github.com/user/repo" dir="ltr" className="rounded-xl" />
-                    </div>
-                    <div>
-                      <Label className="flex items-center gap-1"><Database className="w-4 h-4" /> Supabase URL</Label>
-                      <Input value={formData.supabase_url} onChange={(e) => setFormData(p => ({ ...p, supabase_url: e.target.value }))} placeholder="https://xxxxx.supabase.co" dir="ltr" className="rounded-xl" />
-                    </div>
-                    <div>
-                      <Label className="flex items-center gap-1"><Globe className="w-4 h-4" /> Subdomain</Label>
-                      <Input value={formData.subdomain} onChange={(e) => setFormData(p => ({ ...p, subdomain: e.target.value }))} placeholder="app.example.com" dir="ltr" className="rounded-xl" />
-                    </div>
-                    <div>
-                      <Label className="flex items-center gap-1"><ExternalLink className="w-4 h-4" /> Production URL</Label>
-                      <Input value={formData.production_url} onChange={(e) => setFormData(p => ({ ...p, production_url: e.target.value }))} placeholder="https://www.example.com" dir="ltr" className="rounded-xl" />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <Label>הערות</Label>
-                  <Textarea value={formData.notes} onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))} placeholder="הערות נוספות..." rows={2} className="rounded-xl" />
-                </div>
+                </AnimatePresence>
 
                 <div className="flex gap-2 justify-end">
                   <Button variant="outline" onClick={cancelEdit} className="flex items-center gap-1 rounded-xl">
@@ -787,6 +945,7 @@ export default function Projects() {
                               onEdit={startEdit}
                               onDelete={handleDelete}
                               onOpenWorkbook={openWorkbook}
+                              onQuickStatus={handleQuickStatus}
                               custom={idx}
                             />
                           ))}
@@ -799,6 +958,16 @@ export default function Projects() {
             </div>
           </>
         )}
+      {/* ── Undo Delete Toast ── */}
+      <AnimatePresence>
+        {pendingDelete && (
+          <UndoToast
+            message={`"${pendingDelete.name}" נמחק`}
+            onUndo={undoDelete}
+            onExpire={confirmDelete}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
