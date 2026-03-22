@@ -1018,12 +1018,12 @@ function RingTasksPanel({ ringId, ringLabel, ringColor, tasks, onClose, onEdit }
 
   return (
     <motion.div
-      initial={{ x: '100%' }}
+      initial={{ x: '-100%' }}
       animate={{ x: 0 }}
-      exit={{ x: '100%' }}
+      exit={{ x: '-100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed top-0 right-0 h-full z-50 shadow-2xl flex flex-col"
-      style={{ width: 340, maxWidth: '90vw', backgroundColor: '#FAFAFA', borderLeft: `3px solid ${ringColor}` }}
+      className="fixed top-0 left-0 h-full z-50 shadow-2xl flex flex-col"
+      style={{ width: 340, maxWidth: '90vw', backgroundColor: '#FAFAFA', borderRight: `3px solid ${ringColor}` }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${ringColor}30` }}>
