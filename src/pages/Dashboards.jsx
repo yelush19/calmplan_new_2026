@@ -5,8 +5,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Task, Event } from '@/api/entities';
 import { CheckCircle, Clock, TrendingUp, Users, Briefcase, Home } from 'lucide-react';
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
-
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function DashboardsPage() {
@@ -127,7 +125,6 @@ export default function DashboardsPage() {
     }
 
     return (
-        <UnifiedAyoaLayout tasks={[]} centerLabel="דאשבורדים" accentColor="#0891B2" isLoading={isLoading}>
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -219,6 +216,5 @@ export default function DashboardsPage() {
             </div>
 
         </motion.div>
-        </UnifiedAyoaLayout>
     );
 }
