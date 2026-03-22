@@ -18,6 +18,7 @@ import {
   Map, ArrowRight,
 } from "lucide-react";
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
+import { resolveCollisions, clampRadius } from '@/utils/ringCollision';
 import TaskSidePanel from "@/components/tasks/TaskSidePanel";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Pencil, Trash2, Pin } from "lucide-react";
@@ -357,9 +358,7 @@ export default function HomePage() {
   const calmTasks = useMemo(() => {
     if (!data) return [];
     const merged = [...(data.overdue || []), ...(data.today || [])];
-    const result = sortByPriority(merged).slice(0, 5);
-    console.log('[Home] calmTasks computed:', { mergedLen: merged.length, resultLen: result.length, overdueLen: (data.overdue || []).length, todayLen: (data.today || []).length, sample: result[0] ? { id: result[0].id, title: result[0].title, status: result[0].status } : null });
-    return result;
+    return sortByPriority(merged).slice(0, 5);
   }, [data]);
 
   if (isLoading || !data) {
@@ -556,8 +555,6 @@ export default function HomePage() {
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
         {/* ═══ 3. "מה אפשר לעשות היום" — AYOA-style mini-canvas ═══ */}
-        {/* DEBUG: confirm rendering branch */}
-        {(() => { console.log('[Home] calmTasks.length for render branch:', calmTasks.length); return null; })()}
         {calmTasks.length === 0 ? (
           <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
             <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
@@ -881,6 +878,49 @@ function usePointerDrag(onDragEnd) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// §5b  Resize-drag hook — drag handle changes ring radius
+// ═══════════════════════════════════════════════════════════════════
+
+function useResizeDrag(onResizeEnd) {
+  const [resizing, setResizing] = useState(false);
+  const [liveRadius, setLiveRadius] = useState(0);
+
+  const onPointerDown = useCallback((e, ringCx, ringCy, currentR, containerEl) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = containerEl.getBoundingClientRect();
+    const scaleX = VB_W / rect.width;
+    const scaleY = VB_H / rect.height;
+    setLiveRadius(currentR);
+    setResizing(true);
+
+    const onMove = (ev) => {
+      const mx = (ev.clientX - rect.left) * scaleX;
+      const my = (ev.clientY - rect.top) * scaleY;
+      const dx = mx - ringCx;
+      const dy = my - ringCy;
+      const newR = Math.sqrt(dx * dx + dy * dy);
+      setLiveRadius(newR);
+    };
+    const onUp = (ev) => {
+      const mx = (ev.clientX - rect.left) * scaleX;
+      const my = (ev.clientY - rect.top) * scaleY;
+      const dx = mx - ringCx;
+      const dy = my - ringCy;
+      const newR = Math.sqrt(dx * dx + dy * dy);
+      setResizing(false);
+      onResizeEnd(newR);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, [onResizeEnd]);
+
+  return { resizing, liveRadius, onPointerDown };
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // §6  Glass ring SVG defs (glow + shimmer keyframes)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -907,31 +947,46 @@ function GlassRingDefs() {
 // §7  DraggableRing — glass/diamond style with shimmer
 // ═══════════════════════════════════════════════════════════════════
 
-function DraggableRing({ ring, canvasRef, onDragEnd }) {
+function DraggableRing({ ring, canvasRef, onDragEnd, onResize }) {
   const { dragging, pos, onPointerDown } = usePointerDrag(onDragEnd);
+  const { resizing, liveRadius, onPointerDown: onResizeDown } = useResizeDrag(onResize);
   const cx = dragging ? pos.x : ring.cx;
   const cy = dragging ? pos.y : ring.cy;
+  const r = resizing ? clampRadius(liveRadius, 40, 300) : ring.r;
   const color = RING_COLOR[ring.id];
-  const circumference = 2 * Math.PI * ring.r;
+  const circumference = 2 * Math.PI * r;
 
   const startDrag = (e) => onPointerDown(e, cx, cy, canvasRef.current);
+  const startResize = (e) => onResizeDown(e, ring.cx, ring.cy, ring.r, canvasRef.current);
+
+  // Resize handle position: right side of ring (3 o'clock)
+  const handleX = cx + r;
+  const handleY = cy;
 
   return (
     <g>
       {/* Layer 0: invisible wide hit-area for easier grabbing */}
-      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke="transparent" strokeWidth={18}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="transparent" strokeWidth={18}
         style={{ cursor: dragging ? 'grabbing' : 'grab', pointerEvents: 'stroke' }}
         onPointerDown={startDrag} />
       {/* Layer 1: soft glow */}
-      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke={color} strokeWidth={6} opacity={0.15} filter="url(#cm-glow)" style={{ pointerEvents: 'none' }} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={6} opacity={0.15} filter="url(#cm-glow)" style={{ pointerEvents: 'none' }} />
       {/* Layer 2: glass stroke — white core + coloured edge */}
-      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={3} style={{ pointerEvents: 'none' }} />
-      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke={color} strokeWidth={2} opacity={0.55}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={3} style={{ pointerEvents: 'none' }} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={2} opacity={0.55}
         style={{ pointerEvents: 'none' }} />
       {/* Layer 3: shimmer — bright dash travelling along ring */}
-      <circle cx={cx} cy={cy} r={ring.r} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={3}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={3}
         strokeDasharray={`${circumference * 0.08} ${circumference * 0.92}`} strokeLinecap="round"
         style={{ animation: 'cm-shimmer 10s linear infinite', pointerEvents: 'none' }} />
+      {/* Resize handle — visible grip on ring edge */}
+      <circle cx={handleX} cy={handleY} r={7} fill="white" stroke={color} strokeWidth={2}
+        style={{ cursor: 'ew-resize', pointerEvents: 'all', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }}
+        onPointerDown={startResize} />
+      <line x1={handleX - 2.5} y1={handleY - 3} x2={handleX - 2.5} y2={handleY + 3}
+        stroke={color} strokeWidth={1} opacity={0.6} style={{ pointerEvents: 'none' }} />
+      <line x1={handleX + 2.5} y1={handleY - 3} x2={handleX + 2.5} y2={handleY + 3}
+        stroke={color} strokeWidth={1} opacity={0.6} style={{ pointerEvents: 'none' }} />
     </g>
   );
 }
@@ -953,19 +1008,24 @@ function taskToRingId(task) {
 }
 
 function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChange, onShowFullMap }) {
-  console.log('[AyoaMiniCanvas] RENDER called, tasks:', tasks?.length, 'allTasks:', allTasks?.length);
   const safeTasks = tasks || [];
   const safeAllTasks = allTasks || [];
   const { layout, persist, loaded } = useCircleMapLayout(safeTasks);
   const canvasRef = useRef(null);
 
-  // Debug log — remove after confirming fix
-  useEffect(() => {
-    console.log('[AyoaMiniCanvas]', { tasksLen: safeTasks.length, allTasksLen: safeAllTasks.length, loaded, bubblesCount: Object.keys(layout.bubbles || {}).length });
-  }, [safeTasks.length, safeAllTasks.length, loaded, layout.bubbles]);
-
   const handleRingDragEnd = useCallback((ringId) => (nx, ny) => {
-    persist({ ...layout, rings: { ...layout.rings, [ringId]: { ...layout.rings[ringId], cx: nx, cy: ny } } });
+    const movedRing = { ...layout.rings[ringId], cx: nx, cy: ny };
+    const others = Object.values(layout.rings).filter(r => r.id !== ringId);
+    const resolved = resolveCollisions(movedRing, others, 16, { width: VB_W, height: VB_H });
+    persist({ ...layout, rings: { ...layout.rings, [ringId]: { ...layout.rings[ringId], cx: resolved.cx, cy: resolved.cy } } });
+  }, [layout, persist]);
+
+  const handleRingResize = useCallback((ringId) => (newRadius) => {
+    const r = clampRadius(newRadius, 40, 300);
+    const ring = { ...layout.rings[ringId], r };
+    const others = Object.values(layout.rings).filter(o => o.id !== ringId);
+    const resolved = resolveCollisions(ring, others, 16, { width: VB_W, height: VB_H });
+    persist({ ...layout, rings: { ...layout.rings, [ringId]: { ...ring, cx: resolved.cx, cy: resolved.cy } } });
   }, [layout, persist]);
 
   const handleBubbleDragEnd = useCallback((taskId) => (nx, ny) => {
@@ -990,28 +1050,19 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
     return counts;
   }, [safeTasks, safeAllTasks, layout.bubbles]);
 
-  if (!loaded) {
-    console.log('[AyoaMiniCanvas] NOT loaded yet — returning null');
-    return null;
-  }
-
-  console.log('[AyoaMiniCanvas] LOADED, rendering. bubbles:', Object.keys(layout.bubbles || {}).length,
-    'safeTasks:', safeTasks.length, 'rings:', Object.keys(layout.rings || {}));
+  if (!loaded) return null;
 
   const ringEntries = ['A', 'B', 'C', 'D'].map(id => ({ id, ...layout.rings[id] }));
 
   return (
     <div style={{ backgroundColor: '#FFFFFF', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
-      {/* DEBUG: visible marker to confirm component mounts */}
-      <div data-testid="ayoa-debug" style={{ fontSize: 10, color: '#94A3B8', textAlign: 'center' }}>
-        [DEBUG] AyoaMiniCanvas mounted — {safeTasks.length} tasks, {Object.keys(layout.bubbles || {}).length} bubbles
-      </div>
       <div ref={canvasRef} className="relative w-full" style={{ aspectRatio: `${VB_W} / ${VB_H}` }}>
         {/* SVG layer — glass rings */}
         <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet">
           <GlassRingDefs />
           {ringEntries.map(ring => (
-            <DraggableRing key={ring.id} ring={ring} canvasRef={canvasRef} onDragEnd={handleRingDragEnd(ring.id)} />
+            <DraggableRing key={ring.id} ring={ring} canvasRef={canvasRef}
+              onDragEnd={handleRingDragEnd(ring.id)} onResize={handleRingResize(ring.id)} />
           ))}
         </svg>
 
