@@ -763,6 +763,19 @@ export default function TaxReportsDashboardPage() {
         )}
       </AnimatePresence>
 
+      {/* Search + controls */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-400 w-4 h-4" />
+          <Input
+            placeholder="חיפוש לפי שם לקוח, משימה..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pe-10 h-10 rounded-xl border-2 border-blue-200 focus:border-blue-400 bg-white shadow-sm text-sm"
+          />
+        </div>
+      </div>
+
       <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
 
       {/* Content */}
