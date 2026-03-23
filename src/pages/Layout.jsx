@@ -1183,9 +1183,6 @@ function LayoutInner({ children }) {
 
                   {/* Backup import moved to BackupManager page exclusively */}
 
-                  {/* ── Global AYOA View Switcher ── */}
-                  <GlobalAyoaBar />
-
                   <div className="flex-1 min-h-0">
                     {children}
                   </div>
