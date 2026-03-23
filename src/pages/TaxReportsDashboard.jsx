@@ -252,9 +252,56 @@ export default function TaxReportsDashboardPage() {
     }
   }, [filingSprintActive, filingSprintTasks, filingSprintIdx]);
 
-  // Shared steps removed: income_input/expense_input are now separate P2_income/P2_expenses
-  // tasks in the process tree, not steps within VAT/advances cards.
-  const SHARED_STEPS = {};
+  // ── Dependency map: which services does each collection unlock? ──
+  const COLLECTION_UNLOCKS = {
+    income_collection: ['מע"מ', 'מע"מ 874', 'מקדמות מס', 'work_vat_reporting', 'work_vat_874', 'work_tax_advances'],
+    expense_collection: ['מע"מ', 'מע"מ 874', 'work_vat_reporting', 'work_vat_874'],
+  };
+
+  // ── Sync: when a collection task completes, notify dependent tasks ──
+  const syncCollectionToDependents = useCallback(async (completedTask, isCompleted) => {
+    const service = getServiceForTask(completedTask);
+    if (!service) return;
+    const unlocks = COLLECTION_UNLOCKS[service.key];
+    if (!unlocks) return;
+
+    // Find sibling tasks for same client that depend on this collection
+    const dependents = tasks.filter(t =>
+      t.id !== completedTask.id &&
+      t.client_name === completedTask.client_name &&
+      unlocks.includes(t.category)
+    );
+
+    for (const dep of dependents) {
+      const depService = getServiceForTask(dep);
+      if (!depService?.depends_on_nodes) continue;
+
+      // Check if ALL dependencies for this task are satisfied
+      const allDepsSatisfied = (depService.depends_on_nodes || []).every(nodeId => {
+        // Map node IDs to collection service keys
+        const nodeToServiceKey = { P2_income: 'income_collection', P2_expenses: 'expense_collection' };
+        const depKey = nodeToServiceKey[nodeId];
+        if (!depKey) return true;
+        if (depKey === service.key) return isCompleted;
+        // Check if the other dependency is also done
+        const otherTask = tasks.find(t =>
+          t.id !== completedTask.id &&
+          t.client_name === completedTask.client_name &&
+          getServiceForTask(t)?.key === depKey
+        );
+        return otherTask?.status === 'production_completed';
+      });
+
+      if (allDepsSatisfied && isCompleted) {
+        // All prerequisites met — auto-check receive_data step if it exists
+        const depSteps = getTaskProcessSteps(dep);
+        if (depSteps.receive_data && !depSteps.receive_data?.done) {
+          // This is a soft hint, not auto-completing the whole task
+          // Just mark receive_data so the task appears "ready to work"
+        }
+      }
+    }
+  }, [tasks]);
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
     const currentSteps = getTaskProcessSteps(task);
@@ -272,31 +319,9 @@ export default function TaxReportsDashboardPage() {
       await Task.update(task.id, updatePayload);
       if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
 
-      // Cross-task sync: if this step is shared, update sibling tasks for same client
-      const sharedCategories = SHARED_STEPS[stepKey];
-      if (sharedCategories) {
-        const newStepState = updatedSteps[stepKey];
-        const siblingTasks = tasks.filter(t =>
-          t.id !== task.id &&
-          t.client_name === task.client_name &&
-          sharedCategories.includes(t.category)
-        );
-        for (const sibling of siblingTasks) {
-          const siblingSteps = getTaskProcessSteps(sibling);
-          // Only sync if sibling has this step and it differs
-          const sibService = getServiceForTask(sibling);
-          const hasSameStep = sibService?.steps?.some(s => s.key === stepKey);
-          if (hasSameStep && siblingSteps[stepKey]?.done !== newStepState.done) {
-            const updatedSibSteps = { ...siblingSteps, [stepKey]: { ...newStepState } };
-            const sibPayload = { process_steps: updatedSibSteps };
-            const sibUpdated = { ...sibling, process_steps: updatedSibSteps };
-            if (areAllStepsDone(sibUpdated) && sibling.status !== 'production_completed') {
-              sibPayload.status = 'production_completed';
-            }
-            setTasks(prev => prev.map(t => t.id === sibling.id ? { ...t, ...sibPayload } : t));
-            await Task.update(sibling.id, sibPayload);
-          }
-        }
+      // If a collection task just completed, sync to dependents
+      if (allDone) {
+        await syncCollectionToDependents(updatedTask, true);
       }
 
       // Notify other dashboards
@@ -309,7 +334,7 @@ export default function TaxReportsDashboardPage() {
       console.error("Error updating step:", error);
       localUpdateRef.current = false;
     }
-  }, [tasks]);
+  }, [tasks, syncCollectionToDependents]);
 
   const handleDateChange = useCallback(async (task, stepKey, newDate) => {
     const currentSteps = getTaskProcessSteps(task);
@@ -337,6 +362,10 @@ export default function TaxReportsDashboardPage() {
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       await Task.update(task.id, updatePayload);
       syncNotesWithTaskStatus(task.id, newStatus);
+
+      // If a collection task completed/uncompleted, sync to dependents
+      await syncCollectionToDependents(task, newStatus === 'production_completed');
+
       // Notify other dashboards of the change
       window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
         detail: { collection: 'tasks', type: 'status-change', source: 'tax-reports' }
@@ -346,7 +375,7 @@ export default function TaxReportsDashboardPage() {
       console.error("Error updating status:", error);
       localUpdateRef.current = false;
     }
-  }, []);
+  }, [syncCollectionToDependents]);
 
   const handlePaymentDateChange = useCallback(async (task, paymentDate) => {
     try {
@@ -618,15 +647,36 @@ export default function TaxReportsDashboardPage() {
         <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
       )}
 
-      {/* P2 Production Flow: Collect → Process → Review → Broadcast — Organic Pipeline */}
+      {/* P2 Production Flow: Collect → Process → Review → Broadcast — Step-based Pipeline */}
       {!isLoading && filteredTasks.length > 0 && (() => {
+        // Step-based phase detection (not status-based)
+        // קליטה = income/expense tasks still open
+        // עיבוד = report_prep not yet done (authority tasks)
+        // עיון = report_prep done, submission not yet done → ready for שידור
+        // שידור = submission done (or all steps done)
+        const getTaskPhase = (t) => {
+          const svc = getServiceForTask(t);
+          if (!svc) return 'process';
+          const steps = getTaskProcessSteps(t);
+          // Collection tasks (income/expense) — simple: done or not
+          if (svc.key === 'income_collection' || svc.key === 'expense_collection') {
+            return areAllStepsDone({ ...t, process_steps: steps }) ? 'broadcast' : 'collect';
+          }
+          // Authority/reporting tasks — step-based phases
+          const reportDone = steps?.report_prep?.done;
+          const submissionDone = steps?.submission?.done;
+          if (submissionDone || t.status === 'production_completed') return 'broadcast';
+          if (reportDone) return 'review'; // הפקת דו"ח done → ready for שידור
+          return 'process';
+        };
+
         const phases = [
-          { key: 'collect', label: 'קליטה', statuses: ['waiting_for_materials'], color: '#FF8F00', icon: '📥' },
-          { key: 'process', label: 'עיבוד', statuses: ['not_started', 'needs_corrections'], color: '#4682B4', icon: '⚙️' },
-          { key: 'review', label: 'עיון', statuses: ['sent_for_review'], color: '#7B1FA2', icon: '👁️' },
-          { key: 'broadcast', label: 'שידור', statuses: ['production_completed'], color: '#2E7D32', icon: '📡' },
+          { key: 'collect', label: 'קליטה', color: '#FF8F00', icon: '📥' },
+          { key: 'process', label: 'עיבוד', color: '#4682B4', icon: '⚙️' },
+          { key: 'review', label: 'מוכן לשידור', color: '#7B1FA2', icon: '👁️' },
+          { key: 'broadcast', label: 'שודר', color: '#2E7D32', icon: '📡' },
         ];
-        const phaseCounts = phases.map(p => filteredTasks.filter(t => p.statuses.includes(t.status)).length);
+        const phaseCounts = phases.map(p => filteredTasks.filter(t => getTaskPhase(t) === p.key).length);
         const maxCount = Math.max(...phaseCounts, 1);
         return (
           <div className="rounded-2xl border-0 overflow-hidden px-4 py-4"
