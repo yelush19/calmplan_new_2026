@@ -13,6 +13,25 @@ import { getServiceWeight } from '@/config/serviceWeights';
 import { LOAD_COLORS } from '@/lib/theme-constants';
 import { ChevronLeft, ChevronRight, CalendarDays, ArrowRight } from 'lucide-react';
 
+// Service-type color coding for task capsules
+const SERVICE_COLORS = {
+  'מע"מ': { bg: '#3B82F6', border: '#2563EB', gradient: 'linear-gradient(135deg, #3B82F6, #2563EB)' },
+  'מע"מ 874': { bg: '#1D4ED8', border: '#1E40AF', gradient: 'linear-gradient(135deg, #1D4ED8, #1E40AF)' },
+  'מקדמות מס': { bg: '#F97316', border: '#EA580C', gradient: 'linear-gradient(135deg, #F97316, #EA580C)' },
+  'קליטת הכנסות': { bg: '#22C55E', border: '#16A34A', gradient: 'linear-gradient(135deg, #22C55E, #16A34A)' },
+  'קליטת הוצאות': { bg: '#EC4899', border: '#DB2777', gradient: 'linear-gradient(135deg, #EC4899, #DB2777)' },
+  'התאמות': { bg: '#F59E0B', border: '#D97706', gradient: 'linear-gradient(135deg, #F59E0B, #D97706)' },
+  'רווח והפסד': { bg: '#8B5CF6', border: '#7C3AED', gradient: 'linear-gradient(135deg, #8B5CF6, #7C3AED)' },
+  'שכר': { bg: '#06B6D4', border: '#0891B2', gradient: 'linear-gradient(135deg, #06B6D4, #0891B2)' },
+  'ביטוח לאומי': { bg: '#F43F5E', border: '#E11D48', gradient: 'linear-gradient(135deg, #F43F5E, #E11D48)' },
+  'ניכויים': { bg: '#EAB308', border: '#CA8A04', gradient: 'linear-gradient(135deg, #EAB308, #CA8A04)' },
+  'מס"ב ספקים': { bg: '#14B8A6', border: '#0D9488', gradient: 'linear-gradient(135deg, #14B8A6, #0D9488)' },
+};
+
+function getServiceColor(category) {
+  return SERVICE_COLORS[category] || { bg: '#4682B4', border: '#1e3a8a', gradient: 'linear-gradient(135deg, #4682B4, #1e3a8a)' };
+}
+
 // Full Status Colors — DNA functional colors (no gray, NO TURQUOISE)
 const STATUS_COLORS = {
   not_started:           { bg: '#1565C0', border: '#0D47A1', text: '#fff' },
@@ -317,6 +336,13 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     return tasks.filter(t => t.due_date && parseISO(t.due_date) >= ns && parseISO(t.due_date) <= ne).length;
   }, [tasks, viewMonth]);
 
+  // Visible service types in current month (for legend)
+  const visibleServices = useMemo(() => {
+    const seen = new Set();
+    monthTasks.forEach(t => { if (t.category) seen.add(t.category); });
+    return [...seen].filter(cat => SERVICE_COLORS[cat]);
+  }, [monthTasks]);
+
   // Today marker position
   const todayFraction = isCurrentMonth ? differenceInDays(new Date(), monthStart) / daysInMonth : -1;
 
@@ -356,6 +382,20 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
               );
             })}
           </div>
+          {/* Service color legend */}
+          {visibleServices.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap" style={{ borderRight: '1px solid #E8E8E8', paddingRight: '10px', marginRight: '4px' }}>
+              {visibleServices.map(cat => {
+                const sc = SERVICE_COLORS[cat];
+                return (
+                  <div key={cat} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full" style={{ background: `${sc.bg}12`, border: `1px solid ${sc.bg}25` }}>
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sc.bg }} />
+                    <span className="text-[11px] font-medium" style={{ color: sc.bg }}>{cat}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {!isCurrentMonth && (
             <button onClick={goToCurrentMonth} className="px-3 py-1.5 rounded-full text-xs font-medium transition-all" style={{ background: '#4682B415', color: '#4682B4', border: '1px solid #4682B430' }}>
               חזור להיום
@@ -521,7 +561,9 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                   ? `calc(${pos.left} + ${(dragPreviewDay / daysInMonth) * 100}%)`
                   : pos.left;
                 const statusColor = STATUS_COLORS[task.status] || STATUS_COLORS.not_started;
+                const svcColor = getServiceColor(task.category);
                 const loadColor = pos.loadColor;
+                const isCompleted = task.status === 'production_completed' || task.status === 'completed';
                 const sw = getServiceWeight(task.category);
                 const dnaMinutes = (task.estimated_time && task.estimated_time > 0) ? task.estimated_time : sw.duration;
                 const clientObj = clientByName[task.client_name];
@@ -541,16 +583,19 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                           top: `${topPx}px`,
                           height: `${LANE_HEIGHT}px`,
                           borderRadius: '20px',
-                          background: `linear-gradient(135deg, ${statusColor.bg}E8, ${statusColor.bg})`,
+                          background: svcColor.gradient,
                           borderLeft: `4px solid ${loadColor.color}`,
-                          boxShadow: showBalanceGlow
-                            ? `0 2px 12px ${loadColor.color}35, 0 0 12px #80000060, 0 1px 3px rgba(0,0,0,0.08)`
-                            : isDragging
-                              ? `0 8px 24px ${loadColor.color}40, 0 2px 8px rgba(0,0,0,0.15)`
-                              : capsuleShadow(loadColor.color),
-                          opacity: isDragging ? 0.9 : 1,
+                          borderRight: `3px solid ${svcColor.border}`,
+                          boxShadow: isOverdue
+                            ? `0 0 8px rgba(239, 68, 68, 0.6), 0 2px 8px ${loadColor.color}35`
+                            : showBalanceGlow
+                              ? `0 2px 12px ${loadColor.color}35, 0 0 12px #80000060, 0 1px 3px rgba(0,0,0,0.08)`
+                              : isDragging
+                                ? `0 8px 24px ${loadColor.color}40, 0 2px 8px rgba(0,0,0,0.15)`
+                                : capsuleShadow(loadColor.color),
+                          opacity: isDragging ? 0.9 : isCompleted ? 0.7 : 1,
                           ...(isOverdue ? {
-                            outline: '2px solid #7B1FA2',
+                            outline: '2px solid #EF4444',
                             outlineOffset: '1px',
                           } : {}),
                         }}
@@ -567,6 +612,11 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                       >
                         {/* Capsule inner content */}
                         <div className="absolute inset-0 flex items-center px-2.5 gap-1.5 pointer-events-none" style={{ minWidth: 0 }}>
+                          {/* Completed checkmark */}
+                          {isCompleted && (
+                            <span className="flex-shrink-0 text-white text-[11px] leading-none" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>✓</span>
+                          )}
+
                           {/* DNA load indicator dot */}
                           <div className="flex-shrink-0 w-2 h-2 rounded-full" style={{
                             backgroundColor: loadColor.color,

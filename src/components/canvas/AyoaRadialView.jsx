@@ -39,9 +39,13 @@ const DNA_DEFAULTS = {
 };
 
 function getCategoryColor(category, branchColors) {
+  // Try service-specific color first (distinct per service)
+  const svcColor = getServiceNodeColor(category);
+  if (svcColor) return svcColor;
+
+  // Fallback to branch-level color
   const c = branchColors || DNA_DEFAULTS;
   if (!category) return c.P3;
-  // Resolve custom_XXX IDs and English keys to Hebrew before matching
   const resolved = resolveCategoryLabel(category);
   const cat = (resolved || category || '').toLowerCase();
   if (cat.includes('שכר') || cat.includes('payroll') || cat.includes('ניכויים') || cat.includes('ביטוח') || cat.includes('מס"ב')) return c.P1;
@@ -51,6 +55,31 @@ function getCategoryColor(category, branchColors) {
   if (cat.includes('דוח שנתי') || cat.includes('הצהרת הון') || cat.includes('annual')) return c.P5;
   if (cat.includes('admin') || cat.includes('אדמיני') || cat.includes('ייעוץ') || cat.includes('פגישה') || cat.includes('שיווק')) return c.P3;
   return c.P4;
+}
+
+// Service-specific colors — distinct per category (not just branch)
+const SERVICE_NODE_COLORS = {
+  'מע"מ': '#3B82F6',
+  'מע"מ 874': '#1D4ED8',
+  'מקדמות מס': '#F97316',
+  'קליטת הכנסות': '#22C55E',
+  'קליטת הוצאות': '#EC4899',
+  'התאמות': '#F59E0B',
+  'רווח והפסד': '#8B5CF6',
+  'שכר': '#06B6D4',
+  'ביטוח לאומי': '#F43F5E',
+  'ניכויים': '#EAB308',
+  'מס"ב ספקים': '#14B8A6',
+  'דוח שנתי': '#2E7D32',
+  'דוח רו"ה': '#8B5CF6',
+};
+
+function getServiceNodeColor(category) {
+  if (!category) return null;
+  const resolved = (typeof resolveCategoryLabel === 'function')
+    ? resolveCategoryLabel(category)
+    : category;
+  return SERVICE_NODE_COLORS[resolved] || SERVICE_NODE_COLORS[category] || null;
 }
 
 const STATUS_GLOW = {
@@ -213,28 +242,28 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
       const midAngle = (startAngle + endAngle) / 2;
       const dnaColor = getCategoryColor(cat, branchColors);
 
-      // Ring 1 wedge (דיווחין)
+      // Ring 1 wedge (דיווחין) — vibrant fills
       segments.push({
         key: `ring1-${ci}`,
         d: describeWedge(CX, CY, RINGS.center + 12, RINGS.ring1, startAngle, endAngle),
-        fill: dnaColor + '10',
-        stroke: dnaColor + '20',
+        fill: dnaColor + '20',
+        stroke: dnaColor + '40',
       });
 
       // Ring 2 wedge (שירותים)
       segments.push({
         key: `ring2-${ci}`,
         d: describeWedge(CX, CY, RINGS.ring1 + 5, RINGS.ring2 + 20, startAngle, endAngle),
-        fill: dnaColor + '06',
-        stroke: dnaColor + '10',
+        fill: dnaColor + '12',
+        stroke: dnaColor + '20',
       });
 
       // Ring 3 wedge (ייצור)
       segments.push({
         key: `ring3-${ci}`,
         d: describeWedge(CX, CY, RINGS.ring2 + 25, RINGS.ring3 + 15, startAngle, endAngle),
-        fill: dnaColor + '03',
-        stroke: dnaColor + '06',
+        fill: dnaColor + '08',
+        stroke: dnaColor + '15',
       });
 
       // Category node (Ring 1)
@@ -249,7 +278,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         r: 30,
         shape: 'bubble',
         color: dnaColor,
-        bg: dnaColor + '15',
+        bg: dnaColor + '30',
         label: resolveCategoryLabel(cat).substring(0, 14),
         subLabel: `${catTasks.length}`,
         angle: midAngle,
@@ -283,7 +312,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           r,
           shape: ov.shape || globalShape,
           color: ov.color || dnaColor,
-          bg: (ov.color || dnaColor) + '12',
+          bg: (ov.color || dnaColor) + '25',
           label: task.title || '',
           subLabel: task.client_name || '',
           angle: taskAngle,

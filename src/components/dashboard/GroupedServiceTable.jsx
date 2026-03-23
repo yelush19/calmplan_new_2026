@@ -14,6 +14,23 @@ import {
 } from '@/config/processTemplates';
 import { getVatEnergyTier, getPayrollTier } from '@/engines/taskCascadeEngine';
 
+const SERVICE_ACCENT_COLORS = {
+  'vat': { border: '#3B82F6', bg: '#EFF6FF', headerBg: '#DBEAFE' },
+  'vat_874': { border: '#1D4ED8', bg: '#EFF6FF', headerBg: '#C7D2FE' },
+  'tax_advances': { border: '#F97316', bg: '#FFF7ED', headerBg: '#FED7AA' },
+  'income_collection': { border: '#22C55E', bg: '#F0FDF4', headerBg: '#BBF7D0' },
+  'expense_collection': { border: '#EC4899', bg: '#FDF2F8', headerBg: '#FBCFE8' },
+  'reconciliation': { border: '#F59E0B', bg: '#FEF3C7', headerBg: '#FDE68A' },
+  'pnl_reports': { border: '#8B5CF6', bg: '#F5F3FF', headerBg: '#DDD6FE' },
+  'payroll': { border: '#06B6D4', bg: '#ECFEFF', headerBg: '#A5F3FC' },
+  'social_security': { border: '#F43F5E', bg: '#FFF1F2', headerBg: '#FECDD3' },
+  'deductions': { border: '#EAB308', bg: '#FEF9C3', headerBg: '#FEF08A' },
+};
+
+function getServiceAccent(serviceKey) {
+  return SERVICE_ACCENT_COLORS[serviceKey] || { border: '#94A3B8', bg: '#F8FAFC', headerBg: '#E2E8F0' };
+}
+
 // 5 Golden Statuses — display order by priority
 const STATUS_DISPLAY_ORDER = [
   'waiting_for_materials',   // 1 - ממתין לחומרים
@@ -152,10 +169,15 @@ export default function GroupedServiceTable({
 
   const colCount = service.steps.length + 2; // client + steps + status
 
+  const accent = getServiceAccent(service.key);
+
   return (
     <Card className="border-gray-200 shadow-sm overflow-hidden">
       {/* Service header */}
-      <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
+      <div
+        className="border-b px-4 py-2.5 flex items-center justify-between"
+        style={{ backgroundColor: accent.headerBg, borderLeftWidth: '4px', borderLeftColor: accent.border, borderBottomColor: accent.border + '40' }}
+      >
         <div className="flex items-center gap-3">
           <h2 className="font-bold text-gray-800">{service.label}</h2>
           <span className="text-xs text-gray-500">{completedCount}/{relevantRows.length} הושלמו</span>
@@ -198,11 +220,30 @@ export default function GroupedServiceTable({
               <th className="text-right py-2 px-4 font-semibold text-gray-600 text-xs bg-gray-50 sticky right-0 z-30 min-w-[140px]">
                 לקוח
               </th>
-              {service.steps.map(step => (
-                <th key={step.key} className="text-center py-2 px-2 font-medium text-gray-500 text-[11px] bg-gray-50 min-w-[80px]">
-                  {step.label}
-                </th>
-              ))}
+              {service.steps.map(step => {
+                const stepDoneCount = clientRows.filter(r => {
+                  const s = getTaskProcessSteps(r.task);
+                  return s[step.key]?.done;
+                }).length;
+                const stepAllDone = stepDoneCount === clientRows.length && clientRows.length > 0;
+                const stepSomeDone = stepDoneCount > 0;
+                return (
+                  <th
+                    key={step.key}
+                    className="text-center py-2 px-2 font-medium text-[11px] min-w-[80px]"
+                    style={{
+                      backgroundColor: stepAllDone ? '#D1FAE5' : stepSomeDone ? accent.headerBg : '#F9FAFB',
+                      color: stepAllDone ? '#065F46' : stepSomeDone ? accent.border : '#6B7280',
+                      borderBottom: `2px solid ${stepAllDone ? '#10B981' : stepSomeDone ? accent.border : '#E5E7EB'}`,
+                    }}
+                  >
+                    {step.label}
+                    <div className="text-[9px] font-normal mt-0.5" style={{ color: stepAllDone ? '#059669' : '#9CA3AF' }}>
+                      {stepDoneCount}/{clientRows.length}
+                    </div>
+                  </th>
+                );
+              })}
               <th className="text-center py-2 px-3 font-medium text-gray-500 text-[11px] bg-gray-50 min-w-[80px]">
                 סטטוס
               </th>
@@ -249,6 +290,7 @@ export default function GroupedServiceTable({
                       task={task}
                       client={client}
                       service={service}
+                      accent={accent}
                       isEven={idx % 2 === 0}
                       onToggleStep={onToggleStep}
                       onDateChange={onDateChange}
@@ -279,10 +321,19 @@ export default function GroupedServiceTable({
 // CLIENT ROW
 // =====================================================
 
-function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote, bulkMode, isSelected, onToggleSelect }) {
+function ClientRow({ clientName, task, client, service, accent, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote, bulkMode, isSelected, onToggleSelect }) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
+
+  // Determine the "current" step index: first unchecked step after any checked ones
+  const currentStepIndex = useMemo(() => {
+    for (let i = 0; i < service.steps.length; i++) {
+      const stepData = steps[service.steps[i].key];
+      if (!stepData?.done) return i;
+    }
+    return -1; // all done
+  }, [steps, service.steps]);
   const taxIds = getClientIds ? getClientIds(client, service.key) : [];
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showSubTasks, setShowSubTasks] = useState(false);
@@ -325,7 +376,13 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
 
   return (
     <>
-      <tr className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50' : isEven ? 'bg-white' : 'bg-[#F5F5F5]'} hover:bg-[#F5F5F5]`}>
+      <tr
+        className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50' : ''} hover:bg-[#F5F5F5]`}
+        style={{
+          borderRight: `3px solid ${accent.border}`,
+          backgroundColor: allDone ? undefined : accent.bg,
+        }}
+      >
         {bulkMode && (
           <td className="text-center px-2 py-1.5">
             <input type="checkbox" checked={isSelected} onChange={() => onToggleSelect?.([task.id], !isSelected)}
@@ -333,7 +390,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
           </td>
         )}
         {/* Client name + IDs */}
-        <td className={`py-1.5 px-4 sticky right-0 z-10 ${allDone ? 'bg-emerald-50' : isEven ? 'bg-white' : 'bg-[#F5F5F5]'}`}>
+        <td className="py-1.5 px-4 sticky right-0 z-10" style={{ backgroundColor: allDone ? '#ECFDF5' : accent.bg }}>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setShowSubTasks(!showSubTasks)}
@@ -388,15 +445,22 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
         </td>
 
         {/* Step cells (with sub-step support) */}
-        {service.steps.map(stepDef => {
+        {service.steps.map((stepDef, stepIdx) => {
           const subs = stepDef.sub_steps || [];
           const stepData = steps[stepDef.key] || { done: false, date: null };
+          const isCurrent = stepIdx === currentStepIndex;
 
           if (subs.length === 0) {
             return (
-              <td key={stepDef.key} className="py-1.5 px-2 text-center">
+              <td
+                key={stepDef.key}
+                className="py-1.5 px-2 text-center"
+                style={isCurrent ? { backgroundColor: accent.border + '18', boxShadow: `inset 0 0 0 1px ${accent.border}40` } : stepData.done ? { backgroundColor: '#F0FDF4' } : {}}
+              >
                 <StepCell
                   stepData={stepData}
+                  isCurrent={isCurrent}
+                  accent={accent}
                   onToggle={() => onToggleStep(task, stepDef.key)}
                   onDateChange={(date) => onDateChange(task, stepDef.key, date)}
                 />
@@ -412,7 +476,11 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
           const allSubsDone = subsDone === subs.length;
 
           return (
-            <td key={stepDef.key} className="py-1.5 px-2 text-center">
+            <td
+              key={stepDef.key}
+              className="py-1.5 px-2 text-center"
+              style={isCurrent ? { backgroundColor: accent.border + '18', boxShadow: `inset 0 0 0 1px ${accent.border}40` } : allSubsDone ? { backgroundColor: '#F0FDF4' } : {}}
+            >
               <Popover>
                 <PopoverTrigger asChild>
                   <button className={`w-8 h-8 mx-auto rounded-md border-2 flex items-center justify-center text-[12px] font-bold transition-all ${
@@ -655,7 +723,7 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
 // STEP CELL
 // =====================================================
 
-function StepCell({ stepData, onToggle, onDateChange }) {
+function StepCell({ stepData, isCurrent, accent, onToggle, onDateChange }) {
   const [editingDate, setEditingDate] = useState(false);
 
   const formatDate = (dateStr) => {
@@ -668,9 +736,19 @@ function StepCell({ stepData, onToggle, onDateChange }) {
     return (
       <button
         onClick={onToggle}
-        className="w-8 h-8 mx-auto rounded-md border-2 border-dashed border-gray-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all flex items-center justify-center group"
+        className={`w-8 h-8 mx-auto rounded-full border-2 flex items-center justify-center group transition-all ${
+          isCurrent
+            ? 'border-solid animate-pulse'
+            : 'border-dashed border-gray-200 hover:border-emerald-400 hover:bg-emerald-50'
+        }`}
+        style={isCurrent ? { borderColor: accent?.border || '#94A3B8', backgroundColor: (accent?.border || '#94A3B8') + '15' } : {}}
       >
-        <Check className="w-3.5 h-3.5 text-gray-300 group-hover:text-emerald-400 transition-colors" />
+        <div
+          className={`w-3 h-3 rounded-full transition-colors ${
+            isCurrent ? 'opacity-60' : 'bg-gray-200 group-hover:bg-emerald-300'
+          }`}
+          style={isCurrent ? { backgroundColor: accent?.border || '#94A3B8' } : {}}
+        />
       </button>
     );
   }
@@ -679,7 +757,7 @@ function StepCell({ stepData, onToggle, onDateChange }) {
     <Popover open={editingDate} onOpenChange={setEditingDate}>
       <PopoverTrigger asChild>
         <button className="w-full mx-auto flex flex-col items-center gap-0 group">
-          <div className="w-8 h-8 rounded-md bg-emerald-500 flex items-center justify-center shadow-sm group-hover:bg-emerald-600 transition-colors">
+          <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm group-hover:bg-emerald-600 transition-colors">
             <Check className="w-4 h-4 text-white" />
           </div>
           {stepData.date && (
