@@ -15,16 +15,16 @@ import {
 import { getVatEnergyTier, getPayrollTier } from '@/engines/taskCascadeEngine';
 
 const SERVICE_ACCENT_COLORS = {
-  'vat': { border: '#3B82F6', bg: '#EFF6FF', headerBg: '#DBEAFE' },
-  'vat_874': { border: '#1D4ED8', bg: '#EFF6FF', headerBg: '#C7D2FE' },
-  'tax_advances': { border: '#F97316', bg: '#FFF7ED', headerBg: '#FED7AA' },
-  'income_collection': { border: '#22C55E', bg: '#F0FDF4', headerBg: '#BBF7D0' },
-  'expense_collection': { border: '#EC4899', bg: '#FDF2F8', headerBg: '#FBCFE8' },
-  'reconciliation': { border: '#F59E0B', bg: '#FEF3C7', headerBg: '#FDE68A' },
-  'pnl_reports': { border: '#8B5CF6', bg: '#F5F3FF', headerBg: '#DDD6FE' },
-  'payroll': { border: '#06B6D4', bg: '#ECFEFF', headerBg: '#A5F3FC' },
-  'social_security': { border: '#F43F5E', bg: '#FFF1F2', headerBg: '#FECDD3' },
-  'deductions': { border: '#EAB308', bg: '#FEF9C3', headerBg: '#FEF08A' },
+  'vat': { border: '#3B82F6', bg: '#F8FAFF', headerBg: '#EBF0FF', headerText: '#1E3A5F' },
+  'vat_874': { border: '#1D4ED8', bg: '#F8FAFF', headerBg: '#E0E7FF', headerText: '#1E3A5F' },
+  'tax_advances': { border: '#F97316', bg: '#FFFBF5', headerBg: '#FFF0DB', headerText: '#7C2D12' },
+  'income_collection': { border: '#22C55E', bg: '#F8FFF8', headerBg: '#E6F9E6', headerText: '#14532D' },
+  'expense_collection': { border: '#EC4899', bg: '#FFFAFC', headerBg: '#FFE8F0', headerText: '#831843' },
+  'reconciliation': { border: '#F59E0B', bg: '#FFFDF5', headerBg: '#FFF3D0', headerText: '#78350F' },
+  'pnl_reports': { border: '#8B5CF6', bg: '#FBFAFF', headerBg: '#EDE9FE', headerText: '#3B0764' },
+  'payroll': { border: '#06B6D4', bg: '#F8FFFE', headerBg: '#E0F7FA', headerText: '#164E63' },
+  'social_security': { border: '#F43F5E', bg: '#FFFAFB', headerBg: '#FFE4E8', headerText: '#881337' },
+  'deductions': { border: '#EAB308', bg: '#FFFEF5', headerBg: '#FEF3C7', headerText: '#713F12' },
 };
 
 function getServiceAccent(serviceKey) {
@@ -179,8 +179,8 @@ export default function GroupedServiceTable({
         style={{ backgroundColor: accent.headerBg, borderLeftWidth: '4px', borderLeftColor: accent.border, borderBottomColor: accent.border + '40' }}
       >
         <div className="flex items-center gap-3">
-          <h2 className="font-bold text-gray-800">{service.label}</h2>
-          <span className="text-xs text-gray-500">{completedCount}/{relevantRows.length} הושלמו</span>
+          <h2 className="font-extrabold text-base" style={{ color: accent.headerText || '#1F2937' }}>{service.label}</h2>
+          <span className="text-xs font-bold" style={{ color: accent.headerText || '#374151' }}>{completedCount}/{relevantRows.length} הושלמו</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
@@ -217,7 +217,7 @@ export default function GroupedServiceTable({
                     className="w-4 h-4 rounded border-violet-300 text-violet-600 accent-violet-600" />
                 </th>
               )}
-              <th className="text-right py-2 px-4 font-semibold text-gray-600 text-xs bg-gray-50 sticky right-0 z-30 min-w-[140px]">
+              <th className="text-right py-2.5 px-4 font-bold text-gray-800 text-[13px] bg-gray-50 sticky right-0 z-30 min-w-[140px]">
                 לקוח
               </th>
               {service.steps.map(step => {
@@ -230,21 +230,21 @@ export default function GroupedServiceTable({
                 return (
                   <th
                     key={step.key}
-                    className="text-center py-2 px-2 font-medium text-[11px] min-w-[80px]"
+                    className="text-center py-2.5 px-2 font-bold text-[12px] min-w-[80px]"
                     style={{
-                      backgroundColor: stepAllDone ? '#D1FAE5' : stepSomeDone ? accent.headerBg : '#F9FAFB',
-                      color: stepAllDone ? '#065F46' : stepSomeDone ? accent.border : '#6B7280',
+                      backgroundColor: stepAllDone ? '#DCFCE7' : stepSomeDone ? accent.headerBg : '#F9FAFB',
+                      color: stepAllDone ? '#14532D' : stepSomeDone ? (accent.headerText || '#1F2937') : '#374151',
                       borderBottom: `2px solid ${stepAllDone ? '#10B981' : stepSomeDone ? accent.border : '#E5E7EB'}`,
                     }}
                   >
                     {step.label}
-                    <div className="text-[9px] font-normal mt-0.5" style={{ color: stepAllDone ? '#059669' : '#9CA3AF' }}>
+                    <div className="text-[10px] font-semibold mt-0.5" style={{ color: stepAllDone ? '#166534' : '#6B7280' }}>
                       {stepDoneCount}/{clientRows.length}
                     </div>
                   </th>
                 );
               })}
-              <th className="text-center py-2 px-3 font-medium text-gray-500 text-[11px] bg-gray-50 min-w-[80px]">
+              <th className="text-center py-2.5 px-3 font-bold text-gray-800 text-[13px] bg-gray-50 min-w-[80px]">
                 סטטוס
               </th>
             </tr>
@@ -268,8 +268,8 @@ export default function GroupedServiceTable({
                           className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isCollapsed ? 'rotate-[-90deg]' : ''}`}
                         />
                         <div className={`w-2.5 h-2.5 rounded-full ${config.bg} border ${config.border} shrink-0`} />
-                        <span className="font-semibold text-gray-700 text-xs">{getStatusLabel(status, config, service.taskType)}</span>
-                        <Badge variant="secondary" className="text-[12px] px-1.5 py-0 bg-gray-100 text-gray-500 font-normal">
+                        <span className="font-bold text-gray-900 text-sm">{getStatusLabel(status, config, service.taskType)}</span>
+                        <Badge variant="secondary" className="text-[12px] px-1.5 py-0 bg-gray-100 text-gray-700 font-semibold">
                           {rows.length}
                         </Badge>
                         {/* Mini progress for this group */}
@@ -401,7 +401,7 @@ function ClientRow({ clientName, task, client, service, accent, isEven, onToggle
             </button>
             <div className="min-w-0">
               <div className="flex items-center gap-1">
-                <span className="truncate block max-w-[160px] font-medium text-gray-800 text-xs">{clientName}</span>
+                <span className="truncate block max-w-[160px] font-bold text-gray-900 text-[13px]">{clientName}</span>
                 {isQuickWin && task.status !== 'production_completed' && (
                   <span className="text-emerald-500 shrink-0" title="Quick Win">
                     <Zap className="w-3.5 h-3.5" />

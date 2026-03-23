@@ -313,7 +313,18 @@ export default function TaxReportsDashboardPage() {
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
     const currentSteps = getTaskProcessSteps(task);
-    const updatedSteps = toggleStep(currentSteps, stepKey);
+    let updatedSteps = toggleStep(currentSteps, stepKey);
+
+    // autoSufficient: toggling zero_income/zero_expenses ON also marks sufficient_for_reporting
+    const svc = getServiceForTask(task);
+    const stepDef = svc?.steps?.find(s => s.key === stepKey);
+    if (stepDef?.autoSufficient && updatedSteps[stepKey]?.done) {
+      updatedSteps = {
+        ...updatedSteps,
+        sufficient_for_reporting: { ...updatedSteps.sufficient_for_reporting, done: true, date: new Date().toISOString() },
+      };
+    }
+
     try {
       const updatedTask = { ...task, process_steps: updatedSteps };
       const allDone = areAllStepsDone(updatedTask);
@@ -328,7 +339,8 @@ export default function TaxReportsDashboardPage() {
       if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
 
       // If a collection task just became sufficient or completed, sync to dependents
-      if (allDone || stepKey === 'sufficient_for_reporting') {
+      const isAutoSufficient = stepDef?.autoSufficient && updatedSteps[stepKey]?.done;
+      if (allDone || stepKey === 'sufficient_for_reporting' || isAutoSufficient) {
         const isSufficient = allDone || updatedSteps?.sufficient_for_reporting?.done;
         await syncCollectionToDependents({ ...task, process_steps: updatedSteps }, isSufficient);
       }
@@ -802,18 +814,18 @@ export default function TaxReportsDashboardPage() {
         ) : viewMode === 'timeline' ? (
           <GanttView tasks={filteredTasks} clients={clients} currentMonth={addMonths(selectedMonth, 1)} onEditTask={setEditingTask} />
         ) : viewMode === 'table' ? (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 xl:grid-cols-3 gap-4 items-start">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
               const isCollapsed = collapsedServices.has(serviceKey);
               return (
                 <div key={serviceKey} className="border border-[#E0E0E0] rounded-xl overflow-hidden">
                   <button
                     onClick={() => toggleServiceCollapse(serviceKey)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors"
                   >
                     <div className="flex items-center gap-2">
                       <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
-                      <span className="font-bold text-[#263238]">{service.label}</span>
+                      <span className="font-bold text-[#263238] text-sm">{service.label}</span>
                       <span className="text-xs text-[#455A64]">{clientRows.length} לקוחות</span>
                     </div>
                   </button>
