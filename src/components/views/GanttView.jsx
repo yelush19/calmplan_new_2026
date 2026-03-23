@@ -574,6 +574,16 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                 const clientObj = clientByName[task.client_name];
                 const showBalanceGlow = isClientBalanceUnhealthy(clientObj);
 
+                // Progress: how much of the capsule's timespan has elapsed
+                const todayDay = differenceInDays(new Date(), monthStart);
+                const progressPct = isCompleted
+                  ? 100
+                  : todayDay <= pos.startDay
+                    ? 0
+                    : todayDay >= pos.startDay + pos.durationDays
+                      ? 100
+                      : Math.round(((todayDay - pos.startDay) / pos.durationDays) * 100);
+
                 return (
                   <Tooltip key={task.id}>
                     <TooltipTrigger asChild>
@@ -672,6 +682,31 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                             </span>
                           )}
                         </div>
+
+                        {/* Date progress fill — shows elapsed time within capsule */}
+                        {progressPct > 0 && progressPct < 100 && !isCompleted && (
+                          <>
+                            {/* Elapsed portion: brighter */}
+                            <div className="absolute inset-0 pointer-events-none" style={{
+                              borderRadius: '20px',
+                              clipPath: `inset(0 ${100 - progressPct}% 0 0)`,
+                              background: 'rgba(255,255,255,0.08)',
+                            }} />
+                            {/* Progress edge marker */}
+                            <div className="absolute top-[2px] bottom-[2px] pointer-events-none" style={{
+                              left: `${progressPct}%`,
+                              width: '2px',
+                              background: 'rgba(255,255,255,0.45)',
+                              borderRadius: '1px',
+                            }} />
+                            {/* Remaining portion: slightly dimmed */}
+                            <div className="absolute inset-0 pointer-events-none" style={{
+                              borderRadius: '20px',
+                              clipPath: `inset(0 0 0 ${progressPct}%)`,
+                              background: 'rgba(0,0,0,0.12)',
+                            }} />
+                          </>
+                        )}
 
                         {/* Subtle glass shine overlay */}
                         <div className="absolute inset-0 pointer-events-none" style={{
