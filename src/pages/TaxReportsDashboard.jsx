@@ -43,14 +43,17 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 import { AnimatePresence } from 'framer-motion';
 
-// P2 Tax dashboard: ONLY tax services (VAT + tax advances)
-// Bookkeeping, reconciliation, annual reports, consulting moved to dedicated pages
-const taxDashboardServices = { ...TAX_SERVICES };
+// P2 Tax dashboard: tax services + income/expense collection (prerequisites)
+const taxDashboardServices = {
+  income_collection: ADDITIONAL_SERVICES.income_collection,
+  expense_collection: ADDITIONAL_SERVICES.expense_collection,
+  ...TAX_SERVICES,
+};
 
 const allTaxCategories = Object.values(taxDashboardServices).flatMap(s => s.taskCategories);
 
 // Core services get their own table (they have meaningful steps)
-const CORE_SERVICES = ['vat', 'tax_advances'];
+const CORE_SERVICES = ['income_collection', 'expense_collection', 'vat', 'tax_advances'];
 
 export default function TaxReportsDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -296,6 +299,10 @@ export default function TaxReportsDashboardPage() {
         }
       }
 
+      // Notify other dashboards
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+        detail: { collection: 'tasks', type: 'step-toggle', source: 'tax-reports' }
+      }));
       // Release guard after DB write completes
       setTimeout(() => { localUpdateRef.current = false; }, 1000);
     } catch (error) {
@@ -330,6 +337,10 @@ export default function TaxReportsDashboardPage() {
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       await Task.update(task.id, updatePayload);
       syncNotesWithTaskStatus(task.id, newStatus);
+      // Notify other dashboards of the change
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+        detail: { collection: 'tasks', type: 'status-change', source: 'tax-reports' }
+      }));
       setTimeout(() => { localUpdateRef.current = false; }, 1000);
     } catch (error) {
       console.error("Error updating status:", error);
@@ -813,12 +824,15 @@ function getTaxIds(client, serviceKey) {
   // Always show entity number
   if (client.entity_number) ids.push({ label: 'ח"פ', value: client.entity_number });
 
+  // Always show tax advances ID if client has one (useful across all tax services)
+  if (annual.tax_advances_id) ids.push({ label: 'מזהה מקדמות', value: annual.tax_advances_id });
+
   switch (serviceKey) {
     case 'vat':
+    case 'vat_874':
       if (ti.vat_file_number) ids.push({ label: 'תיק מע"מ', value: ti.vat_file_number });
       break;
     case 'tax_advances':
-      if (annual.tax_advances_id) ids.push({ label: 'פנקס מקדמות', value: annual.tax_advances_id });
       if (annual.tax_advances_percentage) ids.push({ label: '%', value: annual.tax_advances_percentage });
       break;
     case 'deductions':

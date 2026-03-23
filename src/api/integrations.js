@@ -13,18 +13,34 @@ let bucketChecked = false;
 async function ensureBucket() {
   if (bucketChecked || !isSupabaseConfigured) return;
   try {
-    const { data: buckets } = await supabase.storage.listBuckets();
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    if (listError) {
+      // RLS may block listBuckets — try uploading directly and let it fail naturally
+      console.warn('Cannot list buckets (RLS?):', listError.message);
+      bucketChecked = true;
+      return;
+    }
     const exists = buckets?.some(b => b.name === BUCKET_NAME);
     if (!exists) {
-      await supabase.storage.createBucket(BUCKET_NAME, {
+      const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
         public: false,
         fileSizeLimit: 52428800, // 50MB
       });
+      if (createError) {
+        console.error('Bucket creation failed:', createError.message);
+        throw new Error(
+          `לא ניתן ליצור bucket "${BUCKET_NAME}" ב-Supabase. ` +
+          `צור אותו ידנית בלוח הבקרה של Supabase: Storage → New Bucket → "${BUCKET_NAME}"`
+        );
+      }
     }
     bucketChecked = true;
   } catch (err) {
-    console.warn('Bucket check failed (may need manual creation):', err.message);
-    bucketChecked = true; // Don't retry on every upload
+    // Don't mark as checked so next upload retries
+    if (err.message?.includes('Bucket')) throw err;
+    console.warn('Bucket check failed:', err.message);
+    // Still allow upload attempt — the upload itself will give the real error
+    bucketChecked = true;
   }
 }
 
@@ -50,7 +66,15 @@ async function uploadFile({ file }) {
       upsert: false,
     });
 
-  if (error) throw new Error(`שגיאה בהעלאת קובץ: ${error.message}`);
+  if (error) {
+    if (error.message?.toLowerCase().includes('bucket') || error.statusCode === 404) {
+      bucketChecked = false;
+      throw new Error(
+        `Bucket "${BUCKET_NAME}" לא נמצא. צור אותו ב-Supabase Dashboard → Storage → New Bucket → "${BUCKET_NAME}" (Private)`
+      );
+    }
+    throw new Error(`שגיאה בהעלאת קובץ: ${error.message}`);
+  }
 
   // Get a signed URL (valid for 1 year)
   const { data: urlData, error: urlError } = await supabase.storage
@@ -130,7 +154,15 @@ async function uploadClientFile({ file, clientId, documentType = 'other', onProg
     if (progressInterval) clearInterval(progressInterval);
     if (onProgress) onProgress(90);
 
-    if (error) throw new Error(`שגיאה בהעלאת קובץ: ${error.message}`);
+    if (error) {
+      if (error.message?.toLowerCase().includes('bucket') || error.statusCode === 404) {
+        bucketChecked = false;
+        throw new Error(
+          `Bucket "${BUCKET_NAME}" לא נמצא. צור אותו ב-Supabase Dashboard → Storage → New Bucket → "${BUCKET_NAME}" (Private)`
+        );
+      }
+      throw new Error(`שגיאה בהעלאת קובץ: ${error.message}`);
+    }
 
     // Get a signed URL (valid for 1 year)
     const { data: urlData, error: urlError } = await supabase.storage
