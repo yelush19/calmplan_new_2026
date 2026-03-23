@@ -221,6 +221,7 @@ export default function BalanceSheetsPage() {
   const [isGeneratingFromTemplate, setIsGeneratingFromTemplate] = useState(false);
   const [templateGenResult, setTemplateGenResult] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showWorkbookPicker, setShowWorkbookPicker] = useState(false);
   // Task selection state for template generation dialog
   const [selectedTemplateTasks, setSelectedTemplateTasks] = useState({});
 
@@ -482,6 +483,10 @@ export default function BalanceSheetsPage() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setShowWorkbookPicker(true)} className="flex items-center gap-1 bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100">
+            <BookOpen className="w-4 h-4" />
+            חוברת הכנה למאזן
+          </Button>
           <Button variant="outline" onClick={() => setShowTemplateEditor(true)} className="flex items-center gap-1">
             <Settings2 className="w-4 h-4" />
             תבניות מאזן
@@ -780,6 +785,43 @@ export default function BalanceSheetsPage() {
             onSave={(updated) => { handleSaveTemplates(updated); setShowTemplateEditor(false); }}
             onCancel={() => setShowTemplateEditor(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Workbook Picker Dialog */}
+      <Dialog open={showWorkbookPicker} onOpenChange={setShowWorkbookPicker}>
+        <DialogContent className="sm:max-w-[500px] max-h-[70vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>חוברת הכנה למאזן</DialogTitle>
+            <DialogDescription>בחרי לקוח כדי לפתוח את חוברת ההכנה שלו</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 mt-4">
+            {balanceSheets.length === 0 ? (
+              <p className="text-center text-gray-500 py-6">אין מאזנים — יש ליצור מאזנים ללקוחות קודם</p>
+            ) : (
+              balanceSheets.map(balance => (
+                <button
+                  key={balance.id}
+                  className="w-full flex items-center justify-between p-3 rounded-lg border hover:bg-emerald-50 hover:border-emerald-300 transition-colors text-start"
+                  onClick={() => {
+                    setShowWorkbookPicker(false);
+                    navigate(`/BalanceSheetWorkbook?balanceSheetId=${balance.id}&clientId=${balance.client_id}&year=${balance.tax_year}`);
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <BookOpen className="w-5 h-5 text-emerald-600" />
+                    <div>
+                      <p className="font-medium text-gray-800">{balance.client_name}</p>
+                      <p className="text-xs text-gray-500">שנת מס {balance.tax_year}</p>
+                    </div>
+                  </div>
+                  <Badge className={getStageConfig(balance.current_stage || 'closing_operations').color}>
+                    {getStageConfig(balance.current_stage || 'closing_operations').label}
+                  </Badge>
+                </button>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
