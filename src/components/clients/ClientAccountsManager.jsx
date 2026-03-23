@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { ACCOUNT_STATUSES, FREQUENCY_LABELS, FREQUENCY_MONTHS } from '@/config/reconciliationStatuses';
 
 const accountTypeIcons = {
     bank: <Banknote className="w-5 h-5" />,
@@ -26,12 +27,7 @@ const accountTypeLabels = {
     clearing: 'סליקה'
 };
 
-const accountStatusConfig = {
-    active: { label: 'פעיל', badge: 'bg-green-100 text-green-800 border-green-200' },
-    inactive: { label: 'לא פעיל', badge: 'bg-gray-100 text-gray-600 border-gray-200' },
-    in_review: { label: 'בבדיקה', badge: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-    problem: { label: 'בעיה', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
-};
+const accountStatusConfig = ACCOUNT_STATUSES;
 
 const loadingSystemLabels = {
     bizibox: 'BIZIBOX',
@@ -56,7 +52,7 @@ const AccountForm = ({ account, onSave, onCancel, clientId }) => {
         notes: account?.notes || ''
     });
 
-    const frequencyMonths = { monthly: 1, bimonthly: 2, quarterly: 3, semi_annual: 6, yearly: 12 };
+    const frequencyMonths = FREQUENCY_MONTHS;
 
     // Auto-calculate next_reconciliation_due when last_date or frequency changes
     const autoCalcNext = (data) => {
@@ -332,7 +328,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                                 <div className="text-sm text-gray-700 text-right space-y-1">
                                     <p>
                                         תדירות: <span className="font-medium">{
-                                          { monthly: 'חודשי', bimonthly: 'דו-חודשי', quarterly: 'רבעוני', semi_annual: 'חצי שנתי', yearly: 'שנתי' }[account.reconciliation_frequency] || 'חודשי'
+                                          FREQUENCY_LABELS[account.reconciliation_frequency] || 'חודשי'
                                         }</span>
                                     </p>
                                     <p>
