@@ -313,7 +313,18 @@ export default function TaxReportsDashboardPage() {
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
     const currentSteps = getTaskProcessSteps(task);
-    const updatedSteps = toggleStep(currentSteps, stepKey);
+    let updatedSteps = toggleStep(currentSteps, stepKey);
+
+    // autoSufficient: toggling zero_income/zero_expenses ON also marks sufficient_for_reporting
+    const svc = getServiceForTask(task);
+    const stepDef = svc?.steps?.find(s => s.key === stepKey);
+    if (stepDef?.autoSufficient && updatedSteps[stepKey]?.done) {
+      updatedSteps = {
+        ...updatedSteps,
+        sufficient_for_reporting: { ...updatedSteps.sufficient_for_reporting, done: true, date: new Date().toISOString() },
+      };
+    }
+
     try {
       const updatedTask = { ...task, process_steps: updatedSteps };
       const allDone = areAllStepsDone(updatedTask);
@@ -328,7 +339,8 @@ export default function TaxReportsDashboardPage() {
       if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
 
       // If a collection task just became sufficient or completed, sync to dependents
-      if (allDone || stepKey === 'sufficient_for_reporting') {
+      const isAutoSufficient = stepDef?.autoSufficient && updatedSteps[stepKey]?.done;
+      if (allDone || stepKey === 'sufficient_for_reporting' || isAutoSufficient) {
         const isSufficient = allDone || updatedSteps?.sufficient_for_reporting?.done;
         await syncCollectionToDependents({ ...task, process_steps: updatedSteps }, isSufficient);
       }

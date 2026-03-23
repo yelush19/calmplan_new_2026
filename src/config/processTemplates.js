@@ -317,6 +317,7 @@ export const ADDITIONAL_SERVICES = {
     subProcessDefaults: ['חשבונית ירוקה', 'קופה רושמת'],
     steps: [
       { key: 'receive_data',            label: 'קבלת חומרים',      icon: 'download' },
+      { key: 'zero_income',             label: 'הכנסות 0',         icon: 'minus-circle', autoSufficient: true },
       { key: 'income_input',            label: 'הזנת הכנסות',      icon: 'file-text', allowMultiple: true },
       { key: 'sufficient_for_reporting', label: 'מספיק לדיווח',    icon: 'unlock', unlocksDependents: true },
       { key: 'check_entries',           label: 'בדיקת רשומות',     icon: 'check-circle' },
@@ -335,6 +336,7 @@ export const ADDITIONAL_SERVICES = {
     subProcessDefaults: ['חשבוניות ספקים', 'הוצאות עובדים'],
     steps: [
       { key: 'receive_data',            label: 'קבלת חומרים',      icon: 'download' },
+      { key: 'zero_expenses',           label: 'הוצאות 0',         icon: 'minus-circle', autoSufficient: true },
       { key: 'expense_input',           label: 'הזנת הוצאות',      icon: 'file-text', allowMultiple: true },
       { key: 'sufficient_for_reporting', label: 'מספיק לדיווח',    icon: 'unlock', unlocksDependents: true },
       { key: 'check_entries',           label: 'בדיקת רשומות',     icon: 'check-circle' },
