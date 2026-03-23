@@ -851,7 +851,7 @@ export default function TaxReportsDashboardPage() {
           </div>
         ) : viewMode === 'radial' ? (
           <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
-            <AyoaRadialView tasks={filteredTasks} centerLabel="דיווחי מס" centerSub="P2" />
+            <AyoaRadialView tasks={filteredTasks} centerLabel="דיווחי מס" centerSub="P2" onEditTask={setEditingTask} />
           </div>
         ) : null
       ) : (

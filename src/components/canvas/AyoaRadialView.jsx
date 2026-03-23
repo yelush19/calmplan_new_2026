@@ -107,7 +107,7 @@ function describeWedge(cx, cy, innerR, outerR, startAngle, endAngle) {
   ].join(' ');
 }
 
-export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', centerSub = '' }) {
+export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', centerSub = '', onEditTask }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const [focusedNode, setFocusedNode] = useState(null);
@@ -292,6 +292,13 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
         const status = task.status || 'not_started';
         const isCompleted = status === 'production_completed';
 
+        // Calculate step progress for arc indicator
+        const steps = task.process_steps || {};
+        const stepKeys = Object.keys(steps);
+        const totalSteps = stepKeys.length || 1;
+        const doneSteps = stepKeys.filter(k => steps[k]?.done).length;
+        const stepProgress = totalSteps > 0 ? doneSteps / totalSteps : 0;
+
         // Distribute within category angular segment
         const taskAngle = taskCount > 1
           ? startAngle + gap + ((endAngle - startAngle - gap * 2) * ti) / (taskCount - 1)
@@ -321,6 +328,7 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
           statusGlow: STATUS_GLOW[status] || '#546E7A',
           sticker: design?.stickerMap?.[task.id] || null,
           catIndex: ci,
+          stepProgress,
         });
       });
     });
@@ -340,12 +348,16 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
     });
   }, [nodes, dragOffsets]);
 
-  // Single click: toggle focus/navigate only (no toolbar)
+  // Single click: open editor on task nodes, toggle focus on categories
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
     if (dragRef.current.active) return;
+    if (onEditTask) {
+      const task = tasks.find(t => t.id === nodeId);
+      if (task) { onEditTask(task); return; }
+    }
     setFocusedNode(prev => prev === nodeId ? null : nodeId);
-  }, []);
+  }, [onEditTask, tasks]);
 
   // Right-click (context menu) or double-click: open FloatingToolbar
   const handleNodeContextMenu = useCallback((e, nodeId) => {
@@ -601,6 +613,20 @@ export default function AyoaRadialView({ tasks = [], centerLabel = 'מרכז', c
                 transform: isFocused ? 'scale(1.08)' : 'scale(1)',
                 transformOrigin: `${node.x}px ${node.y}px`,
               }}>
+              {/* Progress arc — shows step completion around the node */}
+              {node.stepProgress > 0 && (() => {
+                const pr = node.r + 5;
+                const circumference = 2 * Math.PI * pr;
+                const dashLen = circumference * node.stepProgress;
+                return (
+                  <circle cx={node.x} cy={node.y} r={pr}
+                    fill="none" stroke={node.stepProgress >= 1 ? '#22C55E' : node.color} strokeWidth={2.5}
+                    strokeDasharray={`${dashLen} ${circumference - dashLen}`}
+                    strokeLinecap="round"
+                    transform={`rotate(-90 ${node.x} ${node.y})`}
+                    opacity={0.8} />
+                );
+              })()}
               <circle cx={node.x} cy={node.y} r={node.r + 4}
                 fill="none" stroke={node.statusGlow || '#546E7A'} strokeWidth={1.2} opacity={0.3} />
               {isSelected && (
