@@ -947,7 +947,7 @@ function GlassRingDefs() {
 // §7  DraggableRing — glass/diamond style with shimmer
 // ═══════════════════════════════════════════════════════════════════
 
-function DraggableRing({ ring, canvasRef, onDragEnd, onResize }) {
+function DraggableRing({ ring, canvasRef, onDragEnd, onResize, onRingClick }) {
   const { dragging, pos, onPointerDown } = usePointerDrag(onDragEnd);
   const { resizing, liveRadius, onPointerDown: onResizeDown } = useResizeDrag(onResize);
   const cx = dragging ? pos.x : ring.cx;
@@ -955,8 +955,20 @@ function DraggableRing({ ring, canvasRef, onDragEnd, onResize }) {
   const r = resizing ? clampRadius(liveRadius, 40, 300) : ring.r;
   const color = RING_COLOR[ring.id];
   const circumference = 2 * Math.PI * r;
+  const dragStartRef = useRef(null);
 
-  const startDrag = (e) => onPointerDown(e, cx, cy, canvasRef.current);
+  const startDrag = (e) => {
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    onPointerDown(e, cx, cy, canvasRef.current);
+  };
+  const handleClick = (e) => {
+    if (dragStartRef.current) {
+      const dx = Math.abs(e.clientX - dragStartRef.current.x);
+      const dy = Math.abs(e.clientY - dragStartRef.current.y);
+      if (dx > 5 || dy > 5) return; // was a drag, not a click
+    }
+    onRingClick?.(ring.id);
+  };
   const startResize = (e) => onResizeDown(e, ring.cx, ring.cy, ring.r, canvasRef.current);
 
   // Resize handle position: right side of ring (3 o'clock)
@@ -965,10 +977,10 @@ function DraggableRing({ ring, canvasRef, onDragEnd, onResize }) {
 
   return (
     <g>
-      {/* Layer 0: invisible wide hit-area for easier grabbing */}
+      {/* Layer 0: invisible wide hit-area for easier grabbing + click to open panel */}
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="transparent" strokeWidth={18}
-        style={{ cursor: dragging ? 'grabbing' : 'grab', pointerEvents: 'stroke' }}
-        onPointerDown={startDrag} />
+        style={{ cursor: dragging ? 'grabbing' : 'pointer', pointerEvents: 'stroke' }}
+        onPointerDown={startDrag} onClick={handleClick} />
       {/* Layer 1: soft glow */}
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={6} opacity={0.15} filter="url(#cm-glow)" style={{ pointerEvents: 'none' }} />
       {/* Layer 2: glass stroke — white core + coloured edge */}
@@ -1158,7 +1170,8 @@ function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChan
           <GlassRingDefs />
           {ringEntries.map(ring => (
             <DraggableRing key={ring.id} ring={ring} canvasRef={canvasRef}
-              onDragEnd={handleRingDragEnd(ring.id)} onResize={handleRingResize(ring.id)} />
+              onDragEnd={handleRingDragEnd(ring.id)} onResize={handleRingResize(ring.id)}
+              onRingClick={setRingPanel} />
           ))}
         </svg>
 
@@ -1290,6 +1303,9 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
     } catch { return null; }
   }, [task.reporting_month, task.report_month]);
 
+  // Detect zero income/expenses flag from process_steps
+  const isZeroReport = task.process_steps?.zero_income?.done || task.process_steps?.zero_expenses?.done;
+
   const handlePointerDown = (e) => {
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     onPointerDown(e, cx, cy, canvasRef.current);
@@ -1320,9 +1336,16 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
       }}
       onPointerDown={handlePointerDown}
     >
+      {/* Zero report badge */}
+      {isZeroReport && (
+        <span className="absolute -top-1 -right-1 z-20 flex items-center justify-center rounded-full text-[10px] font-bold"
+          style={{ width: 22, height: 22, backgroundColor: '#94A3B8', color: '#FFF', border: '2px solid #FFF' }}>
+          0
+        </span>
+      )}
       <div onClick={handleClick}
         className="w-full h-full rounded-full flex flex-col items-center justify-center text-center transition-shadow hover:shadow-md p-2 select-none"
-        style={{ backgroundColor: palette.fill, border: `2px solid ${palette.border}` }}>
+        style={{ backgroundColor: isZeroReport ? '#F1F5F9' : palette.fill, border: `2px solid ${isZeroReport ? '#94A3B8' : palette.border}` }}>
         <span className="font-bold leading-tight line-clamp-2" style={{ fontSize: titlePx, color: '#000', maxWidth: textMaxW }}>
           {task.title}
         </span>
