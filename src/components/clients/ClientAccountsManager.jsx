@@ -56,13 +56,35 @@ const AccountForm = ({ account, onSave, onCancel, clientId }) => {
         notes: account?.notes || ''
     });
 
+    const frequencyMonths = { monthly: 1, bimonthly: 2, quarterly: 3, semi_annual: 6, yearly: 12 };
+
     const handleInputChange = (e) => {
         const { id, value } = e.target;
-        setFormData(prev => ({ ...prev, [id]: value }));
+        setFormData(prev => {
+            const updated = { ...prev, [id]: value };
+            // Auto-calculate next reconciliation date when last date changes
+            if (id === 'last_reconciliation_date' && value) {
+                const months = frequencyMonths[updated.reconciliation_frequency] || 1;
+                const d = new Date(value);
+                d.setMonth(d.getMonth() + months);
+                updated.next_reconciliation_due = d.toISOString().split('T')[0];
+            }
+            return updated;
+        });
     };
 
     const handleSelectChange = (id, value) => {
-        setFormData(prev => ({ ...prev, [id]: value }));
+        setFormData(prev => {
+            const updated = { ...prev, [id]: value };
+            // Recalculate next date when frequency changes and last date exists
+            if (id === 'reconciliation_frequency' && updated.last_reconciliation_date) {
+                const months = frequencyMonths[value] || 1;
+                const d = new Date(updated.last_reconciliation_date);
+                d.setMonth(d.getMonth() + months);
+                updated.next_reconciliation_due = d.toISOString().split('T')[0];
+            }
+            return updated;
+        });
     };
 
     const handleSubmit = (e) => {
@@ -295,11 +317,11 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                                         יעד הבא: {account.next_reconciliation_due ? new Date(account.next_reconciliation_due).toLocaleDateString('he-IL') : 'לא הוגדר'}
                                     </p>
                                     <div className="flex gap-2 mt-1">
-                                        <Link to="/reconciliation" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                        <Link to="/Reconciliations" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
                                             <ExternalLink className="w-3 h-3" />
                                             התאמת חשבונות
                                         </Link>
-                                        <Link to="/settings" className="text-xs text-gray-500 hover:underline flex items-center gap-1">
+                                        <Link to="/Settings" className="text-xs text-gray-500 hover:underline flex items-center gap-1">
                                             <Settings className="w-3 h-3" />
                                             הגדרות
                                         </Link>
