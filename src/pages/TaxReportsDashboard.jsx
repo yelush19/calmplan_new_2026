@@ -249,9 +249,10 @@ export default function TaxReportsDashboardPage() {
     }
   }, [filingSprintActive, filingSprintTasks, filingSprintIdx]);
 
-  // Shared steps: when toggled in one service, auto-sync to sibling task
+  // Shared steps: when toggled in one service, auto-sync to sibling tasks for same client
   const SHARED_STEPS = {
-    income_input: ['מע"מ', 'work_vat_reporting', 'מקדמות מס', 'work_tax_advances'],
+    income_input:  ['מע"מ', 'work_vat_reporting', 'מקדמות מס', 'work_tax_advances', 'מע"מ 874', 'work_vat_874'],
+    expense_input: ['מע"מ', 'work_vat_reporting', 'מע"מ 874', 'work_vat_874'],
   };
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
