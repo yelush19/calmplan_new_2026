@@ -394,22 +394,31 @@ const EXECUTION_PERIODS_CONFIG_KEY = 'service_execution_periods';
 // Categories with digital/check variants have { digital, check } instead of { due_day }
 // Digital = payment via internet, Check = payment via bank slip (המחאה)
 export const DEFAULT_SERVICE_DUE_DATES = {
-  'מע"מ': { digital: 19, check: 15 },
-  'מע"מ 874': { due_day: 23 },
-  'מקדמות מס': { digital: 19, check: 15 },
+  // P1 — Payroll
   'שכר': { due_day: 9 },
+  'משלוח תלושים': { due_day: 9 },
+  'מס"ב עובדים': { due_day: 9 },
   'ביטוח לאומי': { due_day: 15 },
   'ניכויים': { digital: 19, check: 15 },
+  'מתפעל': { due_day: 5 },
+  'טמל + לקוח': { due_day: 5 },
+  'קליטה להנה"ח': { due_day: 12 },
   'מס"ב סוציאליות': { due_day: 12 },
-  'מס"ב עובדים': { due_day: 9 },
-  'מס"ב רשויות': { due_day: 15 },
-  'מס"ב ספקים': { due_day: 10 },
-  'תשלום רשויות': { due_day: 15 },
-  'משלוח תלושים': { due_day: 9 },
   'דיווח למתפעל': { due_day: 5 },
   'דיווח לטמל': { due_day: 5 },
   'מילואים': { due_day: 5 },
   'הנחיות מס"ב ממתפעל': { due_day: 1 },
+  // P2 — Bookkeeping & Tax Reporting
+  'מע"מ': { digital: 19, check: 15 },
+  'מע"מ 874': { due_day: 23 },
+  'מקדמות מס': { digital: 19, check: 15 },
+  'קליטת הכנסות': { due_day: 19 },
+  'קליטת הוצאות': { due_day: 19 },
+  'דוח רו"ה': { due_day: 19 },
+  'מס"ב ספקים': { due_day: 10 },
+  'מס"ב רשויות': { due_day: 15 },
+  'תשלום רשויות': { due_day: 15 },
+  'התאמות חשבונות': { due_day: 25 },
 };
 
 // Categories that vary by payment method (digital vs check/המחאה)
