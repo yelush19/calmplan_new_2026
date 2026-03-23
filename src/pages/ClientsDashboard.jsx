@@ -34,7 +34,7 @@ const COLUMN_GROUPS = [
     bgColor: 'bg-[#4682B4]/5',
     headerBg: 'bg-[#4682B4]',
     headerText: 'text-white',
-    drillDownPage: null,
+    drillDownPage: 'ClientsDashboard',
     icon: Calculator,
     columns: [
       { key: 'vat', label: 'מע"מ', categories: ['מע"מ', 'מע"מ 874', 'work_vat_reporting'], createCategory: 'מע"מ', createTitle: 'מע"מ', requiredServices: ['vat_reporting', 'bookkeeping', 'full_service'] },
