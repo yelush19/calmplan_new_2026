@@ -692,7 +692,7 @@ export default function ReconciliationsPage() {
   }, []);
 
   return (
-    <div className="space-y-6 p-4 md:p-6 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]" dir="rtl">
+    <div className="relative z-[1] space-y-6 p-4 md:p-6 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]" dir="rtl">
       {/* ── Header ──────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-3">
