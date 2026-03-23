@@ -128,6 +128,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
       due_time: task.due_time || '',
       estimated_duration: task.estimated_duration || '',
       scheduled_start: task.scheduled_start || '',
+      execution_date: task.execution_date || '',
       notes: task.notes || '',
       sub_tasks: task.sub_tasks || [],
       complexity: task.complexity || 'low',
@@ -376,7 +377,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <span className="text-[12px] text-[#455A64]">תאריך התחלה</span>
                 <Input
@@ -385,6 +386,20 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                   onChange={(e) => setEditData(prev => ({ ...prev, scheduled_start: e.target.value }))}
                   onBlur={(e) => { const f = fixShortYear(e.target.value); if (f !== e.target.value) setEditData(prev => ({ ...prev, scheduled_start: f })); }}
                   className="text-sm h-9"
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[12px] text-[#455A64] flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  תאריך ביצוע
+                </span>
+                <Input
+                  type="date"
+                  value={editData.execution_date}
+                  onChange={(e) => setEditData(prev => ({ ...prev, execution_date: e.target.value }))}
+                  onBlur={(e) => { const f = fixShortYear(e.target.value); if (f !== e.target.value) setEditData(prev => ({ ...prev, execution_date: f })); }}
+                  className="text-sm h-9 border-emerald-200 focus:border-emerald-400"
                   dir="ltr"
                 />
               </div>
