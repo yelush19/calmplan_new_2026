@@ -56,13 +56,36 @@ const AccountForm = ({ account, onSave, onCancel, clientId }) => {
         notes: account?.notes || ''
     });
 
+    const frequencyMonths = { monthly: 1, bimonthly: 2, quarterly: 3, semi_annual: 6, yearly: 12 };
+
+    // Auto-calculate next_reconciliation_due when last_date or frequency changes
+    const autoCalcNext = (data) => {
+        if (data.last_reconciliation_date && data.reconciliation_frequency) {
+            const months = frequencyMonths[data.reconciliation_frequency] || 1;
+            const d = new Date(data.last_reconciliation_date);
+            d.setMonth(d.getMonth() + months);
+            return { ...data, next_reconciliation_due: d.toISOString().split('T')[0] };
+        }
+        return data;
+    };
+
     const handleInputChange = (e) => {
         const { id, value } = e.target;
-        setFormData(prev => ({ ...prev, [id]: value }));
+        const updated = { ...formData, [id]: value };
+        if (id === 'last_reconciliation_date') {
+            setFormData(autoCalcNext(updated));
+        } else {
+            setFormData(updated);
+        }
     };
 
     const handleSelectChange = (id, value) => {
-        setFormData(prev => ({ ...prev, [id]: value }));
+        const updated = { ...formData, [id]: value };
+        if (id === 'reconciliation_frequency') {
+            setFormData(autoCalcNext(updated));
+        } else {
+            setFormData(updated);
+        }
     };
 
     const handleSubmit = (e) => {
@@ -173,6 +196,18 @@ export default function ClientAccountsManager({ clientId, clientName }) {
         loadAccounts();
     }, [clientId]);
 
+    // Refresh when other pages update account data (e.g., Reconciliations page)
+    useEffect(() => {
+        const handler = (e) => {
+            if (e.detail?.source === 'ClientAccountsManager') return;
+            if (e.detail?.type === 'client_account' || e.detail?.type === 'reconciliation') {
+                loadAccounts();
+            }
+        };
+        window.addEventListener('calmplan:data-synced', handler);
+        return () => window.removeEventListener('calmplan:data-synced', handler);
+    }, [clientId]);
+
     const loadAccounts = async () => {
         try {
             // FIX: Increased read limit
@@ -193,6 +228,10 @@ export default function ClientAccountsManager({ clientId, clientName }) {
             await loadAccounts();
             setShowAddForm(false);
             setEditingAccount(null);
+            // Notify other pages (Reconciliations, dashboards) about the change
+            window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+                detail: { type: 'client_account', source: 'ClientAccountsManager', timestamp: new Date().toISOString() }
+            }));
         } catch (error) {
             console.error("Error saving account:", error);
         }
@@ -203,6 +242,9 @@ export default function ClientAccountsManager({ clientId, clientName }) {
             try {
                 await ClientAccount.delete(accountId);
                 await loadAccounts();
+                window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+                    detail: { type: 'client_account', source: 'ClientAccountsManager', timestamp: new Date().toISOString() }
+                }));
             } catch (error) {
                 console.error("Error deleting account:", error);
             }
@@ -295,7 +337,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                                         יעד הבא: {account.next_reconciliation_due ? new Date(account.next_reconciliation_due).toLocaleDateString('he-IL') : 'לא הוגדר'}
                                     </p>
                                     <div className="flex gap-2 mt-1">
-                                        <Link to="/reconciliation" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                        <Link to="/Reconciliations" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
                                             <ExternalLink className="w-3 h-3" />
                                             התאמת חשבונות
                                         </Link>
