@@ -17,7 +17,7 @@ import { format, addMonths, setDate, startOfMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
 import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_NAMES } from '@/config/taxCalendar2026';
-import { getScheduledStartForCategory, loadServiceDueDates, getDueDayForCategory, loadExecutionPeriods } from '@/config/automationRules';
+import { getScheduledStartForCategory, loadServiceDueDates, saveServiceDueDates, getDueDayForCategory, loadExecutionPeriods, DEFAULT_SERVICE_DUE_DATES } from '@/config/automationRules';
 import { getServiceWeight } from '@/config/serviceWeights';
 import { computeComplexityTier } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
@@ -678,7 +678,9 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [deadlineOverrides, setDeadlineOverrides] = useState({});
   const [systemDueDates, setSystemDueDates] = useState(null);
+  const [systemDueDatesConfigId, setSystemDueDatesConfigId] = useState(null);
   const [systemExecutionPeriods, setSystemExecutionPeriods] = useState(null);
+  const [isSavingDeadlines, setIsSavingDeadlines] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -710,7 +712,10 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
       });
       setClients(activeClients);
       setExistingTasks(tasksData || []);
-      if (dueDatesResult.dueDates) setSystemDueDates(dueDatesResult.dueDates);
+      if (dueDatesResult.dueDates) {
+        setSystemDueDates(dueDatesResult.dueDates);
+        if (dueDatesResult.configId) setSystemDueDatesConfigId(dueDatesResult.configId);
+      }
       if (periodsResult.periods) setSystemExecutionPeriods(periodsResult.periods);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -1306,36 +1311,103 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             </div>
           </div>
 
-          {/* ── Deadline Overrides — for holidays/special situations ── */}
+          {/* ── Deadline Configuration — connected to system settings ── */}
           <div className="p-4 rounded-2xl border-2 border-blue-200 bg-blue-50/50 space-y-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-bold text-gray-800">דדליינים — דריסה זמנית</span>
-              <span className="text-[12px] text-blue-500 font-medium">(חגים / מצב מיוחד)</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-bold text-gray-800">דדליינים</span>
+                <span className="text-[12px] text-blue-500 font-medium">
+                  {systemDueDates ? '(טעון מהגדרות מערכת)' : '(ברירות מחדל)'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {Object.keys(deadlineOverrides).length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setDeadlineOverrides({})}
+                    className="text-xs h-7 px-2 text-gray-400 hover:text-gray-600">
+                    איפוס שינויים
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={Object.keys(deadlineOverrides).length === 0 || isSavingDeadlines}
+                  onClick={async () => {
+                    setIsSavingDeadlines(true);
+                    try {
+                      // Merge overrides into system due dates
+                      const OVERRIDE_TO_CATS = {
+                        payroll: ['שכר', 'מס"ב עובדים', 'משלוח תלושים'],
+                        social_operator: ['דיווח למתפעל', 'דיווח לטמל'],
+                        social_security: ['ביטוח לאומי'],
+                        deductions: ['ניכויים'],
+                        vat: ['מע"מ'],
+                        tax_advances: ['מקדמות מס'],
+                      };
+                      const updated = { ...(systemDueDates || DEFAULT_SERVICE_DUE_DATES) };
+                      for (const [overKey, day] of Object.entries(deadlineOverrides)) {
+                        const cats = OVERRIDE_TO_CATS[overKey] || [];
+                        for (const cat of cats) {
+                          if (updated[cat]?.digital !== undefined) {
+                            updated[cat] = { ...updated[cat], digital: day };
+                          } else {
+                            updated[cat] = { ...updated[cat], due_day: day };
+                          }
+                        }
+                      }
+                      const newConfigId = await saveServiceDueDates(systemDueDatesConfigId, updated);
+                      setSystemDueDates(updated);
+                      if (newConfigId) setSystemDueDatesConfigId(newConfigId);
+                      setDeadlineOverrides({});
+                    } catch (err) {
+                      console.error('Error saving deadlines:', err);
+                    }
+                    setIsSavingDeadlines(false);
+                  }}
+                  className="text-xs h-7 px-3 bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-300 font-bold"
+                >
+                  {isSavingDeadlines ? 'שומר...' : 'שמור להגדרות מערכת'}
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {[
-                { key: 'payroll', label: 'שכר + תלושים + מס"ב', defaultDay: 9 },
-                { key: 'social_operator', label: 'פנסיות', defaultDay: 15 },
-                { key: 'social_security', label: 'ביטוח לאומי', defaultDay: 15 },
-                { key: 'deductions', label: 'ניכויים', defaultDay: 19 },
-                { key: 'vat', label: 'מע"מ', defaultDay: 19 },
-                { key: 'tax_advances', label: 'מקדמות', defaultDay: 19 },
-              ].map(dl => (
-                <div key={dl.key} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-blue-100">
-                  <span className="text-xs font-bold text-gray-700 flex-1">{dl.label}</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={deadlineOverrides[dl.key] ?? dl.defaultDay}
-                    onChange={(e) => setDeadlineOverrides(prev => ({ ...prev, [dl.key]: parseInt(e.target.value) || dl.defaultDay }))}
-                    className="w-12 h-7 text-center text-sm font-bold border rounded-lg border-blue-200 focus:border-blue-400 focus:outline-none"
-                  />
-                </div>
-              ))}
+                { key: 'payroll', label: 'שכר + תלושים + מס"ב', sysCat: 'שכר' },
+                { key: 'social_operator', label: 'פנסיות (מתפעל/טמל)', sysCat: 'דיווח למתפעל' },
+                { key: 'social_security', label: 'ביטוח לאומי', sysCat: 'ביטוח לאומי' },
+                { key: 'deductions', label: 'ניכויים', sysCat: 'ניכויים' },
+                { key: 'vat', label: 'מע"מ', sysCat: 'מע"מ' },
+                { key: 'tax_advances', label: 'מקדמות', sysCat: 'מקדמות מס' },
+              ].map(dl => {
+                const sysDay = systemDueDates ? getDueDayForCategory(systemDueDates, dl.sysCat) : getDueDayForCategory(DEFAULT_SERVICE_DUE_DATES, dl.sysCat);
+                const currentDay = deadlineOverrides[dl.key] ?? sysDay ?? 19;
+                const isOverridden = deadlineOverrides[dl.key] !== undefined;
+                return (
+                  <div key={dl.key} className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-white border-blue-100'}`}>
+                    <span className="text-xs font-bold text-gray-700 flex-1">{dl.label}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="31"
+                      value={currentDay}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (val >= 1 && val <= 31) {
+                          setDeadlineOverrides(prev => ({ ...prev, [dl.key]: val }));
+                        }
+                      }}
+                      className={`w-12 h-7 text-center text-sm font-bold border rounded-lg focus:outline-none ${isOverridden ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-blue-200 focus:border-blue-400'}`}
+                    />
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-[12px] text-blue-400">שנה את היום בחודש אם הדדליין הוזז בגלל חג/שבת. שינוי זה חל רק על ההזרקה הנוכחית.</p>
+            <div className="flex items-center justify-between text-[12px]">
+              <span className="text-blue-400">שנה את היום בחודש → חל על ההזרקה הנוכחית. לחץ "שמור" לקבע בהגדרות.</span>
+              {Object.keys(deadlineOverrides).length > 0 && (
+                <span className="text-amber-500 font-bold">⚠ יש שינויים שלא נשמרו</span>
+              )}
+            </div>
           </div>
 
           {/* ── Force Inject Mode + Clear Cache ── */}
