@@ -561,10 +561,11 @@ export default function TasksPage() {
     }
   };
 
-  const handleStatusChange = async (task, newStatus) => {
+  const handleStatusChange = async (task, newStatus, extraData) => {
     try {
       // Use cascade engine so status changes trigger Phase B/C task creation
-      await updateTaskWithCascade(task.id, { status: newStatus });
+      const updatePayload = { status: newStatus, ...(extraData || {}) };
+      await updateTaskWithCascade(task.id, updatePayload);
       syncNotesWithTaskStatus(task.id, newStatus);
     } catch (error) {
       console.error("Error updating status:", error);

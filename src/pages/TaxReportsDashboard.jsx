@@ -258,8 +258,16 @@ export default function TaxReportsDashboardPage() {
     expense_collection: ['מע"מ', 'מע"מ 874', 'work_vat_reporting', 'work_vat_874'],
   };
 
-  // ── Sync: when a collection task completes, notify dependent tasks ──
-  const syncCollectionToDependents = useCallback(async (completedTask, isCompleted) => {
+  // ── Check if a collection task is "sufficient for reporting" ──
+  const isCollectionSufficient = useCallback((task) => {
+    const steps = getTaskProcessSteps(task);
+    // Either fully done OR "sufficient_for_reporting" step is checked
+    return task.status === 'production_completed' ||
+           steps?.sufficient_for_reporting?.done === true;
+  }, []);
+
+  // ── Sync: when a collection task becomes sufficient/complete, notify dependents ──
+  const syncCollectionToDependents = useCallback(async (completedTask, isSufficient) => {
     const service = getServiceForTask(completedTask);
     if (!service) return;
     const unlocks = COLLECTION_UNLOCKS[service.key];
@@ -277,31 +285,31 @@ export default function TaxReportsDashboardPage() {
       if (!depService?.depends_on_nodes) continue;
 
       // Check if ALL dependencies for this task are satisfied
+      // "sufficient" = either production_completed OR sufficient_for_reporting checked
       const allDepsSatisfied = (depService.depends_on_nodes || []).every(nodeId => {
-        // Map node IDs to collection service keys
         const nodeToServiceKey = { P2_income: 'income_collection', P2_expenses: 'expense_collection' };
         const depKey = nodeToServiceKey[nodeId];
         if (!depKey) return true;
-        if (depKey === service.key) return isCompleted;
-        // Check if the other dependency is also done
+        if (depKey === service.key) return isSufficient;
+        // Check if the other dependency is also sufficient
         const otherTask = tasks.find(t =>
           t.id !== completedTask.id &&
           t.client_name === completedTask.client_name &&
           getServiceForTask(t)?.key === depKey
         );
-        return otherTask?.status === 'production_completed';
+        return otherTask ? isCollectionSufficient(otherTask) : false;
       });
 
-      if (allDepsSatisfied && isCompleted) {
-        // All prerequisites met — auto-check receive_data step if it exists
-        const depSteps = getTaskProcessSteps(dep);
-        if (depSteps.receive_data && !depSteps.receive_data?.done) {
-          // This is a soft hint, not auto-completing the whole task
-          // Just mark receive_data so the task appears "ready to work"
+      if (allDepsSatisfied && isSufficient) {
+        // All prerequisites met — move dependent from waiting to ready
+        if (dep.status === 'waiting_for_materials') {
+          const depPayload = { status: 'not_started' };
+          setTasks(prev => prev.map(t => t.id === dep.id ? { ...t, ...depPayload } : t));
+          await Task.update(dep.id, depPayload);
         }
       }
     }
-  }, [tasks]);
+  }, [tasks, isCollectionSufficient]);
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
     const currentSteps = getTaskProcessSteps(task);
@@ -319,9 +327,10 @@ export default function TaxReportsDashboardPage() {
       await Task.update(task.id, updatePayload);
       if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
 
-      // If a collection task just completed, sync to dependents
-      if (allDone) {
-        await syncCollectionToDependents(updatedTask, true);
+      // If a collection task just became sufficient or completed, sync to dependents
+      if (allDone || stepKey === 'sufficient_for_reporting') {
+        const isSufficient = allDone || updatedSteps?.sufficient_for_reporting?.done;
+        await syncCollectionToDependents({ ...task, process_steps: updatedSteps }, isSufficient);
       }
 
       // Notify other dashboards
@@ -350,13 +359,17 @@ export default function TaxReportsDashboardPage() {
     }
   }, []);
 
-  const handleStatusChange = useCallback(async (task, newStatus) => {
+  const handleStatusChange = useCallback(async (task, newStatus, extraData) => {
     try {
       const updatePayload = { status: newStatus };
       if (newStatus === 'production_completed') {
         updatePayload.process_steps = markAllStepsDone(task);
       } else if (task.status === 'production_completed' && newStatus === 'not_started') {
         updatePayload.process_steps = markAllStepsUndone(task);
+      }
+      // Merge any extra data (e.g. process_steps from KanbanView drag-and-drop)
+      if (extraData) {
+        Object.assign(updatePayload, extraData);
       }
       localUpdateRef.current = true;
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
