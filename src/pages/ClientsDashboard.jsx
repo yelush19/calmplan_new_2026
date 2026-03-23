@@ -51,8 +51,8 @@ const COLUMN_GROUPS = [
     serviceCheck: true,
     columns: [
       { key: 'masav_suppliers', label: 'מס"ב ספקים', categories: ['מס"ב ספקים'], createCategory: 'מס"ב ספקים', createTitle: 'מס"ב ספקים', service: 'masav_suppliers' },
-      { key: 'operator_reporting', label: 'מתפעל', categories: ['דיווח למתפעל'], createCategory: 'דיווח למתפעל', createTitle: 'דיווח למתפעל', service: 'operator_reporting' },
-      { key: 'taml_reporting', label: 'טמל', categories: ['דיווח לטמל'], createCategory: 'דיווח לטמל', createTitle: 'דיווח לטמל', service: 'taml_reporting' },
+      { key: 'operator_reporting', label: 'מתפעל', categories: ['דיווח למתפעל', 'מתפעל', 'work_operator_reporting'], createCategory: 'דיווח למתפעל', createTitle: 'דיווח למתפעל', service: 'operator_reporting' },
+      { key: 'taml_reporting', label: 'טמל', categories: ['דיווח לטמל', 'טמל + לקוח', 'work_taml_reporting'], createCategory: 'דיווח לטמל', createTitle: 'דיווח לטמל', service: 'taml_reporting' },
       { key: 'consulting', label: 'ייעוץ', categories: ['ייעוץ', 'work_consulting'], createCategory: 'ייעוץ', createTitle: 'ייעוץ', service: 'consulting' },
     ],
   },
@@ -174,6 +174,13 @@ export default function ClientsDashboardPage() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => { loadData(); }, [selectedMonth]);
+
+  // Cross-page sync: re-fetch when other pages update tasks
+  useEffect(() => {
+    const handler = () => loadData();
+    window.addEventListener('calmplan:data-synced', handler);
+    return () => window.removeEventListener('calmplan:data-synced', handler);
+  }, [selectedMonth]);
 
   const loadData = async () => {
     setIsLoading(true);

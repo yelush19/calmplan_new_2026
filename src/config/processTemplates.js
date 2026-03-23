@@ -160,7 +160,7 @@ export const ADDITIONAL_SERVICES = {
     label: 'שירותים נלווים לשכר',
     dashboard: 'payroll',
     taskType: 'linear',
-    taskCategories: ['שירותים נלווים לשכר', 'work_payroll_ancillary'],
+    taskCategories: ['שירותים נלווים לשכר', 'קליטה להנה"ח', 'work_payroll_ancillary'],
     createCategory: 'שירותים נלווים לשכר',
     steps: [
       { key: 'payslip_sending', label: 'משלוח תלושים',     icon: 'send' },
@@ -182,7 +182,7 @@ export const ADDITIONAL_SERVICES = {
     key: 'pnl_reports',
     label: 'רווח והפסד',
     dashboard: 'tax',
-    taskCategories: ['רווח והפסד', 'רוו"ה', 'work_pnl'],
+    taskCategories: ['רווח והפסד', 'רוו"ה', 'דוח רו"ה', 'work_pnl'],
     createCategory: 'רווח והפסד',
     steps: [
       { key: 'report_generation', label: 'הפקת דוח', icon: 'file-text' },
@@ -488,7 +488,7 @@ export const ADDITIONAL_SERVICES = {
     key: 'operator_reporting',
     label: 'דיווח למתפעל',
     dashboard: 'additional',
-    taskCategories: ['דיווח למתפעל', 'work_operator_reporting'],
+    taskCategories: ['דיווח למתפעל', 'מתפעל', 'work_operator_reporting'],
     createCategory: 'דיווח למתפעל',
     steps: [
       { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
@@ -500,7 +500,7 @@ export const ADDITIONAL_SERVICES = {
     key: 'taml_reporting',
     label: 'דיווח לטמל',
     dashboard: 'additional',
-    taskCategories: ['דיווח לטמל', 'work_taml_reporting'],
+    taskCategories: ['דיווח לטמל', 'טמל + לקוח', 'work_taml_reporting'],
     createCategory: 'דיווח לטמל',
     steps: [
       { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
