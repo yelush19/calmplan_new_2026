@@ -38,9 +38,10 @@ export const TAX_SERVICES = {
     taskCategories: ['מקדמות מס', 'work_tax_advances'],
     createCategory: 'מקדמות מס',
     steps: [
-      { key: 'calculation',  label: 'חישוב מקדמות', icon: 'calculator' },
-      { key: 'submission',   label: 'דיווח',         icon: 'send' },
-      { key: 'payment',      label: 'תשלום',         icon: 'landmark' },
+      { key: 'income_input',  label: 'קליטת הכנסות',  icon: 'download' },
+      { key: 'report_prep',   label: 'הכנת דו"ח',     icon: 'file-text' },
+      { key: 'submission',    label: 'דיווח',          icon: 'send' },
+      { key: 'payment',       label: 'תשלום',          icon: 'landmark' },
     ],
   },
 
@@ -51,9 +52,11 @@ export const TAX_SERVICES = {
     taskCategories: ['מע"מ 874', 'work_vat_874'],
     createCategory: 'מע"מ 874',
     steps: [
-      { key: 'data_export',  label: 'הפקת נתונים',  icon: 'database' },
-      { key: 'report_prep',  label: 'הכנת דו"ח 874', icon: 'file-text' },
-      { key: 'submission',   label: 'שידור',          icon: 'send' },
+      { key: 'income_input',  label: 'קליטת הכנסות',  icon: 'download' },
+      { key: 'expense_input', label: 'קליטת הוצאות',  icon: 'download' },
+      { key: 'report_prep',   label: 'הכנת דו"ח',     icon: 'file-text' },
+      { key: 'submission',    label: 'דיווח',          icon: 'send' },
+      { key: 'payment',       label: 'תשלום',          icon: 'landmark' },
     ],
   },
 };
