@@ -190,25 +190,13 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
   }, [clients]);
 
   const getTaskPosition = (task) => {
-    // Use scheduled_start if available, otherwise derive from Settings-driven execution periods
-    const derivedStart = task.scheduled_start
-      || getScheduledStartForCategory(task.category, task.due_date)
-      || task.due_date;
-    const start = parseISO(derivedStart);
     const end = parseISO(task.due_date);
-    let startDay = Math.max(0, differenceInDays(start, monthStart));
-    let endDay = Math.min(daysInMonth - 1, differenceInDays(end, monthStart));
-    let width = Math.max(1, endDay - startDay + 1);
+    const endDay = Math.min(daysInMonth - 1, differenceInDays(end, monthStart));
 
-    // DNA-driven duration: enforce minimum bar width from serviceWeights
+    // DNA-driven compact width: how many calendar days this task actually takes
     const dnaDays = getDNADurationDays(task);
-    if (width < dnaDays) {
-      const newStart = Math.max(0, endDay - dnaDays + 1);
-      startDay = newStart;
-      width = dnaDays;
-    }
 
-    // Legacy tier-aware fallback
+    // Tier-aware duration (may be larger than DNA)
     const client = clientByName[task.client_name];
     const service = getServiceForTask(task);
     let tierKey = null;
@@ -220,15 +208,29 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       const complexity = getTaskComplexity(task, client);
       tierKey = complexity === 'high' ? 'climb' : complexity === 'medium' ? 'standard' : 'quick_win';
     }
+    const tierDays = (tierKey && TIER_DURATION_DAYS[tierKey]) ? TIER_DURATION_DAYS[tierKey] : 0;
+    const width = Math.max(dnaDays, tierDays, 1);
 
-    if (tierKey && TIER_DURATION_DAYS[tierKey]) {
-      const tierDays = TIER_DURATION_DAYS[tierKey];
-      if (width < tierDays) {
-        const newStart = Math.max(0, endDay - tierDays + 1);
-        startDay = newStart;
-        width = tierDays;
-      }
+    // Anchor point: execution_date (done) → due_date (planned)
+    let anchorDay;
+    if (task.execution_date) {
+      anchorDay = differenceInDays(parseISO(task.execution_date), monthStart);
+    } else {
+      anchorDay = endDay;
     }
+
+    // Position capsule so it ends at the anchor (or centers on it for execution_date)
+    let startDay;
+    if (task.execution_date) {
+      // Center capsule around execution_date
+      startDay = Math.max(0, anchorDay - Math.floor(width / 2));
+    } else {
+      // Capsule ends at due_date
+      startDay = Math.max(0, endDay - width + 1);
+    }
+
+    // Deadline marker position (always show where due_date falls)
+    const deadlineDayPct = (endDay / daysInMonth) * 100;
 
     // Get cognitive load color from DNA
     const loadColor = getTaskLoadColor(task);
@@ -241,6 +243,8 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       tierKey,
       loadColor,
       dnaDays,
+      deadlineDayPct,
+      hasExecDate: !!task.execution_date,
     };
   };
 
@@ -348,6 +352,26 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     return [...seen].filter(cat => SERVICE_COLORS[cat]);
   }, [monthTasks]);
 
+  // ── Daily load heatmap: minutes per day ──
+  const dailyLoad = useMemo(() => {
+    const load = new Array(daysInMonth).fill(0);
+    monthTasks.forEach(task => {
+      if (!task.due_date) return;
+      const pos = getTaskPosition(task);
+      const sw = getServiceWeight(task.category);
+      const minutes = (task.estimated_time && task.estimated_time > 0) ? task.estimated_time : sw.duration;
+      // Spread minutes evenly across capsule days
+      const perDay = minutes / Math.max(1, pos.durationDays);
+      for (let d = pos.startDay; d < pos.startDay + pos.durationDays && d < daysInMonth; d++) {
+        if (d >= 0) load[d] += perDay;
+      }
+    });
+    return load;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthTasks, daysInMonth, monthStart, clientByName]);
+
+  const maxDailyLoad = Math.max(...dailyLoad, 1);
+
   // Today marker position
   const todayFraction = isCurrentMonth ? differenceInDays(new Date(), monthStart) / daysInMonth : -1;
 
@@ -447,6 +471,39 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                   background: isToday ? '#4682B408' : 'transparent',
                 }}>
                 {format(day, 'd')}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Daily load heatmap row ── */}
+      <div className="flex" style={{ borderBottom: '1px solid #F0F0F0' }}>
+        <div className="w-44 shrink-0 px-3 flex items-center" style={{ borderLeft: '1px solid #F0F0F0' }}>
+          <span className="text-[10px] text-[#AAA]">עומס יומי</span>
+        </div>
+        <div className="flex-1 flex">
+          {days.map((day, i) => {
+            const minutes = dailyLoad[i] || 0;
+            const intensity = minutes / maxDailyLoad;
+            const isSaturday = day.getDay() === 6;
+            // Color: green → amber → red
+            const hue = Math.round(120 - intensity * 120); // 120=green, 0=red
+            const bg = minutes > 0
+              ? `hsla(${hue}, 70%, 50%, ${0.15 + intensity * 0.45})`
+              : 'transparent';
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center justify-center py-1"
+                style={{ background: bg, borderLeft: '1px solid #F8F8F8' }}
+                title={`${Math.round(minutes)} דק׳`}
+              >
+                {minutes > 0 && (
+                  <span className="text-[9px] font-bold" style={{
+                    color: intensity > 0.7 ? '#B91C1C' : intensity > 0.4 ? '#92400E' : '#15803D',
+                  }}>
+                    {Math.round(minutes)}׳
+                  </span>
+                )}
               </div>
             );
           })}
@@ -585,7 +642,8 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                       : Math.round(((todayDay - pos.startDay) / pos.durationDays) * 100);
 
                 return (
-                  <Tooltip key={task.id}>
+                  <React.Fragment key={task.id}>
+                  <Tooltip>
                     <TooltipTrigger asChild>
                       <motion.div
                         onPointerDown={(e) => handlePointerDown(e, task, pos)}
@@ -708,6 +766,25 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                           </>
                         )}
 
+                        {/* Execution date badge — green checkmark */}
+                        {pos.hasExecDate && (
+                          <div className="absolute top-[2px] left-[2px] pointer-events-none" style={{ zIndex: 2 }}>
+                            <div style={{
+                              width: '14px',
+                              height: '14px',
+                              borderRadius: '50%',
+                              background: '#10B981',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '9px',
+                              color: '#fff',
+                              boxShadow: '0 0 4px #10B98160',
+                              border: '1px solid rgba(255,255,255,0.4)',
+                            }}>&#10003;</div>
+                          </div>
+                        )}
+
                         {/* Subtle glass shine overlay */}
                         <div className="absolute inset-0 pointer-events-none" style={{
                           borderRadius: '20px',
@@ -733,9 +810,12 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                         </span>
                       </div>
                       <p className="text-xs !text-[#90A4AE] mt-1">
-                        {resolveCategoryLabel(task.category)} {task.due_date && `\u2022 ${format(parseISO(task.due_date), 'dd/MM')}`}
-                        {` \u2022 ${dnaMinutes} דק׳ (DNA)`}
+                        {resolveCategoryLabel(task.category)} {task.due_date && `\u2022 דדליין ${format(parseISO(task.due_date), 'dd/MM')}`}
+                        {` \u2022 ${dnaMinutes} דק׳`}
                       </p>
+                      {task.execution_date && (
+                        <p className="text-[12px] !text-emerald-400">בוצע ב-{format(parseISO(task.execution_date), 'dd/MM')}</p>
+                      )}
                       {pos.durationDays > 1 && (
                         <p className="text-[12px] !text-[#78909C]">{pos.durationDays} ימי עבודה</p>
                       )}
@@ -748,6 +828,28 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                       <p className="text-[12px] text-[#607D8B] mt-1 opacity-70">לחץ לעריכה | גרור לשינוי תאריך</p>
                     </TooltipContent>
                   </Tooltip>
+
+                  {/* Deadline marker — small triangle at due_date */}
+                  {!isCompleted && (
+                    <div
+                      className="absolute pointer-events-none"
+                      style={{
+                        left: `${pos.deadlineDayPct}%`,
+                        top: `${topPx + LANE_HEIGHT - 2}px`,
+                        transform: 'translateX(-50%)',
+                        zIndex: 8,
+                      }}
+                    >
+                      <div style={{
+                        width: 0,
+                        height: 0,
+                        borderLeft: '4px solid transparent',
+                        borderRight: '4px solid transparent',
+                        borderBottom: `5px solid ${isOverdue ? '#EF4444' : '#94A3B8'}`,
+                      }} />
+                    </div>
+                  )}
+                </React.Fragment>
                 );
               })}
             </div>

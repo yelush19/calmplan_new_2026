@@ -352,6 +352,9 @@ export default function TaxReportsDashboardPage() {
       const updatePayload = { process_steps: updatedSteps };
       if (allDone && task.status !== 'production_completed') {
         updatePayload.status = 'production_completed';
+        if (!task.execution_date) {
+          updatePayload.execution_date = new Date().toISOString().split('T')[0];
+        }
       }
       // Guard: prevent sync listener from overwriting optimistic update
       localUpdateRef.current = true;
@@ -395,10 +398,17 @@ export default function TaxReportsDashboardPage() {
   const handleStatusChange = useCallback(async (task, newStatus, extraData) => {
     try {
       const updatePayload = { status: newStatus };
+      if (newStatus === 'production_completed' || newStatus === 'completed') {
+        // Auto-stamp execution_date when task is marked as done
+        if (!task.execution_date) {
+          updatePayload.execution_date = new Date().toISOString().split('T')[0];
+        }
+      }
       if (newStatus === 'production_completed') {
         updatePayload.process_steps = markAllStepsDone(task);
       } else if (task.status === 'production_completed' && newStatus === 'not_started') {
         updatePayload.process_steps = markAllStepsUndone(task);
+        updatePayload.execution_date = ''; // Clear execution_date on revert
       }
       // Merge any extra data (e.g. process_steps from KanbanView drag-and-drop)
       if (extraData) {
