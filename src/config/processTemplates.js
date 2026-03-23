@@ -21,11 +21,10 @@ export const TAX_SERVICES = {
     taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['מע"מ', 'work_vat_reporting'],
     createCategory: 'מע"מ',
+    depends_on_nodes: ['P2_income', 'P2_expenses'],  // קליטת הכנסות/הוצאות = צמתים נפרדים בעץ
     steps: [
-      { key: 'income_input',   label: 'קליטת הכנסות',  icon: 'download' },
-      { key: 'expense_input',  label: 'קליטת הוצאות',  icon: 'download', allowMultiple: true },
-      { key: 'report_prep',    label: 'הכנת דו"ח',     icon: 'file-text', skippable: true, skipWhen: 'client_manages_vat' },  // 30 דק' — רק כשהמשרד מכין
-      { key: 'submission',     label: 'דיווח',          icon: 'send' },
+      { key: 'report_prep',    label: 'הפקת דו"ח',     icon: 'file-text', skippable: true, skipWhen: 'client_manages_vat' },
+      { key: 'submission',     label: 'שידור',          icon: 'send' },
       { key: 'payment',        label: 'תשלום',          icon: 'landmark' },
     ],
   },
@@ -37,9 +36,9 @@ export const TAX_SERVICES = {
     taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['מקדמות מס', 'work_tax_advances'],
     createCategory: 'מקדמות מס',
+    depends_on_nodes: ['P2_income'],  // קליטת הכנסות = צומת נפרד בעץ
     steps: [
-      { key: 'income_input',  label: 'קליטת הכנסות',  icon: 'download' },
-      { key: 'report_prep',   label: 'הכנת דו"ח',     icon: 'file-text' },
+      { key: 'report_prep',   label: 'הפקת דו"ח',     icon: 'file-text' },
       { key: 'submission',    label: 'דיווח',          icon: 'send' },
       { key: 'payment',       label: 'תשלום',          icon: 'landmark' },
     ],
@@ -49,13 +48,13 @@ export const TAX_SERVICES = {
     key: 'vat_874',
     label: 'מע"מ 874',
     dashboard: 'tax',
+    taskType: 'authority',
     taskCategories: ['מע"מ 874', 'work_vat_874'],
     createCategory: 'מע"מ 874',
+    depends_on_nodes: ['P2_income', 'P2_expenses'],  // קליטת הכנסות/הוצאות = צמתים נפרדים בעץ
     steps: [
-      { key: 'income_input',  label: 'קליטת הכנסות',  icon: 'download' },
-      { key: 'expense_input', label: 'קליטת הוצאות',  icon: 'download' },
-      { key: 'report_prep',   label: 'הכנת דו"ח',     icon: 'file-text' },
-      { key: 'submission',    label: 'דיווח',          icon: 'send' },
+      { key: 'report_prep',   label: 'הפקת דו"ח',     icon: 'file-text' },
+      { key: 'submission',    label: 'שידור',          icon: 'send' },
       { key: 'payment',       label: 'תשלום',          icon: 'landmark' },
     ],
   },
@@ -73,13 +72,11 @@ export const PAYROLL_SERVICES = {
     taskType: 'linear',  // Linear task — no דיווח/תשלום sub-tasks
     taskCategories: ['שכר', 'work_payroll'],
     createCategory: 'שכר',
+    // שלבי סגירה (קליטת פקודה, רשויות) = P1_closing בעץ — צומת נפרד
     steps: [
       { key: 'receive_data',            label: 'קבלת נתונים',              icon: 'inbox' },
       { key: 'prepare_payslips',        label: 'הכנת תלושים',              icon: 'file-text' },
       { key: 'proofreading',            label: 'הגהה',                     icon: 'eye' },
-      { key: 'salary_entry',            label: 'קליטת פקודת שכר',          icon: 'calculator' },
-      { key: 'employee_payments',       label: 'רישום תשלומי עובדים',      icon: 'landmark' },
-      { key: 'authority_payments',      label: 'רישום תשלומי רשויות שכר',  icon: 'send' },
     ],
   },
 
@@ -90,10 +87,11 @@ export const PAYROLL_SERVICES = {
     taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['ביטוח לאומי', 'work_social_security'],
     createCategory: 'ביטוח לאומי',
+    depends_on_nodes: ['P1_payroll'],  // תלוי בייצור שכר
     steps: [
-      { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
-      { key: 'submission',   label: 'דיווח',       icon: 'send' },
-      { key: 'payment',      label: 'תשלום',       icon: 'landmark' },
+      { key: 'report_prep',  label: 'הפקת דוח',  icon: 'file-text' },
+      { key: 'submission',   label: 'דיווח',      icon: 'send' },
+      { key: 'payment',      label: 'תשלום',      icon: 'landmark' },
     ],
   },
 
@@ -104,10 +102,11 @@ export const PAYROLL_SERVICES = {
     taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['ניכויים', 'work_deductions'],
     createCategory: 'ניכויים',
+    depends_on_nodes: ['P1_payroll'],  // תלוי בייצור שכר
     steps: [
-      { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
-      { key: 'submission',   label: 'דיווח',       icon: 'send' },
-      { key: 'payment',      label: 'תשלום',       icon: 'landmark' },
+      { key: 'report_prep',  label: 'הפקת דוח',  icon: 'file-text' },
+      { key: 'submission',   label: 'דיווח',      icon: 'send' },
+      { key: 'payment',      label: 'תשלום',      icon: 'landmark' },
     ],
   },
 };
@@ -177,7 +176,23 @@ export const ADDITIONAL_SERVICES = {
     dashboard: 'payroll',
     taskCategories: ['רשויות שכר', 'work_payroll_authorities'],
     createCategory: 'רשויות שכר',
+    depends_on_nodes: ['P1_payroll'],
     steps: [],
+  },
+
+  payroll_closing: {
+    key: 'payroll_closing',
+    label: 'קליטה להנה"ח',
+    dashboard: 'payroll',
+    taskType: 'linear',
+    taskCategories: ['קליטה להנה"ח', 'work_payroll_closing'],
+    createCategory: 'קליטה להנה"ח',
+    depends_on_nodes: ['P1_payslip_sending', 'P1_authorities'],  // תלוי בסיום תלושים + רשויות
+    steps: [
+      { key: 'salary_entry',           label: 'קליטת פקודת משכורת',                   icon: 'calculator' },
+      { key: 'social_security_entry',  label: 'קליטת תשלומי רשויות - ביטוח לאומי',   icon: 'landmark' },
+      { key: 'deductions_entry',       label: 'קליטת תשלומי רשויות - ניכויים',        icon: 'landmark' },
+    ],
   },
 
   pnl_reports: {
@@ -228,9 +243,10 @@ export const ADDITIONAL_SERVICES = {
     createCategory: 'התאמות',
     supportsComplexity: true,
     steps: [
-      { key: 'bank_statements', label: 'קבלת דפי בנק',     icon: 'file-down' },
-      { key: 'reconcile',       label: 'ביצוע התאמה',       icon: 'check-square' },
-      { key: 'differences',     label: 'טיפול בהפרשים',    icon: 'alert-triangle' },
+      { key: 'bank_statements',     label: 'קבלת דפי בנק',          icon: 'file-down' },
+      { key: 'bank_reconciliation',  label: 'התאמת בנק',             icon: 'check-square' },
+      { key: 'cc_reconciliation',    label: 'התאמת כרטיסי אשראי',   icon: 'check-square' },
+      { key: 'differences',          label: 'טיפול בהפרשים',         icon: 'alert-triangle' },
     ],
     // Extended steps for High complexity clients (multiple accounts)
     highComplexitySteps: [
@@ -362,6 +378,7 @@ export const ADDITIONAL_SERVICES = {
     taskType: 'linear',  // Linear task — no דיווח/תשלום sub-tasks
     taskCategories: ['מס"ב עובדים', 'work_masav'],
     createCategory: 'מס"ב עובדים',
+    depends_on_nodes: ['P1_payroll'],  // תלוי בייצור שכר
     steps: [
       { key: 'file_prep',    label: 'הכנת קובץ',   icon: 'file-text' },
       { key: 'upload',       label: 'העלאה',        icon: 'upload' },
@@ -446,6 +463,7 @@ export const ADDITIONAL_SERVICES = {
     sequentialSteps: true, // ENFORCE: each step requires previous step to be done
     taskCategories: ['מס"ב סוציאליות', 'work_masav_social'],
     createCategory: 'מס"ב סוציאליות',
+    depends_on_nodes: ['P1_payroll'],  // תלוי בייצור שכר
     // Social Security Chain (ENFORCED LINEAR):
     // 1. send_to_operator(הושלם) → status: waiting_for_materials (ממתין לקובץ ממתפעל)
     // 2. receive_file(הושלם) → status: not_started (לבצע - הזנת קובץ משנה)
@@ -517,6 +535,7 @@ export const ADDITIONAL_SERVICES = {
     taskType: 'linear',  // Linear task — no דיווח/תשלום sub-tasks
     taskCategories: ['משלוח תלושים', 'work_payslip_sending'],
     createCategory: 'משלוח תלושים',
+    depends_on_nodes: ['P1_payroll'],  // תלוי בייצור שכר
     steps: [
       { key: 'generate',  label: 'הפקת תלושים',  icon: 'file-output' },
       { key: 'send',      label: 'שליחה',         icon: 'send' },
