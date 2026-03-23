@@ -25,9 +25,9 @@ export default function ProcessStatusDashboard({ title, tasks, onTasksChange }) 
     }
   };
 
-  const handleSaveTask = async (updatedData) => {
+  const handleSaveTask = async (taskId, updatedData) => {
     try {
-      await Task.update(editingTask.id, updatedData);
+      await Task.update(taskId, updatedData);
       if (onTasksChange) onTasksChange();
       setEditingTask(null);
     } catch (error) {

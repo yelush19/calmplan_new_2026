@@ -586,14 +586,14 @@ export default function TasksPage() {
 
   const handleEditTask = (task) => setEditingTask(task);
 
-  const handleSaveTask = async (updatedData) => {
+  const handleSaveTask = async (taskId, updatedData) => {
     try {
       // Track reschedule if due_date changed
       if (updatedData.due_date && editingTask.due_date && updatedData.due_date !== editingTask.due_date) {
         updatedData.reschedule_count = (editingTask.reschedule_count || 0) + 1;
       }
       // Use cascade engine so editing a task's status triggers downstream tasks
-      await updateTaskWithCascade(editingTask.id, updatedData);
+      await updateTaskWithCascade(taskId, updatedData);
       setEditingTask(null);
     } catch (error) {
       console.error("Error updating task:", error);

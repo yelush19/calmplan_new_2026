@@ -717,6 +717,8 @@ export function evaluateBookkeepingStatus(task, updatedSteps, siblingTasks = [])
 export const SERVICE_DEPENDENCIES = {
   // VAT blocked until both income + expense collection are production_completed
   vat:            ['income_collection', 'expense_collection'],
+  // VAT 874 same dependencies as regular VAT
+  vat_874:        ['income_collection', 'expense_collection'],
   // Tax advances blocked until income collection is production_completed
   tax_advances:   ['income_collection'],
   // P&L convergence: requires BOTH מע"מ (VAT) AND התאמות (Reconciliation) to be Done
