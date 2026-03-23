@@ -7,46 +7,78 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Clock, User, Calendar, Briefcase, Home, Trash2, Pencil, ChevronDown, ChevronUp, Zap, FastForward, Plus, GitBranchPlus, Users, Layers } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { STATUS_CONFIG } from '@/config/processTemplates';
+import { STATUS_CONFIG, getServiceForTask, getTaskProcessSteps, areAllStepsDone, toggleStep } from '@/config/processTemplates';
 import { getVatEnergyTier, getPayrollTier } from '@/engines/taskCascadeEngine';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 
 // ============================================================
-// Column mapping: status → kanban column
+// Step-based phase columns (not status-based)
 // ============================================================
-// 5 Golden Statuses → 3 Kanban columns
-const columnMapping = {
-  todo: ['waiting_for_materials', 'not_started', 'needs_corrections'],
-  in_progress: ['sent_for_review'],
-  completed: ['production_completed'],
+const columnsConfig = {
+  collect: {
+    title: 'קליטה',
+    bgColor: 'rgba(255, 143, 0, 0.08)',
+    bgPattern: 'rgba(255, 143, 0, 0.06)',
+    headerBg: '#FF8F00',
+    accent: '#FF8F00',
+  },
+  process: {
+    title: 'עיבוד',
+    bgColor: 'rgba(70, 130, 180, 0.08)',
+    bgPattern: 'rgba(70, 130, 180, 0.06)',
+    headerBg: '#4682B4',
+    accent: '#4682B4',
+  },
+  ready: {
+    title: 'מוכן לשידור',
+    bgColor: 'rgba(123, 31, 162, 0.08)',
+    bgPattern: 'rgba(123, 31, 162, 0.06)',
+    headerBg: '#7B1FA2',
+    accent: '#7B1FA2',
+  },
+  done: {
+    title: 'שודר / הושלם',
+    bgColor: 'rgba(46, 125, 50, 0.08)',
+    bgPattern: 'rgba(46, 125, 50, 0.06)',
+    headerBg: '#2E7D32',
+    accent: '#2E7D32',
+  },
 };
 
-const columnsConfig = {
-  todo: {
-    title: 'לבצע',
-    bgColor: 'rgba(239, 68, 68, 0.08)',
-    bgPattern: 'rgba(239, 68, 68, 0.06)',
-    headerBg: '#EF4444',
-    accent: '#EF4444',
-    tasks: [],
-  },
-  in_progress: {
-    title: 'הועבר לעיון',
-    bgColor: 'rgba(59, 130, 246, 0.08)',
-    bgPattern: 'rgba(59, 130, 246, 0.06)',
-    headerBg: '#3B82F6',
-    accent: '#3B82F6',
-    tasks: [],
-  },
-  completed: {
-    title: 'הושלם ייצור',
-    bgColor: 'rgba(34, 197, 94, 0.08)',
-    bgPattern: 'rgba(34, 197, 94, 0.06)',
-    headerBg: '#22C55E',
-    accent: '#22C55E',
-    tasks: [],
-  },
+// ============================================================
+// Service color mapping for card borders & backgrounds
+// ============================================================
+const SERVICE_CARD_COLORS = {
+  'מע"מ': { bg: '#EFF6FF', border: '#3B82F6', dot: '#2563EB' },
+  'מע"מ 874': { bg: '#EFF6FF', border: '#1D4ED8', dot: '#1E40AF' },
+  'מקדמות מס': { bg: '#FFF7ED', border: '#F97316', dot: '#EA580C' },
+  'קליטת הכנסות': { bg: '#F0FDF4', border: '#22C55E', dot: '#16A34A' },
+  'קליטת הוצאות': { bg: '#FDF2F8', border: '#EC4899', dot: '#DB2777' },
+  'התאמות': { bg: '#FEF3C7', border: '#F59E0B', dot: '#D97706' },
+  'רווח והפסד': { bg: '#F5F3FF', border: '#8B5CF6', dot: '#7C3AED' },
+  'שכר': { bg: '#ECFEFF', border: '#06B6D4', dot: '#0891B2' },
+  'ביטוח לאומי': { bg: '#FFF1F2', border: '#F43F5E', dot: '#E11D48' },
+  'ניכויים': { bg: '#FEF9C3', border: '#EAB308', dot: '#CA8A04' },
 };
+
+// ============================================================
+// Determine which phase column a task belongs to
+// ============================================================
+function getTaskPhase(task) {
+  const svc = getServiceForTask(task);
+  if (!svc) return 'process';
+  const steps = getTaskProcessSteps(task);
+  // Collection tasks
+  if (svc.key === 'income_collection' || svc.key === 'expense_collection') {
+    return areAllStepsDone({ ...task, process_steps: steps }) ? 'done' : 'collect';
+  }
+  // Authority/reporting tasks — step-based
+  const reportDone = steps?.report_prep?.done;
+  const submissionDone = steps?.submission?.done;
+  if (submissionDone || task.status === 'production_completed') return 'done';
+  if (reportDone) return 'ready';
+  return 'process';
+}
 
 // ============================================================
 // Hebrew category labels — replace English keys
@@ -138,6 +170,7 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allT
   if (!task || !task.id) return null;
 
   const displayCategory = hebrewCategory(task.category);
+  const serviceColors = SERVICE_CARD_COLORS[displayCategory] || null;
 
   return (
     <Draggable draggableId={task.id} index={index}>
@@ -146,9 +179,11 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allT
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`mb-3 rounded-md bg-white shadow-[0_1px_4px_rgba(0,0,0,0.1)] hover:shadow-[0_3px_12px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 ${getPriorityColor(task.priority)} ${snapshot.isDragging ? 'ring-2 ring-blue-400 shadow-lg rotate-2' : ''} ${bulkMode && isSelected ? 'ring-2 ring-violet-400 bg-violet-50' : ''}`}
+          className={`mb-3 rounded-md shadow-[0_1px_4px_rgba(0,0,0,0.1)] hover:shadow-[0_3px_12px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 border-r-4 ${snapshot.isDragging ? 'ring-2 ring-blue-400 shadow-lg rotate-2' : ''} ${bulkMode && isSelected ? 'ring-2 ring-violet-400' : ''}`}
           style={{
             ...provided.draggableProps.style,
+            backgroundColor: (bulkMode && isSelected) ? '#F5F3FF' : (serviceColors?.bg || '#FFFFFF'),
+            borderRightColor: serviceColors?.border || '#D1D5DB',
             transform: snapshot.isDragging
               ? `${provided.draggableProps.style?.transform || ''} rotate(3deg)`
               : provided.draggableProps.style?.transform,
@@ -285,27 +320,25 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
     const validTasks = Array.isArray(tasks) ? tasks : [];
 
     const newBoard = {
-      todo: { ...columnsConfig.todo, tasks: [] },
-      in_progress: { ...columnsConfig.in_progress, tasks: [] },
-      completed: { ...columnsConfig.completed, tasks: [] },
+      collect: { ...columnsConfig.collect, tasks: [] },
+      process: { ...columnsConfig.process, tasks: [] },
+      ready: { ...columnsConfig.ready, tasks: [] },
+      done: { ...columnsConfig.done, tasks: [] },
     };
 
     validTasks.forEach(task => {
-      if (!task || !task.status) return;
-      if (columnMapping.todo.includes(task.status)) {
-        newBoard.todo.tasks.push(task);
-      } else if (columnMapping.in_progress.includes(task.status)) {
-        newBoard.in_progress.tasks.push(task);
-      } else if (columnMapping.completed.includes(task.status)) {
-        newBoard.completed.tasks.push(task);
+      if (!task) return;
+      const phase = getTaskPhase(task);
+      if (newBoard[phase]) {
+        newBoard[phase].tasks.push(task);
+      } else {
+        newBoard.process.tasks.push(task);
       }
     });
 
     // Sort: nearest due_date first
     const sortByDueDate = (a, b) => (a.due_date || a.date || '9999').localeCompare(b.due_date || b.date || '9999');
-    newBoard.todo.tasks.sort(sortByDueDate);
-    newBoard.in_progress.tasks.sort(sortByDueDate);
-    newBoard.completed.tasks.sort(sortByDueDate);
+    Object.values(newBoard).forEach(col => col.tasks.sort(sortByDueDate));
 
     setBoard(newBoard);
   }, [tasks]);
@@ -319,8 +352,32 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
     const taskToMove = validTasks.find(t => t && t.id === draggableId);
     if (!taskToMove) return;
 
-    const newStatus = columnMapping[destination.droppableId]?.[0] || 'not_started';
-    onTaskStatusChange?.(taskToMove, newStatus);
+    const destColumn = destination.droppableId;
+
+    if (destColumn === 'collect' || destColumn === 'process') {
+      // No status change — just reorder visually
+      return;
+    }
+
+    if (destColumn === 'ready') {
+      // Mark report_prep step as done if not already
+      const steps = getTaskProcessSteps(taskToMove);
+      if (steps?.report_prep && !steps.report_prep.done) {
+        const updatedSteps = { ...steps, report_prep: { ...steps.report_prep, done: true, date: new Date().toISOString() } };
+        onTaskStatusChange?.(taskToMove, taskToMove.status, { process_steps: updatedSteps });
+      }
+      return;
+    }
+
+    if (destColumn === 'done') {
+      // Mark all steps done + set status to production_completed
+      const steps = getTaskProcessSteps(taskToMove);
+      const updatedSteps = {};
+      for (const [key, val] of Object.entries(steps)) {
+        updatedSteps[key] = val?.done ? val : { ...val, done: true, date: new Date().toISOString() };
+      }
+      onTaskStatusChange?.(taskToMove, 'production_completed', { process_steps: updatedSteps });
+    }
   };
 
   // Group tasks within a column by swimlane
@@ -369,8 +426,8 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
         </div>
       </div>
 
-      {/* 3-column AYOA-style kanban */}
-      <div className="grid grid-cols-3 gap-5 min-h-[400px]">
+      {/* 4-column step-based kanban */}
+      <div className="grid grid-cols-4 gap-5 min-h-[400px]">
         {Object.entries(board).map(([columnId, column]) => {
           const isCollapsed = !!collapsed[columnId];
           const taskCount = column.tasks?.length || 0;
