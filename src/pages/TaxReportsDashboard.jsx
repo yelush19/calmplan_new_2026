@@ -9,7 +9,8 @@ import { motion } from 'framer-motion';
 import {
   Calculator, Loader, RefreshCw, ChevronLeft, ChevronRight,
   ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus,
-  Zap, Flame, ChevronDown, Network, Target, TrendingUp, Clock, GitBranchPlus
+  Zap, Flame, ChevronDown, Network, Target, TrendingUp, Clock, GitBranchPlus,
+  CheckSquare, Download, CalendarDays
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
@@ -55,6 +56,20 @@ const allTaxCategories = Object.values(taxDashboardServices).flatMap(s => s.task
 // Core services get their own table (they have meaningful steps)
 const CORE_SERVICES = ['income_collection', 'expense_collection', 'vat', 'tax_advances'];
 
+// Phase detection — reusable for filtering + flow chart
+function getTaskPhase(t) {
+  const svc = getServiceForTask(t);
+  if (!svc) return 'process';
+  const steps = getTaskProcessSteps(t);
+  if (svc.key === 'income_collection' || svc.key === 'expense_collection') {
+    const allDone = svc.steps.every(s => steps[s.key]?.done);
+    return allDone ? 'broadcast' : 'collect';
+  }
+  if (steps.submission?.done) return 'broadcast';
+  if (steps.report_prep?.done) return 'review';
+  return 'process';
+}
+
 export default function TaxReportsDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const clientFilter = searchParams.get('client') || '';
@@ -71,6 +86,9 @@ export default function TaxReportsDashboardPage() {
   const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [cognitiveFilter, setCognitiveFilter] = useState(null);
+  const [phaseFilter, setPhaseFilter] = useState(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [filingSprintActive, setFilingSprintActive] = useState(false);
   const [filingSprintIdx, setFilingSprintIdx] = useState(0);
   const { confirm, ConfirmDialogComponent } = useConfirm();
@@ -166,8 +184,11 @@ export default function TaxReportsDashboardPage() {
         return (w.cognitiveLoad ?? 0) === cognitiveFilter;
       });
     }
+    if (phaseFilter) {
+      result = result.filter(t => getTaskPhase(t) === phaseFilter);
+    }
     return result;
-  }, [tasks, clientFilter, searchTerm, cognitiveFilter]);
+  }, [tasks, clientFilter, searchTerm, cognitiveFilter, phaseFilter]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
@@ -441,6 +462,49 @@ export default function TaxReportsDashboardPage() {
     }
   }, []);
 
+  const handleToggleSelect = useCallback((taskIds, selected) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      (Array.isArray(taskIds) ? taskIds : [taskIds]).forEach(id => {
+        if (selected) next.add(id); else next.delete(id);
+      });
+      return next;
+    });
+  }, []);
+
+  const handleBulkStatusChange = useCallback(async (newStatus) => {
+    const ids = [...selectedTaskIds];
+    if (!ids.length) return;
+    try {
+      localUpdateRef.current = true;
+      const updates = ids.map(id => Task.update(id, { status: newStatus }));
+      await Promise.all(updates);
+      setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, status: newStatus } : t));
+      setSelectedTaskIds(new Set());
+      setBulkMode(false);
+      setTimeout(() => { localUpdateRef.current = false; }, 1000);
+    } catch (err) {
+      console.error('שגיאה בעדכון מרובה:', err);
+      localUpdateRef.current = false;
+    }
+  }, [selectedTaskIds]);
+
+  // CSV Export
+  const handleExport = useCallback(() => {
+    const header = 'לקוח,קטגוריה,סטטוס,דדליין,חודש דיווח\n';
+    const rows = filteredTasks.map(t =>
+      `"${t.client_name || ''}","${t.category || ''}","${STATUS_CONFIG[t.status]?.label || t.status}","${t.due_date || ''}","${t.reporting_month || ''}"`
+    ).join('\n');
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tax-reports-${format(selectedMonth, 'yyyy-MM')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredTasks, selectedMonth]);
+
   const handleDeleteTask = async (task) => {
     setEditingTask(null);
     const ok = await confirm({
@@ -507,9 +571,26 @@ export default function TaxReportsDashboardPage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
           </div>
+          {format(selectedMonth, 'yyyy-MM') !== format(subMonths(new Date(), 1), 'yyyy-MM') && (
+            <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => setSelectedMonth(subMonths(new Date(), 1))}>
+              <CalendarDays className="w-3.5 h-3.5 me-1" />היום
+            </Button>
+          )}
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
             משימה מהירה
+          </Button>
+          <Button variant="outline" size="sm" className="h-9 gap-1" onClick={handleExport}>
+            <Download className="w-3.5 h-3.5" />CSV
+          </Button>
+          <Button
+            variant={bulkMode ? 'default' : 'outline'}
+            size="sm"
+            className={`h-9 gap-1 ${bulkMode ? 'bg-violet-600 hover:bg-violet-700 text-white' : ''}`}
+            onClick={() => { setBulkMode(!bulkMode); setSelectedTaskIds(new Set()); }}
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            {bulkMode ? `נבחרו ${selectedTaskIds.size}` : 'בחירה'}
           </Button>
           <Button
             onClick={() => setShowInjectionPanel(prev => !prev)}
@@ -686,27 +767,6 @@ export default function TaxReportsDashboardPage() {
 
       {/* P2 Production Flow: Collect → Process → Review → Broadcast — Step-based Pipeline */}
       {!isLoading && filteredTasks.length > 0 && (() => {
-        // Step-based phase detection (not status-based)
-        // קליטה = income/expense tasks still open
-        // עיבוד = report_prep not yet done (authority tasks)
-        // עיון = report_prep done, submission not yet done → ready for שידור
-        // שידור = submission done (or all steps done)
-        const getTaskPhase = (t) => {
-          const svc = getServiceForTask(t);
-          if (!svc) return 'process';
-          const steps = getTaskProcessSteps(t);
-          // Collection tasks (income/expense) — simple: done or not
-          if (svc.key === 'income_collection' || svc.key === 'expense_collection') {
-            return areAllStepsDone({ ...t, process_steps: steps }) ? 'broadcast' : 'collect';
-          }
-          // Authority/reporting tasks — step-based phases
-          const reportDone = steps?.report_prep?.done;
-          const submissionDone = steps?.submission?.done;
-          if (submissionDone || t.status === 'production_completed') return 'broadcast';
-          if (reportDone) return 'review'; // הפקת דו"ח done → ready for שידור
-          return 'process';
-        };
-
         const phases = [
           { key: 'collect', label: 'קליטה', color: '#FF8F00', icon: '📥' },
           { key: 'process', label: 'עיבוד', color: '#4682B4', icon: '⚙️' },
@@ -747,9 +807,11 @@ export default function TaxReportsDashboardPage() {
                 const pct = filteredTasks.length > 0 ? Math.round((count / filteredTasks.length) * 100) : 0;
                 const isActive = count > 0;
                 return (
-                  <div key={phase.key} className="flex-1 relative" style={{ zIndex: 1 }}>
+                  <div key={phase.key} className="flex-1 relative cursor-pointer" style={{ zIndex: 1 }}
+                    onClick={() => setPhaseFilter(prev => prev === phase.key ? null : phase.key)}>
                     <motion.div
-                      className="mx-1 rounded-[20px] px-3 py-3 text-center transition-all relative overflow-hidden"
+                      className={`mx-1 rounded-[20px] px-3 py-3 text-center transition-all relative overflow-hidden ${phaseFilter === phase.key ? 'ring-2' : ''}`}
+                      style={{ ringColor: phase.color }}
                       style={{
                         background: isActive
                           ? `linear-gradient(135deg, ${phase.color}08 0%, ${phase.color}14 100%)`
@@ -813,7 +875,26 @@ export default function TaxReportsDashboardPage() {
         </div>
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+      <div className="flex items-center gap-2 flex-wrap">
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+        {phaseFilter && (
+          <Badge className="bg-slate-100 text-slate-700 gap-1 px-2.5 py-1 text-xs font-bold cursor-pointer hover:bg-slate-200" onClick={() => setPhaseFilter(null)}>
+            סינון: {phaseFilter === 'collect' ? 'קליטה' : phaseFilter === 'process' ? 'עיבוד' : phaseFilter === 'review' ? 'מוכן לשידור' : 'שודר'}
+            <X className="w-3 h-3" />
+          </Badge>
+        )}
+        {bulkMode && selectedTaskIds.size > 0 && (
+          <div className="flex items-center gap-1.5 bg-violet-50 border border-violet-200 rounded-lg px-3 py-1.5">
+            <span className="text-xs font-bold text-violet-700">{selectedTaskIds.size} נבחרו:</span>
+            {['not_started', 'sent_for_review', 'production_completed'].map(s => (
+              <Button key={s} size="sm" variant="outline" className="h-7 text-xs px-2"
+                onClick={() => handleBulkStatusChange(s)}>
+                {STATUS_CONFIG[s]?.label || s}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Content */}
       {isLoading ? (
@@ -856,6 +937,9 @@ export default function TaxReportsDashboardPage() {
                       onDelete={handleDeleteTask}
                       onNote={setNoteTask}
                       onReorder={handleReorder}
+                      bulkMode={bulkMode}
+                      selectedTaskIds={selectedTaskIds}
+                      onToggleSelect={handleToggleSelect}
                     />
                   )}
                 </div>

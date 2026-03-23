@@ -1174,11 +1174,41 @@ export default function ReconciliationsPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {clientRows.map((row, idx) => {
+                            {(() => {
+                              // Sub-group by account type
+                              const typeOrder = ['bank', 'credit_card', 'bookkeeping', 'clearing'];
+                              const byType = {};
+                              clientRows.forEach(row => {
+                                const t = row.accountType || 'bank';
+                                if (!byType[t]) byType[t] = [];
+                                byType[t].push(row);
+                              });
+                              const sortedTypes = typeOrder.filter(t => byType[t]?.length);
+                              // Only show sub-headers if more than one type
+                              const showSubHeaders = sortedTypes.length > 1;
+                              let globalIdx = 0;
+                              return sortedTypes.map(type => {
+                                const TypeIcon = accountTypeIcons[type] || Landmark;
+                                const typeRows = byType[type];
+                                return (
+                                  <React.Fragment key={type}>
+                                    {showSubHeaders && (
+                                      <tr>
+                                        <td colSpan={8} className="px-3 py-1.5 bg-slate-50/80 border-b border-slate-100">
+                                          <div className="flex items-center gap-1.5">
+                                            <TypeIcon className="w-3.5 h-3.5 text-[#4682B4]" />
+                                            <span className="text-[11px] font-bold text-slate-600">{accountTypeLabels[type] || type}</span>
+                                            <span className="text-[10px] text-slate-400">({typeRows.length})</span>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                    {typeRows.map((row) => {
                               const AccIcon = accountTypeIcons[row.accountType] || Landmark;
                               const stsCfg = statusConfig[row.latestStatus] || statusConfig.not_started;
                               const severity = lagSeverityConfig[row.lagSeverity];
                               const isChecked = selectedAccounts.has(row.id);
+                              const idx = globalIdx++;
 
                               return (
                                 <motion.tr
@@ -1350,6 +1380,10 @@ export default function ReconciliationsPage() {
                                 </motion.tr>
                               );
                             })}
+                                  </React.Fragment>
+                                );
+                              });
+                            })()}
                           </tbody>
                         </table>
                       </div>

@@ -656,6 +656,21 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                               boxShadow: '0 0 6px #800000, 0 0 10px #80000080',
                             }} />
                           )}
+
+                          {/* Reschedule count badge */}
+                          {(task.reschedule_count || 0) > 0 && (
+                            <span className="flex-shrink-0 text-[9px] font-bold rounded-full px-1 leading-none" style={{
+                              background: 'rgba(245,158,11,0.85)',
+                              color: '#fff',
+                              minWidth: '14px',
+                              textAlign: 'center',
+                              padding: '2px 3px',
+                            }}
+                              title={`נדחה ${task.reschedule_count} פעמים`}
+                            >
+                              ↻{task.reschedule_count}
+                            </span>
+                          )}
                         </div>
 
                         {/* Subtle glass shine overlay */}

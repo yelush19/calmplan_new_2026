@@ -4,7 +4,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar, Zap, FastForward, Paperclip, GripVertical } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar, Zap, FastForward, Paperclip, GripVertical, StickyNote, Brain, Copy } from 'lucide-react';
 import { differenceInDays, parseISO, isValid, format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ResizableTable from '@/components/ui/ResizableTable';
@@ -31,6 +31,12 @@ const SERVICE_ACCENT_COLORS = {
 function getServiceAccent(serviceKey) {
   return SERVICE_ACCENT_COLORS[serviceKey] || { border: '#94A3B8', bg: '#F8FAFC', headerBg: '#E2E8F0' };
 }
+
+const COGNITIVE_LOAD_CONFIG = {
+  1: { label: 'קל', color: '#22C55E', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  2: { label: 'בינוני', color: '#F59E0B', bg: 'bg-amber-50', text: 'text-amber-700' },
+  3: { label: 'כבד', color: '#EF4444', bg: 'bg-red-50', text: 'text-red-700' },
+};
 
 // 5 Golden Statuses — display order by priority
 const STATUS_DISPLAY_ORDER = [
@@ -468,7 +474,10 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
               {taxIds.length > 0 && (
                 <div className="flex gap-2 mt-0.5">
                   {taxIds.map(({ label, value }) => (
-                    <span key={label} className="text-[12px] text-gray-400">
+                    <span key={label} className="text-[12px] text-gray-400 cursor-pointer hover:text-blue-500 transition-colors"
+                      title="לחץ להעתקה"
+                      onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(value); }}
+                    >
                       <span className="font-medium">{label}:</span> {value}
                     </span>
                   ))}
@@ -485,6 +494,21 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
                 <Paperclip className="w-3 h-3" />
               </span>
             )}
+            {task.notes && (
+              <span className="text-amber-400 shrink-0" title={task.notes}>
+                <StickyNote className="w-3 h-3" />
+              </span>
+            )}
+            {(() => {
+              const cl = task.cognitiveLoad ?? task.cognitive_load;
+              const cfg = cl ? COGNITIVE_LOAD_CONFIG[cl] : null;
+              if (!cfg) return null;
+              return (
+                <span className="shrink-0" title={`עומס: ${cfg.label}`}>
+                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: cfg.color }} />
+                </span>
+              );
+            })()}
             {(() => {
               if (!task.due_date) return null;
               const d = parseISO(task.due_date);
@@ -629,8 +653,15 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
       {/* Sub-tasks row */}
       {showSubTasks && (
         <tr className="bg-indigo-50">
-          <td colSpan={service.steps.length + 2} className="px-4 py-2">
+          <td colSpan={service.steps.length + 2 + (bulkMode ? 1 : 0)} className="px-4 py-2">
             <div className="space-y-1.5 mr-6">
+              {/* Task notes preview */}
+              {task.notes && (
+                <div className="bg-amber-50 rounded-lg px-3 py-2 border border-amber-100 flex items-start gap-1.5">
+                  <StickyNote className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-800 whitespace-pre-wrap leading-relaxed">{task.notes}</p>
+                </div>
+              )}
               {/* Fast-Track button for nano payroll */}
               {payrollTier?.fastTrack && task.status !== 'production_completed' && (
                 <button
@@ -709,9 +740,13 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                       {taxIds.map(({ label, value }) => (
-                        <div key={label} className="text-[11px]">
+                        <div key={label} className="text-[11px] flex items-center gap-1 cursor-pointer group/tax"
+                          onClick={() => { navigator.clipboard.writeText(value); }}
+                          title="לחץ להעתקה"
+                        >
                           <span className="text-blue-500">{label}:</span>{' '}
                           <span className="font-mono font-medium text-blue-900 select-all">{value}</span>
+                          <Copy className="w-2.5 h-2.5 text-blue-300 opacity-0 group-hover/tax:opacity-100 transition-opacity" />
                         </div>
                       ))}
                     </div>
