@@ -33,7 +33,8 @@ import {
 } from '@/config/processTemplates';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
-import { useAyoaView } from '@/contexts/AyoaViewContext';
+import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
+import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 
 // Admin dashboard services (dashboard: 'admin')
 const adminDashboardServices = Object.fromEntries(
@@ -56,13 +57,12 @@ export default function AdminTasksDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [collapsedServices, setCollapsedServices] = useState(new Set());
-  const { ayoaView, setAyoaView } = useAyoaView();
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
@@ -337,6 +337,8 @@ export default function AdminTasksDashboardPage() {
         </div>
       </div>
 
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-[#F5F5F5] to-white border-[#E0E0E0] shadow-sm">
           <CardContent className="p-3 text-center">
@@ -370,6 +372,13 @@ export default function AdminTasksDashboardPage() {
         </div>
       ) : (
         Object.keys(serviceData).length > 0 ? (
+          viewMode === 'kanban' ? (
+            <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
+          ) : viewMode === 'radial' ? (
+            <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+              <AyoaRadialView tasks={filteredTasks} centerLabel="ניהול" centerSub="P3" />
+            </div>
+          ) : (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
               const isCollapsed = collapsedServices.has(serviceKey);
@@ -404,6 +413,7 @@ export default function AdminTasksDashboardPage() {
               );
             })}
           </div>
+          )
         ) : (
           <Card className="p-12 text-center border-[#E0E0E0]">
             <ClipboardList className="w-16 h-16 mx-auto text-gray-300 mb-4" />

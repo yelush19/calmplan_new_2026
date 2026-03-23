@@ -21,14 +21,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
 import GanttView from '@/components/views/GanttView';
-import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
-import AyoaMapView from '@/components/canvas/AyoaMapView';
-import AyoaFeedView from '@/components/canvas/AyoaFeedView';
+import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
-import { useAyoaView } from '@/contexts/AyoaViewContext';
 import {
   TAX_SERVICES,
   ADDITIONAL_SERVICES,
@@ -62,7 +59,6 @@ export default function TaxReportsDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
   const [viewMode, setViewMode] = useState('timeline');
-  const { ayoaView, setAyoaView } = useAyoaView();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
@@ -647,6 +643,8 @@ export default function TaxReportsDashboardPage() {
         );
       })()}
 
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+
       {/* Content */}
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
@@ -692,6 +690,10 @@ export default function TaxReportsDashboardPage() {
                 </div>
               );
             })}
+          </div>
+        ) : viewMode === 'radial' ? (
+          <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+            <AyoaRadialView tasks={filteredTasks} centerLabel="דיווחי מס" centerSub="P2" />
           </div>
         ) : null
       ) : (

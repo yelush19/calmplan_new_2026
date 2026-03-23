@@ -307,6 +307,13 @@ export default function TasksPage() {
 
   useEffect(() => { loadTasks(); loadClients(); }, []);
 
+  // Cross-page sync: re-fetch when other pages update tasks via cascade
+  useEffect(() => {
+    const handler = () => loadTasks();
+    window.addEventListener('calmplan:data-synced', handler);
+    return () => window.removeEventListener('calmplan:data-synced', handler);
+  }, []);
+
   const loadClients = async () => {
     try {
       const clients = await Client.list(null, 500);

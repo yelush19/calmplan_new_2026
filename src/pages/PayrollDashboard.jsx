@@ -37,8 +37,9 @@ import { processTaskCascade } from '@/engines/taskCascadeEngine';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
-import { useAyoaView } from '@/contexts/AyoaViewContext';
 import GanttView from '@/components/views/GanttView';
+import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
+import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 
 const payrollDashboardServices = {
   ...PAYROLL_SERVICES,
@@ -57,8 +58,7 @@ export default function PayrollDashboardPage() {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
-  const [viewMode, setViewMode] = useState('kanban');
-  const { ayoaView, setAyoaView } = useAyoaView();
+  const [viewMode, setViewMode] = useState('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
@@ -422,11 +422,13 @@ export default function PayrollDashboardPage() {
         <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
       )}
 
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
-      ) : (
+      ) : viewMode === 'table' ? (
         sortedServiceKeys.length > 0 ? (
           <div className="space-y-4">
             {sortedServiceKeys.map(serviceKey => {
@@ -471,7 +473,15 @@ export default function PayrollDashboardPage() {
             <p className="text-slate-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
           </Card>
         )
-      )}
+      ) : viewMode === 'radial' ? (
+        <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+          <AyoaRadialView tasks={filteredTasks} centerLabel="שכר" centerSub="P1" />
+        </div>
+      ) : viewMode === 'timeline' ? (
+        <ProjectTimelineView tasks={filteredTasks} />
+      ) : viewMode === 'kanban' ? (
+        <KanbanView tasks={filteredTasks} onStatusChange={handleStatusChange} onEdit={setEditingTask} />
+      ) : null}
 
       <QuickAddTaskDialog
         open={showQuickAdd}

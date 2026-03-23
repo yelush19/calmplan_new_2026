@@ -33,6 +33,8 @@ import {
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
+import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
+import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 
 // P1 Reporting: form 102, social security, deductions — the REPORTING step only
 const REPORTING_SERVICES = {
@@ -352,6 +354,8 @@ export default function PayrollReportsDashboardPage() {
         </div>
       </div>
 
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-[#F5F5F5] to-white border-[#E0E0E0] shadow-sm">
           <CardContent className="p-3 text-center">
@@ -389,6 +393,10 @@ export default function PayrollReportsDashboardPage() {
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (
           <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
+        ) : viewMode === 'radial' ? (
+          <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+            <AyoaRadialView tasks={filteredTasks} centerLabel="דיווחי שכר" centerSub="P1" />
+          </div>
         ) : (
           <div className="space-y-4">
             {sortedServiceKeys.map(serviceKey => {
