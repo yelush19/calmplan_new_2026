@@ -170,10 +170,15 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       if (!groups[key]) groups[key] = [];
       groups[key].push(task);
     });
-    return Object.entries(groups).sort(([, a], [, b]) => {
+    // Sort clients: manual sort_order first (min across tasks), then overdue, then alphabetical
+    return Object.entries(groups).sort(([nameA, a], [nameB, b]) => {
+      const minOrderA = Math.min(...a.map(t => t.sort_order ?? Infinity));
+      const minOrderB = Math.min(...b.map(t => t.sort_order ?? Infinity));
+      if (minOrderA !== minOrderB) return minOrderA - minOrderB;
       const aOverdue = a.some(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date());
       const bOverdue = b.some(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date());
-      return bOverdue - aOverdue;
+      if (aOverdue !== bOverdue) return bOverdue - aOverdue;
+      return nameA.localeCompare(nameB, 'he');
     });
   }, [monthTasks]);
 

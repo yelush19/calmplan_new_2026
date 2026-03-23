@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 const fixShortYear = (v) => { if (!v) return v; const m = v.match(/^(\d{1,2})-(\d{2})-(\d{2})$/); if (m) { const yr = parseInt(m[1], 10); return `${yr < 100 ? (yr < 50 ? 2000 + yr : 1900 + yr) : yr}-${m[2]}-${m[3]}`; } return v; };
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar, Zap, FastForward, Paperclip } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar, Zap, FastForward, Paperclip, GripVertical } from 'lucide-react';
 import { differenceInDays, parseISO, isValid, format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ResizableTable from '@/components/ui/ResizableTable';
@@ -120,6 +121,7 @@ export default function GroupedServiceTable({
   bulkMode = false,
   selectedTaskIds = new Set(),
   onToggleSelect,
+  onReorder,
 }) {
   const relevantRows = clientRows;
   const completedCount = relevantRows.filter(r => r.task.status === 'production_completed').length;
@@ -133,9 +135,14 @@ export default function GroupedServiceTable({
       groups[status].push(row);
     });
 
-    // Sort each group by client name
+    // Sort each group: manual sort_order first, then alphabetically
     Object.values(groups).forEach(group => {
-      group.sort((a, b) => a.clientName.localeCompare(b.clientName, 'he'));
+      group.sort((a, b) => {
+        const oa = a.task.sort_order ?? Infinity;
+        const ob = b.task.sort_order ?? Infinity;
+        if (oa !== ob) return oa - ob;
+        return a.clientName.localeCompare(b.clientName, 'he');
+      });
     });
 
     // Return sorted by display order
@@ -166,6 +173,29 @@ export default function GroupedServiceTable({
     STATUS_DISPLAY_ORDER.forEach(s => { all[s] = true; });
     setCollapsedGroups(all);
   };
+
+  // Drag-to-reorder within a status group
+  const handleDragEnd = useCallback((result) => {
+    const { source, destination } = result;
+    if (!destination) return;
+    if (source.droppableId !== destination.droppableId) return;
+    if (source.index === destination.index) return;
+
+    const group = statusGroups.find(g => g.status === source.droppableId);
+    if (!group) return;
+
+    const items = [...group.rows];
+    const [moved] = items.splice(source.index, 1);
+    items.splice(destination.index, 0, moved);
+
+    // Persist sort_order for each reordered task
+    items.forEach((row, idx) => {
+      const newOrder = idx + 1;
+      if (row.task.sort_order !== newOrder) {
+        onReorder?.(row.task, newOrder);
+      }
+    });
+  }, [statusGroups, onReorder]);
 
   const colCount = service.steps.length + 2; // client + steps + status
 
@@ -249,68 +279,86 @@ export default function GroupedServiceTable({
               </th>
             </tr>
           </thead>
-          <tbody>
-            {statusGroups.map(({ status, config, rows }) => {
-              const isCollapsed = !!collapsedGroups[status];
-              return (
-                <React.Fragment key={status}>
-                  {/* Status group header */}
-                  <tr
-                    className="cursor-pointer select-none hover:bg-[#F5F5F5] transition-colors"
-                    onClick={() => toggleGroup(status)}
-                  >
-                    <td
-                      colSpan={colCount}
-                      className="py-1.5 px-4 border-b border-gray-100"
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <tbody>
+              {statusGroups.map(({ status, config, rows }) => {
+                const isCollapsed = !!collapsedGroups[status];
+                return (
+                  <React.Fragment key={status}>
+                    {/* Status group header */}
+                    <tr
+                      className="cursor-pointer select-none hover:bg-[#F5F5F5] transition-colors"
+                      onClick={() => toggleGroup(status)}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <ChevronDown
-                          className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isCollapsed ? 'rotate-[-90deg]' : ''}`}
-                        />
-                        <div className={`w-2.5 h-2.5 rounded-full ${config.bg} border ${config.border} shrink-0`} />
-                        <span className="font-bold text-gray-900 text-sm">{getStatusLabel(status, config, service.taskType)}</span>
-                        <Badge variant="secondary" className="text-[12px] px-1.5 py-0 bg-gray-100 text-gray-700 font-semibold">
-                          {rows.length}
-                        </Badge>
-                        {/* Mini progress for this group */}
-                        <div className="flex-1 max-w-[120px] bg-gray-100 rounded-full h-1 mr-auto">
-                          <div
-                            className={`h-1 rounded-full transition-all ${status === 'production_completed' ? 'bg-emerald-500' : 'bg-sky-400'}`}
-                            style={{ width: `${rows.length > 0 ? Math.round((rows.filter(r => r.task.status === 'production_completed').length / rows.length) * 100) : 0}%` }}
+                      <td
+                        colSpan={colCount + 1}
+                        className="py-1.5 px-4 border-b border-gray-100"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <ChevronDown
+                            className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isCollapsed ? 'rotate-[-90deg]' : ''}`}
                           />
+                          <div className={`w-2.5 h-2.5 rounded-full ${config.bg} border ${config.border} shrink-0`} />
+                          <span className="font-bold text-gray-900 text-sm">{getStatusLabel(status, config, service.taskType)}</span>
+                          <Badge variant="secondary" className="text-[12px] px-1.5 py-0 bg-gray-100 text-gray-700 font-semibold">
+                            {rows.length}
+                          </Badge>
+                          {/* Mini progress for this group */}
+                          <div className="flex-1 max-w-[120px] bg-gray-100 rounded-full h-1 mr-auto">
+                            <div
+                              className={`h-1 rounded-full transition-all ${status === 'production_completed' ? 'bg-emerald-500' : 'bg-sky-400'}`}
+                              style={{ width: `${rows.length > 0 ? Math.round((rows.filter(r => r.task.status === 'production_completed').length / rows.length) * 100) : 0}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                  {/* Client rows */}
-                  {!isCollapsed && rows.map(({ clientName, task, client }, idx) => (
-                    <ClientRow
-                      key={task.id}
-                      clientName={clientName}
-                      task={task}
-                      client={client}
-                      service={service}
-                      accent={accent}
-                      isEven={idx % 2 === 0}
-                      onToggleStep={onToggleStep}
-                      onDateChange={onDateChange}
-                      onStatusChange={onStatusChange}
-                      onPaymentDateChange={onPaymentDateChange}
-                      onSubTaskChange={onSubTaskChange}
-                      onAttachmentUpdate={onAttachmentUpdate}
-                      getClientIds={getClientIds}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      onNote={onNote}
-                      bulkMode={bulkMode}
-                      isSelected={selectedTaskIds.has(task.id)}
-                      onToggleSelect={onToggleSelect}
-                    />
-                  ))}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
+                      </td>
+                    </tr>
+                    {/* Droppable client rows */}
+                    {!isCollapsed && (
+                      <Droppable droppableId={status}>
+                        {(provided) => (
+                          <tr ref={provided.innerRef} {...provided.droppableProps} style={{ display: 'contents' }}>
+                            {rows.map(({ clientName, task, client }, idx) => (
+                              <Draggable key={task.id} draggableId={task.id} index={idx}>
+                                {(dragProvided, snapshot) => (
+                                  <ClientRow
+                                    ref={dragProvided.innerRef}
+                                    dragHandleProps={dragProvided.dragHandleProps}
+                                    draggableProps={dragProvided.draggableProps}
+                                    isDragging={snapshot.isDragging}
+                                    clientName={clientName}
+                                    task={task}
+                                    client={client}
+                                    service={service}
+                                    accent={accent}
+                                    isEven={idx % 2 === 0}
+                                    onToggleStep={onToggleStep}
+                                    onDateChange={onDateChange}
+                                    onStatusChange={onStatusChange}
+                                    onPaymentDateChange={onPaymentDateChange}
+                                    onSubTaskChange={onSubTaskChange}
+                                    onAttachmentUpdate={onAttachmentUpdate}
+                                    getClientIds={getClientIds}
+                                    onEdit={onEdit}
+                                    onDelete={onDelete}
+                                    onNote={onNote}
+                                    bulkMode={bulkMode}
+                                    isSelected={selectedTaskIds.has(task.id)}
+                                    onToggleSelect={onToggleSelect}
+                                  />
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </tr>
+                        )}
+                      </Droppable>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </DragDropContext>
         </ResizableTable>
       </div>
     </Card>
@@ -321,7 +369,7 @@ export default function GroupedServiceTable({
 // CLIENT ROW
 // =====================================================
 
-function ClientRow({ clientName, task, client, service, accent, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote, bulkMode, isSelected, onToggleSelect }) {
+const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client, service, accent, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote, bulkMode, isSelected, onToggleSelect, dragHandleProps, draggableProps, isDragging }, ref) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
@@ -377,10 +425,13 @@ function ClientRow({ clientName, task, client, service, accent, isEven, onToggle
   return (
     <>
       <tr
-        className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50' : ''} hover:bg-[#F5F5F5]`}
+        ref={ref}
+        {...(draggableProps || {})}
+        className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50' : ''} hover:bg-[#F5F5F5] ${isDragging ? 'shadow-lg bg-white z-50' : ''}`}
         style={{
+          ...(draggableProps?.style || {}),
           borderRight: `3px solid ${accent.border}`,
-          backgroundColor: allDone ? undefined : accent.bg,
+          backgroundColor: isDragging ? '#FFF' : allDone ? undefined : accent.bg,
         }}
       >
         {bulkMode && (
@@ -389,9 +440,12 @@ function ClientRow({ clientName, task, client, service, accent, isEven, onToggle
               className="w-4 h-4 rounded border-violet-300 text-violet-600 accent-violet-600" />
           </td>
         )}
-        {/* Client name + IDs */}
-        <td className="py-1.5 px-4 sticky right-0 z-10" style={{ backgroundColor: allDone ? '#ECFDF5' : accent.bg }}>
+        {/* Drag handle + Client name + IDs */}
+        <td className="py-1.5 px-4 sticky right-0 z-10" style={{ backgroundColor: isDragging ? '#FFF' : allDone ? '#ECFDF5' : accent.bg }}>
           <div className="flex items-center gap-1">
+            <span {...(dragHandleProps || {})} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0" title="גרור לשינוי סדר">
+              <GripVertical className="w-3.5 h-3.5" />
+            </span>
             <button
               onClick={() => setShowSubTasks(!showSubTasks)}
               className="text-gray-400 hover:text-gray-600 shrink-0"
@@ -717,7 +771,7 @@ function ClientRow({ clientName, task, client, service, accent, isEven, onToggle
       )}
     </>
   );
-}
+});
 
 // =====================================================
 // STEP CELL
