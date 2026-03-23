@@ -69,11 +69,17 @@ export default function PayrollDashboardPage() {
   const [cognitiveFilter, setCognitiveFilter] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
+  const localUpdateRef = React.useRef(false);
+
   useEffect(() => { loadData(); }, [selectedMonth]);
 
   // Live-refresh: listen for cascade events from other pages
   useEffect(() => {
-    const handler = () => loadData();
+    const handler = (e) => {
+      if (localUpdateRef.current) return;
+      if (e.detail?.source === 'payroll') return;
+      loadData();
+    };
     window.addEventListener('calmplan:data-synced', handler);
     return () => window.removeEventListener('calmplan:data-synced', handler);
   }, []);
@@ -235,8 +241,10 @@ export default function PayrollDashboardPage() {
         }
       }
 
-      await Task.update(task.id, updatePayload);
+      // Guard: prevent sync listener from overwriting optimistic state
+      localUpdateRef.current = true;
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
+      await Task.update(task.id, updatePayload);
 
       // Auto-create Phase B+C child tasks when payroll production completes
       if (cascade.tasksToCreate?.length > 0) {
@@ -245,15 +253,18 @@ export default function PayrollDashboardPage() {
           const created = await Task.create(childDef);
           createdTasks.push(created);
         }
-        // Add newly created tasks to local state so they appear immediately
         setTasks(prev => [...prev, ...createdTasks]);
       }
 
       if (updatePayload.status) {
         syncNotesWithTaskStatus(task.id, updatePayload.status);
-        window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'step-toggle' } }));
+        window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'step-toggle', source: 'payroll' } }));
       }
-    } catch (error) { console.error("Error updating step:", error); }
+      setTimeout(() => { localUpdateRef.current = false; }, 1000);
+    } catch (error) {
+      console.error("Error updating step:", error);
+      localUpdateRef.current = false;
+    }
   }, [filteredTasks]);
 
   const handleDateChange = useCallback(async (task, stepKey, newDate) => {

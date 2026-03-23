@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AccountReconciliation, Client, ClientAccount, Task } from '@/api/entities';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
   BookCheck, Plus, CheckCircle, Clock, AlertCircle, Landmark, CreditCard,
   AlertTriangle, Calendar, Search, BookUser, Building2, ChevronDown, ChevronUp,
   ArrowUpDown, Loader, ExternalLink, Zap, Filter, Users, RefreshCw,
+  LayoutGrid, Table2, CalendarDays, Edit3, Pencil,
   TrendingUp, Activity, BarChart3, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -90,6 +91,68 @@ function getDaysOverdue(nextDate) {
 function formatDate(dateStr) {
   if (!dateStr) return '-';
   return new Date(dateStr).toLocaleDateString('he-IL');
+}
+
+// ─── AYOA-Inspired View Tabs ────────────────────────────────────
+const AYOA_VIEWS = [
+  { key: 'table',    label: 'טבלה',        icon: Table2,       color: '#4682B4', bg: '#E0F7FA' },
+  { key: 'status',   label: 'לפי סטטוס',   icon: LayoutGrid,   color: '#7C3AED', bg: '#EDE9FE' },
+  { key: 'timeline', label: 'ציר זמן',     icon: CalendarDays,  color: '#059669', bg: '#D1FAE5' },
+];
+
+// AYOA color palette — ADHD-friendly: high contrast, soft pastels, clear boundaries
+const AYOA_STATUS_COLORS = {
+  not_started:           { bg: 'bg-gradient-to-br from-slate-50 to-slate-100', border: 'border-slate-300', header: 'bg-slate-200 text-slate-700', accent: '#94A3B8' },
+  waiting_for_materials: { bg: 'bg-gradient-to-br from-amber-50 to-yellow-50', border: 'border-amber-300', header: 'bg-amber-200 text-amber-800', accent: '#F59E0B' },
+  in_progress:           { bg: 'bg-gradient-to-br from-blue-50 to-indigo-50',  border: 'border-blue-300',  header: 'bg-blue-200 text-blue-800',  accent: '#3B82F6' },
+  completed:             { bg: 'bg-gradient-to-br from-emerald-50 to-teal-50', border: 'border-emerald-300', header: 'bg-emerald-200 text-emerald-800', accent: '#10B981' },
+  issues:                { bg: 'bg-gradient-to-br from-orange-50 to-red-50',   border: 'border-orange-300', header: 'bg-orange-200 text-orange-800', accent: '#F97316' },
+};
+
+// ─── Inline Date Cell ───────────────────────────────────────────
+function InlineDateCell({ value, onChange, className = '' }) {
+  const [editing, setEditing] = useState(false);
+  const [tempVal, setTempVal] = useState(value || '');
+  const inputRef = useRef(null);
+
+  useEffect(() => { setTempVal(value || ''); }, [value]);
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.showPicker?.();
+    }
+  }, [editing]);
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="date"
+        value={tempVal}
+        onChange={(e) => setTempVal(e.target.value)}
+        onBlur={() => {
+          setEditing(false);
+          if (tempVal !== (value || '')) onChange(tempVal);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { setEditing(false); if (tempVal !== (value || '')) onChange(tempVal); }
+          if (e.key === 'Escape') { setEditing(false); setTempVal(value || ''); }
+        }}
+        className={`text-xs border border-[#4682B4] rounded-lg px-2 py-1 bg-white focus:ring-2 focus:ring-[#4682B4]/30 outline-none w-[130px] ${className}`}
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className={`group inline-flex items-center gap-1 text-xs hover:bg-[#4682B4]/10 px-2 py-1 rounded-lg transition-colors cursor-pointer ${className}`}
+      title="לחץ לעריכה"
+    >
+      <span>{value ? formatDate(value) : '-'}</span>
+      <Pencil className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </button>
+  );
 }
 
 // ─── Sortable Table Header ──────────────────────────────────────
@@ -457,7 +520,21 @@ export default function ReconciliationsPage() {
   const [selectedAccounts, setSelectedAccounts] = useState(new Set());
   const [showBulkDialog, setShowBulkDialog] = useState(false);
 
+  // AYOA view mode
+  const [viewMode, setViewMode] = useState('table');
+
   useEffect(() => { loadData(); }, []);
+
+  // Bi-directional sync listener
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.detail?.source === 'reconciliations') return; // skip own events
+      console.log('[Reconciliations] 📡 Data synced from:', e.detail?.source);
+      loadData();
+    };
+    window.addEventListener('calmplan:data-synced', handler);
+    return () => window.removeEventListener('calmplan:data-synced', handler);
+  }, []);
 
   // Listen for tree changes → reload (e.g., reconciliation node disabled in Architect)
   useEffect(() => {
@@ -515,6 +592,25 @@ export default function ReconciliationsPage() {
   const handleUpdateAccount = async (accountId, updates) => {
     try {
       await ClientAccount.update(accountId, updates);
+      // If last_reconciliation_date changed, also update matching reconciliation tasks
+      if (updates.last_reconciliation_date) {
+        const row = rows.find(r => r.id === accountId);
+        if (row) {
+          // Find reconciliation tasks for this client and mark completed
+          const matchingTasks = allTasks.filter(t =>
+            t.client_name === row.clientName &&
+            (t.category === 'התאמות חשבונות' || t.category === 'התאמות') &&
+            t.status !== 'completed' && t.status !== 'not_relevant'
+          );
+          for (const task of matchingTasks) {
+            await Task.update(task.id, { status: 'completed' });
+          }
+        }
+      }
+      // Dispatch bi-directional sync event
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+        detail: { source: 'reconciliations', accountId, updates }
+      }));
       await loadData();
       window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
         detail: { type: 'client_account', source: 'Reconciliations', timestamp: new Date().toISOString() }
@@ -921,6 +1017,29 @@ export default function ReconciliationsPage() {
         </motion.div>
       )}
 
+      {/* ── AYOA View Tabs ─────────────────────────────────────── */}
+      <div className="flex items-center gap-2 bg-white border border-[#E0E0E0] rounded-[20px] p-1.5 shadow-sm w-fit">
+        {AYOA_VIEWS.map(v => {
+          const Icon = v.icon;
+          const isActive = viewMode === v.key;
+          return (
+            <button
+              key={v.key}
+              onClick={() => setViewMode(v.key)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-[14px] text-sm font-medium transition-all ${
+                isActive
+                  ? 'text-white shadow-md scale-[1.02]'
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+              style={isActive ? { backgroundColor: v.color } : {}}
+            >
+              <Icon className="w-4 h-4" />
+              {v.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── Filter & Search — Organic Glass ─────────────────────── */}
       <div className="rounded-[20px] p-4 border border-slate-100 shadow-sm" style={{ background: 'linear-gradient(135deg, #FAFBFC 0%, white 100%)' }}>
         <div className="flex flex-col md:flex-row items-center gap-4">
@@ -979,6 +1098,9 @@ export default function ReconciliationsPage() {
       </div>
 
 
+      {/* ── TABLE VIEW ─────────────────────────────────────────── */}
+      {viewMode === 'table' && (
+      <>
       {/* ── Expand/Collapse + Select All ─────────────────────── */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2.5">
@@ -1111,13 +1233,39 @@ export default function ReconciliationsPage() {
                                       {frequencyLabels[row.frequency] || 'חודשי'}
                                     </Badge>
                                   </td>
-                                  {/* Last Reconciliation */}
-                                  <td className="p-3 text-center text-xs text-slate-600">
-                                    {formatDate(row.lastDate)}
+                                  {/* Last Reconciliation — Inline Editable */}
+                                  <td className="p-3 text-center">
+                                    <InlineDateCell
+                                      value={row.lastDate}
+                                      onChange={async (newDate) => {
+                                        try {
+                                          const newNext = calcNextDate(newDate, row.frequency);
+                                          await handleUpdateAccount(row.id, {
+                                            last_reconciliation_date: newDate,
+                                            next_reconciliation_due: newNext,
+                                          });
+                                          toast.success(`${row.accountName} — תאריך התאמה עודכן`);
+                                        } catch (err) {
+                                          toast.error('שגיאה בעדכון תאריך');
+                                        }
+                                      }}
+                                    />
                                   </td>
-                                  {/* Next Reconciliation */}
-                                  <td className="p-3 text-center text-xs text-slate-600">
-                                    {formatDate(row.nextDate)}
+                                  {/* Next Reconciliation — Inline Editable (manual override) */}
+                                  <td className="p-3 text-center">
+                                    <InlineDateCell
+                                      value={row.nextDate}
+                                      onChange={async (newDate) => {
+                                        try {
+                                          await handleUpdateAccount(row.id, {
+                                            next_reconciliation_due: newDate,
+                                          });
+                                          toast.success(`${row.accountName} — יעד עודכן ידנית`);
+                                        } catch (err) {
+                                          toast.error('שגיאה בעדכון יעד');
+                                        }
+                                      }}
+                                    />
                                   </td>
                                   {/* Days Overdue */}
                                   <td className="p-3 text-center">
@@ -1157,6 +1305,9 @@ export default function ReconciliationsPage() {
                                           }
                                           const nextStsCfg = statusConfig[nextStatus] || statusConfig.not_started;
                                           toast.success(`${row.accountName}: ${nextStsCfg.label}`);
+                                          window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+                                            detail: { source: 'reconciliations', type: 'status-change' }
+                                          }));
                                           loadData();
                                         } catch (err) {
                                           toast.error('שגיאה בעדכון סטטוס');
@@ -1197,6 +1348,9 @@ export default function ReconciliationsPage() {
                                               });
                                             }
                                             toast.success(`${row.accountName} — הושלם וסונכרן`);
+                                            window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+                                              detail: { source: 'reconciliations', type: 'quick-sync' }
+                                            }));
                                             loadData();
                                           } catch (err) {
                                             toast.error('שגיאה בסנכרון');
@@ -1223,6 +1377,168 @@ export default function ReconciliationsPage() {
         </div>
       )}
 
+
+      </>
+      )}
+
+      {/* ── STATUS BOARD VIEW (AYOA Kanban) ────────────────────── */}
+      {viewMode === 'status' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {Object.entries(statusConfig).map(([statusKey, stsCfg]) => {
+            const ayoaColors = AYOA_STATUS_COLORS[statusKey] || AYOA_STATUS_COLORS.not_started;
+            const statusRows = sortedRows.filter(r => r.latestStatus === statusKey);
+            return (
+              <div key={statusKey} className={`rounded-[20px] border-2 ${ayoaColors.border} ${ayoaColors.bg} overflow-hidden min-h-[200px]`}>
+                {/* Column Header */}
+                <div className={`${ayoaColors.header} px-4 py-3 flex items-center justify-between`}>
+                  <div className="flex items-center gap-2">
+                    {stsCfg.icon && <stsCfg.icon className="w-4 h-4" />}
+                    <span className="font-bold text-sm">{stsCfg.label}</span>
+                  </div>
+                  <Badge className="bg-white/60 text-inherit border-0 text-xs">{statusRows.length}</Badge>
+                </div>
+                {/* Cards */}
+                <div className="p-2 space-y-2 max-h-[500px] overflow-y-auto">
+                  {statusRows.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-6">אין חשבונות</p>
+                  ) : (
+                    statusRows.map(row => {
+                      const severity = lagSeverityConfig[row.lagSeverity];
+                      return (
+                        <motion.div
+                          key={row.id}
+                          layout
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-white rounded-[14px] p-3 shadow-sm border border-white/50 hover:shadow-md transition-shadow cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className={`w-2.5 h-2.5 rounded-full ${severity.dot} ${severity.glow}`} />
+                            <span className="font-bold text-xs text-slate-800 truncate">{row.clientName}</span>
+                          </div>
+                          <p className="text-xs text-slate-600 mb-2">{row.accountName}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-slate-400">{formatDate(row.lastDate)}</span>
+                            {row.daysOverdue > 0 && (
+                              <Badge className={`text-[10px] rounded-full px-1.5 ${
+                                row.daysOverdue > 30
+                                  ? 'bg-orange-100 text-orange-700 border-orange-200'
+                                  : 'bg-amber-100 text-amber-700 border-amber-200'
+                              }`}>
+                                {row.daysOverdue}d
+                              </Badge>
+                            )}
+                          </div>
+                          {/* Quick sync button */}
+                          <Button
+                            size="sm"
+                            className="w-full mt-2 text-[11px] h-7 gap-1 rounded-[10px] bg-white hover:bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-none"
+                            onClick={async () => {
+                              try {
+                                const today = new Date().toISOString().split('T')[0];
+                                const newNext = calcNextDate(today, row.frequency);
+                                await handleUpdateAccount(row.id, {
+                                  last_reconciliation_date: today,
+                                  next_reconciliation_due: newNext,
+                                });
+                                if (row.latestRec?.id) {
+                                  await AccountReconciliation.update(row.latestRec.id, { status: 'completed' });
+                                }
+                                toast.success(`${row.accountName} — הושלם`);
+                                loadData();
+                              } catch (err) { toast.error('שגיאה'); }
+                            }}
+                          >
+                            <Zap className="w-3 h-3" />
+                            סנכרן עכשיו
+                          </Button>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── TIMELINE VIEW (AYOA) ───────────────────────────────── */}
+      {viewMode === 'timeline' && (
+        <div className="bg-white border border-[#E0E0E0] rounded-[24px] p-6 shadow-sm">
+          <div className="space-y-1">
+            {/* Timeline header */}
+            <div className="flex items-center gap-4 mb-4 pb-3 border-b border-slate-200">
+              <span className="text-sm font-bold text-slate-600 w-40">לקוח / חשבון</span>
+              <span className="text-sm font-bold text-slate-600 w-28 text-center">התאמה אחרונה</span>
+              <span className="text-sm font-bold text-slate-600 flex-1 text-center">ציר זמן</span>
+              <span className="text-sm font-bold text-slate-600 w-28 text-center">יעד הבא</span>
+              <span className="text-sm font-bold text-slate-600 w-20 text-center">פיגור</span>
+            </div>
+            {sortedRows.map((row, idx) => {
+              const severity = lagSeverityConfig[row.lagSeverity];
+              const maxDays = 90;
+              const progressPct = row.lastDate && row.nextDate
+                ? Math.min(100, Math.max(0, (
+                    (Date.now() - new Date(row.lastDate).getTime()) /
+                    (new Date(row.nextDate).getTime() - new Date(row.lastDate).getTime())
+                  ) * 100))
+                : 0;
+              const barColor = progressPct > 100 ? '#F97316'
+                : progressPct > 80 ? '#F59E0B'
+                : progressPct > 50 ? '#3B82F6'
+                : '#10B981';
+
+              return (
+                <motion.div
+                  key={row.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.02 }}
+                  className="flex items-center gap-4 py-2.5 border-b border-slate-100 last:border-0 hover:bg-slate-50 rounded-lg px-2 transition-colors"
+                >
+                  {/* Client + Account */}
+                  <div className="w-40 truncate">
+                    <p className="text-xs font-bold text-slate-800 truncate">{row.clientName}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{row.accountName}</p>
+                  </div>
+                  {/* Last date */}
+                  <div className="w-28 text-center text-xs text-slate-600">{formatDate(row.lastDate)}</div>
+                  {/* Progress bar */}
+                  <div className="flex-1">
+                    <div className="relative h-5 bg-slate-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(progressPct, 100)}%` }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
+                        className="absolute inset-y-0 right-0 rounded-full"
+                        style={{ backgroundColor: barColor, opacity: 0.7 }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-slate-600">{Math.round(progressPct)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Next date */}
+                  <div className="w-28 text-center text-xs text-slate-600">{formatDate(row.nextDate)}</div>
+                  {/* Overdue */}
+                  <div className="w-20 text-center">
+                    {row.daysOverdue > 0 ? (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        row.daysOverdue > 30 ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {row.daysOverdue}d
+                      </span>
+                    ) : (
+                      <span className="text-xs text-teal-500">✓</span>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Client Drawer ──────────────────────────────────────── */}
       <ClientDrawer
