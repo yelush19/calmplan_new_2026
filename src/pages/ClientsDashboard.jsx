@@ -11,7 +11,7 @@ import {
   Loader, RefreshCw, Users, Search,
   ChevronLeft, ChevronRight,
   ExternalLink, Calculator, Briefcase, Settings2,
-  Plus, Check, X, ArrowLeft
+  Plus, Check, X, ArrowLeft, GitBranchPlus
 } from 'lucide-react';
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import { Link, useNavigate } from 'react-router-dom';
@@ -22,6 +22,7 @@ import { isBimonthlyOffMonth, STATUS_CONFIG, getServiceForTask, ALL_SERVICES, ge
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import { processTaskCascade, PHASE_B_SERVICES, PHASE_C_SERVICES, P2_PHASE_B_SERVICES, P2_PHASE_C_SERVICES } from '@/engines/taskCascadeEngine';
+import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 
 
 // === Column Groups — P2 ONLY: Tax + Bookkeeping services ===
@@ -33,7 +34,7 @@ const COLUMN_GROUPS = [
     bgColor: 'bg-[#4682B4]/5',
     headerBg: 'bg-[#4682B4]',
     headerText: 'text-white',
-    drillDownPage: 'TaxReportsDashboard',
+    drillDownPage: null,
     icon: Calculator,
     columns: [
       { key: 'vat', label: 'מע"מ', categories: ['מע"מ', 'מע"מ 874', 'work_vat_reporting'], createCategory: 'מע"מ', createTitle: 'מע"מ', requiredServices: ['vat_reporting', 'bookkeeping', 'full_service'] },
@@ -464,6 +465,8 @@ export default function ClientsDashboardPage() {
     setPopover(null);
   };
 
+  const [showInjectionPanel, setShowInjectionPanel] = useState(false);
+
   // === Bulk: generate all tasks for selected month ===
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState(null);
@@ -551,7 +554,7 @@ export default function ClientsDashboardPage() {
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">P2 | ריכוז דיווחי מיסים</h1>
+            <h1 className="text-2xl font-bold text-gray-800">P2 | דיווחים (מע"מ ומקדמות)</h1>
             <p className="text-sm text-slate-500">חודש דיווח: {format(selectedMonth, 'MMMM yyyy', { locale: he })} | לחץ על תא לשינוי סטטוס</p>
           </div>
         </div>
@@ -583,6 +586,14 @@ export default function ClientsDashboardPage() {
               <><Plus className="w-3.5 h-3.5" />צור דיווחים לכל הלקוחות</>
             )}
           </Button>
+          <Button
+            onClick={() => setShowInjectionPanel(prev => !prev)}
+            size="sm"
+            className={`h-9 gap-1.5 rounded-xl ${showInjectionPanel ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'}`}
+          >
+            <GitBranchPlus className="w-3.5 h-3.5" />
+            הזרקת משימות
+          </Button>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -604,6 +615,16 @@ export default function ClientsDashboardPage() {
           </button>
         </motion.div>
       )}
+
+      {/* Injection Panel */}
+      <AnimatePresence>
+        {showInjectionPanel && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="border-2 border-orange-200 bg-orange-50/30 rounded-2xl overflow-hidden">
+            <ClientRecurringTasks onGenerateComplete={loadData} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
