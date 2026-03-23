@@ -367,7 +367,10 @@ export default function WeeklyPlanningDashboard() {
   // All categories for filter
   const allCategories = useMemo(() => {
     const catSet = new Set();
-    tasks.forEach(t => catSet.add(getCategoryLabel(t.category)));
+    tasks.forEach(t => {
+      const label = getCategoryLabel(t.category);
+      if (label) catSet.add(label);
+    });
     return Array.from(catSet).sort();
   }, [tasks]);
 
