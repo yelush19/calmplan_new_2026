@@ -249,6 +249,11 @@ export default function TaxReportsDashboardPage() {
     }
   }, [filingSprintActive, filingSprintTasks, filingSprintIdx]);
 
+  // Shared steps: when toggled in one service, auto-sync to sibling task
+  const SHARED_STEPS = {
+    income_input: ['מע"מ', 'work_vat_reporting', 'מקדמות מס', 'work_tax_advances'],
+  };
+
   const handleToggleStep = useCallback(async (task, stepKey) => {
     const currentSteps = getTaskProcessSteps(task);
     const updatedSteps = toggleStep(currentSteps, stepKey);
@@ -264,13 +269,41 @@ export default function TaxReportsDashboardPage() {
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       await Task.update(task.id, updatePayload);
       if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
+
+      // Cross-task sync: if this step is shared, update sibling tasks for same client
+      const sharedCategories = SHARED_STEPS[stepKey];
+      if (sharedCategories) {
+        const newStepState = updatedSteps[stepKey];
+        const siblingTasks = tasks.filter(t =>
+          t.id !== task.id &&
+          t.client_name === task.client_name &&
+          sharedCategories.includes(t.category)
+        );
+        for (const sibling of siblingTasks) {
+          const siblingSteps = getTaskProcessSteps(sibling);
+          // Only sync if sibling has this step and it differs
+          const sibService = getServiceForTask(sibling);
+          const hasSameStep = sibService?.steps?.some(s => s.key === stepKey);
+          if (hasSameStep && siblingSteps[stepKey]?.done !== newStepState.done) {
+            const updatedSibSteps = { ...siblingSteps, [stepKey]: { ...newStepState } };
+            const sibPayload = { process_steps: updatedSibSteps };
+            const sibUpdated = { ...sibling, process_steps: updatedSibSteps };
+            if (areAllStepsDone(sibUpdated) && sibling.status !== 'production_completed') {
+              sibPayload.status = 'production_completed';
+            }
+            setTasks(prev => prev.map(t => t.id === sibling.id ? { ...t, ...sibPayload } : t));
+            await Task.update(sibling.id, sibPayload);
+          }
+        }
+      }
+
       // Release guard after DB write completes
       setTimeout(() => { localUpdateRef.current = false; }, 1000);
     } catch (error) {
       console.error("Error updating step:", error);
       localUpdateRef.current = false;
     }
-  }, []);
+  }, [tasks]);
 
   const handleDateChange = useCallback(async (task, stepKey, newDate) => {
     const currentSteps = getTaskProcessSteps(task);
