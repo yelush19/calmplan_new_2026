@@ -56,6 +56,7 @@ export const TAX_SERVICES = {
       { key: 'expense_input', label: 'קליטת הוצאות',  icon: 'download' },
       { key: 'report_prep',   label: 'הכנת דו"ח',     icon: 'file-text' },
       { key: 'submission',    label: 'דיווח',          icon: 'send' },
+      { key: 'payment',       label: 'תשלום',          icon: 'landmark' },
     ],
   },
 };
