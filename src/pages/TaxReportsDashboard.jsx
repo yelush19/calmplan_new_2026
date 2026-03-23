@@ -459,22 +459,6 @@ export default function TaxReportsDashboardPage() {
         </div>
       </motion.div>
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-          <Input
-            placeholder="חיפוש לפי שם לקוח, משימה..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pe-10 h-9"
-          />
-        </div>
-        <div className="flex bg-white rounded-lg p-0.5 shadow-sm border border-[#E0E0E0] text-xs">
-          <button onClick={expandAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">פתח הכל</button>
-          <button onClick={collapseAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">סגור הכל</button>
-        </div>
-      </div>
-
       {/* KPI Bar — AYOA organic capsules */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Total Reports */}
