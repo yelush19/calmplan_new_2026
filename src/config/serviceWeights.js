@@ -42,15 +42,21 @@ export const SERVICE_WEIGHTS = {
   'פנסיות וקרנות':     { duration: 15, cognitiveLoad: 0, label: 'פנסיות וקרנות' },
   'work_social_benefits': { duration: 15, cognitiveLoad: 0, label: 'Social Benefits' },
 
+  // P2 — Data Collection (קליטת נתונים)
+  'קליטת הכנסות':      { duration: 15, cognitiveLoad: 1, label: 'קליטת הכנסות' },
+  'work_income_collection': { duration: 15, cognitiveLoad: 1, label: 'Income Collection' },
+  'קליטת הוצאות':      { duration: 20, cognitiveLoad: 2, label: 'קליטת הוצאות' },        // יותר מורכב — ריבוי ספקים
+  'work_expense_collection': { duration: 20, cognitiveLoad: 2, label: 'Expense Collection' },
+
   // P2 — Bookkeeping & VAT
   'מע"מ — הכנה':       { duration: 30, cognitiveLoad: 2, label: 'מע"מ — הכנה' },        // לקוח שצריך הכנת דוח
   'work_vat_prep':      { duration: 30, cognitiveLoad: 2, label: 'VAT Prep' },
-  'מע"מ':              { duration: 10, cognitiveLoad: 0, label: 'מע"מ' },               // ברירת מחדל — לקוח מנהל, רק העלאה
-  'work_vat_reporting': { duration: 10, cognitiveLoad: 0, label: 'VAT Reporting' },
-  'מע"מ 874':          { duration: 5,  cognitiveLoad: 0, label: 'מע"מ 874' },           // דיווח 3 + תשלום 2 דק'
-  'work_vat_874':       { duration: 5,  cognitiveLoad: 0, label: 'VAT 874' },
-  'מקדמות מס':         { duration: 5,  cognitiveLoad: 0, label: 'מקדמות מס' },          // דיווח 3 + תשלום 2 דק'
-  'work_tax_advances':  { duration: 5,  cognitiveLoad: 0, label: 'Tax Advances' },
+  'מע"מ':              { duration: 10, cognitiveLoad: 1, label: 'מע"מ' },               // דיווח לרשות = פשוט (לא ננו)
+  'work_vat_reporting': { duration: 10, cognitiveLoad: 1, label: 'VAT Reporting' },
+  'מע"מ 874':          { duration: 5,  cognitiveLoad: 1, label: 'מע"מ 874' },           // דיווח לרשות = פשוט
+  'work_vat_874':       { duration: 5,  cognitiveLoad: 1, label: 'VAT 874' },
+  'מקדמות מס':         { duration: 5,  cognitiveLoad: 1, label: 'מקדמות מס' },          // דיווח לרשות = פשוט
+  'work_tax_advances':  { duration: 5,  cognitiveLoad: 1, label: 'Tax Advances' },
   'הנהלת חשבונות':     { duration: 30, cognitiveLoad: 2, label: 'הנהלת חשבונות' },
   'work_bookkeeping':   { duration: 30, cognitiveLoad: 2, label: 'Bookkeeping' },
   'התאמות':            { duration: 30, cognitiveLoad: 2, label: 'התאמות' },

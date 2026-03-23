@@ -53,6 +53,9 @@ const taxDashboardServices = {
 
 const allTaxCategories = Object.values(taxDashboardServices).flatMap(s => s.taskCategories);
 
+// Only actual reports (authority filings) — NOT data entry (קליטת הכנסות/הוצאות)
+const REPORT_ONLY_CATEGORIES = Object.values(TAX_SERVICES).flatMap(s => s.taskCategories);
+
 // Core services get their own table (they have meaningful steps)
 const CORE_SERVICES = ['income_collection', 'expense_collection', 'vat', 'tax_advances'];
 
@@ -230,13 +233,13 @@ export default function TaxReportsDashboardPage() {
   const expandAllServices = useCallback(() => setCollapsedServices(new Set()), []);
   const collapseAllServices = useCallback(() => setCollapsedServices(new Set(serviceKeys)), [serviceKeys]);
 
-  // Stats (excludes not_relevant tasks)
+  // Stats — "דיווחים" counts only actual reports (vat, tax_advances, vat_874), not data entry
   const stats = useMemo(() => {
-    const relevant = filteredTasks;
-    const total = relevant.length;
-    const completed = relevant.filter(t => t.status === 'production_completed').length;
+    const reportTasks = filteredTasks.filter(t => REPORT_ONLY_CATEGORIES.includes(t.category));
+    const reportTotal = reportTasks.length;
+    const reportCompleted = reportTasks.filter(t => t.status === 'production_completed').length;
     let totalSteps = 0, doneSteps = 0;
-    relevant.forEach(task => {
+    filteredTasks.forEach(task => {
       const service = getServiceForTask(task);
       if (service) {
         const steps = task.process_steps || {};
@@ -244,7 +247,15 @@ export default function TaxReportsDashboardPage() {
         doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
       }
     });
-    return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0 };
+    return {
+      total: reportTotal,
+      completed: reportCompleted,
+      pct: reportTotal > 0 ? Math.round((reportCompleted / reportTotal) * 100) : 0,
+      allTasksCount: filteredTasks.length,
+      totalSteps,
+      doneSteps,
+      stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0,
+    };
   }, [filteredTasks]);
 
   // Filing Sprint: tasks that are sent_for_review (ready to file)
@@ -661,7 +672,8 @@ export default function TaxReportsDashboardPage() {
             {[3, 2, 1, 0].map(tier => {
               const taskCount = filteredTasks.filter(t => {
                 const w = getServiceWeight(t.category);
-                return (w.cognitiveLoad ?? 0) === tier;
+                const tl = t.cognitive_load != null ? t.cognitive_load : (w.cognitiveLoad ?? 0);
+                return tl === tier;
               }).length;
               if (!taskCount) return null;
               const lc = LOAD_COLORS[tier];

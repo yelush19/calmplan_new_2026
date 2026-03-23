@@ -30,7 +30,8 @@ export default function CognitiveCapacityHeader({ tasks = [], onFilterTier }) {
     tasks.forEach(task => {
       if (task.status === 'production_completed') return; // skip completed
       const weight = getServiceWeight(task.category);
-      const tier = weight.cognitiveLoad ?? 0;
+      // Prefer task-level cognitive_load (set per client tier), fall back to service default
+      const tier = task.cognitive_load != null ? task.cognitive_load : (weight.cognitiveLoad ?? 0);
       const clampedTier = Math.min(3, Math.max(0, tier));
       buckets[clampedTier].push(task);
     });
@@ -43,7 +44,7 @@ export default function CognitiveCapacityHeader({ tasks = [], onFilterTier }) {
       count: tierTasks.length,
       totalMinutes: tierTasks.reduce((sum, t) => {
         const w = getServiceWeight(t.category);
-        return sum + w.duration;
+        return sum + ((t.estimated_time && t.estimated_time > 0) ? t.estimated_time : w.duration);
       }, 0),
       pct: Math.round((tierTasks.length / maxCount) * 100),
     })).sort((a, b) => b.tier - a.tier); // מורכב first
