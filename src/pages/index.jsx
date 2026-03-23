@@ -177,6 +177,8 @@ const PAGES = {
     
     PayrollDashboard: PayrollDashboard,
 
+    PayrollReportsDashboard: PayrollReportsDashboard,
+
     ClientsDashboard: ClientsDashboard,
 
     TaxReportsDashboard: TaxReportsDashboard,

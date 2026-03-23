@@ -1278,7 +1278,17 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
 
   const titlePx  = size >= 160 ? 15 : size >= 125 ? 13 : size >= 95 ? 11 : 10;
   const labelPx  = size >= 160 ? 13 : 11;
+  const monthPx  = size >= 160 ? 11 : 9;
   const textMaxW = size - 36;
+
+  const reportMonthLabel = useMemo(() => {
+    const rm = task.reporting_month || task.report_month;
+    if (!rm) return null;
+    try {
+      const d = parseISO(rm + '-01');
+      return format(d, 'MMM yy', { locale: he });
+    } catch { return null; }
+  }, [task.reporting_month, task.report_month]);
 
   const handlePointerDown = (e) => {
     dragStartRef.current = { x: e.clientX, y: e.clientY };
@@ -1316,6 +1326,11 @@ function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatus
         <span className="font-bold leading-tight line-clamp-2" style={{ fontSize: titlePx, color: '#000', maxWidth: textMaxW }}>
           {task.title}
         </span>
+        {reportMonthLabel && size >= 95 && (
+          <span className="opacity-60 leading-none" style={{ fontSize: monthPx, color: '#000' }}>
+            {reportMonthLabel}
+          </span>
+        )}
         {size >= 95 ? (
           <span className="mt-1 flex items-center gap-1 hover:bg-white/50 rounded-full px-1.5 py-0.5 transition-colors"
             onClick={e => { e.stopPropagation(); setPicker(!picker); }} title="שנה סטטוס">
