@@ -190,13 +190,17 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
   }, [clients]);
 
   const getTaskPosition = (task) => {
+    // Derive start & end dates
+    const derivedStart = task.scheduled_start
+      || getScheduledStartForCategory(task.category, task.due_date)
+      || null;
     const end = parseISO(task.due_date);
     const endDay = Math.min(daysInMonth - 1, differenceInDays(end, monthStart));
 
-    // DNA-driven compact width: how many calendar days this task actually takes
+    // DNA-driven duration
     const dnaDays = getDNADurationDays(task);
 
-    // Tier-aware duration (may be larger than DNA)
+    // Tier-aware duration
     const client = clientByName[task.client_name];
     const service = getServiceForTask(task);
     let tierKey = null;
@@ -209,30 +213,35 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       tierKey = complexity === 'high' ? 'climb' : complexity === 'medium' ? 'standard' : 'quick_win';
     }
     const tierDays = (tierKey && TIER_DURATION_DAYS[tierKey]) ? TIER_DURATION_DAYS[tierKey] : 0;
-    const width = Math.max(dnaDays, tierDays, 1);
 
-    // Anchor point: execution_date (done) → due_date (planned)
-    let anchorDay;
-    if (task.execution_date) {
-      anchorDay = differenceInDays(parseISO(task.execution_date), monthStart);
-    } else {
-      anchorDay = endDay;
-    }
+    // === Width logic ===
+    // 1. If scheduled_start exists → use actual span, capped to 10 days max
+    // 2. Otherwise → use DNA/tier duration, minimum 3 days for readability
+    let startDay, width;
 
-    // Position capsule so it ends at the anchor (or centers on it for execution_date)
-    let startDay;
     if (task.execution_date) {
-      // Center capsule around execution_date
-      startDay = Math.max(0, anchorDay - Math.floor(width / 2));
+      // Completed with known execution date: anchor capsule there
+      const execDay = differenceInDays(parseISO(task.execution_date), monthStart);
+      width = Math.max(dnaDays, tierDays, 3);
+      startDay = Math.max(0, execDay - Math.floor(width / 2));
+    } else if (derivedStart) {
+      // Has a scheduled start: use the real span, capped
+      const start = parseISO(derivedStart);
+      const rawStartDay = Math.max(0, differenceInDays(start, monthStart));
+      const rawSpan = Math.max(1, endDay - rawStartDay + 1);
+      width = Math.min(rawSpan, 10); // cap at 10 days
+      width = Math.max(width, dnaDays, tierDays, 3); // minimum 3 days
+      startDay = Math.max(0, endDay - width + 1);
     } else {
-      // Capsule ends at due_date
+      // No start info: place before due_date with DNA/tier width
+      width = Math.max(dnaDays, tierDays, 3);
       startDay = Math.max(0, endDay - width + 1);
     }
 
-    // Deadline marker position (always show where due_date falls)
+    // Deadline marker position
     const deadlineDayPct = (endDay / daysInMonth) * 100;
 
-    // Get cognitive load color from DNA
+    // Cognitive load color from DNA
     const loadColor = getTaskLoadColor(task);
 
     return {
