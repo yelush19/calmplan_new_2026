@@ -685,14 +685,11 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // Level 1 (meta-folders): collapsed by default → click to reveal Level 2/3
   // Level 3 (departments): collapsed by default → click to reveal Level 4 clients
   const MAX_VISIBLE_CHILDREN = 999; // Show ALL clients — no pagination at all
-  // ── P3 QUIET: P1+P2 expanded by default, P3+P4 collapsed (Iron Rule) ──
-  // ── P4 ALWAYS EXPANDED: Home branch and its sub-departments are visible by default ──
-  const [expandedMetaFolders, setExpandedMetaFolders] = useState(
-    new Set(['P1 חשבות שכר', 'P2 הנהלת חשבונות', 'P4 בית'])
-  );
-  const [expandedBranches, setExpandedBranches] = useState(
-    new Set(['בית-תחזוקה', 'בית-אישי', 'בית-מלאי', 'p4-maintenance', 'p4-personal', 'p4-inventory'])
-  );
+  // ── ADHD FOCUS: Start COLLAPSED — only P-branches visible with progress badges ──
+  // Click a branch to expand it (reveals departments → clients)
+  // This prevents the "68 items on screen" overwhelm
+  const [expandedMetaFolders, setExpandedMetaFolders] = useState(new Set());
+  const [expandedBranches, setExpandedBranches] = useState(new Set());
   const [expandedFuncBubbles, setExpandedFuncBubbles] = useState(new Set());
 
   // ── FOCUS MODE: zoom into specific branch/client ──
@@ -795,7 +792,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   }, []);
 
   // ── Data Processing ──
-  const { branches, clientNodes, centerLabel, todayTasks, metaFolders, activeTaskCount } = useMemo(() => {
+  const { branches, clientNodes, centerLabel, todayTasks, metaFolders, activeTaskCount, nextAction } = useMemo(() => {
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     const centerLabel = format(today, 'EEEE, d/M', { locale: he });
@@ -1070,6 +1067,42 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
     });
     const metaFolders = Object.values(metaGroups);
 
+    // ── ADHD FOCUS: Compute urgency stats per meta-folder for collapsed badges ──
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    metaFolders.forEach(mf => {
+      const mfBranches = branches.filter(b => b.metaFolder === mf.name);
+      let overdue = 0, dueToday = 0, completedCount = 0, openCount = 0;
+      mfBranches.forEach(b => b.clients.forEach(c => {
+        c.tasks.forEach(t => {
+          if (t.status === 'production_completed') { completedCount++; return; }
+          openCount++;
+          if (t.due_date) {
+            const due = new Date(t.due_date);
+            due.setHours(23, 59, 59, 999);
+            if (due < todayDate) overdue++;
+            else {
+              const dueDay = new Date(t.due_date); dueDay.setHours(0, 0, 0, 0);
+              if (dueDay.getTime() === todayDate.getTime()) dueToday++;
+            }
+          }
+        });
+      }));
+      mf.overdue = overdue;
+      mf.dueToday = dueToday;
+      mf.completedCount = completedCount;
+      mf.openCount = openCount;
+      mf.completionPct = (completedCount + openCount) > 0
+        ? Math.round((completedCount / (completedCount + openCount)) * 100) : 0;
+    });
+
+    // ── ADHD FOCUS: Find the single "next action" — most urgent incomplete task ──
+    let nextAction = null;
+    const allActiveTasks = activeTasks
+      .filter(t => t.status !== 'production_completed' && t.due_date)
+      .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+    if (allActiveTasks.length > 0) nextAction = allActiveTasks[0];
+
     // P1→P2 Sync State: calculate how many P1 payroll tasks are completed
     const p1Payroll = metaGroups['P1 חשבות שכר'];
     const p2Bookkeeping = metaGroups['P2 הנהלת חשבונות'];
@@ -1101,8 +1134,22 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
       return t.due_date === todayStr;
     });
 
-    return { branches, clientNodes, centerLabel, todayTasks, metaFolders, activeTaskCount: activeTasks.length };
+    return { branches, clientNodes, centerLabel, todayTasks, metaFolders, activeTaskCount: activeTasks.length, nextAction };
   }, [tasks, clients, crisisMode]);
+
+  // ── ADHD FOCUS: Auto-expand the branch with the most urgent tasks on first load ──
+  const hasAutoExpanded = React.useRef(false);
+  useEffect(() => {
+    if (hasAutoExpanded.current || !metaFolders || metaFolders.length === 0) return;
+    hasAutoExpanded.current = true;
+    // Find the meta-folder with the most urgency (overdue > dueToday > openCount)
+    const sorted = [...metaFolders]
+      .filter(mf => mf.name !== 'P4 בית')
+      .sort((a, b) => (b.overdue || 0) - (a.overdue || 0) || (b.dueToday || 0) - (a.dueToday || 0) || (b.openCount || 0) - (a.openCount || 0));
+    if (sorted.length > 0 && (sorted[0].overdue > 0 || sorted[0].dueToday > 0 || sorted[0].openCount > 0)) {
+      setExpandedMetaFolders(new Set([sorted[0].name]));
+    }
+  }, [metaFolders]);
 
   // ── Feature 8: Auto-open drawer from search deep-link ──
   useEffect(() => {
@@ -2234,8 +2281,24 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
           }}
         >
           <span className="font-bold leading-tight text-base">היום שלי</span>
-          <span className="mt-0.5 text-xs">{todayTasks.length} משימות להיום</span>
-          <span className="text-[11px]">{centerLabel}</span>
+          {nextAction ? (
+            <>
+              <span className="mt-1 text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }}>
+                הבא שלי →
+              </span>
+              <span className="mt-0.5 text-[10px] text-center px-3 leading-tight opacity-90" style={{ maxWidth: '120px' }}>
+                {nextAction.client_name}
+              </span>
+              <span className="text-[9px] opacity-70">
+                {nextAction.category} · {nextAction.due_date ? format(new Date(nextAction.due_date), 'dd/MM') : ''}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="mt-0.5 text-xs">{todayTasks.length} משימות להיום</span>
+              <span className="text-[11px]">{centerLabel}</span>
+            </>
+          )}
         </motion.div>
 
         {/* ── LAW 3: Level 1 — SOFT-SQUARE Category Containers (with Focus Mode + Branch Colors) ── */}
@@ -2297,12 +2360,38 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                 style={{ pointerEvents: 'none' }}>
                 {mf.config?.icon || '📂'} {mf.name}
               </text>
-              {/* Stats */}
+              {/* Stats — ADHD: show urgency badges when collapsed */}
               <text x={W / 2 + 4} y={H / 2 + 12} textAnchor="middle" fill="#B3D4FC" fontSize="10" style={{ pointerEvents: 'none' }}>
                 {mf.name === 'P4 בית'
                   ? `3 ענפים · ${mf.totalTasks || 9} פריטים`
-                  : `${mf.totalTasks} משימות · ${mf.totalClients} לקוחות`}
+                  : `${mf.openCount || 0} פתוחות · ${mf.completionPct || 0}% הושלם`}
               </text>
+              {/* Urgency badge — overdue count (red) */}
+              {!isMetaExpanded && mf.overdue > 0 && (
+                <>
+                  <circle cx={14} cy={-6} r={12} fill="#D32F2F" stroke="#FFFFFF" strokeWidth={1.5} />
+                  <text x={14} y={-2} textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                    {mf.overdue}
+                  </text>
+                </>
+              )}
+              {/* Due today badge (orange) */}
+              {!isMetaExpanded && mf.dueToday > 0 && (
+                <>
+                  <circle cx={mf.overdue > 0 ? 42 : 14} cy={-6} r={12} fill="#F57C00" stroke="#FFFFFF" strokeWidth={1.5} />
+                  <text x={mf.overdue > 0 ? 42 : 14} y={-2} textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="700" style={{ pointerEvents: 'none' }}>
+                    {mf.dueToday}
+                  </text>
+                </>
+              )}
+              {/* Completion ring around the +/- button */}
+              {!isMetaExpanded && (mf.completionPct || 0) > 0 && (
+                <circle cx={W - 14} cy={14} r={13}
+                  fill="none" stroke="#66BB6A" strokeWidth={2.5}
+                  strokeDasharray={`${(mf.completionPct / 100) * 81.7} 81.7`}
+                  transform={`rotate(-90 ${W - 14} 14)`}
+                  style={{ pointerEvents: 'none' }} />
+              )}
               {/* P1→P2 Sync indicator: shows on P2 meta-folder */}
               {mf.p1SyncPct != null && (
                 <>
@@ -2789,16 +2878,26 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
               const procrastinatedCount = client.tasks.filter(t => (t.reschedule_count || 0) > 3).length;
               const isFrozen = client.tasks.length > 0 && client.tasks.every(t => (t.reschedule_count || 0) > 5);
 
-              // Level 4 — Complexity glow: high-tier clients get subtle glow + 10% larger
+              // ── ADHD FOCUS: Urgency-based sizing ──
+              // Overdue/today = 25% bigger (demands attention)
+              // Completed = 30% smaller + very dim (get out of the way)
+              // Normal = standard size
+              const hasOverdueTasks = client.overdueTasks > 0;
+              const hasDueTodayTasks = client.tasks.some(t => {
+                if (t.status === 'production_completed' || !t.due_date) return false;
+                const d = new Date(t.due_date); d.setHours(0,0,0,0);
+                const td = new Date(); td.setHours(0,0,0,0);
+                return d.getTime() === td.getTime();
+              });
+              const urgencyScale = hasOverdueTasks ? 1.25 : hasDueTodayTasks ? 1.15 : isAllDone ? 0.7 : 1.0;
               const isHighComplexity = client.tier >= 3;
               const complexityScale = isHighComplexity ? 1.1 : 1.0;
 
-              // Pill dimensions based on complexity tier
+              // Pill dimensions
               const pillHeight = Math.max(client.radius * 1.2, 55);
               const pillWidth = Math.max(client.radius * 3.0, 120);
-              // Completed: shrink slightly + dim; High complexity: 10% larger
-              const finalW = (isAllDone ? pillWidth * 0.85 : pillWidth) * complexityScale;
-              const finalH = (isAllDone ? pillHeight * 0.85 : pillHeight) * complexityScale;
+              const finalW = pillWidth * complexityScale * urgencyScale;
+              const finalH = pillHeight * complexityScale * urgencyScale;
 
               // ── ZERO GRAY POLICY: Black text, white bg, vivid borders ──
               // Diamond Standard: client border inherits tier diamond color
@@ -2845,14 +2944,18 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                     // Zero Gray Policy: black text always
                     color: statusColor,
                     boxShadow: isHovered ? hoverGlow : isFocused ? focusGlow : normalShadow,
-                    opacity: isSpotlit(branch.category) ? (isFrozen ? 0.5 : isAllDone ? 0.6 : 1) : 0.3,
-                    filter: !isSpotlit(branch.category) ? 'blur(5px)' : isFrozen ? 'saturate(0.3)' : 'none',
+                    opacity: isSpotlit(branch.category)
+                      ? (isFrozen ? 0.4 : isAllDone ? 0.25 : hasOverdueTasks ? 1 : hasDueTodayTasks ? 0.95 : 0.85)
+                      : 0.2,
+                    filter: !isSpotlit(branch.category) ? 'blur(5px)' : isFrozen ? 'saturate(0.3)' : isAllDone ? 'saturate(0.3) blur(0.5px)' : 'none',
                     cursor: isDragging ? 'grabbing' : 'grab',
                     transition: 'filter 0.4s ease, opacity 0.4s ease, box-shadow 0.3s ease, border-color 0.2s ease',
                   }}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{
-                    opacity: isSpotlit(branch.category) ? (isAllDone ? 0.6 : 1) : 0.3,
+                    opacity: isSpotlit(branch.category)
+                      ? (isAllDone ? 0.25 : hasOverdueTasks ? 1 : 0.85)
+                      : 0.2,
                     scale: 1,
                   }}
                   transition={{
