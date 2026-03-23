@@ -100,6 +100,9 @@ export default function GroupedServiceTable({
   onEdit,
   onDelete,
   onNote,
+  bulkMode = false,
+  selectedTaskIds = new Set(),
+  onToggleSelect,
 }) {
   const relevantRows = clientRows;
   const completedCount = relevantRows.filter(r => r.task.status === 'production_completed').length;
@@ -180,6 +183,18 @@ export default function GroupedServiceTable({
         <ResizableTable className="w-full text-sm" stickyHeader maxHeight="70vh">
           <thead>
             <tr className="border-b border-gray-100 bg-white">
+              {bulkMode && (
+                <th className="text-center py-2 px-2 bg-gray-50 w-8">
+                  <input type="checkbox"
+                    checked={clientRows.every(r => selectedTaskIds.has(r.task.id))}
+                    onChange={() => {
+                      const allSelected = clientRows.every(r => selectedTaskIds.has(r.task.id));
+                      const ids = clientRows.map(r => r.task.id);
+                      if (onToggleSelect) onToggleSelect(ids, !allSelected);
+                    }}
+                    className="w-4 h-4 rounded border-violet-300 text-violet-600 accent-violet-600" />
+                </th>
+              )}
               <th className="text-right py-2 px-4 font-semibold text-gray-600 text-xs bg-gray-50 sticky right-0 z-30 min-w-[140px]">
                 לקוח
               </th>
@@ -245,6 +260,9 @@ export default function GroupedServiceTable({
                       onEdit={onEdit}
                       onDelete={onDelete}
                       onNote={onNote}
+                      bulkMode={bulkMode}
+                      isSelected={selectedTaskIds.has(task.id)}
+                      onToggleSelect={onToggleSelect}
                     />
                   ))}
                 </React.Fragment>
@@ -261,7 +279,7 @@ export default function GroupedServiceTable({
 // CLIENT ROW
 // =====================================================
 
-function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote }) {
+function ClientRow({ clientName, task, client, service, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote, bulkMode, isSelected, onToggleSelect }) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
@@ -308,6 +326,12 @@ function ClientRow({ clientName, task, client, service, isEven, onToggleStep, on
   return (
     <>
       <tr className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50' : isEven ? 'bg-white' : 'bg-[#F5F5F5]'} hover:bg-[#F5F5F5]`}>
+        {bulkMode && (
+          <td className="text-center px-2 py-1.5">
+            <input type="checkbox" checked={isSelected} onChange={() => onToggleSelect?.([task.id], !isSelected)}
+              className="w-4 h-4 rounded border-violet-300 text-violet-600 accent-violet-600" />
+          </td>
+        )}
         {/* Client name + IDs */}
         <td className={`py-1.5 px-4 sticky right-0 z-10 ${allDone ? 'bg-emerald-50' : isEven ? 'bg-white' : 'bg-[#F5F5F5]'}`}>
           <div className="flex items-center gap-1">

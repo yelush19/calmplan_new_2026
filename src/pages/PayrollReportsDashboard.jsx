@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight, ChevronDown,
   ArrowRight, Users, X, FileBarChart, List, LayoutGrid, Search, GanttChart, Plus
@@ -57,10 +57,19 @@ export default function PayrollReportsDashboardPage() {
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, [selectedMonth]);
+
+  // Live-refresh: listen for cascade events from other pages
+  useEffect(() => {
+    const handler = () => loadData();
+    window.addEventListener('calmplan:data-synced', handler);
+    return () => window.removeEventListener('calmplan:data-synced', handler);
+  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -102,6 +111,11 @@ export default function PayrollReportsDashboardPage() {
           await Task.update(task.id, { process_steps: updatedSteps });
           setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
         }
+      } else if (task.status !== 'production_completed' && areAllStepsDone(task)) {
+        // All steps done but status isn't completed — auto-complete
+        await Task.update(task.id, { status: 'production_completed' });
+        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'production_completed' } : t));
+        syncNotesWithTaskStatus(task.id, 'production_completed');
       }
     }
   };
@@ -160,12 +174,7 @@ export default function PayrollReportsDashboardPage() {
     });
   }, [serviceData]);
 
-  // Default all services to collapsed on first load
-  useEffect(() => {
-    if (sortedServiceKeys.length > 0 && collapsedServices.size === 0) {
-      setCollapsedServices(new Set(sortedServiceKeys));
-    }
-  }, [sortedServiceKeys]);
+  // Default all services to EXPANDED on first load (user collapses manually)
 
   const toggleServiceCollapse = useCallback((key) => {
     setCollapsedServices(prev => {
@@ -202,7 +211,10 @@ export default function PayrollReportsDashboardPage() {
       if (allDone && task.status !== 'production_completed') updatePayload.status = 'production_completed';
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
-      if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
+      if (updatePayload.status) {
+        syncNotesWithTaskStatus(task.id, updatePayload.status);
+        window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'step-toggle' } }));
+      }
     } catch (error) { console.error("Error updating step:", error); }
   }, []);
 
@@ -223,8 +235,34 @@ export default function PayrollReportsDashboardPage() {
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       syncNotesWithTaskStatus(task.id, newStatus);
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'status-change' } }));
     } catch (error) { console.error("Error updating status:", error); }
   }, []);
+
+  const handleBulkStatusChange = useCallback(async (newStatus) => {
+    if (selectedTaskIds.size === 0) return;
+    try {
+      const updates = [...selectedTaskIds].map(async id => {
+        const task = tasks.find(t => t.id === id);
+        const updatePayload = { status: newStatus };
+        if (newStatus === 'production_completed' && task) updatePayload.process_steps = markAllStepsDone(task);
+        else if (newStatus === 'not_started' && task) updatePayload.process_steps = markAllStepsUndone(task);
+        await Task.update(id, updatePayload);
+        return { id, ...updatePayload };
+      });
+      const results = await Promise.all(updates);
+      setTasks(prev => prev.map(t => {
+        const upd = results.find(r => r.id === t.id);
+        return upd ? { ...t, ...upd } : t;
+      }));
+      selectedTaskIds.forEach(id => syncNotesWithTaskStatus(id, newStatus));
+      setSelectedTaskIds(new Set());
+      setBulkMode(false);
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'bulk-update' } }));
+    } catch (error) { console.error("Bulk status update error:", error); }
+  }, [selectedTaskIds, tasks]);
+
+  const exitBulkMode = useCallback(() => { setBulkMode(false); setSelectedTaskIds(new Set()); }, []);
 
   const handlePaymentDateChange = useCallback(async (task, paymentDate) => {
     try {
@@ -352,7 +390,50 @@ export default function PayrollReportsDashboardPage() {
           <button onClick={expandAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">פתח הכל</button>
           <button onClick={collapseAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">סגור הכל</button>
         </div>
+        <Button variant="outline" size="sm"
+          onClick={() => bulkMode ? exitBulkMode() : setBulkMode(true)}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 h-auto ${bulkMode ? 'bg-violet-100 text-violet-700 border-violet-400' : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'}`}>
+          {bulkMode ? `ביטול (${selectedTaskIds.size} נבחרו)` : 'עדכון מרובה'}
+        </Button>
+        {bulkMode && (
+          <>
+            <Button variant="outline" size="sm"
+              onClick={() => setSelectedTaskIds(new Set(filteredTasks.map(t => t.id)))}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-violet-50 text-violet-600 hover:bg-violet-100 border border-violet-200 h-auto">
+              בחר הכל ({filteredTasks.length})
+            </Button>
+            <Button variant="outline" size="sm"
+              onClick={() => setSelectedTaskIds(new Set())}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200 h-auto">
+              נקה בחירה
+            </Button>
+          </>
+        )}
       </div>
+
+      {/* Bulk action floating bar */}
+      <AnimatePresence>
+        {bulkMode && selectedTaskIds.size > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border-2 border-violet-300"
+            style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)' }}>
+            <span className="text-sm font-black text-violet-700">{selectedTaskIds.size} נבחרו</span>
+            <span className="text-gray-300">|</span>
+            <span className="text-xs font-bold text-gray-500">שנה סטטוס:</span>
+            {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+              <Button variant="ghost" size="sm" key={key} onClick={() => handleBulkStatusChange(key)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-transparent hover:border-violet-300 h-auto">
+                <div className={`w-2.5 h-2.5 rounded-full ${cfg.bg}`} />
+                {cfg.label}
+              </Button>
+            ))}
+            <span className="text-gray-300">|</span>
+            <Button variant="ghost" size="sm" onClick={exitBulkMode} className="p-1.5 rounded-lg hover:bg-gray-100 h-auto">
+              <X className="w-4 h-4 text-gray-400" />
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
 
@@ -428,6 +509,15 @@ export default function PayrollReportsDashboardPage() {
                       onEdit={setEditingTask}
                       onDelete={handleDeleteTask}
                       onNote={setNoteTask}
+                      bulkMode={bulkMode}
+                      selectedTaskIds={selectedTaskIds}
+                      onToggleSelect={(ids, add) => {
+                        setSelectedTaskIds(prev => {
+                          const next = new Set(prev);
+                          ids.forEach(id => add ? next.add(id) : next.delete(id));
+                          return next;
+                        });
+                      }}
                     />
                   )}
                 </div>
