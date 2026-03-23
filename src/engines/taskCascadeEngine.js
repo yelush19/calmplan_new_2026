@@ -94,15 +94,16 @@ const CONSULTANT_CATEGORIES = new Set([
   'ייעוץ', 'work_consulting',
 ]);
 
-// Payroll final distribution step key
-const PAYROLL_FINAL_STEP = 'authority_payments';
+// Payroll final production step key (closing steps moved to P1_closing)
+const PAYROLL_FINAL_STEP = 'proofreading';
 
 // ============================================================
 // PAYROLL WORKFLOW PHASES (Master Task Container)
 // ============================================================
-// Phase A: ייצור שכר — the initial payroll task (6 steps)
+// Phase A: ייצור שכר — the initial payroll task (3 steps: קבלה, תלושים, הגהה)
 // Phase B: דיווחי רשויות — auto-created when Phase A completes
 // Phase C: שירותים נלווים — auto-created when Phase A completes
+// Closing: קליטה להנה"ח — P1_closing (salary_entry + authority entries)
 
 export const PHASE_B_SERVICES = [
   { serviceKey: 'deductions',        title: 'מ"ה ניכויים' },
@@ -111,6 +112,7 @@ export const PHASE_B_SERVICES = [
 
 export const PHASE_C_SERVICES = [
   { serviceKey: 'payslip_sending',   title: 'משלוח תלושים' },
+  { serviceKey: 'payroll_closing',   title: 'קליטה להנה"ח' },
 ];
 
 // MSB Collector Services — these are multi-parent nodes, NOT children of a single task.
@@ -134,6 +136,7 @@ const CASCADE_SERVICE_TO_TREE_NODE = {
   deductions:          'P1_deductions',
   social_security:     'P1_social_security',
   payslip_sending:     'P1_payslip_sending',  // V4.1: own node
+  payroll_closing:     'P1_closing',          // V4.1: closing bridge P1→P2
   masav_social:        'P1_social_benefits',  // V4.1: social benefits node
   masav_employees:     'P1_masav_employees',  // V4.1: own node
   masav_suppliers:     'P2_masav_suppliers',
@@ -355,28 +358,17 @@ export function evaluateVatStatus(task, updatedSteps) {
   const service = getServiceForTask(task);
   if (!service || service.key !== 'vat') return null;
 
-  const incomeInput = updatedSteps?.income_input?.done;
-  const expenseInput = updatedSteps?.expense_input?.done;
+  // VAT steps: report_prep → submission → payment
+  // (income/expenses are dependency nodes P2_income/P2_expenses, not steps on this task)
   const reportPrep = updatedSteps?.report_prep?.done;
   const submission = updatedSteps?.submission?.done;
-  const payment = updatedSteps?.payment?.done;
 
   // Both דיווח + תשלום done = production_completed (handled by authority evaluator)
   // Submission done only (no payment yet) = sent_for_review (handled by authority evaluator)
   // So here we only handle pre-submission logic:
 
-  // Report prep done = needs_corrections (data ready, needs review before submission)
+  // Report prep done but not yet submitted
   if (reportPrep && !submission) {
-    return { status: 'not_started' };
-  }
-
-  // Both income + expense done = ready for report prep
-  if (incomeInput && expenseInput && !reportPrep) {
-    return { status: 'not_started' };
-  }
-
-  // Only one done = still open
-  if (incomeInput || expenseInput) {
     return { status: 'not_started' };
   }
 
@@ -397,17 +389,18 @@ export function evaluateTaxAdvancesStatus(task, updatedSteps, siblingTasks) {
   const service = getServiceForTask(task);
   if (!service || service.key !== 'tax_advances') return null;
 
-  // Check if the VAT income task is done for this client
-  const vatTask = siblingTasks.find(t => {
+  // Check if the P2_income (קליטת הכנסות) task is done for this client
+  // income_input is now a separate task (income_collection), not a step on VAT
+  const incomeTask = siblingTasks.find(t => {
     const s = getServiceForTask(t);
-    return s?.key === 'vat' && t.client_name === task.client_name;
+    return (s?.key === 'income_collection' || s?.key === 'bookkeeping') && t.client_name === task.client_name;
   });
 
-  const vatIncomesDone = isStepComplete(vatTask?.process_steps?.income_input);
+  const incomeDone = incomeTask?.status === 'production_completed' || incomeTask?.status === 'completed';
 
   // Authority evaluator handles submission+payment → production_completed
   // Here we only handle pre-submission logic:
-  if (vatIncomesDone && isStepComplete(updatedSteps?.calculation) && !isStepComplete(updatedSteps?.submission)) {
+  if (incomeDone && isStepComplete(updatedSteps?.report_prep) && !isStepComplete(updatedSteps?.submission)) {
     return { status: 'not_started' };
   }
 
@@ -426,20 +419,19 @@ const PAYROLL_STEP_ORDER = [
   'receive_data',
   'prepare_payslips',
   'proofreading',
-  'salary_entry',
-  'employee_payments',
-  'authority_payments',
+  // salary_entry, social_security_entry, deductions_entry → moved to P1_closing (payroll_closing)
 ];
 
 /**
  * Evaluate payroll task status based on sequential step completion.
  *
  * MASTER TASK WORKFLOW:
- *   Phase A (ייצור שכר): The 6-step payroll production.
+ *   Phase A (ייצור שכר): 3-step payroll production (קבלת נתונים → הכנת תלושים → הגהה).
  *     V on last step → status becomes 'production_completed' (NOT 'completed').
  *     This triggers creation of Phase B + Phase C tasks.
  *   Phase B (דיווחי רשויות): ניכויים + ביטוח לאומי — auto-created.
  *   Phase C (שירותים נלווים): תלושים + מס"ב — auto-created.
+ *   Closing (קליטה להנה"ח): salary_entry + authority entries — P1_closing node.
  *   The master payroll task reaches 'completed' only when ALL child tasks are done.
  *
  * @param {Object} task - The payroll task
@@ -463,9 +455,9 @@ export function evaluatePayrollStatus(task, updatedSteps) {
 
   const result = {};
 
-  // All 6 production steps done → production_completed (NOT completed)
+  // All 3 production steps done → production_completed (NOT completed)
   // The task stays visible with a "הושלם ייצור" badge.
-  // It triggers Phase B + Phase C child tasks.
+  // It triggers Phase B + Phase C child tasks + P1_closing.
   if (lastDoneIndex === PAYROLL_STEP_ORDER.length - 1) {
     // Don't re-trigger if already in production_completed or completed
     if (task.status === 'production_completed' || task.status === 'completed') {
@@ -1163,10 +1155,12 @@ export function computeInsights(tasks, clients = []) {
   }
 
   // --- VAT Insights ---
+  // VAT steps are now report_prep → submission → payment only.
+  // income/expenses are dependency tasks (P2_income/P2_expenses), not steps on VAT.
   const vatTasks = byService['vat'] || [];
   const vatReady = vatTasks.filter(t => {
     const steps = t.process_steps || {};
-    return isStepComplete(steps.income_input) && isStepComplete(steps.expense_input) && !isStepComplete(steps.submission);
+    return !isStepComplete(steps.report_prep) && !isStepComplete(steps.submission) && t.status === 'not_started';
   });
   if (vatReady.length > 0) {
     insights.push({
@@ -1181,19 +1175,19 @@ export function computeInsights(tasks, clients = []) {
     });
   }
 
-  const vatPending = vatTasks.filter(t => {
+  const vatInProgress = vatTasks.filter(t => {
     const steps = t.process_steps || {};
-    return (!isStepComplete(steps.income_input) || !isStepComplete(steps.expense_input)) && t.status !== 'completed';
+    return isStepComplete(steps.report_prep) && !isStepComplete(steps.submission);
   });
-  if (vatPending.length > 0) {
+  if (vatInProgress.length > 0) {
     insights.push({
       type: 'progress',
       category: 'vat',
       icon: 'Clock',
       color: 'amber',
-      title: `${vatPending.length} לקוחות ממתינים להשלמת קליטה`,
-      description: vatPending.map(t => t.client_name).join(', '),
-      count: vatPending.length,
+      title: `${vatInProgress.length} לקוחות ממתינים לשידור מע"מ`,
+      description: vatInProgress.map(t => t.client_name).join(', '),
+      count: vatInProgress.length,
       priority: 2,
     });
   }
