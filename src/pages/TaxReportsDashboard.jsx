@@ -72,11 +72,21 @@ export default function TaxReportsDashboardPage() {
   const [filingSprintIdx, setFilingSprintIdx] = useState(0);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
+  // Guard: skip external sync reloads briefly after local updates
+  const localUpdateRef = React.useRef(false);
+
   useEffect(() => { loadData(); }, [selectedMonth]);
 
   // Live-refresh: listen for cascade events from other pages
   useEffect(() => {
-    const handler = () => loadData();
+    const handler = (e) => {
+      // Skip reload if this page just made a local update (prevent overwriting optimistic state)
+      if (localUpdateRef.current) return;
+      // Only reload for events from OTHER pages
+      const source = e.detail?.source;
+      if (source === 'tax-reports') return;
+      loadData();
+    };
     window.addEventListener('calmplan:data-synced', handler);
     return () => window.removeEventListener('calmplan:data-synced', handler);
   }, []);
@@ -249,19 +259,31 @@ export default function TaxReportsDashboardPage() {
       if (allDone && task.status !== 'production_completed') {
         updatePayload.status = 'production_completed';
       }
-      await Task.update(task.id, updatePayload);
+      // Guard: prevent sync listener from overwriting optimistic update
+      localUpdateRef.current = true;
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
+      await Task.update(task.id, updatePayload);
       if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
-    } catch (error) { console.error("Error updating step:", error); }
+      // Release guard after DB write completes
+      setTimeout(() => { localUpdateRef.current = false; }, 1000);
+    } catch (error) {
+      console.error("Error updating step:", error);
+      localUpdateRef.current = false;
+    }
   }, []);
 
   const handleDateChange = useCallback(async (task, stepKey, newDate) => {
     const currentSteps = getTaskProcessSteps(task);
     const updatedSteps = { ...currentSteps, [stepKey]: { ...currentSteps[stepKey], date: newDate } };
     try {
-      await Task.update(task.id, { process_steps: updatedSteps });
+      localUpdateRef.current = true;
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
-    } catch (error) { console.error("Error updating date:", error); }
+      await Task.update(task.id, { process_steps: updatedSteps });
+      setTimeout(() => { localUpdateRef.current = false; }, 1000);
+    } catch (error) {
+      console.error("Error updating date:", error);
+      localUpdateRef.current = false;
+    }
   }, []);
 
   const handleStatusChange = useCallback(async (task, newStatus) => {
@@ -272,10 +294,15 @@ export default function TaxReportsDashboardPage() {
       } else if (task.status === 'production_completed' && newStatus === 'not_started') {
         updatePayload.process_steps = markAllStepsUndone(task);
       }
-      await Task.update(task.id, updatePayload);
+      localUpdateRef.current = true;
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
+      await Task.update(task.id, updatePayload);
       syncNotesWithTaskStatus(task.id, newStatus);
-    } catch (error) { console.error("Error updating status:", error); }
+      setTimeout(() => { localUpdateRef.current = false; }, 1000);
+    } catch (error) {
+      console.error("Error updating status:", error);
+      localUpdateRef.current = false;
+    }
   }, []);
 
   const handlePaymentDateChange = useCallback(async (task, paymentDate) => {
