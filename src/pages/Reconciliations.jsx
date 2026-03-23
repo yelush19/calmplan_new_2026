@@ -468,6 +468,17 @@ export default function ReconciliationsPage() {
     return unsub;
   }, []);
 
+  // Listen for data-synced events (e.g., account updated in ClientAccountsManager)
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.detail?.source === 'Reconciliations') return; // skip own events
+      console.log('[Reconciliations] 📡 Data synced — reloading...');
+      loadData();
+    };
+    window.addEventListener('calmplan:data-synced', handler);
+    return () => window.removeEventListener('calmplan:data-synced', handler);
+  }, []);
+
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -505,6 +516,9 @@ export default function ReconciliationsPage() {
     try {
       await ClientAccount.update(accountId, updates);
       await loadData();
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+        detail: { type: 'client_account', source: 'Reconciliations', timestamp: new Date().toISOString() }
+      }));
     } catch (error) {
       console.error("Error updating account:", error);
       throw error;
@@ -524,6 +538,9 @@ export default function ReconciliationsPage() {
       await Promise.all(promises);
       setSelectedAccounts(new Set());
       loadData();
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+        detail: { type: 'client_account', source: 'Reconciliations', timestamp: new Date().toISOString() }
+      }));
     } catch (error) {
       console.error("Error in bulk update:", error);
     }
@@ -539,6 +556,9 @@ export default function ReconciliationsPage() {
       setShowEditDialog(false);
       setEditingRec(null);
       loadData();
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+        detail: { type: 'reconciliation', source: 'Reconciliations', timestamp: new Date().toISOString() }
+      }));
     } catch (error) {
       console.error("Error saving reconciliation:", error);
     }
