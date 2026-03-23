@@ -17,7 +17,7 @@ import { format, addMonths, setDate, startOfMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
 import { getDueDateForCategory, isClient874, getDeadlineTypeLabel, HEBREW_MONTH_NAMES } from '@/config/taxCalendar2026';
-import { getScheduledStartForCategory, loadServiceDueDates, saveServiceDueDates, getDueDayForCategory, loadExecutionPeriods, DEFAULT_SERVICE_DUE_DATES } from '@/config/automationRules';
+import { getScheduledStartForCategory, loadServiceDueDates, getDueDayForCategory, loadExecutionPeriods, DEFAULT_SERVICE_DUE_DATES } from '@/config/automationRules';
 import { getServiceWeight } from '@/config/serviceWeights';
 import { computeComplexityTier } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
@@ -593,8 +593,8 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadl
       if (![3, 6, 9, 12].includes(reportMonth)) continue;
     }
 
-    // Direct category override — each category has its own key in deadlineOverrides
-    const overrideDay = deadlineOverrides[categoryKey];
+    // Per-month per-category override: deadlineOverrides[month][category]
+    const overrideDay = deadlineOverrides[reportMonth]?.[categoryKey];
 
     // Priority: 1) manual deadline override, 2) system due dates from DB, 3) tax calendar
     const dueMonth = reportMonth === 12 ? 1 : reportMonth + 1;
@@ -688,11 +688,11 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [forceInject, setForceInject] = useState(false);
   const [expandedCard, setExpandedCard] = useState(null); // catKey of expanded card
   const [isClearingCache, setIsClearingCache] = useState(false);
+  // deadlineOverrides: { [month]: { [categoryKey]: day } } — per-month per-category
   const [deadlineOverrides, setDeadlineOverrides] = useState({});
   const [systemDueDates, setSystemDueDates] = useState(null);
   const [systemDueDatesConfigId, setSystemDueDatesConfigId] = useState(null);
   const [systemExecutionPeriods, setSystemExecutionPeriods] = useState(null);
-  const [isSavingDeadlines, setIsSavingDeadlines] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -1323,118 +1323,111 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             </div>
           </div>
 
-          {/* ── Deadline Configuration — per category, connected to system settings ── */}
+          {/* ── Deadline Overrides — per month, for holidays/special situations ── */}
+          {selectedMonths.size > 0 && (
           <div className="p-4 rounded-2xl border-2 border-blue-200 bg-blue-50/50 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-bold text-gray-800">דדליינים — יום בחודש העוקב</span>
-                <span className="text-[12px] text-blue-500 font-medium">
-                  {systemDueDates ? '(טעון מהגדרות מערכת)' : '(ברירות מחדל)'}
-                </span>
+                <span className="text-sm font-bold text-gray-800">דדליינים — דריסה לפי חודש</span>
+                <span className="text-[12px] text-blue-500 font-medium">(חגים / דחייה)</span>
               </div>
-              <div className="flex items-center gap-2">
-                {Object.keys(deadlineOverrides).length > 0 && (
-                  <Button variant="ghost" size="sm" onClick={() => setDeadlineOverrides({})}
-                    className="text-xs h-7 px-2 text-gray-400 hover:text-gray-600">
-                    איפוס שינויים
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={Object.keys(deadlineOverrides).length === 0 || isSavingDeadlines}
-                  onClick={async () => {
-                    setIsSavingDeadlines(true);
-                    try {
-                      const updated = { ...(systemDueDates || DEFAULT_SERVICE_DUE_DATES) };
-                      for (const [catKey, day] of Object.entries(deadlineOverrides)) {
-                        if (updated[catKey]?.digital !== undefined) {
-                          updated[catKey] = { ...updated[catKey], digital: day };
-                        } else {
-                          updated[catKey] = { ...(updated[catKey] || {}), due_day: day };
-                        }
-                      }
-                      const newConfigId = await saveServiceDueDates(systemDueDatesConfigId, updated);
-                      setSystemDueDates(updated);
-                      if (newConfigId) setSystemDueDatesConfigId(newConfigId);
-                      setDeadlineOverrides({});
-                    } catch (err) {
-                      console.error('Error saving deadlines:', err);
-                    }
-                    setIsSavingDeadlines(false);
-                  }}
-                  className="text-xs h-7 px-3 bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-300 font-bold"
-                >
-                  {isSavingDeadlines ? 'שומר...' : 'שמור להגדרות מערכת'}
-                </Button>
-              </div>
-            </div>
-            {/* P1 — Payroll */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wide">P1 | שכר</span>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-                {[
-                  { cat: 'שכר', label: 'שכר' },
-                  { cat: 'משלוח תלושים', label: 'תלושים' },
-                  { cat: 'מס"ב עובדים', label: 'מס"ב עובדים' },
-                  { cat: 'ביטוח לאומי', label: 'ביטוח לאומי' },
-                  { cat: 'ניכויים', label: 'ניכויים' },
-                  { cat: 'מתפעל', label: 'מתפעל' },
-                  { cat: 'טמל + לקוח', label: 'טמל' },
-                  { cat: 'קליטה להנה"ח', label: 'קליטה להנה"ח' },
-                ].map(dl => {
-                  const dueDates = systemDueDates || DEFAULT_SERVICE_DUE_DATES;
-                  const sysDay = getDueDayForCategory(dueDates, dl.cat) ?? 15;
-                  const currentDay = deadlineOverrides[dl.cat] ?? sysDay;
-                  const isOverridden = deadlineOverrides[dl.cat] !== undefined;
-                  return (
-                    <div key={dl.cat} className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 border ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-white border-blue-100'}`}>
-                      <span className="text-[11px] font-bold text-gray-600 flex-1 truncate">{dl.label}</span>
-                      <input type="number" min="1" max="31" value={currentDay}
-                        onChange={(e) => { const v = parseInt(e.target.value); if (v >= 1 && v <= 31) setDeadlineOverrides(prev => ({ ...prev, [dl.cat]: v })); }}
-                        className={`w-10 h-6 text-center text-xs font-bold border rounded focus:outline-none ${isOverridden ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-blue-200 focus:border-blue-400'}`} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {/* P2 — Bookkeeping */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wide">P2 | הנה"ח ודיווחים</span>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-                {[
-                  { cat: 'מע"מ', label: 'מע"מ' },
-                  { cat: 'מע"מ 874', label: 'מע"מ 874' },
-                  { cat: 'מקדמות מס', label: 'מקדמות מס' },
-                  { cat: 'קליטת הכנסות', label: 'קליטת הכנסות' },
-                  { cat: 'קליטת הוצאות', label: 'קליטת הוצאות' },
-                  { cat: 'דוח רו"ה', label: 'דוח רו"ה' },
-                  { cat: 'מס"ב ספקים', label: 'מס"ב ספקים' },
-                  { cat: 'התאמות חשבונות', label: 'התאמות' },
-                ].map(dl => {
-                  const dueDates = systemDueDates || DEFAULT_SERVICE_DUE_DATES;
-                  const sysDay = getDueDayForCategory(dueDates, dl.cat) ?? 19;
-                  const currentDay = deadlineOverrides[dl.cat] ?? sysDay;
-                  const isOverridden = deadlineOverrides[dl.cat] !== undefined;
-                  return (
-                    <div key={dl.cat} className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 border ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-white border-blue-100'}`}>
-                      <span className="text-[11px] font-bold text-gray-600 flex-1 truncate">{dl.label}</span>
-                      <input type="number" min="1" max="31" value={currentDay}
-                        onChange={(e) => { const v = parseInt(e.target.value); if (v >= 1 && v <= 31) setDeadlineOverrides(prev => ({ ...prev, [dl.cat]: v })); }}
-                        className={`w-10 h-6 text-center text-xs font-bold border rounded focus:outline-none ${isOverridden ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-blue-200 focus:border-blue-400'}`} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-[12px]">
-              <span className="text-blue-400">שנה את היום בחודש → חל על ההזרקה הנוכחית. לחץ "שמור" לקבע בהגדרות.</span>
               {Object.keys(deadlineOverrides).length > 0 && (
-                <span className="text-amber-500 font-bold">⚠ {Object.keys(deadlineOverrides).length} שינויים שלא נשמרו</span>
+                <Button variant="ghost" size="sm" onClick={() => setDeadlineOverrides({})}
+                  className="text-xs h-7 px-2 text-red-400 hover:text-red-600 hover:bg-red-50">
+                  איפוס הכל
+                </Button>
               )}
             </div>
+            <p className="text-[11px] text-blue-400">ברירות מחדל מהגדרות מערכת. שנה רק מה שצריך — חל על ההזרקה הנוכחית בלבד.</p>
+
+            {(() => {
+              const DEADLINE_CATS = [
+                { cat: 'שכר', label: 'שכר', group: 'P1' },
+                { cat: 'ביטוח לאומי', label: 'ב"ל', group: 'P1' },
+                { cat: 'ניכויים', label: 'ניכויים', group: 'P1' },
+                { cat: 'מתפעל', label: 'מתפעל', group: 'P1' },
+                { cat: 'מע"מ', label: 'מע"מ', group: 'P2' },
+                { cat: 'מע"מ 874', label: '874', group: 'P2' },
+                { cat: 'מקדמות מס', label: 'מקדמות', group: 'P2' },
+                { cat: 'קליטת הכנסות', label: 'הכנסות', group: 'P2' },
+                { cat: 'קליטת הוצאות', label: 'הוצאות', group: 'P2' },
+                { cat: 'דוח רו"ה', label: 'רו"ה', group: 'P2' },
+                { cat: 'מס"ב ספקים', label: 'מס"ב ספק', group: 'P2' },
+                { cat: 'התאמות חשבונות', label: 'התאמות', group: 'P2' },
+              ];
+              const dueDates = systemDueDates || DEFAULT_SERVICE_DUE_DATES;
+              const sortedMonths = Array.from(selectedMonths).sort((a, b) => a - b);
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="border-b border-blue-200">
+                        <th className="text-right py-1.5 px-2 font-bold text-gray-700 sticky right-0 bg-blue-50 min-w-[80px]">חודש</th>
+                        {DEADLINE_CATS.map(dl => (
+                          <th key={dl.cat} className="text-center py-1.5 px-1 font-medium text-gray-500 min-w-[48px]">
+                            <span className={dl.group === 'P1' ? 'text-teal-600' : 'text-blue-600'}>{dl.label}</span>
+                          </th>
+                        ))}
+                        <th className="w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedMonths.map(month => {
+                        const monthOverrides = deadlineOverrides[month] || {};
+                        const overrideCount = Object.keys(monthOverrides).length;
+                        return (
+                          <tr key={month} className="border-b border-blue-100 hover:bg-blue-50/50">
+                            <td className="py-1.5 px-2 font-bold text-gray-700 sticky right-0 bg-blue-50/80">
+                              {HEBREW_MONTH_NAMES[month - 1]}
+                              {overrideCount > 0 && <span className="text-amber-500 mr-1">●</span>}
+                            </td>
+                            {DEADLINE_CATS.map(dl => {
+                              const sysDay = getDueDayForCategory(dueDates, dl.cat) ?? 19;
+                              const currentDay = monthOverrides[dl.cat] ?? sysDay;
+                              const isOverridden = monthOverrides[dl.cat] !== undefined;
+                              return (
+                                <td key={dl.cat} className="text-center py-1 px-0.5">
+                                  <input type="number" min="1" max="31" value={currentDay}
+                                    onChange={(e) => {
+                                      const v = parseInt(e.target.value);
+                                      if (v >= 1 && v <= 31) {
+                                        setDeadlineOverrides(prev => {
+                                          const monthData = { ...(prev[month] || {}) };
+                                          if (v === sysDay) { delete monthData[dl.cat]; }
+                                          else { monthData[dl.cat] = v; }
+                                          const next = { ...prev };
+                                          if (Object.keys(monthData).length === 0) { delete next[month]; }
+                                          else { next[month] = monthData; }
+                                          return next;
+                                        });
+                                      }
+                                    }}
+                                    className={`w-10 h-6 text-center text-xs font-bold border rounded focus:outline-none transition-colors ${
+                                      isOverridden
+                                        ? 'border-amber-400 bg-amber-50 text-amber-700'
+                                        : 'border-gray-200 text-gray-500 focus:border-blue-400'
+                                    }`} />
+                                </td>
+                              );
+                            })}
+                            <td className="px-1">
+                              {overrideCount > 0 && (
+                                <button onClick={() => setDeadlineOverrides(prev => { const next = { ...prev }; delete next[month]; return next; })}
+                                  className="text-gray-300 hover:text-red-400 text-[10px]">✕</button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
+          )}
 
           {/* ── Force Inject Mode + Clear Cache ── */}
           <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-50 border-2 border-amber-200">
