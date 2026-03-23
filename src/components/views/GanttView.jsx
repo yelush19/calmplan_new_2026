@@ -245,7 +245,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     const loadColor = getTaskLoadColor(task);
 
     return {
-      left: `${(startDay / daysInMonth) * 100}%`,
+      right: `${(startDay / daysInMonth) * 100}%`,
       width: `${(width / daysInMonth) * 100}%`,
       startDay,
       durationDays: width,
@@ -554,7 +554,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                   key={i}
                   className="absolute top-0 bottom-0"
                   style={{
-                    left: `${(i / daysInMonth) * 100}%`,
+                    right: `${(i / daysInMonth) * 100}%`,
                     width: '1px',
                     background: day.getDay() === 6 ? '#F0F0F0' : '#F8F8F8',
                   }}
@@ -566,7 +566,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                 <div
                   className="absolute top-0 bottom-0 z-10 pointer-events-none"
                   style={{
-                    left: `${todayFraction * 100}%`,
+                    right: `${todayFraction * 100}%`,
                     width: '2px',
                     background: 'linear-gradient(180deg, #4682B4 0%, #4682B440 100%)',
                     borderRadius: '1px',
@@ -594,9 +594,16 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                       const prevLane = assignment.get(prevTask.id) || 0;
                       const curLane = assignment.get(task.id) || 0;
                       // Convert CSS % to viewBox absolute coordinates
-                      const prevEndX = (parseFloat(prevPos.left) + parseFloat(prevPos.width)) * svgW / 100;
-                      const curStartX = parseFloat(curPos.left) * svgW / 100;
-                      if (curStartX <= prevEndX) return null; // overlapping, no arrow
+                      // RTL: right-based positioning, flip for SVG coordinates
+                      const prevRightPct = parseFloat(prevPos.right);
+                      const prevWidthPct = parseFloat(prevPos.width);
+                      const curRightPct = parseFloat(curPos.right);
+                      const curWidthPct = parseFloat(curPos.width);
+                      // In RTL SVG, "earlier" task has smaller right% (closer to right edge)
+                      // Convert right% to SVG x: x = svgW - (right% + width%) * svgW / 100
+                      const prevEndX = svgW - (prevRightPct * svgW / 100);
+                      const curStartX = svgW - ((curRightPct + curWidthPct) * svgW / 100);
+                      if (curStartX >= prevEndX) return null; // overlapping, no arrow
                       const prevTopY = LANE_GAP + prevLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
                       const curTopY = LANE_GAP + curLane * (LANE_HEIGHT + LANE_GAP) + LANE_HEIGHT / 2;
 
@@ -629,8 +636,8 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                 const isOverdue = task.status !== 'completed' && task.status !== 'production_completed' && new Date(task.due_date) < new Date();
                 const isDragging = draggingTask?.id === task.id;
                 const offsetPct = isDragging && dragPreviewDay
-                  ? `calc(${pos.left} + ${(dragPreviewDay / daysInMonth) * 100}%)`
-                  : pos.left;
+                  ? `calc(${pos.right} - ${(dragPreviewDay / daysInMonth) * 100}%)`
+                  : pos.right;
                 const statusColor = STATUS_COLORS[task.status] || STATUS_COLORS.not_started;
                 const svcColor = getServiceColor(task.category);
                 const loadColor = pos.loadColor;
@@ -660,7 +667,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                           ${task.status === 'completed' ? 'cursor-pointer' : 'cursor-pointer active:cursor-grabbing'}
                           ${isDragging ? 'z-20' : 'z-10'}`}
                         style={{
-                          left: offsetPct,
+                          right: offsetPct,
                           width: pos.width,
                           top: `${topPx}px`,
                           height: `${LANE_HEIGHT}px`,
@@ -843,9 +850,9 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                     <div
                       className="absolute pointer-events-none"
                       style={{
-                        left: `${pos.deadlineDayPct}%`,
+                        right: `${pos.deadlineDayPct}%`,
                         top: `${topPx + LANE_HEIGHT - 2}px`,
-                        transform: 'translateX(-50%)',
+                        transform: 'translateX(50%)',
                         zIndex: 8,
                       }}
                     >
