@@ -312,10 +312,14 @@ export const ADDITIONAL_SERVICES = {
     branch: 'P2',
     taskCategories: ['קליטת הכנסות', 'work_income_collection'],
     createCategory: 'קליטת הכנסות',
+    supportsSubProcesses: true,  // Multiple income systems per client
+    subProcessField: 'income_systems',  // Client field listing systems
+    subProcessDefaults: ['חשבונית ירוקה', 'קופה רושמת'],
     steps: [
-      { key: 'receive_data',   label: 'קבלת חומרים',      icon: 'download' },
-      { key: 'income_input',   label: 'הזנת הכנסות',      icon: 'file-text' },
-      { key: 'check_entries',  label: 'בדיקת רשומות',     icon: 'check-circle' },
+      { key: 'receive_data',            label: 'קבלת חומרים',      icon: 'download' },
+      { key: 'income_input',            label: 'הזנת הכנסות',      icon: 'file-text', allowMultiple: true },
+      { key: 'sufficient_for_reporting', label: 'מספיק לדיווח',    icon: 'unlock', unlocksDependents: true },
+      { key: 'check_entries',           label: 'בדיקת רשומות',     icon: 'check-circle' },
     ],
   },
 
@@ -326,10 +330,14 @@ export const ADDITIONAL_SERVICES = {
     branch: 'P2',
     taskCategories: ['קליטת הוצאות', 'work_expense_collection'],
     createCategory: 'קליטת הוצאות',
+    supportsSubProcesses: true,
+    subProcessField: 'expense_systems',
+    subProcessDefaults: ['חשבוניות ספקים', 'הוצאות עובדים'],
     steps: [
-      { key: 'receive_data',   label: 'קבלת חומרים',      icon: 'download' },
-      { key: 'expense_input',  label: 'הזנת הוצאות',      icon: 'file-text' },
-      { key: 'check_entries',  label: 'בדיקת רשומות',     icon: 'check-circle' },
+      { key: 'receive_data',            label: 'קבלת חומרים',      icon: 'download' },
+      { key: 'expense_input',           label: 'הזנת הוצאות',      icon: 'file-text', allowMultiple: true },
+      { key: 'sufficient_for_reporting', label: 'מספיק לדיווח',    icon: 'unlock', unlocksDependents: true },
+      { key: 'check_entries',           label: 'בדיקת רשומות',     icon: 'check-circle' },
     ],
   },
 

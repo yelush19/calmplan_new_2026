@@ -22,6 +22,13 @@ const columnsConfig = {
     headerBg: '#FF8F00',
     accent: '#FF8F00',
   },
+  collect_done: {
+    title: 'קליטה הושלמה',
+    bgColor: 'rgba(16, 185, 129, 0.08)',
+    bgPattern: 'rgba(16, 185, 129, 0.06)',
+    headerBg: '#10B981',
+    accent: '#10B981',
+  },
   process: {
     title: 'עיבוד',
     bgColor: 'rgba(70, 130, 180, 0.08)',
@@ -37,7 +44,7 @@ const columnsConfig = {
     accent: '#7B1FA2',
   },
   done: {
-    title: 'שודר / הושלם',
+    title: 'שודר',
     bgColor: 'rgba(46, 125, 50, 0.08)',
     bgPattern: 'rgba(46, 125, 50, 0.06)',
     headerBg: '#2E7D32',
@@ -68,11 +75,18 @@ function getTaskPhase(task) {
   const svc = getServiceForTask(task);
   if (!svc) return 'process';
   const steps = getTaskProcessSteps(task);
-  // Collection tasks
+
+  // If user explicitly set status to not_started / in_progress, respect it
+  const isExplicitlyOpen = task.status === 'not_started' || task.status === 'in_progress';
+
+  // Collection tasks — completed collection goes to collect_done, not done
   if (svc.key === 'income_collection' || svc.key === 'expense_collection') {
-    return areAllStepsDone({ ...task, process_steps: steps }) ? 'done' : 'collect';
+    if (isExplicitlyOpen) return 'collect';
+    return areAllStepsDone({ ...task, process_steps: steps }) ? 'collect_done' : 'collect';
   }
+
   // Authority/reporting tasks — step-based
+  if (isExplicitlyOpen) return 'process';
   const reportDone = steps?.report_prep?.done;
   const submissionDone = steps?.submission?.done;
   if (submissionDone || task.status === 'production_completed') return 'done';
@@ -311,6 +325,7 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
   const [collapsed, setCollapsed] = useState({});
   const [subTaskParent, setSubTaskParent] = useState(null);
   const [groupBy, setGroupBy] = useState('none');
+  const [collectTab, setCollectTab] = useState('all'); // 'all' | 'income' | 'expense'
 
   const toggleCollapsed = (colId) => {
     setCollapsed(prev => ({ ...prev, [colId]: !prev[colId] }));
@@ -321,6 +336,7 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
 
     const newBoard = {
       collect: { ...columnsConfig.collect, tasks: [] },
+      collect_done: { ...columnsConfig.collect_done, tasks: [] },
       process: { ...columnsConfig.process, tasks: [] },
       ready: { ...columnsConfig.ready, tasks: [] },
       done: { ...columnsConfig.done, tasks: [] },
@@ -336,9 +352,14 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
       }
     });
 
-    // Sort: nearest due_date first
-    const sortByDueDate = (a, b) => (a.due_date || a.date || '9999').localeCompare(b.due_date || b.date || '9999');
-    Object.values(newBoard).forEach(col => col.tasks.sort(sortByDueDate));
+    // Sort: by sort_order first (drag-based priority), then by due_date
+    const sortTasks = (a, b) => {
+      if (a.sort_order != null && b.sort_order != null) return a.sort_order - b.sort_order;
+      if (a.sort_order != null) return -1;
+      if (b.sort_order != null) return 1;
+      return (a.due_date || a.date || '9999').localeCompare(b.due_date || b.date || '9999');
+    };
+    Object.values(newBoard).forEach(col => col.tasks.sort(sortTasks));
 
     setBoard(newBoard);
   }, [tasks]);
@@ -354,8 +375,42 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
 
     const destColumn = destination.droppableId;
 
+    // Same-column reorder → update sort_order for priority via drag
+    if (source.droppableId === destination.droppableId) {
+      setBoard(prev => {
+        const col = { ...prev[destColumn] };
+        const items = [...(col.tasks || [])];
+        const [moved] = items.splice(source.index, 1);
+        items.splice(destination.index, 0, moved);
+        // Persist sort_order for each task in this column
+        items.forEach((task, idx) => {
+          const newOrder = idx + 1;
+          if (task.sort_order !== newOrder) {
+            onTaskStatusChange?.(task, task.status, { sort_order: newOrder });
+          }
+        });
+        col.tasks = items;
+        return { ...prev, [destColumn]: col };
+      });
+      return;
+    }
+
     if (destColumn === 'collect' || destColumn === 'process') {
-      // No status change — just reorder visually
+      // Cross-column to collect/process — reset steps
+      return;
+    }
+
+    if (destColumn === 'collect_done') {
+      // Mark all collection steps done
+      const svc = getServiceForTask(taskToMove);
+      if (svc?.key === 'income_collection' || svc?.key === 'expense_collection') {
+        const steps = getTaskProcessSteps(taskToMove);
+        const updatedSteps = {};
+        for (const [key, val] of Object.entries(steps || {})) {
+          updatedSteps[key] = val?.done ? val : { ...val, done: true, date: new Date().toISOString() };
+        }
+        onTaskStatusChange?.(taskToMove, 'completed', { process_steps: updatedSteps });
+      }
       return;
     }
 
@@ -373,7 +428,7 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
       // Mark all steps done + set status to production_completed
       const steps = getTaskProcessSteps(taskToMove);
       const updatedSteps = {};
-      for (const [key, val] of Object.entries(steps)) {
+      for (const [key, val] of Object.entries(steps || {})) {
         updatedSteps[key] = val?.done ? val : { ...val, done: true, date: new Date().toISOString() };
       }
       onTaskStatusChange?.(taskToMove, 'production_completed', { process_steps: updatedSteps });
@@ -426,12 +481,25 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
         </div>
       </div>
 
-      {/* 4-column step-based kanban */}
-      <div className="grid grid-cols-4 gap-5 min-h-[400px]">
+      {/* 5-column step-based kanban */}
+      <div className="grid grid-cols-5 gap-4 min-h-[400px]">
         {Object.entries(board).map(([columnId, column]) => {
           const isCollapsed = !!collapsed[columnId];
-          const taskCount = column.tasks?.length || 0;
-          const groups = groupTasks(column.tasks || []);
+          const isCollectionCol = columnId === 'collect' || columnId === 'collect_done';
+
+          // Filter collection columns by income/expense tab
+          let displayTasks = column.tasks || [];
+          if (isCollectionCol && collectTab !== 'all') {
+            displayTasks = displayTasks.filter(t => {
+              const svc = getServiceForTask(t);
+              if (collectTab === 'income') return svc?.key === 'income_collection';
+              if (collectTab === 'expense') return svc?.key === 'expense_collection';
+              return true;
+            });
+          }
+
+          const taskCount = displayTasks.length;
+          const groups = groupTasks(displayTasks);
 
           return (
             <Droppable droppableId={columnId} key={columnId}>
@@ -463,6 +531,30 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                       <span className="bg-white/30 rounded-full px-1.5 text-xs">{taskCount}</span>
                     </div>
                   </div>
+
+                  {/* Income / Expense tabs for collection columns */}
+                  {isCollectionCol && !isCollapsed && (
+                    <div className="flex justify-center gap-1 px-2 mb-1">
+                      {[
+                        { key: 'all', label: 'הכל' },
+                        { key: 'income', label: 'הכנסות', color: '#22C55E' },
+                        { key: 'expense', label: 'הוצאות', color: '#EC4899' },
+                      ].map(tab => (
+                        <button
+                          key={tab.key}
+                          onClick={() => setCollectTab(tab.key)}
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-bold transition-all ${
+                            collectTab === tab.key
+                              ? 'text-white shadow-sm'
+                              : 'text-gray-500 bg-white/50 hover:bg-white/80'
+                          }`}
+                          style={collectTab === tab.key ? { backgroundColor: tab.color || column.accent } : {}}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   {!isCollapsed ? (
                     <div
