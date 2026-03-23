@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight, ChevronDown,
-  ArrowRight, Users, X, FileBarChart, List, LayoutGrid, Search, GanttChart, Plus
+  ArrowRight, Users, X, FileBarChart, List, LayoutGrid, Search, GanttChart, Plus, Trash2
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -262,6 +262,19 @@ export default function PayrollReportsDashboardPage() {
     } catch (error) { console.error("Bulk status update error:", error); }
   }, [selectedTaskIds, tasks]);
 
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedTaskIds.size === 0) return;
+    const ok = await confirm({ title: 'מחיקה מרובה', description: `למחוק ${selectedTaskIds.size} משימות? פעולה בלתי הפיכה!`, confirmText: 'מחק', cancelText: 'ביטול' });
+    if (!ok) return;
+    try {
+      await Promise.all([...selectedTaskIds].map(id => Task.delete(id)));
+      setTasks(prev => prev.filter(t => !selectedTaskIds.has(t.id)));
+      setSelectedTaskIds(new Set());
+      setBulkMode(false);
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'bulk-delete' } }));
+    } catch (error) { console.error("Bulk delete error:", error); loadData(); }
+  }, [selectedTaskIds, confirm]);
+
   const exitBulkMode = useCallback(() => { setBulkMode(false); setSelectedTaskIds(new Set()); }, []);
 
   const handlePaymentDateChange = useCallback(async (task, paymentDate) => {
@@ -427,6 +440,12 @@ export default function PayrollReportsDashboardPage() {
                 {cfg.label}
               </Button>
             ))}
+            <span className="text-gray-300">|</span>
+            <Button variant="ghost" size="sm" onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 border-2 border-transparent hover:border-red-300 h-auto">
+              <Trash2 className="w-3.5 h-3.5" />
+              מחק
+            </Button>
             <span className="text-gray-300">|</span>
             <Button variant="ghost" size="sm" onClick={exitBulkMode} className="p-1.5 rounded-lg hover:bg-gray-100 h-auto">
               <X className="w-4 h-4 text-gray-400" />

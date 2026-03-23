@@ -237,6 +237,25 @@ export default function TasksPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedTaskIds.size === 0) return;
+    const ok = await confirm({
+      title: 'מחיקה מרובה',
+      description: `למחוק ${selectedTaskIds.size} משימות? פעולה בלתי הפיכה!`,
+      confirmText: 'מחק', cancelText: 'ביטול',
+    });
+    if (!ok) return;
+    try {
+      await Promise.all([...selectedTaskIds].map(id => Task.delete(id)));
+      setTasks(prev => prev.filter(t => !selectedTaskIds.has(t.id)));
+      setSelectedTaskIds(new Set());
+      setBulkMode(false);
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      loadTasks();
+    }
+  };
+
   const exitBulkMode = () => {
     setBulkMode(false);
     setSelectedTaskIds(new Set());
@@ -977,6 +996,16 @@ export default function TasksPage() {
                 {text}
               </Button>
             ))}
+            <span className="text-gray-300">|</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 border-2 border-transparent hover:border-red-300 transition-all h-auto"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              מחק
+            </Button>
             <span className="text-gray-300">|</span>
             <Button
               variant="ghost"
