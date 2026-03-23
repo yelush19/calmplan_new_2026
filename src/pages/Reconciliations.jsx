@@ -23,24 +23,22 @@ import {
 import { toast } from 'sonner';
 
 import { loadCompanyTree, isNodeEnabled, onTreeChange, invalidateTreeCache } from '@/services/processTreeService';
+import {
+  RECONCILIATION_STATUSES, RECONCILIATION_STATUS_PILLS, RECONCILIATION_AYOA_COLORS,
+  RECONCILIATION_STATUS_CYCLE, FREQUENCY_LABELS, FREQUENCY_MONTHS,
+} from '@/config/reconciliationStatuses';
 
-// ─── Status Configuration — Glassmorphism Pill Styles ──────────
-const statusConfig = {
-  not_started:            { label: 'לא התחיל',       pill: 'bg-white text-slate-700 border border-[#E0E0E0] ', icon: Clock },
-  waiting_for_materials:  { label: 'ממתין לחומרים',   pill: 'bg-amber-100 text-amber-800 border border-amber-200',            icon: AlertCircle },
-  in_progress:            { label: 'בתהליך',          pill: 'bg-[#4682B4]/10 text-[#4682B4] border border-[#4682B4]',         icon: Clock },
-  completed:              { label: 'הושלם',           pill: 'bg-teal-100 text-teal-800 border border-teal-200',               icon: CheckCircle },
-  issues:                 { label: 'בעיות',           pill: 'bg-amber-100 text-amber-800 border border-amber-200',               icon: AlertCircle },
-};
+// ─── Build runtime statusConfig from global source ──────────────
+const iconMap = { Clock, CheckCircle, AlertCircle };
+const statusConfig = Object.fromEntries(
+  Object.entries(RECONCILIATION_STATUSES).map(([k, v]) => [
+    k,
+    { label: v.label, pill: RECONCILIATION_STATUS_PILLS[k], icon: iconMap[v.icon] || Clock },
+  ])
+);
 
-const frequencyLabels = {
-  monthly: 'חודשי', bimonthly: 'דו-חודשי', quarterly: 'רבעוני',
-  semi_annual: 'חצי שנתי', yearly: 'שנתי',
-};
-
-const frequencyMonths = {
-  monthly: 1, bimonthly: 2, quarterly: 3, semi_annual: 6, yearly: 12,
-};
+const frequencyLabels = FREQUENCY_LABELS;
+const frequencyMonths = FREQUENCY_MONTHS;
 
 const accountTypeIcons = {
   bank: Landmark, credit_card: CreditCard, bookkeeping: BookUser, clearing: Building2,
@@ -100,14 +98,8 @@ const AYOA_VIEWS = [
   { key: 'timeline', label: 'ציר זמן',     icon: CalendarDays,  color: '#059669', bg: '#D1FAE5' },
 ];
 
-// AYOA color palette — ADHD-friendly: high contrast, soft pastels, clear boundaries
-const AYOA_STATUS_COLORS = {
-  not_started:           { bg: 'bg-gradient-to-br from-slate-50 to-slate-100', border: 'border-slate-300', header: 'bg-slate-200 text-slate-700', accent: '#94A3B8' },
-  waiting_for_materials: { bg: 'bg-gradient-to-br from-amber-50 to-yellow-50', border: 'border-amber-300', header: 'bg-amber-200 text-amber-800', accent: '#F59E0B' },
-  in_progress:           { bg: 'bg-gradient-to-br from-blue-50 to-indigo-50',  border: 'border-blue-300',  header: 'bg-blue-200 text-blue-800',  accent: '#3B82F6' },
-  completed:             { bg: 'bg-gradient-to-br from-emerald-50 to-teal-50', border: 'border-emerald-300', header: 'bg-emerald-200 text-emerald-800', accent: '#10B981' },
-  issues:                { bg: 'bg-gradient-to-br from-orange-50 to-red-50',   border: 'border-orange-300', header: 'bg-orange-200 text-orange-800', accent: '#F97316' },
-};
+// AYOA color palette — from global config
+const AYOA_STATUS_COLORS = RECONCILIATION_AYOA_COLORS;
 
 // ─── Inline Date Cell ───────────────────────────────────────────
 function InlineDateCell({ value, onChange, className = '' }) {
@@ -837,7 +829,7 @@ export default function ReconciliationsPage() {
 
   // ── Derived stats for pipeline ────────────────────────────────
   const inProgressCount = rows.filter(r => r.latestStatus === 'in_progress').length;
-  const notStartedCount = rows.filter(r => r.latestStatus === 'not_started' || r.latestStatus === 'waiting_for_materials').length;
+  const notStartedCount = rows.filter(r => r.latestStatus === 'not_started').length;
   const completionPct = rows.length > 0 ? Math.round((completedCount / rows.length) * 100) : 0;
 
   // Severity distribution for heatmap
@@ -1168,18 +1160,17 @@ export default function ReconciliationsPage() {
                       className="overflow-hidden"
                     >
                       <div className="overflow-x-auto">
-                        <table className="w-full text-sm border-collapse">
+                        <table className="w-full text-xs border-collapse table-fixed">
                           <thead>
                             <tr>
-                              <th className="p-2 w-10 rounded-tr-xl" style={{ background: 'linear-gradient(135deg, #4682B4, #5A9CC5)' }}></th>
+                              <th className="p-1.5 w-8 rounded-tr-xl" style={{ background: 'linear-gradient(135deg, #4682B4, #5A9CC5)' }}></th>
                               <SortableHeader label="חשבון" sortKey="accountName" currentSort={sort} onSort={handleSort} />
                               <SortableHeader label="סוג" sortKey="accountType" currentSort={sort} onSort={handleSort} />
-                              <SortableHeader label="תדירות" sortKey="frequency" currentSort={sort} onSort={handleSort} />
-                              <SortableHeader label="התאמה אחרונה" sortKey="lastDate" currentSort={sort} onSort={handleSort} />
-                              <SortableHeader label="התאמה הבאה" sortKey="nextDate" currentSort={sort} onSort={handleSort} />
-                              <SortableHeader label="פיגור (ימים)" sortKey="daysOverdue" currentSort={sort} onSort={handleSort} />
+                              <SortableHeader label="אחרונה" sortKey="lastDate" currentSort={sort} onSort={handleSort} />
+                              <SortableHeader label="הבאה" sortKey="nextDate" currentSort={sort} onSort={handleSort} />
+                              <SortableHeader label="פיגור" sortKey="daysOverdue" currentSort={sort} onSort={handleSort} />
                               <SortableHeader label="סטטוס" sortKey="latestStatus" currentSort={sort} onSort={handleSort} />
-                              <th className="p-3 font-bold text-white text-center rounded-tl-xl" style={{ background: 'linear-gradient(135deg, #4682B4, #5A9CC5)' }}>פעולה</th>
+                              <th className="p-1.5 font-bold text-white text-center rounded-tl-xl w-16" style={{ background: 'linear-gradient(135deg, #4682B4, #5A9CC5)' }}></th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1206,35 +1197,29 @@ export default function ReconciliationsPage() {
                                   }`}
                                 >
                                   {/* Checkbox */}
-                                  <td className="p-2 text-center">
+                                  <td className="p-1.5 text-center">
                                     <Checkbox
                                       checked={isChecked}
                                       onCheckedChange={() => toggleAccountSelection(row.id)}
-                                      className="border-[#4682B4]/50"
+                                      className="border-[#4682B4]/50 h-3.5 w-3.5"
                                     />
                                   </td>
-                                  {/* Account Name + Lag Heatmap Dot */}
-                                  <td className="p-3">
-                                    <div className="flex items-center gap-2">
-                                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${severity.dot} ${severity.glow}`} />
-                                      <AccIcon className="w-4 h-4 text-[#4682B4]" />
-                                      <span className="text-slate-700">{row.accountName}</span>
+                                  {/* Account Name + Type icon + Lag dot */}
+                                  <td className="p-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <div className={`w-2 h-2 rounded-full shrink-0 ${severity.dot}`} />
+                                      <AccIcon className="w-3.5 h-3.5 text-[#4682B4] shrink-0" />
+                                      <span className="text-slate-700 truncate">{row.accountName}</span>
                                     </div>
                                   </td>
                                   {/* Type */}
-                                  <td className="p-3 text-center">
-                                    <Badge className="text-[12px] rounded-full bg-white text-slate-600 border border-[#E0E0E0]">
+                                  <td className="p-1.5 text-center">
+                                    <span className="text-[10px] text-slate-500">
                                       {accountTypeLabels[row.accountType] || row.accountType}
-                                    </Badge>
-                                  </td>
-                                  {/* Frequency */}
-                                  <td className="p-3 text-center">
-                                    <Badge className="text-[12px] rounded-full bg-white text-slate-600 border border-[#E0E0E0]">
-                                      {frequencyLabels[row.frequency] || 'חודשי'}
-                                    </Badge>
+                                    </span>
                                   </td>
                                   {/* Last Reconciliation — Inline Editable */}
-                                  <td className="p-3 text-center">
+                                  <td className="p-1.5 text-center">
                                     <InlineDateCell
                                       value={row.lastDate}
                                       onChange={async (newDate) => {
@@ -1252,7 +1237,7 @@ export default function ReconciliationsPage() {
                                     />
                                   </td>
                                   {/* Next Reconciliation — Inline Editable (manual override) */}
-                                  <td className="p-3 text-center">
+                                  <td className="p-1.5 text-center">
                                     <InlineDateCell
                                       value={row.nextDate}
                                       onChange={async (newDate) => {
@@ -1268,26 +1253,26 @@ export default function ReconciliationsPage() {
                                     />
                                   </td>
                                   {/* Days Overdue */}
-                                  <td className="p-3 text-center">
+                                  <td className="p-1.5 text-center">
                                     {row.daysOverdue > 0 ? (
-                                      <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                                         row.daysOverdue > 30
                                           ? 'bg-orange-100 text-orange-700'
                                           : 'bg-amber-100 text-amber-700'
                                       }`}>
-                                        {row.daysOverdue} ימים
+                                        {row.daysOverdue}d
                                       </span>
                                     ) : (
-                                      <span className="text-xs text-slate-400">-</span>
+                                      <span className="text-[10px] text-slate-400">—</span>
                                     )}
                                   </td>
                                   {/* Status — Interactive Glass Button */}
-                                  <td className="p-3 text-center">
+                                  <td className="p-1.5 text-center">
                                     <button
-                                      className={`inline-flex items-center gap-1.5 text-[12px] rounded-full px-3 py-1.5 font-medium  border shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ${stsCfg.pill}`}
+                                      className={`inline-flex items-center gap-1 text-[10px] rounded-full px-2 py-1 font-medium border shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ${stsCfg.pill}`}
                                       onClick={async (e) => {
                                         e.stopPropagation();
-                                        const statusCycle = ['not_started', 'in_progress', 'completed'];
+                                        const statusCycle = RECONCILIATION_STATUS_CYCLE;
                                         const currentIdx = statusCycle.indexOf(row.latestStatus);
                                         const nextStatus = statusCycle[(currentIdx + 1) % statusCycle.length];
                                         try {
@@ -1318,12 +1303,12 @@ export default function ReconciliationsPage() {
                                       {stsCfg.label}
                                     </button>
                                   </td>
-                                  {/* Quick Sync Action — ⚡ Zap: Mark as Done + update last_sync */}
-                                  <td className="p-3 text-center">
-                                    <div className="flex items-center justify-center gap-1.5">
+                                  {/* Quick Sync Action */}
+                                  <td className="p-1.5 text-center">
+                                    <div className="flex items-center justify-center">
                                       <Button
                                         size="sm"
-                                        className="text-[11px] gap-1 rounded-xl bg-white hover:bg-[#4682B4] text-[#4682B4] hover:text-white border border-[#4682B4]/25 hover:border-transparent shadow-sm hover:shadow-md transition-all"
+                                        className="text-[10px] h-6 px-2 gap-0.5 rounded-lg bg-white hover:bg-[#4682B4] text-[#4682B4] hover:text-white border border-[#4682B4]/25 hover:border-transparent shadow-sm transition-all"
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           try {
@@ -1383,7 +1368,7 @@ export default function ReconciliationsPage() {
 
       {/* ── STATUS BOARD VIEW (AYOA Kanban) ────────────────────── */}
       {viewMode === 'status' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Object.entries(statusConfig).map(([statusKey, stsCfg]) => {
             const ayoaColors = AYOA_STATUS_COLORS[statusKey] || AYOA_STATUS_COLORS.not_started;
             const statusRows = sortedRows.filter(r => r.latestStatus === statusKey);
