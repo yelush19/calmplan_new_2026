@@ -636,7 +636,28 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadl
       description = `${catLabel} עבור חודש ${HEBREW_MONTH_NAMES[reportMonth - 1]} ${year}`;
     }
 
-    tasks.push({ date: dueDate, period, description, reportMonth });
+    // מס"ב ספקים: check client's cycle count from process tree
+    const masavCycles = categoryKey === 'מס"ב ספקים'
+      ? parseInt(client?.process_tree?.P2_masav_suppliers?.masav_cycles || '1')
+      : 0;
+
+    if (masavCycles >= 2) {
+      // 2 cycles: 15th and 30th of reporting month (not due month)
+      const cycleDays = [15, 30];
+      cycleDays.forEach((cycleDay, idx) => {
+        const cycleLabel = idx === 0 ? 'סייקל 15' : 'סייקל 30';
+        const cycleDueDate = new Date(year, reportMonth - 1, cycleDay);
+        tasks.push({
+          date: cycleDueDate,
+          period,
+          description: `${catLabel} (${cycleLabel}) עבור חודש ${HEBREW_MONTH_NAMES[reportMonth - 1]} ${year}`,
+          reportMonth,
+          _cycleIndex: idx + 1,
+        });
+      });
+    } else {
+      tasks.push({ date: dueDate, period, description, reportMonth });
+    }
   }
 
   return tasks;
