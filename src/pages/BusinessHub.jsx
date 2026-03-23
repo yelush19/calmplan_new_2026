@@ -27,7 +27,6 @@ import {
 import { Task, AccountReconciliation, Dashboard } from '@/api/entities';
 import { generateProcessTasks, cleanupYearEndOnlyTasks, cleanupP3GhostTasks, dedupTasksForMonth, wipeAllTasksForMonth, previewTaskGeneration } from '@/api/functions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 const StatCard = ({ title, value, icon: Icon, link, isLoading }) => {
   if (isLoading) {
@@ -357,7 +356,6 @@ export default function BusinessHubPage() {
   ];
 
   return (
-    <UnifiedAyoaLayout tasks={businessData.tasks || []} centerLabel="רכזת עסקית" accentColor="#4682B4" isLoading={isLoading}>
     <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="w-full">
         <motion.div
@@ -657,6 +655,5 @@ export default function BusinessHubPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-    </UnifiedAyoaLayout>
   );
 }

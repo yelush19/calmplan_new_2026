@@ -8,7 +8,6 @@ import { CheckSquare, ListTodo, Loader, Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import RoadmapForm from '@/components/roadmap/RoadmapForm';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 
 const roadmapTasks = [
     // שלב 1: תשתית נתונים ✅ הושלם במלואו
@@ -127,13 +126,6 @@ export default function RoadmapPage() {
     const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
     return (
-        <UnifiedAyoaLayout
-          tasks={items}
-          clients={[]}
-          centerLabel="מפת דרכים"
-          accentColor="#7C3AED"
-          isLoading={isLoading}
-        >
         <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -273,6 +265,5 @@ export default function RoadmapPage() {
                 </DialogContent>
             </Dialog>
         </motion.div>
-        </UnifiedAyoaLayout>
     );
 }

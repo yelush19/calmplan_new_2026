@@ -22,7 +22,7 @@ import { isBimonthlyOffMonth, STATUS_CONFIG, getServiceForTask, ALL_SERVICES, ge
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import { processTaskCascade, PHASE_B_SERVICES, PHASE_C_SERVICES, P2_PHASE_B_SERVICES, P2_PHASE_C_SERVICES } from '@/engines/taskCascadeEngine';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+
 
 // === Column Groups — P2 ONLY: Tax + Bookkeeping services ===
 // Payroll columns (שכר, ביט"ל, ניכויים) belong to P1 (PayrollDashboard).
@@ -534,13 +534,7 @@ export default function ClientsDashboardPage() {
   }, [isUpdating]);
 
   return (
-    <UnifiedAyoaLayout
-      tasks={tasks}
-      clients={clients}
-      centerLabel="לקוחות"
-      accentColor="#0891B2"
-      isLoading={isLoading}
-    >
+    <>
     <div className="p-4 md:p-6 space-y-4 bg-white border border-[#E0E0E0] shadow-xl rounded-[32px]">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
@@ -989,6 +983,6 @@ export default function ClientsDashboardPage() {
         ))}
       </div>
     </div>
-    </UnifiedAyoaLayout>
+    </>
   );
 }

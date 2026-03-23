@@ -33,7 +33,6 @@ import {
 } from '@/config/processTemplates';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import { useAyoaView } from '@/contexts/AyoaViewContext';
 
 // Admin dashboard services (dashboard: 'admin')
@@ -370,8 +369,7 @@ export default function AdminTasksDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : (
-        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="ניהול" centerSub="P3" accentColor="#F59E0B" onEditTask={setEditingTask}>
-        {Object.keys(serviceData).length > 0 ? (
+        Object.keys(serviceData).length > 0 ? (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
               const isCollapsed = collapsedServices.has(serviceKey);
@@ -412,8 +410,7 @@ export default function AdminTasksDashboardPage() {
             <h3 className="text-xl font-semibold text-slate-600 mb-2">אין משימות אדמיניסטרטיביות</h3>
             <p className="text-slate-500">הוסף משימות כלליות כמו שיווק, מעקב לקוחות, פגישות ועוד</p>
           </Card>
-        )}
-        </UnifiedAyoaLayout>
+        )
       )}
 
       <QuickAddTaskDialog

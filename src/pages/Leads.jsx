@@ -31,7 +31,7 @@ import { Lead, Client } from '@/api/entities';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+
 
 const statusLabels = {
   new_lead: 'ליד חדש',
@@ -272,7 +272,6 @@ export default function LeadsPage() {
   }
 
   return (
-    <UnifiedAyoaLayout tasks={leads || []} centerLabel="לידים" accentColor="#6366F1" isLoading={isLoading}>
     <div className="p-4 md:p-6 space-y-6">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -450,6 +449,5 @@ export default function LeadsPage() {
         )}
       </div>
     </div>
-    </UnifiedAyoaLayout>
   );
 }

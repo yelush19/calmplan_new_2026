@@ -25,7 +25,6 @@ import AyoaViewToggle from '@/components/canvas/AyoaViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import AyoaMapView from '@/components/canvas/AyoaMapView';
 import AyoaFeedView from '@/components/canvas/AyoaFeedView';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -649,7 +648,6 @@ export default function TaxReportsDashboardPage() {
       })()}
 
       {/* Content */}
-      <UnifiedAyoaLayout tasks={filteredTasks || tasks} clients={clients} isLoading={isLoading} centerLabel="דיווחי מס" centerSub="P2" branch="P2" accentColor="#B2AC88" currentMonth={selectedMonth} onEditTask={setEditingTask}>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
@@ -703,7 +701,6 @@ export default function TaxReportsDashboardPage() {
           <p className="text-slate-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
         </Card>
       )}
-      </UnifiedAyoaLayout>
 
       <QuickAddTaskDialog
         open={showQuickAdd}

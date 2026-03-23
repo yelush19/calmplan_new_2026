@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { generateProcessTasks } from '@/api/functions';
 import { loadBalanceSheetTemplates, saveBalanceSheetTemplates, DEFAULT_STAGE_TEMPLATES } from '@/config/balanceSheetTemplates';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+
 
 // שלבי תהליך מאזן
 const WORKFLOW_STAGES = [
@@ -638,7 +638,7 @@ export default function BalanceSheetsPage() {
       )}
 
       {/* Balance Sheets - Collapsible by Stage */}
-      <UnifiedAyoaLayout tasks={pseudoTasks} clients={clients} isLoading={isLoading} centerLabel="מאזנים שנתיים" centerSub="P5" branch="P5" accentColor="#2E7D32">
+      <>
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array(6).fill(0).map((_, i) => (
@@ -694,7 +694,7 @@ export default function BalanceSheetsPage() {
           })}
         </div>
       )}
-      </UnifiedAyoaLayout>
+      </>
 
       {/* Generate from template confirmation dialog — with task selection */}
       <Dialog open={!!showGenerateDialog} onOpenChange={(open) => !open && setShowGenerateDialog(null)}>

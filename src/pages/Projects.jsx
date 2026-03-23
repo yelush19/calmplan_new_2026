@@ -15,7 +15,6 @@ import {
   ChevronDown, ChevronUp, Cpu, Layers, Rocket, BookOpen, Undo2, Settings2
 } from 'lucide-react';
 import { loadPlatformConfig } from '@/config/platformConfig';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
 import ProjectAyoaMindMap from '@/components/canvas/ProjectAyoaMindMap';
 
@@ -835,26 +834,6 @@ export default function Projects() {
         )}
       </AnimatePresence>
 
-      {/* ── Projects Grid wrapped in UnifiedAyoaLayout ── */}
-      <UnifiedAyoaLayout
-        tasks={pseudoTasks}
-        isLoading={loading}
-        centerLabel="פרויקטים"
-        centerSub="P6"
-        accentColor={ACCENT}
-        branch="P6"
-        currentMonth={new Date()}
-        onEditTask={(task) => {
-          const proj = projects.find(p => p.id === task.id);
-          if (proj) startEdit(proj);
-        }}
-        customMapView={
-          <ProjectAyoaMindMap
-            projects={projects}
-            onClickProject={openWorkbook}
-          />
-        }
-      >
         {projects.length === 0 && !isCreating ? (
           /* ── Empty State ── */
           <motion.div
@@ -979,8 +958,6 @@ export default function Projects() {
             </div>
           </>
         )}
-      </UnifiedAyoaLayout>
-
       {/* ── Undo Delete Toast ── */}
       <AnimatePresence>
         {pendingDelete && (

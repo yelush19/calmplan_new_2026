@@ -20,7 +20,7 @@ import { createPageUrl } from "@/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import EventDetailsModal from "../components/calendar/EventDetailsModal";
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+
 
 const DAYS_HE = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 const DAYS_FULL = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -187,13 +187,6 @@ export default function CalendarPage() {
   }
 
   return (
-    <UnifiedAyoaLayout
-      tasks={tasks}
-      clients={[]}
-      centerLabel="לוח שנה"
-      accentColor="#F59E0B"
-      isLoading={isLoading}
-    >
     <div className="space-y-4">
       {/* Summary Strip - ADHD friendly quick overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -372,7 +365,6 @@ export default function CalendarPage() {
         onClose={() => setNoteTask(null)}
       />
     </div>
-    </UnifiedAyoaLayout>
   );
 }
 

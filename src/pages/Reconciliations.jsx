@@ -19,7 +19,7 @@ import {
   ArrowUpDown, Loader, ExternalLink, Zap, Filter, Users, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
+
 import { loadCompanyTree, isNodeEnabled, onTreeChange, invalidateTreeCache } from '@/services/processTreeService';
 
 // ─── Status Configuration — Glassmorphism Pill Styles ──────────
@@ -813,8 +813,6 @@ export default function ReconciliationsPage() {
         </div>
       </div>
 
-      {/* ── UnifiedAyoaLayout Wrapper ─────────────── */}
-      <UnifiedAyoaLayout data={reconciliationTasks} clients={clients || []} isLoading={isLoading} centerLabel="התאמת חשבונות" centerSub="P2" branch="P2">
 
       {/* ── Expand/Collapse + Select All controls ─────────────── */}
       <div className="flex items-center justify-between">
@@ -1069,7 +1067,6 @@ export default function ReconciliationsPage() {
         </div>
       )}
 
-      </UnifiedAyoaLayout>
 
       {/* ── Client Drawer ──────────────────────────────────────── */}
       <ClientDrawer

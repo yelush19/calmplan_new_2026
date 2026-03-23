@@ -38,7 +38,6 @@ import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import { useAyoaView } from '@/contexts/AyoaViewContext';
-import UnifiedAyoaLayout from '@/components/canvas/UnifiedAyoaLayout';
 import GanttView from '@/components/views/GanttView';
 
 const payrollDashboardServices = {
@@ -428,8 +427,7 @@ export default function PayrollDashboardPage() {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : (
-        <UnifiedAyoaLayout tasks={filteredTasks} clients={clients} isLoading={isLoading} centerLabel="שכר" centerSub="P1" branch="P1" accentColor="#00A3E0" currentMonth={selectedMonth} onEditTask={setEditingTask}>
-        {sortedServiceKeys.length > 0 ? (
+        sortedServiceKeys.length > 0 ? (
           <div className="space-y-4">
             {sortedServiceKeys.map(serviceKey => {
               const { service, clientRows } = serviceData[serviceKey];
@@ -472,8 +470,7 @@ export default function PayrollDashboardPage() {
             <h3 className="text-xl font-semibold text-slate-600 mb-2">לא נמצאו תהליכי שכר לחודש הנבחר</h3>
             <p className="text-slate-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
           </Card>
-        )}
-        </UnifiedAyoaLayout>
+        )
       )}
 
       <QuickAddTaskDialog
