@@ -1616,7 +1616,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
         if (department === 'שכר') {
           navigate(`/PayrollReportsDashboard?clientId=${clientId}`);
         } else {
-          navigate(`/TaxReportsDashboard?clientId=${clientId}`);
+          navigate(`/ClientsDashboard?clientId=${clientId}`);
         }
       } else {
         navigate(`/ClientManagement?clientId=${clientId}`);
