@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 import {
   Calculator, Loader, RefreshCw, ChevronLeft, ChevronRight,
   ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus,
-  Zap, Flame, ChevronDown, Network, Target, TrendingUp, Clock
+  Zap, Flame, ChevronDown, Network, Target, TrendingUp, Clock, GitBranchPlus
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
@@ -40,6 +40,8 @@ import {
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
+import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
+import { AnimatePresence } from 'framer-motion';
 
 // P2 Tax dashboard: ONLY tax services (VAT + tax advances)
 // Bookkeeping, reconciliation, annual reports, consulting moved to dedicated pages
@@ -63,6 +65,7 @@ export default function TaxReportsDashboardPage() {
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [cognitiveFilter, setCognitiveFilter] = useState(null);
   const [filingSprintActive, setFilingSprintActive] = useState(false);
@@ -377,6 +380,14 @@ export default function TaxReportsDashboardPage() {
             <Plus className="w-4 h-4" />
             משימה מהירה
           </Button>
+          <Button
+            onClick={() => setShowInjectionPanel(prev => !prev)}
+            size="sm"
+            className={`h-9 gap-1.5 rounded-xl ${showInjectionPanel ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'}`}
+          >
+            <GitBranchPlus className="w-3.5 h-3.5" />
+            הזרקת משימות
+          </Button>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -642,6 +653,16 @@ export default function TaxReportsDashboardPage() {
           </div>
         );
       })()}
+
+      {/* Injection Panel */}
+      <AnimatePresence>
+        {showInjectionPanel && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="border-2 border-orange-200 bg-orange-50/30 rounded-2xl overflow-hidden">
+            <ClientRecurringTasks onGenerateComplete={loadData} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
 

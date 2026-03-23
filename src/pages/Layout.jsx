@@ -99,7 +99,7 @@ const getSidebarSections = () => ({
     icon: FileBarChart,
     tabColor: 'border-[#B2AC88]',
     items: [
-      { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("ClientsDashboard"), icon: BarChart3 },
+      { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: BarChart3 },
       { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
       { name: "תוצרים (רוה\"ס)", href: createPageUrl("FinancialResultsDashboard"), icon: TrendingUp },
     ]

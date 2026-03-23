@@ -150,7 +150,7 @@ export default function GlobalSearch() {
       icon: FileBarChart,
       color: 'text-violet-600',
       keywords: ['מעמ', 'vat', 'דיווח מע"מ', 'מע"מ'],
-      action: () => navigate(createPageUrl('ClientsDashboard')),
+      action: () => navigate(createPageUrl('TaxReportsDashboard')),
     },
     {
       key: 'payroll',
@@ -413,7 +413,7 @@ export default function GlobalSearch() {
                     // Navigate to the service's dashboard page, not just Settings
                     const dashboardMap = {
                       payroll: 'PayrollDashboard',
-                      tax: 'ClientsDashboard',
+                      tax: 'TaxReportsDashboard',
                       reconciliation: 'Reconciliations',
                       additional: 'AdditionalServicesDashboard',
                       annual_reports: 'BalanceSheets',
