@@ -802,18 +802,18 @@ export default function TaxReportsDashboardPage() {
         ) : viewMode === 'timeline' ? (
           <GanttView tasks={filteredTasks} clients={clients} currentMonth={addMonths(selectedMonth, 1)} onEditTask={setEditingTask} />
         ) : viewMode === 'table' ? (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 xl:grid-cols-3 gap-4 items-start">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
               const isCollapsed = collapsedServices.has(serviceKey);
               return (
                 <div key={serviceKey} className="border border-[#E0E0E0] rounded-xl overflow-hidden">
                   <button
                     onClick={() => toggleServiceCollapse(serviceKey)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors"
                   >
                     <div className="flex items-center gap-2">
                       <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
-                      <span className="font-bold text-[#263238]">{service.label}</span>
+                      <span className="font-bold text-[#263238] text-sm">{service.label}</span>
                       <span className="text-xs text-[#455A64]">{clientRows.length} לקוחות</span>
                     </div>
                   </button>
