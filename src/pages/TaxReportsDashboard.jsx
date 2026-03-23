@@ -811,8 +811,8 @@ export default function TaxReportsDashboardPage() {
                     onClick={() => setPhaseFilter(prev => prev === phase.key ? null : phase.key)}>
                     <motion.div
                       className={`mx-1 rounded-[20px] px-3 py-3 text-center transition-all relative overflow-hidden ${phaseFilter === phase.key ? 'ring-2' : ''}`}
-                      style={{ ringColor: phase.color }}
                       style={{
+                        '--tw-ring-color': phase.color,
                         background: isActive
                           ? `linear-gradient(135deg, ${phase.color}08 0%, ${phase.color}14 100%)`
                           : 'rgba(255,255,255,0.6)',
