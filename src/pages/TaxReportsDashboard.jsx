@@ -184,12 +184,7 @@ export default function TaxReportsDashboardPage() {
 
   const serviceKeys = useMemo(() => Object.keys(serviceData), [serviceData]);
 
-  // Default all services to collapsed on first load
-  useEffect(() => {
-    if (serviceKeys.length > 0 && collapsedServices.size === 0) {
-      setCollapsedServices(new Set(serviceKeys));
-    }
-  }, [serviceKeys]);
+  // Default all services to EXPANDED on first load (user collapses manually)
 
   const toggleServiceCollapse = useCallback((key) => {
     setCollapsedServices(prev => {
