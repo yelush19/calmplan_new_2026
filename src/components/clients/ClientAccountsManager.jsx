@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -191,6 +191,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
     const [accounts, setAccounts] = useState([]);
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingAccount, setEditingAccount] = useState(null);
+    const formRef = useRef(null);
 
     useEffect(() => {
         loadAccounts();
@@ -254,6 +255,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
     const handleEdit = (account) => {
         setEditingAccount(account);
         setShowAddForm(true);
+        setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     };
 
     const handleCancel = () => {
@@ -264,6 +266,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
     const handleAddNew = () => {
         setEditingAccount(null);
         setShowAddForm(true);
+        setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }
 
     const getStatusBadge = (status) => {
@@ -283,6 +286,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                 </div>
             </CardHeader>
             <CardContent>
+                <div ref={formRef}>
                 <AnimatePresence>
                     {showAddForm && (
                         <AccountForm
@@ -294,6 +298,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                         />
                     )}
                 </AnimatePresence>
+                </div>
 
                 <div className="mt-6 space-y-3">
                     {accounts.length > 0 ? (
@@ -341,7 +346,7 @@ export default function ClientAccountsManager({ clientId, clientName }) {
                                             <ExternalLink className="w-3 h-3" />
                                             התאמת חשבונות
                                         </Link>
-                                        <Link to="/settings" className="text-xs text-gray-500 hover:underline flex items-center gap-1">
+                                        <Link to="/Settings" className="text-xs text-gray-500 hover:underline flex items-center gap-1">
                                             <Settings className="w-3 h-3" />
                                             הגדרות
                                         </Link>

@@ -22,9 +22,30 @@ const columnMapping = {
 };
 
 const columnsConfig = {
-  todo: { title: 'לבצע', color: 'bg-slate-50', headerColor: 'bg-slate-200', tasks: [] },
-  in_progress: { title: 'הועבר לעיון', color: 'bg-purple-50', headerColor: 'bg-purple-200', tasks: [] },
-  completed: { title: 'הושלם ייצור', color: 'bg-emerald-50', headerColor: 'bg-emerald-200', tasks: [] },
+  todo: {
+    title: 'לבצע',
+    bgColor: 'rgba(239, 68, 68, 0.08)',
+    bgPattern: 'rgba(239, 68, 68, 0.06)',
+    headerBg: '#EF4444',
+    accent: '#EF4444',
+    tasks: [],
+  },
+  in_progress: {
+    title: 'הועבר לעיון',
+    bgColor: 'rgba(59, 130, 246, 0.08)',
+    bgPattern: 'rgba(59, 130, 246, 0.06)',
+    headerBg: '#3B82F6',
+    accent: '#3B82F6',
+    tasks: [],
+  },
+  completed: {
+    title: 'הושלם ייצור',
+    bgColor: 'rgba(34, 197, 94, 0.08)',
+    bgPattern: 'rgba(34, 197, 94, 0.06)',
+    headerBg: '#22C55E',
+    accent: '#22C55E',
+    tasks: [],
+  },
 };
 
 // ============================================================
@@ -125,7 +146,13 @@ const TaskCard = ({ task, index, onStatusChange, onDelete, onEdit, clients, allT
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`mb-2 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow ${getPriorityColor(task.priority)} ${snapshot.isDragging ? 'ring-2 ring-primary' : ''} ${bulkMode && isSelected ? 'ring-2 ring-violet-400 bg-violet-50' : ''}`}
+          className={`mb-3 rounded-md bg-white shadow-[0_1px_4px_rgba(0,0,0,0.1)] hover:shadow-[0_3px_12px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 ${getPriorityColor(task.priority)} ${snapshot.isDragging ? 'ring-2 ring-blue-400 shadow-lg rotate-2' : ''} ${bulkMode && isSelected ? 'ring-2 ring-violet-400 bg-violet-50' : ''}`}
+          style={{
+            ...provided.draggableProps.style,
+            transform: snapshot.isDragging
+              ? `${provided.draggableProps.style?.transform || ''} rotate(3deg)`
+              : provided.draggableProps.style?.transform,
+          }}
         >
           <div className="p-2.5 cursor-pointer" onClick={() => { if (bulkMode) { onToggleSelection?.(task.id); } else if (onEdit) { onEdit(task); } else { setExpanded(!expanded); } }}>
             {/* Row 1: Client name + due date */}
@@ -342,8 +369,8 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
         </div>
       </div>
 
-      {/* 3-column horizontal kanban */}
-      <div className="grid grid-cols-3 gap-4 min-h-[400px]">
+      {/* 3-column AYOA-style kanban */}
+      <div className="grid grid-cols-3 gap-5 min-h-[400px]">
         {Object.entries(board).map(([columnId, column]) => {
           const isCollapsed = !!collapsed[columnId];
           const taskCount = column.tasks?.length || 0;
@@ -352,37 +379,52 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
           return (
             <Droppable droppableId={columnId} key={columnId}>
               {(provided, snapshot) => (
-                <Card className={`flex flex-col ${column.color} overflow-hidden`}>
-                  <CardHeader
-                    className={`cursor-pointer select-none py-2.5 px-3 ${column.headerColor}`}
+                <div
+                  className="flex flex-col rounded-2xl overflow-hidden"
+                  style={{
+                    backgroundColor: column.bgColor,
+                    backgroundImage: `
+                      linear-gradient(45deg, ${column.bgPattern} 25%, transparent 25%),
+                      linear-gradient(-45deg, ${column.bgPattern} 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, ${column.bgPattern} 75%),
+                      linear-gradient(-45deg, transparent 75%, ${column.bgPattern} 75%)
+                    `,
+                    backgroundSize: '20px 20px',
+                    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+                    border: `1.5px solid ${column.accent}25`,
+                  }}
+                >
+                  {/* Column header — colored pill */}
+                  <div
+                    className="cursor-pointer select-none mx-auto mt-3 mb-2 px-6 py-1.5 rounded-full text-white font-bold text-sm shadow-md"
+                    style={{ backgroundColor: column.headerBg }}
                     onClick={() => toggleCollapsed(columnId)}
                   >
-                    <CardTitle className="flex justify-between items-center text-sm">
-                      <div className="flex items-center gap-2">
-                        <ChevronDown className={`w-3.5 h-3.5 text-gray-600 transition-transform ${isCollapsed ? 'rotate-[-90deg]' : ''}`} />
-                        <span>{column.title}</span>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">{taskCount}</Badge>
-                    </CardTitle>
-                  </CardHeader>
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isCollapsed ? 'rotate-[-90deg]' : ''}`} />
+                      <span>{column.title}</span>
+                      <span className="bg-white/30 rounded-full px-1.5 text-xs">{taskCount}</span>
+                    </div>
+                  </div>
+
                   {!isCollapsed ? (
-                    <CardContent
+                    <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`flex-grow p-3 overflow-y-auto max-h-[65vh] transition-colors ${snapshot.isDraggingOver ? 'bg-opacity-80' : ''}`}
+                      className={`flex-grow p-3 overflow-y-auto max-h-[65vh] transition-colors ${
+                        snapshot.isDraggingOver ? 'bg-white/20' : ''
+                      }`}
                     >
                       {groups.map(group => {
-                        // Count for drag indexing
                         let runningIdx = 0;
                         const prevGroups = groups.slice(0, groups.indexOf(group));
                         prevGroups.forEach(g => { runningIdx += g.tasks.length; });
 
                         return (
                           <div key={group.key} className={group.label ? 'mb-3' : ''}>
-                            {/* Swimlane header */}
                             {group.label && (
-                              <div className="flex items-center gap-1.5 px-1 py-1 mb-1.5 border-b border-gray-200">
-                                {groupBy === 'client' ? <Users className="w-3 h-3 text-gray-400" /> : <Layers className="w-3 h-3 text-gray-400" />}
+                              <div className="flex items-center gap-1.5 px-1 py-1 mb-1.5" style={{ borderBottom: `1px solid ${column.accent}30` }}>
+                                {groupBy === 'client' ? <Users className="w-3 h-3" style={{ color: column.accent }} /> : <Layers className="w-3 h-3" style={{ color: column.accent }} />}
                                 <span className="text-[11px] font-bold text-gray-600">{group.label}</span>
                                 <span className="text-[12px] text-gray-400">({group.tasks.length})</span>
                               </div>
@@ -408,15 +450,15 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                       })}
                       {provided.placeholder}
                       {taskCount === 0 && (
-                        <div className="text-center text-gray-400 py-6 text-xs">אין משימות</div>
+                        <div className="text-center text-gray-400 py-8 text-xs">אין משימות</div>
                       )}
-                    </CardContent>
+                    </div>
                   ) : (
                     <div ref={provided.innerRef} {...provided.droppableProps} className="hidden">
                       {provided.placeholder}
                     </div>
                   )}
-                </Card>
+                </div>
               )}
             </Droppable>
           );

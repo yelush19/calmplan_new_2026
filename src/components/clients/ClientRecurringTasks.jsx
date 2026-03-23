@@ -1002,6 +1002,13 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
           _categoryAccent, _categoryBgSoft, _categoryDot, _categoryEmoji, _categoryCardColor,
           _frequency, _is874, _reportMonth, _branchKey, _branchLabel, period, ...taskFields
         } = taskData;
+        // Set reporting_month in YYYY-MM format for dashboard filtering
+        if (_reportMonth) {
+          const rmYear = taskData.due_date ? parseInt(taskData.due_date.substring(0, 4)) : new Date().getFullYear();
+          // If reportMonth is December but due_date is in January of next year, use previous year
+          const adjustedYear = (_reportMonth === 12 && taskFields.due_date?.substring(5, 7) === '01') ? rmYear - 1 : rmYear;
+          taskFields.reporting_month = `${adjustedYear}-${String(_reportMonth).padStart(2, '0')}`;
+        }
         await Task.create(taskFields);
         created++;
       } catch (error) { console.error('Error creating task:', error); errors++; }
