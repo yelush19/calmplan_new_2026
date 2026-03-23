@@ -429,6 +429,18 @@ export default function TaxReportsDashboardPage() {
     }
   };
 
+  const handleReorder = useCallback(async (task, newSortOrder) => {
+    try {
+      localUpdateRef.current = true;
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, sort_order: newSortOrder } : t));
+      await Task.update(task.id, { sort_order: newSortOrder });
+      setTimeout(() => { localUpdateRef.current = false; }, 500);
+    } catch (err) {
+      console.error('שגיאה בעדכון סדר:', err);
+      localUpdateRef.current = false;
+    }
+  }, []);
+
   const handleDeleteTask = async (task) => {
     setEditingTask(null);
     const ok = await confirm({
@@ -843,6 +855,7 @@ export default function TaxReportsDashboardPage() {
                       onEdit={setEditingTask}
                       onDelete={handleDeleteTask}
                       onNote={setNoteTask}
+                      onReorder={handleReorder}
                     />
                   )}
                 </div>
