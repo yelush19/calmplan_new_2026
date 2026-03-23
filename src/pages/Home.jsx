@@ -33,6 +33,7 @@ import { useBiologicalClock } from "@/contexts/BiologicalClockContext";
 import OverdueAlert from "@/components/tasks/OverdueAlert";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
 import BadDayMode from "@/components/tasks/BadDayMode";
+import CategoryBreakdown from "@/components/tasks/CategoryBreakdown";
 import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
 import { StickyNote } from "@/api/entities";
 
@@ -558,6 +559,9 @@ export default function HomePage() {
             onShowFullMap={() => setShowFullMap(true)}
           />
         )}
+
+        {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
+        <CategoryBreakdown tasks={data.allTasks || []} />
 
         {/* ═══ 4. Sticky Notes — max 3 ═══ */}
         {stickyNotes.length > 0 && (
