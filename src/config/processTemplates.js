@@ -25,7 +25,6 @@ export const TAX_SERVICES = {
       { key: 'income_input',   label: 'קליטת הכנסות',  icon: 'download' },
       { key: 'expense_input',  label: 'קליטת הוצאות',  icon: 'download', allowMultiple: true },
       { key: 'report_prep',    label: 'הכנת דו"ח',     icon: 'file-text', skippable: true, skipWhen: 'client_manages_vat' },  // 30 דק' — רק כשהמשרד מכין
-      { key: 'upload_sign',    label: 'העלאה + חותמים', icon: 'upload' },   // 10 דק' — תמיד
       { key: 'submission',     label: 'דיווח',          icon: 'send' },
       { key: 'payment',        label: 'תשלום',          icon: 'landmark' },
     ],

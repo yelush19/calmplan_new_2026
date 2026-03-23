@@ -45,8 +45,6 @@ export const SERVICE_WEIGHTS = {
   // P2 — Bookkeeping & VAT
   'מע"מ — הכנה':       { duration: 30, cognitiveLoad: 2, label: 'מע"מ — הכנה' },        // לקוח שצריך הכנת דוח
   'work_vat_prep':      { duration: 30, cognitiveLoad: 2, label: 'VAT Prep' },
-  'מע"מ — העלאה':      { duration: 10, cognitiveLoad: 0, label: 'מע"מ — העלאה' },       // העלאה + העברה לחותמים
-  'work_vat_upload':    { duration: 10, cognitiveLoad: 0, label: 'VAT Upload' },
   'מע"מ':              { duration: 10, cognitiveLoad: 0, label: 'מע"מ' },               // ברירת מחדל — לקוח מנהל, רק העלאה
   'work_vat_reporting': { duration: 10, cognitiveLoad: 0, label: 'VAT Reporting' },
   'מע"מ 874':          { duration: 5,  cognitiveLoad: 0, label: 'מע"מ 874' },           // דיווח 3 + תשלום 2 דק'
