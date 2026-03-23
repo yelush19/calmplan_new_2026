@@ -279,7 +279,7 @@ function GlobalAyoaBar() {
   const { ayoaView, setAyoaView } = useAyoaView();
   const location = useLocation();
   // Only show on task/dashboard pages, not on settings/admin pages
-  const taskPages = ['/', '/payroll', '/tax-reports', '/admin-tasks', '/additional-services', '/my-focus', '/tasks', '/reconciliations', '/clients'];
+  const taskPages = ['/', '/payroll', '/tax-reports', '/admin-tasks', '/additional-services', '/my-focus', '/tasks', '/clients'];
   const showBar = taskPages.some(p => location.pathname === p || location.pathname.startsWith(p + '/'));
   if (!showBar) return null;
   return (
@@ -1186,7 +1186,7 @@ function LayoutInner({ children }) {
                   {/* ── Global AYOA View Switcher ── */}
                   <GlobalAyoaBar />
 
-                  <div className="flex-1 min-h-0">
+                  <div className="flex-1 min-h-0 relative">
                     {children}
                   </div>
                 </div>
