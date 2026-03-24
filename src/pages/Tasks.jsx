@@ -1410,6 +1410,7 @@ export default function TasksPage() {
           services={ALL_SERVICES}
           onToggleStep={handleToggleStep}
           onStatusChange={handleStatusChange}
+          onEdit={handleEditTask}
         />
       ) : view === 'mindmap' ? (
         <ViewErrorBoundary>

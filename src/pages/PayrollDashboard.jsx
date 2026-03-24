@@ -687,6 +687,7 @@ export default function PayrollDashboardPage() {
           onToggleStep={handleToggleStep}
           onStatusChange={handleStatusChange}
           onDateChange={handleDateChange}
+          onEdit={setEditingTask}
         />
       ) : viewMode === 'kanban' ? (
         <KanbanView tasks={filteredTasks} onStatusChange={handleStatusChange} onEdit={setEditingTask} />
