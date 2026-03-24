@@ -874,6 +874,41 @@ export function getDependencyStatus(task, siblingTasks = []) {
   return null;
 }
 
+/**
+ * Get human-readable reasons explaining WHY a task is blocked (waiting_for_materials).
+ * Returns an array of Hebrew labels for each missing dependency.
+ *
+ * @param {Object} task - The blocked task
+ * @param {Object[]} allTasks - All tasks (across all services) for the same reporting month
+ * @returns {string[]} e.g. ["קליטת הכנסות"] or ["קליטת הכנסות", "קליטת הוצאות"]
+ */
+export function getBlockedByReasons(task, allTasks = []) {
+  if (task.status !== 'waiting_for_materials') return [];
+
+  const service = getServiceForTask(task);
+  const serviceKey = service?.key || task.serviceKey;
+  if (!serviceKey) return [];
+
+  const deps = SERVICE_DEPENDENCIES[serviceKey];
+  if (!deps || deps.length === 0) return [];
+
+  const missing = [];
+  for (const depKey of deps) {
+    const depTask = allTasks.find(t => {
+      const s = getServiceForTask(t);
+      const tKey = s?.key || t.serviceKey;
+      return tKey === depKey && t.client_name === task.client_name;
+    });
+    if (!depTask || depTask.status !== 'production_completed') {
+      // Get the label from the service definition
+      const depService = ALL_SERVICES[depKey];
+      missing.push(depService?.label || depKey);
+    }
+  }
+
+  return missing;
+}
+
 // ============================================================
 // 2c. SOCIAL SECURITY CHAIN (מס"ב סוציאליות)
 // ============================================================
