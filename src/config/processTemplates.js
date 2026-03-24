@@ -26,6 +26,8 @@ export const TAX_SERVICES = {
       { key: 'report_prep',    label: 'הפקת דו"ח',     icon: 'file-text', skippable: true, skipWhen: 'client_manages_vat' },
       { key: 'submission',     label: 'שידור',          icon: 'send' },
       { key: 'payment',        label: 'תשלום',          icon: 'landmark' },
+      { key: 'record_report',  label: 'רישום דיווח בהנח"ש', icon: 'book-open' },
+      { key: 'record_payment', label: 'רישום תשלום בהנח"ש', icon: 'book-open' },
     ],
   },
 
@@ -41,6 +43,8 @@ export const TAX_SERVICES = {
       { key: 'report_prep',   label: 'הפקת דו"ח',     icon: 'file-text' },
       { key: 'submission',    label: 'דיווח',          icon: 'send' },
       { key: 'payment',       label: 'תשלום',          icon: 'landmark' },
+      { key: 'record_report',  label: 'רישום דיווח בהנח"ש', icon: 'book-open' },
+      { key: 'record_payment', label: 'רישום תשלום בהנח"ש', icon: 'book-open' },
     ],
   },
 
