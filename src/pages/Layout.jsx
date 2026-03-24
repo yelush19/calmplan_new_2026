@@ -111,11 +111,13 @@ const getSidebarSections = () => ({
     tabColor: 'border-[#6366F1]',
     items: [],
     subGroups: [
-      { key: 'p3_strategy', label: 'אסטרטגיה ותכנון', icon: Brain, items: [
+      { key: 'p3_planning', label: 'מרכז התכנון', icon: LayoutGrid, items: [
         { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
         { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
         { name: "משימות חוזרות (הזרקה)", href: createPageUrl("RecurringTasks"), icon: Repeat },
         { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
+        { name: "מטריצת משימות", href: createPageUrl("TaskMatrix"), icon: LayoutGrid },
+        { name: "דשבורדים", href: createPageUrl("Dashboards"), icon: Activity },
       ]},
       { key: 'p3_clients', label: 'לקוחות וניהול עסקי', icon: Users, items: [
         { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users,
