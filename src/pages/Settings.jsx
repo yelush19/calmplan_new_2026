@@ -24,6 +24,7 @@ import TemplatePanel from '@/components/settings/TemplatePanel';
 import ServiceCatalog from '@/components/settings/ServiceCatalog';
 import ServiceCatalogSection from '@/components/settings/ServiceCatalogSection';
 import ProcessArchitect from '@/components/settings/ProcessArchitect';
+import TagsSettings from '@/components/settings/TagsSettings';
 import { useDesign } from '@/contexts/DesignContext';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -37,6 +38,7 @@ import { ALL_SERVICES, getStepsForService } from '@/config/processTemplates';
 const TABS = [
   { key: 'architect', label: 'Process Architect', icon: Network, color: 'text-[#6366F1]', bg: 'bg-gradient-to-r from-[#6366F110] to-[#FFC10710] border-[#6366F130]', activeBg: 'bg-gradient-to-r from-[#6366F1] to-[#FFC107] text-white' },
   { key: 'automations', label: 'אוטומציות', icon: Zap, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-200', activeBg: 'bg-purple-600 text-white' },
+  { key: 'tags', label: 'תגיות', icon: Tag, color: 'text-[#A855F7]', bg: 'bg-[#A855F708] border-[#A855F730]', activeBg: 'bg-[#A855F7] text-white' },
   { key: 'system', label: 'מערכת', icon: Monitor, color: 'text-[#4682B4]', bg: 'bg-[#4682B408] border-[#4682B430]', activeBg: 'bg-[#4682B4] text-white' },
 ];
 
@@ -273,6 +275,7 @@ export default function SettingsPage() {
           </div>
         )}
         {activeTab === 'automations' && <AutomationSettings />}
+        {activeTab === 'tags' && <TagsSettings />}
         {activeTab === 'system' && <SystemSettings />}
       </motion.div>
 
