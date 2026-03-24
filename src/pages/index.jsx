@@ -115,6 +115,8 @@ import AutomationPage from "./AutomationPage";
 
 import CalendarView from "./CalendarView";
 
+import ClientWorkbook from "./ClientWorkbook";
+
 import { HashRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -248,6 +250,8 @@ const PAGES = {
     AutomationPage: AutomationPage,
 
     CalendarView: CalendarView,
+
+    ClientWorkbook: ClientWorkbook,
 
 }
 
@@ -392,6 +396,8 @@ function PagesContent() {
                 <Route path="/AutomationPage" element={<AnimatedPage><AutomationPage /></AnimatedPage>} />
 
                 <Route path="/CalendarView" element={<AnimatedPage><CalendarView /></AnimatedPage>} />
+
+                <Route path="/ClientWorkbook" element={<AnimatedPage><ClientWorkbook /></AnimatedPage>} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">

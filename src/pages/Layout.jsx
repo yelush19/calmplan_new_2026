@@ -124,6 +124,7 @@ const getSidebarSections = () => ({
         { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
         { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
         { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
+        { name: "חוברת לקוחות", href: createPageUrl("ClientWorkbook"), icon: BookUser },
       ]},
       { key: 'p3_system', label: 'הגדרות מערכת', icon: Settings, items: [
         { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Eye },
