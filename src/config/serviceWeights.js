@@ -15,10 +15,10 @@ export const SERVICE_WEIGHTS = {
   'שכר':               { duration: 15, cognitiveLoad: 1, label: 'שכר' },
   'הכנת שכר':          { duration: 15, cognitiveLoad: 1, label: 'הכנת שכר' },
   'work_payroll':       { duration: 15, cognitiveLoad: 1, label: 'Payroll' },
-  'ביטוח לאומי':       { duration: 15, cognitiveLoad: 1, label: 'ביטוח לאומי' },
-  'work_social_security': { duration: 15, cognitiveLoad: 1, label: 'Social Security' },
-  'ניכויים':           { duration: 15, cognitiveLoad: 1, label: 'ניכויים' },
-  'work_deductions':    { duration: 15, cognitiveLoad: 1, label: 'Deductions' },
+  'ביטוח לאומי':       { duration: 5, cognitiveLoad: 0, label: 'ביטוח לאומי' },
+  'work_social_security': { duration: 5, cognitiveLoad: 0, label: 'Social Security' },
+  'ניכויים':           { duration: 5, cognitiveLoad: 0, label: 'ניכויים' },
+  'work_deductions':    { duration: 5, cognitiveLoad: 0, label: 'Deductions' },
 
   // Payroll voucher intake — 5 דק' גג לכל אחד
   'קליטת פקודת שכר':   { duration: 5,  cognitiveLoad: 0, label: 'קליטת פקודת שכר' },
@@ -51,12 +51,12 @@ export const SERVICE_WEIGHTS = {
   // P2 — Bookkeeping & VAT
   'מע"מ — הכנה':       { duration: 30, cognitiveLoad: 2, label: 'מע"מ — הכנה' },        // לקוח שצריך הכנת דוח
   'work_vat_prep':      { duration: 30, cognitiveLoad: 2, label: 'VAT Prep' },
-  'מע"מ':              { duration: 10, cognitiveLoad: 1, label: 'מע"מ' },               // דיווח לרשות = פשוט (לא ננו)
-  'work_vat_reporting': { duration: 10, cognitiveLoad: 1, label: 'VAT Reporting' },
-  'מע"מ 874':          { duration: 5,  cognitiveLoad: 1, label: 'מע"מ 874' },           // דיווח לרשות = פשוט
-  'work_vat_874':       { duration: 5,  cognitiveLoad: 1, label: 'VAT 874' },
-  'מקדמות מס':         { duration: 5,  cognitiveLoad: 1, label: 'מקדמות מס' },          // דיווח לרשות = פשוט
-  'work_tax_advances':  { duration: 5,  cognitiveLoad: 1, label: 'Tax Advances' },
+  'מע"מ':              { duration: 5,  cognitiveLoad: 0, label: 'מע"מ' },               // דיווח לרשות = ננו
+  'work_vat_reporting': { duration: 5,  cognitiveLoad: 0, label: 'VAT Reporting' },
+  'מע"מ 874':          { duration: 5,  cognitiveLoad: 0, label: 'מע"מ 874' },           // דיווח לרשות = ננו
+  'work_vat_874':       { duration: 5,  cognitiveLoad: 0, label: 'VAT 874' },
+  'מקדמות מס':         { duration: 5,  cognitiveLoad: 0, label: 'מקדמות מס' },          // דיווח לרשות = ננו
+  'work_tax_advances':  { duration: 5,  cognitiveLoad: 0, label: 'Tax Advances' },
   'הנהלת חשבונות':     { duration: 30, cognitiveLoad: 2, label: 'הנהלת חשבונות' },
   'work_bookkeeping':   { duration: 30, cognitiveLoad: 2, label: 'Bookkeeping' },
   'התאמות':            { duration: 30, cognitiveLoad: 2, label: 'התאמות' },
@@ -73,13 +73,13 @@ export const SERVICE_WEIGHTS = {
   'work_pnl':           { duration: 30, cognitiveLoad: 2, label: 'P&L' },
 
   // Reporting
-  'דיווח למתפעל':      { duration: 15, cognitiveLoad: 0, label: 'דיווח למתפעל' },
-  'work_operator_reporting': { duration: 15, cognitiveLoad: 0, label: 'Operator Reporting' },
-  'דיווח לטמל':        { duration: 15, cognitiveLoad: 0, label: 'דיווח לטמל' },
-  'work_taml_reporting': { duration: 15, cognitiveLoad: 0, label: 'TAML Reporting' },
-  'הנחיות מס"ב ממתפעל': { duration: 15, cognitiveLoad: 0, label: 'הנחיות מס"ב ממתפעל' },
-  'מילואים':           { duration: 15, cognitiveLoad: 0, label: 'מילואים' },
-  'work_reserve_claims': { duration: 15, cognitiveLoad: 0, label: 'Reserve Claims' },
+  'דיווח למתפעל':      { duration: 5, cognitiveLoad: 0, label: 'דיווח למתפעל' },
+  'work_operator_reporting': { duration: 5, cognitiveLoad: 0, label: 'Operator Reporting' },
+  'דיווח לטמל':        { duration: 5, cognitiveLoad: 0, label: 'דיווח לטמל' },
+  'work_taml_reporting': { duration: 5, cognitiveLoad: 0, label: 'TAML Reporting' },
+  'הנחיות מס"ב ממתפעל': { duration: 5, cognitiveLoad: 0, label: 'הנחיות מס"ב ממתפעל' },
+  'מילואים':           { duration: 5, cognitiveLoad: 0, label: 'מילואים' },
+  'work_reserve_claims': { duration: 5, cognitiveLoad: 0, label: 'Reserve Claims' },
 
   // P3 — Services / Admin
   'ייעוץ':             { duration: 30, cognitiveLoad: 2, label: 'ייעוץ' },
