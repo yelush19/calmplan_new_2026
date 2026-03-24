@@ -10,7 +10,7 @@ import {
   Calculator, Loader, RefreshCw, ChevronLeft, ChevronRight,
   ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus,
   Zap, Flame, ChevronDown, Network, Target, TrendingUp, Clock, GitBranchPlus,
-  CheckSquare, Download, CalendarDays
+  CheckSquare, Download, CalendarDays, AlertCircle, Hourglass, CheckCircle2
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
@@ -238,6 +238,12 @@ export default function TaxReportsDashboardPage() {
     const reportTasks = filteredTasks.filter(t => REPORT_ONLY_CATEGORIES.includes(t.category));
     const reportTotal = reportTasks.length;
     const reportCompleted = reportTasks.filter(t => t.status === 'production_completed').length;
+    // Near-completion: sent_for_review or needs_corrections (final stages before done)
+    const reportNearCompletion = reportTasks.filter(t =>
+      t.status === 'sent_for_review' || t.status === 'needs_corrections'
+    ).length;
+    // Remaining to process: everything that isn't completed or near-completion
+    const reportRemaining = reportTotal - reportCompleted - reportNearCompletion;
     let totalSteps = 0, doneSteps = 0;
     filteredTasks.forEach(task => {
       const service = getServiceForTask(task);
@@ -250,6 +256,8 @@ export default function TaxReportsDashboardPage() {
     return {
       total: reportTotal,
       completed: reportCompleted,
+      nearCompletion: reportNearCompletion,
+      remaining: reportRemaining,
       pct: reportTotal > 0 ? Math.round((reportCompleted / reportTotal) * 100) : 0,
       allTasksCount: filteredTasks.length,
       totalSteps,
@@ -628,7 +636,7 @@ export default function TaxReportsDashboardPage() {
       </motion.div>
 
       {/* KPI Bar — AYOA organic capsules */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Total Reports */}
         <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
           style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', boxShadow: '0 2px 12px rgba(70,130,180,0.08)' }}>
@@ -639,6 +647,30 @@ export default function TaxReportsDashboardPage() {
           <div>
             <div className="text-2xl font-black text-slate-700">{stats.total}</div>
             <div className="text-[12px] text-slate-400 font-medium tracking-wide">סה"כ דיווחים</div>
+          </div>
+        </div>
+        {/* Remaining to Process */}
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
+          style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', boxShadow: '0 2px 12px rgba(234,88,12,0.08)' }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ boxShadow: '0 0 12px rgba(234,88,12,0.2)', background: 'rgba(234,88,12,0.08)' }}>
+            <Hourglass className="w-5 h-5" style={{ color: '#EA580C' }} />
+          </div>
+          <div>
+            <div className="text-2xl font-black" style={{ color: '#EA580C' }}>{stats.remaining}</div>
+            <div className="text-[12px] text-slate-400 font-medium tracking-wide">נותרו לעיבוד</div>
+          </div>
+        </div>
+        {/* Near Completion */}
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
+          style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)', boxShadow: '0 2px 12px rgba(123,31,162,0.08)' }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ boxShadow: '0 0 12px rgba(123,31,162,0.2)', background: 'rgba(123,31,162,0.08)' }}>
+            <CheckCircle2 className="w-5 h-5" style={{ color: '#7B1FA2' }} />
+          </div>
+          <div>
+            <div className="text-2xl font-black" style={{ color: '#7B1FA2' }}>{stats.nearCompletion}</div>
+            <div className="text-[12px] text-slate-400 font-medium tracking-wide">בשלבי סיום</div>
           </div>
         </div>
         {/* Completion Rate */}
