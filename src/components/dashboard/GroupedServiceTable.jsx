@@ -465,6 +465,11 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
             </button>
             <div className="min-w-0">
               <div className="flex items-center gap-1">
+                {task.reporting_month && (
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-500" title={`חודש דיווח: ${task.reporting_month}`}>
+                    {task.reporting_month.split('-')[1]?.replace(/^0/, '') || ''}
+                  </span>
+                )}
                 <span className="truncate block max-w-[160px] font-bold text-gray-900 text-[13px]">{clientName}</span>
                 {isQuickWin && task.status !== 'production_completed' && (
                   <span className="text-emerald-500 shrink-0" title="Quick Win">

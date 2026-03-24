@@ -780,8 +780,8 @@ export default function TasksPage() {
                     <Icon className="w-4 h-4" style={{ color: phase.color }} />
                   </div>
                   <div className="text-center min-w-[36px]">
-                    <div className="text-lg font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
-                    <div className="text-[10px] text-slate-400 font-medium leading-tight whitespace-nowrap">{phase.label}</div>
+                    <div className="text-xl font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
+                    <div className="text-[11px] text-slate-600 font-bold leading-tight whitespace-nowrap">{phase.label}</div>
                   </div>
                   {count > 0 && (
                     <div className="text-[10px] font-bold rounded-full px-1.5 py-0.5" style={{ color: phase.color, background: phase.color + '15' }}>
@@ -1241,6 +1241,11 @@ export default function TasksPage() {
                                 )}
                                 {depth > 0 && !hasChildren && (
                                   <span className="w-4 shrink-0" />
+                                )}
+                                {task.reporting_month && (
+                                  <span className="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500" title={`חודש דיווח: ${task.reporting_month}`}>
+                                    {task.reporting_month.split('-')[1]?.replace(/^0/, '') || ''}
+                                  </span>
                                 )}
                                 <span className="text-sm font-medium text-gray-800 truncate max-w-[150px]">
                                   {task.client_name || '-'}
