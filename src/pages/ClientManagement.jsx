@@ -30,6 +30,7 @@ import {
   Search,
   List,
   LayoutGrid,
+  BookOpen,
   RefreshCw,
   Download,
   Upload,
@@ -52,6 +53,7 @@ import ClientForm from '@/components/clients/ClientForm';
 import ClientCard from '@/components/clients/ClientCard';
 import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
 import ClientListItem from '@/components/clients/ClientListItem';
+const ClientWorkbookEmbed = React.lazy(() => import('@/pages/ClientWorkbook'));
 import { loadAutomationRules, getReportAutoCreateRules, clientHasServiceForCategory, loadServiceDueDates, getDueDayForCategory } from '@/config/automationRules';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import ClientCollections from '@/components/clients/ClientCollections';
@@ -1068,6 +1070,9 @@ export default function ClientManagementPage() {
               <ToggleGroupItem value="list" aria-label="תצוגת רשימה">
                 <List className="h-4 w-4" />
               </ToggleGroupItem>
+              <ToggleGroupItem value="workbook" aria-label="חוברת לקוחות">
+                <BookOpen className="h-4 w-4" />
+              </ToggleGroupItem>
             </ToggleGroup>
 
             {/* Auto-migration indicator */}
@@ -1127,7 +1132,18 @@ export default function ClientManagementPage() {
             )}
 
             <AnimatePresence mode="wait">
-              {view === 'grid' ? (
+              {view === 'workbook' ? (
+                <motion.div
+                  key="workbook-view"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <React.Suspense fallback={<div className="text-center py-8 text-gray-400">טוען חוברת...</div>}>
+                    <ClientWorkbookEmbed embedded />
+                  </React.Suspense>
+                </motion.div>
+              ) : view === 'grid' ? (
                 <motion.div
                   key="grid-view"
                   initial={{ opacity: 0 }}

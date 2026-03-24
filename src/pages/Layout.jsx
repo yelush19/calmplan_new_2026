@@ -120,9 +120,7 @@ const getSidebarSections = () => ({
         { name: "דשבורדים", href: createPageUrl("Dashboards"), icon: Activity },
       ]},
       { key: 'p3_clients', label: 'לקוחות וניהול עסקי', icon: Users, items: [
-        { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users,
-          subItems: [{ name: "חוברת לקוחות", href: createPageUrl("ClientWorkbook"), icon: BookUser }]
-        },
+        { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
         { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
         { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
         { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
