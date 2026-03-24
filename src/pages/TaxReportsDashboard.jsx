@@ -983,10 +983,10 @@ export default function TaxReportsDashboardPage() {
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
               const isCollapsed = collapsedServices.has(serviceKey);
               return (
-                <div key={serviceKey} className="border border-[#E0E0E0] rounded-xl overflow-hidden">
+                <div key={serviceKey} className="border border-[#E0E0E0] rounded-xl overflow-hidden flex flex-col" style={{ maxHeight: isCollapsed ? 'auto' : '520px' }}>
                   <button
                     onClick={() => toggleServiceCollapse(serviceKey)}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors shrink-0"
                   >
                     <div className="flex items-center gap-2">
                       <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
@@ -995,25 +995,27 @@ export default function TaxReportsDashboardPage() {
                     </div>
                   </button>
                   {!isCollapsed && (
-                    <GroupedServiceTable
-                      service={service}
-                      clientRows={clientRows}
-                      onToggleStep={handleToggleStep}
-                      onDateChange={handleDateChange}
-                      onStatusChange={handleStatusChange}
-                      onPaymentDateChange={handlePaymentDateChange}
-                      onSubTaskChange={handleSubTaskChange}
-                      onAttachmentUpdate={handleAttachmentUpdate}
-                      getClientIds={getTaxIds}
-                      onEdit={setEditingTask}
-                      onDelete={handleDeleteTask}
-                      onNote={setNoteTask}
-                      onReorder={handleReorder}
-                      bulkMode={bulkMode}
-                      selectedTaskIds={selectedTaskIds}
-                      onToggleSelect={handleToggleSelect}
-                      allTasks={filteredTasks}
-                    />
+                    <div className="overflow-y-auto overflow-x-auto flex-1 min-h-0">
+                      <GroupedServiceTable
+                        service={service}
+                        clientRows={clientRows}
+                        onToggleStep={handleToggleStep}
+                        onDateChange={handleDateChange}
+                        onStatusChange={handleStatusChange}
+                        onPaymentDateChange={handlePaymentDateChange}
+                        onSubTaskChange={handleSubTaskChange}
+                        onAttachmentUpdate={handleAttachmentUpdate}
+                        getClientIds={getTaxIds}
+                        onEdit={setEditingTask}
+                        onDelete={handleDeleteTask}
+                        onNote={setNoteTask}
+                        onReorder={handleReorder}
+                        bulkMode={bulkMode}
+                        selectedTaskIds={selectedTaskIds}
+                        onToggleSelect={handleToggleSelect}
+                        allTasks={filteredTasks}
+                      />
+                    </div>
                   )}
                 </div>
               );
