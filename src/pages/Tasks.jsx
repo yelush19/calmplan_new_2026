@@ -780,8 +780,8 @@ export default function TasksPage() {
                     <Icon className="w-4 h-4" style={{ color: phase.color }} />
                   </div>
                   <div className="text-center min-w-[36px]">
-                    <div className="text-lg font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
-                    <div className="text-[10px] text-slate-400 font-medium leading-tight whitespace-nowrap">{phase.label}</div>
+                    <div className="text-xl font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
+                    <div className="text-[11px] text-slate-600 font-bold leading-tight whitespace-nowrap">{phase.label}</div>
                   </div>
                   {count > 0 && (
                     <div className="text-[10px] font-bold rounded-full px-1.5 py-0.5" style={{ color: phase.color, background: phase.color + '15' }}>
