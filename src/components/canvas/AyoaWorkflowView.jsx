@@ -22,6 +22,8 @@ const STATUS_COLORS = {
   completed: { bg: '#10B981', light: '#D1FAE5', text: '#065F46' },
   production_completed: { bg: '#10B981', light: '#D1FAE5', text: '#065F46' },
   sent_for_review: { bg: '#3B82F6', light: '#DBEAFE', text: '#1E40AF' },
+  ready_to_broadcast: { bg: '#0D9488', light: '#CCFBF1', text: '#134E4A' },
+  reported_pending_payment: { bg: '#6366F1', light: '#E0E7FF', text: '#3730A3' },
   in_progress: { bg: '#F59E0B', light: '#FEF3C7', text: '#92400E' },
   waiting_for_materials: { bg: '#8B5CF6', light: '#EDE9FE', text: '#5B21B6' },
   needs_corrections: { bg: '#EF4444', light: '#FEE2E2', text: '#991B1B' },
@@ -55,6 +57,8 @@ function getProgressPercent(task) {
   if (task.progress != null) return task.progress;
   const status = task.status || 'not_started';
   if (status === 'completed' || status === 'production_completed') return 100;
+  if (status === 'reported_pending_payment') return 90;
+  if (status === 'ready_to_broadcast') return 80;
   if (status === 'sent_for_review') return 75;
   if (status === 'in_progress') return 50;
   if (status === 'waiting_for_materials') return 30;
@@ -64,7 +68,7 @@ function getProgressPercent(task) {
 
 function getStatusIcon(status) {
   if (status === 'completed' || status === 'production_completed') return CheckCircle2;
-  if (status === 'in_progress' || status === 'sent_for_review') return Clock;
+  if (status === 'in_progress' || status === 'sent_for_review' || status === 'ready_to_broadcast' || status === 'reported_pending_payment') return Clock;
   if (status === 'needs_corrections') return AlertCircle;
   return Clock;
 }

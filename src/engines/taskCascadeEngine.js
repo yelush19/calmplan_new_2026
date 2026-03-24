@@ -364,7 +364,7 @@ export function evaluateVatStatus(task, updatedSteps) {
   const submission = updatedSteps?.submission?.done;
 
   // Both דיווח + תשלום done = production_completed (handled by authority evaluator)
-  // Submission done only (no payment yet) = sent_for_review (handled by authority evaluator)
+  // Submission done only (no payment yet) = reported_pending_payment (handled by authority evaluator)
   // So here we only handle pre-submission logic:
 
   // Report prep done but not yet submitted
@@ -880,7 +880,7 @@ export function getDependencyStatus(task, siblingTasks = []) {
 // Dependency chain:
 //   "משלוח קובץ למתפעל" (הושלם) → status: waiting_for_materials (ממתין לקובץ ממתפעל)
 //   → "קבלת קובץ ממתפעל" (הושלם) → status: not_started (לבצע)
-//   → "הכנת קובץ + העלאה" (הושלם) → status: sent_for_review
+//   → "הכנת קובץ + העלאה" (הושלם) → status: ready_to_broadcast
 //   → "משלוח אסמכתאות" (הושלם) → status: production_completed
 
 /**
@@ -905,9 +905,9 @@ export function evaluateMasavSocialStatus(task, updatedSteps) {
     return { status: 'production_completed' };
   }
 
-  // Upload done → sent for review (awaiting confirmation)
+  // Upload done → ready to broadcast (awaiting confirmation/receipts)
   if (upload) {
-    return { status: 'sent_for_review' };
+    return { status: 'ready_to_broadcast' };
   }
 
   // File prep done → still in progress (not_started)
@@ -936,7 +936,8 @@ export function evaluateMasavSocialStatus(task, updatedSteps) {
  * Evaluate authority tasks (מע"מ, מקדמות, בט"ל, ניכויים).
  * These have דיווח (submission) + תשלום (payment) as final sub-steps.
  * Payment step completion → production_completed.
- * Submission without payment → sent_for_review.
+ * Submission without payment → reported_pending_payment (שודר, ממתין לתשלום).
+ * Report prep done (no submission yet) → ready_to_broadcast (מוכן לשידור).
  *
  * @param {Object} task - The authority task
  * @param {Object} updatedSteps - The new process_steps
@@ -948,15 +949,22 @@ export function evaluateAuthorityStatus(task, updatedSteps) {
 
   const submission = updatedSteps?.submission?.done;
   const payment = updatedSteps?.payment?.done;
+  const reportPrep = updatedSteps?.report_prep?.done;
+  const filePrep = updatedSteps?.file_prep?.done;
 
   // Both דיווח + תשלום done → production_completed
   if (submission && payment) {
     return { status: 'production_completed' };
   }
 
-  // דיווח done, תשלום pending → sent_for_review
+  // דיווח done, תשלום pending → שודר, ממתין לתשלום
   if (submission && !payment) {
-    return { status: 'sent_for_review' };
+    return { status: 'reported_pending_payment' };
+  }
+
+  // Report prep + file prep done (ready to file) → מוכן לשידור
+  if (reportPrep && filePrep) {
+    return { status: 'ready_to_broadcast' };
   }
 
   return null;

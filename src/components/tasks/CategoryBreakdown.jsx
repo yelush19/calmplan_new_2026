@@ -12,7 +12,7 @@ function classifyPhase(task) {
   const st = task.status;
 
   // Corrections / review → small completions
-  if (st === 'needs_corrections' || st === 'sent_for_review') return 'completions';
+  if (st === 'needs_corrections' || st === 'sent_for_review' || st === 'ready_to_broadcast' || st === 'reported_pending_payment') return 'completions';
 
   // Waiting for materials → completions (blocked but almost done)
   if (st === 'waiting_for_materials') return 'completions';

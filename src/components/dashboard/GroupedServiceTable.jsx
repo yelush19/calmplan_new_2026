@@ -38,24 +38,23 @@ const COGNITIVE_LOAD_CONFIG = {
   3: { label: 'כבד', color: '#EF4444', bg: 'bg-red-50', text: 'text-red-700' },
 };
 
-// 5 Golden Statuses — display order by priority
+// 7 Golden Statuses — display order by priority
 const STATUS_DISPLAY_ORDER = [
-  'waiting_for_materials',   // 1 - ממתין לחומרים
-  'not_started',             // 2 - לבצע
-  'sent_for_review',         // 3 - הועבר לעיון / דווח — ממתין לתשלום
-  'needs_corrections',       // 3 - לבצע תיקונים
-  'production_completed',    // 5 - הושלם ייצור
+  'waiting_for_materials',       // 1 - ממתין לחומרים
+  'not_started',                 // 2 - לבצע
+  'ready_to_broadcast',          // 3 - מוכן לשידור
+  'reported_pending_payment',    // 4 - שודר, ממתין לתשלום
+  'sent_for_review',             // 3 - הועבר לעיון (payroll)
+  'needs_corrections',           // 3 - לבצע תיקונים
+  'production_completed',        // 5 - הושלם ייצור
 ];
 
 /**
- * For authority tasks (ביטוח לאומי, מע"מ, ניכויים, מקדמות):
- * "sent_for_review" actually means "reported — awaiting payment",
- * NOT "sent to client for review" which is the payroll meaning.
+ * Status label — uses the config label directly.
+ * (Previously overrode sent_for_review for authority tasks,
+ *  now they use ready_to_broadcast / reported_pending_payment.)
  */
 function getStatusLabel(statusKey, config, serviceTaskType) {
-  if (statusKey === 'sent_for_review' && serviceTaskType === 'authority') {
-    return 'דווח — ממתין לתשלום';
-  }
   return config.label;
 }
 
@@ -109,7 +108,7 @@ function ExecutionBar({ startDate, dueDate }) {
 }
 
 // ALL statuses start collapsed by default
-const DEFAULT_COLLAPSED = new Set(['waiting_for_materials', 'not_started', 'sent_for_review', 'needs_corrections', 'production_completed']);
+const DEFAULT_COLLAPSED = new Set(['waiting_for_materials', 'not_started', 'ready_to_broadcast', 'reported_pending_payment', 'sent_for_review', 'needs_corrections', 'production_completed']);
 
 export default function GroupedServiceTable({
   service,
@@ -403,7 +402,7 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
   const isQuickWin = vatTier?.key === 'quick_win' || payrollTier?.key === 'nano';
   const isClimb = vatTier?.key === 'climb';
 
-  const statusOptions = ['waiting_for_materials', 'not_started', 'sent_for_review', 'needs_corrections', 'production_completed'];
+  const statusOptions = ['waiting_for_materials', 'not_started', 'ready_to_broadcast', 'reported_pending_payment', 'sent_for_review', 'needs_corrections', 'production_completed'];
 
   const subTasks = task.sub_tasks || [];
 
@@ -420,7 +419,7 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
     const updated = subTasks.map(st => st.id === subId ? { ...st, done: !st.done } : st);
     onSubTaskChange(task, updated);
     if (updated.every(st => st.done) && updated.length > 0 && task.status !== 'production_completed') {
-      onStatusChange(task, 'sent_for_review');
+      onStatusChange(task, 'ready_to_broadcast');
     }
   };
 

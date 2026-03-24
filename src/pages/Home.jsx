@@ -681,6 +681,7 @@ const QUICK_STATUSES = [
 const STATUS_DOT = {
   production_completed: '#10B981', waiting_for_materials: '#6366F1',
   needs_corrections: '#F59E0B', sent_for_review: '#6366F1', not_started: '#94A3B8',
+  ready_to_broadcast: '#0D9488', reported_pending_payment: '#6366F1',
 };
 
 // ═══════════════════════════════════════════════════════════════════

@@ -20,22 +20,26 @@ export const CATEGORY_GRADIENTS = {
   balance_sheets: { from: '#6D8B74', to: '#4A6741', label: 'דוחות כספיים', branch: 'P5' },
 };
 
-// 5 Golden Status visual treatments
+// 7 Golden Status visual treatments
 export const STATUS_STYLES = {
-  waiting_for_materials:  { color: '#f59e0b', glowIntensity: 0.3, animation: 'calm-pulse', label: 'ממתין לחומרים' },
-  not_started:            { color: '#94a3b8', glowIntensity: 0,   animation: null,         label: 'לבצע' },
-  sent_for_review:        { color: '#a855f7', glowIntensity: 0.5, animation: null,         label: 'הועבר לעיון' },
-  needs_corrections:      { color: '#f97316', glowIntensity: 0.7, animation: 'glow-pulse', label: 'לבצע תיקונים' },
-  production_completed:   { color: '#22c55e', glowIntensity: 0.2, animation: null,         label: 'הושלם ייצור' },
+  waiting_for_materials:      { color: '#f59e0b', glowIntensity: 0.3, animation: 'calm-pulse', label: 'ממתין לחומרים' },
+  not_started:                { color: '#94a3b8', glowIntensity: 0,   animation: null,         label: 'לבצע' },
+  sent_for_review:            { color: '#a855f7', glowIntensity: 0.5, animation: null,         label: 'הועבר לעיון' },
+  ready_to_broadcast:         { color: '#0d9488', glowIntensity: 0.5, animation: null,         label: 'מוכן לשידור' },
+  reported_pending_payment:   { color: '#6366f1', glowIntensity: 0.4, animation: 'calm-pulse', label: 'שודר, ממתין לתשלום' },
+  needs_corrections:          { color: '#f97316', glowIntensity: 0.7, animation: 'glow-pulse', label: 'לבצע תיקונים' },
+  production_completed:       { color: '#22c55e', glowIntensity: 0.2, animation: null,         label: 'הושלם ייצור' },
 };
 
 // Status priority for worst-status-wins aggregation (higher = worse)
 export const STATUS_PRIORITY = {
-  production_completed:   0,
-  not_started:            1,
-  sent_for_review:        2,
-  needs_corrections:      3,
-  waiting_for_materials:  4,
+  production_completed:       0,
+  reported_pending_payment:   1,
+  ready_to_broadcast:         1.5,
+  not_started:                2,
+  sent_for_review:            2,
+  needs_corrections:          3,
+  waiting_for_materials:      4,
 };
 
 // Board category definitions for MindMap ring-1 nodes
@@ -135,12 +139,14 @@ export const LOAD_COLORS = {
 
 // ─── Production Flow Status Colors (progressive branch coloring) ──────
 export const PRODUCTION_FLOW_COLORS = {
-  waiting_for_materials: { color: '#FF8F00', progress: 0,    label: 'ממתין לחומרים' },
-  not_started:           { color: '#1565C0', progress: 0.1,  label: 'לבצע' },
-  in_production:         { color: '#4682B4', progress: 0.5,  label: 'בייצור' },
-  sent_for_review:       { color: '#AB47BC', progress: 0.75, label: 'הועבר לעיון' },
-  needs_corrections:     { color: '#F97316', progress: 0.6,  label: 'לבצע תיקונים' },
-  production_completed:  { color: '#2E7D32', progress: 1.0,  label: 'הושלם ייצור' },
+  waiting_for_materials:     { color: '#FF8F00', progress: 0,    label: 'ממתין לחומרים' },
+  not_started:               { color: '#1565C0', progress: 0.1,  label: 'לבצע' },
+  in_production:             { color: '#4682B4', progress: 0.5,  label: 'בייצור' },
+  sent_for_review:           { color: '#AB47BC', progress: 0.75, label: 'הועבר לעיון' },
+  ready_to_broadcast:        { color: '#0D9488', progress: 0.8,  label: 'מוכן לשידור' },
+  reported_pending_payment:  { color: '#6366F1', progress: 0.9,  label: 'שודר, ממתין לתשלום' },
+  needs_corrections:         { color: '#F97316', progress: 0.6,  label: 'לבצע תיקונים' },
+  production_completed:      { color: '#2E7D32', progress: 1.0,  label: 'הושלם ייצור' },
 };
 
 // ─── P-Branch Path Colors (hierarchical — from root to leaves) ──────

@@ -86,6 +86,8 @@ const STATUS_GLOW = {
   waiting_for_materials: '#FF8F00',
   not_started: '#546E7A',
   sent_for_review: '#9C27B0',
+  ready_to_broadcast: '#0D9488',
+  reported_pending_payment: '#6366F1',
   needs_corrections: '#E65100',
   production_completed: '#2E7D32',
 };

@@ -957,25 +957,29 @@ export function areAllStepsDone(task) {
 }
 
 // ============================================================
-// THE GOLDEN LIST — 5 exclusive workflow statuses
+// THE GOLDEN LIST — 7 exclusive workflow statuses
 // ============================================================
 // Safe migration: old statuses are mapped (not deleted) to preserve data.
 // The trigger: "הושלם ייצור" is the ONLY status that fires cascade creation.
 
 export const STATUS_CONFIG = {
-  waiting_for_materials:  { label: 'ממתין לחומרים',  bg: 'bg-amber-100',   text: 'text-amber-800',   border: 'border-amber-200',   priority: 1 },
-  not_started:            { label: 'לבצע',           bg: 'bg-slate-200',   text: 'text-slate-800',   border: 'border-slate-300',   priority: 2 },
-  sent_for_review:        { label: 'הועבר לעיון',    bg: 'bg-purple-200',  text: 'text-purple-800',  border: 'border-purple-300',  priority: 3 },
-  needs_corrections:      { label: 'לבצע תיקונים',   bg: 'bg-orange-200',  text: 'text-orange-800',  border: 'border-orange-300',  priority: 3 },
-  production_completed:   { label: 'הושלם ייצור',    bg: 'bg-emerald-400', text: 'text-white',       border: 'border-emerald-500', priority: 5 },
+  waiting_for_materials:      { label: 'ממתין לחומרים',        bg: 'bg-amber-100',   text: 'text-amber-800',   border: 'border-amber-200',   priority: 1 },
+  not_started:                { label: 'לבצע',                 bg: 'bg-slate-200',   text: 'text-slate-800',   border: 'border-slate-300',   priority: 2 },
+  sent_for_review:            { label: 'הועבר לעיון',          bg: 'bg-purple-200',  text: 'text-purple-800',  border: 'border-purple-300',  priority: 3 },
+  ready_to_broadcast:         { label: 'מוכן לשידור',          bg: 'bg-teal-200',    text: 'text-teal-800',    border: 'border-teal-300',    priority: 3.5 },
+  reported_pending_payment:   { label: 'שודר, ממתין לתשלום',   bg: 'bg-indigo-200',  text: 'text-indigo-800',  border: 'border-indigo-300',  priority: 4 },
+  needs_corrections:          { label: 'לבצע תיקונים',         bg: 'bg-orange-200',  text: 'text-orange-800',  border: 'border-orange-300',  priority: 3 },
+  production_completed:       { label: 'הושלם ייצור',          bg: 'bg-emerald-400', text: 'text-white',       border: 'border-emerald-500', priority: 5 },
 };
 
 export const TASK_STATUS_CONFIG = {
-  waiting_for_materials:  { text: 'ממתין לחומרים',  color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-500' },
-  not_started:            { text: 'לבצע',           color: 'bg-slate-100 text-slate-700',     dot: 'bg-slate-400' },
-  sent_for_review:        { text: 'הועבר לעיון',    color: 'bg-purple-100 text-purple-700',   dot: 'bg-purple-500' },
-  needs_corrections:      { text: 'לבצע תיקונים',   color: 'bg-orange-100 text-orange-700',   dot: 'bg-orange-500' },
-  production_completed:   { text: 'הושלם ייצור',    color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
+  waiting_for_materials:      { text: 'ממתין לחומרים',        color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-500' },
+  not_started:                { text: 'לבצע',                 color: 'bg-slate-100 text-slate-700',     dot: 'bg-slate-400' },
+  sent_for_review:            { text: 'הועבר לעיון',          color: 'bg-purple-100 text-purple-700',   dot: 'bg-purple-500' },
+  ready_to_broadcast:         { text: 'מוכן לשידור',          color: 'bg-teal-100 text-teal-700',       dot: 'bg-teal-500' },
+  reported_pending_payment:   { text: 'שודר, ממתין לתשלום',   color: 'bg-indigo-100 text-indigo-700',   dot: 'bg-indigo-500' },
+  needs_corrections:          { text: 'לבצע תיקונים',         color: 'bg-orange-100 text-orange-700',   dot: 'bg-orange-500' },
+  production_completed:       { text: 'הושלם ייצור',          color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
 };
 
 // ============================================================
@@ -987,6 +991,8 @@ export const STATUS_MIGRATION_MAP = {
   waiting_for_materials:         'waiting_for_materials',
   not_started:                   'not_started',
   production_completed:          'production_completed',
+  ready_to_broadcast:            'ready_to_broadcast',
+  reported_pending_payment:      'reported_pending_payment',
   // "בעבודה" / active → "לבצע"
   in_progress:                   'not_started',
   remaining_completions:         'not_started',
@@ -994,18 +1000,20 @@ export const STATUS_MIGRATION_MAP = {
   completed:                     'production_completed',
   // "לבדיקה" → "הועבר לעיון"
   waiting_for_approval:          'sent_for_review',
+  // Legacy "reported_waiting_for_payment" → new formal status
+  reported_waiting_for_payment:  'reported_pending_payment',
+  // "מוכן לדיווח" → "מוכן לשידור"
+  ready_for_reporting:           'ready_to_broadcast',
   // All others → "לבצע"
   postponed:                     'not_started',
   issue:                         'needs_corrections',
-  ready_for_reporting:           'not_started',
-  reported_waiting_for_payment:  'not_started',
   pending_external:              'not_started',
   waiting_on_client:             'waiting_for_materials',
   not_relevant:                  'production_completed',
 };
 
 /**
- * Normalize any legacy status to one of the 5 golden statuses.
+ * Normalize any legacy status to one of the 7 golden statuses.
  * Safe: returns the status as-is if already valid.
  */
 export function migrateStatus(status) {

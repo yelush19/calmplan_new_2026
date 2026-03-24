@@ -66,6 +66,8 @@ const STATUS_COLORS = {
   waiting_for_materials: '#FF8F00',
   not_started: '#1565C0',
   sent_for_review: '#7B1FA2',
+  ready_to_broadcast: '#0D9488',
+  reported_pending_payment: '#6366F1',
   needs_corrections: '#E65100',
   production_completed: '#2E7D32',
 };

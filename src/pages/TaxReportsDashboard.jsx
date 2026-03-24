@@ -68,8 +68,9 @@ function getTaskPhase(t) {
     const allDone = svc.steps.every(s => steps[s.key]?.done);
     return allDone ? 'broadcast' : 'collect';
   }
-  if (steps.submission?.done) return 'broadcast';
-  if (steps.report_prep?.done) return 'review';
+  // Status-aware: formal status takes precedence
+  if (t.status === 'production_completed' || t.status === 'reported_pending_payment' || steps.submission?.done) return 'broadcast';
+  if (t.status === 'ready_to_broadcast' || steps.report_prep?.done) return 'review';
   return 'process';
 }
 
@@ -238,9 +239,9 @@ export default function TaxReportsDashboardPage() {
     const reportTasks = filteredTasks.filter(t => REPORT_ONLY_CATEGORIES.includes(t.category));
     const reportTotal = reportTasks.length;
     const reportCompleted = reportTasks.filter(t => t.status === 'production_completed').length;
-    // Near-completion: sent_for_review or needs_corrections (final stages before done)
+    // Near-completion: ready_to_broadcast, reported_pending_payment, or needs_corrections (final stages before done)
     const reportNearCompletion = reportTasks.filter(t =>
-      t.status === 'sent_for_review' || t.status === 'needs_corrections'
+      t.status === 'ready_to_broadcast' || t.status === 'reported_pending_payment' || t.status === 'needs_corrections'
     ).length;
     // Remaining to process: everything that isn't completed or near-completion
     const reportRemaining = reportTotal - reportCompleted - reportNearCompletion;
@@ -266,9 +267,9 @@ export default function TaxReportsDashboardPage() {
     };
   }, [filteredTasks]);
 
-  // Filing Sprint: tasks that are sent_for_review (ready to file)
+  // Filing Sprint: tasks that are ready_to_broadcast (ready to file)
   const filingSprintTasks = useMemo(() => {
-    return filteredTasks.filter(t => t.status === 'sent_for_review');
+    return filteredTasks.filter(t => t.status === 'ready_to_broadcast');
   }, [filteredTasks]);
 
   const canStartFilingSprint = filingSprintTasks.length >= 2;
@@ -940,7 +941,7 @@ export default function TaxReportsDashboardPage() {
         {bulkMode && selectedTaskIds.size > 0 && (
           <div className="flex items-center gap-1.5 bg-violet-50 border border-violet-200 rounded-lg px-3 py-1.5">
             <span className="text-xs font-bold text-violet-700">{selectedTaskIds.size} נבחרו:</span>
-            {['not_started', 'sent_for_review', 'production_completed'].map(s => (
+            {['not_started', 'ready_to_broadcast', 'reported_pending_payment', 'production_completed'].map(s => (
               <Button key={s} size="sm" variant="outline" className="h-7 text-xs px-2"
                 onClick={() => handleBulkStatusChange(s)}>
                 {STATUS_CONFIG[s]?.label || s}
