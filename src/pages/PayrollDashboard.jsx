@@ -41,6 +41,7 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import GanttView from '@/components/views/GanttView';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 
 const payrollDashboardServices = {
   ...PAYROLL_SERVICES,
@@ -607,7 +608,7 @@ export default function PayrollDashboardPage() {
         <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
       )}
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
@@ -674,6 +675,15 @@ export default function PayrollDashboardPage() {
         </div>
       ) : viewMode === 'timeline' ? (
         <ProjectTimelineView tasks={filteredTasks} />
+      ) : viewMode === 'workbook' ? (
+        <TaxWorkbookView
+          tasks={filteredTasks}
+          clients={clients}
+          services={payrollDashboardServices}
+          onToggleStep={handleToggleStep}
+          onStatusChange={handleStatusChange}
+          onDateChange={handleDateChange}
+        />
       ) : viewMode === 'kanban' ? (
         <KanbanView tasks={filteredTasks} onStatusChange={handleStatusChange} onEdit={setEditingTask} />
       ) : null}
