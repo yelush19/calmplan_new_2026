@@ -1242,6 +1242,11 @@ export default function TasksPage() {
                                 {depth > 0 && !hasChildren && (
                                   <span className="w-4 shrink-0" />
                                 )}
+                                {task.reporting_month && (
+                                  <span className="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500" title={`חודש דיווח: ${task.reporting_month}`}>
+                                    {task.reporting_month.split('-')[1]?.replace(/^0/, '') || ''}
+                                  </span>
+                                )}
                                 <span className="text-sm font-medium text-gray-800 truncate max-w-[150px]">
                                   {task.client_name || '-'}
                                 </span>
