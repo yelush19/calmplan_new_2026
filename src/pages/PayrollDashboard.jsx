@@ -34,7 +34,7 @@ import {
   markAllStepsUndone,
   areAllStepsDone,
 } from '@/config/processTemplates';
-import { processTaskCascade } from '@/engines/taskCascadeEngine';
+import { processTaskCascade, getOpenPrerequisitesForCompletion } from '@/engines/taskCascadeEngine';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
@@ -304,15 +304,42 @@ export default function PayrollDashboardPage() {
       const updatePayload = { status: newStatus };
       if (newStatus === 'production_completed') {
         updatePayload.process_steps = markAllStepsDone(task);
+        if (!task.execution_date) updatePayload.execution_date = new Date().toISOString().split('T')[0];
       } else if (task.status === 'production_completed' && newStatus === 'not_started') {
         updatePayload.process_steps = markAllStepsUndone(task);
       }
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       syncNotesWithTaskStatus(task.id, newStatus);
+
+      // Reverse cascade: offer to complete open prerequisites/children
+      if (newStatus === 'production_completed') {
+        const { prereqs, children } = getOpenPrerequisitesForCompletion(task, tasks);
+        const openTasks = [...prereqs, ...children];
+        if (openTasks.length > 0) {
+          const names = openTasks.map(t => {
+            const svc = getServiceForTask(t);
+            return `${t.client_name} — ${svc?.label || t.category}`;
+          }).join('\n');
+          const shouldComplete = await confirm({
+            title: 'עדכון משימות מחייבות',
+            message: `המשימות הבאות עדיין פתוחות:\n\n${names}\n\nלעדכן גם אותן כ"הושלם ייצור"?`,
+            confirmText: 'כן, עדכן הכל',
+            cancelText: 'לא, רק את הנוכחית',
+          });
+          if (shouldComplete) {
+            for (const t of openTasks) {
+              const p = { status: 'production_completed', process_steps: markAllStepsDone(t), execution_date: new Date().toISOString().split('T')[0] };
+              setTasks(prev => prev.map(x => x.id === t.id ? { ...x, ...p } : x));
+              await Task.update(t.id, p);
+            }
+          }
+        }
+      }
+
       window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'status-change' } }));
     } catch (error) { console.error("Error updating status:", error); }
-  }, []);
+  }, [tasks, confirm]);
 
   const handleBulkStatusChange = useCallback(async (newStatus) => {
     if (selectedTaskIds.size === 0) return;
