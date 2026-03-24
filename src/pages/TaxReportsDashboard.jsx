@@ -40,6 +40,7 @@ import {
   areAllStepsDone,
 } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
+import { getOpenPrerequisitesForCompletion } from '@/engines/taskCascadeEngine';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
@@ -437,7 +438,6 @@ export default function TaxReportsDashboardPage() {
     try {
       const updatePayload = { status: newStatus };
       if (newStatus === 'production_completed' || newStatus === 'completed') {
-        // Auto-stamp execution_date when task is marked as done
         if (!task.execution_date) {
           updatePayload.execution_date = new Date().toISOString().split('T')[0];
         }
@@ -446,9 +446,8 @@ export default function TaxReportsDashboardPage() {
         updatePayload.process_steps = markAllStepsDone(task);
       } else if (task.status === 'production_completed' && newStatus === 'not_started') {
         updatePayload.process_steps = markAllStepsUndone(task);
-        updatePayload.execution_date = ''; // Clear execution_date on revert
+        updatePayload.execution_date = '';
       }
-      // Merge any extra data (e.g. process_steps from KanbanView drag-and-drop)
       if (extraData) {
         Object.assign(updatePayload, extraData);
       }
@@ -460,6 +459,34 @@ export default function TaxReportsDashboardPage() {
       // If a collection task completed/uncompleted, sync to dependents
       await syncCollectionToDependents(task, newStatus === 'production_completed');
 
+      // ── Reverse cascade: offer to complete open prerequisites ──
+      if (newStatus === 'production_completed') {
+        const { prereqs } = getOpenPrerequisitesForCompletion(task, tasks);
+        if (prereqs.length > 0) {
+          const names = prereqs.map(t => {
+            const svc = getServiceForTask(t);
+            return `${t.client_name} — ${svc?.label || t.category}`;
+          }).join('\n');
+          const shouldComplete = await confirm({
+            title: 'עדכון משימות מחייבות',
+            message: `המשימות הבאות עדיין פתוחות ותלויות במשימה שהושלמה:\n\n${names}\n\nלעדכן גם אותן כ"הושלם ייצור"?`,
+            confirmText: 'כן, עדכן הכל',
+            cancelText: 'לא, רק את הנוכחית',
+          });
+          if (shouldComplete) {
+            for (const prereq of prereqs) {
+              const prereqPayload = {
+                status: 'production_completed',
+                process_steps: markAllStepsDone(prereq),
+                execution_date: new Date().toISOString().split('T')[0],
+              };
+              setTasks(prev => prev.map(t => t.id === prereq.id ? { ...t, ...prereqPayload } : t));
+              await Task.update(prereq.id, prereqPayload);
+            }
+          }
+        }
+      }
+
       // Notify other dashboards of the change
       window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
         detail: { collection: 'tasks', type: 'status-change', source: 'tax-reports' }
@@ -469,7 +496,7 @@ export default function TaxReportsDashboardPage() {
       console.error("Error updating status:", error);
       localUpdateRef.current = false;
     }
-  }, [syncCollectionToDependents]);
+  }, [syncCollectionToDependents, tasks, confirm]);
 
   const handlePaymentDateChange = useCallback(async (task, paymentDate) => {
     try {

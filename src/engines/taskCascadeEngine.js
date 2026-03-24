@@ -725,6 +725,51 @@ export const SERVICE_DEPENDENCIES = {
   pnl_reports:    ['vat_reporting', 'reconciliation'],
 };
 
+/**
+ * Get open prerequisite tasks that should be auto-completed when a downstream
+ * task is marked as production_completed.
+ *
+ * Example: VAT → production_completed → returns open [income_collection, expense_collection] tasks
+ * Example: payroll_closing → production_completed → returns open child tasks (deductions, social_security, etc.)
+ *
+ * @param {Object} task - The task being completed
+ * @param {Object[]} allTasks - All tasks for the same reporting month
+ * @returns {{ prereqs: Object[], children: Object[] }} Open prerequisite tasks + open children
+ */
+export function getOpenPrerequisitesForCompletion(task, allTasks = []) {
+  const service = getServiceForTask(task);
+  const serviceKey = service?.key || task.serviceKey;
+  const result = { prereqs: [], children: [] };
+
+  // 1. Reverse SERVICE_DEPENDENCIES: if this task has deps, find open ones
+  if (serviceKey) {
+    const deps = SERVICE_DEPENDENCIES[serviceKey];
+    if (deps && deps.length > 0) {
+      for (const depKey of deps) {
+        const depTask = allTasks.find(t => {
+          const s = getServiceForTask(t);
+          const tKey = s?.key || t.serviceKey;
+          return tKey === depKey && t.client_name === task.client_name;
+        });
+        if (depTask && depTask.status !== 'production_completed') {
+          result.prereqs.push(depTask);
+        }
+      }
+    }
+  }
+
+  // 2. Find open child tasks (created by cascade) via parent_id or master_task_id
+  const openChildren = allTasks.filter(t =>
+    t.id !== task.id &&
+    t.client_name === task.client_name &&
+    (t.parent_id === task.id || t.master_task_id === task.id) &&
+    t.status !== 'production_completed'
+  );
+  result.children = openChildren;
+
+  return result;
+}
+
 // ── Reverse Next-Step AND Logic ──
 // Reads service "nextStepIds" from ALL_SERVICES + localStorage overrides/customServices.
 // If multiple services point to the same target via nextStepIds, that target requires
