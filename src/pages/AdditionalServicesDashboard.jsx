@@ -36,6 +36,7 @@ import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 
 // P1 Payroll extras: masav, payslips, pensions
 const P1_PAYROLL_EXTRAS = [
@@ -412,7 +413,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         </div>
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
@@ -484,6 +485,15 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
             <AyoaRadialView tasks={filteredTasks} centerLabel="שירותים נוספים" centerSub="P1" />
           </div>
+        ) : viewMode === 'workbook' ? (
+          <TaxWorkbookView
+            tasks={filteredTasks}
+            clients={clients}
+            services={additionalDashboardServices}
+            onToggleStep={handleToggleStep}
+            onStatusChange={handleStatusChange}
+            onDateChange={handleDateChange}
+          />
         ) : viewMode === 'table' ? (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
