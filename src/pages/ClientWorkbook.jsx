@@ -11,7 +11,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { Search, ArrowUpDown, Users } from 'lucide-react';
+import { Search, ArrowUpDown, Users, CheckCircle } from 'lucide-react';
 
 // ── Status config ──
 const STATUS_OPTIONS = [
@@ -601,6 +601,10 @@ export default function ClientWorkbook() {
           <p className="text-sm text-gray-500 mt-1">
             {filteredClients.length} לקוחות מוצגים מתוך {clients.length}
           </p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+          <CheckCircle className="w-4 h-4" />
+          <span>שמירה אוטומטית — כל עריכה נשמרת מיד</span>
         </div>
       </div>
 
