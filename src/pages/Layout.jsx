@@ -815,7 +815,7 @@ function LayoutInner({ children }) {
                       {Object.entries(sidebarSections)
                         .filter(([key]) => getVisibleSections(workMode).includes(key))
                         .map(([, section]) => (
-                          section.items.map(item => (
+                          section.items.flatMap(item => [
                             <Tooltip key={item.href}>
                               <TooltipTrigger asChild>
                                 <Link to={item.href} className={`p-2 rounded-[32px] transition-colors
@@ -824,8 +824,19 @@ function LayoutInner({ children }) {
                                 </Link>
                               </TooltipTrigger>
                               <TooltipContent side="left">{item.name}</TooltipContent>
-                            </Tooltip>
-                          ))
+                            </Tooltip>,
+                            ...(item.subItems || []).map(sub => (
+                              <Tooltip key={sub.href}>
+                                <TooltipTrigger asChild>
+                                  <Link to={sub.href} className={`p-1.5 rounded-[32px] transition-colors
+                                    ${isActive(sub.href) ? 'bg-[#E8F5F7] text-[#4682B4]' : 'text-[#455A64] hover:bg-[#E0E0E0] hover:text-[#37474F]'}`}>
+                                    <sub.icon className="w-4 h-4" />
+                                  </Link>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">{sub.name}</TooltipContent>
+                              </Tooltip>
+                            ))
+                          ])
                         ))}
                     </div>
                   ) : (
@@ -1055,29 +1066,40 @@ function LayoutInner({ children }) {
                                 {isOpen && (
                                   <div className="me-3 border-e-2 border-[#E0E0E0] pe-1 mt-0.5 mb-1">
                                     {section.items.filter(matchesSidebarSearch).map(item => (
-                                      <div key={item.href} className="flex items-center group">
-                                        <Link to={item.href}
-                                          onClick={() => {
-                                            setIsMobileMenuOpen(false);
-                                            setSidebarSearch('');
-                                            const targetMode = SECTION_TO_MODE[key];
-                                            if (targetMode && targetMode !== workMode) {
-                                              setWorkMode(targetMode);
-                                            }
-                                          }}
-                                          className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors
-                                            ${isActive(item.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#37474F] hover:bg-white/70 hover:shadow-sm'}`}>
-                                          <item.icon className="w-3.5 h-3.5" />
-                                          {item.name}
-                                        </Link>
-                                        <button
-                                          onClick={() => toggleMyMenu(item.href)}
-                                          className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
-                                          title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
-                                        >
-                                          <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
-                                        </button>
-                                      </div>
+                                      <React.Fragment key={item.href}>
+                                        <div className="flex items-center group">
+                                          <Link to={item.href}
+                                            onClick={() => {
+                                              setIsMobileMenuOpen(false);
+                                              setSidebarSearch('');
+                                              const targetMode = SECTION_TO_MODE[key];
+                                              if (targetMode && targetMode !== workMode) {
+                                                setWorkMode(targetMode);
+                                              }
+                                            }}
+                                            className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors
+                                              ${isActive(item.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#37474F] hover:bg-white/70 hover:shadow-sm'}`}>
+                                            <item.icon className="w-3.5 h-3.5" />
+                                            {item.name}
+                                          </Link>
+                                          <button
+                                            onClick={() => toggleMyMenu(item.href)}
+                                            className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
+                                            title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
+                                          >
+                                            <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
+                                          </button>
+                                        </div>
+                                        {item.subItems?.map(sub => (
+                                          <Link key={sub.href} to={sub.href}
+                                            onClick={() => { setIsMobileMenuOpen(false); setSidebarSearch(''); }}
+                                            className={`flex items-center gap-2 px-6 py-1 rounded-xl text-xs transition-colors
+                                              ${isActive(sub.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#546E7A] hover:bg-white/70 hover:shadow-sm'}`}>
+                                            <sub.icon className="w-3 h-3" />
+                                            {sub.name}
+                                          </Link>
+                                        ))}
+                                      </React.Fragment>
                                     ))}
                                     {/* Sub-group folders (max 5 items per level) */}
                                     {section.subGroups?.filter(sg => !sidebarSearchLower || (sg.label || '').toLowerCase().includes(sidebarSearchLower) || sg.items?.some(matchesSidebarSearch)).map(sg => {
