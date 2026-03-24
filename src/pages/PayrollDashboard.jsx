@@ -608,6 +608,7 @@ export default function PayrollDashboardPage() {
                     <GroupedServiceTable
                       service={service}
                       clientRows={clientRows}
+                      allTasks={filteredTasks}
                       onToggleStep={handleToggleStep}
                       onDateChange={handleDateChange}
                       onStatusChange={handleStatusChange}

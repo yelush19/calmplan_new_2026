@@ -13,7 +13,8 @@ import {
   Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2, Pencil,
   ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink, Plus,
   ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X,
-  Network, BarChart3, GitBranchPlus
+  Network, BarChart3, GitBranchPlus,
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target
 } from "lucide-react";
 import { cleanupGhostTasks } from '@/api/functions';
 import MindMapView from "../components/views/MindMapView";
@@ -98,6 +99,16 @@ const priorityConfig = {
   high: { text: 'גבוה', color: 'bg-orange-50 text-orange-700', dot: 'bg-orange-400', order: 1 },
   urgent: { text: 'דחוף', color: 'bg-amber-50 text-amber-800', dot: 'bg-amber-500', order: 0 },
 };
+
+const STATUS_PIPELINE = [
+  { key: 'waiting_for_materials', label: 'ממתין לחומרים', color: '#F59E0B', bg1: '#fffbeb', bg2: '#fef3c7', Icon: Inbox },
+  { key: 'not_started', label: 'לבצע', color: '#64748B', bg1: '#f8fafc', bg2: '#f1f5f9', Icon: PlayCircle },
+  { key: 'ready_to_broadcast', label: 'מוכן לשידור', color: '#0D9488', bg1: '#f0fdfa', bg2: '#ccfbf1', Icon: Radio },
+  { key: 'reported_pending_payment', label: 'ממתין לתשלום', color: '#4F46E5', bg1: '#eef2ff', bg2: '#e0e7ff', Icon: Send },
+  { key: 'sent_for_review', label: 'הועבר לעיון', color: '#7C3AED', bg1: '#faf5ff', bg2: '#f3e8ff', Icon: Eye },
+  { key: 'needs_corrections', label: 'לתיקון', color: '#EA580C', bg1: '#fff7ed', bg2: '#ffedd5', Icon: FileWarning },
+  { key: 'production_completed', label: 'הושלם', color: '#16A34A', bg1: '#f0fdf4', bg2: '#dcfce7', Icon: CircleCheck },
+];
 
 // Hebrew → golden status migration for imported data
 const mondayStatusMapping = {
@@ -551,7 +562,14 @@ export default function TasksPage() {
     const total = filteredTasks.length;
     const completed = filteredTasks.filter(t => t.status === 'production_completed').length;
     const inProgress = filteredTasks.filter(t => t.status === 'sent_for_review' || t.status === 'needs_corrections' || t.status === 'ready_to_broadcast' || t.status === 'reported_pending_payment').length;
-    return { total, completed, inProgress };
+    // Status counts for DNA pipeline cards
+    const byStatus = {};
+    STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
+    filteredTasks.forEach(t => {
+      const key = t.status || 'not_started';
+      if (byStatus[key] !== undefined) byStatus[key]++;
+    });
+    return { total, completed, inProgress, byStatus };
   }, [filteredTasks]);
 
   const toggleSort = (field) => {
