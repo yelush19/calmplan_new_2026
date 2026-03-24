@@ -206,17 +206,21 @@ export default function AdminTasksDashboardPage() {
     const relevant = filteredTasks;
     const total = relevant.length;
     const completed = relevant.filter(t => t.status === 'production_completed').length;
-    // Status counts for DNA pipeline cards
+    // Status counts for DNA pipeline cards — count unique clients
     const byStatus = {};
     STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
+    const clientsByStatus = {};
+    STATUS_PIPELINE.forEach(s => { clientsByStatus[s.key] = new Set(); });
     relevant.forEach(t => {
       const key = t.status || 'not_started';
-      if (byStatus[key] !== undefined) byStatus[key]++;
+      if (clientsByStatus[key]) clientsByStatus[key].add(t.client_name);
     });
+    Object.keys(byStatus).forEach(k => { byStatus[k] = clientsByStatus[k].size; });
+    const allClients = new Set(relevant.map(t => t.client_name));
     return {
-      total,
+      total: allClients.size,
       completed,
-      pct: total > 0 ? Math.round((completed / total) * 100) : 0,
+      pct: allClients.size > 0 ? Math.round((completed / allClients.size) * 100) : 0,
       pending: relevant.filter(t => t.status === 'not_started').length,
       inProgress: relevant.filter(t => !['not_started', 'production_completed'].includes(t.status)).length,
       byStatus,
@@ -373,7 +377,7 @@ export default function AdminTasksDashboardPage() {
           </div>
           <div className="text-center">
             <div className="text-xl font-black text-slate-700">{stats.total}</div>
-            <div className="text-[10px] text-slate-400 font-medium">סה"כ</div>
+            <div className="text-[10px] text-slate-400 font-medium">לקוחות</div>
           </div>
         </div>
 
