@@ -647,10 +647,14 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
               </PopoverContent>
             </Popover>
             {blockedByReasons.length > 0 && (
-              <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-tight max-w-[120px] truncate"
-                title={`ממתין ל: ${blockedByReasons.join(', ')}`}
+              <span className={`text-[10px] rounded px-1.5 py-0.5 leading-tight max-w-[120px] truncate ${
+                task.status === 'reported_pending_payment'
+                  ? 'text-indigo-600 bg-indigo-50 border border-indigo-200'
+                  : 'text-amber-600 bg-amber-50 border border-amber-200'
+              }`}
+                title={blockedByReasons.join(', ')}
               >
-                ממתין: {blockedByReasons.join(', ')}
+                {blockedByReasons.join(', ')}
               </span>
             )}
             {task.status === 'reported_waiting_for_payment' && task.payment_due_date && (

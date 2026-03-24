@@ -875,14 +875,21 @@ export function getDependencyStatus(task, siblingTasks = []) {
 }
 
 /**
- * Get human-readable reasons explaining WHY a task is blocked (waiting_for_materials).
- * Returns an array of Hebrew labels for each missing dependency.
+ * Get human-readable reasons explaining WHY a task is blocked.
+ * Works for both waiting_for_materials (dependency not done) and
+ * reported_pending_payment (submitted, awaiting payment).
  *
  * @param {Object} task - The blocked task
  * @param {Object[]} allTasks - All tasks (across all services) for the same reporting month
- * @returns {string[]} e.g. ["קליטת הכנסות"] or ["קליטת הכנסות", "קליטת הוצאות"]
+ * @returns {string[]} e.g. ["קליטת הכנסות"], ["תשלום מע"מ"], ["ממתין לתשלום"]
  */
 export function getBlockedByReasons(task, allTasks = []) {
+  // --- reported_pending_payment: task itself was submitted, waiting for payment ---
+  if (task.status === 'reported_pending_payment') {
+    return ['ממתין לתשלום'];
+  }
+
+  // --- waiting_for_materials: upstream dependency not done ---
   if (task.status !== 'waiting_for_materials') return [];
 
   const service = getServiceForTask(task);
@@ -900,9 +907,14 @@ export function getBlockedByReasons(task, allTasks = []) {
       return tKey === depKey && t.client_name === task.client_name;
     });
     if (!depTask || depTask.status !== 'production_completed') {
-      // Get the label from the service definition
       const depService = ALL_SERVICES[depKey];
-      missing.push(depService?.label || depKey);
+      const label = depService?.label || depKey;
+      // More specific: if dep exists but is pending payment, say so
+      if (depTask?.status === 'reported_pending_payment') {
+        missing.push(`תשלום ${label}`);
+      } else {
+        missing.push(label);
+      }
     }
   }
 
