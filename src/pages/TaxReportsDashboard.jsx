@@ -22,6 +22,7 @@ import { he } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
+import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import GanttView from '@/components/views/GanttView';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
@@ -934,7 +935,7 @@ export default function TaxReportsDashboardPage() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
         {phaseFilter && (
           <Badge className="bg-slate-100 text-slate-700 gap-1 px-2.5 py-1 text-xs font-bold cursor-pointer hover:bg-slate-200" onClick={() => setPhaseFilter(null)}>
             סינון: {STATUS_PIPELINE.find(s => s.key === phaseFilter)?.label || (phaseFilter === 'collect' ? 'קליטה' : phaseFilter === 'process' ? 'עיבוד' : phaseFilter === 'review' ? 'מוכן לשידור' : 'שודר')}
@@ -1007,6 +1008,15 @@ export default function TaxReportsDashboardPage() {
               );
             })}
           </div>
+        ) : viewMode === 'workbook' ? (
+          <TaxWorkbookView
+            tasks={filteredTasks}
+            clients={clients}
+            services={taxDashboardServices}
+            onToggleStep={handleToggleStep}
+            onStatusChange={handleStatusChange}
+            onDateChange={handleDateChange}
+          />
         ) : viewMode === 'radial' ? (
           <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
             <AyoaRadialView tasks={filteredTasks} centerLabel="דיווחי מס" centerSub="P2" onEditTask={setEditingTask} />

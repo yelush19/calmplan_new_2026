@@ -27,8 +27,7 @@ import GlobalSearch from "@/components/GlobalSearch";
 import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
 import useAutoReminders from "@/hooks/useAutoReminders";
 import useBackupMonitor from "@/hooks/useBackupMonitor";
-import BackupHealthIndicator from "@/components/BackupHealthIndicator";
-import SyncStatusIndicator from "@/components/SyncStatusIndicator";
+import SyncBackupStatus from "@/components/SyncBackupStatus";
 import { Task, Client } from "@/api/entities";
 import { importAllData } from "@/api/base44Client";
 import { AppProvider, useApp } from "@/contexts/AppContext";
@@ -629,8 +628,7 @@ function LayoutInner({ children }) {
               <Maximize2 className="w-5 h-5" />
             </Button>
 
-            <SyncStatusIndicator />
-            <BackupHealthIndicator health={backupHealth} />
+            <SyncBackupStatus health={backupHealth} />
           </div>
         </header>
 
