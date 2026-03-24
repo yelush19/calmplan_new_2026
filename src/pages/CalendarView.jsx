@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import {
   ChevronRight, ChevronLeft, Calendar as CalendarIcon,
   CheckCircle, Clock, AlertTriangle,
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,17 @@ const STATUS_LABELS = {
   needs_corrections: 'דרוש תיקון',
   production_completed: 'הושלם ייצור',
 };
+
+// Status pipeline for DNA-style mini status bar (ordered by workflow progression)
+const STATUS_PIPELINE = [
+  { key: 'waiting_for_materials', label: 'ממתין לחומרים',       color: '#F59E0B', bg1: '#fffbeb', bg2: '#fef3c7', Icon: Inbox },
+  { key: 'not_started',          label: 'לבצע',                color: '#64748B', bg1: '#f8fafc', bg2: '#f1f5f9', Icon: PlayCircle },
+  { key: 'ready_to_broadcast',   label: 'מוכן לשידור',         color: '#0D9488', bg1: '#f0fdfa', bg2: '#ccfbf1', Icon: Radio },
+  { key: 'reported_pending_payment', label: 'ממתין לתשלום',     color: '#4F46E5', bg1: '#eef2ff', bg2: '#e0e7ff', Icon: Send },
+  { key: 'sent_for_review',      label: 'הועבר לעיון',         color: '#7C3AED', bg1: '#faf5ff', bg2: '#f3e8ff', Icon: Eye },
+  { key: 'needs_corrections',    label: 'לתיקון',              color: '#EA580C', bg1: '#fff7ed', bg2: '#ffedd5', Icon: FileWarning },
+  { key: 'production_completed', label: 'הושלם',               color: '#16A34A', bg1: '#f0fdf4', bg2: '#dcfce7', Icon: CircleCheck },
+];
 
 const PRIORITY_DOTS = {
   urgent: 'bg-red-500',
@@ -116,7 +128,7 @@ function TaskDetailPanel({ dateKey, tasks, onClose }) {
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{label}</h3>
-        <Button variant="ghost" size="sm" onClick={onClose}>✕</Button>
+        <Button variant="ghost" size="sm" onClick={onClose}>&#x2715;</Button>
       </div>
       {tasks.length === 0 ? (
         <p className="text-sm text-gray-400">אין משימות ליום זה.</p>
@@ -156,6 +168,8 @@ export default function CalendarView() {
   const [tasks, setTasks] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTasks, setSelectedTasks] = useState([]);
+  const [statusFilter, setStatusFilter] = useState(null);       // null = follow hideCompleted; or a specific status key
+  const [hideCompleted, setHideCompleted] = useState(true);      // default ON — hide production_completed
 
   useEffect(() => {
     Task.list()
@@ -163,17 +177,30 @@ export default function CalendarView() {
       .catch(() => setTasks([]));
   }, []);
 
-  // Group tasks by due_date
+  // Apply status filtering to tasks
+  const filteredTasks = useMemo(() => {
+    let result = tasks;
+    if (statusFilter) {
+      // When a specific status is selected, show only that status (ignore hideCompleted)
+      result = result.filter((t) => (t.status || 'not_started') === statusFilter);
+    } else if (hideCompleted) {
+      // Default: hide production_completed
+      result = result.filter((t) => t.status !== 'production_completed');
+    }
+    return result;
+  }, [tasks, statusFilter, hideCompleted]);
+
+  // Group filtered tasks by due_date
   const tasksByDate = useMemo(() => {
     const map = {};
-    for (const t of tasks) {
+    for (const t of filteredTasks) {
       if (!t.due_date) continue;
       const key = t.due_date.slice(0, 10);
       if (!map[key]) map[key] = [];
       map[key].push(t);
     }
     return map;
-  }, [tasks]);
+  }, [filteredTasks]);
 
   const cells = useMemo(() => getMonthGrid(year, month), [year, month]);
   const todayKey = toDateKey(today);
@@ -192,23 +219,37 @@ export default function CalendarView() {
     setSelectedTasks(dayTasks);
   };
 
-  // Stats
+  // Stats — computed from ALL tasks (unfiltered) for the current month
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
   const monthTasks = tasks.filter((t) => t.due_date?.startsWith(monthPrefix));
   const completedCount = monthTasks.filter((t) => t.status === 'production_completed').length;
   const urgentCount = monthTasks.filter((t) => t.priority === 'urgent' || t.priority === 'high').length;
 
+  // Filtered month tasks for the summary line
+  const filteredMonthTasks = filteredTasks.filter((t) => t.due_date?.startsWith(monthPrefix));
+
+  // Status counts for DNA pipeline (from ALL month tasks)
+  const statusCounts = useMemo(() => {
+    const counts = {};
+    STATUS_PIPELINE.forEach((s) => { counts[s.key] = 0; });
+    monthTasks.forEach((t) => {
+      const key = t.status || 'not_started';
+      if (counts[key] !== undefined) counts[key]++;
+    });
+    return counts;
+  }, [monthTasks]);
+
   return (
     <div className="p-6 max-w-5xl mx-auto dark:bg-gray-900" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold text-[#1E3A5F] dark:text-white flex items-center gap-2">
             <CalendarIcon className="w-6 h-6 text-blue-500" />
             תצוגת לוח שנה
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {monthTasks.length} משימות · {completedCount} הושלמו · {urgentCount} דחופות
+            {filteredMonthTasks.length} משימות{statusFilter ? '' : ` · ${completedCount} הושלמו`} · {urgentCount} דחופות
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -229,6 +270,91 @@ export default function CalendarView() {
             היום
           </Button>
         </div>
+      </div>
+
+      {/* DNA-style mini status pipeline bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3">
+        {/* Total capsule */}
+        <div className="rounded-2xl px-3 py-2 flex items-center gap-2 shrink-0 border border-slate-200 shadow-sm"
+          style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
+          <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-slate-100">
+            <Target className="w-3.5 h-3.5 text-slate-500" />
+          </div>
+          <div className="text-center min-w-[28px]">
+            <div className="text-base font-black leading-tight text-slate-700">{monthTasks.length}</div>
+            <div className="text-[10px] text-slate-400 font-medium leading-tight">סה"כ</div>
+          </div>
+        </div>
+
+        {STATUS_PIPELINE.map((phase, idx) => {
+          const count = statusCounts[phase.key] || 0;
+          const pct = monthTasks.length > 0 ? Math.round((count / monthTasks.length) * 100) : 0;
+          const Icon = phase.Icon;
+          const isActive = statusFilter === phase.key;
+          return (
+            <React.Fragment key={phase.key}>
+              {idx > 0 && (
+                <div className="flex items-center shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                </div>
+              )}
+              <button
+                onClick={() => setStatusFilter((prev) => prev === phase.key ? null : phase.key)}
+                className={`rounded-2xl px-3 py-2 flex items-center gap-2 shrink-0 border transition-all cursor-pointer hover:scale-[1.03] ${
+                  isActive ? 'ring-2 ring-offset-1 shadow-md' : 'shadow-sm'
+                }`}
+                style={{
+                  background: `linear-gradient(135deg, ${phase.bg1} 0%, ${phase.bg2} 100%)`,
+                  borderColor: count > 0 ? phase.color + '30' : '#e2e8f0',
+                  ringColor: phase.color,
+                  opacity: count === 0 ? 0.5 : 1,
+                }}
+              >
+                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: phase.color + '15', boxShadow: count > 0 ? `0 0 10px ${phase.color}20` : 'none' }}>
+                  <Icon className="w-3.5 h-3.5" style={{ color: phase.color }} />
+                </div>
+                <div className="text-center min-w-[28px]">
+                  <div className="text-base font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
+                  <div className="text-[10px] text-slate-400 font-medium leading-tight whitespace-nowrap">{phase.label}</div>
+                </div>
+                {count > 0 && (
+                  <div className="text-[10px] font-bold rounded-full px-1.5 py-0.5" style={{ color: phase.color, background: phase.color + '15' }}>
+                    {pct}%
+                  </div>
+                )}
+              </button>
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Filter controls row */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        {/* Hide completed toggle */}
+        <button
+          onClick={() => { setHideCompleted((v) => !v); setStatusFilter(null); }}
+          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+            hideCompleted
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300'
+              : 'bg-gray-50 border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'
+          }`}
+        >
+          <CheckCircle className="w-3.5 h-3.5" />
+          הצג רק פתוחים
+          <span className={`w-2 h-2 rounded-full ${hideCompleted ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+        </button>
+
+        {/* Active filter badge */}
+        {statusFilter && (
+          <Badge
+            className="bg-slate-100 text-slate-700 gap-1 px-2.5 py-1 text-xs font-bold cursor-pointer hover:bg-slate-200"
+            onClick={() => setStatusFilter(null)}
+          >
+            סינון: {STATUS_PIPELINE.find((s) => s.key === statusFilter)?.label || statusFilter}
+            <span className="mr-1">&#x2715;</span>
+          </Badge>
+        )}
       </div>
 
       <div className="flex gap-4">
