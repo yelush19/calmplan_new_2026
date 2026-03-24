@@ -730,6 +730,71 @@ export default function TasksPage() {
         </div>
       </div>
 
+      {/* ── DNA Pipeline Status Cards ── */}
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm pb-2 -mx-4 px-4 pt-1 border-b border-slate-100 dark:border-gray-700 shadow-sm">
+        <div className="flex items-stretch gap-1.5 overflow-x-auto">
+          {/* Total summary capsule */}
+          <div className="rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border border-slate-200 dark:border-gray-600"
+            style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: 'rgba(70,130,180,0.1)' }}>
+              <Target className="w-4.5 h-4.5" style={{ color: '#4682B4' }} />
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-black text-slate-700 dark:text-slate-200">{stats.total}</div>
+              <div className="text-[10px] text-slate-400 font-medium">סה"כ</div>
+            </div>
+          </div>
+
+          {/* DNA pipeline — 7 status capsules with connector dots */}
+          {STATUS_PIPELINE.map((phase, idx) => {
+            const count = stats.byStatus[phase.key] || 0;
+            const pct = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+            const Icon = phase.Icon;
+            const isActive = statusFilter.includes(phase.key);
+            return (
+              <React.Fragment key={phase.key}>
+                {idx > 0 && (
+                  <div className="flex items-center shrink-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                  </div>
+                )}
+                <button
+                  onClick={() => setStatusFilter(prev => {
+                    if (prev.includes(phase.key)) {
+                      return prev.filter(s => s !== phase.key);
+                    }
+                    return [...prev, phase.key];
+                  })}
+                  className={`rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border transition-all cursor-pointer hover:scale-[1.03] ${
+                    isActive ? 'ring-2 ring-offset-1 shadow-md' : 'shadow-sm'
+                  }`}
+                  style={{
+                    background: `linear-gradient(135deg, ${phase.bg1} 0%, ${phase.bg2} 100%)`,
+                    borderColor: count > 0 ? phase.color + '30' : '#e2e8f0',
+                    ringColor: phase.color,
+                    opacity: count === 0 ? 0.5 : 1,
+                  }}
+                >
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: phase.color + '15', boxShadow: count > 0 ? `0 0 10px ${phase.color}20` : 'none' }}>
+                    <Icon className="w-4 h-4" style={{ color: phase.color }} />
+                  </div>
+                  <div className="text-center min-w-[36px]">
+                    <div className="text-lg font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
+                    <div className="text-[10px] text-slate-400 font-medium leading-tight whitespace-nowrap">{phase.label}</div>
+                  </div>
+                  {count > 0 && (
+                    <div className="text-[10px] font-bold rounded-full px-1.5 py-0.5" style={{ color: phase.color, background: phase.color + '15' }}>
+                      {pct}%
+                    </div>
+                  )}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
       {/* ── Ghost Cleanup Result Panel ── */}
       {ghostCleanup?.result && (
         <Card className="border-red-200 bg-red-50/30 shadow-sm">
