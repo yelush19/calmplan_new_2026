@@ -85,12 +85,12 @@ function getTaskPhase(task) {
     return areAllStepsDone({ ...task, process_steps: steps }) ? 'collect_done' : 'collect';
   }
 
-  // Authority/reporting tasks — step-based
+  // Authority/reporting tasks — step-based + status-aware
   if (isExplicitlyOpen) return 'process';
   const reportDone = steps?.report_prep?.done;
   const submissionDone = steps?.submission?.done;
-  if (submissionDone || task.status === 'production_completed') return 'done';
-  if (reportDone) return 'ready';
+  if (submissionDone || task.status === 'production_completed' || task.status === 'reported_pending_payment') return 'done';
+  if (reportDone || task.status === 'ready_to_broadcast') return 'ready';
   return 'process';
 }
 

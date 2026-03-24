@@ -37,12 +37,14 @@ const BRANCH_DNA = {
 
 const STATUS_COLORS = {
   not_started: '#1565C0', in_progress: '#F57C00', waiting_for_materials: '#FF8F00',
-  sent_for_review: '#7B1FA2', needs_corrections: '#E65100', production_completed: '#2E7D32',
+  sent_for_review: '#7B1FA2', ready_to_broadcast: '#0D9488', reported_pending_payment: '#6366F1',
+  needs_corrections: '#E65100', production_completed: '#2E7D32',
 };
 
 const STATUS_LABELS = {
   not_started: 'לא התחיל', in_progress: 'בתהליך', waiting_for_materials: 'ממתין',
-  sent_for_review: 'בבדיקה', needs_corrections: 'תיקון', production_completed: 'הושלם',
+  sent_for_review: 'לעיון', ready_to_broadcast: 'מוכן לשידור', reported_pending_payment: 'ממתין לתשלום',
+  needs_corrections: 'תיקון', production_completed: 'הושלם',
 };
 
 const COLOR_PALETTE = [

@@ -34,13 +34,15 @@ function getServiceColor(category) {
 
 // Full Status Colors — DNA functional colors (no gray, NO TURQUOISE)
 const STATUS_COLORS = {
-  not_started:           { bg: '#1565C0', border: '#0D47A1', text: '#fff' },
-  in_progress:           { bg: '#F57C00', border: '#E65100', text: '#fff' },
-  waiting_for_materials: { bg: '#FF8F00', border: '#FF6F00', text: '#fff' },
-  sent_for_review:       { bg: '#7B1FA2', border: '#6A1B9A', text: '#fff' },
-  needs_corrections:     { bg: '#E65100', border: '#BF360C', text: '#fff' },
-  production_completed:  { bg: '#2E7D32', border: '#1B5E20', text: '#fff' },
-  completed:             { bg: '#1B5E20', border: '#004D40', text: '#fff' },
+  not_started:                { bg: '#1565C0', border: '#0D47A1', text: '#fff' },
+  in_progress:                { bg: '#F57C00', border: '#E65100', text: '#fff' },
+  waiting_for_materials:      { bg: '#FF8F00', border: '#FF6F00', text: '#fff' },
+  sent_for_review:            { bg: '#7B1FA2', border: '#6A1B9A', text: '#fff' },
+  ready_to_broadcast:         { bg: '#0D9488', border: '#0F766E', text: '#fff' },
+  reported_pending_payment:   { bg: '#6366F1', border: '#4F46E5', text: '#fff' },
+  needs_corrections:          { bg: '#E65100', border: '#BF360C', text: '#fff' },
+  production_completed:       { bg: '#2E7D32', border: '#1B5E20', text: '#fff' },
+  completed:                  { bg: '#1B5E20', border: '#004D40', text: '#fff' },
 };
 
 // Status labels (Hebrew)
@@ -49,6 +51,8 @@ const STATUS_LABELS = {
   in_progress: 'בעבודה',
   waiting_for_materials: 'ממתין לחומרים',
   sent_for_review: 'הועבר לעיון',
+  ready_to_broadcast: 'מוכן לשידור',
+  reported_pending_payment: 'שודר, ממתין לתשלום',
   needs_corrections: 'לתיקון',
   production_completed: 'הושלם',
   completed: 'הושלם',

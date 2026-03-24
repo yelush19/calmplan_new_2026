@@ -100,31 +100,37 @@ const ZERO_PANIC = {
   indigo:  '#3949AB',  // Ready for Reporting
 };
 
-// 5 Golden Statuses — Zero Gray: vivid colors only
+// 7 Golden Statuses — Zero Gray: vivid colors only
 const STATUS_TO_COLOR = {
-  waiting_for_materials:  ZERO_PANIC.amber,    // ממתין לחומרים — amber
-  not_started:            '#1565C0',           // לבצע — vivid blue (Zero Gray)
-  sent_for_review:        '#AB47BC',           // הועבר לעיון — purple
-  needs_corrections:      '#F97316',           // לבצע תיקונים — orange
-  production_completed:   ZERO_PANIC.green,    // הושלם ייצור — bright green
+  waiting_for_materials:      ZERO_PANIC.amber,    // ממתין לחומרים — amber
+  not_started:                '#1565C0',           // לבצע — vivid blue (Zero Gray)
+  sent_for_review:            '#AB47BC',           // הועבר לעיון — purple (payroll)
+  ready_to_broadcast:         '#0D9488',           // מוכן לשידור — teal
+  reported_pending_payment:   '#6366F1',           // שודר, ממתין לתשלום — indigo
+  needs_corrections:          '#F97316',           // לבצע תיקונים — orange
+  production_completed:       ZERO_PANIC.green,    // הושלם ייצור — bright green
 };
 
 // Status labels for bubble display (Iron Rule: must match table exactly)
 const STATUS_LABELS = {
-  waiting_for_materials:  'ממתין לחומרים',
-  not_started:            'לבצע',
-  sent_for_review:        'הועבר לעיון',
-  needs_corrections:      'לבצע תיקונים',
-  production_completed:   'הושלם ייצור',
+  waiting_for_materials:      'ממתין לחומרים',
+  not_started:                'לבצע',
+  sent_for_review:            'הועבר לעיון',
+  ready_to_broadcast:         'מוכן לשידור',
+  reported_pending_payment:   'שודר, ממתין לתשלום',
+  needs_corrections:          'לבצע תיקונים',
+  production_completed:       'הושלם ייצור',
 };
 
 // Priority for worst-status-wins (higher = worse = more urgent)
 const STATUS_URGENCY = {
-  production_completed:   0,
-  not_started:            1,
-  sent_for_review:        2,
-  needs_corrections:      3,
-  waiting_for_materials:  4,
+  production_completed:       0,
+  reported_pending_payment:   1,
+  ready_to_broadcast:         1.5,
+  not_started:                2,
+  sent_for_review:            2,
+  needs_corrections:          3,
+  waiting_for_materials:      4,
 };
 
 function getWorstClientStatus(clientTasks) {
@@ -479,12 +485,18 @@ function getClientAggregateState(clientTasks) {
   });
   if (hasDueToday) return { color: ZERO_PANIC.orange, shouldPulse: false, completionRatio, statusRing: 4 };
 
-  // 5 Golden Statuses priority: waiting_for_materials > needs_corrections > sent_for_review > not_started
+  // 7 Golden Statuses priority: waiting_for_materials > needs_corrections > sent_for_review/ready_to_broadcast > not_started
   const hasWaiting = clientTasks.some(t => t.status === 'waiting_for_materials');
   if (hasWaiting) return { color: ZERO_PANIC.amber, shouldPulse: false, completionRatio, statusRing: 3 };
 
   const hasCorrections = clientTasks.some(t => t.status === 'needs_corrections');
   if (hasCorrections) return { color: '#F97316', shouldPulse: false, completionRatio, statusRing: 3 };
+
+  const hasReadyToBroadcast = clientTasks.some(t => t.status === 'ready_to_broadcast');
+  if (hasReadyToBroadcast) return { color: '#0D9488', shouldPulse: false, completionRatio, statusRing: 2 };
+
+  const hasPendingPayment = clientTasks.some(t => t.status === 'reported_pending_payment');
+  if (hasPendingPayment) return { color: '#6366F1', shouldPulse: false, completionRatio, statusRing: 2 };
 
   const hasSentForReview = clientTasks.some(t => t.status === 'sent_for_review');
   if (hasSentForReview) return { color: '#AB47BC', shouldPulse: false, completionRatio, statusRing: 2 };
@@ -3506,7 +3518,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
             })() : null;
 
             // ── Feature 4: Status cycling logic ──
-            const STATUS_CYCLE = ['not_started', 'sent_for_review', 'production_completed'];
+            const STATUS_CYCLE = ['not_started', 'ready_to_broadcast', 'reported_pending_payment', 'production_completed'];
             const cycleStatus = async (task, e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -3533,7 +3545,9 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
 
               // Feature 4: Status dot color classes for cycling
               const statusDotStyle = task.status === 'production_completed'
-                ? 'bg-emerald-500' : task.status === 'sent_for_review'
+                ? 'bg-emerald-500' : task.status === 'reported_pending_payment'
+                ? 'bg-indigo-500' : task.status === 'ready_to_broadcast'
+                ? 'bg-teal-500' : task.status === 'sent_for_review'
                 ? 'bg-purple-500' : task.status === 'needs_corrections'
                 ? 'bg-orange-500' : task.status === 'waiting_for_materials'
                 ? 'bg-amber-500' : 'bg-slate-400';
@@ -3559,6 +3573,8 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       }}
                       className={`w-4 h-4 rounded-full shrink-0 border-2 transition-all hover:scale-125 flex items-center justify-center cursor-pointer ${
                         task.status === 'production_completed' ? 'bg-emerald-500 border-emerald-500' :
+                        task.status === 'reported_pending_payment' ? 'bg-indigo-500 border-indigo-500' :
+                        task.status === 'ready_to_broadcast' ? 'bg-teal-500 border-teal-500' :
                         task.status === 'sent_for_review' ? 'bg-purple-500 border-purple-500' :
                         task.status === 'needs_corrections' ? 'bg-orange-500 border-orange-500' :
                         task.status === 'waiting_for_materials' ? 'bg-amber-500 border-amber-500' :
@@ -3567,7 +3583,7 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
                       title={`סטטוס: ${sts.text} — לחץ לשנות`}
                     >
                       {task.status === 'production_completed' && <Check className="w-2.5 h-2.5 text-white" />}
-                      {task.status === 'sent_for_review' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      {(task.status === 'sent_for_review' || task.status === 'ready_to_broadcast' || task.status === 'reported_pending_payment') && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </button>
 
                     <div className="flex-1 min-w-0">

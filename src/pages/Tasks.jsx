@@ -76,12 +76,12 @@ class ViewErrorBoundary extends React.Component {
   }
 }
 
-// 5 Golden Statuses — display order
+// 7 Golden Statuses — display order
 const STATUS_GROUP_ORDER = [
-  'waiting_for_materials', 'not_started', 'sent_for_review', 'needs_corrections', 'production_completed',
+  'waiting_for_materials', 'not_started', 'ready_to_broadcast', 'reported_pending_payment', 'sent_for_review', 'needs_corrections', 'production_completed',
 ];
 // Default: ALL status groups start collapsed for zero-scroll policy
-const DEFAULT_COLLAPSED_STATUSES = new Set(['waiting_for_materials', 'not_started', 'sent_for_review', 'needs_corrections', 'production_completed']);
+const DEFAULT_COLLAPSED_STATUSES = new Set(['waiting_for_materials', 'not_started', 'ready_to_broadcast', 'reported_pending_payment', 'sent_for_review', 'needs_corrections', 'production_completed']);
 
 function getTaskContext(task) {
   if (task.context === 'work' || task.context === 'home') return task.context;
@@ -105,14 +105,16 @@ const mondayStatusMapping = {
   'בעבודה': 'not_started',
   'ממתין לתחילת העבודה': 'not_started',
   'לבדיקה': 'sent_for_review',
-  'מוכן לדיווח': 'sent_for_review',
-  'דיווח ממתין לתשלום': 'not_started',
+  'מוכן לדיווח': 'ready_to_broadcast',
+  'מוכן לשידור': 'ready_to_broadcast',
+  'דיווח ממתין לתשלום': 'reported_pending_payment',
+  'שודר ממתין לתשלום': 'reported_pending_payment',
   'דווח ושולם': 'production_completed',
   'בעיה': 'needs_corrections',
   'נדחה': 'not_started',
   'ממתין_לחומרים': 'waiting_for_materials',
   'ממתין_לתחילת_העבודה': 'not_started',
-  'מוכן_לדיווח': 'sent_for_review',
+  'מוכן_לדיווח': 'ready_to_broadcast',
   'דיווח_ממתין_לתשלום': 'not_started',
   'דווח_ושולם': 'production_completed',
   'בוצע': 'production_completed',
@@ -120,7 +122,7 @@ const mondayStatusMapping = {
   'הושלם ייצור': 'production_completed',
   'סיום': 'production_completed',
   'ביצוע': 'not_started',
-  'ממתין לתשלום': 'not_started',
+  'ממתין לתשלום': 'reported_pending_payment',
   'ממתין לאישור': 'sent_for_review',
   'ממתין ללקוח': 'waiting_for_materials',
   'לבצע': 'not_started',
@@ -437,7 +439,7 @@ export default function TasksPage() {
           cmp = (a.due_date || '9999').localeCompare(b.due_date || '9999');
           break;
         case 'status': {
-          const statusOrder = ['waiting_for_materials','not_started','sent_for_review','needs_corrections','production_completed'];
+          const statusOrder = ['waiting_for_materials','not_started','ready_to_broadcast','reported_pending_payment','sent_for_review','needs_corrections','production_completed'];
           cmp = statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
           break;
         }
@@ -548,7 +550,7 @@ export default function TasksPage() {
   const stats = useMemo(() => {
     const total = filteredTasks.length;
     const completed = filteredTasks.filter(t => t.status === 'production_completed').length;
-    const inProgress = filteredTasks.filter(t => t.status === 'sent_for_review' || t.status === 'needs_corrections').length;
+    const inProgress = filteredTasks.filter(t => t.status === 'sent_for_review' || t.status === 'needs_corrections' || t.status === 'ready_to_broadcast' || t.status === 'reported_pending_payment').length;
     return { total, completed, inProgress };
   }, [filteredTasks]);
 

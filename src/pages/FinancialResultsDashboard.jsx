@@ -145,7 +145,7 @@ export default function FinancialResultsDashboard() {
         );
         if (pnlTasks.length > 0) {
           const pnlDone = pnlTasks.every(t => t.status === 'production_completed');
-          const pnlInProgress = pnlTasks.some(t => t.status === 'sent_for_review' || t.status === 'needs_corrections');
+          const pnlInProgress = pnlTasks.some(t => t.status === 'sent_for_review' || t.status === 'needs_corrections' || t.status === 'ready_to_broadcast' || t.status === 'reported_pending_payment');
           pnlStatus = pnlDone ? 'ready' : pnlInProgress ? 'in_progress' : 'not_started';
         } else {
           // No PNL task yet but production is done → ready to start

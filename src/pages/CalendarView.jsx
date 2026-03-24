@@ -39,6 +39,8 @@ const STATUS_COLORS = {
   not_started: 'bg-gray-200 text-gray-700',
   waiting_for_materials: 'bg-yellow-100 text-yellow-800',
   sent_for_review: 'bg-blue-100 text-blue-700',
+  ready_to_broadcast: 'bg-teal-100 text-teal-700',
+  reported_pending_payment: 'bg-indigo-100 text-indigo-700',
   needs_corrections: 'bg-red-100 text-red-700',
   production_completed: 'bg-green-100 text-green-700',
 };
@@ -46,7 +48,9 @@ const STATUS_COLORS = {
 const STATUS_LABELS = {
   not_started: 'טרם התחיל',
   waiting_for_materials: 'ממתין לחומרים',
-  sent_for_review: 'נשלח לבדיקה',
+  sent_for_review: 'הועבר לעיון',
+  ready_to_broadcast: 'מוכן לשידור',
+  reported_pending_payment: 'שודר, ממתין לתשלום',
   needs_corrections: 'דרוש תיקון',
   production_completed: 'הושלם ייצור',
 };
