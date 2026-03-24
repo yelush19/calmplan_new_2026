@@ -626,6 +626,10 @@ export default function TasksPage() {
       try {
         await Task.delete(taskId);
         setTasks(prev => prev.filter(t => t.id !== taskId));
+        // Close edit dialog if open for this task
+        if (editingTask?.id === taskId) setEditingTask(null);
+        // Full refresh to ensure all views sync
+        loadTasks();
       } catch (error) {
         console.error("Error deleting task:", error);
       }
@@ -1506,7 +1510,7 @@ export default function TasksPage() {
         open={!!editingTask}
         onClose={() => setEditingTask(null)}
         onSave={handleSaveTask}
-        onDelete={(task) => { setEditingTask(null); handleDeleteTask(task.id); }}
+        onDelete={(task) => handleDeleteTask(task.id)}
         allTasks={tasks}
         onTaskCreated={loadTasks}
       />

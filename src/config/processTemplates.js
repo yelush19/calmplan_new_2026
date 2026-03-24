@@ -54,9 +54,11 @@ export const TAX_SERVICES = {
     taskCategories: ['מע"מ 874', 'work_vat_874'],
     createCategory: 'מע"מ 874',
     steps: [
-      { key: 'report_prep',   label: 'הפקת דו"ח',     icon: 'file-text' },
-      { key: 'submission',    label: 'שידור',          icon: 'send' },
-      { key: 'payment',       label: 'תשלום',          icon: 'landmark' },
+      { key: 'report_prep',    label: 'הפקת דו"ח',          icon: 'file-text' },
+      { key: 'submission',     label: 'שידור',               icon: 'send' },
+      { key: 'payment',        label: 'תשלום',               icon: 'landmark' },
+      { key: 'record_report',  label: 'רישום דיווח בהנח"ש',  icon: 'book-open' },
+      { key: 'record_payment', label: 'רישום תשלום בהנח"ש',  icon: 'book-open' },
     ],
   },
 };
@@ -90,9 +92,11 @@ export const PAYROLL_SERVICES = {
     createCategory: 'ביטוח לאומי',
     depends_on_nodes: ['P1_payroll'],  // תלוי בייצור שכר
     steps: [
-      { key: 'report_prep',  label: 'הפקת דוח',  icon: 'file-text' },
-      { key: 'submission',   label: 'דיווח',      icon: 'send' },
-      { key: 'payment',      label: 'תשלום',      icon: 'landmark' },
+      { key: 'report_prep',    label: 'הפקת דוח',            icon: 'file-text' },
+      { key: 'submission',     label: 'דיווח',                icon: 'send' },
+      { key: 'payment',        label: 'תשלום',                icon: 'landmark' },
+      { key: 'record_report',  label: 'רישום דיווח בהנח"ש',  icon: 'book-open' },
+      { key: 'record_payment', label: 'רישום תשלום בהנח"ש',  icon: 'book-open' },
     ],
   },
 
@@ -105,9 +109,11 @@ export const PAYROLL_SERVICES = {
     createCategory: 'ניכויים',
     depends_on_nodes: ['P1_payroll'],  // תלוי בייצור שכר
     steps: [
-      { key: 'report_prep',  label: 'הפקת דוח',  icon: 'file-text' },
-      { key: 'submission',   label: 'דיווח',      icon: 'send' },
-      { key: 'payment',      label: 'תשלום',      icon: 'landmark' },
+      { key: 'report_prep',    label: 'הפקת דוח',            icon: 'file-text' },
+      { key: 'submission',     label: 'דיווח',                icon: 'send' },
+      { key: 'payment',        label: 'תשלום',                icon: 'landmark' },
+      { key: 'record_report',  label: 'רישום דיווח בהנח"ש',  icon: 'book-open' },
+      { key: 'record_payment', label: 'רישום תשלום בהנח"ש',  icon: 'book-open' },
     ],
   },
 };
