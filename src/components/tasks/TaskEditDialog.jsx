@@ -26,6 +26,7 @@ import { differenceInDays, format, parseISO, isValid } from 'date-fns';
 import { getScheduledStartForCategory } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
+import TagSelector from '@/components/ui/TagSelector';
 import { toast } from 'sonner';
 
 // Fix 2-digit year inputs: "26-01-15" -> "2026-01-15"
@@ -133,6 +134,7 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
       sub_tasks: task.sub_tasks || [],
       complexity: task.complexity || 'low',
       cognitive_load: task.cognitive_load ?? null,
+      tags: task.tags || [],
     };
 
     setNewSubTitle('');
@@ -308,6 +310,16 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">תגיות</Label>
+            <TagSelector
+              scope="task"
+              selectedTags={editData.tags || []}
+              onChange={(tags) => setEditData(prev => ({ ...prev, tags }))}
+            />
           </div>
 
           {/* Complexity + Cognitive Load row */}

@@ -151,8 +151,7 @@ const getSidebarSections = () => ({
     icon: FileBarChart,
     tabColor: 'border-[#2E7D32]',
     items: [
-      { name: "מאזנים", href: createPageUrl("BalanceSheets"), icon: Scaling },
-      { name: "דוחות אישיים", href: createPageUrl("BalanceSheets"), icon: FileBarChart },
+      { name: "מאזנים ודוחות", href: createPageUrl("BalanceSheets"), icon: Scaling },
     ]
   },
   // ── P6 | מעקב פרוייקטים — Project Tracking ──

@@ -342,6 +342,38 @@ export default function BalanceSheetWorkbookPage() {
     }));
   }, [updateWorkbook]);
 
+  const sendToAuditor = useCallback(async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    // 1. Update workbook output status + add sent round
+    updateWorkbook(prev => ({
+      ...prev,
+      output: {
+        ...prev.output,
+        status: 'sent',
+        sent_date: today,
+        rounds: [
+          ...(prev.output.rounds || []),
+          {
+            id: `round_${Date.now().toString(36)}`,
+            date: today,
+            type: 'sent',
+            notes: '',
+            attachments: [],
+          },
+        ],
+      },
+    }));
+    // 2. Advance balance sheet stage to sent_to_auditor
+    if (balanceSheet?.id) {
+      try {
+        await BalanceSheet.update(balanceSheet.id, { current_stage: 'sent_to_auditor' });
+        setBalanceSheet(prev => prev ? { ...prev, current_stage: 'sent_to_auditor' } : prev);
+      } catch (err) {
+        console.error('Error updating balance sheet stage:', err);
+      }
+    }
+  }, [updateWorkbook, balanceSheet]);
+
   // ──────────────────────────────────────────
   // Render
   // ──────────────────────────────────────────
@@ -500,6 +532,7 @@ export default function BalanceSheetWorkbookPage() {
               onTogglePackageItem={toggleOutputPackageItem}
               onAddRound={addRound}
               onUpdateRoundNotes={updateRoundNotes}
+              onSendToAuditor={sendToAuditor}
             />
           </TabsContent>
         </div>
@@ -834,7 +867,7 @@ const ROUND_TYPE_LABELS = {
   answers: 'תשובות',
 };
 
-function OutputTab({ workbook, output, onTogglePackageItem, onAddRound, onUpdateRoundNotes }) {
+function OutputTab({ workbook, output, onTogglePackageItem, onAddRound, onUpdateRoundNotes, onSendToAuditor }) {
   const pkg = output.package || {};
   const rounds = output.rounds || [];
 
@@ -914,10 +947,11 @@ function OutputTab({ workbook, output, onTogglePackageItem, onAddRound, onUpdate
           <Button
             size="sm"
             className="gap-1 bg-orange-600 hover:bg-orange-700"
-            onClick={() => onAddRound('sent')}
+            onClick={onSendToAuditor}
+            disabled={output.status === 'sent'}
           >
             <Send className="w-4 h-4" />
-            שלח לרו"ח (placeholder)
+            {output.status === 'sent' ? 'נשלח לרו"ח' : 'שלח לרו"ח'}
           </Button>
         </CardContent>
       </Card>

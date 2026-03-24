@@ -1,16 +1,29 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Filter, Users, Calendar as CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Filter, Users, Calendar as CalendarIcon, Tag } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { he } from "date-fns/locale";
 import { STATUS_CONFIG } from '@/config/processTemplates';
+import { loadTags, TAGS_CHANGED_EVENT } from '@/services/tagService';
 
 export default function TaskFilters({ filters, setFilters, context, clients }) {
+  const [taskTags, setTaskTags] = useState([]);
+
+  useEffect(() => {
+    loadTags().then(tags => setTaskTags(tags.filter(t => t.scope?.includes('task'))));
+    const handler = (e) => {
+      if (e.detail?.tags) setTaskTags(e.detail.tags.filter(t => t.scope?.includes('task')));
+    };
+    window.addEventListener(TAGS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(TAGS_CHANGED_EVENT, handler);
+  }, []);
+
   const handleFilterChange = (type, value) => {
     setFilters(prev => ({
       ...prev,
@@ -162,6 +175,25 @@ export default function TaskFilters({ filters, setFilters, context, clients }) {
           className="w-32"
         />
       </div>
+
+      {taskTags.length > 0 && (
+        <Select value={filters.tag || 'all'} onValueChange={(value) => handleFilterChange("tag", value)}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="תגית" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">כל התגיות</SelectItem>
+            {taskTags.map(tag => (
+              <SelectItem key={tag.id} value={tag.id}>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
+                  {tag.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }

@@ -210,8 +210,9 @@ export default function BalanceSheetsPage() {
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear() - 1));
 
-  // Collapsible stages - default ALL collapsed (zero-scroll policy)
+  // Collapsible stages - default all collapsed, will auto-expand busiest stage after data loads
   const [collapsedStages, setCollapsedStages] = useState(() => new Set(WORKFLOW_STAGES.map(s => s.key)));
+  const [didAutoExpand, setDidAutoExpand] = useState(false);
 
   // Template state
   const [templates, setTemplates] = useState(DEFAULT_STAGE_TEMPLATES);
@@ -247,6 +248,27 @@ export default function BalanceSheetsPage() {
     }
     setIsLoading(false);
   };
+
+  // Auto-expand the busiest non-signed stage on first load
+  useEffect(() => {
+    if (didAutoExpand || balanceSheets.length === 0) return;
+    const yearSheets = balanceSheets.filter(b => b.tax_year === selectedYear);
+    if (yearSheets.length === 0) return;
+    const counts = {};
+    yearSheets.forEach(b => {
+      const stage = b.current_stage || 'closing_operations';
+      if (stage !== 'signed') counts[stage] = (counts[stage] || 0) + 1;
+    });
+    const busiest = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    if (busiest) {
+      setCollapsedStages(prev => {
+        const next = new Set(prev);
+        next.delete(busiest[0]);
+        return next;
+      });
+    }
+    setDidAutoExpand(true);
+  }, [balanceSheets, selectedYear, didAutoExpand]);
 
   // לקוחות פעילים עם שירות מאזנים
   const balanceClients = useMemo(() =>
