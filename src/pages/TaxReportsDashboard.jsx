@@ -268,18 +268,23 @@ export default function TaxReportsDashboardPage() {
         doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
       }
     });
-    // Status counts for DNA pipeline cards
+    // Status counts for DNA pipeline cards — count unique CLIENTS per status
     const byStatus = {};
     STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
+    const clientsByStatus = {};
+    STATUS_PIPELINE.forEach(s => { clientsByStatus[s.key] = new Set(); });
     filteredTasks.forEach(t => {
       const key = t.status || 'not_started';
-      if (byStatus[key] !== undefined) byStatus[key]++;
+      if (clientsByStatus[key]) clientsByStatus[key].add(t.client_name);
     });
+    Object.keys(byStatus).forEach(k => { byStatus[k] = clientsByStatus[k].size; });
+    // Total unique clients
+    const allClients = new Set(filteredTasks.map(t => t.client_name));
     return {
       total: reportTotal,
       completed: reportCompleted,
       pct: reportTotal > 0 ? Math.round((reportCompleted / reportTotal) * 100) : 0,
-      allTasksCount: filteredTasks.length,
+      allTasksCount: allClients.size,
       totalSteps,
       doneSteps,
       stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0,
@@ -695,7 +700,7 @@ export default function TaxReportsDashboardPage() {
           </div>
           <div className="text-center">
             <div className="text-xl font-black text-slate-700">{stats.allTasksCount}</div>
-            <div className="text-[10px] text-slate-400 font-medium">סה"כ</div>
+            <div className="text-[10px] text-slate-400 font-medium">לקוחות</div>
           </div>
         </div>
 

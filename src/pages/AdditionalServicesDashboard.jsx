@@ -247,14 +247,18 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
       }
     });
-    // Status counts for DNA pipeline cards
+    // Status counts for DNA pipeline cards — count unique clients
     const byStatus = {};
     STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
+    const clientsByStatus = {};
+    STATUS_PIPELINE.forEach(s => { clientsByStatus[s.key] = new Set(); });
     relevant.forEach(t => {
       const key = t.status || 'not_started';
-      if (byStatus[key] !== undefined) byStatus[key]++;
+      if (clientsByStatus[key]) clientsByStatus[key].add(t.client_name);
     });
-    return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0, byStatus };
+    Object.keys(byStatus).forEach(k => { byStatus[k] = clientsByStatus[k].size; });
+    const allClients = new Set(relevant.map(t => t.client_name));
+    return { total: allClients.size, completed, pct: allClients.size > 0 ? Math.round((completed / allClients.size) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0, byStatus };
   }, [filteredTasks]);
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
@@ -425,7 +429,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           </div>
           <div className="text-center">
             <div className="text-xl font-black text-slate-700">{stats.total}</div>
-            <div className="text-[10px] text-slate-400 font-medium">סה"כ</div>
+            <div className="text-[10px] text-slate-400 font-medium">לקוחות</div>
           </div>
         </div>
 
