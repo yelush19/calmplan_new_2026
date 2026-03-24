@@ -1021,6 +1021,7 @@ export default function TaxReportsDashboardPage() {
             onToggleStep={handleToggleStep}
             onStatusChange={handleStatusChange}
             onDateChange={handleDateChange}
+            onEdit={setEditingTask}
           />
         ) : viewMode === 'radial' ? (
           <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>

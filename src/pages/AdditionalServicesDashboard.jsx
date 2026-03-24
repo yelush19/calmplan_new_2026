@@ -497,6 +497,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
             onToggleStep={handleToggleStep}
             onStatusChange={handleStatusChange}
             onDateChange={handleDateChange}
+            onEdit={setEditingTask}
           />
         ) : viewMode === 'table' ? (
           <div className="space-y-4">
