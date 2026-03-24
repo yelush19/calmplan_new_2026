@@ -21,7 +21,6 @@ export const TAX_SERVICES = {
     taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['מע"מ', 'work_vat_reporting'],
     createCategory: 'מע"מ',
-    depends_on_nodes: ['P2_income', 'P2_expenses'],  // קליטת הכנסות/הוצאות = צמתים נפרדים בעץ
     steps: [
       { key: 'report_prep',    label: 'הפקת דו"ח',     icon: 'file-text', skippable: true, skipWhen: 'client_manages_vat' },
       { key: 'submission',     label: 'שידור',          icon: 'send' },
@@ -38,7 +37,6 @@ export const TAX_SERVICES = {
     taskType: 'authority',  // Authority task → gets דיווח + תשלום sub-tasks
     taskCategories: ['מקדמות מס', 'work_tax_advances'],
     createCategory: 'מקדמות מס',
-    depends_on_nodes: ['P2_income'],  // קליטת הכנסות = צומת נפרד בעץ
     steps: [
       { key: 'report_prep',   label: 'הפקת דו"ח',     icon: 'file-text' },
       { key: 'submission',    label: 'דיווח',          icon: 'send' },
@@ -55,7 +53,6 @@ export const TAX_SERVICES = {
     taskType: 'authority',
     taskCategories: ['מע"מ 874', 'work_vat_874'],
     createCategory: 'מע"מ 874',
-    depends_on_nodes: ['P2_income', 'P2_expenses'],  // קליטת הכנסות/הוצאות = צמתים נפרדים בעץ
     steps: [
       { key: 'report_prep',   label: 'הפקת דו"ח',     icon: 'file-text' },
       { key: 'submission',    label: 'שידור',          icon: 'send' },

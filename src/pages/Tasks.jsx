@@ -36,6 +36,7 @@ import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG, ALL_SERVICES, getTas
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import { getCategoryLabel } from '@/utils/categoryLabels';
 import { useDesign } from '@/contexts/DesignContext';
+import { loadTags, TAGS_CHANGED_EVENT } from '@/services/tagService';
 
 // Error Boundary to prevent white screen crashes
 class ViewErrorBoundary extends React.Component {
@@ -173,6 +174,7 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState([]);
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [tagFilter, setTagFilter] = useState("all");
   const [view, setView] = useState("kanban");
   const [isClearing, setIsClearing] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -193,6 +195,16 @@ export default function TasksPage() {
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const [ghostCleanup, setGhostCleanup] = useState(null); // { loading, result }
+  const [taskTags, setTaskTags] = useState([]);
+
+  useEffect(() => {
+    loadTags().then(tags => setTaskTags(tags.filter(t => t.scope?.includes('task'))));
+    const handler = (e) => {
+      if (e.detail?.tags) setTaskTags(e.detail.tags.filter(t => t.scope?.includes('task')));
+    };
+    window.addEventListener(TAGS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(TAGS_CHANGED_EVENT, handler);
+  }, []);
 
   const runGhostScan = async () => {
     setGhostCleanup({ loading: true, result: null });
@@ -432,8 +444,11 @@ export default function TasksPage() {
     if (categoryFilter !== "all") {
       result = result.filter(t => t.category === categoryFilter);
     }
+    if (tagFilter !== "all") {
+      result = result.filter(t => t.tags && t.tags.includes(tagFilter));
+    }
     return result;
-  }, [timeFilteredTasks, searchTerm, statusFilter, priorityFilter, categoryFilter, contextFilter]);
+  }, [timeFilteredTasks, searchTerm, statusFilter, priorityFilter, categoryFilter, contextFilter, tagFilter]);
 
   // Sorting
   const sortedTasks = useMemo(() => {
@@ -966,6 +981,24 @@ export default function TasksPage() {
                 ))}
               </SelectContent>
             </Select>
+            {taskTags.length > 0 && (
+              <Select value={tagFilter} onValueChange={setTagFilter}>
+                <SelectTrigger className="w-full md:w-36 rounded-xl">
+                  <SelectValue placeholder="תגית" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">כל התגיות</SelectItem>
+                  {taskTags.map(tag => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
+                        {tag.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1293,9 +1326,19 @@ export default function TasksPage() {
                                   <GitBranchPlus className="w-3 h-3 text-violet-400 shrink-0" />
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <p className={`text-sm truncate max-w-[250px] ${isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                                    {task.title}
-                                  </p>
+                                  <div className="flex items-center gap-1.5">
+                                    <p className={`text-sm truncate max-w-[220px] ${isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                      {task.title}
+                                    </p>
+                                    {task.tags?.length > 0 && task.tags.map(tagId => {
+                                      const tag = taskTags.find(t => t.id === tagId);
+                                      return tag ? (
+                                        <span key={tagId} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] text-white leading-none" style={{ backgroundColor: tag.color }}>
+                                          {tag.name}
+                                        </span>
+                                      ) : null;
+                                    })}
+                                  </div>
                                   {task.description && (
                                     <p className="text-[12px] text-gray-400 truncate max-w-[250px]">
                                       {task.description.slice(0, 50)}

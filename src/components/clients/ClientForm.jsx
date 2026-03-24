@@ -18,6 +18,7 @@ import { Client, ServiceCompany, ServiceProvider, ClientServiceProvider } from '
 import ClientAccountsManager from '@/components/clients/ClientAccountsManager';
 import ProcessTreeManager from '@/components/clients/ProcessTreeManager';
 import { loadAutomationRules, getAutoLinkedServices } from '@/config/automationRules';
+import TagSelector from '@/components/ui/TagSelector';
 
 
 export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate }) {
@@ -1174,6 +1175,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 </div>
               </div>
               <div><Label htmlFor="preferred_method">אמצעי תקשורת מועדף</Label><Select value={formData.communication_preferences.preferred_method} onValueChange={(value) => handleInputChange('preferred_method', value, 'communication_preferences')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="email">אימייל</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem><SelectItem value="phone">טלפון</SelectItem><SelectItem value="teams">Teams</SelectItem></SelectContent></Select></div>
+              <div className="space-y-1.5"><Label>תגיות</Label><TagSelector scope="client" selectedTags={formData.tags || []} onChange={(tags) => setFormData(prev => ({ ...prev, tags }))} /></div>
               <div><Label htmlFor="notes">הערות</Label><Textarea id="notes" value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} className="h-24" /></div>
             </TabsContent>
             <TabsContent value="accounts" className="space-y-4 rounded-2xl border-2 border-cyan-200 bg-cyan-50/30 p-5">
