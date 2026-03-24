@@ -654,8 +654,11 @@ export default function TaxReportsDashboardPage() {
         </div>
       </motion.div>
 
-      {/* KPI Bar — DNA Pipeline Status Cards */}
-      <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
+      {/* KPI + P2 Flow — sticky combined bar */}
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm pb-2 -mx-4 px-4 pt-1 border-b border-slate-100 shadow-sm flex gap-3 items-stretch">
+
+      {/* DNA Pipeline Status Cards — left side */}
+      <div className="flex items-stretch gap-1.5 overflow-x-auto shrink-0 flex-1 min-w-0">
         {/* Total summary capsule */}
         <div className="rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border border-slate-200"
           style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
@@ -743,6 +746,47 @@ export default function TaxReportsDashboardPage() {
           <div className="text-[10px] text-slate-500 font-bold leading-tight">DNA<br/>Mix</div>
         </div>
       </div>
+
+      {/* P2 Production Flow — compact right side */}
+      {!isLoading && filteredTasks.length > 0 && (() => {
+        const phases = [
+          { key: 'collect', label: 'קליטה', color: '#FF8F00', icon: '📥' },
+          { key: 'process', label: 'עיבוד', color: '#4682B4', icon: '⚙️' },
+          { key: 'review', label: 'מוכן לשידור', color: '#7B1FA2', icon: '👁️' },
+          { key: 'broadcast', label: 'שודר', color: '#2E7D32', icon: '📡' },
+        ];
+        const phaseCounts = phases.map(p => filteredTasks.filter(t => getTaskPhase(t) === p.key).length);
+        return (
+          <div className="rounded-xl border border-slate-100 overflow-hidden px-2 py-2 shrink-0"
+            style={{ background: 'linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%)', width: '280px' }}>
+            <div className="flex items-center gap-1 mb-1">
+              <Network className="w-3 h-3 text-slate-400" />
+              <span className="text-[10px] font-bold text-slate-500">זרימת ייצור P2</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              {phases.map((phase, idx) => {
+                const count = phaseCounts[idx];
+                const pct = filteredTasks.length > 0 ? Math.round((count / filteredTasks.length) * 100) : 0;
+                return (
+                  <button key={phase.key} className="flex-1 text-center cursor-pointer rounded-lg px-1 py-1 transition-all hover:scale-105"
+                    onClick={() => setPhaseFilter(prev => prev === phase.key ? null : phase.key)}
+                    style={{
+                      background: count > 0 ? `${phase.color}10` : 'transparent',
+                      outline: phaseFilter === phase.key ? `2px solid ${phase.color}` : 'none',
+                      outlineOffset: '-1px',
+                    }}>
+                    <div className="text-xs">{phase.icon}</div>
+                    <div className="text-sm font-black" style={{ color: count > 0 ? phase.color : '#B0BEC5' }}>{count}</div>
+                    <div className="text-[9px]" style={{ color: count > 0 ? phase.color + 'AA' : '#ccc' }}>{pct}%</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      </div>{/* end sticky bar */}
 
       {/* Filing Sprint Banner */}
       {canStartFilingSprint && !filingSprintActive && (
@@ -837,92 +881,7 @@ export default function TaxReportsDashboardPage() {
         <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
       )}
 
-      {/* P2 Production Flow: Collect → Process → Review → Broadcast — Step-based Pipeline */}
-      {!isLoading && filteredTasks.length > 0 && (() => {
-        const phases = [
-          { key: 'collect', label: 'קליטה', color: '#FF8F00', icon: '📥' },
-          { key: 'process', label: 'עיבוד', color: '#4682B4', icon: '⚙️' },
-          { key: 'review', label: 'מוכן לשידור', color: '#7B1FA2', icon: '👁️' },
-          { key: 'broadcast', label: 'שודר', color: '#2E7D32', icon: '📡' },
-        ];
-        const phaseCounts = phases.map(p => filteredTasks.filter(t => getTaskPhase(t) === p.key).length);
-        const maxCount = Math.max(...phaseCounts, 1);
-        return (
-          <div className="rounded-2xl border-0 overflow-hidden px-4 py-4"
-            style={{ background: 'linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Network className="w-4 h-4 text-slate-400" />
-              <span className="text-xs font-bold text-slate-600">זרימת ייצור P2</span>
-            </div>
-            <div className="relative flex items-center">
-              {/* SVG Bezier connectors layer — viewBox coordinates, no percentages */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 100" preserveAspectRatio="none" style={{ zIndex: 0 }}>
-                {[0, 1, 2].map(i => {
-                  const x1 = (i * 250) + 200;
-                  const x2 = ((i + 1) * 250) + 50;
-                  const cp1x = (i * 250) + 230;
-                  const cp2x = ((i + 1) * 250) + 20;
-                  return (
-                    <path key={i}
-                      d={`M ${x1} 50 C ${cp1x} 30, ${cp2x} 70, ${x2} 50`}
-                      fill="none"
-                      stroke={phaseCounts[i] > 0 ? phases[i].color + '40' : '#E0E0E040'}
-                      strokeWidth="2"
-                      strokeDasharray={phaseCounts[i] > 0 ? 'none' : '6 4'}
-                    />
-                  );
-                })}
-              </svg>
-              {/* Phase capsules */}
-              {phases.map((phase, idx) => {
-                const count = phaseCounts[idx];
-                const pct = filteredTasks.length > 0 ? Math.round((count / filteredTasks.length) * 100) : 0;
-                const isActive = count > 0;
-                return (
-                  <div key={phase.key} className="flex-1 relative cursor-pointer" style={{ zIndex: 1 }}
-                    onClick={() => setPhaseFilter(prev => prev === phase.key ? null : phase.key)}>
-                    <motion.div
-                      className={`mx-1 rounded-[20px] px-3 py-3 text-center transition-all relative overflow-hidden ${phaseFilter === phase.key ? 'ring-2' : ''}`}
-                      style={{
-                        '--tw-ring-color': phase.color,
-                        background: isActive
-                          ? `linear-gradient(135deg, ${phase.color}08 0%, ${phase.color}14 100%)`
-                          : 'rgba(255,255,255,0.6)',
-                        boxShadow: isActive
-                          ? `0 0 20px ${phase.color}18, 0 2px 8px ${phase.color}10`
-                          : '0 1px 4px rgba(0,0,0,0.04)',
-                      }}
-                      animate={isActive ? {
-                        boxShadow: [
-                          `0 0 20px ${phase.color}18, 0 2px 8px ${phase.color}10`,
-                          `0 0 28px ${phase.color}28, 0 2px 12px ${phase.color}18`,
-                          `0 0 20px ${phase.color}18, 0 2px 8px ${phase.color}10`,
-                        ]
-                      } : {}}
-                      transition={isActive ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' } : {}}
-                    >
-                      {/* Progress fill bar at bottom */}
-                      <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-[20px] overflow-hidden bg-gray-100/50">
-                        <motion.div
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: phase.color }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pct}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut' }}
-                        />
-                      </div>
-                      <div className="text-base mb-0.5">{phase.icon}</div>
-                      <div className="text-[12px] font-bold tracking-wide" style={{ color: phase.color }}>{phase.label}</div>
-                      <div className="text-xl font-black mt-0.5" style={{ color: isActive ? phase.color : '#B0BEC5' }}>{count}</div>
-                      <div className="text-[12px] mt-0.5" style={{ color: isActive ? phase.color + 'AA' : '#ccc' }}>{pct}%</div>
-                    </motion.div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      {/* Old P2 flow removed — now inside sticky bar above */}
 
       {/* Injection Panel */}
       <AnimatePresence>
