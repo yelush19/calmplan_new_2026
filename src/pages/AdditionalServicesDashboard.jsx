@@ -504,6 +504,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
                     <GroupedServiceTable
                       service={service}
                       clientRows={clientRows}
+                      allTasks={filteredTasks}
                       onToggleStep={handleToggleStep}
                       onDateChange={handleDateChange}
                       onStatusChange={handleStatusChange}
