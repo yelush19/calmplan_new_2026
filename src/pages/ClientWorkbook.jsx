@@ -293,9 +293,9 @@ export default function ClientWorkbook() {
 
   // ── Render tab content ──
   const renderFinancialTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <TableHead className="text-xs">סטטוס</TableHead>
@@ -379,9 +379,9 @@ export default function ClientWorkbook() {
   );
 
   const renderTaxTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <SortHeader label="ח.פ / ע.מ" sortKey="tax_info.tax_id" />
@@ -430,9 +430,9 @@ export default function ClientWorkbook() {
   );
 
   const renderProcessesTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <SortHeader label="סוג עסק" sortKey="business_info.business_type" />
@@ -490,9 +490,9 @@ export default function ClientWorkbook() {
   );
 
   const renderProvidersTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <SortHeader label="ערוץ מועדף" sortKey="communication_preferences.preferred_method" />
@@ -537,9 +537,9 @@ export default function ClientWorkbook() {
   );
 
   const renderBankTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <SortHeader label="מספר ישות" sortKey="entity_number" />
