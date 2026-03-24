@@ -11,7 +11,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { Search, ArrowUpDown, Users } from 'lucide-react';
+import { Search, ArrowUpDown, Users, CheckCircle } from 'lucide-react';
 
 // ── Status config ──
 const STATUS_OPTIONS = [
@@ -293,9 +293,9 @@ export default function ClientWorkbook() {
 
   // ── Render tab content ──
   const renderFinancialTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <TableHead className="text-xs">סטטוס</TableHead>
@@ -379,9 +379,9 @@ export default function ClientWorkbook() {
   );
 
   const renderTaxTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <SortHeader label="ח.פ / ע.מ" sortKey="tax_info.tax_id" />
@@ -430,9 +430,9 @@ export default function ClientWorkbook() {
   );
 
   const renderProcessesTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <SortHeader label="סוג עסק" sortKey="business_info.business_type" />
@@ -490,9 +490,9 @@ export default function ClientWorkbook() {
   );
 
   const renderProvidersTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <SortHeader label="ערוץ מועדף" sortKey="communication_preferences.preferred_method" />
@@ -537,9 +537,9 @@ export default function ClientWorkbook() {
   );
 
   const renderBankTab = () => (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
           <TableRow>
             <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
             <SortHeader label="מספר ישות" sortKey="entity_number" />
@@ -601,6 +601,10 @@ export default function ClientWorkbook() {
           <p className="text-sm text-gray-500 mt-1">
             {filteredClients.length} לקוחות מוצגים מתוך {clients.length}
           </p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+          <CheckCircle className="w-4 h-4" />
+          <span>שמירה אוטומטית — כל עריכה נשמרת מיד</span>
         </div>
       </div>
 

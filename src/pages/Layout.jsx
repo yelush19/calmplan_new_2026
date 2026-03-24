@@ -118,12 +118,13 @@ const getSidebarSections = () => ({
         { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       ]},
       { key: 'p3_clients', label: 'לקוחות וניהול עסקי', icon: Users, items: [
-        { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+        { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users,
+          subItems: [{ name: "חוברת לקוחות", href: createPageUrl("ClientWorkbook"), icon: BookUser }]
+        },
         { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
         { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
         { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
         { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
-        { name: "חוברת לקוחות", href: createPageUrl("ClientWorkbook"), icon: BookUser },
       ]},
       { key: 'p3_system', label: 'הגדרות מערכת', icon: Settings, items: [
         { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Eye },
@@ -475,7 +476,8 @@ function LayoutInner({ children }) {
   const sidebarSearchLower = sidebarSearch.trim().toLowerCase();
   const matchesSidebarSearch = useCallback((item) => {
     if (!sidebarSearchLower) return true;
-    return (item.name || '').toLowerCase().includes(sidebarSearchLower);
+    return (item.name || '').toLowerCase().includes(sidebarSearchLower) ||
+      (item.subItems || []).some(sub => (sub.name || '').toLowerCase().includes(sidebarSearchLower));
   }, [sidebarSearchLower]);
 
   const sectionMatchesSearch = useCallback((section) => {
@@ -703,17 +705,28 @@ function LayoutInner({ children }) {
                       {isOpen && (
                         <>
                           {section.items.map(item => (
-                            <Link key={item.href} to={item.href}
-                              onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                const targetMode = SECTION_TO_MODE[key];
-                                if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
-                              }}
-                              className={`flex items-center gap-2 px-6 py-1.5 rounded-xl text-sm transition-colors
-                                ${isActive(item.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#37474F] hover:bg-white/70 hover:shadow-sm'}`}>
-                              <item.icon className="w-3.5 h-3.5" />
-                              {item.name}
-                            </Link>
+                            <React.Fragment key={item.href}>
+                              <Link to={item.href}
+                                onClick={() => {
+                                  setIsMobileMenuOpen(false);
+                                  const targetMode = SECTION_TO_MODE[key];
+                                  if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
+                                }}
+                                className={`flex items-center gap-2 px-6 py-1.5 rounded-xl text-sm transition-colors
+                                  ${isActive(item.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#37474F] hover:bg-white/70 hover:shadow-sm'}`}>
+                                <item.icon className="w-3.5 h-3.5" />
+                                {item.name}
+                              </Link>
+                              {item.subItems?.map(sub => (
+                                <Link key={sub.href} to={sub.href}
+                                  onClick={() => setIsMobileMenuOpen(false)}
+                                  className={`flex items-center gap-2 px-9 py-1 rounded-xl text-xs transition-colors
+                                    ${isActive(sub.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#546E7A] hover:bg-white/70 hover:shadow-sm'}`}>
+                                  <sub.icon className="w-3 h-3" />
+                                  {sub.name}
+                                </Link>
+                              ))}
+                            </React.Fragment>
                           ))}
                           {section.subGroups?.map(sg => {
                             const sgOpen = !collapsedSections.has(sg.key);

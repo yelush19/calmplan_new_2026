@@ -688,19 +688,19 @@ export default function TaxReportsDashboardPage() {
       </motion.div>
 
       {/* KPI + P2 Flow — sticky combined bar */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm pb-2 -mx-4 px-4 pt-1 border-b border-slate-100 shadow-sm flex gap-3 items-stretch">
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm pb-2 -mx-4 px-4 pt-1 border-b border-slate-100 shadow-sm flex gap-2 items-stretch">
 
       {/* DNA Pipeline Status Cards — left side */}
-      <div className="flex items-stretch gap-1.5 overflow-x-auto shrink-0 flex-1 min-w-0">
+      <div className="flex items-stretch gap-1 overflow-x-auto shrink-0 min-w-0">
         {/* Total summary capsule */}
-        <div className="rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border border-slate-200"
+        <div className="rounded-xl px-2 py-1.5 flex items-center gap-1.5 shrink-0 border border-slate-200"
           style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: 'rgba(70,130,180,0.1)' }}>
-            <Target className="w-4.5 h-4.5" style={{ color: '#4682B4' }} />
+          <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(70,130,180,0.1)' }}>
+            <Target className="w-3.5 h-3.5" style={{ color: '#4682B4' }} />
           </div>
           <div className="text-center">
-            <div className="text-xl font-black text-slate-700">{stats.allTasksCount}</div>
-            <div className="text-[10px] text-slate-400 font-medium">לקוחות</div>
+            <div className="text-base font-black text-slate-700 leading-tight">{stats.allTasksCount}</div>
+            <div className="text-[9px] text-slate-400 font-medium">לקוחות</div>
           </div>
         </div>
 
@@ -713,12 +713,12 @@ export default function TaxReportsDashboardPage() {
             <React.Fragment key={phase.key}>
               {idx > 0 && (
                 <div className="flex items-center shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                  <div className="w-1 h-1 rounded-full bg-slate-300" />
                 </div>
               )}
               <button
                 onClick={() => setPhaseFilter(prev => prev === phase.key ? null : phase.key)}
-                className={`rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border transition-all cursor-pointer hover:scale-[1.03] ${
+                className={`rounded-xl px-2 py-1.5 flex items-center gap-1.5 shrink-0 border transition-all cursor-pointer hover:scale-[1.02] ${
                   phaseFilter === phase.key ? 'ring-2 ring-offset-1 shadow-md' : 'shadow-sm'
                 }`}
                 style={{
@@ -728,16 +728,16 @@ export default function TaxReportsDashboardPage() {
                   opacity: count === 0 ? 0.5 : 1,
                 }}
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: phase.color + '15', boxShadow: count > 0 ? `0 0 10px ${phase.color}20` : 'none' }}>
-                  <Icon className="w-4 h-4" style={{ color: phase.color }} />
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: phase.color + '15' }}>
+                  <Icon className="w-3 h-3" style={{ color: phase.color }} />
                 </div>
-                <div className="text-center min-w-[36px]">
-                  <div className="text-xl font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
-                  <div className="text-[11px] text-slate-600 font-bold leading-tight whitespace-nowrap">{phase.label}</div>
+                <div className="text-center min-w-[28px]">
+                  <div className="text-base font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
+                  <div className="text-[9px] text-slate-600 font-bold leading-tight whitespace-nowrap">{phase.label}</div>
                 </div>
                 {count > 0 && (
-                  <div className="text-[10px] font-bold rounded-full px-1.5 py-0.5" style={{ color: phase.color, background: phase.color + '15' }}>
+                  <div className="text-[9px] font-bold rounded-full px-1 py-0.5" style={{ color: phase.color, background: phase.color + '15' }}>
                     {pct}%
                   </div>
                 )}
@@ -747,18 +747,18 @@ export default function TaxReportsDashboardPage() {
         })}
 
         {/* Steps progress mini-card */}
-        <div className="flex items-center shrink-0"><div className="w-1.5 h-1.5 rounded-full bg-slate-300" /></div>
-        <div className="rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border border-blue-100"
+        <div className="flex items-center shrink-0"><div className="w-1 h-1 rounded-full bg-slate-300" /></div>
+        <div className="rounded-xl px-2 py-1.5 flex items-center gap-1.5 shrink-0 border border-blue-100"
           style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)' }}>
-          <Clock className="w-4 h-4" style={{ color: '#1565C0' }} />
+          <Clock className="w-3.5 h-3.5" style={{ color: '#1565C0' }} />
           <div className="text-center">
-            <div className="text-lg font-black" style={{ color: '#1565C0' }}>{stats.stepsPct}%</div>
-            <div className="text-[10px] text-slate-400 font-medium">שלבים</div>
+            <div className="text-sm font-black" style={{ color: '#1565C0' }}>{stats.stepsPct}%</div>
+            <div className="text-[9px] text-slate-400 font-medium">שלבים</div>
           </div>
         </div>
 
         {/* DNA Mix cognitive load */}
-        <div className="rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border border-purple-100"
+        <div className="rounded-xl px-2 py-1.5 flex items-center gap-1 shrink-0 border border-purple-100"
           style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%)' }}>
           <div className="flex items-center gap-0.5">
             {[3, 2, 1, 0].map(tier => {
@@ -770,13 +770,13 @@ export default function TaxReportsDashboardPage() {
               if (!taskCount) return null;
               const lc = LOAD_COLORS[tier];
               return (
-                <div key={tier} className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: lc.color }}>
+                <div key={tier} className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold" style={{ backgroundColor: lc.color }}>
                   {taskCount}
                 </div>
               );
             })}
           </div>
-          <div className="text-[10px] text-slate-500 font-bold leading-tight">DNA<br/>Mix</div>
+          <div className="text-[9px] text-slate-500 font-bold leading-tight">DNA<br/>Mix</div>
         </div>
       </div>
 
