@@ -35,10 +35,15 @@ export default function TaxWorkbookView({
   onStatusChange,
   onDateChange,
 }) {
-  // Build ordered list of service definitions
+  // Build ordered list of service definitions — DYNAMIC: only include services that have tasks
   const serviceList = useMemo(() => {
-    return Object.values(services);
-  }, [services]);
+    const all = Object.values(services);
+    // Filter to services that have at least one matching task
+    const activeServices = all.filter(svc =>
+      tasks.some(t => svc.taskCategories.includes(t.category))
+    );
+    return activeServices.length > 0 ? activeServices : all;
+  }, [services, tasks]);
 
   // Build a map: clientName → { [serviceKey]: task }
   const clientMap = useMemo(() => {
