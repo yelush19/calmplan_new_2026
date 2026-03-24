@@ -13,7 +13,7 @@ import {
   Calendar, User, CheckCircle, Search, List, LayoutGrid, Trash2, Pencil,
   ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink, Plus,
   ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X,
-  Network, BarChart3, GitBranchPlus,
+  Network, BarChart3, GitBranchPlus, Table2,
   Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target
 } from "lucide-react";
 import { cleanupGhostTasks } from '@/api/functions';
@@ -32,7 +32,8 @@ import useTaskCascade from '@/hooks/useTaskCascade';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 
-import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG } from '@/config/processTemplates';
+import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG, ALL_SERVICES, getTaskProcessSteps, toggleStep } from '@/config/processTemplates';
+import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import { getCategoryLabel } from '@/utils/categoryLabels';
 import { useDesign } from '@/contexts/DesignContext';
 
@@ -593,6 +594,17 @@ export default function TasksPage() {
     }
   };
 
+  const handleToggleStep = useCallback(async (task, stepKey) => {
+    const currentSteps = getTaskProcessSteps(task);
+    const updatedSteps = toggleStep(currentSteps, stepKey);
+    try {
+      await Task.update(task.id, { process_steps: updatedSteps });
+      loadTasks();
+    } catch (error) {
+      console.error("Error toggling step:", error);
+    }
+  }, []);
+
   const handleDeleteTask = async (taskId) => {
     const ok = await confirm({ description: 'למחוק משימה זו?' });
     if (ok) {
@@ -965,6 +977,7 @@ export default function TasksPage() {
           {[
             { key: 'kanban', label: 'קנבן', icon: LayoutGrid },
             { key: 'list', label: 'רשימה', icon: List },
+            { key: 'workbook', label: 'גיליון', icon: Table2 },
             { key: 'mindmap', label: 'מיינדמפ', icon: Network },
             { key: 'gantt', label: 'גאנט', icon: BarChart3 },
           ].map(({ key, label, icon: Icon }) => (
@@ -1390,6 +1403,14 @@ export default function TasksPage() {
             </ResizableTable>
           </Card>
         )
+      ) : view === 'workbook' ? (
+        <TaxWorkbookView
+          tasks={filteredTasks}
+          clients={clientsList}
+          services={ALL_SERVICES}
+          onToggleStep={handleToggleStep}
+          onStatusChange={handleStatusChange}
+        />
       ) : view === 'mindmap' ? (
         <ViewErrorBoundary>
           <MindMapView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} onTaskCreated={loadTasks} onStatusChange={handleStatusChange} focusTaskId={focusTaskId} focusClientName={focusClientName} onFocusHandled={() => { setFocusTaskId(null); setFocusClientName(null); }} />
