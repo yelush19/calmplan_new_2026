@@ -105,15 +105,39 @@ const AYOA_STATUS_COLORS = RECONCILIATION_AYOA_COLORS;
 function InlineDateCell({ value, onChange, className = '' }) {
   const [editing, setEditing] = useState(false);
   const [tempVal, setTempVal] = useState(value || '');
+  const [saving, setSaving] = useState(false);
+  // Optimistic display: show saved value until server confirms
+  const [optimisticVal, setOptimisticVal] = useState(null);
   const inputRef = useRef(null);
 
-  useEffect(() => { setTempVal(value || ''); }, [value]);
+  useEffect(() => {
+    setTempVal(value || '');
+    // Server confirmed — clear optimistic value
+    setOptimisticVal(null);
+    setSaving(false);
+  }, [value]);
   useEffect(() => {
     if (editing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.showPicker?.();
     }
   }, [editing]);
+
+  const commitChange = async (newVal) => {
+    setEditing(false);
+    if (newVal !== (value || '')) {
+      // Show optimistic value immediately (no flash)
+      setOptimisticVal(newVal);
+      setSaving(true);
+      try {
+        await onChange(newVal);
+      } catch {
+        // Revert on failure
+        setOptimisticVal(null);
+        setSaving(false);
+      }
+    }
+  };
 
   if (editing) {
     return (
@@ -122,12 +146,9 @@ function InlineDateCell({ value, onChange, className = '' }) {
         type="date"
         value={tempVal}
         onChange={(e) => setTempVal(e.target.value)}
-        onBlur={() => {
-          setEditing(false);
-          if (tempVal !== (value || '')) onChange(tempVal);
-        }}
+        onBlur={() => commitChange(tempVal)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') { setEditing(false); if (tempVal !== (value || '')) onChange(tempVal); }
+          if (e.key === 'Enter') commitChange(tempVal);
           if (e.key === 'Escape') { setEditing(false); setTempVal(value || ''); }
         }}
         className={`text-xs border border-[#4682B4] rounded-lg px-2 py-1 bg-white focus:ring-2 focus:ring-[#4682B4]/30 outline-none w-[130px] ${className}`}
@@ -135,14 +156,19 @@ function InlineDateCell({ value, onChange, className = '' }) {
     );
   }
 
+  const displayVal = optimisticVal || value;
   return (
     <button
       onClick={() => setEditing(true)}
       className={`group inline-flex items-center gap-1 text-xs hover:bg-[#4682B4]/10 px-2 py-1 rounded-lg transition-colors cursor-pointer ${className}`}
       title="לחץ לעריכה"
     >
-      <span>{value ? formatDate(value) : '-'}</span>
-      <Pencil className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <span className={saving ? 'opacity-60' : ''}>{displayVal ? formatDate(displayVal) : '-'}</span>
+      {saving ? (
+        <span className="w-3 h-3 border-2 border-[#4682B4] border-t-transparent rounded-full animate-spin" />
+      ) : (
+        <Pencil className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+      )}
     </button>
   );
 }
@@ -601,12 +627,9 @@ export default function ReconciliationsPage() {
       }
       // Dispatch bi-directional sync event
       window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
-        detail: { source: 'reconciliations', accountId, updates }
+        detail: { source: 'Reconciliations', accountId, updates }
       }));
       await loadData();
-      window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
-        detail: { type: 'client_account', source: 'Reconciliations', timestamp: new Date().toISOString() }
-      }));
     } catch (error) {
       console.error("Error updating account:", error);
       throw error;
@@ -1262,6 +1285,7 @@ export default function ReconciliationsPage() {
                                           toast.success(`${row.accountName} — תאריך התאמה עודכן`);
                                         } catch (err) {
                                           toast.error('שגיאה בעדכון תאריך');
+                                          throw err; // re-throw for optimistic UI rollback
                                         }
                                       }}
                                     />
@@ -1278,6 +1302,7 @@ export default function ReconciliationsPage() {
                                           toast.success(`${row.accountName} — יעד עודכן ידנית`);
                                         } catch (err) {
                                           toast.error('שגיאה בעדכון יעד');
+                                          throw err;
                                         }
                                       }}
                                     />

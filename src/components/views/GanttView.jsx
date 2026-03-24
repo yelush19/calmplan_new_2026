@@ -15,21 +15,21 @@ import { ChevronLeft, ChevronRight, CalendarDays, ArrowRight } from 'lucide-reac
 
 // Service-type color coding for task capsules
 const SERVICE_COLORS = {
-  'מע"מ': { bg: '#3B82F6', border: '#2563EB', gradient: 'linear-gradient(135deg, #3B82F6, #2563EB)' },
-  'מע"מ 874': { bg: '#1D4ED8', border: '#1E40AF', gradient: 'linear-gradient(135deg, #1D4ED8, #1E40AF)' },
-  'מקדמות מס': { bg: '#F97316', border: '#EA580C', gradient: 'linear-gradient(135deg, #F97316, #EA580C)' },
-  'קליטת הכנסות': { bg: '#22C55E', border: '#16A34A', gradient: 'linear-gradient(135deg, #22C55E, #16A34A)' },
-  'קליטת הוצאות': { bg: '#EC4899', border: '#DB2777', gradient: 'linear-gradient(135deg, #EC4899, #DB2777)' },
-  'התאמות': { bg: '#F59E0B', border: '#D97706', gradient: 'linear-gradient(135deg, #F59E0B, #D97706)' },
-  'רווח והפסד': { bg: '#8B5CF6', border: '#7C3AED', gradient: 'linear-gradient(135deg, #8B5CF6, #7C3AED)' },
-  'שכר': { bg: '#06B6D4', border: '#0891B2', gradient: 'linear-gradient(135deg, #06B6D4, #0891B2)' },
-  'ביטוח לאומי': { bg: '#F43F5E', border: '#E11D48', gradient: 'linear-gradient(135deg, #F43F5E, #E11D48)' },
-  'ניכויים': { bg: '#EAB308', border: '#CA8A04', gradient: 'linear-gradient(135deg, #EAB308, #CA8A04)' },
-  'מס"ב ספקים': { bg: '#14B8A6', border: '#0D9488', gradient: 'linear-gradient(135deg, #14B8A6, #0D9488)' },
+  'מע"מ': { bg: '#93B5F7', border: '#7BA3F0', gradient: 'linear-gradient(135deg, #93B5F7, #7BA3F0)' },
+  'מע"מ 874': { bg: '#7B9FE8', border: '#6B8FD8', gradient: 'linear-gradient(135deg, #7B9FE8, #6B8FD8)' },
+  'מקדמות מס': { bg: '#F5B882', border: '#EDA76E', gradient: 'linear-gradient(135deg, #F5B882, #EDA76E)' },
+  'קליטת הכנסות': { bg: '#7DD3A0', border: '#6BC48E', gradient: 'linear-gradient(135deg, #7DD3A0, #6BC48E)' },
+  'קליטת הוצאות': { bg: '#F0A4C8', border: '#E890B8', gradient: 'linear-gradient(135deg, #F0A4C8, #E890B8)' },
+  'התאמות': { bg: '#F5CE7A', border: '#EDC26A', gradient: 'linear-gradient(135deg, #F5CE7A, #EDC26A)' },
+  'רווח והפסד': { bg: '#B8A3E8', border: '#A893D8', gradient: 'linear-gradient(135deg, #B8A3E8, #A893D8)' },
+  'שכר': { bg: '#7DD3E0', border: '#6BC4D0', gradient: 'linear-gradient(135deg, #7DD3E0, #6BC4D0)' },
+  'ביטוח לאומי': { bg: '#F09DAB', border: '#E88B9A', gradient: 'linear-gradient(135deg, #F09DAB, #E88B9A)' },
+  'ניכויים': { bg: '#EFD580', border: '#E5C870', gradient: 'linear-gradient(135deg, #EFD580, #E5C870)' },
+  'מס"ב ספקים': { bg: '#7DD3C8', border: '#6BC4B8', gradient: 'linear-gradient(135deg, #7DD3C8, #6BC4B8)' },
 };
 
 function getServiceColor(category) {
-  return SERVICE_COLORS[category] || { bg: '#4682B4', border: '#1e3a8a', gradient: 'linear-gradient(135deg, #4682B4, #1e3a8a)' };
+  return SERVICE_COLORS[category] || { bg: '#8FB8D4', border: '#7AA6C4', gradient: 'linear-gradient(135deg, #8FB8D4, #7AA6C4)' };
 }
 
 // Full Status Colors — DNA functional colors (no gray, NO TURQUOISE)
@@ -426,9 +426,9 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
               {visibleServices.map(cat => {
                 const sc = SERVICE_COLORS[cat];
                 return (
-                  <div key={cat} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full" style={{ background: `${sc.bg}12`, border: `1px solid ${sc.bg}25` }}>
+                  <div key={cat} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full" style={{ background: `${sc.bg}20`, border: `1px solid ${sc.bg}40` }}>
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sc.bg }} />
-                    <span className="text-[11px] font-medium" style={{ color: sc.bg }}>{cat}</span>
+                    <span className="text-[11px] font-medium" style={{ color: sc.border }}>{cat}</span>
                   </div>
                 );
               })}
@@ -703,7 +703,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                         <div className="absolute inset-0 flex items-center px-2.5 gap-1.5 pointer-events-none" style={{ minWidth: 0 }}>
                           {/* Completed checkmark */}
                           {isCompleted && (
-                            <span className="flex-shrink-0 text-white text-[11px] leading-none" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>✓</span>
+                            <span className="flex-shrink-0 text-[11px] leading-none" style={{ color: '#2D3748', textShadow: 'none' }}>✓</span>
                           )}
 
                           {/* DNA load indicator dot */}
@@ -714,8 +714,9 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
 
                           {/* Task title */}
                           {pos.durationDays >= 2 && (
-                            <span className="text-[12px] font-semibold text-white truncate leading-tight" style={{
-                              textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                            <span className="text-[12px] font-semibold truncate leading-tight" style={{
+                              color: '#2D3748',
+                              textShadow: 'none',
                               letterSpacing: '0.01em',
                             }}>
                               {task.title}
@@ -725,8 +726,8 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                           {/* Duration badge (DNA minutes) — only on wider capsules */}
                           {pos.durationDays >= 3 && (
                             <span className="flex-shrink-0 text-[11px] font-medium rounded-full px-1.5 py-0.5 mr-auto" style={{
-                              background: 'rgba(255,255,255,0.25)',
-                              color: 'rgba(255,255,255,0.95)',
+                              background: 'rgba(255,255,255,0.5)',
+                              color: '#4A5568',
                               backdropFilter: 'blur(4px)',
                             }}>
                               {dnaMinutes}′
