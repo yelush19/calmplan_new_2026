@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader, RefreshCw, Briefcase, ChevronLeft, ChevronRight,
-  ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus, ChevronDown, Trash2
+  ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus, ChevronDown, Trash2,
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
@@ -50,6 +51,17 @@ const payrollDashboardServices = {
 
 const allPayrollCategories = Object.values(payrollDashboardServices).flatMap(s => s.taskCategories);
 
+// Status pipeline for DNA-style KPI cards (ordered by workflow progression)
+const STATUS_PIPELINE = [
+  { key: 'waiting_for_materials', label: 'ממתין לחומרים',       color: '#F59E0B', bg1: '#fffbeb', bg2: '#fef3c7', Icon: Inbox },
+  { key: 'not_started',          label: 'לבצע',                color: '#64748B', bg1: '#f8fafc', bg2: '#f1f5f9', Icon: PlayCircle },
+  { key: 'ready_to_broadcast',   label: 'מוכן לשידור',         color: '#0D9488', bg1: '#f0fdfa', bg2: '#ccfbf1', Icon: Radio },
+  { key: 'reported_pending_payment', label: 'ממתין לתשלום',     color: '#4F46E5', bg1: '#eef2ff', bg2: '#e0e7ff', Icon: Send },
+  { key: 'sent_for_review',      label: 'הועבר לעיון',         color: '#7C3AED', bg1: '#faf5ff', bg2: '#f3e8ff', Icon: Eye },
+  { key: 'needs_corrections',    label: 'לתיקון',              color: '#EA580C', bg1: '#fff7ed', bg2: '#ffedd5', Icon: FileWarning },
+  { key: 'production_completed', label: 'הושלם',               color: '#16A34A', bg1: '#f0fdf4', bg2: '#dcfce7', Icon: CircleCheck },
+];
+
 export default function PayrollDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const clientFilter = searchParams.get('client') || '';
@@ -67,6 +79,7 @@ export default function PayrollDashboardPage() {
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [cognitiveFilter, setCognitiveFilter] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   const localUpdateRef = React.useRef(false);
@@ -149,8 +162,11 @@ export default function PayrollDashboardPage() {
         return (w.cognitiveLoad ?? 0) === cognitiveFilter;
       });
     }
+    if (statusFilter) {
+      result = result.filter(t => (t.status || 'not_started') === statusFilter);
+    }
     return result;
-  }, [tasks, clientFilter, searchTerm, cognitiveFilter]);
+  }, [tasks, clientFilter, searchTerm, cognitiveFilter, statusFilter]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
@@ -218,7 +234,14 @@ export default function PayrollDashboardPage() {
         doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
       }
     });
-    return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0 };
+    // Status counts for DNA pipeline cards
+    const byStatus = {};
+    STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
+    relevant.forEach(t => {
+      const key = t.status || 'not_started';
+      if (byStatus[key] !== undefined) byStatus[key]++;
+    });
+    return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0, byStatus };
   }, [filteredTasks]);
 
   const handleToggleStep = useCallback(async (task, stepKey) => {
