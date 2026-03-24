@@ -12,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import { Search, ArrowUpDown, Users, CheckCircle } from 'lucide-react';
+import { computeComplexityTier, getTierInfo } from '@/lib/complexity';
 
 // ── Status config ──
 const STATUS_OPTIONS = [
@@ -45,9 +46,11 @@ const BUSINESS_SIZE_OPTIONS = [
 ];
 
 const COMPLEXITY_OPTIONS = [
-  { value: 'low', label: 'נמוך' },
-  { value: 'medium', label: 'בינוני' },
-  { value: 'high', label: 'גבוה' },
+  { value: '', label: 'אוטומטי' },
+  { value: '0', label: '0 - ננו' },
+  { value: '1', label: '1 - פשוט' },
+  { value: '2', label: '2 - בינוני' },
+  { value: '3', label: '3 - מורכב' },
 ];
 
 const CONTACT_METHOD_OPTIONS = [
@@ -190,6 +193,10 @@ export default function ClientWorkbook() {
 
   // ── Save cell ──
   const saveField = useCallback(async (clientId, fieldPath, value) => {
+    // Convert complexity_level to number or null for auto
+    if (fieldPath === 'business_info.complexity_level') {
+      value = value === '' || value === null ? null : Number(value);
+    }
     const payload = {};
     // Build nested payload from dot-path
     const keys = fieldPath.split('.');
@@ -438,7 +445,8 @@ export default function ClientWorkbook() {
             <SortHeader label="סוג עסק" sortKey="business_info.business_type" />
             <SortHeader label="גודל עסק" sortKey="business_info.business_size" />
             <SortHeader label="מס׳ עובדים" sortKey="business_info.employee_count" />
-            <SortHeader label="מורכבות" sortKey="business_info.complexity_level" />
+            <SortHeader label="מורכבות (ידני)" sortKey="business_info.complexity_level" />
+            <TableHead className="text-xs whitespace-nowrap">טייר מחושב</TableHead>
             <TableHead className="text-xs">סוגי שירות</TableHead>
           </TableRow>
         </TableHeader>
@@ -473,6 +481,22 @@ export default function ClientWorkbook() {
                   onChange={v => saveField(c.id, 'business_info.complexity_level', v)}
                   options={COMPLEXITY_OPTIONS}
                 />
+              </TableCell>
+              <TableCell className="text-center">
+                {(() => {
+                  const tier = computeComplexityTier(c);
+                  const info = getTierInfo(tier);
+                  return (
+                    <Badge className={`text-xs ${
+                      tier === 0 ? 'bg-green-100 text-green-700' :
+                      tier === 1 ? 'bg-blue-100 text-blue-700' :
+                      tier === 2 ? 'bg-amber-100 text-amber-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {info?.label || `T${tier}`}
+                    </Badge>
+                  );
+                })()}
               </TableCell>
               <TableCell className="max-w-[200px]">
                 <div className="flex flex-wrap gap-1">
