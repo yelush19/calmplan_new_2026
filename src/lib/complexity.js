@@ -2,9 +2,15 @@ import { COMPLEXITY_TIERS } from './theme-constants';
 
 // Compute complexity tier (0-3) from client data
 export function computeComplexityTier(client) {
-  // If manually set, respect it
-  if (client.complexity_level !== undefined && client.complexity_level !== null) {
-    return Number(client.complexity_level);
+  // If manually set as numeric tier (0-3), respect it
+  if (client.complexity_level !== undefined && client.complexity_level !== null && client.complexity_level !== '') {
+    const num = Number(client.complexity_level);
+    if (!isNaN(num) && num >= 0 && num <= 3) return num;
+    // Handle legacy string values
+    const legacyMap = { low: 0, medium: 1, high: 2 };
+    if (typeof client.complexity_level === 'string' && legacyMap[client.complexity_level] !== undefined) {
+      return legacyMap[client.complexity_level];
+    }
   }
 
   // Auto-compute from employee_count and estimated hours
