@@ -167,7 +167,7 @@ const TABS = [
   { key: 'bank', label: 'בנק' },
 ];
 
-export default function ClientWorkbook() {
+export default function ClientWorkbook({ embedded = false }) {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('financial');
@@ -614,23 +614,25 @@ export default function ClientWorkbook() {
   }
 
   return (
-    <div className="p-4 space-y-4" dir="rtl">
+    <div className={embedded ? "space-y-3" : "p-4 space-y-4"} dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-6 w-6" />
-            חוברת לקוחות
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {filteredClients.length} לקוחות מוצגים מתוך {clients.length}
-          </p>
+      {!embedded && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Users className="h-6 w-6" />
+              חוברת לקוחות
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {filteredClients.length} לקוחות מוצגים מתוך {clients.length}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+            <CheckCircle className="w-4 h-4" />
+            <span>שמירה אוטומטית — כל עריכה נשמרת מיד</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
-          <CheckCircle className="w-4 h-4" />
-          <span>שמירה אוטומטית — כל עריכה נשמרת מיד</span>
-        </div>
-      </div>
+      )}
 
       {/* Filter bar */}
       <Card>
