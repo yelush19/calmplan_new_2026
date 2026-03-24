@@ -10,7 +10,8 @@ import {
   Calculator, Loader, RefreshCw, ChevronLeft, ChevronRight,
   ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus,
   Zap, Flame, ChevronDown, Network, Target, TrendingUp, Clock, GitBranchPlus,
-  CheckSquare, Download, CalendarDays, AlertCircle, Hourglass, CheckCircle2
+  CheckSquare, Download, CalendarDays, AlertCircle, Hourglass, CheckCircle2,
+  Send, Radio, Eye, FileWarning, CircleCheck, Inbox, PlayCircle
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
@@ -58,6 +59,17 @@ const REPORT_ONLY_CATEGORIES = Object.values(TAX_SERVICES).flatMap(s => s.taskCa
 
 // Core services get their own table (they have meaningful steps)
 const CORE_SERVICES = ['income_collection', 'expense_collection', 'vat', 'tax_advances'];
+
+// Status pipeline for DNA-style KPI cards (ordered by workflow progression)
+const STATUS_PIPELINE = [
+  { key: 'waiting_for_materials', label: 'ממתין לחומרים',       color: '#F59E0B', bg1: '#fffbeb', bg2: '#fef3c7', Icon: Inbox },
+  { key: 'not_started',          label: 'לבצע',                color: '#64748B', bg1: '#f8fafc', bg2: '#f1f5f9', Icon: PlayCircle },
+  { key: 'ready_to_broadcast',   label: 'מוכן לשידור',         color: '#0D9488', bg1: '#f0fdfa', bg2: '#ccfbf1', Icon: Radio },
+  { key: 'reported_pending_payment', label: 'ממתין לתשלום',     color: '#4F46E5', bg1: '#eef2ff', bg2: '#e0e7ff', Icon: Send },
+  { key: 'sent_for_review',      label: 'הועבר לעיון',         color: '#7C3AED', bg1: '#faf5ff', bg2: '#f3e8ff', Icon: Eye },
+  { key: 'needs_corrections',    label: 'לתיקון',              color: '#EA580C', bg1: '#fff7ed', bg2: '#ffedd5', Icon: FileWarning },
+  { key: 'production_completed', label: 'הושלם',               color: '#16A34A', bg1: '#f0fdf4', bg2: '#dcfce7', Icon: CircleCheck },
+];
 
 // Phase detection — reusable for filtering + flow chart
 function getTaskPhase(t) {
@@ -189,7 +201,13 @@ export default function TaxReportsDashboardPage() {
       });
     }
     if (phaseFilter) {
-      result = result.filter(t => getTaskPhase(t) === phaseFilter);
+      // Support both phase keys (collect/process/review/broadcast) and status keys
+      const STATUS_KEYS = STATUS_PIPELINE.map(s => s.key);
+      if (STATUS_KEYS.includes(phaseFilter)) {
+        result = result.filter(t => (t.status || 'not_started') === phaseFilter);
+      } else {
+        result = result.filter(t => getTaskPhase(t) === phaseFilter);
+      }
     }
     return result;
   }, [tasks, clientFilter, searchTerm, cognitiveFilter, phaseFilter]);
@@ -239,12 +257,6 @@ export default function TaxReportsDashboardPage() {
     const reportTasks = filteredTasks.filter(t => REPORT_ONLY_CATEGORIES.includes(t.category));
     const reportTotal = reportTasks.length;
     const reportCompleted = reportTasks.filter(t => t.status === 'production_completed').length;
-    // Near-completion: ready_to_broadcast, reported_pending_payment, or needs_corrections (final stages before done)
-    const reportNearCompletion = reportTasks.filter(t =>
-      t.status === 'ready_to_broadcast' || t.status === 'reported_pending_payment' || t.status === 'needs_corrections'
-    ).length;
-    // Remaining to process: everything that isn't completed or near-completion
-    const reportRemaining = reportTotal - reportCompleted - reportNearCompletion;
     let totalSteps = 0, doneSteps = 0;
     filteredTasks.forEach(task => {
       const service = getServiceForTask(task);
@@ -254,16 +266,22 @@ export default function TaxReportsDashboardPage() {
         doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
       }
     });
+    // Status counts for DNA pipeline cards
+    const byStatus = {};
+    STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
+    filteredTasks.forEach(t => {
+      const key = t.status || 'not_started';
+      if (byStatus[key] !== undefined) byStatus[key]++;
+    });
     return {
       total: reportTotal,
       completed: reportCompleted,
-      nearCompletion: reportNearCompletion,
-      remaining: reportRemaining,
       pct: reportTotal > 0 ? Math.round((reportCompleted / reportTotal) * 100) : 0,
       allTasksCount: filteredTasks.length,
       totalSteps,
       doneSteps,
       stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0,
+      byStatus,
     };
   }, [filteredTasks]);
 
@@ -636,72 +654,77 @@ export default function TaxReportsDashboardPage() {
         </div>
       </motion.div>
 
-      {/* KPI Bar — AYOA organic capsules */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* Total Reports */}
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
-          style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', boxShadow: '0 2px 12px rgba(70,130,180,0.08)' }}>
-          <div className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ boxShadow: '0 0 12px rgba(70,130,180,0.2)', background: 'rgba(70,130,180,0.08)' }}>
-            <Target className="w-5 h-5" style={{ color: '#4682B4' }} />
+      {/* KPI Bar — DNA Pipeline Status Cards */}
+      <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
+        {/* Total summary capsule */}
+        <div className="rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border border-slate-200"
+          style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: 'rgba(70,130,180,0.1)' }}>
+            <Target className="w-4.5 h-4.5" style={{ color: '#4682B4' }} />
           </div>
-          <div>
-            <div className="text-2xl font-black text-slate-700">{stats.total}</div>
-            <div className="text-[12px] text-slate-400 font-medium tracking-wide">סה"כ דיווחים</div>
-          </div>
-        </div>
-        {/* Remaining to Process */}
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
-          style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', boxShadow: '0 2px 12px rgba(234,88,12,0.08)' }}>
-          <div className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ boxShadow: '0 0 12px rgba(234,88,12,0.2)', background: 'rgba(234,88,12,0.08)' }}>
-            <Hourglass className="w-5 h-5" style={{ color: '#EA580C' }} />
-          </div>
-          <div>
-            <div className="text-2xl font-black" style={{ color: '#EA580C' }}>{stats.remaining}</div>
-            <div className="text-[12px] text-slate-400 font-medium tracking-wide">נותרו לעיבוד</div>
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-700">{stats.allTasksCount}</div>
+            <div className="text-[10px] text-slate-400 font-medium">סה"כ</div>
           </div>
         </div>
-        {/* Near Completion */}
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
-          style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)', boxShadow: '0 2px 12px rgba(123,31,162,0.08)' }}>
-          <div className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ boxShadow: '0 0 12px rgba(123,31,162,0.2)', background: 'rgba(123,31,162,0.08)' }}>
-            <CheckCircle2 className="w-5 h-5" style={{ color: '#7B1FA2' }} />
-          </div>
-          <div>
-            <div className="text-2xl font-black" style={{ color: '#7B1FA2' }}>{stats.nearCompletion}</div>
-            <div className="text-[12px] text-slate-400 font-medium tracking-wide">בשלבי סיום</div>
+
+        {/* DNA pipeline — 7 status capsules with connector dots */}
+        {STATUS_PIPELINE.map((phase, idx) => {
+          const count = stats.byStatus[phase.key] || 0;
+          const pct = stats.allTasksCount > 0 ? Math.round((count / stats.allTasksCount) * 100) : 0;
+          const Icon = phase.Icon;
+          return (
+            <React.Fragment key={phase.key}>
+              {idx > 0 && (
+                <div className="flex items-center shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                </div>
+              )}
+              <button
+                onClick={() => setPhaseFilter(prev => prev === phase.key ? null : phase.key)}
+                className={`rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border transition-all cursor-pointer hover:scale-[1.03] ${
+                  phaseFilter === phase.key ? 'ring-2 ring-offset-1 shadow-md' : 'shadow-sm'
+                }`}
+                style={{
+                  background: `linear-gradient(135deg, ${phase.bg1} 0%, ${phase.bg2} 100%)`,
+                  borderColor: count > 0 ? phase.color + '30' : '#e2e8f0',
+                  ringColor: phase.color,
+                  opacity: count === 0 ? 0.5 : 1,
+                }}
+              >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: phase.color + '15', boxShadow: count > 0 ? `0 0 10px ${phase.color}20` : 'none' }}>
+                  <Icon className="w-4 h-4" style={{ color: phase.color }} />
+                </div>
+                <div className="text-center min-w-[36px]">
+                  <div className="text-lg font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
+                  <div className="text-[10px] text-slate-400 font-medium leading-tight whitespace-nowrap">{phase.label}</div>
+                </div>
+                {count > 0 && (
+                  <div className="text-[10px] font-bold rounded-full px-1.5 py-0.5" style={{ color: phase.color, background: phase.color + '15' }}>
+                    {pct}%
+                  </div>
+                )}
+              </button>
+            </React.Fragment>
+          );
+        })}
+
+        {/* Steps progress mini-card */}
+        <div className="flex items-center shrink-0"><div className="w-1.5 h-1.5 rounded-full bg-slate-300" /></div>
+        <div className="rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border border-blue-100"
+          style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)' }}>
+          <Clock className="w-4 h-4" style={{ color: '#1565C0' }} />
+          <div className="text-center">
+            <div className="text-lg font-black" style={{ color: '#1565C0' }}>{stats.stepsPct}%</div>
+            <div className="text-[10px] text-slate-400 font-medium">שלבים</div>
           </div>
         </div>
-        {/* Completion Rate */}
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
-          style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)', boxShadow: '0 2px 12px rgba(46,125,50,0.08)' }}>
-          <div className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ boxShadow: '0 0 12px rgba(46,125,50,0.2)', background: 'rgba(46,125,50,0.08)' }}>
-            <TrendingUp className="w-5 h-5" style={{ color: '#2E7D32' }} />
-          </div>
-          <div>
-            <div className="text-2xl font-black" style={{ color: '#2E7D32' }}>{stats.pct}%</div>
-            <div className="text-[12px] text-slate-400 font-medium tracking-wide">{stats.completed}/{stats.total} הושלמו</div>
-          </div>
-        </div>
-        {/* Steps Progress */}
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
-          style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)', boxShadow: '0 2px 12px rgba(21,101,192,0.08)' }}>
-          <div className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ boxShadow: '0 0 12px rgba(21,101,192,0.2)', background: 'rgba(21,101,192,0.08)' }}>
-            <Clock className="w-5 h-5" style={{ color: '#1565C0' }} />
-          </div>
-          <div>
-            <div className="text-2xl font-black" style={{ color: '#1565C0' }}>{stats.stepsPct}%</div>
-            <div className="text-[12px] text-slate-400 font-medium tracking-wide">שלבים ({stats.doneSteps}/{stats.totalSteps})</div>
-          </div>
-        </div>
-        {/* Cognitive Load DNA */}
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 border-0"
-          style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%)', boxShadow: '0 2px 12px rgba(128,0,0,0.06)' }}>
-          <div className="flex items-center gap-1">
+
+        {/* DNA Mix cognitive load */}
+        <div className="rounded-2xl px-3 py-2.5 flex items-center gap-2 shrink-0 border border-purple-100"
+          style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%)' }}>
+          <div className="flex items-center gap-0.5">
             {[3, 2, 1, 0].map(tier => {
               const taskCount = filteredTasks.filter(t => {
                 const w = getServiceWeight(t.category);
@@ -711,19 +734,13 @@ export default function TaxReportsDashboardPage() {
               if (!taskCount) return null;
               const lc = LOAD_COLORS[tier];
               return (
-                <div key={tier} className="flex flex-col items-center">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: lc.color, boxShadow: `0 0 8px ${lc.color}40` }}>
-                    {taskCount}
-                  </div>
-                  <span className="text-[11px] mt-0.5" style={{ color: lc.color }}>{lc.label}</span>
+                <div key={tier} className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: lc.color }}>
+                  {taskCount}
                 </div>
               );
             })}
           </div>
-          <div>
-            <div className="text-xs font-bold text-slate-600">עומס קוגניטיבי</div>
-            <div className="text-[12px] text-slate-400">DNA Mix</div>
-          </div>
+          <div className="text-[10px] text-slate-500 font-bold leading-tight">DNA<br/>Mix</div>
         </div>
       </div>
 
@@ -934,7 +951,7 @@ export default function TaxReportsDashboardPage() {
         <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
         {phaseFilter && (
           <Badge className="bg-slate-100 text-slate-700 gap-1 px-2.5 py-1 text-xs font-bold cursor-pointer hover:bg-slate-200" onClick={() => setPhaseFilter(null)}>
-            סינון: {phaseFilter === 'collect' ? 'קליטה' : phaseFilter === 'process' ? 'עיבוד' : phaseFilter === 'review' ? 'מוכן לשידור' : 'שודר'}
+            סינון: {STATUS_PIPELINE.find(s => s.key === phaseFilter)?.label || (phaseFilter === 'collect' ? 'קליטה' : phaseFilter === 'process' ? 'עיבוד' : phaseFilter === 'review' ? 'מוכן לשידור' : 'שודר')}
             <X className="w-3 h-3" />
           </Badge>
         )}
