@@ -1,8 +1,9 @@
 import React from 'react';
-import { LayoutGrid, GanttChart, List, Circle } from 'lucide-react';
+import { LayoutGrid, GanttChart, List, Circle, Sheet } from 'lucide-react';
 
 const VIEW_OPTIONS = [
   { key: 'table', label: 'טבלה', icon: List },
+  { key: 'workbook', label: 'גיליון', icon: Sheet },
   { key: 'kanban', label: 'קנבן', icon: LayoutGrid },
   { key: 'timeline', label: 'גאנט', icon: GanttChart },
   { key: 'radial', label: 'טבעות', icon: Circle },
