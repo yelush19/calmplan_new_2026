@@ -995,6 +995,7 @@ export default function TaxReportsDashboardPage() {
                       bulkMode={bulkMode}
                       selectedTaskIds={selectedTaskIds}
                       onToggleSelect={handleToggleSelect}
+                      allTasks={filteredTasks}
                     />
                   )}
                 </div>

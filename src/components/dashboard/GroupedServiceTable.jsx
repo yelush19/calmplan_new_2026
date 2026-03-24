@@ -13,7 +13,7 @@ import {
   STATUS_CONFIG,
   getTaskProcessSteps,
 } from '@/config/processTemplates';
-import { getVatEnergyTier, getPayrollTier } from '@/engines/taskCascadeEngine';
+import { getVatEnergyTier, getPayrollTier, getBlockedByReasons } from '@/engines/taskCascadeEngine';
 
 const SERVICE_ACCENT_COLORS = {
   'vat': { border: '#3B82F6', bg: '#F8FAFF', headerBg: '#EBF0FF', headerText: '#1E3A5F' },
@@ -127,6 +127,7 @@ export default function GroupedServiceTable({
   selectedTaskIds = new Set(),
   onToggleSelect,
   onReorder,
+  allTasks = [],
 }) {
   const relevantRows = clientRows;
   const completedCount = relevantRows.filter(r => r.task.status === 'production_completed').length;
@@ -350,6 +351,7 @@ export default function GroupedServiceTable({
                                     bulkMode={bulkMode}
                                     isSelected={selectedTaskIds.has(task.id)}
                                     onToggleSelect={onToggleSelect}
+                                    allTasks={allTasks}
                                   />
                                 )}
                               </Draggable>
@@ -374,7 +376,7 @@ export default function GroupedServiceTable({
 // CLIENT ROW
 // =====================================================
 
-const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client, service, accent, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote, bulkMode, isSelected, onToggleSelect, dragHandleProps, draggableProps, isDragging }, ref) {
+const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client, service, accent, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote, bulkMode, isSelected, onToggleSelect, dragHandleProps, draggableProps, isDragging, allTasks = [] }, ref) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
@@ -393,6 +395,9 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
   const [newSubTitle, setNewSubTitle] = useState('');
   const [newSubDue, setNewSubDue] = useState('');
   const [newSubTime, setNewSubTime] = useState('');
+
+  // Blocked-by reasons (dependency tooltip)
+  const blockedByReasons = useMemo(() => getBlockedByReasons(task, allTasks), [task, allTasks]);
 
   // Energy tier computation
   const isVat = service.key === 'vat' || service.key === 'tax_advances';
@@ -641,6 +646,13 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
                 )}
               </PopoverContent>
             </Popover>
+            {blockedByReasons.length > 0 && (
+              <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-tight max-w-[120px] truncate"
+                title={`ממתין ל: ${blockedByReasons.join(', ')}`}
+              >
+                ממתין: {blockedByReasons.join(', ')}
+              </span>
+            )}
             {task.status === 'reported_waiting_for_payment' && task.payment_due_date && (
               <span className="text-[12px] text-yellow-700 font-medium">
                 תשלום: {new Date(task.payment_due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })}
