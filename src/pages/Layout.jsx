@@ -1007,8 +1007,8 @@ function LayoutInner({ children }) {
                               style={{ background: '#1E3A5F' }}
                             >
                               <div className="flex items-center gap-1.5">
-                                <Star className="w-3.5 h-3.5 text-amber-300" />
-                                <span>כלים אישיים</span>
+                                <Star className="w-3.5 h-3.5" style={{ color: '#FCD34D' }} />
+                                <span style={{ color: '#FFFFFF' }}>כלים אישיים</span>
                               </div>
                               <ChevronDown className={`w-3 h-3 text-white/70 transition-transform ${!collapsedSections.has('personal_tools') ? '' : '-rotate-90'}`} />
                             </button>
@@ -1088,10 +1088,10 @@ function LayoutInner({ children }) {
                                   style={isCenter ? { background: '#1E3A5F' } : {}}
                                 >
                                   <div className="flex items-center gap-2">
-                                    <section.icon className={`w-4 h-4 ${isCenter ? 'text-white' : ''}`} />
-                                    <span className={isCenter ? 'text-[14px] font-bold' : 'text-sm font-bold'}>{section.title}</span>
+                                    <section.icon className="w-4 h-4" style={isCenter ? { color: '#FFFFFF' } : {}} />
+                                    <span className={isCenter ? 'text-[14px] font-bold' : 'text-sm font-bold'} style={isCenter ? { color: '#FFFFFF' } : {}}>{section.title}</span>
                                   </div>
-                                  <ChevronDown className={`w-3.5 h-3.5 ${isCenter ? 'text-white/70' : 'text-[#455A64]'} transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                                  <ChevronDown className="w-3.5 h-3.5 transition-transform" style={isCenter ? { color: 'rgba(255,255,255,0.7)' } : { color: '#455A64' }} />
                                 </button>
                                 {isOpen && (
                                   <div className="mt-1.5 ms-2">
