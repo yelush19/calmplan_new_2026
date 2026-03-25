@@ -94,13 +94,22 @@ const WORK_MODES = [
 // 🏠 בית ולייפסטייל
 // ══════════════════════════════════════════════════════════════
 const getSidebarSections = () => ({
-  // ── תכנון ועבודה (top of business center) ──
+  // ── 🏢 מרכז עסקי — visual header ──
+  business_header: {
+    title: "🏢 מרכז עסקי",
+    icon: Building2,
+    tabColor: `border-[${PILLAR_COLORS.P1.color}]`,
+    isHeader: true,
+    items: [],
+  },
   planning: {
     title: "📋 תכנון שבועי",
     icon: Brain,
     tabColor: `border-[${PILLAR_COLORS.P3.color}]`,
     items: [
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
+      { name: "דשבורדים", href: createPageUrl("Dashboards"), icon: Activity },
+      { name: "מטריצת משימות", href: createPageUrl("TaskMatrix"), icon: LayoutGrid },
     ]
   },
   calendar: {
@@ -119,7 +128,6 @@ const getSidebarSections = () => ({
       { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
     ]
   },
-  // ── מרכז שכר ומיסים (sub-menu with children) ──
   payroll_tax: {
     title: "💰 מרכז שכר ומיסים",
     icon: Calculator,
@@ -142,7 +150,6 @@ const getSidebarSections = () => ({
       ]},
     ]
   },
-  // ── לקוחות וקשרי עבודה ──
   clients: {
     title: "👥 לקוחות וקשרי עבודה",
     icon: Users,
@@ -153,8 +160,7 @@ const getSidebarSections = () => ({
       { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
     ]
   },
-  // ── פרוייקטים ──
-  p6_projects: {
+  projects: {
     title: "📁 פרוייקטים",
     icon: FolderKanban,
     tabColor: `border-[${PILLAR_COLORS.P6.color}]`,
@@ -163,7 +169,6 @@ const getSidebarSections = () => ({
       { name: "דאשבורד פרויקט", href: createPageUrl("ProjectWorkbook"), icon: BookOpen },
     ]
   },
-  // ── ניהול מערכת ──
   settings: {
     title: "⚙️ ניהול מערכת",
     icon: Settings,
@@ -179,7 +184,6 @@ const getSidebarSections = () => ({
       { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
     ]
   },
-  // ── 🏠 בית ולייפסטייל ──
   p4_home: {
     title: "🏠 בית ולייפסטייל",
     icon: BookHeart,
@@ -194,18 +198,19 @@ const getSidebarSections = () => ({
 
 // Map sidebar sections to their parent work mode for auto-switching
 const SECTION_TO_MODE = {
+  business_header: null,
   planning: null,
   calendar: null,
   tasks: null,
-  payroll_tax: 'doing',
+  payroll_tax: null,
   clients: null,
-  p6_projects: null,
+  projects: null,
   settings: null,
   p4_home: null,
 };
 
 const getVisibleSections = (mode) => {
-  return ['planning', 'calendar', 'tasks', 'payroll_tax', 'clients', 'p6_projects', 'settings', 'p4_home'];
+  return ['business_header', 'planning', 'calendar', 'tasks', 'payroll_tax', 'clients', 'projects', 'settings', 'p4_home'];
 };
 
 // Deadline countdown — connected to real TAX_CALENDAR_2026
@@ -368,7 +373,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['payroll_tax', 'clients', 'p6_projects', 'settings', 'p4_home', 'sg_payroll', 'sg_bookkeeping', 'sg_annual']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['planning', 'calendar', 'tasks', 'payroll_tax', 'clients', 'projects', 'settings', 'p4_home', 'sg_payroll', 'sg_bookkeeping', 'sg_annual']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
