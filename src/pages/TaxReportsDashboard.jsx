@@ -254,7 +254,7 @@ export default function TaxReportsDashboardPage() {
   const expandAllServices = useCallback(() => setCollapsedServices(new Set()), []);
   const collapseAllServices = useCallback(() => setCollapsedServices(new Set(serviceKeys)), [serviceKeys]);
 
-  // Stats — "דיווחים" counts only actual reports (vat, tax_advances, vat_874), not data entry
+  // Stats — separated breakdown: income collection, expense collection, reports
   const stats = useMemo(() => {
     const reportTasks = filteredTasks.filter(t => REPORT_ONLY_CATEGORIES.includes(t.category));
     const reportTotal = reportTasks.length;
@@ -268,13 +268,36 @@ export default function TaxReportsDashboardPage() {
         doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
       }
     });
-    // Status counts for DNA pipeline cards — count TASKS (reports), not just unique clients
+    // Status counts for DNA pipeline cards — count TASKS (reports)
     const byStatus = {};
     STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
     filteredTasks.forEach(t => {
       const key = t.status || 'not_started';
       if (byStatus[key] !== undefined) byStatus[key]++;
     });
+
+    // ── Breakdown by task type: income / expenses / reports ──
+    const incomeCategories = taxDashboardServices.income_collection?.taskCategories || [];
+    const expenseCategories = taxDashboardServices.expense_collection?.taskCategories || [];
+
+    const incomeTasks = filteredTasks.filter(t => incomeCategories.includes(t.category));
+    const expenseTasks = filteredTasks.filter(t => expenseCategories.includes(t.category));
+
+    const makeBreakdown = (tasks, defaultMinutes) => ({
+      total: tasks.length,
+      completed: tasks.filter(t => t.status === 'production_completed').length,
+      inProgress: tasks.filter(t => t.status !== 'production_completed' && t.status !== 'not_started' && t.status !== 'waiting_for_materials').length,
+      pending: tasks.filter(t => t.status === 'not_started' || t.status === 'waiting_for_materials').length,
+      totalMinutes: tasks.reduce((sum, t) => sum + (t.estimated_duration || t.duration_minutes || defaultMinutes), 0),
+      remainingMinutes: tasks.filter(t => t.status !== 'production_completed').reduce((sum, t) => sum + (t.estimated_duration || t.duration_minutes || defaultMinutes), 0),
+    });
+
+    const breakdown = {
+      income: makeBreakdown(incomeTasks, 15),
+      expenses: makeBreakdown(expenseTasks, 20),
+      reports: makeBreakdown(reportTasks, 5),
+    };
+
     return {
       total: reportTotal,
       completed: reportCompleted,
@@ -284,6 +307,7 @@ export default function TaxReportsDashboardPage() {
       doneSteps,
       stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0,
       byStatus,
+      breakdown,
     };
   }, [filteredTasks]);
 
@@ -695,7 +719,7 @@ export default function TaxReportsDashboardPage() {
           </div>
           <div className="text-center">
             <div className="text-base font-black text-slate-700 leading-tight">{stats.allTasksCount}</div>
-            <div className="text-[9px] text-slate-400 font-medium">לקוחות</div>
+            <div className="text-[9px] text-slate-400 font-medium">משימות</div>
           </div>
         </div>
 
@@ -774,6 +798,41 @@ export default function TaxReportsDashboardPage() {
           <div className="text-[9px] text-slate-500 font-bold leading-tight">DNA<br/>Mix</div>
         </div>
       </div>
+
+      {/* ── Breakdown cards: קליטת הכנסות | קליטת הוצאות | דיווחים ── */}
+      {stats.breakdown && (
+        <div className="flex items-stretch gap-1.5 shrink-0">
+          {[
+            { key: 'income', label: 'קליטת הכנסות', color: '#0EA5E9', icon: '📥' },
+            { key: 'expenses', label: 'קליטת הוצאות', color: '#F59E0B', icon: '📤' },
+            { key: 'reports', label: 'דיווחים', color: '#16A34A', icon: '📊' },
+          ].map(({ key, label, color, icon }) => {
+            const b = stats.breakdown[key];
+            if (!b || b.total === 0) return null;
+            const hrs = Math.floor(b.remainingMinutes / 60);
+            const mins = b.remainingMinutes % 60;
+            const timeStr = hrs > 0 ? `${hrs}:${String(mins).padStart(2,'0')} שע'` : `${mins} דק'`;
+            return (
+              <div key={key} className="rounded-xl px-2.5 py-1.5 border shrink-0 min-w-[100px]"
+                style={{ borderColor: color + '30', background: `linear-gradient(135deg, ${color}08 0%, ${color}12 100%)` }}>
+                <div className="flex items-center gap-1 mb-0.5">
+                  <span className="text-xs">{icon}</span>
+                  <span className="text-[10px] font-bold" style={{ color }}>{label}</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-black" style={{ color }}>{b.completed}/{b.total}</span>
+                  <span className="text-[9px] text-slate-400">הושלמו</span>
+                </div>
+                {b.remainingMinutes > 0 && (
+                  <div className="text-[9px] text-slate-500 mt-0.5">
+                    ⏱ נותרו {timeStr}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* P2 Production Flow — compact right side */}
       {!isLoading && filteredTasks.length > 0 && (() => {

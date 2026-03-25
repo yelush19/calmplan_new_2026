@@ -556,7 +556,7 @@ export default function PayrollDashboardPage() {
           </div>
           <div className="text-center">
             <div className="text-base leading-tight font-black text-slate-700">{stats.total}</div>
-            <div className="text-[9px] text-slate-400 font-medium">לקוחות</div>
+            <div className="text-[9px] text-slate-400 font-medium">משימות</div>
           </div>
         </div>
 
