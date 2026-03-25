@@ -1332,19 +1332,6 @@ function LayoutInner({ children }) {
       {/* Aggressive Reminder System — disabled (too noisy) */}
       {/* <AggressiveReminderSystem /> */}
 
-      {/* "Back to Now" floating button — visible on all pages except Home */}
-      {!isHomePage && (
-        <button
-          onClick={() => navigate(createPageUrl("Home"))}
-          className="fixed bottom-5 right-5 z-[10000] flex items-center gap-1.5 px-4 py-2.5 rounded-full shadow-lg text-white text-sm font-bold transition-all hover:scale-105"
-          style={{ background: 'linear-gradient(135deg, #00A3E0, #0077B6)' }}
-          title="חזרה לעכשיו"
-        >
-          <Home className="w-4 h-4" />
-          עכשיו
-        </button>
-      )}
-
       {/* Design Engine Floating Tab — persistent across all pages */}
       <DesignFloatingTab />
 
