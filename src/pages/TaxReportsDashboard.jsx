@@ -799,41 +799,6 @@ export default function TaxReportsDashboardPage() {
         </div>
       </div>
 
-      {/* ── Breakdown cards: קליטת הכנסות | קליטת הוצאות | דיווחים ── */}
-      {stats.breakdown && (
-        <div className="flex items-stretch gap-1.5 shrink-0">
-          {[
-            { key: 'income', label: 'קליטת הכנסות', color: '#0EA5E9', icon: '📥' },
-            { key: 'expenses', label: 'קליטת הוצאות', color: '#F59E0B', icon: '📤' },
-            { key: 'reports', label: 'דיווחים', color: '#16A34A', icon: '📊' },
-          ].map(({ key, label, color, icon }) => {
-            const b = stats.breakdown[key];
-            if (!b || b.total === 0) return null;
-            const hrs = Math.floor(b.remainingMinutes / 60);
-            const mins = b.remainingMinutes % 60;
-            const timeStr = hrs > 0 ? `${hrs}:${String(mins).padStart(2,'0')} שע'` : `${mins} דק'`;
-            return (
-              <div key={key} className="rounded-xl px-2.5 py-1.5 border shrink-0 min-w-[100px]"
-                style={{ borderColor: color + '30', background: `linear-gradient(135deg, ${color}08 0%, ${color}12 100%)` }}>
-                <div className="flex items-center gap-1 mb-0.5">
-                  <span className="text-xs">{icon}</span>
-                  <span className="text-[10px] font-bold" style={{ color }}>{label}</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-sm font-black" style={{ color }}>{b.completed}/{b.total}</span>
-                  <span className="text-[9px] text-slate-400">הושלמו</span>
-                </div>
-                {b.remainingMinutes > 0 && (
-                  <div className="text-[9px] text-slate-500 mt-0.5">
-                    ⏱ נותרו {timeStr}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       {/* P2 Production Flow — compact right side */}
       {!isLoading && filteredTasks.length > 0 && (() => {
         const phases = [
@@ -874,6 +839,41 @@ export default function TaxReportsDashboardPage() {
       })()}
 
       </div>{/* end sticky bar */}
+
+      {/* ── Breakdown cards: קליטת הכנסות | קליטת הוצאות | דיווחים ── */}
+      {stats.breakdown && (
+        <div className="flex flex-wrap items-stretch gap-3 mt-2 mb-2">
+          {[
+            { key: 'income', label: 'קליטת הכנסות', color: '#0EA5E9', icon: '📥' },
+            { key: 'expenses', label: 'קליטת הוצאות', color: '#F59E0B', icon: '📤' },
+            { key: 'reports', label: 'דיווחים', color: '#16A34A', icon: '📊' },
+          ].map(({ key, label, color, icon }) => {
+            const b = stats.breakdown[key];
+            if (!b || b.total === 0) return null;
+            const hrs = Math.floor(b.remainingMinutes / 60);
+            const mins = b.remainingMinutes % 60;
+            const timeStr = hrs > 0 ? `${hrs}:${String(mins).padStart(2,'0')} שע'` : `${mins} דק'`;
+            return (
+              <div key={key} className="rounded-xl px-4 py-3 border flex-1 min-w-[160px]"
+                style={{ borderColor: color + '40', background: `linear-gradient(135deg, ${color}08 0%, ${color}15 100%)` }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-base">{icon}</span>
+                  <span className="text-sm font-bold" style={{ color }}>{label}</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-black" style={{ color }}>{b.completed}/{b.total}</span>
+                  <span className="text-xs text-slate-500 font-semibold">הושלמו</span>
+                </div>
+                {b.remainingMinutes > 0 && (
+                  <div className="text-xs text-slate-500 mt-1 font-medium">
+                    ⏱ נותרו {timeStr}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Filing Sprint Banner */}
       {canStartFilingSprint && !filingSprintActive && (
