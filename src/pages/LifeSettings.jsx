@@ -11,35 +11,109 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { 
-  Clock, Brain, Heart, Coffee, Moon, Sun, Utensils, 
+  Clock, Brain, Heart, Coffee, Moon, Sun, Utensils,
   Calendar, Plus, X, Save, Bell, Target, Home,
-  AlertTriangle, CheckCircle, Ship, PartyPopper
+  AlertTriangle, CheckCircle, Ship, PartyPopper, Cake, TreePalm
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 
-const ISRAELI_HOLIDAYS_2024 = [
-  "2024-10-02", "2024-10-03", "2024-10-04",
-  "2024-10-11", "2024-10-12",
-  "2024-10-16", "2024-10-17", "2024-10-18", "2024-10-19", "2024-10-20", "2024-10-21", "2024-10-22",
-  "2024-10-23", "2024-10-24",
-  "2024-04-22", "2024-04-23", "2024-04-24", "2024-04-25", "2024-04-26", "2024-04-27", "2024-04-28", "2024-04-29",
-  "2024-05-13", "2024-05-14",
-  "2024-06-11", "2024-06-12",
+// ── Israeli Holidays 2026 (complete: erev chag, chag, chol hamoed) ──
+const ISRAELI_HOLIDAYS_2026 = [
+  // פורים
+  { date: "2026-03-03", title: "תענית אסתר", type: "day_off", subtype: "erev" },
+  { date: "2026-03-04", title: "פורים", type: "day_off", subtype: "holiday" },
+  { date: "2026-03-05", title: "שושן פורים", type: "day_off", subtype: "holiday" },
+  // פסח
+  { date: "2026-04-01", title: "ערב פסח", type: "day_off", subtype: "erev" },
+  { date: "2026-04-02", title: "פסח א׳", type: "day_off", subtype: "holiday" },
+  { date: "2026-04-03", title: "חול המועד פסח א׳", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-04-04", title: "חול המועד פסח ב׳", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-04-05", title: "חול המועד פסח ג׳", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-04-06", title: "חול המועד פסח ד׳", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-04-07", title: "חול המועד פסח ה׳", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-04-08", title: "שביעי של פסח", type: "day_off", subtype: "holiday" },
+  // יום הזיכרון + יום העצמאות
+  { date: "2026-04-21", title: "יום הזיכרון", type: "day_off", subtype: "erev" },
+  { date: "2026-04-22", title: "יום העצמאות", type: "day_off", subtype: "holiday" },
+  // ל״ג בעומר
+  { date: "2026-05-05", title: "ל״ג בעומר", type: "day_off", subtype: "holiday" },
+  // שבועות
+  { date: "2026-05-21", title: "ערב שבועות", type: "day_off", subtype: "erev" },
+  { date: "2026-05-22", title: "שבועות", type: "day_off", subtype: "holiday" },
+  // ט׳ באב
+  { date: "2026-07-23", title: "ערב ט׳ באב", type: "day_off", subtype: "erev" },
+  { date: "2026-07-24", title: "ט׳ באב", type: "day_off", subtype: "holiday" },
+  // ראש השנה
+  { date: "2026-09-11", title: "ערב ראש השנה", type: "day_off", subtype: "erev" },
+  { date: "2026-09-12", title: "ראש השנה א׳", type: "day_off", subtype: "holiday" },
+  { date: "2026-09-13", title: "ראש השנה ב׳", type: "day_off", subtype: "holiday" },
+  // צום גדליה
+  { date: "2026-09-14", title: "צום גדליה", type: "day_off", subtype: "erev" },
+  // יום כיפור
+  { date: "2026-09-20", title: "ערב יום כיפור", type: "day_off", subtype: "erev" },
+  { date: "2026-09-21", title: "יום כיפור", type: "day_off", subtype: "holiday" },
+  // סוכות
+  { date: "2026-09-25", title: "ערב סוכות", type: "day_off", subtype: "erev" },
+  { date: "2026-09-26", title: "סוכות א׳", type: "day_off", subtype: "holiday" },
+  { date: "2026-09-27", title: "חול המועד סוכות א׳", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-09-28", title: "חול המועד סוכות ב׳", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-09-29", title: "חול המועד סוכות ג׳", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-09-30", title: "חול המועד סוכות ד׳", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-10-01", title: "הושענא רבה", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-10-02", title: "שמיני עצרת", type: "day_off", subtype: "holiday" },
+  { date: "2026-10-03", title: "שמחת תורה", type: "day_off", subtype: "holiday" },
+  // חנוכה
+  { date: "2026-12-12", title: "חנוכה - נר ראשון", type: "day_off", subtype: "holiday" },
+  { date: "2026-12-13", title: "חנוכה - נר שני", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-12-14", title: "חנוכה - נר שלישי", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-12-15", title: "חנוכה - נר רביעי", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-12-16", title: "חנוכה - נר חמישי", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-12-17", title: "חנוכה - נר שישי", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-12-18", title: "חנוכה - נר שביעי", type: "chol_hamoed", subtype: "chol_hamoed" },
+  { date: "2026-12-19", title: "חנוכה - נר שמיני", type: "chol_hamoed", subtype: "chol_hamoed" },
+];
+
+// ── August quiet period (הדממה) ──
+const AUGUST_QUIET_2026 = (() => {
+  const days = [];
+  for (let d = 16; d <= 31; d++) {
+    const dd = String(d).padStart(2, '0');
+    days.push({
+      date: `2026-08-${dd}`,
+      title: `הדממת אוגוסט — מנוחה`,
+      type: 'quiet_period',
+      subtype: 'quiet',
+      is_all_day: true,
+    });
+  }
+  return days;
+})();
+
+// ── Family birthdays (placeholders — user should set real dates) ──
+const FAMILY_BIRTHDAYS_2026 = [
+  { date: "2026-01-01", title: "🎂 יום הולדת שלי", type: "birthday", subtype: "birthday", is_all_day: true },
+  { date: "2026-01-01", title: "🎂 יום הולדת בעלי", type: "birthday", subtype: "birthday", is_all_day: true },
+  { date: "2026-01-01", title: "🎂 יום הולדת ילד/ה 1", type: "birthday", subtype: "birthday", is_all_day: true },
+  { date: "2026-01-01", title: "🎂 יום הולדת ילד/ה 2", type: "birthday", subtype: "birthday", is_all_day: true },
 ];
 
 const getHolidaysForYear = (year) => {
-    if (year === 2024) {
-        return ISRAELI_HOLIDAYS_2024.map(date => ({
-            date: date,
-            is_all_day: true,
-            title: `חג / ערב חג`,
-            type: 'day_off'
-        }));
-    }
-    return [];
-}
+  if (year === 2026) {
+    return ISRAELI_HOLIDAYS_2026.map(h => ({
+      date: h.date,
+      is_all_day: true,
+      title: h.title,
+      type: h.type,
+      subtype: h.subtype,
+    }));
+  }
+  return [];
+};
+
+const getAugustQuiet = () => AUGUST_QUIET_2026;
+const getFamilyBirthdays = () => FAMILY_BIRTHDAYS_2026;
 
 export default function LifeSettingsPage() {
   const [schedule, setSchedule] = useState({
@@ -254,15 +328,39 @@ export default function LifeSettingsPage() {
   };
   
   const addHolidays = () => {
-    const holidays = getHolidaysForYear(new Date().getFullYear());
+    const holidays = getHolidaysForYear(2026);
     const existingDates = new Set((schedule.temporary_events || []).map(e => e.date));
     const newHolidays = holidays.filter(h => !existingDates.has(h.date));
-    
+
     if(newHolidays.length > 0) {
         updateSchedule('temporary_events', [...(schedule.temporary_events || []), ...newHolidays]);
-        alert(`נוספו ${newHolidays.length} חגים לרשימת ימי החופש.`);
+        alert(`נוספו ${newHolidays.length} חגים (כולל ערבי חג וחול המועד).`);
     } else {
-        alert("כל החגים עבור שנה זו כבר נוספו למערכת.");
+        alert("כל החגים כבר נוספו למערכת.");
+    }
+  };
+
+  const addAugustQuiet = () => {
+    const quietDays = getAugustQuiet();
+    const existingDates = new Set((schedule.temporary_events || []).map(e => e.date));
+    const newDays = quietDays.filter(d => !existingDates.has(d.date));
+    if (newDays.length > 0) {
+      updateSchedule('temporary_events', [...(schedule.temporary_events || []), ...newDays]);
+      alert(`נוספו ${newDays.length} ימי הדממת אוגוסט (16-31.8).`);
+    } else {
+      alert("הדממת אוגוסט כבר נוספה.");
+    }
+  };
+
+  const addBirthdays = () => {
+    const bdays = getFamilyBirthdays();
+    const existingTitles = new Set((schedule.temporary_events || []).map(e => e.title));
+    const newBdays = bdays.filter(b => !existingTitles.has(b.title));
+    if (newBdays.length > 0) {
+      updateSchedule('temporary_events', [...(schedule.temporary_events || []), ...newBdays]);
+      alert(`נוספו ${newBdays.length} ימי הולדת. עדכני את התאריכים!`);
+    } else {
+      alert("ימי ההולדת כבר נוספו.");
     }
   };
 
@@ -275,9 +373,26 @@ export default function LifeSettingsPage() {
 
   const getDayOffDates = () => {
     return (schedule.temporary_events || [])
-      .filter(event => event.is_all_day && event.type === 'day_off')
+      .filter(event => event.is_all_day)
       .map(event => event.date)
       .sort();
+  };
+
+  const getEventByDate = (date) => {
+    return (schedule.temporary_events || []).find(e => e.date === date);
+  };
+
+  const getEventBadge = (event) => {
+    if (!event) return null;
+    const type = event.subtype || event.type;
+    switch (type) {
+      case 'holiday': return { label: 'חג', color: 'bg-red-100 text-red-700' };
+      case 'erev': return { label: 'ערב חג', color: 'bg-orange-100 text-orange-700' };
+      case 'chol_hamoed': return { label: 'חוה״מ', color: 'bg-amber-100 text-amber-700' };
+      case 'quiet': return { label: 'הדממה', color: 'bg-blue-100 text-blue-700' };
+      case 'birthday': return { label: 'יום הולדת', color: 'bg-pink-100 text-pink-700' };
+      default: return { label: 'חופש', color: 'bg-green-100 text-green-700' };
+    }
   };
 
   const getContextualMessage = () => {
@@ -624,39 +739,72 @@ export default function LifeSettingsPage() {
             </div>
              <Separator/>
             <div>
-              <Label className="font-semibold flex items-center gap-2 mb-2"><PartyPopper className="w-4 h-4"/>חגי ישראל</Label>
+              <Label className="font-semibold flex items-center gap-2 mb-2"><PartyPopper className="w-4 h-4"/>חגי ישראל 2026</Label>
+              <p className="text-xs text-gray-500 mb-2">כולל ערבי חג, חגים, וחול המועד (חוה״מ = עובדים רק אם אין ברירה)</p>
               <Button onClick={addHolidays} variant="outline" className="w-full">
-                הוסף את כל חגי ישראל ({new Date().getFullYear()}) לימי החופש
+                הוסף את כל חגי ישראל 2026 (כולל ערבי חג וחוה״מ)
               </Button>
             </div>
-            
+
+            <Separator/>
+
+            <div>
+              <Label className="font-semibold flex items-center gap-2 mb-2"><TreePalm className="w-4 h-4"/>הדממת אוגוסט</Label>
+              <p className="text-xs text-gray-500 mb-2">מחצית שנייה של אוגוסט (16-31) — עומס מינימלי, מנוחה ואיפוס</p>
+              <Button onClick={addAugustQuiet} variant="outline" className="w-full">
+                הוסף הדממת אוגוסט (16-31.8.2026)
+              </Button>
+            </div>
+
+            <Separator/>
+
+            <div>
+              <Label className="font-semibold flex items-center gap-2 mb-2"><Cake className="w-4 h-4"/>ימי הולדת משפחה</Label>
+              <p className="text-xs text-gray-500 mb-2">יתווספו עם תאריך placeholder — עדכני את התאריכים הנכונים אחרי ההוספה</p>
+              <Button onClick={addBirthdays} variant="outline" className="w-full">
+                הוסף ימי הולדת (שלי, בעלי, ילדים)
+              </Button>
+            </div>
+
             <Separator/>
 
             <div className="space-y-2">
-              <h4 className="font-semibold">ימים חסומים:</h4>
+              <h4 className="font-semibold">ימים חסומים ואירועים ({getDayOffDates().length}):</h4>
               <AnimatePresence>
-                {getDayOffDates().map((date) => (
-                  <motion.div
-                    key={date}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className="flex items-center justify-between p-3 bg-white rounded-lg border"
-                  >
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>{format(new Date(date), 'EEEE, d בMMMM yyyy', { locale: he })}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeDayOff(date)}
-                      className="text-amber-500 hover:text-amber-700"
+                {getDayOffDates().map((date) => {
+                  const event = getEventByDate(date);
+                  const badge = getEventBadge(event);
+                  return (
+                    <motion.div
+                      key={date}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        event?.subtype === 'holiday' ? 'bg-red-50 border-red-200' :
+                        event?.subtype === 'erev' ? 'bg-orange-50 border-orange-200' :
+                        event?.subtype === 'chol_hamoed' ? 'bg-amber-50 border-amber-200' :
+                        event?.subtype === 'quiet' ? 'bg-blue-50 border-blue-200' :
+                        event?.subtype === 'birthday' ? 'bg-pink-50 border-pink-200' :
+                        'bg-white'
+                      }`}
                     >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </motion.div>
-                ))}
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-sm">{format(new Date(date), 'EEEE, d בMMMM yyyy', { locale: he })}</span>
+                        {event?.title && <span className="text-xs text-gray-600 truncate">— {event.title}</span>}
+                        {badge && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${badge.color}`}>{badge.label}</span>}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeDayOff(date)}
+                        className="text-amber-500 hover:text-amber-700 shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
               {getDayOffDates().length === 0 && (
                 <p className="text-gray-500 text-center py-4">אין ימי חופש מתוכננים</p>
