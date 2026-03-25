@@ -268,23 +268,18 @@ export default function TaxReportsDashboardPage() {
         doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
       }
     });
-    // Status counts for DNA pipeline cards — count unique CLIENTS per status
+    // Status counts for DNA pipeline cards — count TASKS (reports), not just unique clients
     const byStatus = {};
     STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
-    const clientsByStatus = {};
-    STATUS_PIPELINE.forEach(s => { clientsByStatus[s.key] = new Set(); });
     filteredTasks.forEach(t => {
       const key = t.status || 'not_started';
-      if (clientsByStatus[key]) clientsByStatus[key].add(t.client_name);
+      if (byStatus[key] !== undefined) byStatus[key]++;
     });
-    Object.keys(byStatus).forEach(k => { byStatus[k] = clientsByStatus[k].size; });
-    // Total unique clients
-    const allClients = new Set(filteredTasks.map(t => t.client_name));
     return {
       total: reportTotal,
       completed: reportCompleted,
       pct: reportTotal > 0 ? Math.round((reportCompleted / reportTotal) * 100) : 0,
-      allTasksCount: allClients.size,
+      allTasksCount: filteredTasks.length,
       totalSteps,
       doneSteps,
       stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0,

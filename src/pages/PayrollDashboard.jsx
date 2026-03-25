@@ -235,18 +235,14 @@ export default function PayrollDashboardPage() {
         doneSteps += service.steps.filter(s => steps[s.key]?.done).length;
       }
     });
-    // Status counts for DNA pipeline cards — count unique clients
+    // Status counts for DNA pipeline cards — count TASKS (reports), not just unique clients
     const byStatus = {};
     STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
-    const clientsByStatus = {};
-    STATUS_PIPELINE.forEach(s => { clientsByStatus[s.key] = new Set(); });
     relevant.forEach(t => {
       const key = t.status || 'not_started';
-      if (clientsByStatus[key]) clientsByStatus[key].add(t.client_name);
+      if (byStatus[key] !== undefined) byStatus[key]++;
     });
-    Object.keys(byStatus).forEach(k => { byStatus[k] = clientsByStatus[k].size; });
-    const allClients = new Set(relevant.map(t => t.client_name));
-    return { total: allClients.size, completed, pct: allClients.size > 0 ? Math.round((completed / allClients.size) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0, byStatus };
+    return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0, totalSteps, doneSteps, stepsPct: totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0, byStatus };
   }, [filteredTasks]);
 
   const handleToggleStep = useCallback(async (task, stepKey) => {

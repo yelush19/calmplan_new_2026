@@ -1,6 +1,27 @@
 // Theme constants for the MindMap "External Brain" cockpit
 // Centralizes all category gradients, status colors, board definitions, and complexity tiers
 
+// ─── SINGLE SOURCE OF TRUTH: Pillar Colors ───────────────────────
+// ALL files MUST import from here. NO hardcoded pillar colors anywhere else.
+// Iron Rule: NO red (#EF4444, #DC2626) and NO fuchsia (#EC4899) anywhere in the app.
+// For "urgent/overdue" use URGENT_COLOR (dark amber) instead.
+export const PILLAR_COLORS = {
+  P1: { color: '#00A3E0', light: '#B3E5FC', label: 'P1 שכר',      name: 'תכלת שמיים' },
+  P2: { color: '#4682B4', light: '#B2C8DF', label: 'P2 הנה"ח',    name: 'כחול פלדה' },
+  P3: { color: '#6366F1', light: '#C7D2FE', label: 'P3 ניהול',     name: 'אינדיגו' },
+  P4: { color: '#FACC15', light: '#FEF9C3', label: 'P4 בית',      name: 'צהוב לימון' },
+  P5: { color: '#2E7D32', light: '#C8E6C9', label: 'P5 מאזנים',   name: 'ירוק יער' },
+  P6: { color: '#7C3AED', light: '#DDD6FE', label: 'P6 פרוייקטים', name: 'סגול' },
+};
+
+// Urgent/overdue color — replaces red everywhere
+export const URGENT_COLOR = '#D97706'; // dark amber — firm but not stressful
+
+// Quick lookup: pillar key → hex color
+export const PILLAR_HEX = Object.fromEntries(
+  Object.entries(PILLAR_COLORS).map(([k, v]) => [k, v.color])
+);
+
 export const CATEGORY_GRADIENTS = {
   // P1 — Payroll
   payroll: { from: '#00A3E0', to: '#0077B6', label: 'שכר', branch: 'P1' },
@@ -150,21 +171,24 @@ export const PRODUCTION_FLOW_COLORS = {
 };
 
 // ─── P-Branch Path Colors (hierarchical — from root to leaves) ──────
+// All colors sourced from PILLAR_COLORS (SSOT)
 // Keyed by both canonical and short forms for flexible lookup
 export const BRANCH_PATH_COLORS = {
-  'P1':                  { color: '#00A3E0', light: '#B3E5FC', label: 'P1 שכר' },
-  'P1 שכר':             { color: '#00A3E0', light: '#B3E5FC', label: 'P1 שכר' },
-  'P1 חשבות שכר':       { color: '#00A3E0', light: '#B3E5FC', label: 'P1 שכר' },
-  'P2':                  { color: '#4682B4', light: '#B2C8DF', label: 'P2 הנה"ח' },
-  'P2 הנהלת חשבונות':   { color: '#4682B4', light: '#B2C8DF', label: 'P2 הנה"ח' },
-  'P3':                  { color: '#F59E0B', light: '#FDE68A', label: 'P3 ניהול' },
-  'P3 ניהול ותכנון':    { color: '#F59E0B', light: '#FDE68A', label: 'P3 ניהול' },
-  'P3 ניהול משרד':      { color: '#F59E0B', light: '#FDE68A', label: 'P3 ניהול' },
-  'P4':                  { color: '#FACC15', light: '#FEF9C3', label: 'P4 בית' },
-  'P4 בית':             { color: '#FACC15', light: '#FEF9C3', label: 'P4 בית' },
-  'P4 בית / אישי':     { color: '#FACC15', light: '#FEF9C3', label: 'P4 בית' },
-  'P5':                  { color: '#2E7D32', light: '#C8E6C9', label: 'P5 דוחות' },
-  'P5 דוחות שנתיים':    { color: '#2E7D32', light: '#C8E6C9', label: 'P5 דוחות' },
+  'P1':                  { ...PILLAR_COLORS.P1 },
+  'P1 שכר':             { ...PILLAR_COLORS.P1 },
+  'P1 חשבות שכר':       { ...PILLAR_COLORS.P1 },
+  'P2':                  { ...PILLAR_COLORS.P2 },
+  'P2 הנהלת חשבונות':   { ...PILLAR_COLORS.P2 },
+  'P3':                  { ...PILLAR_COLORS.P3 },
+  'P3 ניהול ותכנון':    { ...PILLAR_COLORS.P3 },
+  'P3 ניהול משרד':      { ...PILLAR_COLORS.P3 },
+  'P4':                  { ...PILLAR_COLORS.P4 },
+  'P4 בית':             { ...PILLAR_COLORS.P4 },
+  'P4 בית / אישי':     { ...PILLAR_COLORS.P4 },
+  'P5':                  { ...PILLAR_COLORS.P5 },
+  'P5 דוחות שנתיים':    { ...PILLAR_COLORS.P5 },
+  'P6':                  { ...PILLAR_COLORS.P6 },
+  'P6 פרוייקטים':       { ...PILLAR_COLORS.P6 },
 };
 
 // Complexity tiers - Enterprise (tier 3) is 3x the size of Nano (tier 0)

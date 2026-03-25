@@ -42,6 +42,7 @@ import BiologicalClockIndicator from "@/components/canvas/BiologicalClockIndicat
 import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
 import { runAllAutomations } from "@/engines/automationEngine";
 import AggressiveReminderSystem from "@/components/notifications/AggressiveReminderSystem";
+import { PILLAR_COLORS, URGENT_COLOR } from "@/lib/theme-constants";
 
 // Work Modes — aligned to P1-P5 pillar tree
 const WORK_MODES = [
@@ -84,7 +85,7 @@ const getSidebarSections = () => ({
   p1_payroll: {
     title: "P1 | שכר",
     icon: Calculator,
-    tabColor: 'border-[#00A3E0]',
+    tabColor: `border-[${PILLAR_COLORS.P1.color}]`,
     items: [
       { name: "שלב ייצור ואישור", href: createPageUrl("PayrollDashboard"), icon: Zap },
       { name: "דיווחים שוטפים (102)", href: createPageUrl("PayrollReportsDashboard"), icon: FileBarChart },
@@ -96,7 +97,7 @@ const getSidebarSections = () => ({
   p2_bookkeeping: {
     title: "P2 | הנהלת חשבונות",
     icon: FileBarChart,
-    tabColor: 'border-[#B2AC88]',
+    tabColor: `border-[${PILLAR_COLORS.P2.color}]`,
     items: [
       { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: BarChart3 },
       { name: "התאמות חשבונות", href: createPageUrl("Reconciliations"), icon: BookCheck },
@@ -108,7 +109,7 @@ const getSidebarSections = () => ({
   p3_hub: {
     title: "P3 | ניהול ותכנון",
     icon: Brain,
-    tabColor: 'border-[#6366F1]',
+    tabColor: `border-[${PILLAR_COLORS.P3.color}]`,
     items: [],
     subGroups: [
       { key: 'p3_planning', label: 'מרכז התכנון', icon: LayoutGrid, items: [
@@ -139,7 +140,7 @@ const getSidebarSections = () => ({
   p4_home: {
     title: "P4 | בית / אישי",
     icon: BookHeart,
-    tabColor: 'border-[#FFC107]',
+    tabColor: `border-[${PILLAR_COLORS.P4.color}]`,
     items: [
       { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
       { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
@@ -150,7 +151,7 @@ const getSidebarSections = () => ({
   p5_annual: {
     title: "P5 | דוחות שנתיים",
     icon: FileBarChart,
-    tabColor: 'border-[#2E7D32]',
+    tabColor: `border-[${PILLAR_COLORS.P5.color}]`,
     items: [
       { name: "מאזנים ודוחות", href: createPageUrl("BalanceSheets"), icon: Scaling },
     ]
@@ -159,7 +160,7 @@ const getSidebarSections = () => ({
   p6_projects: {
     title: "P6 | מעקב פרוייקטים",
     icon: FolderKanban,
-    tabColor: 'border-[#7C3AED]',
+    tabColor: `border-[${PILLAR_COLORS.P6.color}]`,
     items: [
       { name: "פרוייקטים", href: createPageUrl("Projects"), icon: FolderKanban },
       { name: "דאשבורד פרויקט", href: createPageUrl("ProjectWorkbook"), icon: BookOpen },
@@ -182,16 +183,51 @@ const getVisibleSections = (mode) => {
   return ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p6_projects'];
 };
 
-// Deadline countdown
+// Deadline countdown — connected to real TAX_CALENDAR_2026
+import { TAX_CALENDAR_2026 } from "@/config/taxCalendar2026";
+
 const getNextDeadline = () => {
   const now = new Date();
-  const day = now.getDate();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  let deadline = new Date(year, month, 15);
-  if (day > 15) deadline = new Date(year, month + 1, 15);
-  const daysLeft = differenceInDays(deadline, now);
-  return { daysLeft, label: 'דיווח מע"מ' };
+  const today = now.toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // Collect all upcoming deadlines from the tax calendar
+  const allDeadlines = [];
+  const DEADLINE_LABELS = {
+    payroll: 'שכר',
+    masavSuppliers: 'מס"ב ספקים',
+    masavSocial: 'מס"ב סוציאליות',
+    masavAuthorities: 'מס"ב רשויות',
+    nationalInsurance: 'ביטוח לאומי',
+    deductions: 'ניכויים',
+    onlineFiling: 'מע"מ / מקדמות',
+    detailedVat: 'מע"מ 874',
+    operatorReport: 'דיווח מתפעל',
+    operatorInstructions: 'הנחיות מתפעל',
+  };
+
+  for (const [, entry] of Object.entries(TAX_CALENDAR_2026)) {
+    for (const [key, label] of Object.entries(DEADLINE_LABELS)) {
+      const dateStr = entry[key];
+      if (dateStr && dateStr >= today) {
+        allDeadlines.push({
+          date: dateStr,
+          label,
+          reportMonth: entry.reportMonthName,
+        });
+      }
+    }
+  }
+
+  // Sort by date and pick the closest
+  allDeadlines.sort((a, b) => a.date.localeCompare(b.date));
+  const next = allDeadlines[0];
+
+  if (!next) {
+    return { daysLeft: 99, label: 'אין דדליינים קרובים' };
+  }
+
+  const daysLeft = differenceInDays(parseISO(next.date), now);
+  return { daysLeft, label: next.label, reportMonth: next.reportMonth };
 };
 
 // ─── Draggable FAB component (useMotionValue localStorage persist) ─────────
@@ -503,7 +539,7 @@ function LayoutInner({ children }) {
 
   const isHomePage = location.pathname === createPageUrl("Home");
   const emergencyCount = emergencyTasks.length;
-  const { daysLeft, label: deadlineLabel } = getNextDeadline();
+  const { daysLeft, label: deadlineLabel, reportMonth: deadlineReportMonth } = getNextDeadline();
 
   return (
     <TooltipProvider>
@@ -556,7 +592,7 @@ function LayoutInner({ children }) {
               backgroundColor: daysLeft <= 3 ? '#FFF8E7' : '#F0F7FA',
               color: daysLeft <= 3 ? '#B8860B' : '#5A8FA0',
             }}>
-              עוד {daysLeft} ימים ל{deadlineLabel}
+              {daysLeft <= 0 ? 'היום' : daysLeft === 1 ? 'מחר' : `עוד ${daysLeft} ימים`} — {deadlineLabel}{deadlineReportMonth ? ` (${deadlineReportMonth})` : ''}
             </Badge>
 
             {/* Energy Filter */}
