@@ -1073,8 +1073,8 @@ function LayoutInner({ children }) {
                             const isOpen = !collapsedSections.has(key);
                             const isCenter = section.isMainCenter;
                             return (
-                              <div key={key} className={isCenter ? 'mb-2' : 'mb-1'}>
-                                {/* LEVEL 0: Main center header (מרכז עסקי / בית ולייפסטייל) */}
+                              <div key={key} className={isCenter ? 'mb-3 mt-2' : 'mb-1'}>
+                                {/* LEVEL 0: Main center header */}
                                 <button
                                   onClick={() => setCollapsedSections(prev => {
                                     const next = new Set(prev);
@@ -1082,36 +1082,26 @@ function LayoutInner({ children }) {
                                     return next;
                                   })}
                                   className={isCenter
-                                    ? 'w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-black transition-colors bg-slate-100 hover:bg-slate-200 border border-slate-200'
+                                    ? 'w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors bg-[#1E293B] text-white hover:bg-[#334155]'
                                     : `w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-[#000000] hover:bg-[#F5F5F5] transition-colors border-r-3 ${section.tabColor || ''}`}
                                 >
                                   <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{
-                                      background: key === 'p1_payroll' ? 'linear-gradient(135deg, #00A3E020, #00BCD420)'
-                                        : key === 'p2_bookkeeping' ? 'linear-gradient(135deg, #B2AC8820, #8BC34A20)'
-                                        : key === 'p3_hub' ? 'linear-gradient(135deg, #6366F120, #9C27B020)'
-                                        : key === 'p4_home' ? 'linear-gradient(135deg, #FFC10720, #FF980020)'
-                                        : key === 'p5_annual' ? 'linear-gradient(135deg, #2E7D3220, #1B5E2020)'
-                                        : key === 'p6_projects' ? 'linear-gradient(135deg, #7C3AED20, #6D28D920)'
-                                        : 'linear-gradient(135deg, #54647A20, #37474F20)',
-                                    }}>
-                                      <section.icon className="w-3.5 h-3.5" style={{
-                                        color: key === 'p1_payroll' ? '#00A3E0'
-                                          : key === 'p2_bookkeeping' ? '#B2AC88'
-                                          : key === 'p3_hub' ? '#6366F1'
-                                          : key === 'p4_home' ? '#FFC107'
-                                          : key === 'p5_annual' ? '#2E7D32'
-                                          : key === 'p6_projects' ? '#7C3AED'
-                                          : '#546E7A',
-                                      }} />
-                                    </div>
-                                    <span>{section.title}</span>
+                                    <section.icon className={`w-4 h-4 ${isCenter ? 'text-white' : ''}`} style={!isCenter ? {
+                                      color: section.tabColor?.includes('#00A3E0') ? '#00A3E0'
+                                        : section.tabColor?.includes('#4682B4') ? '#4682B4'
+                                        : section.tabColor?.includes('#6366F1') ? '#6366F1'
+                                        : section.tabColor?.includes('#FACC15') ? '#FACC15'
+                                        : section.tabColor?.includes('#2E7D32') ? '#2E7D32'
+                                        : section.tabColor?.includes('#7C3AED') ? '#7C3AED'
+                                        : '#546E7A',
+                                    } : {}} />
+                                    <span className={isCenter ? 'text-[15px] font-black' : 'text-sm font-bold'}>{section.title}</span>
                                   </div>
-                                  <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                                  <ChevronDown className={`w-3.5 h-3.5 ${isCenter ? 'text-white/70' : 'text-[#455A64]'} transition-transform ${isOpen ? '' : '-rotate-90'}`} />
                                 </button>
                                 {isOpen && (
-                                  <div className={`mt-0.5 mb-1 ${isCenter ? 'me-2 pe-1 border-e-2 border-slate-200' : 'me-3 pe-1 border-e-2 border-[#E0E0E0]'}`}>
-                                    {/* LEVEL 1: Direct items (תכנון שבועי, לוח שנה, etc.) — bold, medium size */}
+                                  <div className={`mt-1 ${isCenter ? 'ms-3 ps-2 border-s-2 border-[#E2E8F0]' : 'ms-3 ps-1 border-s-2 border-[#E0E0E0]'}`}>
+                                    {/* LEVEL 1: Direct items — semibold, 14px */}
                                     {section.items.filter(matchesSidebarSearch).map(item => (
                                       <React.Fragment key={item.href}>
                                         <div className="flex items-center group">
@@ -1124,9 +1114,9 @@ function LayoutInner({ children }) {
                                                 setWorkMode(targetMode);
                                               }
                                             }}
-                                            className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-xl text-[13px] font-semibold transition-colors
+                                            className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] font-semibold transition-colors
                                               ${isActive(item.href) ? 'bg-sky-50 text-[#00A3E0] font-bold border border-sky-100' : 'text-[#1E293B] hover:bg-slate-50'}`}>
-                                            <item.icon className="w-3.5 h-3.5" />
+                                            <item.icon className="w-4 h-4" />
                                             {item.name}
                                           </Link>
                                           <button
@@ -1140,35 +1130,33 @@ function LayoutInner({ children }) {
                                         {item.subItems?.map(sub => (
                                           <Link key={sub.href} to={sub.href}
                                             onClick={() => { setIsMobileMenuOpen(false); setSidebarSearch(''); }}
-                                            className={`flex items-center gap-2 px-6 py-1 rounded-xl text-xs transition-colors
-                                              ${isActive(sub.href) ? 'bg-gradient-to-l from-sky-100/80 to-violet-50/40 text-[#00A3E0] font-bold shadow-sm border border-sky-100' : 'text-[#546E7A] hover:bg-white/70 hover:shadow-sm'}`}>
+                                            className={`flex items-center gap-2 px-6 py-1 rounded-lg text-xs transition-colors
+                                              ${isActive(sub.href) ? 'bg-sky-50 text-[#00A3E0] font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
                                             <sub.icon className="w-3 h-3" />
                                             {sub.name}
                                           </Link>
                                         ))}
                                       </React.Fragment>
                                     ))}
-                                    {/* LEVEL 1: Sub-group headers (שכר, הנה"ח, etc.) — collapsible with color dot */}
+                                    {/* LEVEL 1: Sub-group headers — with colored left border */}
                                     {section.subGroups?.filter(sg => !sidebarSearchLower || (sg.label || '').toLowerCase().includes(sidebarSearchLower) || sg.items?.some(matchesSidebarSearch)).map(sg => {
                                       const sgOpen = !collapsedSections.has(sg.key);
                                       return (
-                                        <div key={sg.key} className="mt-1">
+                                        <div key={sg.key} className="mt-2">
                                           <button
                                             onClick={() => setCollapsedSections(prev => {
                                               const next = new Set(prev);
                                               if (next.has(sg.key)) next.delete(sg.key); else next.add(sg.key);
                                               return next;
                                             })}
-                                            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-bold text-[#334155] hover:bg-slate-50 transition-colors"
+                                            className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] font-bold text-[#1E293B] hover:bg-slate-50 transition-colors"
                                           >
-                                            <div className="flex items-center gap-1.5">
-                                              <span className="text-sm">{sg.label}</span>
-                                            </div>
+                                            <span>{sg.label}</span>
                                             <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${sgOpen ? '' : '-rotate-90'}`} />
                                           </button>
                                           {sgOpen && (
-                                            <div className="me-4 border-e border-slate-200 pe-1">
-                                              {/* LEVEL 2: Sub-group items — smaller, lighter */}
+                                            <div className="ms-4 ps-2 border-s border-slate-200">
+                                              {/* LEVEL 2: Sub-group items — 12px, lighter color */}
                                               {sg.items.filter(matchesSidebarSearch).map(item => (
                                                 <div key={item.href} className="flex items-center group">
                                                   <Link to={item.href}
@@ -1178,8 +1166,8 @@ function LayoutInner({ children }) {
                                                       const targetMode = SECTION_TO_MODE[key];
                                                       if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
                                                     }}
-                                                    className={`flex-1 flex items-center gap-2 px-3 py-1 rounded-lg text-xs transition-colors
-                                                      ${isActive(item.href) ? 'bg-sky-50 text-[#00A3E0] font-bold border border-sky-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                                                    className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[12px] transition-colors
+                                                      ${isActive(item.href) ? 'bg-sky-50 text-[#00A3E0] font-bold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
                                                     <item.icon className="w-3 h-3" />
                                                     {item.name}
                                                   </Link>
