@@ -241,6 +241,27 @@ const MONTH_NAMES = [
 ];
 
 /**
+ * Calculate work start date: go back N work days from deadline.
+ * Excludes: Friday (5), Saturday (6).
+ * Returns YYYY-MM-DD string.
+ */
+function calculateWorkStart(dueDateStr, workDaysBeforeDeadline = 5) {
+  if (!dueDateStr) return null;
+  try {
+    let d = new Date(dueDateStr + 'T12:00:00');
+    let daysBack = 0;
+    while (daysBack < workDaysBeforeDeadline) {
+      d.setDate(d.getDate() - 1);
+      const dow = d.getDay();
+      if (dow !== 5 && dow !== 6) daysBack++; // Skip Friday + Saturday
+    }
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Creates a Task entity conforming to the system's data model.
  * Uses process tree steps (V4.3) with fallback to processTemplates.
  */
@@ -266,9 +287,10 @@ export function createTaskEntity({ client, serviceDef, reportMonth, reportYear, 
     tree_node_id: serviceDef.treeNodeId,
     parent_service: dashboardMap[serviceDef.branch] || 'tax',
 
-    // Temporal
+    // Temporal — work window: scheduled_start → due_date
     date: dueDate,
     due_date: dueDate,
+    scheduled_start: calculateWorkStart(dueDate, serviceDef.work_lead_days || 5),
     report_month: reportMonth,
     report_year: reportYear,
     report_period: `${reportYear}-${String(reportMonth).padStart(2, '0')}`,
