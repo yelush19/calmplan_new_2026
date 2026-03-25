@@ -370,27 +370,28 @@ function LayoutInner({ children }) {
     }
   }, [location.pathname, navigate]);
 
-  // Load emergency tasks
+  // Load emergency tasks — refreshes on every page navigation
   useEffect(() => {
     const loadEmergency = async () => {
       try {
         const allTasks = await Task.list(null, 5000).catch(() => []);
         const tasks = Array.isArray(allTasks) ? allTasks : [];
         const now = new Date();
+        const DONE = new Set(['completed', 'not_relevant', 'production_completed']);
         const emergency = tasks
           .filter(t => {
-            if (t.status === 'completed' || t.status === 'not_relevant') return false;
+            if (DONE.has(t.status)) return false;
             const due = t.due_date ? parseISO(t.due_date) : null;
             if (!due) return false;
             return differenceInDays(due, now) <= 0;
           })
           .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
-          .slice(0, 5);
+          .slice(0, 10);
         setEmergencyTasks(emergency);
       } catch { setEmergencyTasks([]); }
     };
     loadEmergency();
-  }, []);
+  }, [location.pathname]);
 
   // Load pinned/recent clients
   useEffect(() => {
