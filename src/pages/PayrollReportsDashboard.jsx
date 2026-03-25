@@ -108,10 +108,10 @@ export default function PayrollReportsDashboardPage() {
         if (!allReportingCategories.includes(t.category)) return false;
         return getTaskReportingMonth(t) === selectedMonthStr;
       });
-      // DATA SURVIVAL: if month filter kills everything, show all matching category tasks
+      // DATA SURVIVAL: if month filter kills everything, show all matching category tasks (never all raw)
       if (filtered.length === 0 && allRaw.length > 0) {
         const allCategory = allRaw.filter(t => allReportingCategories.includes(t.category));
-        setTasks(allCategory.length > 0 ? allCategory : allRaw);
+        setTasks(allCategory);
       } else {
         setTasks(filtered);
       }

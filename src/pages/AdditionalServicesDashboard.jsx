@@ -141,7 +141,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       // DATA SURVIVAL: if month filter kills everything, show all matching category tasks
       if (filtered.length === 0 && allRaw.length > 0) {
         const allCategory = allRaw.filter(t => allAdditionalCategories.includes(t.category));
-        setTasks(allCategory.length > 0 ? allCategory : allRaw);
+        setTasks(allCategory);
       } else {
         setTasks(filtered);
       }
