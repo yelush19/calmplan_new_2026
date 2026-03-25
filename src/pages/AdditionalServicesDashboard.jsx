@@ -101,7 +101,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
-  const [viewMode, setViewMode] = useState('kanban');
+  const [viewMode, setViewMode] = useState('table'); // Default: table (client prefers spreadsheet view)
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);

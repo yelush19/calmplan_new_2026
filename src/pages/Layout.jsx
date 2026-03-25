@@ -43,6 +43,7 @@ import AyoaViewToggle from "@/components/canvas/AyoaViewToggle";
 import { runAllAutomations } from "@/engines/automationEngine";
 import AggressiveReminderSystem from "@/components/notifications/AggressiveReminderSystem";
 import { PILLAR_COLORS, URGENT_COLOR } from "@/lib/theme-constants";
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
 // Work Modes — aligned to P1-P5 pillar tree
 const WORK_MODES = [
@@ -538,6 +539,34 @@ function LayoutInner({ children }) {
   };
 
   const isHomePage = location.pathname === createPageUrl("Home");
+
+  // Build breadcrumb trail from current path + sidebar structure
+  const breadcrumbTrail = React.useMemo(() => {
+    if (isHomePage) return null; // No breadcrumb on home
+    const path = location.pathname;
+    for (const [sectionKey, section] of Object.entries(sidebarSections)) {
+      // Check direct items
+      for (const item of section.items) {
+        if (item.href && path.startsWith(item.href)) {
+          return { section: section.title, page: item.name };
+        }
+      }
+      // Check sub-group items
+      if (section.subGroups) {
+        for (const sg of section.subGroups) {
+          for (const item of sg.items) {
+            if (item.href && path.startsWith(item.href)) {
+              return { section: section.title, subGroup: sg.label, page: item.name };
+            }
+          }
+        }
+      }
+    }
+    // Special pages
+    if (path.includes('MyFocus')) return { section: null, page: 'התמונה המלאה' };
+    return null;
+  }, [location.pathname, isHomePage, sidebarSections]);
+
   const emergencyCount = emergencyTasks.length;
   const { daysLeft, label: deadlineLabel, reportMonth: deadlineReportMonth } = getNextDeadline();
 
@@ -1250,6 +1279,41 @@ function LayoutInner({ children }) {
                   <TimeAwareness />
 
                   {/* Backup import moved to BackupManager page exclusively */}
+
+                  {/* Breadcrumbs + Back to Home */}
+                  {breadcrumbTrail && (
+                    <div className="flex items-center justify-between mb-1 px-1">
+                      <Breadcrumb>
+                        <BreadcrumbList>
+                          <BreadcrumbItem>
+                            <BreadcrumbLink href={createPageUrl("Home")} className="text-xs font-semibold text-slate-500 hover:text-slate-800">
+                              🏠 עכשיו
+                            </BreadcrumbLink>
+                          </BreadcrumbItem>
+                          {breadcrumbTrail.section && (
+                            <>
+                              <BreadcrumbSeparator />
+                              <BreadcrumbItem>
+                                <span className="text-xs font-semibold text-slate-400">{breadcrumbTrail.section}</span>
+                              </BreadcrumbItem>
+                            </>
+                          )}
+                          {breadcrumbTrail.subGroup && (
+                            <>
+                              <BreadcrumbSeparator />
+                              <BreadcrumbItem>
+                                <span className="text-xs text-slate-400">{breadcrumbTrail.subGroup}</span>
+                              </BreadcrumbItem>
+                            </>
+                          )}
+                          <BreadcrumbSeparator />
+                          <BreadcrumbItem>
+                            <BreadcrumbPage className="text-xs font-bold text-slate-700">{breadcrumbTrail.page}</BreadcrumbPage>
+                          </BreadcrumbItem>
+                        </BreadcrumbList>
+                      </Breadcrumb>
+                    </div>
+                  )}
 
                   <div className="flex-1 min-h-0 relative">
                     {children}

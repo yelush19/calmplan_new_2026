@@ -175,7 +175,7 @@ export default function TasksPage() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
-  const [view, setView] = useState("kanban");
+  const [view, setView] = useState("list"); // Default: list/table (client prefers spreadsheet view)
   const [isClearing, setIsClearing] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
