@@ -153,7 +153,7 @@ const getSidebarSections = () => ({
   },
   // ── הגדרות ──
   settings: {
-    title: "⚙️ הגדרות",
+    title: "⚙️ ניהול מערכת",
     icon: Settings,
     tabColor: 'border-slate-300',
     items: [
