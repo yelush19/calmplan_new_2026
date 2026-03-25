@@ -209,15 +209,30 @@ export default function TimeAwareness() {
   const isShabbat = dayNum === 6;
   const daysLeftThisWeek = dayNum <= 5 ? 5 - dayNum : 0;
 
-  const upcomingDeadlines = REPORTING_DEADLINES
-    .map(d => {
-      const deadlineDate = new Date(now.getFullYear(), now.getMonth(), d.day);
-      const calendarDays = differenceInCalendarDays(deadlineDate, now);
-      const workDays = calendarDays > 0 ? getWorkDaysUntil(deadlineDate) : 0;
-      const taskInfo = deadlineTasks[d.day] || { total: 0, incomplete: 0 };
-      return { ...d, calendarDays, workDays, passed: calendarDays < 0, ...taskInfo };
-    })
-    .filter(d => !d.passed);
+  // Build upcoming deadlines — check current month AND next month
+  const upcomingDeadlines = (() => {
+    const thisMonth = REPORTING_DEADLINES
+      .map(d => {
+        const deadlineDate = new Date(now.getFullYear(), now.getMonth(), d.day);
+        const calendarDays = differenceInCalendarDays(deadlineDate, now);
+        const workDays = calendarDays > 0 ? getWorkDaysUntil(deadlineDate) : 0;
+        const taskInfo = deadlineTasks[d.day] || { total: 0, incomplete: 0 };
+        return { ...d, calendarDays, workDays, passed: calendarDays < 0, ...taskInfo };
+      })
+      .filter(d => !d.passed);
+
+    // If no deadlines left this month, also check next month
+    if (thisMonth.length === 0) {
+      const nextMonthDeadlines = REPORTING_DEADLINES.map(d => {
+        const deadlineDate = new Date(now.getFullYear(), now.getMonth() + 1, d.day);
+        const calendarDays = differenceInCalendarDays(deadlineDate, now);
+        const workDays = calendarDays > 0 ? getWorkDaysUntil(deadlineDate) : 0;
+        return { ...d, calendarDays, workDays, passed: false, total: 0, incomplete: 0, nextMonth: true };
+      });
+      return nextMonthDeadlines.filter(d => d.calendarDays <= 14); // show next 14 days only
+    }
+    return thisMonth;
+  })();
 
   const nearestDeadline = upcomingDeadlines[0];
   const isUrgent = nearestDeadline && nearestDeadline.calendarDays <= 2;
@@ -272,8 +287,10 @@ export default function TimeAwareness() {
                   {d.calendarDays <= 2 && !(d.calendarDays === 0 && hasIncomplete) && <Clock className="w-3 h-3" />}
                   {d.calendarDays === 0 ? (
                     <span>היום! {d.label} (ה-{d.day})</span>
+                  ) : d.calendarDays === 1 ? (
+                    <span>מחר! {d.label} (ה-{d.day}){d.nextMonth ? ' (חודש הבא)' : ''}</span>
                   ) : (
-                    <span>{d.workDays} ימ"ע {d.label} (ה-{d.day})</span>
+                    <span>{d.workDays} ימ"ע {d.label} (ה-{d.day}){d.nextMonth ? ' (חודש הבא)' : ''}</span>
                   )}
                   {d.calendarDays === 0 && d.total > 0 && (
                     <span className={`mr-0.5 px-1 py-0 rounded text-[12px] font-bold ${
