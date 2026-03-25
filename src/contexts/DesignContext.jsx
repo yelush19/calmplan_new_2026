@@ -17,6 +17,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { ServiceCatalog, UserPreferences } from '@/api/entities';
+import { PILLAR_COLORS } from '@/lib/theme-constants';
 
 const LS_KEY = 'calmplan_design_prefs';
 const USER_PREFS_KEY = 'calmplan_global_design';
@@ -33,13 +34,14 @@ const DEFAULTS = {
   fillMode: 'filled',        // 'filled' | 'border' -- Fill Mode Toggle
   stickerMap: {},            // nodeId -> emoji/icon key
   nodeOverrides: {},         // nodeId -> { shape, color, lineStyle } -- per-node style overrides (cross-page)
-  // -- Branch Color Engine: P1-P5 customizable colors --
+  // -- Branch Color Engine: P1-P6 from PILLAR_COLORS (SSOT in theme-constants.js) --
   branchColors: {
-    P1: '#00A3E0',   // Sky Blue
-    P2: '#4682B4',   // Steel Blue
-    P3: '#F59E0B',   // Amber Orange
-    P4: '#FACC15',   // Lemon Yellow (hard default)
-    P5: '#2E7D32',   // Forest Green
+    P1: PILLAR_COLORS.P1.color,
+    P2: PILLAR_COLORS.P2.color,
+    P3: PILLAR_COLORS.P3.color,
+    P4: PILLAR_COLORS.P4.color,
+    P5: PILLAR_COLORS.P5.color,
+    P6: PILLAR_COLORS.P6.color,
   },
   // -- Automation control --
   automationsPaused: false,

@@ -169,11 +169,17 @@ button:focus-visible {
     background: #FFFFFF;
     min-height: 100vh;
     color: #000000;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   h1, h2, h3, h4, h5, h6, .heading {
     font-family: 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
-    font-weight: 600;
+    font-weight: 700;
     color: #000000;
+    letter-spacing: 0.01em;
   }
   .btn, button {
     font-family: 'Assistant', 'Varela Round', 'Heebo', sans-serif;
@@ -424,22 +430,26 @@ button:focus-visible {
   --cp-font: 'Heebo', 'Assistant', sans-serif;
   --cp-font-heading: 'Assistant', 'Heebo', sans-serif;
   --cp-font-size-xs: 12px;   /* Minimum readable — was 10px, now 12px */
-  --cp-font-size-sm: 13px;   /* Small but clear — was 12px */
+  --cp-font-size-sm: 14px;   /* Small but clear — was 13px, now 14px for tabs/labels */
   --cp-font-size-md: 15px;   /* Normal baseline — was 14px */
   --cp-font-size-lg: 18px;
   --cp-font-size-xl: 22px;
+  --cp-font-weight-normal: 500;   /* Stronger normal weight for Hebrew readability */
+  --cp-font-weight-heading: 700;  /* Bold headings — was 600, now 700 */
+  --cp-letter-spacing-he: 0.01em; /* Subtle Hebrew letter spacing for clarity */
 
   /* AYOA Canvas defaults */
   --cp-canvas-bg: #F8F9FA;
   --cp-node-radius: 20px;
   --cp-capsule-radius: 24px;
 
-  /* Branch DNA colors (overridden by DesignContext at runtime) */
+  /* Branch DNA colors — SSOT in theme-constants.js (overridden by DesignContext at runtime) */
   --cp-p1: #00A3E0;
   --cp-p2: #4682B4;
-  --cp-p3: #F59E0B;
+  --cp-p3: #6366F1;
   --cp-p4: #FACC15;
   --cp-p5: #2E7D32;
+  --cp-p6: #7C3AED;
 
   /* AYOA Organic palette */
   --cp-pastel-pink: #EDE9FE;

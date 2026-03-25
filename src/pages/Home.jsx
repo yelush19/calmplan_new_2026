@@ -108,7 +108,7 @@ export default function HomePage() {
   const [noteTask, setNoteTask] = useState(null);
   const [showFullMap, setShowFullMap] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
-  const { focusMode } = useApp();
+  const { focusMode, filterByEnergy, energyLevel } = useApp();
   const [stickyNotes, setStickyNotes] = useState([]);
 
   let design = null;
@@ -355,11 +355,13 @@ export default function HomePage() {
 
   // ── Top 5 tasks for the calm "מה אפשר לעשות היום" section ──
   // Must be above the early return so hook count is stable across renders
+  // Energy filter: when energy is low/medium, show only matching cognitive-load tasks
   const calmTasks = useMemo(() => {
     if (!data) return [];
     const merged = [...(data.overdue || []), ...(data.today || [])];
-    return sortByPriority(merged).slice(0, 5);
-  }, [data]);
+    const energyFiltered = filterByEnergy(merged);
+    return sortByPriority(energyFiltered).slice(0, 5);
+  }, [data, filterByEnergy]);
 
   if (isLoading || !data) {
     return (
@@ -389,12 +391,12 @@ export default function HomePage() {
     return filterBySearch(data[tabKey] || []).length;
   };
 
-  const allFocusTasks = filterBySearch([
+  const allFocusTasks = filterByEnergy(filterBySearch([
     ...(data.overdue || []),
     ...(data.today || []),
     ...(data.upcoming || []),
     ...(data.payment || []),
-  ]);
+  ]));
 
   const getTabContent = () => {
     switch (activeTab) {
