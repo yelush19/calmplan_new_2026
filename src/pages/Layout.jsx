@@ -694,7 +694,7 @@ function LayoutInner({ children }) {
                 </Button>
               </div>
               <div className="px-4 pt-2 pb-0 text-center">
-                <p className="block font-black text-2xl py-6 text-center" style={{ color: '#6B9DB5' }}>עשוי טוב יותר ממושלם</p>
+                <p className="block font-black text-2xl py-6 text-center" style={{ color: '#1E3A5F' }}>עשוי טוב יותר ממושלם</p>
               </div>
 
               {/* Mobile search */}
@@ -890,7 +890,7 @@ function LayoutInner({ children }) {
                     <div className="flex flex-col flex-1 overflow-y-auto">
                       {/* Mantra — very top of sidebar */}
                       <div className="px-3 pt-4 pb-2 text-center">
-                        <p className="block font-black text-xl py-4 text-center" style={{ color: '#6B9DB5' }}>
+                        <p className="block font-black text-xl py-4 text-center" style={{ color: '#1E3A5F' }}>
                           עשוי טוב יותר ממושלם
                         </p>
                       </div>
@@ -1010,7 +1010,7 @@ function LayoutInner({ children }) {
                                 <Star className="w-3.5 h-3.5" style={{ color: '#FCD34D' }} />
                                 <span style={{ color: '#FFFFFF' }}>כלים אישיים</span>
                               </div>
-                              <ChevronDown className={`w-3 h-3 text-white/70 transition-transform ${!collapsedSections.has('personal_tools') ? '' : '-rotate-90'}`} />
+                              <ChevronDown className="w-3 h-3 transition-transform" style={{ color: 'rgba(255,255,255,0.7)', transform: collapsedSections.has('personal_tools') ? 'rotate(-90deg)' : 'none' }} />
                             </button>
                             {!collapsedSections.has('personal_tools') && (
                               <div className="mt-0.5">

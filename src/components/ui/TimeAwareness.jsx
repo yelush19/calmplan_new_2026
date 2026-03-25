@@ -17,6 +17,19 @@ const REPORTING_DEADLINES = [
 // Statuses that mean the report has been filed / is done
 const DONE_STATUSES = new Set(['completed', 'not_relevant', 'reported_waiting_for_payment', 'production_completed']);
 
+// Israeli holidays 2026 — non-work days (imported from LifeSettings calendar)
+const HOLIDAY_DATES_2026 = new Set([
+  '2026-03-03','2026-03-04','2026-03-05', // פורים
+  '2026-04-01','2026-04-02','2026-04-08', // פסח (ערב + ראשון + שביעי)
+  '2026-04-21','2026-04-22', // יום הזיכרון + עצמאות
+  '2026-05-05', // ל"ג בעומר
+  '2026-05-21','2026-05-22', // שבועות
+  '2026-07-23','2026-07-24', // ט' באב
+  '2026-09-11','2026-09-12','2026-09-13', // ראש השנה
+  '2026-09-20','2026-09-21', // יום כיפור
+  '2026-09-25','2026-09-26','2026-10-03', // סוכות + שמחת תורה
+]);
+
 function getWorkDaysUntil(targetDate) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -29,7 +42,11 @@ function getWorkDaysUntil(targetDate) {
   let current = addDays(today, 1);
   while (current <= target) {
     const day = getDay(current);
-    if (day !== 6) count++;
+    const dateStr = format(current, 'yyyy-MM-dd');
+    // Exclude: Friday (5), Saturday (6), and holidays
+    if (day !== 5 && day !== 6 && !HOLIDAY_DATES_2026.has(dateStr)) {
+      count++;
+    }
     current = addDays(current, 1);
   }
   return count;
@@ -154,8 +171,11 @@ export default function TimeAwareness() {
   const [deadlineTasks, setDeadlineTasks] = useState({});  // { deadlineDay: { total, incomplete } }
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => setNow(new Date()), 30000); // Refresh every 30 seconds (was 60s)
+    // Also refresh when tab becomes visible (user completed tasks in another view)
+    const onVisibility = () => { if (!document.hidden) setNow(new Date()); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisibility); };
   }, []);
 
   // Fetch tasks and compute incomplete counts per deadline (current + next month)
