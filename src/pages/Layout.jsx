@@ -1074,7 +1074,7 @@ function LayoutInner({ children }) {
                             const isCenter = section.isMainCenter;
                             return (
                               <div key={key} className={isCenter ? 'mb-3 mt-2' : 'mb-1'}>
-                                {/* LEVEL 0: Main center header */}
+                                {/* LEVEL 0: Main center header — dark blue with white text */}
                                 <button
                                   onClick={() => setCollapsedSections(prev => {
                                     const next = new Set(prev);
@@ -1082,26 +1082,19 @@ function LayoutInner({ children }) {
                                     return next;
                                   })}
                                   className={isCenter
-                                    ? 'w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors bg-[#1E293B] text-white hover:bg-[#334155]'
+                                    ? 'w-full flex items-center justify-between px-3 py-2 rounded-xl transition-colors text-white hover:brightness-110'
                                     : `w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-[#000000] hover:bg-[#F5F5F5] transition-colors border-r-3 ${section.tabColor || ''}`}
+                                  style={isCenter ? { background: '#1E3A5F' } : {}}
                                 >
                                   <div className="flex items-center gap-2">
-                                    <section.icon className={`w-4 h-4 ${isCenter ? 'text-white' : ''}`} style={!isCenter ? {
-                                      color: section.tabColor?.includes('#00A3E0') ? '#00A3E0'
-                                        : section.tabColor?.includes('#4682B4') ? '#4682B4'
-                                        : section.tabColor?.includes('#6366F1') ? '#6366F1'
-                                        : section.tabColor?.includes('#FACC15') ? '#FACC15'
-                                        : section.tabColor?.includes('#2E7D32') ? '#2E7D32'
-                                        : section.tabColor?.includes('#7C3AED') ? '#7C3AED'
-                                        : '#546E7A',
-                                    } : {}} />
-                                    <span className={isCenter ? 'text-[15px] font-black' : 'text-sm font-bold'}>{section.title}</span>
+                                    <section.icon className={`w-4 h-4 ${isCenter ? 'text-white' : ''}`} />
+                                    <span className={isCenter ? 'text-[14px] font-bold' : 'text-sm font-bold'}>{section.title}</span>
                                   </div>
                                   <ChevronDown className={`w-3.5 h-3.5 ${isCenter ? 'text-white/70' : 'text-[#455A64]'} transition-transform ${isOpen ? '' : '-rotate-90'}`} />
                                 </button>
                                 {isOpen && (
-                                  <div className={`mt-1 ${isCenter ? 'ms-3 ps-2 border-s-2 border-[#E2E8F0]' : 'ms-3 ps-1 border-s-2 border-[#E0E0E0]'}`}>
-                                    {/* LEVEL 1: Direct items — semibold, 14px */}
+                                  <div className="mt-1.5 ms-2">
+                                    {/* LEVEL 1: Direct items — bold, 13px, with left color bar */}
                                     {section.items.filter(matchesSidebarSearch).map(item => (
                                       <React.Fragment key={item.href}>
                                         <div className="flex items-center group">
@@ -1114,9 +1107,9 @@ function LayoutInner({ children }) {
                                                 setWorkMode(targetMode);
                                               }
                                             }}
-                                            className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] font-semibold transition-colors
-                                              ${isActive(item.href) ? 'bg-sky-50 text-[#00A3E0] font-bold border border-sky-100' : 'text-[#1E293B] hover:bg-slate-50'}`}>
-                                            <item.icon className="w-4 h-4" />
+                                            className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition-colors
+                                              ${isActive(item.href) ? 'bg-sky-50 text-[#0077B6] font-bold border-s-2 border-[#00A3E0]' : 'text-[#1E293B] hover:bg-slate-50'}`}>
+                                            <item.icon className="w-3.5 h-3.5" />
                                             {item.name}
                                           </Link>
                                           <button
@@ -1127,64 +1120,61 @@ function LayoutInner({ children }) {
                                             <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
                                           </button>
                                         </div>
-                                        {item.subItems?.map(sub => (
-                                          <Link key={sub.href} to={sub.href}
-                                            onClick={() => { setIsMobileMenuOpen(false); setSidebarSearch(''); }}
-                                            className={`flex items-center gap-2 px-6 py-1 rounded-lg text-xs transition-colors
-                                              ${isActive(sub.href) ? 'bg-sky-50 text-[#00A3E0] font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
-                                            <sub.icon className="w-3 h-3" />
-                                            {sub.name}
-                                          </Link>
-                                        ))}
                                       </React.Fragment>
                                     ))}
-                                    {/* LEVEL 1: Sub-group headers — with colored left border */}
-                                    {section.subGroups?.filter(sg => !sidebarSearchLower || (sg.label || '').toLowerCase().includes(sidebarSearchLower) || sg.items?.some(matchesSidebarSearch)).map(sg => {
-                                      const sgOpen = !collapsedSections.has(sg.key);
-                                      return (
-                                        <div key={sg.key} className="mt-2">
-                                          <button
-                                            onClick={() => setCollapsedSections(prev => {
-                                              const next = new Set(prev);
-                                              if (next.has(sg.key)) next.delete(sg.key); else next.add(sg.key);
-                                              return next;
-                                            })}
-                                            className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] font-bold text-[#1E293B] hover:bg-slate-50 transition-colors"
-                                          >
-                                            <span>{sg.label}</span>
-                                            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${sgOpen ? '' : '-rotate-90'}`} />
-                                          </button>
-                                          {sgOpen && (
-                                            <div className="ms-4 ps-2 border-s border-slate-200">
-                                              {/* LEVEL 2: Sub-group items — 12px, lighter color */}
-                                              {sg.items.filter(matchesSidebarSearch).map(item => (
-                                                <div key={item.href} className="flex items-center group">
-                                                  <Link to={item.href}
-                                                    onClick={() => {
-                                                      setIsMobileMenuOpen(false);
-                                                      setSidebarSearch('');
-                                                      const targetMode = SECTION_TO_MODE[key];
-                                                      if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
-                                                    }}
-                                                    className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[12px] transition-colors
-                                                      ${isActive(item.href) ? 'bg-sky-50 text-[#00A3E0] font-bold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
-                                                    <item.icon className="w-3 h-3" />
-                                                    {item.name}
-                                                  </Link>
-                                                  <button
-                                                    onClick={() => toggleMyMenu(item.href)}
-                                                    className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
-                                                    title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
-                                                  >
-                                                    <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
-                                                  </button>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
+                                    {/* LEVEL 1: Sub-groups as compact pills/chips with color accent */}
+                                    {section.subGroups && (
+                                      <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
+                                        {section.subGroups.filter(sg => !sidebarSearchLower || (sg.label || '').toLowerCase().includes(sidebarSearchLower) || sg.items?.some(matchesSidebarSearch)).map(sg => {
+                                          const sgOpen = !collapsedSections.has(sg.key);
+                                          return (
+                                            <button
+                                              key={sg.key}
+                                              onClick={() => setCollapsedSections(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(sg.key)) next.delete(sg.key); else next.add(sg.key);
+                                                return next;
+                                              })}
+                                              className={`px-2.5 py-1 rounded-full text-[12px] font-bold transition-all border ${
+                                                sgOpen
+                                                  ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                                                  : 'bg-white text-[#1E3A5F] border-[#CBD5E1] hover:border-[#1E3A5F] hover:bg-slate-50'
+                                              }`}
+                                            >
+                                              {sg.label}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                    {/* LEVEL 2: Expanded sub-group items — only shown for open sub-group */}
+                                    {section.subGroups?.filter(sg => !collapsedSections.has(sg.key)).map(sg => (
+                                      <div key={`${sg.key}_items`} className="ms-2 ps-2 border-s border-slate-200 mb-2 mt-1">
+                                        {sg.items.filter(matchesSidebarSearch).map(item => (
+                                          <div key={item.href} className="flex items-center group">
+                                            <Link to={item.href}
+                                              onClick={() => {
+                                                setIsMobileMenuOpen(false);
+                                                setSidebarSearch('');
+                                                const targetMode = SECTION_TO_MODE[key];
+                                                if (targetMode && targetMode !== workMode) setWorkMode(targetMode);
+                                              }}
+                                              className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-[12px] transition-colors
+                                                ${isActive(item.href) ? 'bg-sky-50 text-[#0077B6] font-bold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
+                                              <item.icon className="w-3 h-3" />
+                                              {item.name}
+                                            </Link>
+                                            <button
+                                              onClick={() => toggleMyMenu(item.href)}
+                                              className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#E0E0E0]"
+                                              title={myMenu.includes(item.href) ? 'הסר מהתפריט שלי' : 'הוסף לתפריט שלי'}
+                                            >
+                                              <Star className="w-3 h-3" style={{ color: myMenu.includes(item.href) ? '#F59E0B' : '#D1D5DB', fill: myMenu.includes(item.href) ? '#F59E0B' : 'none' }} />
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
                               </div>
