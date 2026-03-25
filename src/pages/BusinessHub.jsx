@@ -356,7 +356,7 @@ export default function BusinessHubPage() {
   ];
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="bg-white p-6">
       <div className="w-full">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -493,7 +493,7 @@ export default function BusinessHubPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-red-50 to-rose-100 border-red-200 hover:shadow-lg transition-all duration-300 rounded-xl">
+          <Card className="bg-white border-amber-200 hover:shadow-lg transition-all duration-300 rounded-xl">
             <CardContent className="p-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-red-500 rounded-full flex items-center justify-center">
