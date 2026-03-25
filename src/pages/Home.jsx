@@ -658,15 +658,15 @@ const CANVAS_PAD = 30; // viewBox units of internal padding
 // Customize per ring if needed: { A: 3, B: 2, C: 2, D: 2 }
 const MAX_VISIBLE_PER_RING = 3;
 
-// ── Ring colours ───────────────────────────────────────────────
-const RING_COLOR = { A: '#F97316', B: '#EC4899', C: '#06B6D4', D: '#F97316' };
+// ── Ring colours — NO pink/fuchsia/red (ADHD-friendly, calm palette) ──
+const RING_COLOR = { A: '#F97316', B: '#7C3AED', C: '#06B6D4', D: '#2E7D32' };
 
 // ── Bubble colour palettes per ring ────────────────────────────
 const RING_PALETTE = {
-  A: { fill: '#FFEDD5', border: '#F97316' },
-  D: { fill: '#FFEDD5', border: '#F97316' },
-  B: { fill: '#FCE7F3', border: '#EC4899' },
-  C: { fill: '#E0F2FE', border: '#06B6D4' },
+  A: { fill: '#FFEDD5', border: '#F97316' },    // orange — work
+  B: { fill: '#EDE9FE', border: '#7C3AED' },    // purple — urgent (was fuchsia)
+  C: { fill: '#E0F2FE', border: '#06B6D4' },    // cyan — home
+  D: { fill: '#DCFCE7', border: '#2E7D32' },    // green — quick (was duplicate orange)
 };
 const NEUTRAL_PALETTE = { fill: '#FFF7ED', border: '#FED7AA' };
 

@@ -15,7 +15,7 @@ const REPORTING_DEADLINES = [
 ];
 
 // Statuses that mean the report has been filed / is done
-const DONE_STATUSES = new Set(['completed', 'not_relevant', 'reported_waiting_for_payment']);
+const DONE_STATUSES = new Set(['completed', 'not_relevant', 'reported_waiting_for_payment', 'production_completed']);
 
 function getWorkDaysUntil(targetDate) {
   const today = new Date();
@@ -158,7 +158,8 @@ export default function TimeAwareness() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch tasks and compute incomplete counts per deadline (current month only)
+  // Fetch tasks and compute incomplete counts per deadline (current + next month)
+  const [openTaskCount, setOpenTaskCount] = useState(0);
   useEffect(() => {
     let cancelled = false;
     async function fetchDeadlineTasks() {
@@ -166,23 +167,32 @@ export default function TimeAwareness() {
         const allTasks = await Task.list(null, 5000).catch(() => []);
         if (cancelled) return;
 
-        // Only count tasks whose due_date falls in the current month (YYYY-MM)
+        // Count tasks due in current month or next month
         const currentMonthPrefix = format(now, 'yyyy-MM');
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const nextMonthPrefix = format(nextMonth, 'yyyy-MM');
 
         const counts = {};
         for (const dl of REPORTING_DEADLINES) {
           const matching = allTasks.filter(t => {
             if (!t || !t.category) return false;
-            // Match category (Hebrew or English)
             if (!dl.categories.includes(t.category)) return false;
-            // Only tasks due this month
-            if (!t.due_date || !t.due_date.startsWith(currentMonthPrefix)) return false;
+            // Tasks due this month or next month
+            if (!t.due_date) return false;
+            if (!t.due_date.startsWith(currentMonthPrefix) && !t.due_date.startsWith(nextMonthPrefix)) return false;
             return true;
           });
           const incomplete = matching.filter(t => !DONE_STATUSES.has(t.status));
           counts[dl.day] = { total: matching.length, incomplete: incomplete.length };
         }
         setDeadlineTasks(counts);
+
+        // Count ALL open work tasks (for banner when no deadlines this month)
+        const openWork = allTasks.filter(t =>
+          t && t.status && !DONE_STATUSES.has(t.status) &&
+          t.context !== 'archived' && t.status !== 'not_relevant'
+        );
+        if (!cancelled) setOpenTaskCount(openWork.length);
       } catch {
         // ignore
       }
@@ -276,8 +286,10 @@ export default function TimeAwareness() {
               );
             })
           ) : (
-            <span className="text-xs text-gray-500 px-2 py-0.5 rounded-md bg-emerald-50">
-              {differenceInCalendarDays(endOfMonth(now), now)} ימים לסוף חודש - כל הדיווחים הוגשו
+            <span className={`text-xs px-2 py-0.5 rounded-md ${openTaskCount > 0 ? 'bg-amber-50 text-amber-700 font-semibold' : 'bg-gray-50 text-gray-500'}`}>
+              {openTaskCount > 0
+                ? `${differenceInCalendarDays(endOfMonth(now), now)} ימים לסוף חודש — ${openTaskCount} משימות פתוחות`
+                : `${differenceInCalendarDays(endOfMonth(now), now)} ימים לסוף חודש — אין דדליינים נוספים`}
             </span>
           )}
         </div>
