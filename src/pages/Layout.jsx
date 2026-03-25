@@ -694,7 +694,7 @@ function LayoutInner({ children }) {
                 </Button>
               </div>
               <div className="px-4 pt-2 pb-0 text-center">
-                <p className="block font-black text-2xl py-6 text-center" style={{ color: '#6B9DB5' }}>עשוי טוב יותר ממושלם</p>
+                <p className="block font-black text-2xl py-6 text-center" style={{ color: '#1E3A5F' }}>עשוי טוב יותר ממושלם</p>
               </div>
 
               {/* Mobile search */}
@@ -890,7 +890,7 @@ function LayoutInner({ children }) {
                     <div className="flex flex-col flex-1 overflow-y-auto">
                       {/* Mantra — very top of sidebar */}
                       <div className="px-3 pt-4 pb-2 text-center">
-                        <p className="block font-black text-xl py-4 text-center" style={{ color: '#6B9DB5' }}>
+                        <p className="block font-black text-xl py-4 text-center" style={{ color: '#1E3A5F' }}>
                           עשוי טוב יותר ממושלם
                         </p>
                       </div>
