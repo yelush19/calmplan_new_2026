@@ -154,8 +154,11 @@ export default function TimeAwareness() {
   const [deadlineTasks, setDeadlineTasks] = useState({});  // { deadlineDay: { total, incomplete } }
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => setNow(new Date()), 30000); // Refresh every 30 seconds (was 60s)
+    // Also refresh when tab becomes visible (user completed tasks in another view)
+    const onVisibility = () => { if (!document.hidden) setNow(new Date()); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisibility); };
   }, []);
 
   // Fetch tasks and compute incomplete counts per deadline (current + next month)

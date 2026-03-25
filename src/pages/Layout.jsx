@@ -1010,7 +1010,7 @@ function LayoutInner({ children }) {
                                 <Star className="w-3.5 h-3.5" style={{ color: '#FCD34D' }} />
                                 <span style={{ color: '#FFFFFF' }}>כלים אישיים</span>
                               </div>
-                              <ChevronDown className={`w-3 h-3 text-white/70 transition-transform ${!collapsedSections.has('personal_tools') ? '' : '-rotate-90'}`} />
+                              <ChevronDown className="w-3 h-3 transition-transform" style={{ color: 'rgba(255,255,255,0.7)', transform: collapsedSections.has('personal_tools') ? 'rotate(-90deg)' : 'none' }} />
                             </button>
                             {!collapsedSections.has('personal_tools') && (
                               <div className="mt-0.5">
