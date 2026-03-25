@@ -1269,3 +1269,21 @@ export const cleanupGhostTasks = async ({ dryRun = true } = {}) => {
     };
   }
 };
+
+/**
+ * Delete ALL sticky notes — bulk cleanup.
+ */
+export const deleteAllStickyNotes = async () => {
+  try {
+    const StickyNote = _registry.get('StickyNote');
+    if (!StickyNote) return { data: { success: false, error: 'StickyNote entity not found' } };
+    const all = await StickyNote.list(null, 5000);
+    if (!all?.length) return { data: { success: true, deleted: 0, message: 'אין פתקים דביקים למחיקה' } };
+    for (const note of all) {
+      await StickyNote.delete(note.id);
+    }
+    return { data: { success: true, deleted: all.length, message: `נמחקו ${all.length} פתקים דביקים` } };
+  } catch (err) {
+    return { data: { success: false, error: err.message } };
+  }
+};

@@ -25,7 +25,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { Task, AccountReconciliation, Dashboard } from '@/api/entities';
-import { generateProcessTasks, cleanupYearEndOnlyTasks, cleanupP3GhostTasks, dedupTasksForMonth, wipeAllTasksForMonth, previewTaskGeneration } from '@/api/functions';
+import { generateProcessTasks, cleanupYearEndOnlyTasks, cleanupP3GhostTasks, dedupTasksForMonth, wipeAllTasksForMonth, previewTaskGeneration, deleteAllStickyNotes } from '@/api/functions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const StatCard = ({ title, value, icon: Icon, link, isLoading }) => {
@@ -489,6 +489,20 @@ export default function BusinessHubPage() {
               >
                 <AlertCircle className={`w-4 h-4 ms-2 ${isGeneratingTasks ? 'animate-spin' : ''}`} />
                 ניקוי משימות רפאים P3
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!confirm('למחוק את כל הפתקים הדביקים?')) return;
+                  const result = await deleteAllStickyNotes();
+                  alert(result?.data?.message || 'הושלם');
+                  loadData();
+                }}
+                disabled={isGeneratingTasks}
+                variant="outline"
+                className="w-full mt-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+              >
+                <AlertCircle className="w-4 h-4 ms-2" />
+                מחק כל הפתקים הדביקים
               </Button>
             </CardContent>
           </Card>
