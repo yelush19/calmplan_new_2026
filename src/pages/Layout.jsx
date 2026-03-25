@@ -82,9 +82,9 @@ const WORK_MODES = [
 // P5: Annual Reports (Income Tax, Capital Statements)
 // ============================================================
 const getSidebarSections = () => ({
-  // ── P1 | שכר — Production → Reporting → Payment ──
+  // ── שכר ──
   p1_payroll: {
-    title: "P1 | שכר",
+    title: "💰 שכר",
     icon: Calculator,
     tabColor: `border-[${PILLAR_COLORS.P1.color}]`,
     items: [
@@ -94,9 +94,9 @@ const getSidebarSections = () => ({
       { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
     ]
   },
-  // ── P2 | הנהלת חשבונות — VAT, Advances, Collection ──
+  // ── הנהלת חשבונות ──
   p2_bookkeeping: {
-    title: "P2 | הנהלת חשבונות",
+    title: "📊 הנהלת חשבונות",
     icon: FileBarChart,
     tabColor: `border-[${PILLAR_COLORS.P2.color}]`,
     items: [
@@ -105,9 +105,18 @@ const getSidebarSections = () => ({
       { name: "תוצרים (רוה\"ס)", href: createPageUrl("FinancialResultsDashboard"), icon: TrendingUp },
     ]
   },
-  // ── 👥 לקוחות — Standalone section (extracted from P3) ──
+  // ── מאזנים ודוחות שנתיים (right after bookkeeping) ──
+  p5_annual: {
+    title: "📋 מאזנים ודוחות",
+    icon: FileBarChart,
+    tabColor: `border-[${PILLAR_COLORS.P5.color}]`,
+    items: [
+      { name: "מאזנים ודוחות", href: createPageUrl("BalanceSheets"), icon: Scaling },
+    ]
+  },
+  // ── לקוחות, ספקים ושיווק ──
   clients: {
-    title: "👥 לקוחות",
+    title: "👥 לקוחות וקשרי עבודה",
     icon: Users,
     tabColor: `border-[${PILLAR_COLORS.P3.color}]`,
     items: [
@@ -118,7 +127,7 @@ const getSidebarSections = () => ({
       { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
     ]
   },
-  // ── P3 | תכנון ומשימות — Simplified (only planning tools) ──
+  // ── תכנון ומשימות ──
   p3_hub: {
     title: "📋 תכנון ומשימות",
     icon: Brain,
@@ -132,18 +141,9 @@ const getSidebarSections = () => ({
       { name: "משימות חוזרות (הזרקה)", href: createPageUrl("RecurringTasks"), icon: Repeat },
     ]
   },
-  // ── P5 | דוחות שנתיים — Income Tax, Capital Statements ──
-  p5_annual: {
-    title: "P5 | מאזנים ודוחות",
-    icon: FileBarChart,
-    tabColor: `border-[${PILLAR_COLORS.P5.color}]`,
-    items: [
-      { name: "מאזנים ודוחות", href: createPageUrl("BalanceSheets"), icon: Scaling },
-    ]
-  },
-  // ── P6 | מעקב פרוייקטים — Project Tracking ──
+  // ── פרוייקטים ──
   p6_projects: {
-    title: "P6 | פרוייקטים",
+    title: "📁 פרוייקטים",
     icon: FolderKanban,
     tabColor: `border-[${PILLAR_COLORS.P6.color}]`,
     items: [
@@ -151,18 +151,7 @@ const getSidebarSections = () => ({
       { name: "דאשבורד פרויקט", href: createPageUrl("ProjectWorkbook"), icon: BookOpen },
     ]
   },
-  // ── 🏠 P4 | בית / אישי ──
-  p4_home: {
-    title: "🏠 בית / אישי",
-    icon: BookHeart,
-    tabColor: `border-[${PILLAR_COLORS.P4.color}]`,
-    items: [
-      { name: "הגדרות אישיות", href: createPageUrl("LifeSettings"), icon: Settings },
-      { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
-      { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
-    ]
-  },
-  // ── ⚙️ הגדרות — System settings (extracted from P3) ──
+  // ── הגדרות ──
   settings: {
     title: "⚙️ הגדרות",
     icon: Settings,
@@ -190,7 +179,7 @@ const SECTION_TO_MODE = {
 };
 
 const getVisibleSections = (mode) => {
-  return ['p1_payroll', 'p2_bookkeeping', 'clients', 'p3_hub', 'p5_annual', 'p6_projects', 'p4_home', 'settings'];
+  return ['p1_payroll', 'p2_bookkeeping', 'p5_annual', 'clients', 'p3_hub', 'p6_projects', 'settings', 'p4_home'];
 };
 
 // Deadline countdown — connected to real TAX_CALENDAR_2026
@@ -353,7 +342,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'clients', 'p3_hub', 'p5_annual', 'p6_projects', 'p4_home', 'settings']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p5_annual', 'clients', 'p3_hub', 'p6_projects', 'settings', 'p4_home']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
