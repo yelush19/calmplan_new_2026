@@ -223,7 +223,8 @@ export default function PayrollDashboardPage() {
   const collapseAllServices = useCallback(() => setCollapsedServices(new Set(sortedServiceKeys)), [sortedServiceKeys]);
 
   const stats = useMemo(() => {
-    const relevant = filteredTasks;
+    // Filter to ONLY payroll categories (P1) — not all tasks
+    const relevant = filteredTasks.filter(t => allPayrollCategories.includes(t.category));
     const total = relevant.length;
     const completed = relevant.filter(t => t.status === 'production_completed').length;
     let totalSteps = 0, doneSteps = 0;
