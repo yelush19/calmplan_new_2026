@@ -160,6 +160,7 @@ export default function TimeAwareness() {
 
   // Fetch tasks and compute incomplete counts per deadline (current + next month)
   const [openTaskCount, setOpenTaskCount] = useState(0);
+  const [dueSoonTasks, setDueSoonTasks] = useState([]);
   useEffect(() => {
     let cancelled = false;
     async function fetchDeadlineTasks() {
@@ -193,6 +194,12 @@ export default function TimeAwareness() {
           t.context !== 'archived' && t.status !== 'not_relevant'
         );
         if (!cancelled) setOpenTaskCount(openWork.length);
+
+        // Find tasks due TODAY or TOMORROW (any category) for urgent banner
+        const todayStr = format(now, 'yyyy-MM-dd');
+        const tomorrowStr = format(addDays(now, 1), 'yyyy-MM-dd');
+        const dueSoon = openWork.filter(t => t.due_date === todayStr || t.due_date === tomorrowStr);
+        if (!cancelled) setDueSoonTasks(dueSoon);
       } catch {
         // ignore
       }
@@ -304,9 +311,7 @@ export default function TimeAwareness() {
             })
           ) : (
             <span className={`text-xs px-2 py-0.5 rounded-md ${openTaskCount > 0 ? 'bg-amber-50 text-amber-700 font-semibold' : 'bg-gray-50 text-gray-500'}`}>
-              {openTaskCount > 0
-                ? `${differenceInCalendarDays(endOfMonth(now), now)} ימים לסוף חודש — ${openTaskCount} משימות פתוחות`
-                : `${differenceInCalendarDays(endOfMonth(now), now)} ימים לסוף חודש — אין דדליינים נוספים`}
+              {differenceInCalendarDays(endOfMonth(now), now)} ימים לסוף חודש — {openTaskCount} משימות פתוחות
             </span>
           )}
         </div>
@@ -320,6 +325,27 @@ export default function TimeAwareness() {
             </span>
           </div>
         ))}
+
+        {/* Tasks due today/tomorrow that aren't in the static deadline list */}
+        {dueSoonTasks.length > 0 && (() => {
+          const todayStr = format(now, 'yyyy-MM-dd');
+          const dueToday = dueSoonTasks.filter(t => t.due_date === todayStr);
+          const dueTomorrow = dueSoonTasks.filter(t => t.due_date !== todayStr);
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              {dueToday.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-bold">
+                  {dueToday.length} משימות לסיום היום
+                </span>
+              )}
+              {dueTomorrow.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-semibold">
+                  {dueTomorrow.length} משימות דד-ליין מחר
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
