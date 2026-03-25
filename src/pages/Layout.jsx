@@ -105,52 +105,36 @@ const getSidebarSections = () => ({
       { name: "תוצרים (רוה\"ס)", href: createPageUrl("FinancialResultsDashboard"), icon: TrendingUp },
     ]
   },
-  // ── P3 | ניהול ותכנון — VIEWER/HUB (Law 1: no own service steps) ──
-  // Structure: 3 nested groups — Strategy, Clients, Settings
-  p3_hub: {
-    title: "P3 | ניהול ותכנון",
-    icon: Brain,
+  // ── 👥 לקוחות — Standalone section (extracted from P3) ──
+  clients: {
+    title: "👥 לקוחות",
+    icon: Users,
     tabColor: `border-[${PILLAR_COLORS.P3.color}]`,
-    items: [],
-    subGroups: [
-      { key: 'p3_planning', label: 'מרכז התכנון', icon: LayoutGrid, items: [
-        { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
-        { name: "משימות", href: createPageUrl("Tasks"), icon: CheckSquare },
-        { name: "משימות חוזרות (הזרקה)", href: createPageUrl("RecurringTasks"), icon: Repeat },
-        { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
-        { name: "מטריצת משימות", href: createPageUrl("TaskMatrix"), icon: LayoutGrid },
-        { name: "דשבורדים", href: createPageUrl("Dashboards"), icon: Activity },
-      ]},
-      { key: 'p3_clients', label: 'לקוחות וניהול עסקי', icon: Users, items: [
-        { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
-        { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
-        { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
-        { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
-        { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
-      ]},
-      { key: 'p3_system', label: 'הגדרות מערכת', icon: Settings, items: [
-        { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Eye },
-        { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
-        { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
-        { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
-        { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
-      ]},
+    items: [
+      { name: "מרכז לקוחות", href: createPageUrl("ClientManagement"), icon: Users },
+      { name: "מרכז עסקי", href: createPageUrl("BusinessHub"), icon: Building2 },
+      { name: "לידים ושיווק", href: createPageUrl("Leads"), icon: Target },
+      { name: "ניהול שכ\"ט", href: createPageUrl("FeeManagement"), icon: Receipt },
+      { name: "ספקי שירות", href: createPageUrl("ServiceProviders"), icon: Briefcase },
     ]
   },
-  // ── P4 | בית/אישי — Meals, Morning/Evening routines ──
-  p4_home: {
-    title: "P4 | בית / אישי",
-    icon: BookHeart,
-    tabColor: `border-[${PILLAR_COLORS.P4.color}]`,
+  // ── P3 | תכנון ומשימות — Simplified (only planning tools) ──
+  p3_hub: {
+    title: "📋 תכנון ומשימות",
+    icon: Brain,
+    tabColor: `border-[${PILLAR_COLORS.P3.color}]`,
     items: [
-      { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
-      { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
-      { name: "הגדרות אישיות", href: createPageUrl("LifeSettings"), icon: Settings },
+      { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
+      { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+      { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
+      { name: "מטריצת משימות", href: createPageUrl("TaskMatrix"), icon: LayoutGrid },
+      { name: "דשבורדים", href: createPageUrl("Dashboards"), icon: Activity },
+      { name: "משימות חוזרות (הזרקה)", href: createPageUrl("RecurringTasks"), icon: Repeat },
     ]
   },
   // ── P5 | דוחות שנתיים — Income Tax, Capital Statements ──
   p5_annual: {
-    title: "P5 | דוחות שנתיים",
+    title: "P5 | מאזנים ודוחות",
     icon: FileBarChart,
     tabColor: `border-[${PILLAR_COLORS.P5.color}]`,
     items: [
@@ -159,12 +143,36 @@ const getSidebarSections = () => ({
   },
   // ── P6 | מעקב פרוייקטים — Project Tracking ──
   p6_projects: {
-    title: "P6 | מעקב פרוייקטים",
+    title: "P6 | פרוייקטים",
     icon: FolderKanban,
     tabColor: `border-[${PILLAR_COLORS.P6.color}]`,
     items: [
       { name: "פרוייקטים", href: createPageUrl("Projects"), icon: FolderKanban },
       { name: "דאשבורד פרויקט", href: createPageUrl("ProjectWorkbook"), icon: BookOpen },
+    ]
+  },
+  // ── 🏠 P4 | בית / אישי ──
+  p4_home: {
+    title: "🏠 בית / אישי",
+    icon: BookHeart,
+    tabColor: `border-[${PILLAR_COLORS.P4.color}]`,
+    items: [
+      { name: "הגדרות אישיות", href: createPageUrl("LifeSettings"), icon: Settings },
+      { name: "תכנון ארוחות", href: createPageUrl("MealPlanner"), icon: Soup },
+      { name: "השראה וספרים", href: createPageUrl("Inspiration"), icon: BookHeart },
+    ]
+  },
+  // ── ⚙️ הגדרות — System settings (extracted from P3) ──
+  settings: {
+    title: "⚙️ הגדרות",
+    icon: Settings,
+    tabColor: 'border-slate-300',
+    items: [
+      { name: "הגדרות מערכת", href: createPageUrl("Settings"), icon: Settings },
+      { name: "כללי אוטומציה", href: createPageUrl("AutomationRules"), icon: Workflow },
+      { name: "אפיון עומס קוגניטיבי", href: createPageUrl("BatchSetup"), icon: Layers },
+      { name: "מצב המערכת", href: createPageUrl("SystemOverview"), icon: Eye },
+      { name: "גיבויים", href: createPageUrl("BackupManager"), icon: HardDrive },
     ]
   },
 });
@@ -173,15 +181,16 @@ const getSidebarSections = () => ({
 const SECTION_TO_MODE = {
   p1_payroll: 'doing',
   p2_bookkeeping: 'doing',
-  p3_hub: null,    // P3 is a HUB — visible in all modes
-  p4_home: null,   // visible in all modes
-  p5_annual: null,  // visible in all modes
-  p6_projects: null, // visible in all modes
+  clients: null,     // Always visible — core CRM
+  p3_hub: null,      // Planning tools — always visible
+  p5_annual: null,
+  p6_projects: null,
+  p4_home: null,
+  settings: null,
 };
 
 const getVisibleSections = (mode) => {
-  // All 5 pillars always visible — P3 is a HUB layer (Law 1)
-  return ['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p6_projects'];
+  return ['p1_payroll', 'p2_bookkeeping', 'clients', 'p3_hub', 'p5_annual', 'p6_projects', 'p4_home', 'settings'];
 };
 
 // Deadline countdown — connected to real TAX_CALENDAR_2026
@@ -344,7 +353,7 @@ function LayoutInner({ children }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'p3_hub', 'p4_home', 'p5_annual', 'p6_projects', 'p3_strategy', 'p3_clients', 'p3_system']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['p1_payroll', 'p2_bookkeeping', 'clients', 'p3_hub', 'p5_annual', 'p6_projects', 'p4_home', 'settings']));
   const [emergencyTasks, setEmergencyTasks] = useState([]);
   const [pinnedClients, setPinnedClients] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
