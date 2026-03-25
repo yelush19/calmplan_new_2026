@@ -1009,82 +1009,6 @@ function LayoutInner({ children }) {
                         </div>
                       </div>
 
-                      {/* כלים אישיים — Always visible so users can see starred items */}
-                      {(
-                        <div className="px-2 py-1">
-                          <button
-                            onClick={() => setCollapsedSections(prev => {
-                              const next = new Set(prev);
-                              if (next.has('personal_tools')) next.delete('personal_tools'); else next.add('personal_tools');
-                              return next;
-                            })}
-                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-[#000000] hover:bg-[#F5F5F5] transition-colors"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Star className="w-4 h-4 text-[#4682B4]" />
-                              <span>כלים אישיים</span>
-                            </div>
-                            <ChevronDown className={`w-3.5 h-3.5 text-[#455A64] transition-transform ${!collapsedSections.has('personal_tools') ? '' : '-rotate-90'}`} />
-                          </button>
-                          {!collapsedSections.has('personal_tools') && (
-                            <div className="me-3 border-e-2 border-[#E0E0E0] pe-1 mt-0.5 mb-1">
-                              {/* Pinned Clients */}
-                              {pinnedClients.length > 0 && (
-                                <>
-                                  <h4 className="text-[12px] font-bold text-[#455A64] px-3 pt-1 pb-0.5">גישה מהירה</h4>
-                                  {pinnedClients.slice(0, 8).map(client => (
-                                    <Link key={client.id}
-                                      to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
-                                      onClick={() => setIsMobileMenuOpen(false)}
-                                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-[#000000] hover:bg-[#F5F5F5] transition-colors">
-                                      <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                                      {client.name}
-                                    </Link>
-                                  ))}
-                                </>
-                              )}
-                              {/* My Menu */}
-                              {myMenu.length > 0 && (
-                                <>
-                                  <h4 className="text-[12px] font-bold text-[#455A64] px-3 pt-1 pb-0.5">התפריט שלי</h4>
-                                  {myMenu.map(href => {
-                                    let menuItem = null;
-                                    for (const section of Object.values(sidebarSections)) {
-                                      menuItem = section.items.find(i => i.href === href);
-                                      if (menuItem) break;
-                                      // Also search subGroups (P3 has nested items)
-                                      if (section.subGroups) {
-                                        for (const sg of section.subGroups) {
-                                          menuItem = sg.items.find(i => i.href === href);
-                                          if (menuItem) break;
-                                        }
-                                        if (menuItem) break;
-                                      }
-                                    }
-                                    if (!menuItem) return null;
-                                    return (
-                                      <Link key={href} to={href}
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors
-                                          ${isActive(href) ? 'bg-[#E8F5F7] text-[#4682B4] font-bold' : 'text-[#000000] hover:bg-[#F5F5F5]'}`}>
-                                        <menuItem.icon className="w-3.5 h-3.5" />
-                                        {menuItem.name}
-                                      </Link>
-                                    );
-                                  })}
-                                </>
-                              )}
-                              {/* Empty state hint */}
-                              {pinnedClients.length === 0 && myMenu.length === 0 && (
-                                <p className="text-[12px] text-gray-400 px-3 py-2">
-                                  לחצי על ⭐ ליד פריט בתפריט כדי להוסיף אותו לכאן
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
                       {/* Navigation sections — Accordion */}
                       <nav className="flex-1 px-2 py-1 space-y-0.5">
                         {/* Daily Focus — single entry point (no duplication) */}
@@ -1117,6 +1041,78 @@ function LayoutInner({ children }) {
                           <Target className="w-4 h-4" style={{ color: isActive(createPageUrl("MyFocus")) ? 'white' : '#FFC107' }} />
                           התמונה המלאה
                         </Link>
+
+                        {/* כלים אישיים — right after top buttons */}
+                        {(myMenu.length > 0 || pinnedClients.length > 0) && (
+                          <div className="mb-2 border-b border-gray-200 pb-2">
+                            <button
+                              onClick={() => setCollapsedSections(prev => {
+                                const next = new Set(prev);
+                                if (next.has('personal_tools')) next.delete('personal_tools'); else next.add('personal_tools');
+                                return next;
+                              })}
+                              className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <Star className="w-3.5 h-3.5 text-amber-400" />
+                                <span>כלים אישיים</span>
+                              </div>
+                              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${!collapsedSections.has('personal_tools') ? '' : '-rotate-90'}`} />
+                            </button>
+                            {!collapsedSections.has('personal_tools') && (
+                              <div className="mt-0.5">
+                                {pinnedClients.slice(0, 8).map(client => (
+                                  <div key={client.id} className="flex items-center gap-1 group">
+                                    <Link
+                                      to={`${createPageUrl('ClientManagement')}?clientId=${client.id}`}
+                                      onClick={() => setIsMobileMenuOpen(false)}
+                                      className="flex-1 flex items-center gap-2 px-3 py-1 rounded-lg text-xs text-slate-700 hover:bg-slate-50 transition-colors">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                      {client.name}
+                                    </Link>
+                                  </div>
+                                ))}
+                                {myMenu.map(href => {
+                                  let menuItem = null;
+                                  for (const section of Object.values(sidebarSections)) {
+                                    menuItem = section.items.find(i => i.href === href);
+                                    if (menuItem) break;
+                                    if (section.subGroups) {
+                                      for (const sg of section.subGroups) {
+                                        menuItem = sg.items.find(i => i.href === href);
+                                        if (menuItem) break;
+                                      }
+                                      if (menuItem) break;
+                                    }
+                                  }
+                                  if (!menuItem) return null;
+                                  return (
+                                    <div key={href} className="flex items-center gap-1 group">
+                                      <Link to={href}
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className={`flex-1 flex items-center gap-2 px-3 py-1 rounded-lg text-xs transition-colors
+                                          ${isActive(href) ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                        <menuItem.icon className="w-3 h-3" />
+                                        {menuItem.name}
+                                      </Link>
+                                      <button
+                                        onClick={() => setMyMenu(prev => {
+                                          const next = prev.filter(h => h !== href);
+                                          try { localStorage.setItem('calmplan_my_menu', JSON.stringify(next)); } catch {}
+                                          return next;
+                                        })}
+                                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-amber-50 transition-opacity"
+                                        title="הסר מכלים אישיים"
+                                      >
+                                        <X className="w-3 h-3 text-amber-500" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {Object.entries(sidebarSections)
                           .filter(([key]) => getVisibleSections(workMode).includes(key))
