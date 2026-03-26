@@ -748,7 +748,26 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                       <div><Label>נייד</Label><Input value={contact.mobile} onChange={(e) => updateContact(index, 'mobile', e.target.value)} placeholder="050-1234567" /></div>
                       <div><Label>אמצעי קשר מועדף</Label><Select value={contact.preferred_contact_method} onValueChange={(value) => updateContact(index, 'preferred_contact_method', value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="email">אימייל</SelectItem><SelectItem value="phone">טלפון</SelectItem><SelectItem value="mobile">נייד</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem></SelectContent></Select></div>
                     </div>
-                    <div className="mt-3"><label className="flex items-center gap-2"><Checkbox checked={contact.is_primary} onCheckedChange={(checked) => updateContact(index, 'is_primary', checked)} />איש קשר ראשי</label></div>
+                    <div className="mt-3 flex items-center gap-6">
+                      <label className="flex items-center gap-2"><Checkbox checked={contact.is_primary} onCheckedChange={(checked) => updateContact(index, 'is_primary', checked)} />איש קשר ראשי</label>
+                      <label className="flex items-center gap-2">
+                        <Checkbox checked={false} onCheckedChange={(checked) => {
+                          if (!checked) return;
+                          // Copy contact data to shareholders
+                          const newShareholder = {
+                            name: contact.name || '', id_number: '', birth_date: '',
+                            license_number: '', phone: contact.phone || contact.mobile || '',
+                            email: contact.email || '', role: contact.role || 'בעל מניות',
+                            custom_fields: {}
+                          };
+                          setFormData(prev => ({
+                            ...prev,
+                            shareholders: [...(prev.shareholders || []), newShareholder]
+                          }));
+                        }} />
+                        <span className="text-xs text-slate-500">העתק גם לבעלי מניות</span>
+                      </label>
+                    </div>
                     {contact.notes !== undefined && (<div className="mt-3"><Label>הערות</Label><Input value={contact.notes} onChange={(e) => updateContact(index, 'notes', e.target.value)} placeholder="הערות נוספות..." /></div>)}
                   </div>
                 ))}
