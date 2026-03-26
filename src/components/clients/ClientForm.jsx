@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useApp } from '@/contexts/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,43 @@ import ProcessTreeManager from '@/components/clients/ProcessTreeManager';
 import { loadAutomationRules, getAutoLinkedServices } from '@/config/automationRules';
 import TagSelector from '@/components/ui/TagSelector';
 
+// Global display fields settings — same for all clients, stored in localStorage
+function DisplayFieldsSettings() {
+  const { displayFields, updateDisplayField } = useApp();
+  const FIELD_OPTIONS = [
+    { key: 'entity_number', label: 'ח"פ / ע.מ.', group: 'מזהים' },
+    { key: 'deductions_file', label: 'תיק ניכויים', group: 'מזהים' },
+    { key: 'deductions_id', label: 'מזהה ניכויים', group: 'מזהים' },
+    { key: 'advances_id', label: 'מזהה מקדמות', group: 'מזהים' },
+    { key: 'social_security_id', label: 'תיק ביטוח לאומי', group: 'מזהים' },
+    { key: 'vat_file', label: 'תיק מע"מ', group: 'מזהים' },
+    { key: 'shareholder_name', label: 'שם בעל מניות', group: 'בעלי מניות' },
+    { key: 'shareholder_id', label: 'ת"ז בעל מניות', group: 'בעלי מניות' },
+    { key: 'shareholder_phone', label: 'טלפון בעל מניות', group: 'בעלי מניות' },
+  ];
+  const groups = [...new Set(FIELD_OPTIONS.map(f => f.group))];
+  return (
+    <div>
+      <h3 className="text-sm font-bold text-slate-700 mb-1">הגדרת שדות להצגה — כלל המערכת</h3>
+      <p className="text-xs text-slate-400 mb-4">ההגדרה חלה על כל העמודים: רשימת משימות, דאשבורדים, שכר ומיסים</p>
+      {groups.map(group => (
+        <div key={group} className="mb-3">
+          <h4 className="text-xs font-bold text-slate-500 mb-1">{group}</h4>
+          {FIELD_OPTIONS.filter(f => f.group === group).map(({ key, label }) => (
+            <label key={key} className="flex items-center gap-3 px-3 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+              <input type="checkbox"
+                checked={displayFields[key] ?? false}
+                onChange={e => updateDisplayField(key, e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-blue-600"
+              />
+              <span className="text-sm font-medium text-slate-700">{label}</span>
+            </label>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate }) {
   const [formData, setFormData] = useState({
@@ -1303,28 +1341,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
 
             {/* ── הגדרות הצגה ── */}
             <TabsContent value="display_settings" className="space-y-4 rounded-2xl border-2 border-slate-200 bg-slate-50/30 p-5">
-              <h3 className="text-sm font-bold text-slate-700 mb-2">שדות להצגה ברשימות משימות ודאשבורדים</h3>
-              <p className="text-xs text-slate-400 mb-4">סמני אילו שדות יוצגו ליד שם הלקוח בעמודי משימות, דאשבורד שכר ומיסים</p>
-              {[
-                { key: 'show_entity_number', label: 'ח"פ / ע.מ.' },
-                { key: 'show_deductions_file', label: 'תיק ניכויים' },
-                { key: 'show_deductions_id', label: 'מזהה ניכויים' },
-                { key: 'show_advances_id', label: 'מזהה מקדמות' },
-                { key: 'show_social_security_id', label: 'תיק ביטוח לאומי' },
-                { key: 'show_shareholders', label: 'בעלי מניות' },
-              ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 cursor-pointer">
-                  <input type="checkbox"
-                    checked={formData.display_fields?.[key] ?? false}
-                    onChange={e => setFormData(prev => ({
-                      ...prev,
-                      display_fields: { ...prev.display_fields, [key]: e.target.checked }
-                    }))}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600"
-                  />
-                  <span className="text-sm font-medium text-slate-700">{label}</span>
-                </label>
-              ))}
+              <DisplayFieldsSettings />
             </TabsContent>
           </Tabs>
 

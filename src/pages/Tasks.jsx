@@ -36,6 +36,7 @@ import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG, ALL_SERVICES, getTas
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import { getCategoryLabel } from '@/utils/categoryLabels';
 import { useDesign } from '@/contexts/DesignContext';
+import { useApp } from '@/contexts/AppContext';
 import { loadTags, TAGS_CHANGED_EVENT } from '@/services/tagService';
 
 // Error Boundary to prevent white screen crashes
@@ -167,6 +168,7 @@ function getTimePeriods() {
 export default function TasksPage() {
   const design = useDesign();
   const { confirm, ConfirmDialogComponent } = useConfirm();
+  const { getClientDisplayIds } = useApp();
   const { prevMonthStart, prevMonthEnd, currMonthStart, currMonthEnd, tabs: TIME_TABS } = useMemo(() => getTimePeriods(), []);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1306,15 +1308,7 @@ export default function TasksPage() {
                                 {(() => {
                                   const cl = clientByName[task.client_name];
                                   if (!cl) return null;
-                                  const df = cl.display_fields || {};
-                                  const ids = [];
-                                  if ((df.show_entity_number !== false) && cl.entity_number) ids.push({ l: 'ח"פ', v: cl.entity_number });
-                                  const ti = cl.tax_info || {};
-                                  const annual = ti.annual_tax_ids || {};
-                                  if ((df.show_deductions_file !== false) && ti.tax_deduction_file_number) ids.push({ l: 'תיק ניכויים', v: ti.tax_deduction_file_number });
-                                  if ((df.show_deductions_id !== false) && annual.deductions_id) ids.push({ l: 'מזהה ניכויים', v: annual.deductions_id });
-                                  if ((df.show_advances_id !== false) && annual.tax_advances_id) ids.push({ l: 'מקדמות', v: annual.tax_advances_id });
-                                  if (df.show_social_security_id && ti.social_security_file_number) ids.push({ l: 'ב"ל', v: ti.social_security_file_number });
+                                  const ids = getClientDisplayIds(cl);
                                   if (ids.length === 0) return null;
                                   return (
                                     <span className="flex gap-1.5 shrink-0">
