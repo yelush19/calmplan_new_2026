@@ -637,8 +637,9 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadl
     }
 
     // מס"ב ספקים: check client's cycle count from process tree
+    // מס"ב ספקים: check client's cycle count (default: 2 cycles per tree definition)
     const masavCycles = categoryKey === 'מס"ב ספקים'
-      ? parseInt(client?.process_tree?.P2_masav_suppliers?.masav_cycles || '1')
+      ? parseInt(client?.process_tree?.P2_masav_suppliers?.masav_cycles || '2')
       : 0;
 
     if (masavCycles >= 2) {
