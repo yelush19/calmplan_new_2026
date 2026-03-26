@@ -1287,3 +1287,59 @@ export const deleteAllStickyNotes = async () => {
     return { data: { success: false, error: err.message } };
   }
 };
+
+/**
+ * Bulk update deadline (due_date) for tasks matching category + report period.
+ * Use case: tax authority postpones deadline (e.g., war situation → מע"מ moved to 12.04)
+ *
+ * @param {Object} params
+ * @param {string[]} params.categories - Task categories to match (e.g., ['מע"מ', 'מקדמות מס', 'work_vat_reporting', 'work_tax_advances'])
+ * @param {string} params.reportPeriod - Report period to match (e.g., '2026-02' for February 2026)
+ * @param {string} params.newDueDate - New due date in YYYY-MM-DD format (e.g., '2026-04-12')
+ * @param {boolean} params.dryRun - If true, only preview without changing (default: true)
+ */
+export const bulkUpdateDeadline = async ({ categories = [], reportPeriod = '', newDueDate = '', dryRun = true } = {}) => {
+  try {
+    const Task = _registry.get('Task');
+    if (!Task) return { data: { success: false, error: 'Task entity not found' } };
+    if (!categories.length || !reportPeriod || !newDueDate) {
+      return { data: { success: false, error: 'חסרים פרמטרים: categories, reportPeriod, newDueDate' } };
+    }
+
+    const allTasks = await Task.list(null, 5000);
+    const matching = (allTasks || []).filter(t => {
+      if (!t.category || !categories.includes(t.category)) return false;
+      // Match by report_period field OR by due_date month
+      const period = t.report_period || (t.due_date ? t.due_date.slice(0, 7) : '');
+      return period === reportPeriod;
+    });
+
+    if (dryRun) {
+      return {
+        data: {
+          success: true,
+          dryRun: true,
+          matchCount: matching.length,
+          preview: matching.map(t => ({ id: t.id, title: t.title, client: t.client_name, oldDue: t.due_date, newDue: newDueDate })),
+          message: `נמצאו ${matching.length} משימות שיעודכנו ל-${newDueDate}`,
+        },
+      };
+    }
+
+    let updated = 0;
+    for (const task of matching) {
+      await Task.update(task.id, { due_date: newDueDate, date: newDueDate });
+      updated++;
+    }
+
+    return {
+      data: {
+        success: true,
+        updated,
+        message: `עודכנו ${updated} משימות — דדליין חדש: ${newDueDate}`,
+      },
+    };
+  } catch (err) {
+    return { data: { success: false, error: err.message } };
+  }
+};
