@@ -104,94 +104,89 @@ export default function ClientListItem({ client, isSelected, onToggleSelect, onE
       return orderA - orderB;
     });
 
+    // Tax IDs for compact display
+    const ti = client.tax_info || {};
+    const annual = ti.annual_tax_ids || {};
+    const taxIds = [
+      client.entity_number && { l: 'ח"פ', v: client.entity_number },
+      ti.tax_deduction_file_number && { l: 'תיק ניכויים', v: ti.tax_deduction_file_number },
+      annual.deductions_id && { l: 'מזהה ניכויים', v: annual.deductions_id },
+      annual.tax_advances_id && { l: 'מזהה מקדמות', v: annual.tax_advances_id },
+    ].filter(Boolean);
+
+    // Frequency labels
+    const ri = client.reporting_info || {};
+    const freqLabel = (f) => f === 'monthly' ? 'חודשי' : f === 'bimonthly' ? 'דו-חודשי' : f === 'quarterly' ? 'רבעוני' : f === 'not_applicable' ? '' : f || '';
+    const frequencies = [
+      ri.vat_reporting_frequency && ri.vat_reporting_frequency !== 'not_applicable' && { l: 'מע"מ', v: freqLabel(ri.vat_reporting_frequency) },
+      ri.payroll_frequency && ri.payroll_frequency !== 'not_applicable' && { l: 'שכר', v: freqLabel(ri.payroll_frequency) },
+      ri.tax_advances_frequency && ri.tax_advances_frequency !== 'not_applicable' && { l: 'מקדמות', v: freqLabel(ri.tax_advances_frequency) },
+      ri.social_security_frequency && ri.social_security_frequency !== 'not_applicable' && { l: 'ב"ל', v: freqLabel(ri.social_security_frequency) },
+      ri.deductions_frequency && ri.deductions_frequency !== 'not_applicable' && { l: 'ניכויים', v: freqLabel(ri.deductions_frequency) },
+    ].filter(Boolean);
+
     return (
-        <div className={`group flex flex-col md:flex-row items-start md:items-center justify-between px-5 py-4 transition-all duration-300 border-b border-gray-100 rounded-xl mx-1 my-0.5 ${isSelected ? 'bg-gradient-to-l from-blue-50/80 to-sky-50/40 border-r-4 border-r-blue-500 shadow-sm' : 'hover:bg-gradient-to-l hover:from-emerald-50/30 hover:to-white hover:border-r-4 hover:border-r-emerald-400 hover:shadow-sm'}`}>
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-                {/* Selection Checkbox */}
+        <div className={`group border rounded-xl mx-1 my-1 transition-all duration-200 ${isSelected ? 'bg-sky-50/50 border-blue-300 shadow-sm' : 'bg-white border-gray-200 hover:border-emerald-300 hover:shadow-sm'}`}>
+            {/* Row 1: Name + Status + Contact + Actions */}
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100">
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={onToggleSelect}
-                    className="w-5 h-5"
-                  />
+                  <Checkbox checked={isSelected} onCheckedChange={onToggleSelect} className="w-4 h-4" />
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{client.name}</h3>
-                  </div>
+                <Badge className={`${uiProps.badge} border text-[11px] font-bold px-2 py-0.5 shrink-0`}>
+                    {uiProps.label}
+                </Badge>
 
-                  {/* Services grouped by branch — matching card layout */}
-                  {sortedBranches.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      {sortedBranches.map(([branchId, svcs]) => {
-                        const branchCfg = BRANCH_DISPLAY[branchId];
-                        if (!branchCfg) {
-                          // Unknown branch — plain badges
-                          return svcs.map(st => (
-                            <Badge key={st} className="bg-gray-50 text-gray-700 border-gray-300 text-xs px-2 py-0.5 border font-medium">
-                              {serviceTypeLabels[st] || st}
-                            </Badge>
-                          ));
-                        }
-                        return (
-                          <div key={branchId} className="flex items-center gap-0.5">
-                            <span className={`${branchCfg.headerBg} text-white text-[11px] font-bold px-2 py-1 rounded-r-lg`}>
-                              {branchCfg.label}
-                            </span>
-                            <div className="flex gap-0.5">
-                              {svcs.map(st => (
-                                <Badge key={st} className={`${branchCfg.badgeBg} text-xs px-2 py-0.5 border rounded-none last:rounded-l-lg font-medium`}>
-                                  {serviceTypeLabels[st] || st}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-            </div>
+                <h3 className="text-sm font-black text-gray-900 truncate">{client.name}</h3>
 
-            <div className="w-full md:w-auto flex items-center justify-start gap-5 mt-3 md:mt-0">
+                {mainContact?.name && mainContact.name !== client.contact_person && (
+                  <span className="text-xs text-slate-400 shrink-0">👤 {mainContact.name}</span>
+                )}
+
+                <div className="flex-1" />
+
                 {mainContact?.phone && (
-                  <a href={`tel:${mainContact.phone}`} className="text-base text-gray-600 hover:text-emerald-700 flex items-center gap-2 transition-colors font-medium">
-                    <Phone className="w-4 h-4"/>
-                    <span className="hidden sm:inline">{mainContact.phone}</span>
+                  <a href={`tel:${mainContact.phone}`} className="text-xs text-gray-500 hover:text-emerald-700 flex items-center gap-1 shrink-0">
+                    <Phone className="w-3 h-3" />{mainContact.phone}
                   </a>
                 )}
                 {mainContact?.email && (
-                  <a href={`mailto:${mainContact.email}`} className="text-base text-gray-600 hover:text-emerald-700 flex items-center gap-2 transition-colors">
-                    <Mail className="w-4 h-4"/>
-                    <span className="hidden sm:inline truncate max-w-xs">{mainContact.email}</span>
+                  <a href={`mailto:${mainContact.email}`} className="text-xs text-gray-500 hover:text-emerald-700 flex items-center gap-1 shrink-0 max-w-[200px] truncate">
+                    <Mail className="w-3 h-3" />{mainContact.email}
                   </a>
                 )}
-            </div>
 
-            <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 mt-3 md:mt-0">
-                <Badge className={`${uiProps.badge} flex items-center gap-1.5 border text-sm font-bold px-3 py-1`}>
-                    {client.status === 'onboarding_pending' && <UserCheck className="w-4 h-4"/>}
-                    {uiProps.label}
-                </Badge>
-                <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(client)} title="עריכת פרטים" className="h-9 w-9 hover:bg-white hover:shadow-sm rounded-lg">
-                        <Edit className="w-4.5 h-4.5 text-gray-500 group-hover:text-gray-700" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onSelectAccounts(client)} title="ניהול חשבונות" className="h-9 w-9 hover:bg-white hover:shadow-sm rounded-lg">
-                        <Building className="w-4.5 h-4.5 text-gray-500 group-hover:text-gray-700" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onSelectCollections(client)} title="ניהול גבייה" className="h-9 w-9 hover:bg-white hover:shadow-sm rounded-lg">
-                        <DollarSign className="w-4.5 h-4.5 text-gray-500 group-hover:text-gray-700" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onSelectFiles?.(client)} title="ניהול קבצים" className="h-9 w-9 hover:bg-white hover:shadow-sm rounded-lg">
-                        <FolderOpen className="w-4.5 h-4.5 text-gray-500 group-hover:text-gray-700" />
-                    </Button>
-                     <Button variant="ghost" size="icon" onClick={() => onDelete(client.id)} title="מחיקת לקוח" className="h-9 w-9 hover:bg-orange-50 rounded-lg">
-                        <Trash2 className="w-4.5 h-4.5 text-gray-400 hover:text-orange-600" />
-                    </Button>
+                <div className="flex gap-0.5 shrink-0">
+                    <Button variant="ghost" size="icon" onClick={() => onEdit(client)} title="עריכה" className="h-7 w-7 hover:bg-white hover:shadow-sm rounded-lg"><Edit className="w-3.5 h-3.5 text-gray-400" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => onSelectAccounts(client)} title="חשבונות" className="h-7 w-7 hover:bg-white hover:shadow-sm rounded-lg"><Building className="w-3.5 h-3.5 text-gray-400" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => onSelectFiles?.(client)} title="קבצים" className="h-7 w-7 hover:bg-white hover:shadow-sm rounded-lg"><FolderOpen className="w-3.5 h-3.5 text-gray-400" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => onDelete(client.id)} title="מחיקה" className="h-7 w-7 hover:bg-orange-50 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-gray-400" /></Button>
                 </div>
             </div>
+
+            {/* Row 2: Services (frequencies) — compact */}
+            {frequencies.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 px-4 py-1.5 border-b border-gray-50">
+                {frequencies.map(({ l, v }) => (
+                  <span key={l} className="text-[11px] text-slate-500">
+                    <span className="font-bold">{l}:</span> {v}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Row 3: Tax IDs — compact, click to copy */}
+            {taxIds.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 px-4 py-1.5">
+                {taxIds.map(({ l, v }) => (
+                  <span key={l} className="text-[11px] text-slate-400 cursor-pointer hover:text-blue-500"
+                    title={`${l}: ${v} — לחצי להעתקה`}
+                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(v); }}>
+                    <span className="font-semibold">{l}:</span> {v}
+                  </span>
+                ))}
+              </div>
+            )}
         </div>
     );
 }
