@@ -577,7 +577,39 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
                     {client.tax_info?.annual_tax_ids?.tax_advances_id || <span className="text-red-500 text-xs font-bold">חסר</span>}
                   </span>
                 )}
+                {client.tax_info?.social_security_file_number && (
+                  <span>
+                    <span className="font-bold text-gray-800">ב"ל:</span>{' '}
+                    {client.tax_info.social_security_file_number}
+                  </span>
+                )}
+                {client.tax_info?.vat_file_number && (
+                  <span>
+                    <span className="font-bold text-gray-800">מע"מ:</span>{' '}
+                    {client.tax_info.vat_file_number}
+                  </span>
+                )}
               </div>
+              {/* Shareholders */}
+              {client.shareholders?.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                  {client.shareholders.map((sh, idx) => (
+                    <span key={idx} className="flex items-center gap-1">
+                      <span className="text-xs">👤</span>
+                      <span className="font-medium">{sh.name}</span>
+                      {sh.id_number && <span className="text-xs text-gray-400">({sh.id_number})</span>}
+                      {sh.phone && <span className="text-xs text-gray-400">{sh.phone}</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Balance sheet target date */}
+              {client.reporting_info?.balance_sheet_target_date && (
+                <div className="mt-1 text-sm">
+                  <span className="font-bold text-emerald-700">יעד מאזן:</span>{' '}
+                  <span className="text-gray-700">{new Date(client.reporting_info.balance_sheet_target_date).toLocaleDateString('he-IL')}</span>
+                </div>
+              )}
             </div>
           );
         })()}
