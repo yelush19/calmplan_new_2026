@@ -1306,13 +1306,15 @@ export default function TasksPage() {
                                 {(() => {
                                   const cl = clientByName[task.client_name];
                                   if (!cl) return null;
+                                  const df = cl.display_fields || {};
                                   const ids = [];
-                                  if (cl.entity_number) ids.push({ l: 'ח"פ', v: cl.entity_number });
+                                  if ((df.show_entity_number !== false) && cl.entity_number) ids.push({ l: 'ח"פ', v: cl.entity_number });
                                   const ti = cl.tax_info || {};
                                   const annual = ti.annual_tax_ids || {};
-                                  if (ti.tax_deduction_file_number) ids.push({ l: 'תיק ניכויים', v: ti.tax_deduction_file_number });
-                                  if (annual.deductions_id) ids.push({ l: 'מזהה ניכויים', v: annual.deductions_id });
-                                  if (annual.tax_advances_id) ids.push({ l: 'מקדמות', v: annual.tax_advances_id });
+                                  if ((df.show_deductions_file !== false) && ti.tax_deduction_file_number) ids.push({ l: 'תיק ניכויים', v: ti.tax_deduction_file_number });
+                                  if ((df.show_deductions_id !== false) && annual.deductions_id) ids.push({ l: 'מזהה ניכויים', v: annual.deductions_id });
+                                  if ((df.show_advances_id !== false) && annual.tax_advances_id) ids.push({ l: 'מקדמות', v: annual.tax_advances_id });
+                                  if (df.show_social_security_id && ti.social_security_file_number) ids.push({ l: 'ב"ל', v: ti.social_security_file_number });
                                   if (ids.length === 0) return null;
                                   return (
                                     <span className="flex gap-1.5 shrink-0">

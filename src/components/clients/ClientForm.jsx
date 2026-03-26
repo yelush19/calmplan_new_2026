@@ -102,7 +102,16 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     paying_client_id: '',
     tags: [],
     notes: '',
-    process_tree: {}
+    process_tree: {},
+    shareholders: [],  // Array of { name, id_number, birth_date, license_number, phone, email, role, custom_fields: {} }
+    display_fields: {  // Which fields to show on task lists/dashboards
+      show_entity_number: true,
+      show_deductions_file: true,
+      show_deductions_id: true,
+      show_advances_id: true,
+      show_social_security_id: false,
+      show_shareholders: false,
+    },
   });
 
   const [onboardingLink, setOnboardingLink] = useState('');
@@ -662,6 +671,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <TabsTrigger value="tax" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-violet-300 data-[state=inactive]:hover:text-violet-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">🧾 מס</TabsTrigger>
               <TabsTrigger value="accounts" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-cyan-300 data-[state=inactive]:hover:text-cyan-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">🏦 בנק</TabsTrigger>
               <TabsTrigger value="integration" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-indigo-300 data-[state=inactive]:hover:text-indigo-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">🔗 חיבורים</TabsTrigger>
+              <TabsTrigger value="shareholders" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-slate-600 data-[state=active]:to-slate-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-slate-400 data-[state=inactive]:hover:text-slate-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">👤 בעלי מניות</TabsTrigger>
+              <TabsTrigger value="display_settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-slate-600 data-[state=active]:to-slate-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:border-slate-400 data-[state=inactive]:hover:text-slate-600 rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap transition-all duration-300">👁️ הצגה</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4 rounded-2xl border-2 border-sky-200 bg-sky-50/30 p-5">
@@ -1201,6 +1212,100 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 <div><Label htmlFor="annual_reports_client_id">מזהה מערכת מאזנים</Label><Input id="annual_reports_client_id" value={formData.integration_info.annual_reports_client_id} onChange={(e) => handleInputChange('annual_reports_client_id', e.target.value, 'integration_info')} /></div>
                 <div><Label htmlFor="lastpass_payment_entry_id">מזהה רשומת תשלומים (אופציונלי)</Label><Input id="lastpass_payment_entry_id" value={formData.integration_info.lastpass_payment_entry_id} onChange={(e) => handleInputChange('lastpass_payment_entry_id', e.target.value, 'integration_info')} placeholder="לקישור נוח לפרטי תשלום ברשויות" /></div>
               </div>
+            </TabsContent>
+
+            {/* ── בעלי מניות ── */}
+            <TabsContent value="shareholders" className="space-y-4 rounded-2xl border-2 border-slate-200 bg-slate-50/30 p-5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-bold text-slate-700">בעלי מניות / בעלים</h3>
+                <Button type="button" size="sm" variant="outline" onClick={() => {
+                  const updated = [...(formData.shareholders || []), {
+                    name: '', id_number: '', birth_date: '', license_number: '', phone: '', email: '', role: 'בעל מניות', custom_fields: {}
+                  }];
+                  setFormData(prev => ({ ...prev, shareholders: updated }));
+                }}>
+                  + הוסף בעל מניות
+                </Button>
+              </div>
+              {(formData.shareholders || []).length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-4">אין בעלי מניות רשומים — לחצי "הוסף בעל מניות"</p>
+              )}
+              {(formData.shareholders || []).map((sh, idx) => (
+                <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-600">בעל מניות #{idx + 1}</span>
+                    <Button type="button" size="sm" variant="ghost" className="text-slate-400 hover:text-slate-700" onClick={() => {
+                      const updated = formData.shareholders.filter((_, i) => i !== idx);
+                      setFormData(prev => ({ ...prev, shareholders: updated }));
+                    }}>✕ הסר</Button>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <div><Label>שם מלא</Label><Input value={sh.name} onChange={e => { const u = [...formData.shareholders]; u[idx] = { ...u[idx], name: e.target.value }; setFormData(prev => ({ ...prev, shareholders: u })); }} /></div>
+                    <div><Label>תעודת זהות</Label><Input value={sh.id_number} onChange={e => { const u = [...formData.shareholders]; u[idx] = { ...u[idx], id_number: e.target.value }; setFormData(prev => ({ ...prev, shareholders: u })); }} /></div>
+                    <div><Label>תאריך לידה</Label><Input type="date" value={sh.birth_date} onChange={e => { const u = [...formData.shareholders]; u[idx] = { ...u[idx], birth_date: e.target.value }; setFormData(prev => ({ ...prev, shareholders: u })); }} /></div>
+                    <div><Label>רישיון נהיגה</Label><Input value={sh.license_number} onChange={e => { const u = [...formData.shareholders]; u[idx] = { ...u[idx], license_number: e.target.value }; setFormData(prev => ({ ...prev, shareholders: u })); }} /></div>
+                    <div><Label>טלפון</Label><Input value={sh.phone} onChange={e => { const u = [...formData.shareholders]; u[idx] = { ...u[idx], phone: e.target.value }; setFormData(prev => ({ ...prev, shareholders: u })); }} /></div>
+                    <div><Label>מייל</Label><Input type="email" value={sh.email} onChange={e => { const u = [...formData.shareholders]; u[idx] = { ...u[idx], email: e.target.value }; setFormData(prev => ({ ...prev, shareholders: u })); }} /></div>
+                    <div><Label>תפקיד</Label><Input value={sh.role} onChange={e => { const u = [...formData.shareholders]; u[idx] = { ...u[idx], role: e.target.value }; setFormData(prev => ({ ...prev, shareholders: u })); }} placeholder='בעל מניות / מנכ״ל / דירקטור' /></div>
+                  </div>
+                  {/* Custom fields */}
+                  <div className="mt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">שדות נוספים:</span>
+                      <Button type="button" size="sm" variant="ghost" className="text-xs text-blue-500" onClick={() => {
+                        const fieldName = prompt('שם השדה החדש:');
+                        if (!fieldName) return;
+                        const u = [...formData.shareholders];
+                        u[idx] = { ...u[idx], custom_fields: { ...u[idx].custom_fields, [fieldName]: '' } };
+                        setFormData(prev => ({ ...prev, shareholders: u }));
+                      }}>+ שדה</Button>
+                    </div>
+                    {Object.entries(sh.custom_fields || {}).map(([key, val]) => (
+                      <div key={key} className="flex items-center gap-2 mt-1">
+                        <Label className="text-xs w-24 shrink-0">{key}</Label>
+                        <Input className="text-sm" value={val} onChange={e => {
+                          const u = [...formData.shareholders];
+                          u[idx] = { ...u[idx], custom_fields: { ...u[idx].custom_fields, [key]: e.target.value } };
+                          setFormData(prev => ({ ...prev, shareholders: u }));
+                        }} />
+                        <Button type="button" size="sm" variant="ghost" className="text-xs text-slate-400" onClick={() => {
+                          const u = [...formData.shareholders];
+                          const cf = { ...u[idx].custom_fields };
+                          delete cf[key];
+                          u[idx] = { ...u[idx], custom_fields: cf };
+                          setFormData(prev => ({ ...prev, shareholders: u }));
+                        }}>✕</Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </TabsContent>
+
+            {/* ── הגדרות הצגה ── */}
+            <TabsContent value="display_settings" className="space-y-4 rounded-2xl border-2 border-slate-200 bg-slate-50/30 p-5">
+              <h3 className="text-sm font-bold text-slate-700 mb-2">שדות להצגה ברשימות משימות ודאשבורדים</h3>
+              <p className="text-xs text-slate-400 mb-4">סמני אילו שדות יוצגו ליד שם הלקוח בעמודי משימות, דאשבורד שכר ומיסים</p>
+              {[
+                { key: 'show_entity_number', label: 'ח"פ / ע.מ.' },
+                { key: 'show_deductions_file', label: 'תיק ניכויים' },
+                { key: 'show_deductions_id', label: 'מזהה ניכויים' },
+                { key: 'show_advances_id', label: 'מזהה מקדמות' },
+                { key: 'show_social_security_id', label: 'תיק ביטוח לאומי' },
+                { key: 'show_shareholders', label: 'בעלי מניות' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+                  <input type="checkbox"
+                    checked={formData.display_fields?.[key] ?? false}
+                    onChange={e => setFormData(prev => ({
+                      ...prev,
+                      display_fields: { ...prev.display_fields, [key]: e.target.checked }
+                    }))}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600"
+                  />
+                  <span className="text-sm font-medium text-slate-700">{label}</span>
+                </label>
+              ))}
             </TabsContent>
           </Tabs>
 
