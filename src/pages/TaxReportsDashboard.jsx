@@ -692,10 +692,15 @@ export default function TaxReportsDashboardPage() {
               const newDate = prompt('דדליין חדש (YYYY-MM-DD):', '2026-04-12');
               if (!newDate) return;
               const monthStr = format(selectedMonth, 'yyyy-MM');
-              const cats = ['מע"מ', 'work_vat_reporting', 'מע"מ 874', 'work_vat_874', 'מקדמות מס', 'work_tax_advances', 'ניכויים', 'work_deductions', 'ביטוח לאומי', 'work_social_security'];
+              const cats = ['מע"מ', 'work_vat_reporting', 'מע"מ 874', 'work_vat_874', 'מקדמות מס', 'work_tax_advances', 'ניכויים', 'work_deductions', 'ביטוח לאומי', 'work_social_security', 'קליטת הכנסות', 'work_income_collection', 'קליטת הוצאות', 'work_expense_collection'];
               const preview = await bulkUpdateDeadline({ categories: cats, reportPeriod: monthStr, newDueDate: newDate, dryRun: true });
               const count = preview?.data?.matchCount || 0;
-              if (count === 0) { alert('לא נמצאו משימות מתאימות לחודש ' + monthStr); return; }
+              const debug = preview?.data?.debug;
+              if (count === 0) {
+                const debugMsg = debug ? `\n\nדיבאג: ${debug.totalTasks} משימות במערכת\nדוגמאות: ${JSON.stringify(debug.sampleCategoryTasks, null, 2)}` : '';
+                alert(`לא נמצאו משימות מתאימות לחודש ${monthStr}${debugMsg}`);
+                return;
+              }
               if (!confirm(`נמצאו ${count} משימות של ${monthStr}.\nלעדכן דדליין ל-${newDate}?`)) return;
               const result = await bulkUpdateDeadline({ categories: cats, reportPeriod: monthStr, newDueDate: newDate, dryRun: false });
               alert(result?.data?.message || 'הושלם');

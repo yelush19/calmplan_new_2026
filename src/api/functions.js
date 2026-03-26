@@ -1331,13 +1331,21 @@ export const bulkUpdateDeadline = async ({ categories = [], reportPeriod = '', n
     });
 
     if (dryRun) {
+      // Also show sample non-matching tasks for debugging
+      const sampleNonMatch = (allTasks || [])
+        .filter(t => categories.includes(t.category))
+        .slice(0, 3)
+        .map(t => ({ title: t.title?.slice(0, 40), category: t.category, report_period: t.report_period, report_month: t.report_month, due_date: t.due_date }));
       return {
         data: {
           success: true,
           dryRun: true,
           matchCount: matching.length,
           preview: matching.map(t => ({ id: t.id, title: t.title, client: t.client_name, oldDue: t.due_date, newDue: newDueDate })),
-          message: `נמצאו ${matching.length} משימות שיעודכנו ל-${newDueDate}`,
+          debug: { totalTasks: (allTasks || []).length, categoriesSearched: categories, reportPeriod, sampleCategoryTasks: sampleNonMatch },
+          message: matching.length > 0
+            ? `נמצאו ${matching.length} משימות שיעודכנו ל-${newDueDate}`
+            : `לא נמצאו משימות מתאימות לחודש ${reportPeriod}`,
         },
       };
     }

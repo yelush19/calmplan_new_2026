@@ -334,7 +334,7 @@ const REPORT_CATEGORIES = {
     accent: 'border-slate-400',
     bgSoft: 'bg-slate-50',
     dot: 'bg-[#4682B4]',
-    frequencyField: null,
+    frequencyField: 'vat_reporting_frequency',  // Inherits from VAT frequency (bimonthly clients skip odd months)
     serviceTypeKey: 'income_entry',
     treeNodeId: 'P2_income',
     dayOfMonth: 15,
@@ -350,7 +350,7 @@ const REPORT_CATEGORIES = {
     accent: 'border-slate-400',
     bgSoft: 'bg-slate-50',
     dot: 'bg-[#4682B4]',
-    frequencyField: null,
+    frequencyField: 'vat_reporting_frequency',  // Inherits from VAT frequency
     serviceTypeKey: 'expense_entry',
     treeNodeId: 'P2_expenses',
     dayOfMonth: 15,
@@ -637,8 +637,9 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadl
     }
 
     // מס"ב ספקים: check client's cycle count from process tree
+    // מס"ב ספקים: check client's cycle count (default: 2 cycles per tree definition)
     const masavCycles = categoryKey === 'מס"ב ספקים'
-      ? parseInt(client?.process_tree?.P2_masav_suppliers?.masav_cycles || '1')
+      ? parseInt(client?.process_tree?.P2_masav_suppliers?.masav_cycles || '2')
       : 0;
 
     if (masavCycles >= 2) {
@@ -689,7 +690,17 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [expandedCard, setExpandedCard] = useState(null); // catKey of expanded card
   const [isClearingCache, setIsClearingCache] = useState(false);
   // deadlineOverrides: { [month]: { [categoryKey]: day } } — per-month per-category
-  const [deadlineOverrides, setDeadlineOverrides] = useState({});
+  // PERSISTED in localStorage so they survive page navigation and injection
+  const [deadlineOverrides, setDeadlineOverrides] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`calmplan_deadline_overrides_${selectedYear}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  // Save overrides to localStorage whenever they change
+  React.useEffect(() => {
+    try { localStorage.setItem(`calmplan_deadline_overrides_${selectedYear}`, JSON.stringify(deadlineOverrides)); } catch {}
+  }, [deadlineOverrides, selectedYear]);
   const [systemDueDates, setSystemDueDates] = useState(null);
   const [systemDueDatesConfigId, setSystemDueDatesConfigId] = useState(null);
   const [systemExecutionPeriods, setSystemExecutionPeriods] = useState(null);
@@ -1033,8 +1044,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setResults({ created, errors, total: tasksToCreate.length });
     setIsGenerating(false);
     setShowPreview(false);
-    // Reset deadline overrides back to defaults after injection
-    setDeadlineOverrides({});
+    // NOTE: deadline overrides are persisted in localStorage — NOT reset after injection
+    // User can manually reset via "איפוס הכל" button if needed
     await loadData();
     if (onGenerateComplete) onGenerateComplete();
   };
