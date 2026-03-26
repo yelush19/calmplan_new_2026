@@ -315,9 +315,10 @@ function ServiceTreeSection({ services }) {
   );
 }
 
-export default function ClientCard({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks, onSelectFiles, onSelectProviders }) {
+export default function ClientCard({ client, isSelected, forceOpen, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks, onSelectFiles, onSelectProviders }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isCardOpen, setIsCardOpen] = useState(true); // Card starts open
+  const [isCardOpen, setIsCardOpen] = useState(true);
+  useEffect(() => { if (forceOpen !== undefined) setIsCardOpen(forceOpen); }, [forceOpen]);
   const [relatedTasks, setRelatedTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [accountsSummary, setAccountsSummary] = useState(null);
@@ -433,7 +434,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
   const hasReporting = reportingRow1.length > 0 || reportingRow2.length > 0;
 
   return (
-    <Card className={`w-full transition-all duration-300 flex flex-col group rounded-2xl ${isSelected ? 'border-[3px] border-blue-400 ring-2 ring-blue-100 bg-gradient-to-br from-blue-50/60 to-white shadow-lg shadow-blue-100/50' : 'border-[3px] border-gray-200 bg-white shadow-sm hover:shadow-xl hover:border-emerald-300 hover:-translate-y-1'}`}>
+    <Card className={`w-full transition-all duration-300 group rounded-2xl ${!isCardOpen ? 'h-auto' : 'flex flex-col'} ${isSelected ? 'border-[3px] border-blue-400 ring-2 ring-blue-100 bg-gradient-to-br from-blue-50/60 to-white shadow-lg shadow-blue-100/50' : 'border-[3px] border-gray-200 bg-white shadow-sm hover:shadow-xl hover:border-emerald-300 hover:-translate-y-1'}`}>
       <CardHeader className="pb-3 flex-shrink-0 rounded-t-2xl border-b cursor-pointer" onClick={() => setIsCardOpen(prev => !prev)}
         style={{ background: 'linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 50%, #F0FDF4 100%)', borderColor: '#E2E8F0' }}>
         <div className="flex justify-between items-start gap-2">

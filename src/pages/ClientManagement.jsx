@@ -97,7 +97,8 @@ export default function ClientManagementPage() {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [view, setView] = useState('grid'); // Default: grid (collapsed cards with compact first row)
+  const [view, setView] = useState('grid');
+  const [allCardsOpen, setAllCardsOpen] = useState(true); // Controls all cards open/collapsed
   const [selectedClient, setSelectedClient] = useState(null);
   const [showClientForm, setShowClientForm] = useState(false);
   const [selectedAccountsClient, setSelectedAccountsClient] = useState(null);
@@ -1063,6 +1064,11 @@ export default function ClientManagementPage() {
               onChange={setStatusFilter}
             />
 
+            <div className="flex gap-1 ms-2">
+              <Button variant="outline" size="sm" className="h-8 text-xs px-2" onClick={() => setAllCardsOpen(true)}>פתח הכל</Button>
+              <Button variant="outline" size="sm" className="h-8 text-xs px-2" onClick={() => setAllCardsOpen(false)}>סגור הכל</Button>
+            </div>
+
             <ToggleGroup type="single" value={view} onValueChange={(value) => value && setView(value)} className="hidden md:flex">
               <ToggleGroupItem value="grid" aria-label="תצוגת רשת">
                 <LayoutGrid className="h-4 w-4" />
@@ -1168,6 +1174,7 @@ export default function ClientManagementPage() {
                               key={client.id}
                               client={client}
                               isSelected={selectedClientIds.has(client.id)}
+                              forceOpen={allCardsOpen}
                               onToggleSelect={() => handleToggleSelectClient(client.id)}
                               onEdit={(c) => { setSelectedClient(c); setShowClientForm(true); }}
                               onSelectTasks={setSelectedTasksClient}
