@@ -317,6 +317,7 @@ function ServiceTreeSection({ services }) {
 
 export default function ClientCard({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks, onSelectFiles, onSelectProviders }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isCardOpen, setIsCardOpen] = useState(false); // Card starts collapsed
   const [relatedTasks, setRelatedTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [accountsSummary, setAccountsSummary] = useState(null);
@@ -433,7 +434,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
 
   return (
     <Card className={`w-full transition-all duration-300 flex flex-col group rounded-2xl ${isSelected ? 'border-[3px] border-blue-400 ring-2 ring-blue-100 bg-gradient-to-br from-blue-50/60 to-white shadow-lg shadow-blue-100/50' : 'border-[3px] border-gray-200 bg-white shadow-sm hover:shadow-xl hover:border-emerald-300 hover:-translate-y-1'}`}>
-      <CardHeader className="pb-3 flex-shrink-0 bg-gradient-to-l from-emerald-50/30 via-sky-50/20 to-white rounded-t-2xl border-b border-gray-100">
+      <CardHeader className="pb-3 flex-shrink-0 bg-gradient-to-l from-emerald-50/30 via-sky-50/20 to-white rounded-t-2xl border-b border-gray-100 cursor-pointer" onClick={() => setIsCardOpen(prev => !prev)}>
         <div className="flex justify-between items-start gap-2">
             <div className="flex items-start gap-3 flex-1 min-w-0">
               {/* Selection Checkbox */}
@@ -463,15 +464,24 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
               )}
             </div>
         </div>
-        {mainContact?.name && (
-          <p className="text-base text-gray-700 flex items-center gap-2 mt-1 truncate font-medium">
-            <User className="w-4 h-4 flex-shrink-0" />
-            <span>{mainContact.name}</span>
-          </p>
-        )}
+        <div className="flex items-center gap-3 mt-1 flex-wrap">
+          {mainContact?.name && (
+            <span className="text-sm text-gray-700 flex items-center gap-1 font-medium">
+              <User className="w-3.5 h-3.5 flex-shrink-0" />
+              {mainContact.name}
+            </span>
+          )}
+          {mainContact?.phone && (
+            <span className="text-sm text-gray-500">{mainContact.phone}</span>
+          )}
+          {client.entity_number && (
+            <span className="text-xs text-gray-400">ח"פ: {client.entity_number}</span>
+          )}
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ms-auto ${isCardOpen ? '' : '-rotate-90'}`} />
+        </div>
       </CardHeader>
       
-      <CardContent className="py-3 flex-grow overflow-y-auto">
+      {isCardOpen && <CardContent className="py-3 flex-grow overflow-y-auto">
         {(mainContact?.phone || mainContact?.email) && (
           <div className="space-y-2 mb-3">
             {mainContact.phone && (
@@ -577,7 +587,39 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
                     {client.tax_info?.annual_tax_ids?.tax_advances_id || <span className="text-red-500 text-xs font-bold">חסר</span>}
                   </span>
                 )}
+                {client.tax_info?.social_security_file_number && (
+                  <span>
+                    <span className="font-bold text-gray-800">ב"ל:</span>{' '}
+                    {client.tax_info.social_security_file_number}
+                  </span>
+                )}
+                {client.tax_info?.vat_file_number && (
+                  <span>
+                    <span className="font-bold text-gray-800">מע"מ:</span>{' '}
+                    {client.tax_info.vat_file_number}
+                  </span>
+                )}
               </div>
+              {/* Shareholders */}
+              {client.shareholders?.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                  {client.shareholders.map((sh, idx) => (
+                    <span key={idx} className="flex items-center gap-1">
+                      <span className="text-xs">👤</span>
+                      <span className="font-medium">{sh.name}</span>
+                      {sh.id_number && <span className="text-xs text-gray-400">({sh.id_number})</span>}
+                      {sh.phone && <span className="text-xs text-gray-400">{sh.phone}</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Balance sheet target date */}
+              {client.reporting_info?.balance_sheet_target_date && (
+                <div className="mt-1 text-sm">
+                  <span className="font-bold text-emerald-700">יעד מאזן:</span>{' '}
+                  <span className="text-gray-700">{new Date(client.reporting_info.balance_sheet_target_date).toLocaleDateString('he-IL')}</span>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -644,9 +686,9 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
             )}
           </div>
         )}
-      </CardContent>
-      
-      <CardFooter className="grid grid-cols-4 gap-1.5 p-2.5 border-t-2 border-gray-100 bg-gradient-to-l from-gray-50/80 to-white rounded-b-2xl flex-shrink-0">
+      </CardContent>}
+
+      {isCardOpen && <CardFooter className="grid grid-cols-4 gap-1.5 p-2.5 border-t-2 border-gray-100 bg-gradient-to-l from-gray-50/80 to-white rounded-b-2xl flex-shrink-0">
           <Button variant="ghost" size="sm" onClick={() => onEdit(client)} className="h-9 text-sm font-medium text-gray-600 hover:bg-white hover:text-emerald-700 hover:shadow-sm">
             <Edit className="w-4 h-4 ml-1" />
             עריכה
@@ -683,7 +725,7 @@ export default function ClientCard({ client, isSelected, onToggleSelect, onEdit,
               <Trash2 className="w-4 h-4 ml-1" />
               מחיקה
           </Button>
-      </CardFooter>
+      </CardFooter>}
       <TaxInfoDialog client={client} open={showTaxInfo} onClose={() => setShowTaxInfo(false)} />
     </Card>
   );
