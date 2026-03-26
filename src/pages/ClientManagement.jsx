@@ -1168,7 +1168,7 @@ export default function ClientManagementPage() {
                         <Badge variant="outline" className="text-[12px] px-1.5 py-0">{group.clients.length}</Badge>
                       </button>
                       {!collapsedGroups.has(group.status) && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
                           {group.clients.map(client => (
                             <ClientCard
                               key={client.id}
