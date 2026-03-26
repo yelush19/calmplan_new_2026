@@ -689,7 +689,17 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [expandedCard, setExpandedCard] = useState(null); // catKey of expanded card
   const [isClearingCache, setIsClearingCache] = useState(false);
   // deadlineOverrides: { [month]: { [categoryKey]: day } } — per-month per-category
-  const [deadlineOverrides, setDeadlineOverrides] = useState({});
+  // PERSISTED in localStorage so they survive page navigation and injection
+  const [deadlineOverrides, setDeadlineOverrides] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`calmplan_deadline_overrides_${selectedYear}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  // Save overrides to localStorage whenever they change
+  React.useEffect(() => {
+    try { localStorage.setItem(`calmplan_deadline_overrides_${selectedYear}`, JSON.stringify(deadlineOverrides)); } catch {}
+  }, [deadlineOverrides, selectedYear]);
   const [systemDueDates, setSystemDueDates] = useState(null);
   const [systemDueDatesConfigId, setSystemDueDatesConfigId] = useState(null);
   const [systemExecutionPeriods, setSystemExecutionPeriods] = useState(null);
@@ -1033,8 +1043,8 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setResults({ created, errors, total: tasksToCreate.length });
     setIsGenerating(false);
     setShowPreview(false);
-    // Reset deadline overrides back to defaults after injection
-    setDeadlineOverrides({});
+    // NOTE: deadline overrides are persisted in localStorage — NOT reset after injection
+    // User can manually reset via "איפוס הכל" button if needed
     await loadData();
     if (onGenerateComplete) onGenerateComplete();
   };
