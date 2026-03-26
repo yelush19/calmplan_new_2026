@@ -873,7 +873,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                       </SelectTrigger>
                       <SelectContent>
                         {allClientsForLinking.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          <SelectItem key={c.id} value={c.id || `client_${c.name}`}>{c.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -1048,7 +1048,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                       </SelectTrigger>
                       <SelectContent>
                         {availableCompanies.map(company => (
-                          <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                          <SelectItem key={company.id} value={company.id || `company_${company.name}`}>{company.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
