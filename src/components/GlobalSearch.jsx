@@ -9,7 +9,7 @@ import {
   ArrowLeft, Plus, UserCheck, FileBarChart, Calculator, Eye, Zap,
   Network, Home as HomeIcon,
 } from 'lucide-react';
-import { Task, Client, Project, StickyNote as StickyNoteEntity } from '@/api/entities';
+import { Task, Client, Project, StickyNote as StickyNoteEntity, ServiceProvider } from '@/api/entities';
 import { createPageUrl } from '@/utils';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
@@ -45,6 +45,9 @@ const ENTITY_CONFIGS = [
       if (contacts.some(c => [c.name, c.email, c.phone, c.role].some(v => v && String(v).toLowerCase().includes(q)))) return true;
       // notes
       if (item.notes && String(item.notes).toLowerCase().includes(q)) return true;
+      // shareholders (בעלי מניות)
+      const shareholders = item.shareholders || [];
+      if (shareholders.some(sh => [sh.name, sh.id_number, sh.phone, sh.email, sh.license_number, sh.role].some(v => v && String(v).toLowerCase().includes(q)))) return true;
       return false;
     },
     getUrl: (item) => `${createPageUrl('ClientManagement')}?clientId=${item.id}`,
@@ -93,6 +96,37 @@ const ENTITY_CONFIGS = [
     getUrl: () => createPageUrl('Home'),
     getSubtitle: (item) => item.content?.substring(0, 60) || '',
   },
+  {
+    key: 'providers',
+    label: 'ספקי שירות',
+    icon: Users,
+    color: 'text-teal-600',
+    entity: ServiceProvider,
+    searchFields: ['name', 'contact_person', 'phone', 'email', 'service_type', 'notes'],
+    getUrl: () => createPageUrl('ServiceProviders'),
+    getSubtitle: (item) => [item.service_type, item.contact_person, item.phone].filter(Boolean).join(' | '),
+  },
+];
+
+// Sidebar menu items for search
+const MENU_ITEMS = [
+  { label: 'מה לעשות היום', url: createPageUrl('Home'), keywords: 'היום עכשיו פוקוס' },
+  { label: 'התמונה המלאה', url: createPageUrl('MyFocus'), keywords: 'מיקוד תמונה מלאה' },
+  { label: 'תכנון שבועי', url: createPageUrl('WeeklyPlanningDashboard'), keywords: 'שבוע תכנון שבועי' },
+  { label: 'לוח שנה', url: createPageUrl('Calendar'), keywords: 'לוח שנה אירועים' },
+  { label: 'כל המשימות', url: createPageUrl('Tasks'), keywords: 'משימות רשימה' },
+  { label: 'שלב ייצור ואישור', url: createPageUrl('PayrollDashboard'), keywords: 'שכר ייצור תלושים' },
+  { label: 'דיווחים שוטפים 102', url: createPageUrl('PayrollReportsDashboard'), keywords: '102 ביטוח לאומי ניכויים' },
+  { label: 'דיווחי מיסים', url: createPageUrl('TaxReportsDashboard'), keywords: 'מעמ מקדמות מיסים' },
+  { label: 'התאמות חשבונות', url: createPageUrl('Reconciliations'), keywords: 'התאמות בנק אשראי' },
+  { label: 'מאזנים ודוחות', url: createPageUrl('BalanceSheets'), keywords: 'מאזן דוח שנתי' },
+  { label: 'מרכז לקוחות', url: createPageUrl('ClientManagement'), keywords: 'לקוחות ניהול' },
+  { label: 'פרוייקטים', url: createPageUrl('Projects'), keywords: 'פרויקט פיתוח' },
+  { label: 'הגדרות מערכת', url: createPageUrl('Settings'), keywords: 'הגדרות תהליכים' },
+  { label: 'משימות חוזרות', url: createPageUrl('RecurringTasks'), keywords: 'הזרקה חוזרות דדליין' },
+  { label: 'ספקי שירות', url: createPageUrl('ServiceProviders'), keywords: 'ספק רואה חשבון מתפעל' },
+  { label: 'תכנון ארוחות', url: createPageUrl('MealPlanner'), keywords: 'ארוחות בישול' },
+  { label: 'גיבויים', url: createPageUrl('BackupManager'), keywords: 'גיבוי שחזור' },
 ];
 
 export default function GlobalSearch() {
@@ -277,6 +311,12 @@ export default function GlobalSearch() {
     );
     if (matchingActions.length > 0) filtered['actions'] = matchingActions;
 
+    // ── Menu items search ──
+    const menuMatches = MENU_ITEMS.filter(m =>
+      m.label.toLowerCase().includes(q) || m.keywords.toLowerCase().includes(q)
+    );
+    if (menuMatches.length > 0) filtered['menu'] = menuMatches;
+
     // ── Service Catalog search ──
     const serviceMatches = serviceIndex.filter(svc =>
       svc.label.toLowerCase().includes(q) ||
@@ -433,6 +473,30 @@ export default function GlobalSearch() {
                       {svc.branch} | {svc.dashboard} | {svc.key}
                     </div>
                   </div>
+                  <ArrowLeft className="w-3 h-3 text-gray-300 shrink-0" />
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {/* Menu / Pages results */}
+          {!isLoading && results.menu && results.menu.length > 0 && (
+            <CommandGroup heading={
+              <span className="flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5 text-slate-500" />
+                עמודים ותפריטים
+                <span className="text-gray-400 font-normal">({results.menu.length})</span>
+              </span>
+            }>
+              {results.menu.map((m) => (
+                <CommandItem
+                  key={m.url}
+                  value={`menu-${m.label}`}
+                  onSelect={() => { navigate(m.url); setOpen(false); }}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="font-medium text-sm">{m.label}</span>
                   <ArrowLeft className="w-3 h-3 text-gray-300 shrink-0" />
                 </CommandItem>
               ))}
