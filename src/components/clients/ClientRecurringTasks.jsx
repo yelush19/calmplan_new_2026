@@ -334,7 +334,8 @@ const REPORT_CATEGORIES = {
     accent: 'border-slate-400',
     bgSoft: 'bg-slate-50',
     dot: 'bg-[#4682B4]',
-    frequencyField: 'vat_reporting_frequency',  // Inherits from VAT frequency (bimonthly clients skip odd months)
+    frequencyField: 'vat_reporting_frequency',  // Inherits from VAT frequency
+    fallbackFrequencyField: 'tax_advances_frequency',  // If no VAT, inherit from tax advances
     serviceTypeKey: 'income_entry',
     treeNodeId: 'P2_income',
     dayOfMonth: 15,
@@ -351,6 +352,7 @@ const REPORT_CATEGORIES = {
     bgSoft: 'bg-slate-50',
     dot: 'bg-[#4682B4]',
     frequencyField: 'vat_reporting_frequency',  // Inherits from VAT frequency
+    fallbackFrequencyField: 'tax_advances_frequency',  // If no VAT, inherit from tax advances
     serviceTypeKey: 'expense_entry',
     treeNodeId: 'P2_expenses',
     dayOfMonth: 15,
@@ -554,7 +556,9 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadl
 
   // Yearly: single task — triggered when any month is selected (but only once)
   if (frequency === 'yearly') {
-    const dueDate = getDueDateForCategory(categoryKey, client, 5) || `${year}-05-31`;
+    // Use client's custom balance sheet target date if available
+    const clientTargetDate = client?.reporting_info?.balance_sheet_target_date;
+    const dueDate = clientTargetDate || getDueDateForCategory(categoryKey, client, 5) || `${year}-05-31`;
     tasks.push({
       date: new Date(dueDate),
       period: `שנת ${year}`,
