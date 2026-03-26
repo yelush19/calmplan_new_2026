@@ -334,7 +334,7 @@ const REPORT_CATEGORIES = {
     accent: 'border-slate-400',
     bgSoft: 'bg-slate-50',
     dot: 'bg-[#4682B4]',
-    frequencyField: null,
+    frequencyField: 'vat_reporting_frequency',  // Inherits from VAT frequency (bimonthly clients skip odd months)
     serviceTypeKey: 'income_entry',
     treeNodeId: 'P2_income',
     dayOfMonth: 15,
@@ -350,7 +350,7 @@ const REPORT_CATEGORIES = {
     accent: 'border-slate-400',
     bgSoft: 'bg-slate-50',
     dot: 'bg-[#4682B4]',
-    frequencyField: null,
+    frequencyField: 'vat_reporting_frequency',  // Inherits from VAT frequency
     serviceTypeKey: 'expense_entry',
     treeNodeId: 'P2_expenses',
     dayOfMonth: 15,
