@@ -330,7 +330,173 @@ export default function MealPlannerPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* ── תכנון תפריט חג ── */}
+      <HolidayMealPlanner />
     </div>
+  );
+}
+
+// ── Holiday Meal Planner Component ──
+function HolidayMealPlanner() {
+  const [holiday, setHoliday] = useState('pesach');
+  const [guests, setGuests] = useState(8);
+  const [meals, setMeals] = useState([]);
+  const [newMeal, setNewMeal] = useState('');
+  const [newPrepTime, setNewPrepTime] = useState('');
+  const [newPrepDay, setNewPrepDay] = useState('day_before');
+
+  const HOLIDAYS = {
+    pesach: { label: '🫓 פסח', meals: ['ליל הסדר', 'חג ראשון צהריים', 'חג שני', 'חול המועד', 'שביעי'] },
+    rosh_hashana: { label: '🍎 ראש השנה', meals: ['ערב חג', 'חג ראשון', 'חג שני'] },
+    sukkot: { label: '🌿 סוכות', meals: ['ערב חג', 'חג ראשון', 'חול המועד', 'שמחת תורה'] },
+    shavuot: { label: '🥛 שבועות', meals: ['ערב חג', 'חג'] },
+    shabbat: { label: '🕯️ שבת', meals: ['ערב שבת', 'שבת צהריים', 'סעודה שלישית'] },
+  };
+
+  const PREP_DAYS = [
+    { value: '3_days_before', label: '3 ימים לפני (הקפאה)' },
+    { value: '2_days_before', label: '2 ימים לפני' },
+    { value: 'day_before', label: 'יום לפני' },
+    { value: 'morning', label: 'בוקר החג' },
+    { value: 'hour_before', label: 'שעה לפני' },
+  ];
+
+  const addMeal = () => {
+    if (!newMeal.trim()) return;
+    setMeals(prev => [...prev, {
+      id: Date.now(),
+      name: newMeal.trim(),
+      prepTime: parseInt(newPrepTime) || 30,
+      prepDay: newPrepDay,
+      done: false,
+    }]);
+    setNewMeal('');
+    setNewPrepTime('');
+  };
+
+  const toggleDone = (id) => {
+    setMeals(prev => prev.map(m => m.id === id ? { ...m, done: !m.done } : m));
+  };
+
+  const removeMeal = (id) => {
+    setMeals(prev => prev.filter(m => m.id !== id));
+  };
+
+  const totalPrepTime = meals.reduce((sum, m) => sum + m.prepTime, 0);
+  const totalHours = Math.floor(totalPrepTime / 60);
+  const totalMins = totalPrepTime % 60;
+
+  const shareWhatsApp = () => {
+    const h = HOLIDAYS[holiday];
+    const byDay = {};
+    PREP_DAYS.forEach(d => { byDay[d.value] = meals.filter(m => m.prepDay === d.value); });
+    let text = `🍽️ *תפריט ${h.label}* (${guests} סועדים)\n\n`;
+    PREP_DAYS.forEach(d => {
+      const dayMeals = byDay[d.value];
+      if (dayMeals.length === 0) return;
+      text += `📅 *${d.label}:*\n`;
+      dayMeals.forEach(m => {
+        text += `${m.done ? '✅' : '☐'} ${m.name} (${m.prepTime} דק')\n`;
+      });
+      text += '\n';
+    });
+    text += `⏱ סה"כ: ${totalHours}:${String(totalMins).padStart(2,'0')} שעות הכנה`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  return (
+    <Card className="rounded-xl shadow-sm border">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-[#1E3A5F] text-base">
+          🍽️ תכנון תפריט חג
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Holiday + Guests */}
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <label className="text-xs font-bold text-slate-600 mb-1 block">בחרי חג</label>
+            <select value={holiday} onChange={e => setHoliday(e.target.value)}
+              className="w-full h-9 rounded-lg border border-gray-300 px-2 text-sm">
+              {Object.entries(HOLIDAYS).map(([k, v]) => (
+                <option key={k} value={k}>{v.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-24">
+            <label className="text-xs font-bold text-slate-600 mb-1 block">סועדים</label>
+            <Input type="number" value={guests} onChange={e => setGuests(parseInt(e.target.value) || 1)} className="h-9" />
+          </div>
+        </div>
+
+        {/* Meal suggestions for selected holiday */}
+        <div className="text-xs text-slate-400">
+          ארוחות ב{HOLIDAYS[holiday].label}: {HOLIDAYS[holiday].meals.join(' • ')}
+        </div>
+
+        {/* Add meal */}
+        <div className="flex gap-2">
+          <Input value={newMeal} onChange={e => setNewMeal(e.target.value)} placeholder="שם המנה..." className="flex-1 h-9 text-sm"
+            onKeyDown={e => e.key === 'Enter' && addMeal()} />
+          <Input type="number" value={newPrepTime} onChange={e => setNewPrepTime(e.target.value)} placeholder="דק'" className="w-16 h-9 text-sm" />
+          <select value={newPrepDay} onChange={e => setNewPrepDay(e.target.value)}
+            className="h-9 rounded-lg border border-gray-300 px-2 text-xs w-36">
+            {PREP_DAYS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+          </select>
+          <Button onClick={addMeal} size="icon" className="bg-emerald-500 hover:bg-emerald-600 h-9 w-9 shrink-0">
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Timeline by prep day */}
+        {PREP_DAYS.map(day => {
+          const dayMeals = meals.filter(m => m.prepDay === day.value);
+          if (dayMeals.length === 0) return null;
+          const dayTime = dayMeals.reduce((s, m) => s + m.prepTime, 0);
+          return (
+            <div key={day.value} className="border rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold text-[#1E3A5F]">📅 {day.label}</span>
+                <span className="text-xs text-slate-400">{dayTime} דק'</span>
+              </div>
+              {dayMeals.map(m => (
+                <div key={m.id} className="flex items-center gap-2 py-1">
+                  <Checkbox checked={m.done} onCheckedChange={() => toggleDone(m.id)} />
+                  <span className={`flex-1 text-sm ${m.done ? 'line-through text-slate-400' : ''}`}>{m.name}</span>
+                  <span className="text-xs text-slate-400">{m.prepTime} דק'</span>
+                  <button onClick={() => removeMeal(m.id)} className="text-slate-300 hover:text-amber-600">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+
+        {/* Summary + Share */}
+        {meals.length > 0 && (
+          <div className="flex items-center justify-between pt-2 border-t">
+            <div>
+              <span className="text-sm font-bold text-[#1E3A5F]">סה"כ: {meals.length} מנות</span>
+              <span className="text-xs text-slate-400 ms-2">⏱ {totalHours}:{String(totalMins).padStart(2,'0')} שעות הכנה</span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={shareWhatsApp} className="gap-1 text-emerald-700 border-emerald-300">
+                📱 WhatsApp
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1 text-slate-600" onClick={() => {
+                const text = meals.filter(m => !m.done).map(m => `- ${m.name} (${m.prepTime} דק')`).join('\n');
+                navigator.clipboard.writeText(text);
+                toast.success('הועתק!');
+              }}>
+                📋 העתק
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
