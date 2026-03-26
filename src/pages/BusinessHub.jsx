@@ -25,7 +25,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { Task, AccountReconciliation, Dashboard } from '@/api/entities';
-import { generateProcessTasks, cleanupYearEndOnlyTasks, cleanupP3GhostTasks, dedupTasksForMonth, wipeAllTasksForMonth, previewTaskGeneration, deleteAllStickyNotes } from '@/api/functions';
+import { generateProcessTasks, cleanupYearEndOnlyTasks, cleanupP3GhostTasks, dedupTasksForMonth, wipeAllTasksForMonth, previewTaskGeneration, deleteAllStickyNotes, bulkUpdateDeadline } from '@/api/functions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const StatCard = ({ title, value, icon: Icon, link, isLoading }) => {
@@ -503,6 +503,25 @@ export default function BusinessHubPage() {
               >
                 <AlertCircle className="w-4 h-4 ms-2" />
                 מחק כל הפתקים הדביקים
+              </Button>
+              <Button
+                onClick={async () => {
+                  // First: dry run to preview
+                  const categories = ['מע"מ', 'work_vat_reporting', 'מע"מ 874', 'work_vat_874', 'מקדמות מס', 'work_tax_advances'];
+                  const preview = await bulkUpdateDeadline({ categories, reportPeriod: '2026-02', newDueDate: '2026-04-12', dryRun: true });
+                  const count = preview?.data?.matchCount || 0;
+                  if (count === 0) { alert('לא נמצאו משימות מתאימות'); return; }
+                  if (!confirm(`נמצאו ${count} משימות מע"מ/מקדמות של פברואר 2026.\nלעדכן דדליין ל-12.04.2026?`)) return;
+                  const result = await bulkUpdateDeadline({ categories, reportPeriod: '2026-02', newDueDate: '2026-04-12', dryRun: false });
+                  alert(result?.data?.message || 'הושלם');
+                  loadData();
+                }}
+                disabled={isGeneratingTasks}
+                variant="outline"
+                className="w-full mt-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+              >
+                <AlertCircle className="w-4 h-4 ms-2" />
+                דחיית דדליין מע"מ/מקדמות פב' → 12.04.2026
               </Button>
             </CardContent>
           </Card>

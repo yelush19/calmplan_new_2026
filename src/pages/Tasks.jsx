@@ -182,6 +182,7 @@ export default function TasksPage() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [clientMap, setClientMap] = useState({});
   const [clientsList, setClientsList] = useState([]);
+  const [clientByName, setClientByName] = useState({});
   const [timeTab, setTimeTab] = useState('active');
   const [contextFilter, setContextFilter] = useState('all');
   const [sortField, setSortField] = useState('due_date');
@@ -365,9 +366,11 @@ export default function TasksPage() {
       const arr = Array.isArray(clients) ? clients : [];
       setClientsList(arr);
       const map = {};
-      arr.forEach(c => { if (c.name) map[c.name] = c.id; });
+      const byName = {};
+      arr.forEach(c => { if (c.name) { map[c.name] = c.id; byName[c.name] = c; } });
       setClientMap(map);
-    } catch { setClientMap({}); setClientsList([]); }
+      setClientByName(byName);
+    } catch { setClientMap({}); setClientsList([]); setClientByName({}); }
   };
 
   const loadTasks = async () => {
@@ -1300,6 +1303,31 @@ export default function TasksPage() {
                                 <span className="text-sm font-medium text-gray-800 truncate max-w-[150px]">
                                   {task.client_name || '-'}
                                 </span>
+                                {(() => {
+                                  const cl = clientByName[task.client_name];
+                                  if (!cl) return null;
+                                  const df = cl.display_fields || {};
+                                  const ids = [];
+                                  if ((df.show_entity_number !== false) && cl.entity_number) ids.push({ l: 'ח"פ', v: cl.entity_number });
+                                  const ti = cl.tax_info || {};
+                                  const annual = ti.annual_tax_ids || {};
+                                  if ((df.show_deductions_file !== false) && ti.tax_deduction_file_number) ids.push({ l: 'תיק ניכויים', v: ti.tax_deduction_file_number });
+                                  if ((df.show_deductions_id !== false) && annual.deductions_id) ids.push({ l: 'מזהה ניכויים', v: annual.deductions_id });
+                                  if ((df.show_advances_id !== false) && annual.tax_advances_id) ids.push({ l: 'מקדמות', v: annual.tax_advances_id });
+                                  if (df.show_social_security_id && ti.social_security_file_number) ids.push({ l: 'ב"ל', v: ti.social_security_file_number });
+                                  if (ids.length === 0) return null;
+                                  return (
+                                    <span className="flex gap-1.5 shrink-0">
+                                      {ids.map(({ l, v }) => (
+                                        <span key={l} className="text-[10px] text-slate-400 cursor-pointer hover:text-blue-500"
+                                          title={`${l}: ${v} — לחצי להעתקה`}
+                                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); navigator.clipboard.writeText(v); }}>
+                                          {l}:{v}
+                                        </span>
+                                      ))}
+                                    </span>
+                                  );
+                                })()}
                                 {clientMap[task.client_name] && (
                                   <Button
                                     variant="ghost"
