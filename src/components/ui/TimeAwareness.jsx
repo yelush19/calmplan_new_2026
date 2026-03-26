@@ -61,10 +61,23 @@ function getWorkDaysUntil(targetDate, withDetails = false) {
     current = addDays(current, 1);
   }
 
+  // Also count "emergency days" — Friday + chol hamoed that COULD be worked if deadline forces it
+  let emergencyDays = 0;
+  let currentE = addDays(today, 1);
+  while (currentE <= target) {
+    const dayE = getDay(currentE);
+    const dateStrE = format(currentE, 'yyyy-MM-dd');
+    // Friday or chol hamoed (but NOT Shabbat, NOT major holidays like Yom Kippur/Rosh Hashana)
+    if (dayE === 5 || (dayE !== 6 && HOLIDAY_DATES_2026.has(dateStrE))) {
+      emergencyDays++;
+    }
+    currentE = addDays(currentE, 1);
+  }
+
   if (!withDetails) return count;
 
-  const details = `ימי עבודה (${count}):\n${workDays.join(', ')}\n\nימים שלא נספרים (${offDays.length}):\n${offDays.join(', ')}`;
-  return { count, details };
+  const details = `ימי עבודה (${count}):\n${workDays.join(', ')}\n\nימים שלא נספרים (${offDays.length}):\n${offDays.join(', ')}${emergencyDays > 0 ? `\n\n⚠️ במקרה חירום: +${emergencyDays} ימים (שישי/חוה"מ)` : ''}`;
+  return { count, details, emergencyDays };
 }
 
 function getDeadlineStyle(calendarDays, hasIncomplete) {
