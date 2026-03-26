@@ -556,7 +556,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
             <FileText className="w-3.5 h-3.5 text-gray-500" />
             <span className="text-[11px] text-gray-600 font-medium">{fieldDef.label}:</span>
             <Select
-              value={currentValue}
+              value={currentValue || undefined}
               onValueChange={(val) => onExtraFieldChange(node.id, fieldKey, val)}
             >
               <SelectTrigger className="h-6 w-[180px] text-[11px] border-gray-300 bg-white">

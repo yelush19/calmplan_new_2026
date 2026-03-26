@@ -77,6 +77,8 @@ export default function FocusMapView({
   allTasks,
   centerLabel = 'מה לעשות עכשיו',
   centerSub = '',
+  onEditTask,
+  onStatusChange,
 }) {
   const svgRef = useRef(null);
   const [focusedNode, setFocusedNode] = useState(null);
@@ -230,10 +232,14 @@ export default function FocusMapView({
       setSelectedNode(null);
     } else {
       setSelectedNode(nodeId);
-      // Notify Design Engine of selection (global activeTaskId)
       window.dispatchEvent(new CustomEvent('calmplan:node-selected', { detail: { nodeId } }));
     }
   }, [selectedNode]);
+
+  const handleNodeDoubleClick = useCallback((e, task) => {
+    e.stopPropagation();
+    if (onEditTask) onEditTask(task);
+  }, [onEditTask]);
 
   return (
     <div className="relative w-full h-full" style={{
@@ -391,6 +397,7 @@ export default function FocusMapView({
           return (
             <g key={`u-${node.id}`}
               onClick={(e) => handleNodeClick(e, node.id)}
+              onDoubleClick={(e) => handleNodeDoubleClick(e, node.task)}
               style={{
                 cursor: 'pointer',
                 transition: 'opacity 0.4s, transform 0.3s',
@@ -478,6 +485,40 @@ export default function FocusMapView({
           ✕ הצג הכל
         </button>
       )}
+
+      {/* Quick action panel when node is selected */}
+      {selectedNode && (() => {
+        const task = tasks.find(t => t.id === selectedNode);
+        if (!task) return null;
+        const STATUS_OPTIONS = [
+          { key: 'not_started', label: 'לבצע', color: '#64748B' },
+          { key: 'waiting_for_materials', label: 'ממתין לחומרים', color: '#F59E0B' },
+          { key: 'ready_to_broadcast', label: 'מוכן לשידור', color: '#0D9488' },
+          { key: 'production_completed', label: 'הושלם', color: '#16A34A' },
+        ];
+        return (
+          <div className="absolute top-3 right-3 bg-white rounded-xl shadow-lg border p-3 max-w-[250px] z-10">
+            <div className="text-sm font-bold text-slate-800 mb-1 truncate">{task.title}</div>
+            <div className="text-xs text-slate-400 mb-2">{task.client_name}</div>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {STATUS_OPTIONS.map(s => (
+                <button key={s.key}
+                  onClick={() => { if (onStatusChange) onStatusChange(task, s.key); setSelectedNode(null); }}
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-bold border transition-all ${task.status === s.key ? 'ring-2 ring-offset-1' : 'opacity-70 hover:opacity-100'}`}
+                  style={{ borderColor: s.color, color: s.color, ...(task.status === s.key ? { backgroundColor: s.color + '15', ringColor: s.color } : {}) }}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            {onEditTask && (
+              <button onClick={() => { onEditTask(task); setSelectedNode(null); }}
+                className="w-full text-center text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg py-1 transition-colors">
+                ✏️ פתח משימה
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Legend — Focus Map identity */}
       <div className="absolute bottom-3 right-3 flex flex-col gap-1.5 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-amber-100">

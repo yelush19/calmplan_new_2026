@@ -19,6 +19,7 @@ import {
 import { cleanupGhostTasks } from '@/api/functions';
 import MindMapView from "../components/views/MindMapView";
 import GanttView from "../components/views/GanttView";
+import FocusMapView from "../components/canvas/FocusMapView";
 import { getActiveTreeTasks, getTaskPBranch, getPBranchLabel } from '@/utils/taskTreeFilter';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { motion, AnimatePresence } from "framer-motion";
@@ -1020,6 +1021,7 @@ export default function TasksPage() {
             { key: 'kanban', label: 'קנבן', icon: LayoutGrid },
             { key: 'list', label: 'רשימה', icon: List },
             { key: 'workbook', label: 'גיליון', icon: Table2 },
+            { key: 'focus', label: 'מיקוד', icon: Eye },
             { key: 'mindmap', label: 'מיינדמפ', icon: Network },
             { key: 'gantt', label: 'גאנט', icon: BarChart3 },
           ].map(({ key, label, icon: Icon }) => (
@@ -1481,6 +1483,17 @@ export default function TasksPage() {
           onStatusChange={handleStatusChange}
           onEdit={handleEditTask}
         />
+      ) : view === 'focus' ? (
+        <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '500px' }}>
+          <FocusMapView
+            tasks={filteredTasks}
+            allTasks={tasks}
+            centerLabel="כל המשימות"
+            centerSub={`${filteredTasks.length} משימות`}
+            onEditTask={handleEditTask}
+            onStatusChange={handleStatusChange}
+          />
+        </div>
       ) : view === 'mindmap' ? (
         <ViewErrorBoundary>
           <MindMapView tasks={filteredTasks} clients={clientsList} onEditTask={handleEditTask} onTaskCreated={loadTasks} onStatusChange={handleStatusChange} focusTaskId={focusTaskId} focusClientName={focusClientName} onFocusHandled={() => { setFocusTaskId(null); setFocusClientName(null); }} />
