@@ -563,8 +563,8 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {fieldDef.options.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                {fieldDef.options.filter(opt => opt.value !== '' && opt.value != null).map(opt => (
+                  <SelectItem key={opt.value} value={String(opt.value)} className="text-xs">
                     {opt.label}
                   </SelectItem>
                 ))}

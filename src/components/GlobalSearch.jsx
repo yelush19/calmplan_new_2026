@@ -21,7 +21,7 @@ const ENTITY_CONFIGS = [
     icon: Users,
     color: 'text-emerald-600',
     entity: Client,
-    searchFields: ['name', 'entity_number', 'contact_person', 'email', 'phone'],
+    searchFields: ['name', 'entity_number', 'contact_person', 'email', 'phone', 'nickname'],
     // Deep search: also check nested tax_info, reporting_info, contacts, process_tree fields
     deepSearch: (item, q) => {
       // tax_info fields (תיק ניכויים, תיק מע"מ, תיק ביטוח לאומי, etc.)
@@ -51,13 +51,21 @@ const ENTITY_CONFIGS = [
       return false;
     },
     getUrl: (item) => `${createPageUrl('ClientManagement')}?clientId=${item.id}`,
-    getSubtitle: (item) => {
+    getSubtitle: (item, q) => {
       const parts = [item.entity_number, item.contact_person, item.email].filter(Boolean);
       const ti = item.tax_info || {};
       if (ti.tax_deduction_file_number) parts.push(`ניכויים: ${ti.tax_deduction_file_number}`);
       if (ti.vat_file_number) parts.push(`מע"מ: ${ti.vat_file_number}`);
       if (ti.social_security_file_number) parts.push(`ב"ל: ${ti.social_security_file_number}`);
-      return parts.slice(0, 4).join(' | ');
+      // Show which contact matched
+      const contacts = item.contacts || [];
+      const matchedContact = q ? contacts.find(c => [c.name, c.email, c.phone].some(v => v && String(v).toLowerCase().includes(q.toLowerCase()))) : null;
+      if (matchedContact) parts.unshift(`👤 ${matchedContact.name || matchedContact.email}`);
+      // Show shareholder match
+      const shareholders = item.shareholders || [];
+      const matchedSh = q ? shareholders.find(sh => [sh.name, sh.id_number, sh.phone].some(v => v && String(v).toLowerCase().includes(q.toLowerCase()))) : null;
+      if (matchedSh) parts.unshift(`👤 בעלים: ${matchedSh.name}`);
+      return parts.slice(0, 5).join(' | ');
     },
   },
   {
@@ -423,8 +431,8 @@ export default function GlobalSearch() {
                     <Icon className={`w-4 h-4 ${config.color} shrink-0`} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{item.title || item.name}</div>
-                      {config.getSubtitle(item) && (
-                        <div className="text-[11px] text-gray-400 truncate">{config.getSubtitle(item)}</div>
+                      {config.getSubtitle(item, query) && (
+                        <div className="text-[11px] text-gray-400 truncate">{config.getSubtitle(item, query)}</div>
                       )}
                     </div>
                     {config.getUrl(item) && (

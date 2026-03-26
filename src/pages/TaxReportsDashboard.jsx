@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Task, Client } from '@/api/entities';
+import { bulkUpdateDeadline } from '@/api/functions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -682,6 +683,26 @@ export default function TaxReportsDashboardPage() {
           </Button>
           <Button variant="outline" size="sm" className="h-9 gap-1" onClick={handleExport}>
             <Download className="w-3.5 h-3.5" />CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+            onClick={async () => {
+              const newDate = prompt('דדליין חדש (YYYY-MM-DD):', '2026-04-12');
+              if (!newDate) return;
+              const monthStr = format(selectedMonth, 'yyyy-MM');
+              const cats = ['מע"מ', 'work_vat_reporting', 'מע"מ 874', 'work_vat_874', 'מקדמות מס', 'work_tax_advances', 'ניכויים', 'work_deductions', 'ביטוח לאומי', 'work_social_security'];
+              const preview = await bulkUpdateDeadline({ categories: cats, reportPeriod: monthStr, newDueDate: newDate, dryRun: true });
+              const count = preview?.data?.matchCount || 0;
+              if (count === 0) { alert('לא נמצאו משימות מתאימות לחודש ' + monthStr); return; }
+              if (!confirm(`נמצאו ${count} משימות של ${monthStr}.\nלעדכן דדליין ל-${newDate}?`)) return;
+              const result = await bulkUpdateDeadline({ categories: cats, reportPeriod: monthStr, newDueDate: newDate, dryRun: false });
+              alert(result?.data?.message || 'הושלם');
+              loadData();
+            }}
+          >
+            📅 דחה דדליין
           </Button>
           <Button
             variant={bulkMode ? 'default' : 'outline'}

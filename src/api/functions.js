@@ -1309,9 +1309,25 @@ export const bulkUpdateDeadline = async ({ categories = [], reportPeriod = '', n
     const allTasks = await Task.list(null, 5000);
     const matching = (allTasks || []).filter(t => {
       if (!t.category || !categories.includes(t.category)) return false;
-      // Match by report_period field OR by due_date month
-      const period = t.report_period || (t.due_date ? t.due_date.slice(0, 7) : '');
-      return period === reportPeriod;
+      // Match by: report_period, OR report_month+year, OR due_date month
+      const period = t.report_period || '';
+      if (period === reportPeriod) return true;
+      // Try report_month + report_year (e.g., month=2, year=2026 → '2026-02')
+      if (t.report_month && t.report_year) {
+        const composed = `${t.report_year}-${String(t.report_month).padStart(2, '0')}`;
+        if (composed === reportPeriod) return true;
+      }
+      // Fallback: due_date in the FOLLOWING month (Feb tasks have March due dates)
+      if (t.due_date) {
+        const dueMonth = t.due_date.slice(0, 7); // '2026-03'
+        // If reportPeriod is '2026-02', due dates would be '2026-03'
+        const [rYear, rMonth] = reportPeriod.split('-').map(Number);
+        let nextMonth = rMonth + 1, nextYear = rYear;
+        if (nextMonth > 12) { nextMonth = 1; nextYear++; }
+        const expectedDueMonth = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+        if (dueMonth === expectedDueMonth) return true;
+      }
+      return false;
     });
 
     if (dryRun) {
