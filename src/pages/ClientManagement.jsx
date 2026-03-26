@@ -97,7 +97,7 @@ export default function ClientManagementPage() {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [view, setView] = useState('list'); // Default: list (compact rows with tax IDs + frequencies)
+  const [view, setView] = useState('grid'); // Default: grid (collapsed cards with compact first row)
   const [selectedClient, setSelectedClient] = useState(null);
   const [showClientForm, setShowClientForm] = useState(false);
   const [selectedAccountsClient, setSelectedAccountsClient] = useState(null);
