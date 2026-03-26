@@ -29,6 +29,7 @@ import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
 import useTaskCascade from "@/hooks/useTaskCascade";
 import { useApp } from "@/contexts/AppContext";
 import { useDesign } from "@/contexts/DesignContext";
+import FocusMapView from "@/components/canvas/FocusMapView";
 import { useBiologicalClock } from "@/contexts/BiologicalClockContext";
 import OverdueAlert from "@/components/tasks/OverdueAlert";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
@@ -546,20 +547,22 @@ export default function HomePage() {
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
-        {/* ═══ 3. "מה אפשר לעשות היום" — AYOA-style mini-canvas ═══ */}
+        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map (replaces old ring canvas) ═══ */}
         {calmTasks.length === 0 ? (
           <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
             <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
           </div>
         ) : (
-          <AyoaMiniCanvas
-            tasks={calmTasks}
-            allTasks={data.activeTasks || []}
-            totalExtra={(data.overdue.length + data.today.length) - calmTasks.length}
-            onEdit={setEditingTask}
-            onStatusChange={handleStatusChange}
-            onShowFullMap={() => setShowFullMap(true)}
-          />
+          <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '400px' }}>
+            <FocusMapView
+              tasks={calmTasks}
+              allTasks={data.activeTasks || []}
+              centerLabel="מה לעשות היום"
+              centerSub={`${data.overdue.length + data.today.length} משימות`}
+              onEditTask={setEditingTask}
+              onStatusChange={handleStatusChange}
+            />
+          </div>
         )}
 
         {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
