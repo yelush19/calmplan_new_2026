@@ -29,7 +29,7 @@ export const TIME_ZONES = {
     end: '08:15',
     startMinutes: 420,   // 7 * 60
     endMinutes: 495,     // 8 * 60 + 15
-    activeBranches: ['P4'],
+    activeBranches: ['home'],
     color: '#FACC15',
     description: 'אישי / חיות מחמד / בית',
   },
@@ -42,9 +42,9 @@ export const TIME_ZONES = {
     end: '16:15',
     startMinutes: 495,
     endMinutes: 975,     // 16 * 60 + 15
-    activeBranches: ['P1', 'P2', 'P3'],
+    activeBranches: ['payroll', 'bookkeeping', 'management'],
     color: '#1565C0',
-    description: 'מיקוד מקצועי (P1-P3)',
+    description: 'שכר, הנה"ח, ניהול',
   },
   afternoon: {
     key: 'afternoon',
@@ -55,7 +55,7 @@ export const TIME_ZONES = {
     end: '20:30',
     startMinutes: 975,
     endMinutes: 1230,    // 20 * 60 + 30
-    activeBranches: ['P4'],
+    activeBranches: ['home'],
     color: '#4CAF50',
     description: 'משפחה / בית / מנוחה',
   },
@@ -68,9 +68,9 @@ export const TIME_ZONES = {
     end: '22:00',
     startMinutes: 1230,
     endMinutes: 1320,    // 22 * 60
-    activeBranches: ['P3', 'P4'],
+    activeBranches: ['management', 'home'],
     color: '#7B1FA2',
-    description: 'אדמיניסטרציה / תחזוקת בית / תכנון',
+    description: 'ניהול מערכת / תחזוקת בית / תכנון',
   },
   offHours: {
     key: 'offHours',
@@ -103,28 +103,23 @@ function detectTimeZone(minuteOfDay) {
 }
 
 /**
- * Determine branch key (P1-P5) from task category
+ * Determine branch key from task category — NO P-numbers in UI
  */
 function getTaskBranch(task) {
   const cat = task?.category || '';
-  // P4 Home
-  if (cat === 'home' || cat === 'בית' || cat.startsWith('home_')) return 'P4';
-  // P5 Annual
-  if (cat.includes('annual') || cat.includes('שנתי') || cat.includes('הצהרת')) return 'P5';
-  // P1 Payroll
+  if (cat === 'home' || cat === 'בית' || cat.startsWith('home_')) return 'home';
+  if (cat.includes('annual') || cat.includes('שנתי') || cat.includes('הצהרת')) return 'management';
   if (['שכר', 'work_payroll', 'ביטוח לאומי', 'ביטוח לאומי — דיווח', 'work_social_security', 'ניכויים', 'ניכויים — דיווח', 'work_deductions',
        'מס"ב עובדים', 'work_masav', 'מס"ב סוציאליות', 'work_masav_social', 'פנסיות וקרנות', 'סוציאליות',
        'work_social_benefits', 'פנסיות — מתפעל', 'work_social_operator', 'פנסיות — טמל', 'work_social_taml',
        'משלוח תלושים', 'work_payslip_sending', 'מילואים', 'work_reserve_claims',
-       'הנחיות מס"ב ממתפעל'].includes(cat)) return 'P1';
-  // P2 Bookkeeping
+       'הנחיות מס"ב ממתפעל'].includes(cat)) return 'payroll';
   if (['מע"מ', 'work_vat_reporting', 'מע"מ 874', 'work_vat_874', 'מקדמות מס', 'work_tax_advances',
        'התאמות', 'work_reconciliation', 'הנהלת חשבונות', 'work_bookkeeping', 'רווח והפסד', 'work_pnl',
        'תשלום רשויות', 'work_authorities_payment', 'מס"ב רשויות', 'work_masav_authorities',
        'מס"ב ספקים', 'work_masav_suppliers', 'דיווח למתפעל', 'work_operator_reporting',
-       'דיווח לטמל', 'work_taml_reporting'].includes(cat)) return 'P2';
-  // P3 Office/Admin
-  return 'P3';
+       'דיווח לטמל', 'work_taml_reporting'].includes(cat)) return 'bookkeeping';
+  return 'management';
 }
 
 /**
