@@ -315,9 +315,10 @@ function ServiceTreeSection({ services }) {
   );
 }
 
-export default function ClientCard({ client, isSelected, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks, onSelectFiles, onSelectProviders }) {
+export default function ClientCard({ client, isSelected, forceOpen, onToggleSelect, onEdit, onSelectAccounts, onSelectCollections, onSelectContracts, onDelete, onSelectTasks, onSelectFiles, onSelectProviders }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isCardOpen, setIsCardOpen] = useState(true); // Card starts open
+  const [isCardOpen, setIsCardOpen] = useState(true);
+  useEffect(() => { if (forceOpen !== undefined) setIsCardOpen(forceOpen); }, [forceOpen]);
   const [relatedTasks, setRelatedTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [accountsSummary, setAccountsSummary] = useState(null);
