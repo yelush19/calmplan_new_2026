@@ -104,6 +104,7 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
       payroll_frequency: 'monthly',
       pnl_frequency: 'not_applicable',
       pnl_target_day: '',
+      balance_sheet_target_date: '',
       masav_suppliers_cycles: 0,
       masav_suppliers_cycle_dates: []
     },
@@ -1193,6 +1194,19 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                     </div>
                   </div>
                   {formData.tax_info.annual_tax_ids?.last_updated && (<div className="mt-3 text-sm text-gray-600">עודכן לאחרונה: {new Date(formData.tax_info.annual_tax_ids.last_updated).toLocaleDateString('he-IL')}</div>)}
+                </div>
+              </div>
+              {/* Balance sheet target date */}
+              <div className="border-t pt-4 mt-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-emerald-800 mb-2">יעד מאזן</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>תאריך יעד להעברה לביקורת</Label>
+                      <Input type="date" value={formData.reporting_info.balance_sheet_target_date || ''} onChange={(e) => handleInputChange('balance_sheet_target_date', e.target.value, 'reporting_info')} />
+                      <p className="text-xs text-gray-400 mt-1">ברירת מחדל: 31.05 של השנה הבאה. שני כאן אם הלקוח צריך מוקדם/מאוחר יותר.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               {/* Previous year IDs */}

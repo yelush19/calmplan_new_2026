@@ -18,6 +18,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
 import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
+import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -533,7 +534,7 @@ export default function PayrollReportsDashboardPage() {
         )}
       </AnimatePresence>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
@@ -598,7 +599,9 @@ export default function PayrollReportsDashboardPage() {
         </div>
       ) : (
         sortedServiceKeys.length > 0 ? (
-        viewMode === 'kanban' ? (
+        viewMode === 'workbook' ? (
+          <TaxWorkbookView tasks={filteredTasks} clients={clients} services={REPORTING_SERVICES} onStatusChange={handleStatusChange} onEditTask={setEditingTask} />
+        ) : viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (
           <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />

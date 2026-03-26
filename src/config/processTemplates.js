@@ -511,7 +511,7 @@ export const ADDITIONAL_SERVICES = {
   masav_suppliers: {
     key: 'masav_suppliers',
     label: 'מס"ב ספקים',
-    dashboard: 'payroll',
+    dashboard: 'tax',  // P2 bookkeeping — NOT payroll
     taskCategories: ['מס"ב ספקים', 'work_masav_suppliers'],
     createCategory: 'מס"ב ספקים',
     steps: [
