@@ -30,26 +30,54 @@ const HOLIDAY_DATES_2026 = new Set([
   '2026-09-25','2026-09-26','2026-09-27','2026-09-28','2026-09-29','2026-09-30','2026-10-01','2026-10-02','2026-10-03', // סוכות מלא (ערב + חג + חול המועד + שמחת תורה)
 ]);
 
-function getWorkDaysUntil(targetDate) {
+const HE_DAYS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+
+function getWorkDaysUntil(targetDate, withDetails = false) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const target = new Date(targetDate);
   target.setHours(0, 0, 0, 0);
 
-  if (target <= today) return 0;
+  if (target <= today) return withDetails ? { count: 0, details: '' } : 0;
 
   let count = 0;
   let current = addDays(today, 1);
+  const workDays = [];
+  const offDays = [];
   while (current <= target) {
     const day = getDay(current);
     const dateStr = format(current, 'yyyy-MM-dd');
-    // Exclude: Friday (5), Saturday (6), and holidays
-    if (day !== 5 && day !== 6 && !HOLIDAY_DATES_2026.has(dateStr)) {
+    const dayLabel = `${current.getDate()}/${current.getMonth()+1} ${HE_DAYS[day]}`;
+    if (day === 5) {
+      offDays.push(`${dayLabel} (שישי)`);
+    } else if (day === 6) {
+      offDays.push(`${dayLabel} (שבת)`);
+    } else if (HOLIDAY_DATES_2026.has(dateStr)) {
+      offDays.push(`${dayLabel} (חג)`);
+    } else {
       count++;
+      workDays.push(dayLabel);
     }
     current = addDays(current, 1);
   }
-  return count;
+
+  // Also count "emergency days" — Friday + chol hamoed that COULD be worked if deadline forces it
+  let emergencyDays = 0;
+  let currentE = addDays(today, 1);
+  while (currentE <= target) {
+    const dayE = getDay(currentE);
+    const dateStrE = format(currentE, 'yyyy-MM-dd');
+    // Friday or chol hamoed (but NOT Shabbat, NOT major holidays like Yom Kippur/Rosh Hashana)
+    if (dayE === 5 || (dayE !== 6 && HOLIDAY_DATES_2026.has(dateStrE))) {
+      emergencyDays++;
+    }
+    currentE = addDays(currentE, 1);
+  }
+
+  if (!withDetails) return count;
+
+  const details = `ימי עבודה (${count}):\n${workDays.join(', ')}\n\nימים שלא נספרים (${offDays.length}):\n${offDays.join(', ')}${emergencyDays > 0 ? `\n\n⚠️ במקרה חירום: +${emergencyDays} ימים (שישי/חוה"מ)` : ''}`;
+  return { count, details, emergencyDays };
 }
 
 function getDeadlineStyle(calendarDays, hasIncomplete) {
@@ -242,9 +270,9 @@ export default function TimeAwareness() {
       .map(d => {
         const deadlineDate = new Date(now.getFullYear(), now.getMonth(), d.day);
         const calendarDays = differenceInCalendarDays(deadlineDate, now);
-        const workDays = calendarDays > 0 ? getWorkDaysUntil(deadlineDate) : 0;
+        const wd = calendarDays > 0 ? getWorkDaysUntil(deadlineDate, true) : { count: 0, details: '' };
         const taskInfo = deadlineTasks[d.day] || { total: 0, incomplete: 0 };
-        return { ...d, calendarDays, workDays, passed: calendarDays < 0, ...taskInfo };
+        return { ...d, calendarDays, workDays: wd.count, workDaysDetails: wd.details, passed: calendarDays < 0, ...taskInfo };
       })
       .filter(d => !d.passed);
 
@@ -253,8 +281,8 @@ export default function TimeAwareness() {
       const nextMonthDeadlines = REPORTING_DEADLINES.map(d => {
         const deadlineDate = new Date(now.getFullYear(), now.getMonth() + 1, d.day);
         const calendarDays = differenceInCalendarDays(deadlineDate, now);
-        const workDays = calendarDays > 0 ? getWorkDaysUntil(deadlineDate) : 0;
-        return { ...d, calendarDays, workDays, passed: false, total: 0, incomplete: 0, nextMonth: true };
+        const wd = calendarDays > 0 ? getWorkDaysUntil(deadlineDate, true) : { count: 0, details: '' };
+        return { ...d, calendarDays, workDays: wd.count, workDaysDetails: wd.details, passed: false, total: 0, incomplete: 0, nextMonth: true };
       });
       return nextMonthDeadlines.filter(d => d.calendarDays <= 14); // show next 14 days only
     }
@@ -317,7 +345,7 @@ export default function TimeAwareness() {
                   ) : d.calendarDays === 1 ? (
                     <span>מחר! {d.label} (ה-{d.day}){d.nextMonth ? ' (חודש הבא)' : ''}</span>
                   ) : (
-                    <span>{d.workDays} ימ"ע {d.label} (ה-{d.day}){d.nextMonth ? ' (חודש הבא)' : ''}</span>
+                    <span title={d.workDaysDetails} className="cursor-help border-b border-dotted border-gray-400">{d.workDays} ימ"ע {d.label} (ה-{d.day}){d.nextMonth ? ' (חודש הבא)' : ''}</span>
                   )}
                   {d.calendarDays === 0 && d.total > 0 && (
                     <span className={`mr-0.5 px-1 py-0 rounded text-[12px] font-bold ${

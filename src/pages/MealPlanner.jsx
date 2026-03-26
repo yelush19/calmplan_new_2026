@@ -229,6 +229,35 @@ export default function MealPlannerPage() {
                   </AnimatePresence>
                 </div>
               )}
+              {groceryList.length > 0 && (
+                <div className="flex gap-2 mt-3 pt-3 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                    onClick={() => {
+                      const unchecked = groceryList.filter(i => !i.checked).map(i => `☐ ${i.name}`);
+                      const checked = groceryList.filter(i => i.checked).map(i => `✅ ${i.name}`);
+                      const text = `🛒 *רשימת קניות*\n\n${unchecked.join('\n')}${checked.length ? '\n\n_נקנה:_\n' + checked.join('\n') : ''}`;
+                      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                    }}
+                  >
+                    📱 שלח בWhatsApp
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1.5 text-slate-600 border-slate-300 hover:bg-slate-50"
+                    onClick={() => {
+                      const text = groceryList.filter(i => !i.checked).map(i => `- ${i.name}`).join('\n');
+                      navigator.clipboard.writeText(text);
+                      alert('הרשימה הועתקה!');
+                    }}
+                  >
+                    📋 העתק
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
