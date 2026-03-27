@@ -626,6 +626,20 @@ export default function ClientCard({ client, isSelected, forceOpen, onToggleSele
           );
         })()}
 
+        {/* Quick Links */}
+        {client.quick_links?.length > 0 && (
+          <div className="border-t border-gray-100 pt-2 mt-2">
+            <div className="flex flex-wrap gap-2">
+              {client.quick_links.filter(l => l.url).map((link, idx) => (
+                <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors">
+                  🔗 {link.label || link.url}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Bank accounts summary */}
         {accountsSummary && (
           <div className="border-t border-gray-100 pt-2 mt-2">
@@ -653,6 +667,36 @@ export default function ClientCard({ client, isSelected, forceOpen, onToggleSele
         )}
 
         {/* הצגת משימות קשורות */}
+        {/* Internal Notes — always visible */}
+        {client.internal_notes?.length > 0 && (
+          <div className="border-t border-gray-100 pt-2 mt-2">
+            <h4 className="text-xs font-bold text-gray-500 mb-1">📝 הערות</h4>
+            <div className="space-y-1 max-h-20 overflow-y-auto">
+              {client.internal_notes.slice(-3).reverse().map((note, idx) => (
+                <div key={idx} className="text-xs text-gray-600 bg-amber-50 rounded px-2 py-1">
+                  <span className="text-[10px] text-gray-400">{note.date}</span> {note.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Last activity */}
+        {relatedTasks.length > 0 && (() => {
+          const completed = relatedTasks.filter(t => t.status === 'production_completed' || t.status === 'completed');
+          const lastCompleted = completed.sort((a, b) => (b.updated_date || '').localeCompare(a.updated_date || ''))[0];
+          if (!lastCompleted) return null;
+          return (
+            <div className="border-t border-gray-100 pt-1.5 mt-1.5">
+              <span className="text-[11px] text-gray-400">פעולה אחרונה: </span>
+              <span className="text-[11px] text-gray-600 font-medium">{lastCompleted.title?.slice(0, 40)}</span>
+              {lastCompleted.updated_date && (
+                <span className="text-[10px] text-gray-400 ms-1">({new Date(lastCompleted.updated_date).toLocaleDateString('he-IL')})</span>
+              )}
+            </div>
+          );
+        })()}
+
         {isExpanded && (
           <div className="border-t border-gray-100 pt-3 mt-3">
             <div className="flex items-center justify-between mb-2">

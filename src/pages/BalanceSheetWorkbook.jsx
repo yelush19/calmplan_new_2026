@@ -925,6 +925,81 @@ function OutputTab({ workbook, output, onTogglePackageItem, onAddRound, onUpdate
         </CardContent>
       </Card>
 
+      {/* Import from Hashavshevet */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">📥 ייבוא בוחן מחשבשבת</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-gray-500 mb-3">
+            העלי קובץ Excel עם בוחן מחשבשבת — המערכת תמפה אוטומטית חשבונות לקבוצות (בנקים, ספקים, רכוש...).
+          </p>
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            id="import-excel-input"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              try {
+                const { parseHashavshevetExcel } = await import('@/engines/excelImportEngine');
+                const result = await parseHashavshevetExcel(file);
+                if (!result.success) {
+                  alert('שגיאה בייבוא:\n' + result.errors.join('\n'));
+                  return;
+                }
+                // Preview
+                const summary = Object.entries(result.groupSummary)
+                  .map(([k, v]) => `${v.label}: ${v.count} חשבונות (חו: ${v.totalDebit.toLocaleString()}, זכ: ${v.totalCredit.toLocaleString()})`)
+                  .join('\n');
+                if (!confirm(`נמצאו ${result.totalAccounts} חשבונות:\n\n${summary}\n\nלייבא לחוברת העבודה?`)) return;
+
+                // Import: add accounts to matching groups
+                const updatedWorkbook = { ...workbook };
+                const groups = [...(updatedWorkbook.account_groups || [])];
+                for (const [groupKey, accounts] of Object.entries(result.groups)) {
+                  const groupIdx = groups.findIndex(g => g.key === groupKey);
+                  if (groupIdx >= 0) {
+                    groups[groupIdx] = {
+                      ...groups[groupIdx],
+                      accounts: [...(groups[groupIdx].accounts || []), ...accounts],
+                    };
+                  } else {
+                    // Create new group for unmapped accounts
+                    groups.push({
+                      id: `grp_imp_${groupKey}`,
+                      key: groupKey,
+                      label: result.groupSummary[groupKey]?.label || groupKey,
+                      group_code: '',
+                      accounts,
+                      status: 'not_started',
+                      sort_order: groups.length,
+                    });
+                  }
+                }
+                setWorkbook(prev => ({ ...prev, account_groups: groups }));
+                // Auto-save
+                setTimeout(() => saveWorkbook(), 500);
+                alert(`✅ יובאו ${result.totalAccounts} חשבונות בהצלחה!`);
+              } catch (err) {
+                alert('שגיאה: ' + err.message);
+              }
+              e.target.value = '';
+            }}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={() => document.getElementById('import-excel-input')?.click()}
+          >
+            <Upload className="w-4 h-4" />
+            העלה קובץ Excel מחשבשבת
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Status */}
       <Card>
         <CardHeader className="pb-2">

@@ -58,6 +58,7 @@ const emptyProject = {
   name: '', description: '', status: 'planning', system_type: 'web_app',
   platform: '', platform_data: {}, git_repo: '', supabase_url: '',
   subdomain: '', production_url: '', tech_stack: '', notes: '',
+  client_ids: [],  // Link to specific clients (empty = global tool)
 };
 
 /* ── Redesign Seed Data ── */

@@ -487,6 +487,27 @@ export default function TaskEditDialog({ task, open, onClose, onSave, onDelete, 
             />
           </div>
 
+          {/* External Link */}
+          <div>
+            <Label className="text-xs font-medium flex items-center gap-1.5">
+              🔗 קישור חיצוני
+            </Label>
+            <input
+              type="url"
+              value={editData.external_url || ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, external_url: e.target.value }))}
+              className="w-full text-sm border border-[#E0E0E0] rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="https://..."
+              dir="ltr"
+            />
+            {editData.external_url && (
+              <a href={editData.external_url} target="_blank" rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:underline mt-1 inline-block">
+                פתח קישור ↗
+              </a>
+            )}
+          </div>
+
           {/* Sub Tasks */}
           <div className="space-y-2">
             <Label className="text-xs font-medium flex items-center gap-1.5">
