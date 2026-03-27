@@ -143,7 +143,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     notes: '',
     process_tree: {},
     shareholders: [],
-    quick_links: [],  // Array of { label, url } — hyperlinks per client  // Array of { name, id_number, birth_date, license_number, phone, email, role, custom_fields: {} }
+    quick_links: [],  // Array of { label, url } — hyperlinks per client
+    internal_notes: [],  // Array of { date, text } — internal CRM notes  // Array of { name, id_number, birth_date, license_number, phone, email, role, custom_fields: {} }
     display_fields: {  // Which fields to show on task lists/dashboards
       show_entity_number: true,
       show_deductions_file: true,
@@ -1260,6 +1261,46 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
               <div><Label htmlFor="preferred_method">אמצעי תקשורת מועדף</Label><Select value={formData.communication_preferences.preferred_method} onValueChange={(value) => handleInputChange('preferred_method', value, 'communication_preferences')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="email">אימייל</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem><SelectItem value="phone">טלפון</SelectItem><SelectItem value="teams">Teams</SelectItem></SelectContent></Select></div>
               <div className="space-y-1.5"><Label>תגיות</Label><TagSelector scope="client" selectedTags={formData.tags || []} onChange={(tags) => setFormData(prev => ({ ...prev, tags }))} /></div>
               <div><Label htmlFor="notes">הערות</Label><Textarea id="notes" value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} className="h-24" /></div>
+
+              {/* Internal CRM Notes — timestamped */}
+              <div className="border-t pt-4 mt-4">
+                <Label className="font-bold mb-2 block">📝 הערות פנימיות (עם חותמת זמן)</Label>
+                <div className="flex gap-2 mb-2">
+                  <Input id="new-internal-note" placeholder="רשום הערה..." className="flex-1" onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const text = e.target.value.trim();
+                      if (!text) return;
+                      const note = { date: new Date().toLocaleDateString('he-IL') + ' ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }), text };
+                      setFormData(prev => ({ ...prev, internal_notes: [...(prev.internal_notes || []), note] }));
+                      e.target.value = '';
+                    }
+                  }} />
+                  <Button type="button" size="sm" onClick={() => {
+                    const input = document.getElementById('new-internal-note');
+                    const text = input?.value?.trim();
+                    if (!text) return;
+                    const note = { date: new Date().toLocaleDateString('he-IL') + ' ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }), text };
+                    setFormData(prev => ({ ...prev, internal_notes: [...(prev.internal_notes || []), note] }));
+                    input.value = '';
+                  }}>הוסף</Button>
+                </div>
+                {(formData.internal_notes || []).length > 0 && (
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {[...(formData.internal_notes || [])].reverse().map((note, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs bg-amber-50 rounded px-2 py-1">
+                        <span className="text-[10px] text-gray-400 shrink-0">{note.date}</span>
+                        <span className="text-gray-700 flex-1">{note.text}</span>
+                        <button type="button" onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            internal_notes: prev.internal_notes.filter((_, i) => i !== (prev.internal_notes.length - 1 - idx))
+                          }));
+                        }} className="text-gray-300 hover:text-amber-600 text-[10px]">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </TabsContent>
             <TabsContent value="accounts" className="space-y-4 rounded-2xl border-2 border-cyan-200 bg-cyan-50/30 p-5">
               {client?.id ? (
