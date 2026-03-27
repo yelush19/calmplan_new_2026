@@ -676,7 +676,7 @@ function TrialBalanceGroup({
       {/* ── Account Rows ── */}
       {!isCollapsed && (
         <div>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" dir="rtl">
             <thead>
               <tr className="bg-gray-100 text-gray-600">
                 <th className="px-2 py-1.5 text-end font-medium w-24">חשבון</th>
