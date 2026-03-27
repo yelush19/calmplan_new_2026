@@ -626,6 +626,20 @@ export default function ClientCard({ client, isSelected, forceOpen, onToggleSele
           );
         })()}
 
+        {/* Quick Links */}
+        {client.quick_links?.length > 0 && (
+          <div className="border-t border-gray-100 pt-2 mt-2">
+            <div className="flex flex-wrap gap-2">
+              {client.quick_links.filter(l => l.url).map((link, idx) => (
+                <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors">
+                  🔗 {link.label || link.url}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Bank accounts summary */}
         {accountsSummary && (
           <div className="border-t border-gray-100 pt-2 mt-2">

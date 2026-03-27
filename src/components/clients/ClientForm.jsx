@@ -142,7 +142,8 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
     tags: [],
     notes: '',
     process_tree: {},
-    shareholders: [],  // Array of { name, id_number, birth_date, license_number, phone, email, role, custom_fields: {} }
+    shareholders: [],
+    quick_links: [],  // Array of { label, url } — hyperlinks per client  // Array of { name, id_number, birth_date, license_number, phone, email, role, custom_fields: {} }
     display_fields: {  // Which fields to show on task lists/dashboards
       show_entity_number: true,
       show_deductions_file: true,
@@ -1282,6 +1283,28 @@ export default function ClientForm({ client, onSubmit, onCancel, onClientUpdate 
                 </div>
                 <div><Label htmlFor="annual_reports_client_id">מזהה מערכת מאזנים</Label><Input id="annual_reports_client_id" value={formData.integration_info.annual_reports_client_id} onChange={(e) => handleInputChange('annual_reports_client_id', e.target.value, 'integration_info')} /></div>
                 <div><Label htmlFor="lastpass_payment_entry_id">מזהה רשומת תשלומים (אופציונלי)</Label><Input id="lastpass_payment_entry_id" value={formData.integration_info.lastpass_payment_entry_id} onChange={(e) => handleInputChange('lastpass_payment_entry_id', e.target.value, 'integration_info')} placeholder="לקישור נוח לפרטי תשלום ברשויות" /></div>
+              </div>
+
+              {/* Quick Links — hyperlinks per client */}
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-gray-700">🔗 קישורים מהירים</h4>
+                  <Button type="button" size="sm" variant="outline" onClick={() => {
+                    setFormData(prev => ({ ...prev, quick_links: [...(prev.quick_links || []), { label: '', url: '' }] }));
+                  }}>+ הוסף קישור</Button>
+                </div>
+                <p className="text-xs text-gray-400 mb-3">קישורים למערכות חיצוניות: שכר, בנק, חשבשבת, Drive ועוד. נגישים מכל מקום.</p>
+                {(formData.quick_links || []).map((link, idx) => (
+                  <div key={idx} className="flex gap-2 mb-2 items-center">
+                    <Input value={link.label} placeholder="שם (למשל: מערכת שכר)" className="w-1/3 text-sm"
+                      onChange={e => { const u = [...formData.quick_links]; u[idx] = { ...u[idx], label: e.target.value }; setFormData(prev => ({ ...prev, quick_links: u })); }} />
+                    <Input value={link.url} placeholder="https://..." className="flex-1 text-sm" dir="ltr"
+                      onChange={e => { const u = [...formData.quick_links]; u[idx] = { ...u[idx], url: e.target.value }; setFormData(prev => ({ ...prev, quick_links: u })); }} />
+                    <Button type="button" variant="ghost" size="sm" onClick={() => {
+                      setFormData(prev => ({ ...prev, quick_links: prev.quick_links.filter((_, i) => i !== idx) }));
+                    }} className="text-gray-400 hover:text-amber-600">✕</Button>
+                  </div>
+                ))}
               </div>
             </TabsContent>
 
