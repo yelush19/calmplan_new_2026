@@ -138,6 +138,25 @@ export default function BalanceSheetWorkbookPage() {
     }));
   }, [updateWorkbook]);
 
+  // Expose import function for TrialBalanceTab's inline import button
+  useEffect(() => {
+    window.__importAccounts = (groupedAccounts) => {
+      updateWorkbook(prev => {
+        const groups = [...(prev.trial_balance?.groups || [])];
+        for (const [groupKey, accounts] of Object.entries(groupedAccounts)) {
+          const groupIdx = groups.findIndex(g => g.key === groupKey);
+          if (groupIdx >= 0) {
+            groups[groupIdx] = { ...groups[groupIdx], accounts: [...(groups[groupIdx].accounts || []), ...accounts] };
+          } else {
+            groups.push({ id: `grp_imp_${groupKey}`, key: groupKey, label: groupKey, group_code: '', accounts, status: 'not_started', sort_order: groups.length });
+          }
+        }
+        return { ...prev, trial_balance: { ...prev.trial_balance, groups } };
+      });
+    };
+    return () => { delete window.__importAccounts; };
+  }, [updateWorkbook]);
+
   const addAccountToGroup = useCallback((groupId) => {
     updateWorkbook(prev => ({
       ...prev,
@@ -558,7 +577,30 @@ function TrialBalanceTab({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-800">מאזן בוחן והפניות</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-gray-800">מאזן בוחן והפניות</h2>
+          <input type="file" accept=".xlsx,.xls,.csv" className="hidden" id="import-excel-trial"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              try {
+                const { parseHashavshevetExcel } = await import('@/engines/excelImportEngine');
+                const result = await parseHashavshevetExcel(file);
+                if (!result.success) { alert('שגיאה:\n' + result.errors.join('\n')); return; }
+                const summary = Object.entries(result.groupSummary).map(([k, v]) => `${v.label}: ${v.count} חשבונות`).join('\n');
+                if (!confirm(`נמצאו ${result.totalAccounts} חשבונות:\n\n${summary}\n\nלייבא?`)) return;
+                // Call parent to merge accounts
+                if (typeof window.__importAccounts === 'function') window.__importAccounts(result.groups);
+                else alert('ייבוא לא זמין — נסי מכפתור בתחתית העמוד');
+              } catch (err) { alert('שגיאה: ' + err.message); }
+              e.target.value = '';
+            }}
+          />
+          <Button size="sm" variant="outline" className="gap-1 h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={() => document.getElementById('import-excel-trial')?.click()}>
+            📥 ייבוא מחשבשבת
+          </Button>
+        </div>
         <div className="flex items-center gap-3 text-xs text-gray-500">
           {GROUP_STATUSES.map(s => (
             <span key={s.key} className="flex items-center gap-1">
