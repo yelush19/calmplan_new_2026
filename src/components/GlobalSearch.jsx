@@ -9,7 +9,7 @@ import {
   ArrowLeft, Plus, UserCheck, FileBarChart, Calculator, Eye, Zap,
   Network, Home as HomeIcon,
 } from 'lucide-react';
-import { Task, Client, Project, StickyNote as StickyNoteEntity, ServiceProvider } from '@/api/entities';
+import { Task, Client, Project, StickyNote as StickyNoteEntity, ServiceProvider, FileMetadata } from '@/api/entities';
 import { createPageUrl } from '@/utils';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
@@ -93,6 +93,16 @@ const ENTITY_CONFIGS = [
     searchFields: ['title', 'description', 'client_name'],
     getUrl: () => createPageUrl('Projects'),
     getSubtitle: (item) => [item.client_name, item.status].filter(Boolean).join(' | '),
+  },
+  {
+    key: 'files',
+    label: 'קבצים',
+    icon: FolderKanban,
+    color: 'text-orange-600',
+    entity: FileMetadata,
+    searchFields: ['file_name', 'document_type', 'client_name', 'notes'],
+    getUrl: (item) => item.client_id ? `${createPageUrl('ClientManagement')}?clientId=${item.client_id}&tab=files` : createPageUrl('ClientFiles'),
+    getSubtitle: (item) => [item.client_name, item.document_type, item.year ? `${item.year}` : ''].filter(Boolean).join(' | '),
   },
   {
     key: 'notes',
