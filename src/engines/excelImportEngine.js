@@ -2,160 +2,157 @@
  * ══ Excel Import Engine ══
  * ייבוא בוחן מחשבשבת (Hashavshevet) לחוברת עבודה
  *
- * Hashavshevet trial balance format:
- * Column A (rightmost in RTL): Group header names (bold rows like "רכוש קבוע", "חלויות שוטפות")
- * Column B: Sort code / Group code (12, 13, 14, 15, 90, 100, 200...)
- * Column C: Account number / Card number (1206, 1207, 74361338...)
- * Column D: Account name
- * Column E-H: Debit/Credit amounts
+ * Hashavshevet RTL Excel layout (visual order right-to-left):
+ * Visual A (rightmost) = Group header names ("רכוש קבוע", "חלויות שוטפות")
+ * Visual B = Sort/Group code (12, 13, 14, 15, 90, 100, 200...)
+ * Visual C = Account/Card number (1000, 1206, 74361338...)
+ * Visual D = Account name ("מחשבים-ר.קבוע", "שיפורים במושכר")
+ * Visual E-H = Amounts (debit/credit opening/closing)
  *
- * Group headers are rows where column A has text but columns C/D are empty.
- * Summary rows contain "סה"כ" or "**".
+ * In XLSX.js parsed data (LTR):
+ * These map to the LAST columns (reversed from visual RTL order)
  */
 import * as XLSX from 'xlsx';
 
-/**
- * Parse Excel file from Hashavshevet trial balance export.
- * Uses SORT CODE (column B) as group identifier + reads Hebrew group headers.
- */
 export async function parseHashavshevetExcel(file) {
-  const errors = [];
-
   try {
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: 'array' });
-
     const sheetName = workbook.SheetNames[0];
-    if (!sheetName) {
-      return { success: false, accounts: [], groups: {}, errors: ['הקובץ ריק — אין גליונות'] };
-    }
+    if (!sheetName) return { success: false, accounts: [], groups: {}, errors: ['הקובץ ריק'] };
 
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (rows.length < 3) return { success: false, accounts: [], groups: {}, errors: ['פחות מ-3 שורות'] };
 
-    if (rows.length < 2) {
-      return { success: false, accounts: [], groups: {}, errors: ['הקובץ ריק — פחות מ-2 שורות'] };
-    }
+    // Find the max column count
+    const maxCols = Math.max(...rows.map(r => (r || []).length));
 
-    // Detect column layout by scanning first rows
-    // Hashavshevet exports: A=group header, B=sort code, C=account number, D=account name, E-H=amounts
-    // But columns may vary. We detect by finding numeric patterns.
+    // In RTL Excel exported via XLSX.js:
+    // The LAST column in array = visual column A (rightmost = group headers)
+    // Second to last = visual column B (sort code)
+    // Third to last = visual column C (account number)
+    // etc.
+    // BUT - some exports keep LTR order. We need to auto-detect.
 
-    let sortCodeCol = -1;   // Column with sort/group codes (12, 13, 100, 200...)
-    let accountCodeCol = -1; // Column with account/card numbers (1206, 74361338...)
-    let accountNameCol = -1; // Column with account names
-    let amountCols = [];     // Columns with numeric amounts
+    // Strategy: find the column with sort codes (small numbers 10-999)
+    // and the column with account codes (larger numbers 1000+)
+    let sortCodeCol = -1;
+    let accountCodeCol = -1;
+    let nameCol = -1;
+    const colScores = {};
 
-    // Scan first 30 data rows to detect column purposes
-    for (let i = 0; i < Math.min(30, rows.length); i++) {
-      const row = rows[i];
-      if (!row || row.length < 3) continue;
-
-      for (let c = 0; c < row.length; c++) {
-        const val = String(row[c] || '').trim();
-        if (!val) continue;
-
-        // Header detection: Hebrew column names
-        const lower = val.toLowerCase();
-        if (lower === 'מיון' || lower === 'קוד מיון' || lower === 'מיון מס') { sortCodeCol = c; continue; }
-        if (lower === 'כרטיס' || lower === 'מספר כרטיס' || lower === 'חשבון' || lower === 'מס חשבון') { accountCodeCol = c; continue; }
-        if (lower === 'שם' || lower === 'שם חשבון' || lower === 'תאור' || lower === 'תיאור') { accountNameCol = c; continue; }
+    for (let c = 0; c < maxCols; c++) {
+      let smallNums = 0, bigNums = 0, texts = 0, empties = 0;
+      for (let r = 1; r < Math.min(50, rows.length); r++) {
+        const val = rows[r]?.[c];
+        if (val === '' || val == null) { empties++; continue; }
+        const num = parseFloat(val);
+        if (isNaN(num)) { texts++; continue; }
+        if (num >= 10 && num <= 999) smallNums++;
+        else if (num >= 1000) bigNums++;
       }
+      colScores[c] = { smallNums, bigNums, texts, empties };
     }
 
-    // If headers not found, use positional heuristic for Hashavshevet:
-    // Typically: last col = group header (A in RTL), then sort code, account code, name, amounts
-    if (sortCodeCol < 0 || accountCodeCol < 0) {
-      // Try to find by data patterns: sort code = small numbers (10-900), account code = larger numbers
-      for (let i = 1; i < Math.min(20, rows.length); i++) {
-        const row = rows[i];
-        if (!row) continue;
-        for (let c = 0; c < Math.min(5, row.length); c++) {
-          const num = parseInt(row[c]);
-          if (isNaN(num)) continue;
-          if (num >= 10 && num <= 999 && sortCodeCol < 0) { sortCodeCol = c; }
-          else if (num >= 1000 && accountCodeCol < 0 && c !== sortCodeCol) { accountCodeCol = c; }
-        }
-        if (sortCodeCol >= 0 && accountCodeCol >= 0) break;
-      }
+    // Sort code column = most small numbers (10-999)
+    // Account code column = most big numbers (1000+)
+    // Name column = most text entries
+    let bestSmall = 0, bestBig = 0, bestText = 0;
+    for (const [c, scores] of Object.entries(colScores)) {
+      const ci = parseInt(c);
+      if (scores.smallNums > bestSmall) { bestSmall = scores.smallNums; sortCodeCol = ci; }
+      if (scores.bigNums > bestBig) { bestBig = scores.bigNums; accountCodeCol = ci; }
+    }
+    // Name = column with most text that isn't sort or account
+    for (const [c, scores] of Object.entries(colScores)) {
+      const ci = parseInt(c);
+      if (ci === sortCodeCol || ci === accountCodeCol) continue;
+      if (scores.texts > bestText) { bestText = scores.texts; nameCol = ci; }
     }
 
-    // Find name column: first text column that's not sort/account code
-    if (accountNameCol < 0) {
-      for (let i = 1; i < Math.min(10, rows.length); i++) {
-        const row = rows[i];
-        if (!row) continue;
-        for (let c = 0; c < row.length; c++) {
-          if (c === sortCodeCol || c === accountCodeCol) continue;
-          const val = String(row[c] || '').trim();
-          if (val && isNaN(parseFloat(val)) && val.length > 2) { accountNameCol = c; break; }
-        }
-        if (accountNameCol >= 0) break;
-      }
+    // Find amount columns (remaining numeric columns)
+    const amountCols = [];
+    for (const [c, scores] of Object.entries(colScores)) {
+      const ci = parseInt(c);
+      if (ci === sortCodeCol || ci === accountCodeCol || ci === nameCol) continue;
+      if (scores.smallNums + scores.bigNums > 3) amountCols.push(ci);
     }
 
-    // Find amount columns: numeric columns that aren't sort/account code
-    for (let c = 0; c < (rows[1]?.length || 0); c++) {
-      if (c === sortCodeCol || c === accountCodeCol || c === accountNameCol) continue;
-      let numCount = 0;
-      for (let i = 1; i < Math.min(15, rows.length); i++) {
-        const val = parseFloat(rows[i]?.[c]);
-        if (!isNaN(val) && val !== 0) numCount++;
-      }
-      if (numCount >= 2) amountCols.push(c);
+    // Group header column = column with text that appears in rows where sort code is empty
+    // Usually the column AFTER the last data column, or a column with few entries but long text
+    let headerCol = -1;
+    for (const [c, scores] of Object.entries(colScores)) {
+      const ci = parseInt(c);
+      if (ci === sortCodeCol || ci === accountCodeCol || ci === nameCol) continue;
+      if (amountCols.includes(ci)) continue;
+      if (scores.texts >= 3 && scores.texts < bestText) { headerCol = ci; }
+    }
+    // If not found, check if it's the last or first column
+    if (headerCol < 0) {
+      // Try last column
+      const lastScores = colScores[maxCols - 1];
+      if (lastScores && lastScores.texts >= 3) headerCol = maxCols - 1;
+      // Try first column
+      else if (colScores[0]?.texts >= 3 && 0 !== nameCol) headerCol = 0;
     }
 
-    if (accountNameCol < 0) {
-      return { success: false, accounts: [], groups: {}, errors: ['לא נמצאה עמודת שם חשבון'] };
+    if (sortCodeCol < 0 || nameCol < 0) {
+      return { success: false, accounts: [], groups: {}, errors: [`לא זוהו עמודות. sortCode=${sortCodeCol} name=${nameCol} account=${accountCodeCol}`] };
     }
 
-    // Parse: identify group headers + accounts
+    // Parse data
     const accounts = [];
     const groupedAccounts = {};
-    const groupNames = {}; // sortCode → Hebrew name
+    const groupNames = {};
+    let currentGroupName = 'כללי';
     let currentGroupCode = 'other';
-    let currentGroupName = 'אחר';
-
-    // First pass: find group header rows (text in rightmost column, no account code)
-    const lastCol = rows[0] ? rows[0].length - 1 : 0;
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      if (!row || row.length < 2) continue;
+      if (!row) continue;
 
-      const sortCode = String(row[sortCodeCol] || '').trim();
-      const accountCode = String(row[accountCodeCol] || '').trim();
-      const accountName = String(row[accountNameCol] || '').trim();
+      const sortVal = String(row[sortCodeCol] || '').trim();
+      const acctVal = String(row[accountCodeCol] || '').trim();
+      const nameVal = String(row[nameCol] || '').trim();
+      const headerVal = headerCol >= 0 ? String(row[headerCol] || '').trim() : '';
 
       // Skip summary rows
-      if (accountName.includes('סה"כ') || sortCode === '**' || sortCode === '*') continue;
+      if (nameVal.includes('סה"כ') || headerVal.includes('סה"כ') || sortVal === '**' || sortVal === '*') continue;
 
-      // Detect group header: has a name in the last/first column but NO account code
-      // Group headers in Hashavshevet are bold rows like "רכוש קבוע", "חלויות שוטפות"
-      const headerText = String(row[lastCol] || '').trim() || String(row[0] || '').trim();
-      if (headerText && !accountCode && !sortCode && headerText.length > 1 && isNaN(parseFloat(headerText))) {
-        // This is a group header row
-        currentGroupName = headerText;
+      // Group header detection: row with text in header column but no sort code and no account code
+      if (headerVal && !sortVal && !acctVal && headerVal.length > 1 && isNaN(parseFloat(headerVal)) && !headerVal.includes('סה"כ')) {
+        currentGroupName = headerVal;
+        continue;
+      }
+      // Also check name column for group headers (if no account code)
+      if (nameVal && !sortVal && !acctVal && nameVal.length > 1 && isNaN(parseFloat(nameVal)) && !nameVal.includes('סה"כ')) {
+        currentGroupName = nameVal;
         continue;
       }
 
-      // If sort code exists, use it as group identifier
-      if (sortCode && !isNaN(parseInt(sortCode))) {
-        currentGroupCode = sortCode;
-        if (!groupNames[sortCode]) {
-          groupNames[sortCode] = currentGroupName;
+      // Update current group code from sort column
+      if (sortVal && !isNaN(parseInt(sortVal))) {
+        currentGroupCode = sortVal;
+        if (!groupNames[currentGroupCode]) {
+          groupNames[currentGroupCode] = currentGroupName;
         }
       }
 
-      // Skip rows without account code (empty data rows)
-      if (!accountCode || isNaN(parseInt(accountCode))) continue;
+      // Must have at least a name to be a data row
+      if (!nameVal || nameVal.length < 2) continue;
+      // Skip if no numbers at all
+      const hasAnyNumber = acctVal || amountCols.some(c => parseFloat(row[c]));
+      if (!hasAnyNumber) continue;
 
-      // Parse amounts - take last two amount columns as debit/credit, or first two
+      // Parse amounts
       let debit = 0, credit = 0;
       if (amountCols.length >= 2) {
-        // Closing balances are usually the last two amount columns
-        debit = Math.abs(parseFloat(row[amountCols[amountCols.length - 2]]) || 0);
-        credit = Math.abs(parseFloat(row[amountCols[amountCols.length - 1]]) || 0);
+        // Try to find the closing balance columns (usually last two with data)
+        const amounts = amountCols.map(c => parseFloat(row[c]) || 0);
+        // Use first non-zero pair, or last two
+        debit = Math.abs(amounts[amounts.length - 2] || amounts[0] || 0);
+        credit = Math.abs(amounts[amounts.length - 1] || amounts[1] || 0);
       } else if (amountCols.length === 1) {
         const val = parseFloat(row[amountCols[0]]) || 0;
         if (val >= 0) debit = val; else credit = Math.abs(val);
@@ -164,8 +161,8 @@ export async function parseHashavshevetExcel(file) {
       const groupKey = `group_${currentGroupCode}`;
       const account = {
         id: `imp_${Date.now()}_${i}`,
-        account_code: accountCode,
-        account_name: accountName,
+        account_code: acctVal || '',
+        account_name: nameVal,
         group_code: currentGroupCode,
         debit,
         credit,
@@ -180,34 +177,23 @@ export async function parseHashavshevetExcel(file) {
     }
 
     if (accounts.length === 0) {
-      return { success: false, accounts: [], groups: {}, errors: ['לא נמצאו חשבונות בקובץ. וודאי שזה ייצוא בוחן מחשבשבת.'] };
+      return { success: false, accounts: [], groups: {}, errors: ['לא נמצאו חשבונות. וודאי שזה בוחן מחשבשבת.'] };
     }
 
-    // Build group summary with Hebrew names
     const groupSummary = {};
     for (const [key, accs] of Object.entries(groupedAccounts)) {
-      const sortCode = key.replace('group_', '');
-      const label = groupNames[sortCode] || `קבוצה ${sortCode}`;
+      const code = key.replace('group_', '');
       groupSummary[key] = {
-        label,
-        sortCode,
+        label: groupNames[code] || `קבוצה ${code}`,
+        sortCode: code,
         count: accs.length,
         totalDebit: accs.reduce((s, a) => s + a.debit, 0),
         totalCredit: accs.reduce((s, a) => s + a.credit, 0),
       };
     }
 
-    return {
-      success: true,
-      accounts,
-      groups: groupedAccounts,
-      groupSummary,
-      totalAccounts: accounts.length,
-      sheetName,
-      errors,
-    };
-
+    return { success: true, accounts, groups: groupedAccounts, groupSummary, totalAccounts: accounts.length, sheetName, errors: [] };
   } catch (err) {
-    return { success: false, accounts: [], groups: {}, errors: [`שגיאה בקריאת הקובץ: ${err.message}`] };
+    return { success: false, accounts: [], groups: {}, errors: [`שגיאה: ${err.message}`] };
   }
 }
