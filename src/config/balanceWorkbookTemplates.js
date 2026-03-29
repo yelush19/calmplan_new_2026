@@ -27,8 +27,10 @@ export const TRIAL_BALANCE_COLUMNS = [
  */
 export const REFERENCE_STATUSES = [
   { key: 'matched', label: 'תואם', color: '#4ade80' },
-  { key: 'matched_see_appendix', label: 'תואם אישור ראה נספחים', color: '#86efac' },
+  { key: 'matched_see_appendix', label: 'תואם — ראה נספחים', color: '#86efac' },
   { key: 'see_worksheet', label: 'ראה גליון עבודה', color: '#93c5fd' },
+  { key: 'see_development', label: 'ראה התפתחות', color: '#67e8f9' },
+  { key: 'handled', label: 'טופל', color: '#a78bfa' },
   { key: 'to_check', label: 'לבדוק', color: '#fbbf24' },
   { key: 'to_calculate', label: 'לחשב', color: '#fb923c' },
   { key: 'not_started', label: 'טרם טופל', color: '#d1d5db' },
