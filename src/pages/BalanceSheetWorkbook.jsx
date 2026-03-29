@@ -142,19 +142,29 @@ export default function BalanceSheetWorkbookPage() {
   useEffect(() => {
     window.__importAccounts = (groupedAccounts, groupSummary) => {
       updateWorkbook(prev => {
-        const groups = [...(prev.trial_balance?.groups || [])];
-        for (const [groupKey, accounts] of Object.entries(groupedAccounts)) {
+        // REPLACE all groups with the ACTUAL data from the file
+        // Don't try to match templates — use the real data as-is
+        const importedGroups = Object.entries(groupedAccounts).map(([groupKey, accounts], idx) => {
           const sortCode = groupKey.replace('group_', '');
-          const label = groupSummary?.[groupKey]?.label || `קבוצה ${sortCode}`;
-          // Match by group_code (100, 200...) OR by key
-          const groupIdx = groups.findIndex(g => g.group_code === sortCode || g.key === groupKey);
-          if (groupIdx >= 0) {
-            groups[groupIdx] = { ...groups[groupIdx], accounts: [...(groups[groupIdx].accounts || []), ...accounts] };
-          } else {
-            groups.push({ id: `grp_imp_${sortCode}`, key: `group_${sortCode}`, label, group_code: sortCode, accounts, status: 'not_started', sort_order: groups.length });
-          }
-        }
-        return { ...prev, trial_balance: { ...prev.trial_balance, groups } };
+          const info = groupSummary?.[groupKey] || {};
+          return {
+            id: `grp_${sortCode}_${Date.now()}`,
+            key: groupKey,
+            label: info.label || `קבוצה ${sortCode}`,
+            group_code: sortCode,
+            accounts,
+            status: 'not_started',
+            sort_order: idx,
+            has_worksheet: false,
+            summary: {
+              debit: info.totalDebit || 0,
+              credit: info.totalCredit || 0,
+              difference: (info.totalDebit || 0) - (info.totalCredit || 0),
+            },
+          };
+        });
+
+        return { ...prev, trial_balance: { ...prev.trial_balance, groups: importedGroups } };
       });
     };
     return () => { delete window.__importAccounts; };
