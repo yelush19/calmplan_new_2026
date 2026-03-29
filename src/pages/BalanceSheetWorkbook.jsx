@@ -140,15 +140,18 @@ export default function BalanceSheetWorkbookPage() {
 
   // Expose import function for TrialBalanceTab's inline import button
   useEffect(() => {
-    window.__importAccounts = (groupedAccounts) => {
+    window.__importAccounts = (groupedAccounts, groupSummary) => {
       updateWorkbook(prev => {
         const groups = [...(prev.trial_balance?.groups || [])];
         for (const [groupKey, accounts] of Object.entries(groupedAccounts)) {
-          const groupIdx = groups.findIndex(g => g.key === groupKey);
+          const sortCode = groupKey.replace('group_', '');
+          const label = groupSummary?.[groupKey]?.label || `קבוצה ${sortCode}`;
+          // Match by group_code (100, 200...) OR by key
+          const groupIdx = groups.findIndex(g => g.group_code === sortCode || g.key === groupKey);
           if (groupIdx >= 0) {
             groups[groupIdx] = { ...groups[groupIdx], accounts: [...(groups[groupIdx].accounts || []), ...accounts] };
           } else {
-            groups.push({ id: `grp_imp_${groupKey}`, key: groupKey, label: groupKey, group_code: '', accounts, status: 'not_started', sort_order: groups.length });
+            groups.push({ id: `grp_imp_${sortCode}`, key: `group_${sortCode}`, label, group_code: sortCode, accounts, status: 'not_started', sort_order: groups.length });
           }
         }
         return { ...prev, trial_balance: { ...prev.trial_balance, groups } };
@@ -590,7 +593,7 @@ function TrialBalanceTab({
                 const summary = Object.entries(result.groupSummary).map(([k, v]) => `${v.label}: ${v.count} חשבונות`).join('\n');
                 if (!confirm(`נמצאו ${result.totalAccounts} חשבונות:\n\n${summary}\n\nלייבא?`)) return;
                 // Call parent to merge accounts
-                if (typeof window.__importAccounts === 'function') window.__importAccounts(result.groups);
+                if (typeof window.__importAccounts === 'function') window.__importAccounts(result.groups, result.groupSummary);
                 else alert('ייבוא לא זמין — נסי מכפתור בתחתית העמוד');
               } catch (err) { alert('שגיאה: ' + err.message); }
               e.target.value = '';
