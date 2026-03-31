@@ -14,12 +14,13 @@ import {
   ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink, Plus,
   ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X,
   Network, BarChart3, GitBranchPlus, Table2,
-  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target, ArrowRight
 } from "lucide-react";
 import { cleanupGhostTasks } from '@/api/functions';
 import MindMapView from "../components/views/MindMapView";
 import GanttView from "../components/views/GanttView";
 import FocusMapView from "../components/canvas/FocusMapView";
+import ProcessFlowView from "../components/views/ProcessFlowView";
 import { getActiveTreeTasks, getTaskPBranch, getPBranchLabel } from '@/utils/taskTreeFilter';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { motion, AnimatePresence } from "framer-motion";
@@ -1022,6 +1023,7 @@ export default function TasksPage() {
             { key: 'list', label: 'רשימה', icon: List },
             { key: 'workbook', label: 'גיליון', icon: Table2 },
             { key: 'focus', label: 'מיקוד', icon: Eye },
+            { key: 'flow', label: 'זרימה', icon: ArrowRight },
             { key: 'mindmap', label: 'מיינדמפ', icon: Network },
             { key: 'gantt', label: 'גאנט', icon: BarChart3 },
           ].map(({ key, label, icon: Icon }) => (
@@ -1482,6 +1484,13 @@ export default function TasksPage() {
           onToggleStep={handleToggleStep}
           onStatusChange={handleStatusChange}
           onEdit={handleEditTask}
+        />
+      ) : view === 'flow' ? (
+        <ProcessFlowView
+          tasks={filteredTasks}
+          clients={clientsList}
+          onEditTask={handleEditTask}
+          onStatusChange={handleStatusChange}
         />
       ) : view === 'focus' ? (
         <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '500px' }}>

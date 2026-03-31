@@ -43,11 +43,10 @@ import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 
+// P1 Payroll Dashboard: ONLY core production services (payroll + social_security + deductions)
+// Additional services (payslip sending, MASAV, operator, etc.) are in AdditionalServicesDashboard
 const payrollDashboardServices = {
   ...PAYROLL_SERVICES,
-  ...Object.fromEntries(
-    Object.entries(ADDITIONAL_SERVICES).filter(([, s]) => s.dashboard === 'payroll')
-  ),
 };
 
 const allPayrollCategories = Object.values(payrollDashboardServices).flatMap(s => s.taskCategories);
