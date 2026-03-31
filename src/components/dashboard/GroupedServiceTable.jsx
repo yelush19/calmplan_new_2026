@@ -108,7 +108,8 @@ function ExecutionBar({ startDate, dueDate }) {
 }
 
 // ALL statuses start collapsed by default
-const DEFAULT_COLLAPSED = new Set(['waiting_for_materials', 'not_started', 'ready_to_broadcast', 'reported_pending_payment', 'sent_for_review', 'needs_corrections', 'production_completed']);
+// All status groups start OPEN — client requested no collapsing
+const DEFAULT_COLLAPSED = new Set();
 
 export default function GroupedServiceTable({
   service,
