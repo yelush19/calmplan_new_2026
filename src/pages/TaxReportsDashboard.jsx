@@ -5,6 +5,7 @@ import { bulkUpdateDeadline } from '@/api/functions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
@@ -1054,23 +1055,29 @@ export default function TaxReportsDashboardPage() {
         ) : viewMode === 'timeline' ? (
           <GanttView tasks={filteredTasks} clients={clients} currentMonth={addMonths(selectedMonth, 1)} onEditTask={setEditingTask} />
         ) : viewMode === 'table' ? (
-          <div className="grid grid-cols-2 xl:grid-cols-3 gap-4 items-start">
-            {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
-              const isCollapsed = collapsedServices.has(serviceKey);
-              return (
-                <div key={serviceKey} className="border border-[#E0E0E0] rounded-xl overflow-hidden flex flex-col" style={{ maxHeight: isCollapsed ? 'auto' : '520px' }}>
-                  <button
-                    onClick={() => toggleServiceCollapse(serviceKey)}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors shrink-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
-                      <span className="font-bold text-[#263238] text-sm">{service.label}</span>
-                      <span className="text-xs text-[#455A64]">{clientRows.length} לקוחות</span>
-                    </div>
-                  </button>
-                  {!isCollapsed && (
-                    <div className="overflow-y-auto overflow-x-auto flex-1 min-h-0">
+          (() => {
+            const entries = Object.entries(serviceData);
+            if (entries.length === 0) return null;
+            const TAB_COLORS = ['#4682B4', '#2E7D32', '#7C3AED', '#F59E0B', '#0D9488', '#6366F1'];
+            return (
+              <Tabs defaultValue={entries[0][0]} className="w-full" dir="rtl">
+                <TabsList className="flex gap-2 h-auto p-2 rounded-xl bg-white border mb-3 justify-start">
+                  {entries.map(([serviceKey, { service, clientRows }], idx) => {
+                    const completed = clientRows.filter(r => r.task.status === 'production_completed').length;
+                    const color = TAB_COLORS[idx % TAB_COLORS.length];
+                    return (
+                      <TabsTrigger key={serviceKey} value={serviceKey}
+                        className="rounded-xl px-5 py-2.5 text-sm font-bold border-2 transition-all data-[state=active]:shadow-lg"
+                        style={{ borderColor: color, color }}>
+                        {service.label}
+                        <span className="ms-1.5 text-xs opacity-70">({completed}/{clientRows.length})</span>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+                {entries.map(([serviceKey, { service, clientRows }]) => (
+                  <TabsContent key={serviceKey} value={serviceKey} className="mt-0">
+                    <div className="border border-[#E0E0E0] rounded-xl overflow-hidden">
                       <GroupedServiceTable
                         service={service}
                         clientRows={clientRows}
@@ -1091,11 +1098,11 @@ export default function TaxReportsDashboardPage() {
                         allTasks={filteredTasks}
                       />
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            );
+          })()
         ) : viewMode === 'workbook' ? (
           <TaxWorkbookView
             tasks={filteredTasks}

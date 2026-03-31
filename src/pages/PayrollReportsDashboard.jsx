@@ -495,7 +495,7 @@ export default function PayrollReportsDashboardPage() {
                 context: 'work',
                 is_recurring: false,
                 source: 'manual',
-                process_steps: { collect_data: { done: false }, report_bl: { done: false }, record: { done: false } },
+                process_steps: { collect_data: { done: false }, report_bl: { done: false } },
               });
               alert(`נוצר דיווח מילואים עבור ${clientName} — ${monthName}`);
               loadData();
