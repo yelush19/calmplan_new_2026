@@ -622,20 +622,30 @@ export default function PayrollDashboardPage() {
         </div>
       ) : viewMode === 'table' ? (
         sortedServiceKeys.length > 0 ? (
-          <Tabs defaultValue={sortedServiceKeys[0]} className="w-full">
-            <TabsList className="flex gap-1 h-auto p-1.5 rounded-xl bg-slate-100 border mb-3 flex-wrap">
-              {sortedServiceKeys.map(serviceKey => {
-                const { service, clientRows } = serviceData[serviceKey];
-                const completed = clientRows.filter(r => r.task.status === 'production_completed').length;
-                return (
-                  <TabsTrigger key={serviceKey} value={serviceKey}
-                    className="rounded-lg px-4 py-2 text-sm font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#1E3A5F]">
-                    {service.label}
-                    <span className="ms-1.5 text-xs text-slate-400">({completed}/{clientRows.length})</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
+          <Tabs defaultValue={sortedServiceKeys[0]} className="w-full" dir="rtl">
+            {(() => {
+              const TAB_COLORS = ['#00A3E0', '#0D9488', '#7C3AED', '#F59E0B', '#6366F1'];
+              return (
+                <div className="flex gap-2 mb-3 flex-wrap justify-start" role="tablist">
+                  {sortedServiceKeys.map((serviceKey, idx) => {
+                    const { service, clientRows } = serviceData[serviceKey];
+                    const completed = clientRows.filter(r => r.task.status === 'production_completed').length;
+                    const color = TAB_COLORS[idx % TAB_COLORS.length];
+                    return (
+                      <TabsTrigger key={serviceKey} value={serviceKey}
+                        className="rounded-xl px-5 py-2.5 text-sm font-bold border-2 transition-all data-[state=active]:text-white data-[state=active]:shadow-lg"
+                        style={{
+                          borderColor: color,
+                          color: color,
+                        }}>
+                        {service.label}
+                        <span className="ms-1.5 text-xs opacity-70">({completed}/{clientRows.length})</span>
+                      </TabsTrigger>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             {sortedServiceKeys.map(serviceKey => {
               const { service, clientRows } = serviceData[serviceKey];
               return (
