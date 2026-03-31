@@ -41,10 +41,11 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 
-// P1 Board 3 — דיווחים + קליטה: ב"ל + ניכויים + קליטה להנה"ח
+// P1 Board 3 — דיווחים + קליטה: ב"ל + ניכויים + מילואים + קליטה להנה"ח
 const REPORTING_SERVICES = {
   social_security: PAYROLL_SERVICES.social_security,
   deductions: PAYROLL_SERVICES.deductions,
+  ...(PAYROLL_SERVICES.reserve_report ? { reserve_report: PAYROLL_SERVICES.reserve_report } : {}),
   ...(ADDITIONAL_SERVICES.payroll_closing ? { payroll_closing: ADDITIONAL_SERVICES.payroll_closing } : {}),
 };
 
@@ -468,6 +469,39 @@ export default function PayrollReportsDashboardPage() {
           <Button onClick={() => setShowQuickAdd(true)} size="sm" className="gap-1 h-9">
             <Plus className="w-4 h-4" />
             משימה מהירה
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 h-9 border-amber-300 text-amber-700 hover:bg-amber-50"
+            onClick={async () => {
+              const clientName = prompt('שם לקוח לדיווח מילואים:');
+              if (!clientName) return;
+              const monthStr = format(selectedMonth, 'yyyy-MM');
+              const monthName = format(selectedMonth, 'MMMM yyyy', { locale: he });
+              await Task.create({
+                title: `מילואים - ${clientName} - ${monthName}`,
+                category: 'מילואים',
+                branch: 'P1',
+                status: 'not_started',
+                priority: 'Medium',
+                client_name: clientName,
+                service_key: 'reserve_report',
+                parent_service: 'payroll',
+                report_period: monthStr,
+                report_month: selectedMonth.getMonth() + 1,
+                report_year: selectedMonth.getFullYear(),
+                due_date: format(addMonths(selectedMonth, 1), 'yyyy-MM-15'),
+                context: 'work',
+                is_recurring: false,
+                source: 'manual',
+                process_steps: { collect_data: { done: false }, report_bl: { done: false }, record: { done: false } },
+              });
+              alert(`נוצר דיווח מילואים עבור ${clientName} — ${monthName}`);
+              loadData();
+            }}
+          >
+            🎖️ דיווח מילואים
           </Button>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
