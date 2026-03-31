@@ -198,7 +198,8 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     const derivedStart = task.scheduled_start
       || getScheduledStartForCategory(task.category, task.due_date)
       || null;
-    const end = parseISO(task.due_date);
+    let end;
+    try { end = parseISO(task.due_date); if (isNaN(end.getTime())) return null; } catch { return null; }
     const endDay = Math.min(daysInMonth - 1, differenceInDays(end, monthStart));
 
     // DNA-driven duration

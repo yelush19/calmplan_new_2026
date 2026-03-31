@@ -114,9 +114,11 @@ export default function PayrollDashboardPage() {
         Client.list(null, 500).catch(() => []),
       ]);
       const allRaw = Array.isArray(tasksData) ? tasksData : [];
-      setTasks(allRaw);
+      // Filter to ONLY payroll categories — prevents other services from appearing in Kanban/Gantt/Radial
+      const payrollOnly = allRaw.filter(t => allPayrollCategories.includes(t.category));
+      setTasks(payrollOnly);
       setClients(clientsData || []);
-      syncCompletedTaskSteps(allRaw);
+      syncCompletedTaskSteps(payrollOnly);
     } catch (error) {
       console.error("Error loading payroll tasks:", error);
     }
