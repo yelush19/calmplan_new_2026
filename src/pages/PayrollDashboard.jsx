@@ -622,23 +622,25 @@ export default function PayrollDashboardPage() {
         </div>
       ) : viewMode === 'table' ? (
         sortedServiceKeys.length > 0 ? (
-          <div className="space-y-4">
+          <Tabs defaultValue={sortedServiceKeys[0]} className="w-full">
+            <TabsList className="flex gap-1 h-auto p-1.5 rounded-xl bg-slate-100 border mb-3 flex-wrap">
+              {sortedServiceKeys.map(serviceKey => {
+                const { service, clientRows } = serviceData[serviceKey];
+                const completed = clientRows.filter(r => r.task.status === 'production_completed').length;
+                return (
+                  <TabsTrigger key={serviceKey} value={serviceKey}
+                    className="rounded-lg px-4 py-2 text-sm font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#1E3A5F]">
+                    {service.label}
+                    <span className="ms-1.5 text-xs text-slate-400">({completed}/{clientRows.length})</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
             {sortedServiceKeys.map(serviceKey => {
               const { service, clientRows } = serviceData[serviceKey];
-              const isCollapsed = collapsedServices.has(serviceKey);
               return (
-                <div key={serviceKey} className="border border-[#E0E0E0] rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => toggleServiceCollapse(serviceKey)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
-                      <span className="font-bold text-[#263238]">{service.label}</span>
-                      <span className="text-xs text-[#455A64]">{clientRows.length} לקוחות</span>
-                    </div>
-                  </button>
-                  {!isCollapsed && (
+                <TabsContent key={serviceKey} value={serviceKey} className="mt-0">
+                  <div className="border border-[#E0E0E0] rounded-xl overflow-hidden">
                     <GroupedServiceTable
                       service={service}
                       clientRows={clientRows}
@@ -663,11 +665,11 @@ export default function PayrollDashboardPage() {
                         });
                       }}
                     />
-                  )}
-                </div>
+                  </div>
+                </TabsContent>
               );
             })}
-          </div>
+          </Tabs>
         ) : (
           <Card className="p-12 text-center border-[#E0E0E0]">
             <Briefcase className="w-16 h-16 mx-auto text-gray-300 mb-4" />
