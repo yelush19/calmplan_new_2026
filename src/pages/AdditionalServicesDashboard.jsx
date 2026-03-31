@@ -4,6 +4,7 @@ import { Task, Client } from '@/api/entities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import {
@@ -500,41 +501,46 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
             onEdit={setEditingTask}
           />
         ) : viewMode === 'table' ? (
-          <div className="space-y-4">
-            {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {
-              const isCollapsed = collapsedServices.has(serviceKey);
-              return (
-                <div key={serviceKey} className="border border-[#E0E0E0] rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => toggleServiceCollapse(serviceKey)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 bg-[#FAFBFC] hover:bg-[#F5F5F5] transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
-                      <span className="font-bold text-[#263238]">{service.label}</span>
-                      <span className="text-xs text-[#455A64]">{clientRows.length} לקוחות</span>
+          (() => {
+            const serviceEntries = Object.entries(serviceData);
+            if (serviceEntries.length === 0) return null;
+            return (
+              <Tabs defaultValue={serviceEntries[0][0]} className="w-full">
+                <TabsList className="flex gap-1 h-auto p-1.5 rounded-xl bg-slate-100 border mb-3 flex-wrap">
+                  {serviceEntries.map(([serviceKey, { service, clientRows }]) => {
+                    const completed = clientRows.filter(r => r.task.status === 'production_completed').length;
+                    return (
+                      <TabsTrigger key={serviceKey} value={serviceKey}
+                        className="rounded-lg px-4 py-2 text-sm font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#1E3A5F]">
+                        {service.label}
+                        <span className="ms-1.5 text-xs text-slate-400">({completed}/{clientRows.length})</span>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+                {serviceEntries.map(([serviceKey, { service, clientRows }]) => (
+                  <TabsContent key={serviceKey} value={serviceKey} className="mt-0">
+                    <div className="border border-[#E0E0E0] rounded-xl overflow-hidden">
+                      <GroupedServiceTable
+                        service={service}
+                        clientRows={clientRows}
+                        allTasks={filteredTasks}
+                        onToggleStep={handleToggleStep}
+                        onDateChange={handleDateChange}
+                        onStatusChange={handleStatusChange}
+                        onPaymentDateChange={handlePaymentDateChange}
+                        onSubTaskChange={handleSubTaskChange}
+                        onAttachmentUpdate={handleAttachmentUpdate}
+                        onEdit={setEditingTask}
+                        onDelete={handleDeleteTask}
+                        onNote={setNoteTask}
+                      />
                     </div>
-                  </button>
-                  {!isCollapsed && (
-                    <GroupedServiceTable
-                      service={service}
-                      clientRows={clientRows}
-                      allTasks={filteredTasks}
-                      onToggleStep={handleToggleStep}
-                      onDateChange={handleDateChange}
-                      onStatusChange={handleStatusChange}
-                      onPaymentDateChange={handlePaymentDateChange}
-                      onSubTaskChange={handleSubTaskChange}
-                      onAttachmentUpdate={handleAttachmentUpdate}
-                      onEdit={setEditingTask}
-                      onDelete={handleDeleteTask}
-                      onNote={setNoteTask}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            );
+          })()
         ) : null
       ) : (
         <Card className="p-12 text-center border-[#E0E0E0]">
