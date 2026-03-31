@@ -73,7 +73,17 @@ export default function PayrollDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    try {
+      const saved = localStorage.getItem('calmplan_payroll_month');
+      if (saved) return new Date(saved);
+    } catch {}
+    return subMonths(new Date(), 1);
+  });
+  // Persist selected month
+  useEffect(() => {
+    try { localStorage.setItem('calmplan_payroll_month', selectedMonth.toISOString()); } catch {}
+  }, [selectedMonth]);
   const [viewMode, setViewMode] = useState('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);

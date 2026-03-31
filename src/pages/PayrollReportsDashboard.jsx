@@ -68,7 +68,10 @@ export default function PayrollReportsDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1));
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    try { const s = localStorage.getItem('calmplan_102_month'); if (s) return new Date(s); } catch {} return subMonths(new Date(), 1);
+  });
+  useEffect(() => { try { localStorage.setItem('calmplan_102_month', selectedMonth.toISOString()); } catch {} }, [selectedMonth]);
   const [viewMode, setViewMode] = useState('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
