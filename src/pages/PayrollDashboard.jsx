@@ -212,18 +212,14 @@ export default function PayrollDashboardPage() {
   }, [filteredTasks, clientByName]);
 
   // Sort service keys: active work first, fully completed last
+  // Fixed order: שכר → תלושים → מס"ב (not sorted by active count)
+  const PAYROLL_ORDER = ['payroll', 'payslip_sending', 'masav_employees', 'reserve_report'];
   const sortedServiceKeys = useMemo(() => {
-    return Object.keys(serviceData).sort((a, b) => {
-      const aRows = serviceData[a].clientRows;
-      const bRows = serviceData[b].clientRows;
-      const aActive = aRows.filter(r => r.task.status !== 'production_completed').length;
-      const bActive = bRows.filter(r => r.task.status !== 'production_completed').length;
-      const aAllDone = aActive === 0;
-      const bAllDone = bActive === 0;
-      // Fully completed services go to bottom
-      if (aAllDone !== bAllDone) return aAllDone ? 1 : -1;
-      // Among active services, sort by more active tasks first
-      return bActive - aActive;
+    const keys = Object.keys(serviceData);
+    return keys.sort((a, b) => {
+      const ai = PAYROLL_ORDER.indexOf(a);
+      const bi = PAYROLL_ORDER.indexOf(b);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
     });
   }, [serviceData]);
 
