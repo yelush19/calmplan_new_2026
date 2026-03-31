@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { Task } from '@/api/entities';
 const fixShortYear = (v) => { if (!v) return v; const m = v.match(/^(\d{1,2})-(\d{2})-(\d{2})$/); if (m) { const yr = parseInt(m[1], 10); return `${yr < 100 ? (yr < 50 ? 2000 + yr : 1900 + yr) : yr}-${m[2]}-${m[3]}`; } return v; };
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card } from '@/components/ui/card';
@@ -110,6 +111,28 @@ function ExecutionBar({ startDate, dueDate }) {
 // ALL statuses start collapsed by default
 // All status groups start OPEN — client requested no collapsing
 const DEFAULT_COLLAPSED = new Set();
+
+// Inline notes editor — saves directly to DB on blur
+function NotesCell({ taskId, initialNotes }) {
+  const [val, setVal] = useState(initialNotes);
+  const [saving, setSaving] = useState(false);
+  return (
+    <textarea
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={async () => {
+        if (val !== initialNotes) {
+          setSaving(true);
+          try { await Task.update(taskId, { notes: val }); } catch {}
+          setSaving(false);
+        }
+      }}
+      placeholder="הערות..."
+      className={`w-full text-xs border rounded px-2 py-1 resize-none h-8 focus:h-16 transition-all bg-white ${saving ? 'border-emerald-300' : 'border-gray-200 focus:border-blue-300'}`}
+      rows={1}
+    />
+  );
+}
 
 export default function GroupedServiceTable({
   service,
@@ -828,21 +851,7 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
           </td>
           {/* Notes column */}
           <td className="py-1.5 px-2 text-right align-top" style={{ minWidth: '120px' }}>
-            <textarea
-              value={task.notes || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                onEdit?.({ ...task, notes: val });
-              }}
-              onBlur={(e) => {
-                if (e.target.value !== (task.notes || '')) {
-                  onStatusChange?.(task, task.status);
-                }
-              }}
-              placeholder="הערות..."
-              className="w-full text-xs border border-gray-200 rounded px-2 py-1 resize-none h-8 focus:h-16 focus:border-blue-300 transition-all bg-white"
-              rows={1}
-            />
+            <NotesCell taskId={task.id} initialNotes={task.notes || ''} />
           </td>
         </tr>
       )}

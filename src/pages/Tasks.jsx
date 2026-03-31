@@ -21,6 +21,8 @@ import MindMapView from "../components/views/MindMapView";
 import GanttView from "../components/views/GanttView";
 import FocusMapView from "../components/canvas/FocusMapView";
 import ProcessFlowView from "../components/views/ProcessFlowView";
+import MiroProcessMap from "../components/views/MiroProcessMap";
+import { PAYROLL_SERVICES, ADDITIONAL_SERVICES, TAX_SERVICES } from '@/config/processTemplates';
 import { getActiveTreeTasks, getTaskPBranch, getPBranchLabel } from '@/utils/taskTreeFilter';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import { motion, AnimatePresence } from "framer-motion";
@@ -1024,6 +1026,7 @@ export default function TasksPage() {
             { key: 'workbook', label: 'גיליון', icon: Table2 },
             { key: 'focus', label: 'מיקוד', icon: Eye },
             { key: 'flow', label: 'זרימה', icon: ArrowRight },
+            { key: 'miro', label: 'מפה', icon: Network },
             { key: 'mindmap', label: 'מיינדמפ', icon: Network },
             { key: 'gantt', label: 'גאנט', icon: BarChart3 },
           ].map(({ key, label, icon: Icon }) => (
@@ -1484,6 +1487,41 @@ export default function TasksPage() {
           onToggleStep={handleToggleStep}
           onStatusChange={handleStatusChange}
           onEdit={handleEditTask}
+        />
+      ) : view === 'miro' ? (
+        <MiroProcessMap
+          tasks={filteredTasks}
+          centerLabel="תהליכי עבודה"
+          centerSub={`${filteredTasks.length} משימות`}
+          onEditTask={handleEditTask}
+          onStatusChange={handleStatusChange}
+          phases={[
+            {
+              label: 'שלב 1 — ייצור שכר',
+              serviceKeys: ['payroll', 'שכר', 'work_payroll'],
+              services: [PAYROLL_SERVICES.payroll].filter(Boolean),
+            },
+            {
+              label: 'שלב 2 — הפצה',
+              serviceKeys: ['payslip_sending', 'masav_employees', 'משלוח תלושים', 'מס"ב עובדים'],
+              services: [ADDITIONAL_SERVICES.payslip_sending, ADDITIONAL_SERVICES.masav_employees].filter(Boolean),
+            },
+            {
+              label: 'שלב 3 — דיווחי רשויות',
+              serviceKeys: ['social_security', 'deductions', 'ביטוח לאומי', 'ניכויים'],
+              services: [PAYROLL_SERVICES.social_security, PAYROLL_SERVICES.deductions].filter(Boolean),
+            },
+            {
+              label: 'שלב 4 — הנה"ח ומיסים',
+              serviceKeys: ['vat', 'tax_advances', 'מע"מ', 'מקדמות מס', 'work_vat_reporting', 'work_tax_advances'],
+              services: Object.values(TAX_SERVICES || {}).filter(Boolean).slice(0, 4),
+            },
+            {
+              label: 'שלב 5 — קליטה + התאמות',
+              serviceKeys: ['income_collection', 'expense_collection', 'reconciliation', 'קליטת הכנסות', 'קליטת הוצאות', 'התאמות'],
+              services: [ADDITIONAL_SERVICES.income_collection, ADDITIONAL_SERVICES.expense_collection].filter(Boolean),
+            },
+          ]}
         />
       ) : view === 'flow' ? (
         <ProcessFlowView
