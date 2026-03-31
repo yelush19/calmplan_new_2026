@@ -636,6 +636,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
               {/* ── Floating capsule bars ── */}
               {sortedTasks.map(task => {
                 const pos = getTaskPosition(task);
+                if (!pos) return null;
                 const lane = assignment.get(task.id) || 0;
                 const topPx = LANE_GAP + lane * (LANE_HEIGHT + LANE_GAP);
                 const isOverdue = task.status !== 'completed' && task.status !== 'production_completed' && new Date(task.due_date) < new Date();
@@ -832,12 +833,10 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
                         </span>
                       </div>
                       <p className="text-xs !text-[#90A4AE] mt-1">
-                        {resolveCategoryLabel(task.category)} {task.due_date && `\u2022 דדליין ${format(parseISO(task.due_date), 'dd/MM')}`}
+                        {resolveCategoryLabel(task.category)} {task.due_date && (() => { try { return `\u2022 דדליין ${format(parseISO(task.due_date), 'dd/MM')}`; } catch { return ''; } })()}
                         {` \u2022 ${dnaMinutes} דק׳`}
                       </p>
-                      {task.execution_date && (
-                        <p className="text-[12px] !text-emerald-400">בוצע ב-{format(parseISO(task.execution_date), 'dd/MM')}</p>
-                      )}
+                      {task.execution_date && (() => { try { const d = parseISO(task.execution_date); return isNaN(d.getTime()) ? null : <p className="text-[12px] !text-emerald-400">בוצע ב-{format(d, 'dd/MM')}</p>; } catch { return null; } })()}
                       {pos.durationDays > 1 && (
                         <p className="text-[12px] !text-[#78909C]">{pos.durationDays} ימי עבודה</p>
                       )}
@@ -886,7 +885,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
           background: 'linear-gradient(135deg, #4682B4, #4682B4DD)',
           boxShadow: '0 4px 16px rgba(70,130,180,0.4)',
         }}>
-          {draggingTask.title}: {dragPreviewDay > 0 ? `+${dragPreviewDay}` : dragPreviewDay} ימים → {format(addDays(parseISO(draggingTask.due_date), dragPreviewDay), 'dd/MM')}
+          {draggingTask.title}: {dragPreviewDay > 0 ? `+${dragPreviewDay}` : dragPreviewDay} ימים → {(() => { try { return format(addDays(parseISO(draggingTask.due_date), dragPreviewDay), 'dd/MM'); } catch { return '?'; } })()}
         </div>
       )}
       </>
