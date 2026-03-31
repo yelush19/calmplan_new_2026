@@ -524,13 +524,13 @@ function LayoutInner({ children }) {
 
   // Build breadcrumb trail from current path + sidebar structure
   const breadcrumbTrail = React.useMemo(() => {
-    if (isHomePage) return null; // No breadcrumb on home
+    if (isHomePage) return null;
     const path = location.pathname;
     for (const [sectionKey, section] of Object.entries(sidebarSections)) {
       // Check direct items
       for (const item of section.items) {
         if (item.href && path.startsWith(item.href)) {
-          return { section: section.title, page: item.name };
+          return { section: section.title, page: item.name, sectionHref: section.items[0]?.href };
         }
       }
       // Check sub-group items
@@ -538,7 +538,7 @@ function LayoutInner({ children }) {
         for (const sg of section.subGroups) {
           for (const item of sg.items) {
             if (item.href && path.startsWith(item.href)) {
-              return { section: section.title, subGroup: sg.label, page: item.name };
+              return { section: section.title, subGroup: sg.label, page: item.name, sectionHref: section.items[0]?.href, subGroupHref: sg.items[0]?.href };
             }
           }
         }
@@ -1252,7 +1252,13 @@ function LayoutInner({ children }) {
                             <>
                               <BreadcrumbSeparator />
                               <BreadcrumbItem>
-                                <span className="text-xs font-semibold text-slate-400">{breadcrumbTrail.section}</span>
+                                {breadcrumbTrail.sectionHref ? (
+                                  <BreadcrumbLink href={breadcrumbTrail.sectionHref} className="text-xs font-semibold text-slate-500 hover:text-slate-800">
+                                    {breadcrumbTrail.section}
+                                  </BreadcrumbLink>
+                                ) : (
+                                  <span className="text-xs font-semibold text-slate-400">{breadcrumbTrail.section}</span>
+                                )}
                               </BreadcrumbItem>
                             </>
                           )}
@@ -1260,7 +1266,13 @@ function LayoutInner({ children }) {
                             <>
                               <BreadcrumbSeparator />
                               <BreadcrumbItem>
-                                <span className="text-xs text-slate-400">{breadcrumbTrail.subGroup}</span>
+                                {breadcrumbTrail.subGroupHref ? (
+                                  <BreadcrumbLink href={breadcrumbTrail.subGroupHref} className="text-xs text-slate-500 hover:text-slate-800">
+                                    {breadcrumbTrail.subGroup}
+                                  </BreadcrumbLink>
+                                ) : (
+                                  <span className="text-xs text-slate-400">{breadcrumbTrail.subGroup}</span>
+                                )}
                               </BreadcrumbItem>
                             </>
                           )}
