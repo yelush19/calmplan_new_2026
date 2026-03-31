@@ -128,9 +128,8 @@ export const PAYROLL_SERVICES = {
     depends_on_nodes: ['P1_social_security'],
     manual_only: true,  // NOT auto-injected — only created manually per month
     steps: [
-      { key: 'collect_data',   label: 'קבלת טופס 3010 מעובד',  icon: 'inbox' },
-      { key: 'report_bl',      label: 'דיווח לביטוח לאומי',      icon: 'send' },
-      { key: 'record',         label: 'רישום בהנה"ח',            icon: 'book-open' },
+      { key: 'collect_data',   label: 'קבלת נתוני מילואים מעובד', icon: 'inbox' },
+      { key: 'report_bl',      label: 'דיווח לביטוח לאומי',        icon: 'send' },
     ],
   },
 };
