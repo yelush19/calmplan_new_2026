@@ -42,6 +42,7 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import GanttView from '@/components/views/GanttView';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import MiroProcessMap from '@/components/views/MiroProcessMap';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 
 // P1 Board 1 — ייצור + הפצה: שכר → תלושים → מס"ב עובדים
@@ -562,7 +563,7 @@ export default function PayrollDashboardPage() {
             className="pe-10 h-9"
           />
         </div>
-        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial']} />
       </div>
 
       {/* DNA Pipeline Status Cards */}
@@ -691,6 +692,19 @@ export default function PayrollDashboardPage() {
             <p className="text-slate-500">נסה לבחור חודש אחר או ליצור משימות חוזרות</p>
           </Card>
         )
+      ) : viewMode === 'miro' ? (
+        <MiroProcessMap
+          tasks={filteredTasks}
+          centerLabel="שכר"
+          centerSub={`חודש ${format(selectedMonth, 'MMMM', { locale: he })}`}
+          onEditTask={setEditingTask}
+          onStatusChange={handleStatusChange}
+          phases={[
+            { label: 'ייצור שכר', serviceKeys: ['payroll', 'שכר'], services: [payrollDashboardServices.payroll].filter(Boolean) },
+            { label: 'משלוח תלושים', serviceKeys: ['payslip_sending', 'משלוח תלושים'], services: [payrollDashboardServices.payslip_sending].filter(Boolean) },
+            { label: 'מס"ב עובדים', serviceKeys: ['masav_employees', 'מס"ב עובדים'], services: [payrollDashboardServices.masav_employees].filter(Boolean) },
+          ]}
+        />
       ) : viewMode === 'radial' ? (
         <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
           <AyoaRadialView tasks={filteredTasks} centerLabel="שכר" centerSub="P1" />
