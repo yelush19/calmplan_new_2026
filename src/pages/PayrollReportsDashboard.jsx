@@ -24,6 +24,7 @@ import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   PAYROLL_SERVICES,
+  ADDITIONAL_SERVICES,
   STATUS_CONFIG,
   getServiceForTask,
   getTaskProcessSteps,
