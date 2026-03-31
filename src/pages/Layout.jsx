@@ -107,10 +107,10 @@ const getSidebarSections = () => ({
     ],
     subGroups: [
       { key: 'sg_payroll', label: '💰 שכר', icon: Calculator, items: [
-        { name: "שלב ייצור ואישור", href: createPageUrl("PayrollDashboard"), icon: Zap },
+        { name: "ייצור + הפצה", href: createPageUrl("PayrollDashboard"), icon: Zap },
+        { name: "פנסיות וקרנות", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
         { name: "דיווחים שוטפים (102)", href: createPageUrl("PayrollReportsDashboard"), icon: FileBarChart },
         { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
-        { name: "שירותים נוספים", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
       ]},
       { key: 'sg_bookkeeping', label: '📊 הנהלת חשבונות', icon: FileBarChart, items: [
         { name: "דיווחים (מע\"מ ומקדמות)", href: createPageUrl("TaxReportsDashboard"), icon: BarChart3 },

@@ -38,11 +38,11 @@ import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 
-// P1 Payroll extras: masav, payslips, pensions
+// P1 Board 2 — פנסיות וקרנות: מתפעל/טמל + מס"ב סוציאליות + רשויות
 const P1_PAYROLL_EXTRAS = [
-  'masav_social', 'masav_employees', 'masav_authorities',
-  'payslip_sending', 'authorities_payment', 'reserve_claims',
-  'social_benefits',
+  'social_operator', 'social_taml', 'social_benefits',
+  'masav_social', 'masav_authorities',
+  'authorities_payment', 'reserve_claims',
 ];
 
 // P2 Bookkeeping extras: supplier MASAV, operator/taml, consulting
@@ -71,8 +71,8 @@ const STATUS_PIPELINE = [
 
 const SCOPE_CONFIG = {
   p1: {
-    title: 'שכר - שירותים נוספים',
-    subtitle: 'מס"ב עובדים, מס"ב סוציאלי, משלוח תלושים, דיווח מתפעל/טמל',
+    title: 'פנסיות וקרנות',
+    subtitle: 'מתפעל, טמל, מס"ב סוציאליות, תשלום רשויות, מילואים',
     gradientFrom: 'from-[#0277BD]',
     gradientTo: 'to-[#01579B]',
     backHref: 'PayrollDashboard',

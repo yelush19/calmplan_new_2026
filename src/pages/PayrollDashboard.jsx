@@ -43,10 +43,13 @@ import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 
-// P1 Payroll Dashboard: ONLY core production services (payroll + social_security + deductions)
-// Additional services (payslip sending, MASAV, operator, etc.) are in AdditionalServicesDashboard
+// P1 Board 1 — ייצור + הפצה: שכר → תלושים → מס"ב עובדים
+// Board 2 (פנסיות): PeriodicSummaryReports
+// Board 3 (דיווחים): PayrollReportsDashboard (102) — ב"ל + ניכויים + קליטה להנה"ח
 const payrollDashboardServices = {
-  ...PAYROLL_SERVICES,
+  payroll: PAYROLL_SERVICES.payroll,
+  ...(ADDITIONAL_SERVICES.payslip_sending ? { payslip_sending: ADDITIONAL_SERVICES.payslip_sending } : {}),
+  ...(ADDITIONAL_SERVICES.masav_employees ? { masav_employees: ADDITIONAL_SERVICES.masav_employees } : {}),
 };
 
 const allPayrollCategories = Object.values(payrollDashboardServices).flatMap(s => s.taskCategories);
