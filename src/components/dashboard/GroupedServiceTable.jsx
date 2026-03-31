@@ -284,6 +284,9 @@ export default function GroupedServiceTable({
               <th className="text-center py-2.5 px-3 font-bold text-gray-800 text-[13px] bg-gray-50 min-w-[80px]">
                 סטטוס
               </th>
+              <th className="text-right py-2.5 px-3 font-bold text-gray-800 text-[13px] bg-gray-50 min-w-[120px]">
+                הערות
+              </th>
             </tr>
           </thead>
           <DragDropContext onDragEnd={handleDragEnd}>
@@ -822,6 +825,24 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
                 </div>
               )}
             </div>
+          </td>
+          {/* Notes column */}
+          <td className="py-1.5 px-2 text-right align-top" style={{ minWidth: '120px' }}>
+            <textarea
+              value={task.notes || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                onEdit?.({ ...task, notes: val });
+              }}
+              onBlur={(e) => {
+                if (e.target.value !== (task.notes || '')) {
+                  onStatusChange?.(task, task.status);
+                }
+              }}
+              placeholder="הערות..."
+              className="w-full text-xs border border-gray-200 rounded px-2 py-1 resize-none h-8 focus:h-16 focus:border-blue-300 transition-all bg-white"
+              rows={1}
+            />
           </td>
         </tr>
       )}
