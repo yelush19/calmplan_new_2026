@@ -41,7 +41,7 @@ import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 
 // P1 Board 2 — פנסיות וקרנות: מתפעל/טמל + מס"ב סוציאליות + רשויות
 const P1_PAYROLL_EXTRAS = [
-  'social_operator', 'social_taml', 'social_benefits',
+  'operator_reporting', 'taml_reporting', 'social_benefits',
   'masav_social', 'masav_authorities',
   'authorities_payment', 'reserve_claims',
 ];
