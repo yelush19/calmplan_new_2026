@@ -160,7 +160,7 @@ export default function TaxWorkbookView({
       <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '75vh' }}>
         <table className="w-full border-collapse text-sm" style={{ direction: 'rtl', minWidth: `${totalColumns * 60}px` }}>
           {/* Header row 1: service names spanning sub-columns */}
-          <thead className="sticky top-0 z-10">
+          <thead className="sticky top-0 z-10" style={{ backgroundColor: '#F1F5F9' }}>
             <tr>
               <th
                 rowSpan={2}

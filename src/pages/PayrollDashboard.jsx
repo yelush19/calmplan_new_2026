@@ -150,7 +150,9 @@ export default function PayrollDashboardPage() {
   }, [clients]);
 
   const filteredTasks = useMemo(() => {
-    let result = tasks;
+    // Filter by reporting month first
+    const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
+    let result = tasks.filter(t => getTaskReportingMonth(t) === selectedMonthStr);
     if (clientFilter) {
       result = result.filter(t => t.client_name === clientFilter);
     }
@@ -488,15 +490,6 @@ export default function PayrollDashboardPage() {
       </motion.div>
 
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-          <Input
-            placeholder="חיפוש לפי שם לקוח, משימה..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pe-10 h-9"
-        />
-        </div>
         <div className="flex bg-white rounded-lg p-0.5 shadow-sm border border-[#E0E0E0] text-xs">
           <button onClick={expandAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">פתח הכל</button>
           <button onClick={collapseAllServices} className="px-2.5 py-1.5 rounded-md text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 font-medium transition-colors whitespace-nowrap">סגור הכל</button>
@@ -551,6 +544,20 @@ export default function PayrollDashboardPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Search + View Toggle — ABOVE pipeline */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <Input
+            placeholder="חיפוש לפי שם לקוח, משימה..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pe-10 h-9"
+          />
+        </div>
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
+      </div>
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
@@ -614,8 +621,6 @@ export default function PayrollDashboardPage() {
         <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
       )}
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
-
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader className="w-12 h-12 animate-spin text-primary" />
@@ -623,29 +628,22 @@ export default function PayrollDashboardPage() {
       ) : viewMode === 'table' ? (
         sortedServiceKeys.length > 0 ? (
           <Tabs defaultValue={sortedServiceKeys[0]} className="w-full" dir="rtl">
-            {(() => {
-              const TAB_COLORS = ['#00A3E0', '#0D9488', '#7C3AED', '#F59E0B', '#6366F1'];
-              return (
-                <div className="flex gap-2 mb-3 flex-wrap justify-start" role="tablist">
-                  {sortedServiceKeys.map((serviceKey, idx) => {
-                    const { service, clientRows } = serviceData[serviceKey];
-                    const completed = clientRows.filter(r => r.task.status === 'production_completed').length;
-                    const color = TAB_COLORS[idx % TAB_COLORS.length];
-                    return (
-                      <TabsTrigger key={serviceKey} value={serviceKey}
-                        className="rounded-xl px-5 py-2.5 text-sm font-bold border-2 transition-all data-[state=active]:text-white data-[state=active]:shadow-lg"
-                        style={{
-                          borderColor: color,
-                          color: color,
-                        }}>
-                        {service.label}
-                        <span className="ms-1.5 text-xs opacity-70">({completed}/{clientRows.length})</span>
-                      </TabsTrigger>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+            <TabsList className="flex gap-2 h-auto p-2 rounded-xl bg-white border mb-3 justify-start">
+              {sortedServiceKeys.map((serviceKey, idx) => {
+                const { service, clientRows } = serviceData[serviceKey];
+                const completed = clientRows.filter(r => r.task.status === 'production_completed').length;
+                const TAB_COLORS = ['#00A3E0', '#0D9488', '#7C3AED', '#F59E0B', '#6366F1'];
+                const color = TAB_COLORS[idx % TAB_COLORS.length];
+                return (
+                  <TabsTrigger key={serviceKey} value={serviceKey}
+                    className="rounded-xl px-5 py-2.5 text-sm font-bold border-2 transition-all data-[state=active]:shadow-lg"
+                    style={{ borderColor: color, color }}>
+                    {service.label}
+                    <span className="ms-1.5 text-xs opacity-70">({completed}/{clientRows.length})</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
             {sortedServiceKeys.map(serviceKey => {
               const { service, clientRows } = serviceData[serviceKey];
               return (
