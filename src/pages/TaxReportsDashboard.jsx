@@ -96,7 +96,10 @@ export default function TaxReportsDashboardPage() {
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to previous month (reporting month)
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    try { const s = localStorage.getItem('calmplan_tax_month'); if (s) return new Date(s); } catch {} return subMonths(new Date(), 1);
+  });
+  useEffect(() => { try { localStorage.setItem('calmplan_tax_month', selectedMonth.toISOString()); } catch {} }, [selectedMonth]);
   const [viewMode, setViewMode] = useState('table'); // Default: table (client prefers spreadsheet view)
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);

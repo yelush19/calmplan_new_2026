@@ -116,6 +116,23 @@ export const PAYROLL_SERVICES = {
       { key: 'record_payment', label: 'רישום תשלום בהנח"ש',  icon: 'book-open' },
     ],
   },
+
+  // דיווח מילואים לביטוח לאומי — לא שגרתי, נוצר ידנית כשיש עובדים במילואים
+  reserve_report: {
+    key: 'reserve_report',
+    label: 'דיווח מילואים לב"ל',
+    dashboard: 'payroll',
+    taskType: 'linear',
+    taskCategories: ['מילואים', 'work_reserve_claims'],
+    createCategory: 'מילואים',
+    depends_on_nodes: ['P1_social_security'],
+    manual_only: true,  // NOT auto-injected — only created manually per month
+    steps: [
+      { key: 'collect_data',   label: 'קבלת טופס 3010 מעובד',  icon: 'inbox' },
+      { key: 'report_bl',      label: 'דיווח לביטוח לאומי',      icon: 'send' },
+      { key: 'record',         label: 'רישום בהנה"ח',            icon: 'book-open' },
+    ],
+  },
 };
 
 // ============================================================
