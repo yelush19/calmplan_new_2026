@@ -20,7 +20,7 @@ const STATUS_STYLES = {
   ready_to_broadcast: { fill: '#CCFBF1', stroke: '#0D9488', text: '#0F766E', label: 'מוכן לשידור', icon: '📡' },
   reported_pending_payment: { fill: '#E0E7FF', stroke: '#4F46E5', text: '#3730A3', label: 'ממתין לתשלום', icon: '💰' },
   sent_for_review: { fill: '#F3E8FF', stroke: '#7C3AED', text: '#6D28D9', label: 'הועבר לעיון', icon: '👁️' },
-  needs_corrections: { fill: '#FFEDD5', stroke: '#EA580C', text: '#C2410C', label: 'לתיקון', icon: '⚠️' },
+  needs_corrections: { fill: '#FEF3C7', stroke: '#D97706', text: '#92400E', label: 'לתיקון', icon: '⚠️' },
   waiting_for_materials: { fill: '#FEF3C7', stroke: '#D97706', text: '#92400E', label: 'ממתין לחומרים', icon: '⏳' },
   not_started: { fill: '#F3F4F6', stroke: '#9CA3AF', text: '#4B5563', label: 'טרם התחיל', icon: '⭕' },
 };
@@ -48,6 +48,7 @@ export default function MiroProcessMap({
   const [zoom, setZoom] = useState(0.85);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [selectedTask, setSelectedTask] = useState(null);
+  const [expandedSummary, setExpandedSummary] = useState(null);
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
@@ -129,29 +130,30 @@ export default function MiroProcessMap({
 
         edges.push({ from: phaseId, to: svcId, color: phaseColor + '60' });
 
-        // Client task nodes
-        let clientY = serviceY - ((svcTasks.length - 1) * CLIENT_GAP_Y) / 2;
-
-        svcTasks.forEach((task, taskIdx) => {
-          const clientX = svcX - CLIENT_OFFSET_X;
-          const taskId = `task_${task.id}`;
-          const status = STATUS_STYLES[task.status] || STATUS_STYLES.not_started;
+        // Summary node — grouped clients instead of individual task nodes
+        if (svcTasks.length > 0) {
+          const summaryX = svcX - CLIENT_OFFSET_X;
+          const summaryId = `summary_${phaseIdx}_${svcIdx}`;
+          const waiting = svcTasks.filter(t => t.status === 'waiting_for_materials').length;
+          const notStarted = svcTasks.filter(t => t.status === 'not_started').length;
+          const inProgress = svcTasks.filter(t => !['production_completed', 'completed', 'not_started', 'waiting_for_materials'].includes(t.status)).length;
 
           nodes.push({
-            id: taskId,
-            type: 'task',
-            x: clientX,
-            y: clientY,
-            label: task.client_name || task.title,
-            sub: task.title?.split(' - ')[0],
-            status: task.status,
-            style: status,
-            task,
+            id: summaryId,
+            type: 'summary',
+            x: summaryX,
+            y: serviceY,
+            tasks: svcTasks,
+            completed: svcCompleted,
+            waiting,
+            notStarted,
+            inProgress,
+            total: svcTasks.length,
+            color: phaseColor,
           });
 
-          edges.push({ from: svcId, to: taskId, color: status.stroke + '40' });
-          clientY += CLIENT_GAP_Y;
-        });
+          edges.push({ from: svcId, to: summaryId, color: phaseColor + '30' });
+        }
 
         serviceY += Math.max(SERVICE_GAP_Y, svcTasks.length * CLIENT_GAP_Y + 20);
       });
@@ -321,20 +323,48 @@ export default function MiroProcessMap({
             </g>
           ))}
 
-          {/* Task nodes */}
-          {layout.nodes.filter(n => n.type === 'task').map(node => {
-            const isSelected = selectedTask?.id === node.task?.id;
+          {/* Summary nodes — grouped clients with status breakdown */}
+          {layout.nodes.filter(n => n.type === 'summary').map(node => {
+            const isExpanded = expandedSummary === node.id;
+            const barW = 140;
+            const completedPct = node.total > 0 ? (node.completed / node.total) * barW : 0;
+            const inProgressPct = node.total > 0 ? (node.inProgress / node.total) * barW : 0;
+            const waitingPct = node.total > 0 ? (node.waiting / node.total) * barW : 0;
+
             return (
               <g key={node.id} data-clickable="true"
-                onClick={() => setSelectedTask(node.task)}
+                onClick={() => setExpandedSummary(prev => prev === node.id ? null : node.id)}
                 style={{ cursor: 'pointer' }}>
-                <rect x={node.x - NODE_W / 2} y={node.y - 16} width={NODE_W} height={32}
-                  rx={8} fill={node.style.fill} stroke={isSelected ? '#1E3A5F' : node.style.stroke}
-                  strokeWidth={isSelected ? 3 : 1.5} />
-                <text x={node.x - NODE_W / 2 + 24} y={node.y + 1} fill={node.style.text} fontSize={11} fontWeight="600">
-                  {node.label?.length > 16 ? node.label.slice(0, 16) + '...' : node.label}
+                {/* Summary card */}
+                <rect x={node.x - 80} y={node.y - 28} width={160} height={isExpanded ? 56 + node.tasks.length * 22 : 56}
+                  rx={10} fill="white" stroke={node.color} strokeWidth={1.5} />
+                {/* Status bar */}
+                <rect x={node.x - 70} y={node.y - 18} width={completedPct} height={8} rx={4} fill="#16A34A" />
+                <rect x={node.x - 70 + completedPct} y={node.y - 18} width={inProgressPct} height={8} rx={0} fill="#2563EB" />
+                <rect x={node.x - 70 + completedPct + inProgressPct} y={node.y - 18} width={waitingPct} height={8} rx={0} fill="#D97706" />
+                <rect x={node.x - 70 + completedPct + inProgressPct + waitingPct} y={node.y - 18}
+                  width={barW - completedPct - inProgressPct - waitingPct} height={8} rx={4} fill="#E5E7EB" />
+                {/* Count text */}
+                <text x={node.x} y={node.y + 4} textAnchor="middle" fill={node.color} fontSize={12} fontWeight="bold">
+                  ✅ {node.completed}  🔵 {node.inProgress}  ⏳ {node.waiting}  ⭕ {node.notStarted}
                 </text>
-                <text x={node.x - NODE_W / 2 + 8} y={node.y + 2} fontSize={12}>{node.style.icon}</text>
+                <text x={node.x} y={node.y + 20} textAnchor="middle" fill="#9CA3AF" fontSize={10}>
+                  {node.total} לקוחות — לחצי לפירוט
+                </text>
+                {/* Expanded: show individual clients */}
+                {isExpanded && node.tasks.map((task, ti) => {
+                  const st = STATUS_STYLES[task.status] || STATUS_STYLES.not_started;
+                  return (
+                    <g key={task.id} data-clickable="true" onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }}>
+                      <rect x={node.x - 75} y={node.y + 30 + ti * 22} width={150} height={20}
+                        rx={5} fill={st.fill} stroke={st.stroke} strokeWidth={1} />
+                      <text x={node.x - 70 + 16} y={node.y + 44 + ti * 22} fill={st.text} fontSize={10} fontWeight="600">
+                        {task.client_name?.length > 18 ? task.client_name.slice(0, 18) + '…' : task.client_name}
+                      </text>
+                      <text x={node.x - 70 + 4} y={node.y + 44 + ti * 22} fontSize={10}>{st.icon}</text>
+                    </g>
+                  );
+                })}
               </g>
             );
           })}
