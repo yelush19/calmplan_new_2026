@@ -2,6 +2,15 @@ import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { resolveCategoryLabel } from '@/utils/categoryLabels';
 import { motion } from 'framer-motion';
 import { format, parseISO, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, addDays, addMonths, subMonths, isWithinInterval } from 'date-fns';
+
+// Safe parseISO — returns null instead of crashing on invalid dates
+function safeParseISO(dateStr) {
+  if (!dateStr) return null;
+  try {
+    const d = parseISO(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  } catch { return null; }
+}
 import { he } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Task } from '@/api/entities';
@@ -225,20 +234,22 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     let startDay, width;
 
     if (task.execution_date) {
-      // Completed with known execution date: anchor capsule there
-      const execDay = differenceInDays(parseISO(task.execution_date), monthStart);
-      width = Math.max(dnaDays, tierDays, 3);
-      startDay = Math.max(0, execDay - Math.floor(width / 2));
+      const execDate = safeParseISO(task.execution_date);
+      if (execDate) {
+        const execDay = differenceInDays(execDate, monthStart);
+        width = Math.max(dnaDays, tierDays, 3);
+        startDay = Math.max(0, execDay - Math.floor(width / 2));
+      }
     } else if (derivedStart) {
-      // Has a scheduled start: use the real span, capped
-      const start = parseISO(derivedStart);
-      const rawStartDay = Math.max(0, differenceInDays(start, monthStart));
-      const rawSpan = Math.max(1, endDay - rawStartDay + 1);
-      width = Math.min(rawSpan, 10); // cap at 10 days
-      width = Math.max(width, dnaDays, tierDays, 3); // minimum 3 days
-      startDay = Math.max(0, endDay - width + 1);
+      const start = safeParseISO(derivedStart);
+      if (start) {
+        const rawStartDay = Math.max(0, differenceInDays(start, monthStart));
+        const rawSpan = Math.max(1, endDay - rawStartDay + 1);
+        width = Math.min(rawSpan, 10);
+        width = Math.max(width, dnaDays, tierDays, 3);
+        startDay = Math.max(0, endDay - width + 1);
+      }
     } else {
-      // No start info: place before due_date with DNA/tier width
       width = Math.max(dnaDays, tierDays, 3);
       startDay = Math.max(0, endDay - width + 1);
     }
