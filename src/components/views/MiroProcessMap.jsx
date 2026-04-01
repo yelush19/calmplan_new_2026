@@ -77,12 +77,16 @@ export default function MiroProcessMap({
       const phaseId = `phase_${phaseIdx}`;
       const phaseColor = PHASE_COLORS[phaseIdx % PHASE_COLORS.length];
 
-      // Count tasks in this phase
-      const phaseTasks = tasks.filter(t =>
-        phase.serviceKeys?.some(sk =>
-          t.category?.includes(sk) || t.service_key === sk || t.service_group === sk
-        )
-      );
+      // Count tasks in this phase — match by service taskCategories OR direct category/key match
+      const allPhaseCategories = (phase.services || []).flatMap(s => s.taskCategories || []);
+      const allPhaseKeys = phase.serviceKeys || [];
+      const phaseTasks = tasks.filter(t => {
+        if (allPhaseCategories.includes(t.category)) return true;
+        if (allPhaseKeys.includes(t.category)) return true;
+        if (allPhaseKeys.includes(t.service_key)) return true;
+        if (allPhaseKeys.includes(t.service_group)) return true;
+        return false;
+      });
       const completed = phaseTasks.filter(t => t.status === 'production_completed' || t.status === 'completed').length;
 
       nodes.push({
@@ -106,8 +110,9 @@ export default function MiroProcessMap({
         const svcX = phaseX - CLIENT_OFFSET_X;
         const svcId = `svc_${phaseIdx}_${svcIdx}`;
 
+        const svcCats = service.taskCategories || [];
         const svcTasks = tasks.filter(t =>
-          service.taskCategories?.some(cat => t.category === cat)
+          svcCats.includes(t.category) || t.service_key === service.key || t.service_group === service.key
         );
         const svcCompleted = svcTasks.filter(t => t.status === 'production_completed' || t.status === 'completed').length;
 
