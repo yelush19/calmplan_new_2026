@@ -203,35 +203,31 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
   }, [clients]);
 
   const getTaskPosition = (task) => {
-    // Derive start & end dates
+    try {
     const derivedStart = task.scheduled_start
       || getScheduledStartForCategory(task.category, task.due_date)
       || null;
-    let end;
-    try { end = parseISO(task.due_date); if (isNaN(end.getTime())) return null; } catch { return null; }
+    const end = safeParseISO(task.due_date);
+    if (!end) return null;
     const endDay = Math.min(daysInMonth - 1, differenceInDays(end, monthStart));
 
-    // DNA-driven duration
     const dnaDays = getDNADurationDays(task);
 
-    // Tier-aware duration
     const client = clientByName[task.client_name];
     const service = getServiceForTask(task);
     let tierKey = null;
-    if (service?.key === 'payroll' && client) {
-      tierKey = getPayrollTier(client).key;
-    } else if (service?.key === 'vat') {
-      tierKey = getVatEnergyTier(task).key;
-    } else if (service?.key === 'reconciliation' || service?.key === 'annual_reports') {
-      const complexity = getTaskComplexity(task, client);
-      tierKey = complexity === 'high' ? 'climb' : complexity === 'medium' ? 'standard' : 'quick_win';
-    }
+    try {
+      if (service?.key === 'payroll' && client) tierKey = getPayrollTier(client).key;
+      else if (service?.key === 'vat') tierKey = getVatEnergyTier(task).key;
+      else if (service?.key === 'reconciliation' || service?.key === 'annual_reports') {
+        const complexity = getTaskComplexity(task, client);
+        tierKey = complexity === 'high' ? 'climb' : complexity === 'medium' ? 'standard' : 'quick_win';
+      }
+    } catch {}
     const tierDays = (tierKey && TIER_DURATION_DAYS[tierKey]) ? TIER_DURATION_DAYS[tierKey] : 0;
 
-    // === Width logic ===
-    // 1. If scheduled_start exists → use actual span, capped to 10 days max
-    // 2. Otherwise → use DNA/tier duration, minimum 3 days for readability
-    let startDay, width;
+    let startDay = Math.max(0, endDay - 3);
+    let width = 3;
 
     if (task.execution_date) {
       const execDate = safeParseISO(task.execution_date);
@@ -254,7 +250,6 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       startDay = Math.max(0, endDay - width + 1);
     }
 
-    // Deadline marker position
     const deadlineDayPct = (endDay / daysInMonth) * 100;
 
     // Cognitive load color from DNA
@@ -271,6 +266,7 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
       deadlineDayPct,
       hasExecDate: !!task.execution_date,
     };
+    } catch (err) { return null; }
   };
 
   // Pre-compute lane assignments for each client group
