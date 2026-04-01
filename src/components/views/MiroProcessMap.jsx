@@ -149,7 +149,15 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
     setPan({ x: panStart.current.px + (e.clientX - panStart.current.x), y: panStart.current.py + (e.clientY - panStart.current.y) });
   }, [dragNode, zoom, savePos]);
   const onMouseUp = useCallback(() => { isPanning.current = false; setDragNode(null); }, []);
-  const onWheel = useCallback((e) => { e.preventDefault(); setZoom(z => Math.max(0.3, Math.min(2.5, z - e.deltaY * 0.001))); }, []);
+  const onWheel = useCallback((e) => { setZoom(z => Math.max(0.3, Math.min(2.5, z - e.deltaY * 0.001))); }, []);
+  // Prevent page scroll when wheeling on map (non-passive)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e) => e.preventDefault();
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
 
   const startDrag = useCallback((e, nodeId, nx, ny) => {
     e.stopPropagation();
@@ -255,7 +263,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           {layout.nodes.filter(n => n.type === 'phase').map(n => (
             <g key={n.id} onMouseDown={e => startDrag(e, n.id, n.x, n.y)} data-clickable="true"
               onMouseEnter={() => setHoveredNode(n)} onMouseLeave={() => setHoveredNode(null)} style={{ cursor: 'move' }}>
-              <rect x={n.x - 85} y={n.y - 25} width={170} height={50} rx={14} fill={n.color} stroke={n.color} strokeWidth={0}>
+              <rect x={n.x - 100} y={n.y - 25} width={200} height={54} rx={14} fill={n.color} stroke={n.color} strokeWidth={0}>
                 <animate attributeName="opacity" values="0;1" dur="0.5s" fill="freeze" />
               </rect>
               <text x={n.x} y={n.y - 2} textAnchor="middle" fill="white" fontSize={13} fontWeight="700" style={{ pointerEvents: 'none' }}>{n.label}</text>
@@ -269,27 +277,27 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           {layout.nodes.filter(n => n.type === 'service').map(n => {
             const isExpanded = expandedNode === n.id;
             const isSearchHit = searchMatch?.nodeId === n.id;
-            const barW = 120;
+            const barW = 160;
             const donePct = n.total > 0 ? (n.done / n.total) * barW : 0;
 
             return (
               <g key={n.id} onMouseDown={e => startDrag(e, n.id, n.x, n.y)} style={{ cursor: 'move' }}>
                 {/* Card */}
-                <rect x={n.x - 75} y={n.y - 30} width={150} height={isExpanded ? 65 + (n.tasks?.length || 0) * 24 : 60}
+                <rect x={n.x - 95} y={n.y - 30} width={190} height={isExpanded ? 70 + (n.tasks?.length || 0) * 30 : 60}
                   rx={12} fill="white" stroke={isSearchHit ? '#1E3A5F' : n.color} strokeWidth={isSearchHit ? 3 : 2}>
                   <animate attributeName="opacity" values="0;1" dur="0.6s" fill="freeze" />
                 </rect>
                 {/* Service name */}
                 <text x={n.x} y={n.y - 10} textAnchor="middle" fill={n.color} fontSize={13} fontWeight="700" style={{ pointerEvents: 'none' }}>{n.label}</text>
                 {/* Progress bar */}
-                <rect x={n.x - 60} y={n.y + 2} width={barW} height={6} rx={3} fill="#E5E7EB" />
-                <rect x={n.x - 60} y={n.y + 2} width={donePct} height={6} rx={3} fill={n.color} />
+                <rect x={n.x - 80} y={n.y + 2} width={barW} height={6} rx={3} fill="#E5E7EB" />
+                <rect x={n.x - 80} y={n.y + 2} width={donePct} height={6} rx={3} fill={n.color} />
                 {/* Count */}
                 <text x={n.x} y={n.y + 22} textAnchor="middle" fill="#6B7280" fontSize={10} style={{ pointerEvents: 'none' }}>
                   {n.done}/{n.total} — לחצי לפירוט
                 </text>
                 {/* Click area */}
-                <rect x={n.x - 75} y={n.y - 30} width={150} height={60} fill="transparent" data-clickable="true"
+                <rect x={n.x - 95} y={n.y - 30} width={190} height={60} fill="transparent" data-clickable="true"
                   onClick={() => setExpandedNode(prev => prev === n.id ? null : n.id)} style={{ cursor: 'pointer' }} />
                 {/* Expanded client list */}
                 {isExpanded && (n.tasks || []).map((task, ti) => {
@@ -298,12 +306,12 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
                   return (
                     <g key={task.id} data-clickable="true" onClick={() => setSelectedTask(task)}
                       onMouseEnter={() => setHoveredNode(task)} onMouseLeave={() => setHoveredNode(null)} style={{ cursor: 'pointer' }}>
-                      <rect x={n.x - 68} y={n.y + 38 + ti * 24} width={136} height={22}
+                      <rect x={n.x - 88} y={n.y + 40 + ti * 30} width={176} height={26}
                         rx={6} fill={st.fill} stroke={isSearchedTask ? '#1E3A5F' : st.stroke} strokeWidth={isSearchedTask ? 2.5 : 1} />
-                      <text x={n.x - 50} y={n.y + 53 + ti * 24} fill={st.text} fontSize={10} fontWeight="600" style={{ pointerEvents: 'none' }}>
-                        {task.client_name?.length > 16 ? task.client_name.slice(0, 16) + '…' : task.client_name}
+                      <text x={n.x - 68} y={n.y + 57 + ti * 30} fill={st.text} fontSize={10} fontWeight="600" style={{ pointerEvents: 'none' }}>
+                        {task.client_name?.length > 22 ? task.client_name.slice(0, 22) + '…' : task.client_name}
                       </text>
-                      <text x={n.x - 64} y={n.y + 53 + ti * 24} fontSize={10} style={{ pointerEvents: 'none' }}>{st.icon}</text>
+                      <text x={n.x - 82} y={n.y + 57 + ti * 30} fontSize={10} style={{ pointerEvents: 'none' }}>{st.icon}</text>
                     </g>
                   );
                 })}
@@ -331,8 +339,8 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
         </svg>
       </div>
 
-      {/* Legend */}
-      <div className="absolute bottom-3 right-3 bg-white/90 rounded-xl px-3 py-1.5 shadow-sm border text-[10px] flex gap-3 flex-wrap" style={{ maxWidth: '280px' }}>
+      {/* Legend — top right, always visible */}
+      <div className="absolute top-14 right-3 z-20 bg-white/95 rounded-xl px-3 py-2 shadow-md border text-[11px] flex gap-3 flex-wrap" style={{ maxWidth: '300px' }}>
         {Object.entries(STATUS).filter(([k]) => !['completed'].includes(k)).slice(0, 6).map(([k, st]) => (
           <span key={k} className="flex items-center gap-0.5">
             <span className="w-2.5 h-2.5 rounded-full border" style={{ backgroundColor: st.fill, borderColor: st.stroke }} />
