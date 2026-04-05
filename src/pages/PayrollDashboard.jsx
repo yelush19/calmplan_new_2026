@@ -197,8 +197,8 @@ export default function PayrollDashboardPage() {
     const result = {};
     Object.values(payrollDashboardServices).forEach(service => {
       const serviceTasks = filteredTasks.filter(t => service.taskCategories.includes(t.category));
-      if (serviceTasks.length > 0) {
-        result[service.key] = {
+      // Always show tab (even if empty) — so user knows the service exists
+      result[service.key] = {
           service,
           clientRows: serviceTasks
             .map(task => ({
@@ -208,7 +208,6 @@ export default function PayrollDashboardPage() {
             }))
             .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
         };
-      }
     });
     return result;
   }, [filteredTasks, clientByName]);

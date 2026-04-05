@@ -436,7 +436,7 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
   const isQuickWin = vatTier?.key === 'quick_win' || payrollTier?.key === 'nano';
   const isClimb = vatTier?.key === 'climb';
 
-  const statusOptions = ['waiting_for_materials', 'not_started', 'ready_to_broadcast', 'reported_pending_payment', 'sent_for_review', 'needs_corrections', 'production_completed'];
+  const statusOptions = ['waiting_for_materials', 'not_started', 'sent_for_review', 'review_after_corrections', 'ready_to_broadcast', 'reported_pending_payment', 'needs_corrections', 'production_completed'];
 
   const subTasks = task.sub_tasks || [];
 

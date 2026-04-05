@@ -227,20 +227,21 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           {nodes.filter(n => n.t === 'task').map(n => {
             const isHL = searchHighlight === n.id;
             const isSel = selectedTask?.id === n.task?.id;
+            const clipId = `clip_${n.id}`;
             return (
               <g key={n.id} data-click="1" onClick={(e) => { e.stopPropagation(); setSelectedTask(n.task); }} style={{ cursor: 'pointer' }}>
+                <defs>
+                  <clipPath id={clipId}><rect x={n.x - 108} y={n.y - 16} width={216} height={32} /></clipPath>
+                </defs>
                 <rect x={n.x - 110} y={n.y - 17} width={220} height={34} rx={10}
                   fill={n.st.fill} stroke={isHL ? '#1E3A5F' : isSel ? '#2563EB' : n.st.stroke}
                   strokeWidth={isHL || isSel ? 3 : 1.5} />
-                {/* Status icon — left side */}
-                <text x={n.x - 96} y={n.y + 5} fontSize={14}>{n.st.icon}</text>
-                {/* Client name — inside card, after icon */}
-                <text x={n.x - 78} y={n.y + 4} fill={n.st.text} fontSize={12} fontWeight="700" style={{ pointerEvents: 'none' }}>
-                  {n.label?.length > 20 ? n.label.slice(0, 20) + '…' : n.label}
-                </text>
-                {/* Deadline — right side inside card */}
+                <g clipPath={`url(#${clipId})`}>
+                  <text x={n.x - 96} y={n.y + 5} fontSize={14}>{n.st.icon}</text>
+                  <text x={n.x - 78} y={n.y + 4} fill={n.st.text} fontSize={12} fontWeight="700">{n.label}</text>
+                </g>
                 {n.dueStr && (
-                  <text x={n.x + 100} y={n.y + 4} textAnchor="end" fill={n.st.text} fontSize={10} fontWeight="500" opacity={0.7} style={{ pointerEvents: 'none' }}>
+                  <text x={n.x + 100} y={n.y + 4} textAnchor="end" fill={n.st.text} fontSize={10} fontWeight="500" opacity={0.7}>
                     📅 {n.dueStr}
                   </text>
                 )}
