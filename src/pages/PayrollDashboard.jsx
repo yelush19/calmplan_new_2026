@@ -353,6 +353,21 @@ export default function PayrollDashboardPage() {
         }
       }
 
+      // Auto-cascade: when payroll completed → mark "הפקת תלושים" step done on payslip_sending task
+      if (newStatus === 'production_completed' && task.category === 'שכר') {
+        const payslipTask = tasks.find(t =>
+          t.client_name === task.client_name &&
+          (t.category === 'משלוח תלושים' || t.category === 'work_payslip_sending') &&
+          t.status !== 'production_completed'
+        );
+        if (payslipTask) {
+          const steps = payslipTask.process_steps || {};
+          const updatedSteps = { ...steps, generate: { ...steps.generate, done: true } };
+          await Task.update(payslipTask.id, { process_steps: updatedSteps, status: payslipTask.status === 'not_started' ? 'waiting_for_materials' : payslipTask.status });
+          setTasks(prev => prev.map(t => t.id === payslipTask.id ? { ...t, process_steps: updatedSteps } : t));
+        }
+      }
+
       window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'status-change' } }));
     } catch (error) { console.error("Error updating status:", error); }
   }, [tasks, confirm]);
