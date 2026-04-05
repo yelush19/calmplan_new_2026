@@ -26,6 +26,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
   const [sel, setSel] = useState(null);
   const [search, setSearch] = useState('');
   const [hideOk, setHideOk] = useState(true);
+  const [collapsed, setCollapsed] = useState({}); // { nodeId: true } — collapsed branches
   // Per-node drag offsets
   const [offsets, setOffsets] = useState(() => { try { return JSON.parse(localStorage.getItem(POS_KEY) || '{}'); } catch { return {}; } });
   const [dragId, setDragId] = useState(null);
@@ -100,7 +101,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
         const stTasks = s.tasks.filter(t => t.status === stKey);
         if (stTasks.length === 0) return;
         const stid = `st_${si}_${stKey}`;
-        N.push({ id: stid, t: 'st', bx: sx - 220, by: sty + (stTasks.length * 36) / 2, label: stCfg.label, icon: stCfg.icon, color: stCfg.color, fill: stCfg.fill, count: stTasks.length });
+        N.push({ id: stid, t: 'st', bx: sx - 220, by: sty + (stTasks.length * 36) / 2, label: stCfg.label, icon: stCfg.icon, color: stCfg.color, fill: stCfg.fill, count: stTasks.length, parentSvc: sid });
         E.push({ from: sid, to: stid, color: stCfg.color + '50' });
 
         // Client cards
@@ -109,7 +110,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           const tx = sx - 220 - 250;
           const ty = sty + ti * 36;
           const due = (() => { try { return task.due_date ? new Date(task.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : ''; } catch { return ''; } })();
-          N.push({ id: tid, t: 't', bx: tx, by: ty, task, stCfg, due, label: task.client_name || task.title });
+          N.push({ id: tid, t: 't', bx: tx, by: ty, task, stCfg, due, label: task.client_name || task.title, parentSvc: sid });
           E.push({ from: stid, to: tid, color: stCfg.color + '25' });
         });
         sty += Math.max(50, stTasks.length * 36 + 30);
@@ -185,6 +186,8 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
             const f = nodes.find(n => n.id === e.from);
             const t = nodes.find(n => n.id === e.to);
             if (!f || !t) return null;
+            // Hide edges to collapsed children
+            if (t.parentSvc && collapsed[t.parentSvc]) return null;
             const fp = getPos(f), tp = getPos(t);
             return <path key={i} d={bz(fp.x - 50, fp.y, tp.x + 110, tp.y)} fill="none" stroke={e.color} strokeWidth={2} opacity={0.4} />;
           })}
@@ -203,9 +206,9 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           ); })}
 
           {/* Services */}
-          {nodes.filter(n => n.t === 's').map(n => { const p = getPos(n); return (
-            <g key={n.id} data-d="1" onMouseDown={e => startDrag(e, n.id)} style={{ cursor: 'move' }}>
-              <rect x={p.x - 90} y={p.y - 24} width={180} height={48} rx={14} fill={n.color} />
+          {nodes.filter(n => n.t === 's').map(n => { const p = getPos(n); const isCol = collapsed[n.id]; return (
+            <g key={n.id} data-d="1" onMouseDown={e => startDrag(e, n.id)} onDoubleClick={() => setCollapsed(prev => ({ ...prev, [n.id]: !prev[n.id] }))} style={{ cursor: 'move' }} title="גרור להזזה, לחיצה כפולה לסגירה/פתיחה">
+              <rect x={p.x - 90} y={p.y - 24} width={180} height={48} rx={14} fill={n.color} stroke={isCol ? '#1E3A5F' : 'none'} strokeWidth={isCol ? 2 : 0} strokeDasharray={isCol ? '4 2' : 'none'} />
               <foreignObject x={p.x - 88} y={p.y - 22} width={176} height={44}>
                 <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', color: 'white', direction: 'rtl' }}>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>{n.label}</div>
@@ -216,7 +219,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           ); })}
 
           {/* Status nodes */}
-          {nodes.filter(n => n.t === 'st').map(n => { const p = getPos(n); return (
+          {nodes.filter(n => n.t === 'st' && !collapsed[n.parentSvc]).map(n => { const p = getPos(n); return (
             <g key={n.id} data-d="1" onMouseDown={e => startDrag(e, n.id)} style={{ cursor: 'move' }}>
               <rect x={p.x - 80} y={p.y - 18} width={160} height={36} rx={10} fill={n.fill} stroke={n.color} strokeWidth={2} />
               <foreignObject x={p.x - 78} y={p.y - 16} width={156} height={32}>
@@ -230,8 +233,8 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           ); })}
 
           {/* Clients */}
-          {nodes.filter(n => n.t === 't').map(n => { const p = getPos(n); const isHL = searchHL === n.id; const isSel = sel?.id === n.task?.id; return (
-            <g key={n.id} data-d="1" onMouseDown={e => { e.stopPropagation(); setSel(n.task); }} style={{ cursor: 'pointer' }}>
+          {nodes.filter(n => n.t === 't' && !collapsed[n.parentSvc]).map(n => { const p = getPos(n); const isHL = searchHL === n.id; const isSel = sel?.id === n.task?.id; return (
+            <g key={n.id} data-d="1" onMouseDown={e => startDrag(e, n.id)} onDoubleClick={() => setSel(n.task)} style={{ cursor: 'move' }} title="גרור להזזה, לחיצה כפולה לעריכה">
               <rect x={p.x - 105} y={p.y - 14} width={210} height={28} rx={8}
                 fill={n.stCfg.fill} stroke={isHL ? '#1E3A5F' : isSel ? '#2563EB' : n.stCfg.color}
                 strokeWidth={isHL || isSel ? 3 : 1} />

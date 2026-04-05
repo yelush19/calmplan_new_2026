@@ -744,7 +744,7 @@ export default function PayrollDashboardPage() {
           <AyoaRadialView tasks={filteredTasks} centerLabel="שכר" centerSub="P1" />
         </div>
       ) : viewMode === 'timeline' ? (
-        <ProjectTimelineView tasks={filteredTasks} />
+        <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />
       ) : viewMode === 'workbook' ? (
         <TaxWorkbookView
           tasks={filteredTasks}

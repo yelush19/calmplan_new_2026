@@ -10,13 +10,15 @@ import { Timer, CheckCircle, AlertTriangle } from 'lucide-react';
  * Shows each client task as a bar from scheduled_start → due_date
  */
 export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
+  const safeMonth = month || (new Date().getMonth() + 1);
+  const safeYear = year || new Date().getFullYear();
   // Build the timeline date range (the full month + 5 days padding)
   const timelineRange = useMemo(() => {
-    const monthDate = new Date(year, month - 1, 1);
+    const monthDate = new Date(safeYear, safeMonth - 1, 1);
     const start = startOfMonth(monthDate);
     const end = addDays(endOfMonth(monthDate), 5);
     return { start, end, days: eachDayOfInterval({ start, end }) };
-  }, [month, year]);
+  }, [safeMonth, safeYear]);
 
   // Group tasks by service category
   const grouped = useMemo(() => {
