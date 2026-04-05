@@ -1,17 +1,5 @@
 /**
- * ── MiroProcessMap V3: Full Miro-Style Mind Map ──
- *
- * Features:
- * - Drag & drop nodes with snap-to-grid
- * - Persistent positions (localStorage)
- * - Tooltip on hover (full details)
- * - Animated entry
- * - Mini-map navigation
- * - Search → zoom to node
- * - Status-colored nodes with progress bars
- * - Expandable summary groups
- * - Click → quick status change + edit
- * - No red/fuchsia (ADHD-friendly palette)
+ * ── MiroProcessMap V4: Every client is a separate node ──
  */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
@@ -26,327 +14,250 @@ const STATUS = {
   sent_for_review: { fill: '#F3E8FF', stroke: '#7C3AED', text: '#6D28D9', label: 'הועבר לעיון', icon: '👁️' },
   needs_corrections: { fill: '#FEF3C7', stroke: '#D97706', text: '#92400E', label: 'לתיקון', icon: '⚠️' },
   waiting_for_materials: { fill: '#FEF3C7', stroke: '#D97706', text: '#92400E', label: 'ממתין לחומרים', icon: '⏳' },
-  not_started: { fill: '#F3F4F6', stroke: '#9CA3AF', text: '#4B5563', label: 'טרם התחיל', icon: '⭕' },
+  not_started: { fill: '#F1F5F9', stroke: '#94A3B8', text: '#475569', label: 'טרם התחיל', icon: '⭕' },
 };
-
-const PHASE_COLORS = ['#00A3E0', '#0D9488', '#6366F1', '#F59E0B', '#7C3AED'];
-const STORAGE_KEY = 'calmplan_miro_positions';
-
-function getS(status) { return STATUS[status] || STATUS.not_started; }
+const COLORS = ['#00A3E0', '#0D9488', '#6366F1', '#F59E0B', '#7C3AED'];
+const getS = (s) => STATUS[s] || STATUS.not_started;
 
 export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 'תהליך', centerSub = '', onEditTask, onStatusChange }) {
   const containerRef = useRef(null);
-  const [zoom, setZoom] = useState(0.8);
-  const [pan, setPan] = useState({ x: 100, y: 0 });
+  const [zoom, setZoom] = useState(0.65);
+  const [pan, setPan] = useState({ x: 200, y: 50 });
   const [selectedTask, setSelectedTask] = useState(null);
-  const [expandedNode, setExpandedNode] = useState(null);
-  const [hoveredNode, setHoveredNode] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dragNode, setDragNode] = useState(null);
-  const [savedPositions, setSavedPositions] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
-  });
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0, px: 0, py: 0 });
-  const dragStart = useRef({ x: 0, y: 0, nx: 0, ny: 0 });
 
-  // Save positions
-  const savePos = useCallback((id, x, y) => {
-    setSavedPositions(prev => {
-      const next = { ...prev, [id]: { x, y } };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }, []);
-
-  // Build layout
-  const layout = useMemo(() => {
-    if (!phases?.length) return { nodes: [], edges: [] };
-    const nodes = [];
-    const edges = [];
-    const cx = 700, cy = 350;
-
-    nodes.push({ id: 'center', type: 'center', x: savedPositions.center?.x || cx, y: savedPositions.center?.y || cy, label: centerLabel, sub: centerSub });
-
-    const totalPhaseH = phases.length * 140;
-    let py = cy - totalPhaseH / 2 + 70;
-
-    phases.forEach((phase, pi) => {
-      const pid = `p${pi}`;
-      const color = PHASE_COLORS[pi % PHASE_COLORS.length];
-      const px = cx - 220;
-
-      // Gather all tasks for this phase
-      const allCats = (phase.services || []).flatMap(s => s.taskCategories || []);
-      const allKeys = phase.serviceKeys || [];
-      const phaseTasks = tasks.filter(t => allCats.includes(t.category) || allKeys.includes(t.category) || allKeys.includes(t.service_key));
-      const done = phaseTasks.filter(t => t.status === 'production_completed' || t.status === 'completed').length;
-
-      const phaseNode = { id: pid, type: 'phase', x: savedPositions[pid]?.x || px, y: savedPositions[pid]?.y || py, label: phase.label, color, done, total: phaseTasks.length };
-      nodes.push(phaseNode);
-      edges.push({ from: 'center', to: pid, color });
-
-      // Services
-      let sy = py - ((phase.services?.length || 1) - 1) * 60 / 2;
-      (phase.services || []).forEach((svc, si) => {
-        const sid = `s${pi}_${si}`;
-        const sx = px - 200;
-        const cats = svc.taskCategories || [];
-        const svcTasks = tasks.filter(t => cats.includes(t.category) || t.service_key === svc.key);
-        const svcDone = svcTasks.filter(t => t.status === 'production_completed' || t.status === 'completed').length;
-
-        nodes.push({ id: sid, type: 'service', x: savedPositions[sid]?.x || sx, y: savedPositions[sid]?.y || sy, label: svc.label, color, done: svcDone, total: svcTasks.length, tasks: svcTasks });
-        edges.push({ from: pid, to: sid, color: color + '50' });
-        sy += Math.max(70, svcTasks.length * 8 + 40);
-      });
-
-      py += Math.max(140, (phase.services?.length || 1) * 80);
-    });
-
-    return { nodes, edges };
-  }, [tasks, phases, centerLabel, centerSub, savedPositions]);
-
-  // Search highlight
-  const searchMatch = useMemo(() => {
-    if (!searchTerm) return null;
-    const q = searchTerm.toLowerCase();
-    for (const node of layout.nodes) {
-      if (node.type === 'service' && node.tasks) {
-        const match = node.tasks.find(t => t.client_name?.toLowerCase().includes(q) || t.title?.toLowerCase().includes(q));
-        if (match) return { nodeId: node.id, taskId: match.id };
-      }
-    }
-    return null;
-  }, [searchTerm, layout.nodes]);
-
-  // Auto-zoom to search result
-  useEffect(() => {
-    if (searchMatch) {
-      const node = layout.nodes.find(n => n.id === searchMatch.nodeId);
-      if (node) {
-        setPan({ x: -node.x * zoom + 400, y: -node.y * zoom + 300 });
-        setExpandedNode(searchMatch.nodeId);
-      }
-    }
-  }, [searchMatch]);
-
-  // Pan
-  const onMouseDown = useCallback((e) => {
-    if (e.target.closest('[data-clickable]')) return;
-    isPanning.current = true;
-    panStart.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
-  }, [pan]);
-  const onMouseMove = useCallback((e) => {
-    if (dragNode) {
-      const dx = (e.clientX - dragStart.current.x) / zoom;
-      const dy = (e.clientY - dragStart.current.y) / zoom;
-      const newX = dragStart.current.nx + dx;
-      const newY = dragStart.current.ny + dy;
-      savePos(dragNode, Math.round(newX / 10) * 10, Math.round(newY / 10) * 10);
-      return;
-    }
-    if (!isPanning.current) return;
-    setPan({ x: panStart.current.px + (e.clientX - panStart.current.x), y: panStart.current.py + (e.clientY - panStart.current.y) });
-  }, [dragNode, zoom, savePos]);
-  const onMouseUp = useCallback(() => { isPanning.current = false; setDragNode(null); }, []);
-  const onWheel = useCallback((e) => { setZoom(z => Math.max(0.3, Math.min(2.5, z - e.deltaY * 0.001))); }, []);
-  // Prevent page scroll when wheeling on map (non-passive)
+  // Non-passive wheel
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const handler = (e) => e.preventDefault();
-    el.addEventListener('wheel', handler, { passive: false });
-    return () => el.removeEventListener('wheel', handler);
+    const h = (e) => { e.preventDefault(); setZoom(z => Math.max(0.2, Math.min(2.5, z - e.deltaY * 0.001))); };
+    el.addEventListener('wheel', h, { passive: false });
+    return () => el.removeEventListener('wheel', h);
   }, []);
 
-  const startDrag = useCallback((e, nodeId, nx, ny) => {
-    e.stopPropagation();
-    setDragNode(nodeId);
-    dragStart.current = { x: e.clientX, y: e.clientY, nx, ny };
-  }, []);
+  const onMD = (e) => { if (e.target.closest('[data-click]')) return; isPanning.current = true; panStart.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y }; };
+  const onMM = (e) => { if (!isPanning.current) return; setPan({ x: panStart.current.px + (e.clientX - panStart.current.x), y: panStart.current.py + (e.clientY - panStart.current.y) }); };
+  const onMU = () => isPanning.current = false;
 
-  const resetView = () => { setZoom(0.8); setPan({ x: 100, y: 0 }); };
-  const resetPositions = () => { setSavedPositions({}); try { localStorage.removeItem(STORAGE_KEY); } catch {} };
+  // Build layout: center → phases → services → individual clients
+  const { nodes, edges } = useMemo(() => {
+    const N = [], E = [];
+    if (!phases?.length) return { nodes: N, edges: E };
+    const CX = 800, CY = 400;
+    N.push({ id: 'c', t: 'center', x: CX, y: CY, label: centerLabel, sub: centerSub });
 
-  // Bezier path
-  const bezier = (x1, y1, x2, y2) => {
-    const cx1 = x1 - 80, cx2 = x2 + 80;
-    return `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`;
-  };
+    let totalH = 0;
+    // Pre-calculate heights
+    const phaseHeights = phases.map((ph) => {
+      const svcs = (ph.services || []);
+      let h = 0;
+      svcs.forEach(svc => {
+        const cats = svc.taskCategories || [];
+        const keys = ph.serviceKeys || [];
+        const count = tasks.filter(t => cats.includes(t.category) || keys.includes(t.category) || keys.includes(t.service_key)).length;
+        h += Math.max(60, count * 42 + 50);
+      });
+      return Math.max(100, h);
+    });
+    const totalPH = phaseHeights.reduce((s, h) => s + h, 0);
+
+    let py = CY - totalPH / 2;
+    phases.forEach((phase, pi) => {
+      const color = COLORS[pi % COLORS.length];
+      const pId = `p${pi}`;
+      const px = CX - 250;
+      const phaseH = phaseHeights[pi];
+
+      // Phase tasks
+      const allCats = (phase.services || []).flatMap(s => s.taskCategories || []);
+      const allKeys = phase.serviceKeys || [];
+      const pTasks = tasks.filter(t => allCats.includes(t.category) || allKeys.includes(t.category) || allKeys.includes(t.service_key));
+      const pDone = pTasks.filter(t => t.status === 'production_completed' || t.status === 'completed').length;
+
+      N.push({ id: pId, t: 'phase', x: px, y: py + phaseH / 2, label: phase.label, color, done: pDone, total: pTasks.length });
+      E.push({ from: 'c', to: pId, color });
+
+      let sy = py + 30;
+      (phase.services || []).forEach((svc, si) => {
+        const sId = `s${pi}_${si}`;
+        const sx = px - 230;
+        const cats = svc.taskCategories || [];
+        const sTasks = tasks.filter(t => cats.includes(t.category) || t.service_key === svc.key);
+        const sDone = sTasks.filter(t => t.status === 'production_completed' || t.status === 'completed').length;
+
+        N.push({ id: sId, t: 'service', x: sx, y: sy + (sTasks.length * 42) / 2, label: svc.label, color, done: sDone, total: sTasks.length });
+        E.push({ from: pId, to: sId, color: color + '60' });
+
+        // Individual client nodes
+        sTasks.forEach((task, ti) => {
+          const tId = `t_${task.id}`;
+          const tx = sx - 250;
+          const ty = sy + ti * 42;
+          const st = getS(task.status);
+          // Deadline info
+          const dueStr = task.due_date ? new Date(task.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : '';
+          N.push({ id: tId, t: 'task', x: tx, y: ty, task, st, dueStr, label: task.client_name || task.title });
+          E.push({ from: sId, to: tId, color: st.stroke + '30' });
+        });
+
+        sy += Math.max(60, sTasks.length * 42 + 50);
+      });
+
+      py += phaseH + 30;
+    });
+
+    return { nodes: N, edges: E };
+  }, [tasks, phases, centerLabel, centerSub]);
+
+  // Search
+  const searchHighlight = useMemo(() => {
+    if (!searchTerm) return null;
+    const q = searchTerm.toLowerCase();
+    const found = nodes.find(n => n.t === 'task' && (n.label?.toLowerCase().includes(q) || n.task?.title?.toLowerCase().includes(q)));
+    if (found) {
+      setPan({ x: -found.x * zoom + 500, y: -found.y * zoom + 300 });
+      return found.id;
+    }
+    return null;
+  }, [searchTerm, nodes, zoom]);
+
+  const bezier = (x1, y1, x2, y2) => `M ${x1} ${y1} C ${x1 - 80} ${y1}, ${x2 + 80} ${y2}, ${x2} ${y2}`;
 
   return (
-    <div ref={containerRef} className="relative w-full bg-gradient-to-br from-slate-50 to-white rounded-xl border overflow-hidden" style={{ height: '75vh', minHeight: '500px' }}>
+    <div ref={containerRef} className="relative w-full rounded-xl border overflow-hidden" style={{ height: '75vh', minHeight: '500px', background: 'linear-gradient(135deg, #FAFBFE 0%, #F5F7FC 100%)' }}>
       {/* Toolbar */}
-      <div className="absolute top-3 left-3 z-20 flex gap-1 bg-white/90 rounded-xl p-1.5 shadow-sm border">
+      <div className="absolute top-3 left-3 z-20 flex gap-1 bg-white rounded-xl p-1.5 shadow border">
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.min(2.5, z + 0.15))}><ZoomIn className="w-3.5 h-3.5" /></Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.max(0.3, z - 0.15))}><ZoomOut className="w-3.5 h-3.5" /></Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={resetView}><Maximize2 className="w-3.5 h-3.5" /></Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.max(0.2, z - 0.15))}><ZoomOut className="w-3.5 h-3.5" /></Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setZoom(0.65); setPan({ x: 200, y: 50 }); }}><Maximize2 className="w-3.5 h-3.5" /></Button>
         <span className="text-[10px] text-gray-400 self-center px-1">{Math.round(zoom * 100)}%</span>
-        <div className="border-r mx-1" />
-        <Button variant="ghost" size="sm" className="h-7 text-[10px] px-2" onClick={resetPositions}>סדר מחדש</Button>
       </div>
 
       {/* Search */}
-      <div className="absolute top-3 right-3 z-20 w-48">
-        <div className="relative">
-          <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-          <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="חפש לקוח..."
-            className="h-8 text-xs pe-8 bg-white/90 border shadow-sm" />
-        </div>
+      <div className="absolute top-3 right-3 z-20 w-52">
+        <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="🔍 חפש לקוח..." className="h-8 text-xs bg-white shadow border" />
+      </div>
+
+      {/* Legend — always visible top */}
+      <div className="absolute top-14 right-3 z-20 bg-white rounded-xl px-3 py-2 shadow border flex gap-3 flex-wrap text-[11px]" style={{ maxWidth: '320px' }}>
+        {Object.entries(STATUS).filter(([k]) => !['completed'].includes(k)).slice(0, 6).map(([k, s]) => (
+          <span key={k} className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded border" style={{ backgroundColor: s.fill, borderColor: s.stroke }} />
+            <span style={{ color: s.text }}>{s.label}</span>
+          </span>
+        ))}
       </div>
 
       {/* Selected task panel */}
       {selectedTask && (
-        <div className="absolute bottom-3 right-3 z-20 bg-white rounded-xl shadow-lg border p-3 max-w-[280px]">
-          <div className="text-sm font-bold text-slate-800 mb-0.5">{selectedTask.title}</div>
-          <div className="text-xs text-slate-400 mb-2">{selectedTask.client_name} • {selectedTask.due_date || 'ללא דדליין'}</div>
+        <div className="absolute bottom-3 right-3 z-20 bg-white rounded-xl shadow-lg border p-3 w-[280px]">
+          <div className="text-sm font-bold text-slate-800">{selectedTask.title}</div>
+          <div className="text-xs text-slate-400 mb-1">{selectedTask.client_name} • דדליין: {selectedTask.due_date || 'לא נקבע'}</div>
+          {selectedTask.notes && <div className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 mb-1">📝 {selectedTask.notes}</div>}
           <div className="flex flex-wrap gap-1 mb-2">
-            {['not_started', 'waiting_for_materials', 'ready_to_broadcast', 'production_completed'].map(s => {
-              const st = STATUS[s];
-              return (
-                <button key={s} onClick={() => { onStatusChange?.(selectedTask, s); setSelectedTask(null); }}
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${selectedTask.status === s ? 'ring-2 ring-offset-1' : 'opacity-60 hover:opacity-100'}`}
-                  style={{ borderColor: st.stroke, color: st.text }}>{st.icon} {st.label}</button>
-              );
-            })}
+            {['not_started', 'waiting_for_materials', 'ready_to_broadcast', 'production_completed'].map(s => (
+              <button key={s} onClick={() => { onStatusChange?.(selectedTask, s); setSelectedTask(null); }}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${selectedTask.status === s ? 'ring-2 ring-offset-1' : 'opacity-50 hover:opacity-100'}`}
+                style={{ borderColor: getS(s).stroke, color: getS(s).text }}>{getS(s).icon} {getS(s).label}</button>
+            ))}
           </div>
           <div className="flex gap-2">
-            {onEditTask && <button onClick={() => { onEditTask(selectedTask); setSelectedTask(null); }} className="text-xs font-bold text-blue-600 hover:bg-blue-50 rounded px-2 py-0.5">✏️ פתח</button>}
-            <button onClick={() => setSelectedTask(null)} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-0.5">סגור</button>
+            {onEditTask && <button onClick={() => { onEditTask(selectedTask); setSelectedTask(null); }} className="text-xs font-bold text-blue-600 hover:bg-blue-50 rounded px-2 py-1">✏️ פתח משימה</button>}
+            <button onClick={() => setSelectedTask(null)} className="text-xs text-gray-400 px-2 py-1">✕</button>
           </div>
-        </div>
-      )}
-
-      {/* Tooltip */}
-      {hoveredNode && !selectedTask && !dragNode && (
-        <div className="absolute z-30 bg-slate-800 text-white rounded-lg px-3 py-2 text-xs shadow-xl pointer-events-none max-w-[220px]"
-          style={{ left: 20, bottom: 60 }}>
-          <div className="font-bold mb-0.5">{hoveredNode.label || hoveredNode.client_name}</div>
-          {hoveredNode.due_date && <div>דדליין: {hoveredNode.due_date}</div>}
-          {hoveredNode.status && <div>סטטוס: {getS(hoveredNode.status).label}</div>}
-          {hoveredNode.total != null && <div>{hoveredNode.done}/{hoveredNode.total} הושלמו</div>}
         </div>
       )}
 
       {/* SVG */}
-      <svg className="w-full h-full" style={{ cursor: dragNode ? 'grabbing' : isPanning.current ? 'grabbing' : 'grab' }}
-        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onWheel={onWheel}>
+      <svg className="w-full h-full" style={{ cursor: isPanning.current ? 'grabbing' : 'grab' }}
+        onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}>
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
-
-          {/* Grid dots */}
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <circle cx="20" cy="20" r="0.5" fill="#CBD5E1" />
+          {/* Grid */}
+          <pattern id="dots" width="50" height="50" patternUnits="userSpaceOnUse">
+            <circle cx="25" cy="25" r="0.7" fill="#D1D5DB" />
           </pattern>
-          <rect width="3000" height="2000" x="-500" y="-200" fill="url(#grid)" />
+          <rect x="-500" y="-300" width="4000" height="3000" fill="url(#dots)" />
 
-          {/* Edges */}
-          {layout.edges.map((e, i) => {
-            const f = layout.nodes.find(n => n.id === e.from);
-            const t = layout.nodes.find(n => n.id === e.to);
+          {/* Edges — bezier curves */}
+          {edges.map((e, i) => {
+            const f = nodes.find(n => n.id === e.from);
+            const t = nodes.find(n => n.id === e.to);
             if (!f || !t) return null;
-            return <path key={i} d={bezier(f.x - 50, f.y, t.x + 80, t.y)} fill="none" stroke={e.color} strokeWidth={2.5} strokeLinecap="round" opacity={0.6} />;
+            const fx = f.t === 'center' ? f.x - 55 : f.x - 90;
+            const tx = t.x + (t.t === 'task' ? 110 : 90);
+            return <path key={i} d={bezier(fx, f.y, tx, t.y)} fill="none" stroke={e.color} strokeWidth={2} opacity={0.5} />;
           })}
 
-          {/* Center */}
-          {layout.nodes.filter(n => n.type === 'center').map(n => (
-            <g key={n.id} onMouseDown={e => startDrag(e, n.id, n.x, n.y)} data-clickable="true"
-              onMouseEnter={() => setHoveredNode(n)} onMouseLeave={() => setHoveredNode(null)} style={{ cursor: 'move' }}>
-              <circle cx={n.x} cy={n.y} r={50} fill="#1E3A5F" stroke="#0F172A" strokeWidth={3}>
-                <animate attributeName="r" values="48;52;48" dur="4s" repeatCount="indefinite" />
-              </circle>
-              <text x={n.x} y={n.y - 6} textAnchor="middle" fill="white" fontSize={15} fontWeight="800" style={{ pointerEvents: 'none' }}>{n.label}</text>
-              <text x={n.x} y={n.y + 12} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize={11} style={{ pointerEvents: 'none' }}>{n.sub}</text>
+          {/* CENTER */}
+          {nodes.filter(n => n.t === 'center').map(n => (
+            <g key={n.id}>
+              <circle cx={n.x} cy={n.y} r={55} fill="#1E3A5F" stroke="#0F172A" strokeWidth={3} />
+              <text x={n.x} y={n.y - 6} textAnchor="middle" fill="white" fontSize={16} fontWeight="800">{n.label}</text>
+              <text x={n.x} y={n.y + 14} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize={11}>{n.sub}</text>
             </g>
           ))}
 
-          {/* Phases */}
-          {layout.nodes.filter(n => n.type === 'phase').map(n => (
-            <g key={n.id} onMouseDown={e => startDrag(e, n.id, n.x, n.y)} data-clickable="true"
-              onMouseEnter={() => setHoveredNode(n)} onMouseLeave={() => setHoveredNode(null)} style={{ cursor: 'move' }}>
-              <rect x={n.x - 100} y={n.y - 25} width={200} height={54} rx={14} fill={n.color} stroke={n.color} strokeWidth={0}>
-                <animate attributeName="opacity" values="0;1" dur="0.5s" fill="freeze" />
-              </rect>
-              <text x={n.x} y={n.y - 2} textAnchor="middle" fill="white" fontSize={13} fontWeight="700" style={{ pointerEvents: 'none' }}>{n.label}</text>
-              <text x={n.x} y={n.y + 16} textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize={11} style={{ pointerEvents: 'none' }}>
-                {n.done}/{n.total} הושלמו
-              </text>
+          {/* PHASES */}
+          {nodes.filter(n => n.t === 'phase').map(n => (
+            <g key={n.id}>
+              <rect x={n.x - 100} y={n.y - 28} width={200} height={56} rx={16} fill={n.color} />
+              <text x={n.x} y={n.y - 4} textAnchor="middle" fill="white" fontSize={14} fontWeight="700">{n.label}</text>
+              <text x={n.x} y={n.y + 16} textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize={12}>{n.done}/{n.total} הושלמו</text>
             </g>
           ))}
 
-          {/* Services */}
-          {layout.nodes.filter(n => n.type === 'service').map(n => {
-            const isExpanded = expandedNode === n.id;
-            const isSearchHit = searchMatch?.nodeId === n.id;
-            const barW = 160;
-            const donePct = n.total > 0 ? (n.done / n.total) * barW : 0;
-
+          {/* SERVICES */}
+          {nodes.filter(n => n.t === 'service').map(n => {
+            const pct = n.total > 0 ? (n.done / n.total) * 140 : 0;
             return (
-              <g key={n.id} onMouseDown={e => startDrag(e, n.id, n.x, n.y)} style={{ cursor: 'move' }}>
-                {/* Card */}
-                <rect x={n.x - 95} y={n.y - 30} width={190} height={isExpanded ? 70 + (n.tasks?.length || 0) * 30 : 60}
-                  rx={12} fill="white" stroke={isSearchHit ? '#1E3A5F' : n.color} strokeWidth={isSearchHit ? 3 : 2}>
-                  <animate attributeName="opacity" values="0;1" dur="0.6s" fill="freeze" />
-                </rect>
-                {/* Service name */}
-                <text x={n.x} y={n.y - 10} textAnchor="middle" fill={n.color} fontSize={13} fontWeight="700" style={{ pointerEvents: 'none' }}>{n.label}</text>
-                {/* Progress bar */}
-                <rect x={n.x - 80} y={n.y + 2} width={barW} height={6} rx={3} fill="#E5E7EB" />
-                <rect x={n.x - 80} y={n.y + 2} width={donePct} height={6} rx={3} fill={n.color} />
-                {/* Count */}
-                <text x={n.x} y={n.y + 22} textAnchor="middle" fill="#6B7280" fontSize={10} style={{ pointerEvents: 'none' }}>
-                  {n.done}/{n.total} — לחצי לפירוט
-                </text>
-                {/* Click area */}
-                <rect x={n.x - 95} y={n.y - 30} width={190} height={60} fill="transparent" data-clickable="true"
-                  onClick={() => setExpandedNode(prev => prev === n.id ? null : n.id)} style={{ cursor: 'pointer' }} />
-                {/* Expanded client list */}
-                {isExpanded && (n.tasks || []).map((task, ti) => {
-                  const st = getS(task.status);
-                  const isSearchedTask = searchMatch?.taskId === task.id;
-                  return (
-                    <g key={task.id} data-clickable="true" onClick={() => setSelectedTask(task)}
-                      onMouseEnter={() => setHoveredNode(task)} onMouseLeave={() => setHoveredNode(null)} style={{ cursor: 'pointer' }}>
-                      <rect x={n.x - 88} y={n.y + 40 + ti * 30} width={176} height={26}
-                        rx={6} fill={st.fill} stroke={isSearchedTask ? '#1E3A5F' : st.stroke} strokeWidth={isSearchedTask ? 2.5 : 1} />
-                      <text x={n.x - 68} y={n.y + 57 + ti * 30} fill={st.text} fontSize={10} fontWeight="600" style={{ pointerEvents: 'none' }}>
-                        {task.client_name?.length > 22 ? task.client_name.slice(0, 22) + '…' : task.client_name}
-                      </text>
-                      <text x={n.x - 82} y={n.y + 57 + ti * 30} fontSize={10} style={{ pointerEvents: 'none' }}>{st.icon}</text>
-                    </g>
-                  );
-                })}
+              <g key={n.id}>
+                <rect x={n.x - 90} y={n.y - 24} width={180} height={48} rx={12} fill="white" stroke={n.color} strokeWidth={2} />
+                <text x={n.x} y={n.y - 2} textAnchor="middle" fill={n.color} fontSize={13} fontWeight="700">{n.label}</text>
+                <rect x={n.x - 70} y={n.y + 8} width={140} height={5} rx={2.5} fill="#E5E7EB" />
+                <rect x={n.x - 70} y={n.y + 8} width={pct} height={5} rx={2.5} fill={n.color} />
+                <text x={n.x + 78} y={n.y + 14} fill="#9CA3AF" fontSize={9} textAnchor="end">{n.done}/{n.total}</text>
               </g>
             );
           })}
 
-          <defs>
-            <radialGradient id="cg"><stop offset="0%" stopColor="#2563EB" /><stop offset="100%" stopColor="#1E3A5F" /></radialGradient>
-          </defs>
+          {/* TASK NODES — individual clients */}
+          {nodes.filter(n => n.t === 'task').map(n => {
+            const isHL = searchHighlight === n.id;
+            const isSel = selectedTask?.id === n.task?.id;
+            return (
+              <g key={n.id} data-click="1" onClick={() => setSelectedTask(n.task)} style={{ cursor: 'pointer' }}>
+                <rect x={n.x - 110} y={n.y - 16} width={220} height={32} rx={8}
+                  fill={n.st.fill} stroke={isHL ? '#1E3A5F' : isSel ? '#2563EB' : n.st.stroke}
+                  strokeWidth={isHL || isSel ? 3 : 1.5} />
+                {/* Icon */}
+                <text x={n.x + 95} y={n.y + 5} fontSize={13} textAnchor="end">{n.st.icon}</text>
+                {/* Client name — full width */}
+                <text x={n.x - 100} y={n.y + 1} fill={n.st.text} fontSize={12} fontWeight="600" style={{ pointerEvents: 'none' }}>
+                  {n.label?.length > 26 ? n.label.slice(0, 26) + '…' : n.label}
+                </text>
+                {/* Deadline */}
+                {n.dueStr && (
+                  <text x={n.x + 100} y={n.y + 1} textAnchor="end" fill={n.st.text} fontSize={10} opacity={0.6}>{n.dueStr}</text>
+                )}
+              </g>
+            );
+          })}
         </g>
       </svg>
 
       {/* Mini-map */}
-      <div className="absolute bottom-3 left-3 w-32 h-20 bg-white/90 rounded-lg border shadow-sm overflow-hidden">
-        <svg viewBox="0 400 1400 800" className="w-full h-full">
-          {layout.nodes.map(n => (
+      <div className="absolute bottom-3 left-3 w-36 h-24 bg-white/90 rounded-lg border shadow overflow-hidden">
+        <svg viewBox="0 0 1600 1200" className="w-full h-full">
+          {nodes.map(n => (
             <circle key={n.id} cx={n.x} cy={n.y}
-              r={n.type === 'center' ? 8 : n.type === 'phase' ? 6 : 4}
-              fill={n.color || '#1E3A5F'} opacity={0.7} />
+              r={n.t === 'center' ? 12 : n.t === 'phase' ? 8 : n.t === 'service' ? 6 : 3}
+              fill={n.color || n.st?.stroke || '#1E3A5F'} opacity={0.6} />
           ))}
-          {/* Viewport indicator */}
-          <rect x={(-pan.x / zoom)} y={(-pan.y / zoom) + 400} width={1200 / zoom} height={600 / zoom}
-            fill="none" stroke="#00A3E0" strokeWidth={3} rx={4} />
+          <rect x={-pan.x / zoom} y={-pan.y / zoom} width={1200 / zoom} height={700 / zoom}
+            fill="none" stroke="#00A3E0" strokeWidth={4} rx={6} />
         </svg>
-      </div>
-
-      {/* Legend — top right, always visible */}
-      <div className="absolute top-14 right-3 z-20 bg-white/95 rounded-xl px-3 py-2 shadow-md border text-[11px] flex gap-3 flex-wrap" style={{ maxWidth: '300px' }}>
-        {Object.entries(STATUS).filter(([k]) => !['completed'].includes(k)).slice(0, 6).map(([k, st]) => (
-          <span key={k} className="flex items-center gap-0.5">
-            <span className="w-2.5 h-2.5 rounded-full border" style={{ backgroundColor: st.fill, borderColor: st.stroke }} />
-            {st.label}
-          </span>
-        ))}
       </div>
     </div>
   );
