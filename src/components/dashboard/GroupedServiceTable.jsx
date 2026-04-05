@@ -719,6 +719,10 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
             )}
           </div>
         </td>
+        {/* Notes — in main row, always visible */}
+        <td className="py-1.5 px-2 text-right align-top" style={{ minWidth: '100px' }}>
+          <NotesCell taskId={task.id} initialNotes={task.notes || ''} />
+        </td>
       </tr>
       {/* Sub-tasks row */}
       {showSubTasks && (
@@ -871,10 +875,6 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
                 </div>
               )}
             </div>
-          </td>
-          {/* Notes column */}
-          <td className="py-1.5 px-2 text-right align-top" style={{ minWidth: '120px' }}>
-            <NotesCell taskId={task.id} initialNotes={task.notes || ''} />
           </td>
         </tr>
       )}
