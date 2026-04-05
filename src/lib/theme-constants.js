@@ -152,7 +152,7 @@ export const BOARD_CATEGORIES = [
 // ─── Functional Load Colors (Iron Rule — cognitive load visualization) ──────
 // Used by Dashboard Feed, KPI Bar, and MindMap branch coloring
 export const LOAD_COLORS = {
-  3: { color: '#800000', label: 'מורכב',  bg: 'bg-[#800000]', border: 'border-l-4 border-l-[#800000]', textClass: 'text-[#800000]' },  // בורדו
+  3: { color: '#92400E', label: 'מורכב',  bg: 'bg-[#92400E]', border: 'border-l-4 border-l-[#92400E]', textClass: 'text-[#92400E]' },  // חום-ענבר כהה (was בורדו)
   2: { color: '#4682B4', label: 'בינוני', bg: 'bg-[#4682B4]', border: 'border-l-4 border-l-[#4682B4]', textClass: 'text-[#4682B4]' },  // טורקיז
   1: { color: '#ADD8E6', label: 'פשוט',  bg: 'bg-[#ADD8E6]', border: 'border-l-4 border-l-[#ADD8E6]', textClass: 'text-[#5B99A8]' },  // תכלת
   0: { color: '#8FBC8F', label: 'ננו',   bg: 'bg-[#8FBC8F]', border: 'border-l-4 border-l-[#8FBC8F]', textClass: 'text-[#5A8A5A]' },  // ירוק מרווה
