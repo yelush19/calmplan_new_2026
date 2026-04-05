@@ -503,11 +503,11 @@ export const ADDITIONAL_SERVICES = {
     // 3. file_prep + upload(הושלם) → status: sent_for_review
     // 4. send_receipts(הושלם) → status: production_completed (פותח משלוח אסמכתאות)
     steps: [
-      { key: 'send_to_operator', label: 'משלוח קובץ למתפעל', icon: 'send' },
-      { key: 'receive_file',     label: 'קבלת קובץ ממתפעל',  icon: 'inbox',       requiresPrev: true },
+      { key: 'send_to_operator', label: 'שליחה למתפעל', icon: 'send' },
+      { key: 'receive_file',     label: 'אישור קבלת הנחיות',  icon: 'inbox',       requiresPrev: true },
       { key: 'file_prep',        label: 'הכנת קובץ מס"ב',    icon: 'file-text',   requiresPrev: true },
-      { key: 'upload',           label: 'העלאה',              icon: 'upload',      requiresPrev: true },
-      { key: 'send_receipts',    label: 'משלוח אסמכתאות',     icon: 'check-circle', requiresPrev: true },
+      { key: 'upload',           label: 'העלאת מס"ב',         icon: 'upload',      requiresPrev: true },
+      { key: 'send_receipts',    label: 'שליחת אסמכתאות',     icon: 'check-circle', requiresPrev: true },
     ],
   },
 
