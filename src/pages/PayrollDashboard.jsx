@@ -353,7 +353,7 @@ export default function PayrollDashboardPage() {
         }
       }
 
-      // Auto-cascade: when payroll completed → mark "הפקת תלושים" step done on payslip_sending task
+      // Auto-cascade: when payroll completed → offer to update payslip sending
       if (newStatus === 'production_completed' && task.category === 'שכר') {
         const payslipTask = tasks.find(t =>
           t.client_name === task.client_name &&
@@ -361,10 +361,29 @@ export default function PayrollDashboardPage() {
           t.status !== 'production_completed'
         );
         if (payslipTask) {
-          const steps = payslipTask.process_steps || {};
-          const updatedSteps = { ...steps, generate: { ...steps.generate, done: true } };
-          await Task.update(payslipTask.id, { process_steps: updatedSteps, status: payslipTask.status === 'not_started' ? 'waiting_for_materials' : payslipTask.status });
-          setTasks(prev => prev.map(t => t.id === payslipTask.id ? { ...t, process_steps: updatedSteps } : t));
+          const shouldUpdate = await confirm({
+            title: '🎉 שכר הושלם!',
+            message: `${task.client_name} — שכר הושלם.\n\nלהעביר למשלוח תלושים ולסמן "הפקת תלושים" כבוצע?`,
+            confirmText: 'כן, העבר למשלוח',
+            cancelText: 'לא עכשיו',
+          });
+          if (shouldUpdate) {
+            const steps = payslipTask.process_steps || {};
+            const updatedSteps = { ...steps, generate: { ...steps.generate, done: true } };
+            await Task.update(payslipTask.id, { process_steps: updatedSteps, status: 'not_started' });
+            setTasks(prev => prev.map(t => t.id === payslipTask.id ? { ...t, process_steps: updatedSteps, status: 'not_started' } : t));
+          }
+        }
+
+        // Also check: MASAV employees task
+        const masavTask = tasks.find(t =>
+          t.client_name === task.client_name &&
+          (t.category === 'מס"ב עובדים' || t.category === 'work_masav') &&
+          t.status !== 'production_completed'
+        );
+        if (masavTask && masavTask.status === 'waiting_for_materials') {
+          await Task.update(masavTask.id, { status: 'not_started' });
+          setTasks(prev => prev.map(t => t.id === masavTask.id ? { ...t, status: 'not_started' } : t));
         }
       }
 
