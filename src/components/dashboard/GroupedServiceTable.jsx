@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Task } from '@/api/entities';
 const fixShortYear = (v) => { if (!v) return v; const m = v.match(/^(\d{1,2})-(\d{2})-(\d{2})$/); if (m) { const yr = parseInt(m[1], 10); return `${yr < 100 ? (yr < 50 ? 2000 + yr : 1900 + yr) : yr}-${m[2]}-${m[3]}`; } return v; };
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -112,25 +112,46 @@ function ExecutionBar({ startDate, dueDate }) {
 // All status groups start OPEN — client requested no collapsing
 const DEFAULT_COLLAPSED = new Set();
 
-// Inline notes editor — saves directly to DB on blur
+// Inline notes editor — saves directly to DB
 function NotesCell({ taskId, initialNotes }) {
-  const [val, setVal] = useState(initialNotes);
-  const [saving, setSaving] = useState(false);
-  // Sync with external changes
-  useEffect(() => { setVal(initialNotes); }, [initialNotes]);
+  const [val, setVal] = useState(initialNotes || '');
+  const [saved, setSaved] = useState(true);
+  const saveTimer = useRef(null);
+
+  const saveNow = useCallback(async (text) => {
+    try {
+      await Task.update(taskId, { notes: text });
+      setSaved(true);
+    } catch (err) {
+      console.error('Failed to save notes:', err);
+    }
+  }, [taskId]);
+
+  const handleChange = useCallback((e) => {
+    const text = e.target.value;
+    setVal(text);
+    setSaved(false);
+    // Debounce: save 1 second after last keystroke
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => saveNow(text), 1000);
+  }, [saveNow]);
+
+  // Save immediately on blur
+  const handleBlur = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    if (!saved) saveNow(val);
+  }, [val, saved, saveNow]);
+
+  // Cleanup
+  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
+
   return (
     <textarea
       value={val}
-      onChange={(e) => setVal(e.target.value)}
-      onBlur={async () => {
-        if (val !== initialNotes) {
-          setSaving(true);
-          try { await Task.update(taskId, { notes: val }); } catch {}
-          setSaving(false);
-        }
-      }}
+      onChange={handleChange}
+      onBlur={handleBlur}
       placeholder="הערות..."
-      className={`w-full text-xs border rounded px-2 py-1 resize-none h-8 focus:h-16 transition-all bg-white ${saving ? 'border-emerald-300' : 'border-gray-200 focus:border-blue-300'}`}
+      className={`w-full text-xs border rounded px-2 py-1 resize-none h-8 focus:h-16 transition-all bg-white ${!saved ? 'border-amber-300' : 'border-gray-200 focus:border-blue-300'}`}
       rows={1}
     />
   );
