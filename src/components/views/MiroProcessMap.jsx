@@ -1,35 +1,34 @@
 /**
- * ── MiroProcessMap V4: Every client is a separate node ──
+ * ── MiroProcessMap V5: Status-based branches ──
+ * Center → Status nodes → Client cards
+ * Simple and clear: see immediately who needs what
  */
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-const STATUS = {
-  production_completed: { fill: '#DCFCE7', stroke: '#16A34A', text: '#15803D', label: 'הושלם', icon: '✅' },
-  completed: { fill: '#DCFCE7', stroke: '#16A34A', text: '#15803D', label: 'הושלם', icon: '✅' },
-  ready_to_broadcast: { fill: '#CCFBF1', stroke: '#0D9488', text: '#0F766E', label: 'מוכן לשידור', icon: '📡' },
-  reported_pending_payment: { fill: '#E0E7FF', stroke: '#4F46E5', text: '#3730A3', label: 'ממתין לתשלום', icon: '💰' },
-  sent_for_review: { fill: '#F3E8FF', stroke: '#7C3AED', text: '#6D28D9', label: 'הועבר לעיון', icon: '👁️' },
-  review_after_corrections: { fill: '#EDE9FE', stroke: '#8B5CF6', text: '#5B21B6', label: 'לעיון לאחר תיקונים', icon: '🔄' },
-  needs_corrections: { fill: '#FEF3C7', stroke: '#D97706', text: '#92400E', label: 'לתיקון', icon: '⚠️' },
-  waiting_for_materials: { fill: '#FEF3C7', stroke: '#D97706', text: '#92400E', label: 'ממתין לחומרים', icon: '⏳' },
-  not_started: { fill: '#F1F5F9', stroke: '#94A3B8', text: '#475569', label: 'טרם התחיל', icon: '⭕' },
-};
-const COLORS = ['#00A3E0', '#0D9488', '#6366F1', '#F59E0B', '#7C3AED'];
-const getS = (s) => STATUS[s] || STATUS.not_started;
+const STATUSES = [
+  { key: 'waiting_for_materials', label: 'ממתין לחומרים', icon: '⏳', color: '#D97706', fill: '#FEF3C7' },
+  { key: 'not_started', label: 'לבצע', icon: '⭕', color: '#6B7280', fill: '#F3F4F6' },
+  { key: 'sent_for_review', label: 'הועבר לעיון', icon: '👁️', color: '#7C3AED', fill: '#F3E8FF' },
+  { key: 'review_after_corrections', label: 'לעיון לאחר תיקונים', icon: '🔄', color: '#8B5CF6', fill: '#EDE9FE' },
+  { key: 'needs_corrections', label: 'לתיקון', icon: '⚠️', color: '#D97706', fill: '#FEF3C7' },
+  { key: 'ready_to_broadcast', label: 'מוכן לשידור', icon: '📡', color: '#0D9488', fill: '#CCFBF1' },
+  { key: 'reported_pending_payment', label: 'שודר, ממתין לתשלום', icon: '💰', color: '#4F46E5', fill: '#E0E7FF' },
+  { key: 'production_completed', label: 'הושלם', icon: '✅', color: '#16A34A', fill: '#DCFCE7' },
+];
 
-export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 'תהליך', centerSub = '', onEditTask, onStatusChange }) {
+export default function MiroProcessMap({ tasks = [], centerLabel = 'תהליך', centerSub = '', onEditTask, onStatusChange, phases }) {
   const containerRef = useRef(null);
-  const [zoom, setZoom] = useState(0.65);
-  const [pan, setPan] = useState({ x: 200, y: 50 });
+  const [zoom, setZoom] = useState(0.7);
+  const [pan, setPan] = useState({ x: 150, y: 30 });
   const [selectedTask, setSelectedTask] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [hideCompleted, setHideCompleted] = useState(true); // Hide completed by default
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0, px: 0, py: 0 });
 
-  // Non-passive wheel
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -42,89 +41,66 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
   const onMM = (e) => { if (!isPanning.current) return; setPan({ x: panStart.current.px + (e.clientX - panStart.current.x), y: panStart.current.py + (e.clientY - panStart.current.y) }); };
   const onMU = () => isPanning.current = false;
 
-  // Build layout: center → phases → services → individual clients
+  // Group tasks by status
+  const filteredTasks = useMemo(() => {
+    if (!hideCompleted) return tasks;
+    return tasks.filter(t => t.status !== 'production_completed' && t.status !== 'completed');
+  }, [tasks, hideCompleted]);
+
+  const statusGroups = useMemo(() => {
+    return STATUSES.map(st => {
+      const matching = filteredTasks.filter(t => t.status === st.key);
+      return { ...st, tasks: matching, count: matching.length };
+    }).filter(g => g.count > 0);
+  }, [filteredTasks]);
+
+  // Layout
   const { nodes, edges } = useMemo(() => {
     const N = [], E = [];
-    if (!phases?.length) return { nodes: N, edges: E };
-    const CX = 800, CY = 400;
-    N.push({ id: 'c', t: 'center', x: CX, y: CY, label: centerLabel, sub: centerSub });
+    const CX = 700, CY = 350;
+    N.push({ id: 'c', t: 'center', x: CX, y: CY, label: centerLabel, sub: `${tasks.length} משימות` });
 
-    let totalH = 0;
-    // Pre-calculate heights
-    const phaseHeights = phases.map((ph) => {
-      const svcs = (ph.services || []);
-      let h = 0;
-      svcs.forEach(svc => {
-        const cats = svc.taskCategories || [];
-        const keys = ph.serviceKeys || [];
-        const count = tasks.filter(t => cats.includes(t.category) || keys.includes(t.category) || keys.includes(t.service_key)).length;
-        h += Math.max(60, count * 42 + 50);
-      });
-      return Math.max(100, h);
-    });
-    const totalPH = phaseHeights.reduce((s, h) => s + h, 0);
+    const totalH = statusGroups.length * 120;
+    let sy = CY - totalH / 2 + 60;
 
-    let py = CY - totalPH / 2;
-    phases.forEach((phase, pi) => {
-      const color = COLORS[pi % COLORS.length];
-      const pId = `p${pi}`;
-      const px = CX - 250;
-      const phaseH = phaseHeights[pi];
+    statusGroups.forEach((sg, si) => {
+      const sx = CX - 280;
+      const statusId = `st_${si}`;
+      N.push({ id: statusId, t: 'status', x: sx, y: sy, ...sg });
+      E.push({ from: 'c', to: statusId, color: sg.color });
 
-      // Phase tasks
-      const allCats = (phase.services || []).flatMap(s => s.taskCategories || []);
-      const allKeys = phase.serviceKeys || [];
-      const pTasks = tasks.filter(t => allCats.includes(t.category) || allKeys.includes(t.category) || allKeys.includes(t.service_key));
-      const pDone = pTasks.filter(t => t.status === 'production_completed' || t.status === 'completed').length;
-
-      N.push({ id: pId, t: 'phase', x: px, y: py + phaseH / 2, label: phase.label, color, done: pDone, total: pTasks.length });
-      E.push({ from: 'c', to: pId, color });
-
-      let sy = py + 30;
-      (phase.services || []).forEach((svc, si) => {
-        const sId = `s${pi}_${si}`;
-        const sx = px - 230;
-        const cats = svc.taskCategories || [];
-        const sTasks = tasks.filter(t => cats.includes(t.category) || t.service_key === svc.key);
-        const sDone = sTasks.filter(t => t.status === 'production_completed' || t.status === 'completed').length;
-
-        N.push({ id: sId, t: 'service', x: sx, y: sy + (sTasks.length * 42) / 2, label: svc.label, color, done: sDone, total: sTasks.length });
-        E.push({ from: pId, to: sId, color: color + '60' });
-
-        // Individual client nodes
-        sTasks.forEach((task, ti) => {
-          const tId = `t_${task.id}`;
-          const tx = sx - 250;
-          const ty = sy + ti * 42;
-          const st = getS(task.status);
-          // Deadline info
-          const dueStr = (() => { try { return task.due_date ? new Date(task.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : ''; } catch { return ''; } })();
-          N.push({ id: tId, t: 'task', x: tx, y: ty, task, st, dueStr, label: task.client_name || task.title });
-          E.push({ from: sId, to: tId, color: st.stroke + '30' });
-        });
-
-        sy += Math.max(60, sTasks.length * 42 + 50);
+      // Client nodes
+      const clientH = sg.tasks.length * 38;
+      let cy = sy - clientH / 2 + 19;
+      sg.tasks.forEach((task, ti) => {
+        const cx = sx - 280;
+        const tid = `t_${task.id}`;
+        const dueStr = (() => { try { return task.due_date ? new Date(task.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : ''; } catch { return ''; } })();
+        N.push({ id: tid, t: 'task', x: cx, y: cy, task, sg, dueStr, label: task.client_name || task.title });
+        E.push({ from: statusId, to: tid, color: sg.color + '30' });
+        cy += 38;
       });
 
-      py += phaseH + 30;
+      sy += Math.max(120, sg.tasks.length * 38 + 60);
     });
 
     return { nodes: N, edges: E };
-  }, [tasks, phases, centerLabel, centerSub]);
+  }, [tasks, statusGroups, centerLabel]);
 
   // Search
-  const searchHighlight = useMemo(() => {
+  const searchHL = useMemo(() => {
     if (!searchTerm) return null;
     const q = searchTerm.toLowerCase();
-    const found = nodes.find(n => n.t === 'task' && (n.label?.toLowerCase().includes(q) || n.task?.title?.toLowerCase().includes(q)));
-    if (found) {
-      setPan({ x: -found.x * zoom + 500, y: -found.y * zoom + 300 });
-      return found.id;
-    }
-    return null;
+    const found = nodes.find(n => n.t === 'task' && n.label?.toLowerCase().includes(q));
+    if (found) setPan({ x: -found.x * zoom + 500, y: -found.y * zoom + 300 });
+    return found?.id || null;
   }, [searchTerm, nodes, zoom]);
 
-  const bezier = (x1, y1, x2, y2) => `M ${x1} ${y1} C ${x1 - 80} ${y1}, ${x2 + 80} ${y2}, ${x2} ${y2}`;
+  const bezier = (x1, y1, x2, y2) => `M ${x1} ${y1} C ${x1-80} ${y1}, ${x2+80} ${y2}, ${x2} ${y2}`;
+
+  if (tasks.length === 0) {
+    return <div className="flex items-center justify-center h-64 text-gray-400"><div className="text-center"><div className="text-4xl mb-2">🗺️</div><p className="text-sm">אין משימות להצגה</p></div></div>;
+  }
 
   return (
     <div ref={containerRef} className="relative w-full rounded-xl border overflow-hidden" style={{ height: '75vh', minHeight: '500px', background: 'linear-gradient(135deg, #FAFBFE 0%, #F5F7FC 100%)' }}>
@@ -132,8 +108,13 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
       <div className="absolute top-3 left-3 z-20 flex gap-1 bg-white rounded-xl p-1.5 shadow border">
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.min(2.5, z + 0.15))}><ZoomIn className="w-3.5 h-3.5" /></Button>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.max(0.2, z - 0.15))}><ZoomOut className="w-3.5 h-3.5" /></Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setZoom(0.65); setPan({ x: 200, y: 50 }); }}><Maximize2 className="w-3.5 h-3.5" /></Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setZoom(0.7); setPan({ x: 150, y: 30 }); }}><Maximize2 className="w-3.5 h-3.5" /></Button>
         <span className="text-[10px] text-gray-400 self-center px-1">{Math.round(zoom * 100)}%</span>
+        <div className="border-r mx-1" />
+        <Button variant={hideCompleted ? 'default' : 'ghost'} size="sm" className="h-7 text-[10px] px-2"
+          onClick={() => setHideCompleted(p => !p)}>
+          {hideCompleted ? '✅ הצג הושלמו' : '🙈 הסתר הושלמו'}
+        </Button>
       </div>
 
       {/* Search */}
@@ -141,57 +122,50 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
         <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="🔍 חפש לקוח..." className="h-8 text-xs bg-white shadow border" />
       </div>
 
-      {/* Legend — always visible top */}
-      <div className="absolute top-14 right-3 z-20 bg-white rounded-xl px-3 py-2 shadow border flex gap-3 flex-wrap text-[11px]" style={{ maxWidth: '320px' }}>
-        {Object.entries(STATUS).filter(([k]) => !['completed'].includes(k)).map(([k, s]) => (
-          <span key={k} className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded border" style={{ backgroundColor: s.fill, borderColor: s.stroke }} />
-            <span style={{ color: s.text }}>{s.label}</span>
+      {/* Legend */}
+      <div className="absolute top-14 right-3 z-20 bg-white rounded-xl px-3 py-2 shadow border flex gap-2 flex-wrap text-[11px]" style={{ maxWidth: '350px' }}>
+        {STATUSES.map(s => (
+          <span key={s.key} className="flex items-center gap-1">
+            <span>{s.icon}</span>
+            <span style={{ color: s.color, fontWeight: 600 }}>{s.label}</span>
           </span>
         ))}
       </div>
 
-      {/* Selected task panel */}
+      {/* Selected task */}
       {selectedTask && (
         <div className="absolute bottom-3 right-3 z-20 bg-white rounded-xl shadow-lg border p-3 w-[280px]">
           <div className="text-sm font-bold text-slate-800">{selectedTask.title}</div>
-          <div className="text-xs text-slate-400 mb-1">{selectedTask.client_name} • דדליין: {selectedTask.due_date || 'לא נקבע'}</div>
-          {selectedTask.notes && <div className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 mb-1">📝 {selectedTask.notes}</div>}
+          <div className="text-xs text-slate-400 mb-2">{selectedTask.client_name} • {selectedTask.due_date || 'ללא דדליין'}</div>
           <div className="flex flex-wrap gap-1 mb-2">
-            {['not_started', 'waiting_for_materials', 'sent_for_review', 'review_after_corrections', 'needs_corrections', 'ready_to_broadcast', 'production_completed'].map(s => (
-              <button key={s} onClick={() => { onStatusChange?.(selectedTask, s); setSelectedTask(null); }}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${selectedTask.status === s ? 'ring-2 ring-offset-1' : 'opacity-50 hover:opacity-100'}`}
-                style={{ borderColor: getS(s).stroke, color: getS(s).text }}>{getS(s).icon} {getS(s).label}</button>
+            {STATUSES.map(s => (
+              <button key={s.key} onClick={() => { onStatusChange?.(selectedTask, s.key); setSelectedTask(null); }}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${selectedTask.status === s.key ? 'ring-2 ring-offset-1' : 'opacity-40 hover:opacity-100'}`}
+                style={{ borderColor: s.color, color: s.color }}>{s.icon} {s.label}</button>
             ))}
           </div>
           <div className="flex gap-2">
-            {onEditTask && <button onClick={() => { onEditTask(selectedTask); setSelectedTask(null); }} className="text-xs font-bold text-blue-600 hover:bg-blue-50 rounded px-2 py-1">✏️ פתח משימה</button>}
+            {onEditTask && <button onClick={() => { onEditTask(selectedTask); setSelectedTask(null); }} className="text-xs font-bold text-blue-600 hover:bg-blue-50 rounded px-2 py-1">✏️ פתח</button>}
             <button onClick={() => setSelectedTask(null)} className="text-xs text-gray-400 px-2 py-1">✕</button>
           </div>
         </div>
       )}
 
       {/* SVG */}
-      <svg className="w-full h-full" style={{ cursor: isPanning.current ? 'grabbing' : 'grab' }}
-        onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}>
+      <svg className="w-full h-full" style={{ cursor: 'grab' }} onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}>
         <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
-          {/* Grid */}
-          <pattern id="dots" width="50" height="50" patternUnits="userSpaceOnUse">
-            <circle cx="25" cy="25" r="0.7" fill="#D1D5DB" />
-          </pattern>
+          <pattern id="dots" width="50" height="50" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="0.7" fill="#D1D5DB" /></pattern>
           <rect x="-500" y="-300" width="4000" height="3000" fill="url(#dots)" />
 
-          {/* Edges — bezier curves */}
+          {/* Edges */}
           {edges.map((e, i) => {
             const f = nodes.find(n => n.id === e.from);
             const t = nodes.find(n => n.id === e.to);
             if (!f || !t) return null;
-            const fx = f.t === 'center' ? f.x - 55 : f.x - 90;
-            const tx = t.x + (t.t === 'task' ? 110 : 90);
-            return <path key={i} d={bezier(fx, f.y, tx, t.y)} fill="none" stroke={e.color} strokeWidth={2} opacity={0.5} />;
+            return <path key={i} d={bezier(f.x - 50, f.y, t.x + 110, t.y)} fill="none" stroke={e.color} strokeWidth={2} opacity={0.5} />;
           })}
 
-          {/* CENTER */}
+          {/* Center */}
           {nodes.filter(n => n.t === 'center').map(n => (
             <g key={n.id}>
               <circle cx={n.x} cy={n.y} r={55} fill="#1E3A5F" stroke="#0F172A" strokeWidth={3} />
@@ -200,46 +174,36 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
             </g>
           ))}
 
-          {/* PHASES */}
-          {nodes.filter(n => n.t === 'phase').map(n => (
+          {/* Status branches */}
+          {nodes.filter(n => n.t === 'status').map(n => (
             <g key={n.id}>
               <rect x={n.x - 100} y={n.y - 28} width={200} height={56} rx={16} fill={n.color} />
-              <text x={n.x} y={n.y - 4} textAnchor="middle" fill="white" fontSize={14} fontWeight="700">{n.label}</text>
-              <text x={n.x} y={n.y + 16} textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize={12}>{n.done}/{n.total} הושלמו</text>
+              <foreignObject x={n.x - 98} y={n.y - 26} width={196} height={52}>
+                <div xmlns="http://www.w3.org/1999/xhtml" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'white', direction: 'rtl' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 700 }}>{n.icon} {n.label}</span>
+                  <span style={{ fontSize: '12px', opacity: 0.8 }}>{n.count} לקוחות</span>
+                </div>
+              </foreignObject>
             </g>
           ))}
 
-          {/* SERVICES */}
-          {nodes.filter(n => n.t === 'service').map(n => {
-            const pct = n.total > 0 ? (n.done / n.total) * 140 : 0;
-            return (
-              <g key={n.id}>
-                <rect x={n.x - 90} y={n.y - 24} width={180} height={48} rx={12} fill="white" stroke={n.color} strokeWidth={2} />
-                <text x={n.x} y={n.y - 2} textAnchor="middle" fill={n.color} fontSize={13} fontWeight="700">{n.label}</text>
-                <rect x={n.x - 70} y={n.y + 8} width={140} height={5} rx={2.5} fill="#E5E7EB" />
-                <rect x={n.x - 70} y={n.y + 8} width={pct} height={5} rx={2.5} fill={n.color} />
-                <text x={n.x + 78} y={n.y + 14} fill="#9CA3AF" fontSize={9} textAnchor="end">{n.done}/{n.total}</text>
-              </g>
-            );
-          })}
-
-          {/* TASK NODES — individual clients */}
+          {/* Task cards */}
           {nodes.filter(n => n.t === 'task').map(n => {
-            const isHL = searchHighlight === n.id;
+            const isHL = searchHL === n.id;
             const isSel = selectedTask?.id === n.task?.id;
             return (
               <g key={n.id} data-click="1" onClick={(e) => { e.stopPropagation(); setSelectedTask(n.task); }} style={{ cursor: 'pointer' }}>
-                <rect x={n.x - 110} y={n.y - 17} width={220} height={34} rx={10}
-                  fill={n.st.fill} stroke={isHL ? '#1E3A5F' : isSel ? '#2563EB' : n.st.stroke}
+                <rect x={n.x - 110} y={n.y - 16} width={220} height={32} rx={10}
+                  fill={n.sg.fill} stroke={isHL ? '#1E3A5F' : isSel ? '#2563EB' : n.sg.color}
                   strokeWidth={isHL || isSel ? 3 : 1.5} />
-                <foreignObject x={n.x - 108} y={n.y - 15} width={216} height={30}>
+                <foreignObject x={n.x - 108} y={n.y - 14} width={216} height={28}>
                   <div xmlns="http://www.w3.org/1999/xhtml"
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', padding: '0 8px', direction: 'rtl', overflow: 'hidden' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: n.st.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: n.sg.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
                       {n.label}
                     </span>
-                    <span style={{ fontSize: '10px', color: n.st.text, opacity: 0.7, marginRight: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {n.dueStr ? `📅${n.dueStr}` : ''} {n.st.icon}
+                    <span style={{ fontSize: '10px', color: n.sg.color, opacity: 0.7, marginRight: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {n.dueStr && `📅${n.dueStr}`}
                     </span>
                   </div>
                 </foreignObject>
@@ -251,14 +215,9 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
 
       {/* Mini-map */}
       <div className="absolute bottom-3 left-3 w-36 h-24 bg-white/90 rounded-lg border shadow overflow-hidden">
-        <svg viewBox="0 0 1600 1200" className="w-full h-full">
-          {nodes.map(n => (
-            <circle key={n.id} cx={n.x} cy={n.y}
-              r={n.t === 'center' ? 12 : n.t === 'phase' ? 8 : n.t === 'service' ? 6 : 3}
-              fill={n.color || n.st?.stroke || '#1E3A5F'} opacity={0.6} />
-          ))}
-          <rect x={-pan.x / zoom} y={-pan.y / zoom} width={1200 / zoom} height={700 / zoom}
-            fill="none" stroke="#00A3E0" strokeWidth={4} rx={6} />
+        <svg viewBox="0 0 1400 1000" className="w-full h-full">
+          {nodes.map(n => <circle key={n.id} cx={n.x} cy={n.y} r={n.t === 'center' ? 10 : n.t === 'status' ? 7 : 3} fill={n.color || n.sg?.color || '#1E3A5F'} opacity={0.6} />)}
+          <rect x={-pan.x / zoom} y={-pan.y / zoom} width={1200 / zoom} height={700 / zoom} fill="none" stroke="#00A3E0" strokeWidth={4} rx={6} />
         </svg>
       </div>
     </div>
