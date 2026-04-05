@@ -1297,7 +1297,7 @@ export function computeInsights(tasks, clients = []) {
   // --- Payroll Insights ---
   const payrollTasks = byService['payroll'] || [];
   const inRevision = payrollTasks.filter(t =>
-    t.status === 'sent_for_review' || t.status === 'needs_corrections'
+    t.status === 'sent_for_review' || t.status === 'review_after_corrections' || t.status === 'needs_corrections'
   );
   if (inRevision.length > 0) {
     insights.push({

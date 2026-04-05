@@ -39,13 +39,14 @@ const COGNITIVE_LOAD_CONFIG = {
   3: { label: 'כבד', color: '#D97706', bg: 'bg-amber-50', text: 'text-amber-800' },
 };
 
-// 7 Golden Statuses — display order by priority
+// 8 Statuses — display order by priority
 const STATUS_DISPLAY_ORDER = [
   'waiting_for_materials',       // 1 - ממתין לחומרים
   'not_started',                 // 2 - לבצע
   'ready_to_broadcast',          // 3 - מוכן לשידור
   'reported_pending_payment',    // 4 - שודר, ממתין לתשלום
   'sent_for_review',             // 3 - הועבר לעיון (payroll)
+  'review_after_corrections',    // 3.2 - הועבר לעיון לאחר תיקונים
   'needs_corrections',           // 3 - לבצע תיקונים
   'production_completed',        // 5 - הושלם ייצור
 ];
