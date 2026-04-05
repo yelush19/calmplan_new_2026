@@ -650,7 +650,7 @@ export default function PayrollReportsDashboardPage() {
             <AyoaRadialView tasks={filteredTasks} centerLabel="דיווחי שכר" centerSub="P1" />
           </div>
         ) : (
-          <Tabs defaultValue={sortedServiceKeys[0]} className="w-full">
+          <Tabs defaultValue={sortedServiceKeys[0]} className="w-full" dir="rtl">
             <TabsList className="flex gap-1 h-auto p-1.5 rounded-xl bg-slate-100 border mb-3 flex-wrap">
               {sortedServiceKeys.map(serviceKey => {
                 const { service, clientRows } = serviceData[serviceKey];

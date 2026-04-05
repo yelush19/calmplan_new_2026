@@ -36,7 +36,7 @@ function getServiceAccent(serviceKey) {
 const COGNITIVE_LOAD_CONFIG = {
   1: { label: 'קל', color: '#22C55E', bg: 'bg-emerald-50', text: 'text-emerald-700' },
   2: { label: 'בינוני', color: '#F59E0B', bg: 'bg-amber-50', text: 'text-amber-700' },
-  3: { label: 'כבד', color: '#EF4444', bg: 'bg-red-50', text: 'text-red-700' },
+  3: { label: 'כבד', color: '#D97706', bg: 'bg-amber-50', text: 'text-amber-800' },
 };
 
 // 7 Golden Statuses — display order by priority

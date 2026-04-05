@@ -508,7 +508,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
             const serviceEntries = Object.entries(serviceData);
             if (serviceEntries.length === 0) return null;
             return (
-              <Tabs defaultValue={serviceEntries[0][0]} className="w-full">
+              <Tabs defaultValue={serviceEntries[0][0]} className="w-full" dir="rtl">
                 <TabsList className="flex gap-1 h-auto p-1.5 rounded-xl bg-slate-100 border mb-3 flex-wrap">
                   {serviceEntries.map(([serviceKey, { service, clientRows }]) => {
                     const completed = clientRows.filter(r => r.task.status === 'production_completed').length;
