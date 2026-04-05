@@ -989,6 +989,7 @@ export const STATUS_CONFIG = {
   waiting_for_materials:      { label: 'ממתין לחומרים',        bg: 'bg-amber-100',   text: 'text-amber-800',   border: 'border-amber-200',   priority: 1 },
   not_started:                { label: 'לבצע',                 bg: 'bg-slate-200',   text: 'text-slate-800',   border: 'border-slate-300',   priority: 2 },
   sent_for_review:            { label: 'הועבר לעיון',          bg: 'bg-purple-200',  text: 'text-purple-800',  border: 'border-purple-300',  priority: 3 },
+  review_after_corrections:   { label: 'הועבר לעיון לאחר תיקונים', bg: 'bg-violet-200', text: 'text-violet-800', border: 'border-violet-300', priority: 3.2 },
   ready_to_broadcast:         { label: 'מוכן לשידור',          bg: 'bg-teal-200',    text: 'text-teal-800',    border: 'border-teal-300',    priority: 3.5 },
   reported_pending_payment:   { label: 'שודר, ממתין לתשלום',   bg: 'bg-indigo-200',  text: 'text-indigo-800',  border: 'border-indigo-300',  priority: 4 },
   needs_corrections:          { label: 'לבצע תיקונים',         bg: 'bg-orange-200',  text: 'text-orange-800',  border: 'border-orange-300',  priority: 3 },

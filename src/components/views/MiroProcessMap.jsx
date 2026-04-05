@@ -12,6 +12,7 @@ const STATUS = {
   ready_to_broadcast: { fill: '#CCFBF1', stroke: '#0D9488', text: '#0F766E', label: 'מוכן לשידור', icon: '📡' },
   reported_pending_payment: { fill: '#E0E7FF', stroke: '#4F46E5', text: '#3730A3', label: 'ממתין לתשלום', icon: '💰' },
   sent_for_review: { fill: '#F3E8FF', stroke: '#7C3AED', text: '#6D28D9', label: 'הועבר לעיון', icon: '👁️' },
+  review_after_corrections: { fill: '#EDE9FE', stroke: '#8B5CF6', text: '#5B21B6', label: 'לעיון לאחר תיקונים', icon: '🔄' },
   needs_corrections: { fill: '#FEF3C7', stroke: '#D97706', text: '#92400E', label: 'לתיקון', icon: '⚠️' },
   waiting_for_materials: { fill: '#FEF3C7', stroke: '#D97706', text: '#92400E', label: 'ממתין לחומרים', icon: '⏳' },
   not_started: { fill: '#F1F5F9', stroke: '#94A3B8', text: '#475569', label: 'טרם התחיל', icon: '⭕' },
@@ -157,7 +158,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           <div className="text-xs text-slate-400 mb-1">{selectedTask.client_name} • דדליין: {selectedTask.due_date || 'לא נקבע'}</div>
           {selectedTask.notes && <div className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 mb-1">📝 {selectedTask.notes}</div>}
           <div className="flex flex-wrap gap-1 mb-2">
-            {['not_started', 'waiting_for_materials', 'ready_to_broadcast', 'production_completed'].map(s => (
+            {['not_started', 'waiting_for_materials', 'sent_for_review', 'review_after_corrections', 'needs_corrections', 'ready_to_broadcast', 'production_completed'].map(s => (
               <button key={s} onClick={() => { onStatusChange?.(selectedTask, s); setSelectedTask(null); }}
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${selectedTask.status === s ? 'ring-2 ring-offset-1' : 'opacity-50 hover:opacity-100'}`}
                 style={{ borderColor: getS(s).stroke, color: getS(s).text }}>{getS(s).icon} {getS(s).label}</button>
