@@ -170,9 +170,11 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
   const monthTasks = useMemo(() => {
     return tasks.filter(t => {
       if (!t.due_date) return false;
-      const due = parseISO(t.due_date);
-      const start = t.scheduled_start ? parseISO(t.scheduled_start) : due;
-      return start <= monthEnd && due >= monthStart;
+      const d = safeParseISO(t.due_date);
+      if (!d) return false;
+      const start = t.scheduled_start ? safeParseISO(t.scheduled_start) : d;
+      if (!start) return false;
+      return start <= monthEnd && d >= monthStart;
     });
   }, [tasks, monthStart, monthEnd]);
 
@@ -330,15 +332,20 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
     }
 
     const task = draggingTask;
-    const newDueDate = addDays(parseISO(task.due_date), dragPreviewDay);
+    const parsedDue = safeParseISO(task.due_date);
+    if (!parsedDue) { setDraggingTask(null); setDragPreviewDay(null); return; }
+    const newDueDate = addDays(parsedDue, dragPreviewDay);
     const updates = {
       due_date: format(newDueDate, 'yyyy-MM-dd'),
       reschedule_count: (task.reschedule_count || 0) + 1,
     };
 
     if (task.scheduled_start) {
-      const newStart = addDays(parseISO(task.scheduled_start), dragPreviewDay);
-      updates.scheduled_start = format(newStart, 'yyyy-MM-dd');
+      const parsedStart = safeParseISO(task.scheduled_start);
+      if (parsedStart) {
+        const newStart = addDays(parsedStart, dragPreviewDay);
+        updates.scheduled_start = format(newStart, 'yyyy-MM-dd');
+      }
     }
 
     try {
@@ -358,12 +365,12 @@ export default function GanttView({ tasks, clients, currentMonth, onEditTask }) 
   const prevMonthCount = useMemo(() => {
     const ps = startOfMonth(subMonths(viewMonth, 1));
     const pe = endOfMonth(ps);
-    return tasks.filter(t => t.due_date && parseISO(t.due_date) >= ps && parseISO(t.due_date) <= pe).length;
+    return tasks.filter(t => { const d = safeParseISO(t.due_date); return d && d >= ps && d <= pe; }).length;
   }, [tasks, viewMonth]);
   const nextMonthCount = useMemo(() => {
     const ns = startOfMonth(addMonths(viewMonth, 1));
     const ne = endOfMonth(ns);
-    return tasks.filter(t => t.due_date && parseISO(t.due_date) >= ns && parseISO(t.due_date) <= ne).length;
+    return tasks.filter(t => { const d = safeParseISO(t.due_date); return d && d >= ns && d <= ne; }).length;
   }, [tasks, viewMonth]);
 
   // Visible service types in current month (for legend)
