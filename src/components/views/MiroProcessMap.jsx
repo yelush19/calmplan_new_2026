@@ -97,7 +97,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           const ty = sy + ti * 42;
           const st = getS(task.status);
           // Deadline info
-          const dueStr = task.due_date ? new Date(task.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : '';
+          const dueStr = (() => { try { return task.due_date ? new Date(task.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : ''; } catch { return ''; } })();
           N.push({ id: tId, t: 'task', x: tx, y: ty, task, st, dueStr, label: task.client_name || task.title });
           E.push({ from: sId, to: tId, color: st.stroke + '30' });
         });
@@ -142,7 +142,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
 
       {/* Legend — always visible top */}
       <div className="absolute top-14 right-3 z-20 bg-white rounded-xl px-3 py-2 shadow border flex gap-3 flex-wrap text-[11px]" style={{ maxWidth: '320px' }}>
-        {Object.entries(STATUS).filter(([k]) => !['completed'].includes(k)).slice(0, 6).map(([k, s]) => (
+        {Object.entries(STATUS).filter(([k]) => !['completed'].includes(k)).map(([k, s]) => (
           <span key={k} className="flex items-center gap-1">
             <span className="w-3 h-3 rounded border" style={{ backgroundColor: s.fill, borderColor: s.stroke }} />
             <span style={{ color: s.text }}>{s.label}</span>
@@ -227,19 +227,21 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
             const isHL = searchHighlight === n.id;
             const isSel = selectedTask?.id === n.task?.id;
             return (
-              <g key={n.id} data-click="1" onClick={() => setSelectedTask(n.task)} style={{ cursor: 'pointer' }}>
-                <rect x={n.x - 110} y={n.y - 16} width={220} height={32} rx={8}
+              <g key={n.id} data-click="1" onClick={(e) => { e.stopPropagation(); setSelectedTask(n.task); }} style={{ cursor: 'pointer' }}>
+                <rect x={n.x - 110} y={n.y - 17} width={220} height={34} rx={10}
                   fill={n.st.fill} stroke={isHL ? '#1E3A5F' : isSel ? '#2563EB' : n.st.stroke}
                   strokeWidth={isHL || isSel ? 3 : 1.5} />
-                {/* Icon */}
-                <text x={n.x + 95} y={n.y + 5} fontSize={13} textAnchor="end">{n.st.icon}</text>
-                {/* Client name — full width */}
-                <text x={n.x - 100} y={n.y + 1} fill={n.st.text} fontSize={12} fontWeight="600" style={{ pointerEvents: 'none' }}>
-                  {n.label?.length > 26 ? n.label.slice(0, 26) + '…' : n.label}
+                {/* Status icon — left side */}
+                <text x={n.x - 96} y={n.y + 5} fontSize={14}>{n.st.icon}</text>
+                {/* Client name — inside card, after icon */}
+                <text x={n.x - 78} y={n.y + 4} fill={n.st.text} fontSize={12} fontWeight="700" style={{ pointerEvents: 'none' }}>
+                  {n.label?.length > 20 ? n.label.slice(0, 20) + '…' : n.label}
                 </text>
-                {/* Deadline */}
+                {/* Deadline — right side inside card */}
                 {n.dueStr && (
-                  <text x={n.x + 100} y={n.y + 1} textAnchor="end" fill={n.st.text} fontSize={10} opacity={0.6}>{n.dueStr}</text>
+                  <text x={n.x + 100} y={n.y + 4} textAnchor="end" fill={n.st.text} fontSize={10} fontWeight="500" opacity={0.7} style={{ pointerEvents: 'none' }}>
+                    📅 {n.dueStr}
+                  </text>
                 )}
               </g>
             );
