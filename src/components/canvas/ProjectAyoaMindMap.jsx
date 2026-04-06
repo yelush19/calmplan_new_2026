@@ -22,7 +22,7 @@ const BRANCH_COLORS = {
   in_development: { fill: '#3B82F6', stroke: '#3B82F6', light: '#DBEAFE', label: 'בפיתוח',   emoji: '🔨' },
   testing:        { fill: '#F59E0B', stroke: '#F59E0B', light: '#FEF3C7', label: 'בדיקות',   emoji: '🧪' },
   deployed:       { fill: '#10B981', stroke: '#10B981', light: '#D1FAE5', label: 'באוויר',   emoji: '🚀' },
-  maintenance:    { fill: '#EC4899', stroke: '#EC4899', light: '#FCE7F3', label: 'תחזוקה',   emoji: '🔧' },
+  maintenance:    { fill: '#7C3AED', stroke: '#7C3AED', light: '#EDE9FE', label: 'תחזוקה',   emoji: '🔧' },
   archived:       { fill: '#9CA3AF', stroke: '#9CA3AF', light: '#F3F4F6', label: 'ארכיון',   emoji: '📦' },
 };
 

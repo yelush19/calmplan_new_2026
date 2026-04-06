@@ -38,7 +38,7 @@ export const TAG_COLORS = [
   '#3B82F6', // blue
   '#6366F1', // indigo
   '#A855F7', // purple
-  '#EC4899', // pink
+  '#7C3AED', // violet
 ];
 
 /**
