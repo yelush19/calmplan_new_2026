@@ -285,7 +285,7 @@ export default function ClientsDashboardPage() {
         const checks = {
           has_issues: relevant.some(t => t.status === 'needs_corrections' || t.status === 'waiting_for_materials'),
           all_done: relevant.length > 0 && relevant.every(t => t.status === 'production_completed'),
-          in_progress: relevant.some(t => t.status === 'sent_for_review' || t.status === 'needs_corrections' || t.status === 'ready_to_broadcast' || t.status === 'reported_pending_payment'),
+          in_progress: relevant.some(t => t.status === 'sent_for_review' || t.status === 'review_after_corrections' || t.status === 'needs_corrections' || t.status === 'ready_to_broadcast' || t.status === 'reported_pending_payment'),
           remaining_completions: relevant.some(t => t.status === 'needs_corrections'),
           not_started: relevant.some(t => t.status === 'not_started') || relevant.length === 0,
         };
