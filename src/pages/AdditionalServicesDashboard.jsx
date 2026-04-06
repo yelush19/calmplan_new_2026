@@ -37,6 +37,7 @@ import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import MiroProcessMap from '@/components/views/MiroProcessMap';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 
 // P1 Board 2 — פנסיות וקרנות: מתפעל/טמל + מס"ב סוציאליות + תשלום רשויות
@@ -420,7 +421,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         </div>
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial']} />
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
@@ -484,7 +485,20 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           <Loader className="w-12 h-12 animate-spin text-primary" />
         </div>
       ) : Object.keys(serviceData).length > 0 ? (
-        viewMode === 'kanban' ? (
+        viewMode === 'miro' ? (
+          <MiroProcessMap
+            tasks={filteredTasks}
+            centerLabel={scope === 'p2' ? 'שירותים נוספים' : 'פנסיות וקרנות'}
+            centerSub={`חודש ${format(selectedMonth, 'MMMM', { locale: he })}`}
+            onEditTask={setEditingTask}
+            onStatusChange={handleStatusChange}
+            phases={Object.values(additionalDashboardServices).map(svc => ({
+              label: svc.label,
+              serviceKeys: [svc.key, ...(svc.taskCategories || [])],
+              services: [svc],
+            }))}
+          />
+        ) : viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} />
         ) : viewMode === 'timeline' ? (
           <ProjectTimelineView tasks={filteredTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} onEdit={setEditingTask} />

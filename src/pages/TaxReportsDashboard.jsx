@@ -27,6 +27,7 @@ import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import GanttView from '@/components/views/GanttView';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import MiroProcessMap from '@/components/views/MiroProcessMap';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
@@ -1026,7 +1027,7 @@ export default function TaxReportsDashboardPage() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial']} />
         {phaseFilter && (
           <Badge className="bg-slate-100 text-slate-700 gap-1 px-2.5 py-1 text-xs font-bold cursor-pointer hover:bg-slate-200" onClick={() => setPhaseFilter(null)}>
             סינון: {STATUS_PIPELINE.find(s => s.key === phaseFilter)?.label || (phaseFilter === 'collect' ? 'קליטה' : phaseFilter === 'process' ? 'עיבוד' : phaseFilter === 'review' ? 'מוכן לשידור' : 'שודר')}
@@ -1114,6 +1115,19 @@ export default function TaxReportsDashboardPage() {
             onStatusChange={handleStatusChange}
             onDateChange={handleDateChange}
             onEdit={setEditingTask}
+          />
+        ) : viewMode === 'miro' ? (
+          <MiroProcessMap
+            tasks={filteredTasks}
+            centerLabel="הנהלת חשבונות"
+            centerSub={`חודש ${format(selectedMonth, 'MMMM', { locale: he })}`}
+            onEditTask={setEditingTask}
+            onStatusChange={handleStatusChange}
+            phases={Object.values(taxDashboardServices).map(svc => ({
+              label: svc.label,
+              serviceKeys: [svc.key, ...(svc.taskCategories || [])],
+              services: [svc],
+            }))}
           />
         ) : viewMode === 'radial' ? (
           <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
