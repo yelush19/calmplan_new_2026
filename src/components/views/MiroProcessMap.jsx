@@ -277,7 +277,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
                 <div xmlns="http://www.w3.org/1999/xhtml"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', padding: '0 6px', direction: 'rtl', overflow: 'hidden' }}>
                   <span style={{ fontSize: '11px', fontWeight: 600, color: n.stCfg.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{n.label}</span>
-                  {n.due && <span style={{ fontSize: '10px', fontWeight: 700, color: n.stCfg.color, flexShrink: 0, marginRight: '4px' }}>📅{n.due}</span>}
+                  {n.due && <span style={{ fontSize: '11px', fontWeight: 800, color: '#1E293B', flexShrink: 0, marginRight: '4px', background: 'rgba(255,255,255,0.7)', borderRadius: '4px', padding: '0 3px' }}>📅 {n.due}</span>}
                 </div>
               </foreignObject>
             </g>
