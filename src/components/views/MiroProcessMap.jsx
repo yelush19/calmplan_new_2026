@@ -53,17 +53,44 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
   useEffect(() => { try { localStorage.setItem(POS_KEY, JSON.stringify(offsets)); } catch {} }, [offsets]);
 
   const onMD = e => { if (e.target.closest('[data-d]')) return; isPan.current = true; panS.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y }; };
+  // Get child node IDs for group dragging
+  const getChildIds = useCallback((parentId) => {
+    return nodes.filter(n => n.parentStatus === parentId || n.parentSvc === parentId).map(n => n.id);
+  }, [nodes]);
+
   const onMM = e => {
     if (dragId) {
       const dx = (e.clientX - dragStart.current.x) / zoom;
       const dy = (e.clientY - dragStart.current.y) / zoom;
-      setOffsets(p => ({ ...p, [dragId]: { x: (dragStart.current.ox || 0) + dx, y: (dragStart.current.oy || 0) + dy } }));
+      const newOx = (dragStart.current.ox || 0) + dx;
+      const newOy = (dragStart.current.oy || 0) + dy;
+      setOffsets(p => {
+        const updated = { ...p, [dragId]: { x: newOx, y: newOy } };
+        // Move children together with parent (status → clients, service → statuses+clients)
+        const children = dragStart.current.childIds || [];
+        children.forEach(cid => {
+          const startOff = dragStart.current.childStarts?.[cid] || { x: 0, y: 0 };
+          updated[cid] = { x: startOff.x + dx, y: startOff.y + dy };
+        });
+        return updated;
+      });
       return;
     }
     if (isPan.current) setPan({ x: panS.current.px + (e.clientX - panS.current.x), y: panS.current.py + (e.clientY - panS.current.y) });
   };
   const onMU = () => { isPan.current = false; setDragId(null); };
-  const startDrag = (e, id) => { e.stopPropagation(); setDragId(id); dragStart.current = { x: e.clientX, y: e.clientY, ox: offsets[id]?.x || 0, oy: offsets[id]?.y || 0 }; };
+  const startDrag = (e, id) => {
+    e.stopPropagation();
+    setDragId(id);
+    // Collect all children and their current offsets for group drag
+    const childIds = getChildIds(id);
+    // For service nodes, also include grandchildren (status → clients)
+    const allChildIds = [...childIds];
+    childIds.forEach(cid => { getChildIds(cid).forEach(gcid => { if (!allChildIds.includes(gcid)) allChildIds.push(gcid); }); });
+    const childStarts = {};
+    allChildIds.forEach(cid => { childStarts[cid] = { x: offsets[cid]?.x || 0, y: offsets[cid]?.y || 0 }; });
+    dragStart.current = { x: e.clientX, y: e.clientY, ox: offsets[id]?.x || 0, oy: offsets[id]?.y || 0, childIds: allChildIds, childStarts };
+  };
 
   // Build: center → services → statuses → clients
   const { nodes, edges } = useMemo(() => {
@@ -125,7 +152,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           const tx = sx - 220 - 250;
           const ty = sty + ti * 36;
           const due = (() => { try { return task.due_date ? new Date(task.due_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : ''; } catch { return ''; } })();
-          N.push({ id: tid, t: 't', bx: tx, by: ty, task, stCfg, due, label: task.client_name || task.title, parentSvc: sid });
+          N.push({ id: tid, t: 't', bx: tx, by: ty, task, stCfg, due, label: task.client_name || task.title, parentSvc: sid, parentStatus: stid });
           E.push({ from: stid, to: tid, color: stCfg.color + '25' });
         });
         sty += Math.max(50, stTasks.length * 36 + 30);
