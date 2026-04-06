@@ -53,44 +53,6 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
   useEffect(() => { try { localStorage.setItem(POS_KEY, JSON.stringify(offsets)); } catch {} }, [offsets]);
 
   const onMD = e => { if (e.target.closest('[data-d]')) return; isPan.current = true; panS.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y }; };
-  // Get child node IDs for group dragging
-  const getChildIds = useCallback((parentId) => {
-    return nodes.filter(n => n.parentStatus === parentId || n.parentSvc === parentId).map(n => n.id);
-  }, [nodes]);
-
-  const onMM = e => {
-    if (dragId) {
-      const dx = (e.clientX - dragStart.current.x) / zoom;
-      const dy = (e.clientY - dragStart.current.y) / zoom;
-      const newOx = (dragStart.current.ox || 0) + dx;
-      const newOy = (dragStart.current.oy || 0) + dy;
-      setOffsets(p => {
-        const updated = { ...p, [dragId]: { x: newOx, y: newOy } };
-        // Move children together with parent (status → clients, service → statuses+clients)
-        const children = dragStart.current.childIds || [];
-        children.forEach(cid => {
-          const startOff = dragStart.current.childStarts?.[cid] || { x: 0, y: 0 };
-          updated[cid] = { x: startOff.x + dx, y: startOff.y + dy };
-        });
-        return updated;
-      });
-      return;
-    }
-    if (isPan.current) setPan({ x: panS.current.px + (e.clientX - panS.current.x), y: panS.current.py + (e.clientY - panS.current.y) });
-  };
-  const onMU = () => { isPan.current = false; setDragId(null); };
-  const startDrag = (e, id) => {
-    e.stopPropagation();
-    setDragId(id);
-    // Collect all children and their current offsets for group drag
-    const childIds = getChildIds(id);
-    // For service nodes, also include grandchildren (status → clients)
-    const allChildIds = [...childIds];
-    childIds.forEach(cid => { getChildIds(cid).forEach(gcid => { if (!allChildIds.includes(gcid)) allChildIds.push(gcid); }); });
-    const childStarts = {};
-    allChildIds.forEach(cid => { childStarts[cid] = { x: offsets[cid]?.x || 0, y: offsets[cid]?.y || 0 }; });
-    dragStart.current = { x: e.clientX, y: e.clientY, ox: offsets[id]?.x || 0, oy: offsets[id]?.y || 0, childIds: allChildIds, childStarts };
-  };
 
   // Build: center → services → statuses → clients
   const { nodes, edges } = useMemo(() => {
@@ -162,6 +124,42 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
 
     return { nodes: N, edges: E };
   }, [tasks, phases, hideOk, centerLabel]);
+
+  // Get child node IDs for group dragging (must be after nodes useMemo)
+  const getChildIds = useCallback((parentId) => {
+    return nodes.filter(n => n.parentStatus === parentId || n.parentSvc === parentId).map(n => n.id);
+  }, [nodes]);
+
+  const onMM = e => {
+    if (dragId) {
+      const dx = (e.clientX - dragStart.current.x) / zoom;
+      const dy = (e.clientY - dragStart.current.y) / zoom;
+      const newOx = (dragStart.current.ox || 0) + dx;
+      const newOy = (dragStart.current.oy || 0) + dy;
+      setOffsets(p => {
+        const updated = { ...p, [dragId]: { x: newOx, y: newOy } };
+        const children = dragStart.current.childIds || [];
+        children.forEach(cid => {
+          const startOff = dragStart.current.childStarts?.[cid] || { x: 0, y: 0 };
+          updated[cid] = { x: startOff.x + dx, y: startOff.y + dy };
+        });
+        return updated;
+      });
+      return;
+    }
+    if (isPan.current) setPan({ x: panS.current.px + (e.clientX - panS.current.x), y: panS.current.py + (e.clientY - panS.current.y) });
+  };
+  const onMU = () => { isPan.current = false; setDragId(null); };
+  const startDrag = (e, id) => {
+    e.stopPropagation();
+    setDragId(id);
+    const childIds = getChildIds(id);
+    const allChildIds = [...childIds];
+    childIds.forEach(cid => { getChildIds(cid).forEach(gcid => { if (!allChildIds.includes(gcid)) allChildIds.push(gcid); }); });
+    const childStarts = {};
+    allChildIds.forEach(cid => { childStarts[cid] = { x: offsets[cid]?.x || 0, y: offsets[cid]?.y || 0 }; });
+    dragStart.current = { x: e.clientX, y: e.clientY, ox: offsets[id]?.x || 0, oy: offsets[id]?.y || 0, childIds: allChildIds, childStarts };
+  };
 
   // Apply offsets
   const getPos = useCallback((n) => ({
