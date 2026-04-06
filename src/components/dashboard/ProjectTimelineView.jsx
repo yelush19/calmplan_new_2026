@@ -133,6 +133,7 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
               const today = new Date(); today.setHours(0, 0, 0, 0);
               const due = task.due_date ? parseISO(task.due_date) : null;
               const remaining = due && isValid(due) ? differenceInDays(due, today) : null;
+              const remainingLabel = remaining === null ? '' : remaining < 0 ? `איחור ${Math.abs(remaining)} ימים` : remaining === 0 ? 'היום' : `${remaining} ימים`;
 
               return (
                 <div
@@ -147,14 +148,14 @@ export default function ProjectTimelineView({ tasks, month, year, onEdit }) {
                         {task.client_name || task.title}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <Badge className={`text-[11px] px-1 py-0 h-3.5 ${statusCfg.color}`}>
-                          {statusCfg.text}
+                        <Badge className={`text-[11px] px-1 py-0 h-3.5 ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
+                          {statusCfg.label}
                         </Badge>
                         {remaining !== null && (
-                          <span className={`text-[12px] font-medium ${
+                          <span className={`text-[10px] font-medium ${
                             remaining < 0 ? 'text-amber-600' : remaining <= 1 ? 'text-amber-500' : remaining <= 3 ? 'text-amber-600' : 'text-gray-400'
                           }`}>
-                            {remaining < 0 ? `${Math.abs(remaining)}d-` : remaining === 0 ? 'היום' : `${remaining}d`}
+                            {remainingLabel}
                           </span>
                         )}
                       </div>
