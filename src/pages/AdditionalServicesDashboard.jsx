@@ -204,8 +204,8 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
     const result = {};
     Object.values(additionalDashboardServices).forEach(service => {
       const serviceTasks = filteredTasks.filter(t => service.taskCategories.includes(t.category));
-      if (serviceTasks.length > 0) {
-        result[service.key] = {
+      // Always show all services (even empty) so tabs are always visible
+      result[service.key] = {
           service,
           clientRows: serviceTasks
             .map(task => ({
@@ -215,10 +215,9 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
             }))
             .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
         };
-      }
     });
     return result;
-  }, [filteredTasks, clientByName]);
+  }, [filteredTasks, clientByName, additionalDashboardServices]);
 
   const serviceKeys = useMemo(() => Object.keys(serviceData), [serviceData]);
 
@@ -524,22 +523,30 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
                 </TabsList>
                 {serviceEntries.map(([serviceKey, { service, clientRows }]) => (
                   <TabsContent key={serviceKey} value={serviceKey} className="mt-0">
-                    <div className="border border-[#E0E0E0] rounded-xl overflow-hidden">
-                      <GroupedServiceTable
-                        service={service}
-                        clientRows={clientRows}
-                        allTasks={filteredTasks}
-                        onToggleStep={handleToggleStep}
-                        onDateChange={handleDateChange}
-                        onStatusChange={handleStatusChange}
-                        onPaymentDateChange={handlePaymentDateChange}
-                        onSubTaskChange={handleSubTaskChange}
-                        onAttachmentUpdate={handleAttachmentUpdate}
-                        onEdit={setEditingTask}
-                        onDelete={handleDeleteTask}
-                        onNote={setNoteTask}
-                      />
-                    </div>
+                    {clientRows.length === 0 ? (
+                      <div className="border border-[#E0E0E0] rounded-xl p-8 text-center text-slate-400">
+                        <div className="text-3xl mb-2">📭</div>
+                        <p className="font-medium">אין משימות עבור {service.label} בחודש הנבחר</p>
+                        <p className="text-xs mt-1">הזרק משימות דרך כרטיס הלקוח או הפעל אוטומציות</p>
+                      </div>
+                    ) : (
+                      <div className="border border-[#E0E0E0] rounded-xl overflow-hidden">
+                        <GroupedServiceTable
+                          service={service}
+                          clientRows={clientRows}
+                          allTasks={filteredTasks}
+                          onToggleStep={handleToggleStep}
+                          onDateChange={handleDateChange}
+                          onStatusChange={handleStatusChange}
+                          onPaymentDateChange={handlePaymentDateChange}
+                          onSubTaskChange={handleSubTaskChange}
+                          onAttachmentUpdate={handleAttachmentUpdate}
+                          onEdit={setEditingTask}
+                          onDelete={handleDeleteTask}
+                          onNote={setNoteTask}
+                        />
+                      </div>
+                    )}
                   </TabsContent>
                 ))}
               </Tabs>
