@@ -40,6 +40,7 @@ import { getOpenPrerequisitesForCompletion } from '@/engines/taskCascadeEngine';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import MiroProcessMap from '@/components/views/MiroProcessMap';
 
 // P1 Board 3 — דיווחים + קליטה: ב"ל + ניכויים + מילואים + תביעות מילואים + קליטה להנה"ח
 const REPORTING_SERVICES = {
@@ -576,7 +577,7 @@ export default function PayrollReportsDashboardPage() {
         )}
       </AnimatePresence>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'kanban', 'timeline', 'radial']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial']} />
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
@@ -641,7 +642,20 @@ export default function PayrollReportsDashboardPage() {
         </div>
       ) : (
         sortedServiceKeys.length > 0 ? (
-        viewMode === 'workbook' ? (
+        viewMode === 'miro' ? (
+          <MiroProcessMap
+            tasks={filteredTasks}
+            centerLabel="דיווחי שכר"
+            centerSub={`חודש ${format(selectedMonth, 'MMMM', { locale: he })}`}
+            onEditTask={setEditingTask}
+            onStatusChange={handleStatusChange}
+            phases={Object.values(REPORTING_SERVICES).map((svc, i) => ({
+              label: svc.label,
+              serviceKeys: [svc.key, ...(svc.taskCategories || [])],
+              services: [svc],
+            }))}
+          />
+        ) : viewMode === 'workbook' ? (
           <TaxWorkbookView tasks={filteredTasks} clients={clients} services={REPORTING_SERVICES} onStatusChange={handleStatusChange} onEditTask={setEditingTask} />
         ) : viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />

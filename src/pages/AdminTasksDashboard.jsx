@@ -36,6 +36,7 @@ import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import MiroProcessMap from '@/components/views/MiroProcessMap';
 
 // Admin dashboard services (dashboard: 'admin')
 const adminDashboardServices = Object.fromEntries(
@@ -366,7 +367,7 @@ export default function AdminTasksDashboardPage() {
         </div>
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'kanban', 'timeline', 'radial']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro', 'kanban', 'timeline', 'radial']} />
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
@@ -431,7 +432,20 @@ export default function AdminTasksDashboardPage() {
         </div>
       ) : (
         Object.keys(serviceData).length > 0 ? (
-          viewMode === 'kanban' ? (
+          viewMode === 'miro' ? (
+            <MiroProcessMap
+              tasks={filteredTasks}
+              centerLabel="ניהול משרד"
+              centerSub="P3"
+              onEditTask={setEditingTask}
+              onStatusChange={handleStatusChange}
+              phases={Object.values(serviceData).map(({ service }) => ({
+                label: service.label,
+                serviceKeys: [service.key, ...(service.taskCategories || [])],
+                services: [service],
+              }))}
+            />
+          ) : viewMode === 'kanban' ? (
             <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
           ) : viewMode === 'radial' ? (
             <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>

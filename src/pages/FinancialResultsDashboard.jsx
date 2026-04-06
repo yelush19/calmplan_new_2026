@@ -24,6 +24,9 @@ import { format, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
 import ResizableTable from '@/components/ui/ResizableTable';
 import { getTaskReportingMonth } from '@/config/automationRules';
+import MiroProcessMap from '@/components/views/MiroProcessMap';
+import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
+import { ADDITIONAL_SERVICES, TAX_SERVICES } from '@/config/processTemplates';
 
 
 // ============================================================
@@ -62,6 +65,7 @@ export default function FinancialResultsDashboard() {
   const [search, setSearch] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState(new Set(['ready', 'in_progress', 'waiting', 'not_started']));
   const [allExpanded, setAllExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState('table');
 
   useEffect(() => { loadData(); }, [selectedMonth]);
 
@@ -301,6 +305,19 @@ export default function FinancialResultsDashboard() {
       </div>
       </div>
 
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro']} />
+
+      {viewMode === 'miro' ? (
+        <MiroProcessMap
+          tasks={pnlMapTasks}
+          centerLabel="התאמות ומאזנים"
+          centerSub={`חודש ${format(selectedMonth, 'MMMM', { locale: he })}`}
+          phases={[
+            { label: 'הנהלת חשבונות', serviceKeys: ['bookkeeping', 'הנהלת חשבונות', 'work_bookkeeping'], services: [ADDITIONAL_SERVICES.bookkeeping].filter(Boolean) },
+            { label: 'רווח והפסד', serviceKeys: ['pnl_reports', 'רווח והפסד', 'work_pnl'], services: [ADDITIONAL_SERVICES.pnl_reports || TAX_SERVICES.pnl_reports].filter(Boolean) },
+          ]}
+        />
+      ) : (
       <>
       {/* Table */}
       <Card>
@@ -402,6 +419,7 @@ export default function FinancialResultsDashboard() {
         ))}
       </div>
       </>
+      )}
     </div>
   );
 }
