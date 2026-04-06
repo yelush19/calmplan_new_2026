@@ -37,7 +37,7 @@ const LANE_COLORS = [
   { accent: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
   { accent: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
   { accent: '#8B5CF6', bg: '#F5F3FF', border: '#DDD6FE' },
-  { accent: '#EC4899', bg: '#FDF2F8', border: '#FBCFE8' },
+  { accent: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
   { accent: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC' },
   { accent: '#F97316', bg: '#FFF7ED', border: '#FED7AA' },
 ];

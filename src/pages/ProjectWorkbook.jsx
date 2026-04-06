@@ -52,7 +52,7 @@ const PHASES = [
     doneWhen: 'יש רשימה ברורה של עמודים + מה כל אחד עושה + איזה מידע שומרים.',
   },
   {
-    id: 'design', icon: PenTool, emoji: '🎨', title: 'עיצוב ומראה', color: '#EC4899',
+    id: 'design', icon: PenTool, emoji: '🎨', title: 'עיצוב ומראה', color: '#7C3AED',
     tagline: 'איך זה ייראה?',
     description: 'כאן את בוחרת צבעים, פונטים, וסגנון כללי. אפשר להשתמש בתבניות מוכנות.',
     whatINeed: ['צבע ראשי', 'סגנון: מודרני? חמים? מינימלי?', 'דוגמאות השראה'],
@@ -481,7 +481,7 @@ const AUDIT_TABS = [
     id: 'design',
     label: 'עיצוב',
     icon: Palette,
-    color: '#EC4899',
+    color: '#7C3AED',
     content: {
       title: 'ממצאי עיצוב ו-ADHD — עדכון 17.3.2026',
       sections: [

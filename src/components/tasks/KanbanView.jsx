@@ -60,11 +60,11 @@ const SERVICE_CARD_COLORS = {
   'מע"מ 874': { bg: '#EFF6FF', border: '#1D4ED8', dot: '#1E40AF' },
   'מקדמות מס': { bg: '#FFF7ED', border: '#F97316', dot: '#EA580C' },
   'קליטת הכנסות': { bg: '#F0FDF4', border: '#22C55E', dot: '#16A34A' },
-  'קליטת הוצאות': { bg: '#FDF2F8', border: '#EC4899', dot: '#DB2777' },
+  'קליטת הוצאות': { bg: '#F5F3FF', border: '#8B5CF6', dot: '#7C3AED' },
   'התאמות': { bg: '#FEF3C7', border: '#F59E0B', dot: '#D97706' },
   'רווח והפסד': { bg: '#F5F3FF', border: '#8B5CF6', dot: '#7C3AED' },
   'שכר': { bg: '#ECFEFF', border: '#06B6D4', dot: '#0891B2' },
-  'ביטוח לאומי': { bg: '#FFF1F2', border: '#F43F5E', dot: '#E11D48' },
+  'ביטוח לאומי': { bg: '#ECFEFF', border: '#0891B2', dot: '#0E7490' },
   'ניכויים': { bg: '#FEF9C3', border: '#EAB308', dot: '#CA8A04' },
 };
 
@@ -538,7 +538,7 @@ export default function KanbanView({ tasks = [], onTaskStatusChange, onDeleteTas
                       {[
                         { key: 'all', label: 'הכל' },
                         { key: 'income', label: 'הכנסות', color: '#22C55E' },
-                        { key: 'expense', label: 'הוצאות', color: '#EC4899' },
+                        { key: 'expense', label: 'הוצאות', color: '#8B5CF6' },
                       ].map(tab => (
                         <button
                           key={tab.key}

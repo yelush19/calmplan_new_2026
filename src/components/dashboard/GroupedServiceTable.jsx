@@ -21,11 +21,11 @@ const SERVICE_ACCENT_COLORS = {
   'vat_874': { border: '#1D4ED8', bg: '#F8FAFF', headerBg: '#E0E7FF', headerText: '#1E3A5F' },
   'tax_advances': { border: '#F97316', bg: '#FFFBF5', headerBg: '#FFF0DB', headerText: '#7C2D12' },
   'income_collection': { border: '#22C55E', bg: '#F8FFF8', headerBg: '#E6F9E6', headerText: '#14532D' },
-  'expense_collection': { border: '#EC4899', bg: '#FFFAFC', headerBg: '#FFE8F0', headerText: '#831843' },
+  'expense_collection': { border: '#8B5CF6', bg: '#FAFAFF', headerBg: '#EDE9FE', headerText: '#3B0764' },
   'reconciliation': { border: '#F59E0B', bg: '#FFFDF5', headerBg: '#FFF3D0', headerText: '#78350F' },
   'pnl_reports': { border: '#8B5CF6', bg: '#FBFAFF', headerBg: '#EDE9FE', headerText: '#3B0764' },
   'payroll': { border: '#06B6D4', bg: '#F8FFFE', headerBg: '#E0F7FA', headerText: '#164E63' },
-  'social_security': { border: '#F43F5E', bg: '#FFFAFB', headerBg: '#FFE4E8', headerText: '#881337' },
+  'social_security': { border: '#0891B2', bg: '#F0FDFA', headerBg: '#CFFAFE', headerText: '#164E63' },
   'deductions': { border: '#EAB308', bg: '#FFFEF5', headerBg: '#FEF3C7', headerText: '#713F12' },
 };
 
