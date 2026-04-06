@@ -369,13 +369,25 @@ export const ADDITIONAL_SERVICES = {
   authorities_payment: {
     key: 'authorities_payment',
     label: 'תשלום רשויות',
-    dashboard: 'payroll',
-    taskCategories: ['תשלום רשויות', 'work_authorities_payment'],
+    dashboard: ['payroll', 'tax'],  // מופיע בשני הלוחות
+    taskCategories: ['תשלום רשויות', 'מס"ב רשויות', 'work_authorities_payment', 'work_masav_authorities'],
     createCategory: 'תשלום רשויות',
+    // הצעדים משתנים לפי אמצעי תשלום הלקוח (authorities_payment_method)
+    // מס"ב: הכנת קובץ → העלאה → אישור
+    // אחר: הפקת שובר → תשלום → אישור קבלה
     steps: [
-      { key: 'report_prep',  label: 'הכנת דו"ח',  icon: 'file-text' },
-      { key: 'payment',      label: 'תשלום',       icon: 'landmark' },
+      { key: 'file_prep',    label: 'הכנת קובץ / שובר',   icon: 'file-text' },
+      { key: 'upload',       label: 'העלאה / ביצוע תשלום', icon: 'upload' },
+      { key: 'confirmation', label: 'אישור ביצוע',         icon: 'check-circle' },
     ],
+    // Step label overrides by payment method
+    stepLabelsByPaymentMethod: {
+      masav: { file_prep: 'הכנת קובץ מס"ב', upload: 'העלאת מס"ב', confirmation: 'אישור ביצוע מס"ב' },
+      bank_standing_order: { file_prep: 'בדיקת הו"ק', upload: 'אישור חיוב', confirmation: 'אישור ביצוע' },
+      credit_card: { file_prep: 'בדיקת חיוב', upload: 'אישור כ.אשראי', confirmation: 'אישור ביצוע' },
+      check: { file_prep: 'הכנת המחאה', upload: 'שליחה/מסירה', confirmation: 'אישור קבלה' },
+      client_pays: { file_prep: 'שליחת שובר ללקוח', upload: 'אישור תשלום מלקוח', confirmation: 'אישור קבלה ברשות' },
+    },
   },
 
   reserve_claims: {
@@ -511,18 +523,7 @@ export const ADDITIONAL_SERVICES = {
     ],
   },
 
-  masav_authorities: {
-    key: 'masav_authorities',
-    label: 'מס"ב רשויות',
-    dashboard: 'payroll',
-    taskCategories: ['מס"ב רשויות', 'work_masav_authorities'],
-    createCategory: 'מס"ב רשויות',
-    steps: [
-      { key: 'file_prep',    label: 'הכנת קובץ',   icon: 'file-text' },
-      { key: 'upload',       label: 'העלאה',        icon: 'upload' },
-      { key: 'confirmation', label: 'אישור ביצוע',  icon: 'check-circle' },
-    ],
-  },
+  // masav_authorities merged into authorities_payment above (unified by payment method)
 
   masav_suppliers: {
     key: 'masav_suppliers',
@@ -677,7 +678,9 @@ export const ALL_SERVICES = {
  * Get all services that belong to a specific dashboard
  */
 export function getServicesByDashboard(dashboardType) {
-  return Object.values(ALL_SERVICES).filter(s => s.dashboard === dashboardType);
+  return Object.values(ALL_SERVICES).filter(s =>
+    Array.isArray(s.dashboard) ? s.dashboard.includes(dashboardType) : s.dashboard === dashboardType
+  );
 }
 
 /**

@@ -49,20 +49,21 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 import { AnimatePresence } from 'framer-motion';
 
-// P2 Tax dashboard: tax services + income/expense collection (prerequisites)
+// P2 Tax dashboard: tax services + income/expense collection (prerequisites) + authority payments
 const taxDashboardServices = {
   income_collection: ADDITIONAL_SERVICES.income_collection,
   expense_collection: ADDITIONAL_SERVICES.expense_collection,
   ...TAX_SERVICES,
+  authorities_payment: ADDITIONAL_SERVICES.authorities_payment,
 };
 
-const allTaxCategories = Object.values(taxDashboardServices).flatMap(s => s.taskCategories);
+const allTaxCategories = Object.values(taxDashboardServices).flatMap(s => Array.isArray(s.taskCategories) ? s.taskCategories : []);
 
 // Only actual reports (authority filings) — NOT data entry (קליטת הכנסות/הוצאות)
 const REPORT_ONLY_CATEGORIES = Object.values(TAX_SERVICES).flatMap(s => s.taskCategories);
 
 // Core services get their own table (they have meaningful steps)
-const CORE_SERVICES = ['income_collection', 'expense_collection', 'vat', 'tax_advances'];
+const CORE_SERVICES = ['income_collection', 'expense_collection', 'vat', 'tax_advances', 'authorities_payment'];
 
 // Status pipeline for DNA-style KPI cards (ordered by workflow progression)
 const STATUS_PIPELINE = [

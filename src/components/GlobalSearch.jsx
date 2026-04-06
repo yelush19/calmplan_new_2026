@@ -163,7 +163,7 @@ export default function GlobalSearch() {
       key,
       label: svc.label,
       dashboard: svc.dashboard,
-      branch: svc.branch || (svc.dashboard === 'payroll' ? 'P1' : svc.dashboard === 'home' ? 'P4' : svc.dashboard === 'annual_reports' ? 'P5' : 'P2'),
+      branch: svc.branch || ((Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard) === 'payroll' ? 'P1' : (Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard) === 'home' ? 'P4' : (Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard) === 'annual_reports' ? 'P5' : 'P2'),
       categories: (svc.taskCategories || []).join(' '),
       stepLabels: (svc.steps || []).map(s => s.label).join(' '),
     }));

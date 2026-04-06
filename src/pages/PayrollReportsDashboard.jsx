@@ -41,11 +41,12 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 
-// P1 Board 3 — דיווחים + קליטה: ב"ל + ניכויים + מילואים + קליטה להנה"ח
+// P1 Board 3 — דיווחים + קליטה: ב"ל + ניכויים + מילואים + תביעות מילואים + קליטה להנה"ח
 const REPORTING_SERVICES = {
   social_security: PAYROLL_SERVICES.social_security,
   deductions: PAYROLL_SERVICES.deductions,
   ...(PAYROLL_SERVICES.reserve_report ? { reserve_report: PAYROLL_SERVICES.reserve_report } : {}),
+  ...(ADDITIONAL_SERVICES.reserve_claims ? { reserve_claims: ADDITIONAL_SERVICES.reserve_claims } : {}),
   ...(ADDITIONAL_SERVICES.payroll_closing ? { payroll_closing: ADDITIONAL_SERVICES.payroll_closing } : {}),
 };
 

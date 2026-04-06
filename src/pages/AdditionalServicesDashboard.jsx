@@ -39,11 +39,10 @@ import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 
-// P1 Board 2 — פנסיות וקרנות: מתפעל/טמל + מס"ב סוציאליות + רשויות
+// P1 Board 2 — פנסיות וקרנות: מתפעל/טמל + מס"ב סוציאליות + תשלום רשויות
 const P1_PAYROLL_EXTRAS = [
   'operator_reporting', 'taml_reporting', 'social_benefits',
-  'masav_social', 'masav_authorities',
-  'authorities_payment', 'reserve_claims',
+  'masav_social', 'authorities_payment',
 ];
 
 // P2 Bookkeeping extras: supplier MASAV, operator/taml, consulting
