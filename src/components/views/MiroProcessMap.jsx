@@ -239,9 +239,9 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
             <g key={n.id} data-d="1" onMouseDown={e => startDrag(e, n.id)} onDoubleClick={() => setCollapsed(prev => ({ ...prev, [n.id]: !prev[n.id] }))} style={{ cursor: 'move' }} title="גרור להזזה, לחיצה כפולה לסגירה/פתיחה">
               <rect x={p.x - 90} y={p.y - 24} width={180} height={48} rx={14} fill={n.color} stroke={isCol ? '#1E3A5F' : 'none'} strokeWidth={isCol ? 2 : 0} strokeDasharray={isCol ? '4 2' : 'none'} />
               <foreignObject x={p.x - 88} y={p.y - 22} width={176} height={44}>
-                <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', color: fc, direction: 'rtl' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700 }}>{n.label}</div>
-                  <div style={{ fontSize: '11px', opacity: 0.7 }}>{n.done}/{n.count}</div>
+                <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', direction: 'rtl' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: fc }}>{n.label}</div>
+                  <div style={{ fontSize: '11px', color: fc, opacity: 0.8 }}>{n.done}/{n.count}</div>
                 </div>
               </foreignObject>
             </g>
