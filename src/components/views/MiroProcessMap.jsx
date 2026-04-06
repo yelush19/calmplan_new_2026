@@ -17,13 +17,25 @@ const STS = {
   production_completed: { label: 'הושלם', icon: '✅', color: '#16A34A', fill: '#DCFCE7' },
 };
 const COLORS = ['#00A3E0', '#0D9488', '#6366F1', '#F59E0B', '#7C3AED'];
+// Display label overrides for the map (keeps processTemplates intact)
+const MIRO_LABEL_OVERRIDE = { 'שכר': 'ייצור והפצה' };
 const POS_KEY = 'calmplan_miro_v6_pos';
+
+// Decide font color based on background luminance
+function fontForBg(hex) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 0.299 + g * 0.587 + b * 0.114) < 160 ? '#FFFFFF' : '#1E293B';
+}
 
 export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 'תהליך', centerSub = '', onEditTask, onStatusChange }) {
   const ref = useRef(null);
   const [zoom, setZoom] = useState(0.6);
   const [pan, setPan] = useState({ x: 200, y: 20 });
   const [sel, setSel] = useState(null);
+  const [selPos, setSelPos] = useState({ x: 0, y: 0 });
   const [search, setSearch] = useState('');
   const [hideOk, setHideOk] = useState(true);
   const [collapsed, setCollapsed] = useState({}); // { nodeId: true } — collapsed branches
@@ -33,6 +45,9 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
   const dragStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const isPan = useRef(false);
   const panS = useRef({ x: 0, y: 0, px: 0, py: 0 });
+  // Popup drag
+  const [popDrag, setPopDrag] = useState(false);
+  const popDragStart = useRef({ x: 0, y: 0, sx: 0, sy: 0 });
 
   useEffect(() => { const el = ref.current; if (!el) return; const h = e => { e.preventDefault(); setZoom(z => Math.max(0.2, Math.min(3, z - e.deltaY * 0.001))); }; el.addEventListener('wheel', h, { passive: false }); return () => el.removeEventListener('wheel', h); }, []);
   useEffect(() => { try { localStorage.setItem(POS_KEY, JSON.stringify(offsets)); } catch {} }, [offsets]);
@@ -91,7 +106,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
       const sid = `svc_${si}`;
       const sx = CX - 260;
       const svcH = svcHeights[si];
-      N.push({ id: sid, t: 's', bx: sx, by: sy + svcH / 2, label: s.svc.label, color: s.color, count: s.tasks.length, done: s.tasks.filter(t => t.status === 'production_completed').length });
+      N.push({ id: sid, t: 's', bx: sx, by: sy + svcH / 2, label: MIRO_LABEL_OVERRIDE[s.svc.label] || s.svc.label, color: s.color, count: s.tasks.length, done: s.tasks.filter(t => t.status === 'production_completed').length });
       E.push({ from: 'c', to: sid, color: s.color });
 
       // Group by status
@@ -160,8 +175,23 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
       </div>
 
       {sel && (
-        <div className="absolute bottom-3 right-3 z-20 bg-white rounded-xl shadow-lg border p-3 w-[260px]">
-          <div className="text-sm font-bold">{sel.title}</div>
+        <div
+          className="absolute z-20 bg-white rounded-xl shadow-lg border p-3 w-[260px]"
+          style={{ left: selPos.x, top: selPos.y, cursor: popDrag ? 'grabbing' : 'grab' }}
+          onMouseDown={e => {
+            if (e.target.closest('button')) return;
+            setPopDrag(true);
+            popDragStart.current = { x: e.clientX, y: e.clientY, sx: selPos.x, sy: selPos.y };
+            const onMove = ev => setSelPos({ x: popDragStart.current.sx + (ev.clientX - popDragStart.current.x), y: popDragStart.current.sy + (ev.clientY - popDragStart.current.y) });
+            const onUp = () => { setPopDrag(false); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+          }}
+        >
+          <div className="flex justify-between items-start mb-1">
+            <div className="text-sm font-bold flex-1">{sel.title}</div>
+            <button onClick={() => setSel(null)} className="text-gray-400 hover:text-gray-600 mr-1 text-base leading-none">✕</button>
+          </div>
           <div className="text-xs text-gray-400 mb-2">{sel.client_name} • {sel.due_date || '-'}</div>
           <div className="flex flex-wrap gap-1 mb-2">
             {Object.entries(STS).map(([k, s]) => (
@@ -172,7 +202,6 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           </div>
           <div className="flex gap-2">
             {onEditTask && <button onClick={() => { onEditTask(sel); setSel(null); }} className="text-xs text-blue-600 font-bold">✏️ פתח</button>}
-            <button onClick={() => setSel(null)} className="text-xs text-gray-400">✕</button>
           </div>
         </div>
       )}
@@ -206,11 +235,11 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
           ); })}
 
           {/* Services */}
-          {nodes.filter(n => n.t === 's').map(n => { const p = getPos(n); const isCol = collapsed[n.id]; return (
+          {nodes.filter(n => n.t === 's').map(n => { const p = getPos(n); const isCol = collapsed[n.id]; const fc = fontForBg(n.color); return (
             <g key={n.id} data-d="1" onMouseDown={e => startDrag(e, n.id)} onDoubleClick={() => setCollapsed(prev => ({ ...prev, [n.id]: !prev[n.id] }))} style={{ cursor: 'move' }} title="גרור להזזה, לחיצה כפולה לסגירה/פתיחה">
               <rect x={p.x - 90} y={p.y - 24} width={180} height={48} rx={14} fill={n.color} stroke={isCol ? '#1E3A5F' : 'none'} strokeWidth={isCol ? 2 : 0} strokeDasharray={isCol ? '4 2' : 'none'} />
               <foreignObject x={p.x - 88} y={p.y - 22} width={176} height={44}>
-                <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', color: 'white', direction: 'rtl' }}>
+                <div xmlns="http://www.w3.org/1999/xhtml" style={{ textAlign: 'center', color: fc, direction: 'rtl' }}>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>{n.label}</div>
                   <div style={{ fontSize: '11px', opacity: 0.7 }}>{n.done}/{n.count}</div>
                 </div>
@@ -234,7 +263,13 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
 
           {/* Clients */}
           {nodes.filter(n => n.t === 't' && !collapsed[n.parentSvc]).map(n => { const p = getPos(n); const isHL = searchHL === n.id; const isSel = sel?.id === n.task?.id; return (
-            <g key={n.id} data-d="1" onMouseDown={e => startDrag(e, n.id)} onDoubleClick={() => setSel(n.task)} style={{ cursor: 'move' }} title="גרור להזזה, לחיצה כפולה לעריכה">
+            <g key={n.id} data-d="1" onMouseDown={e => startDrag(e, n.id)} onDoubleClick={(e) => {
+              const svgRect = ref.current?.getBoundingClientRect();
+              if (svgRect) {
+                setSelPos({ x: Math.min(e.clientX - svgRect.left, svgRect.width - 280), y: Math.max(e.clientY - svgRect.top - 120, 10) });
+              }
+              setSel(n.task);
+            }} style={{ cursor: 'move' }} title="גרור להזזה, לחיצה כפולה לעריכה">
               <rect x={p.x - 105} y={p.y - 14} width={210} height={28} rx={8}
                 fill={n.stCfg.fill} stroke={isHL ? '#1E3A5F' : isSel ? '#2563EB' : n.stCfg.color}
                 strokeWidth={isHL || isSel ? 3 : 1} />
@@ -242,7 +277,7 @@ export default function MiroProcessMap({ tasks = [], phases = [], centerLabel = 
                 <div xmlns="http://www.w3.org/1999/xhtml"
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', padding: '0 6px', direction: 'rtl', overflow: 'hidden' }}>
                   <span style={{ fontSize: '11px', fontWeight: 600, color: n.stCfg.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{n.label}</span>
-                  <span style={{ fontSize: '9px', color: n.stCfg.color, opacity: 0.6, flexShrink: 0, marginRight: '4px' }}>{n.due && `📅${n.due}`}</span>
+                  {n.due && <span style={{ fontSize: '10px', fontWeight: 700, color: n.stCfg.color, flexShrink: 0, marginRight: '4px' }}>📅{n.due}</span>}
                 </div>
               </foreignObject>
             </g>
