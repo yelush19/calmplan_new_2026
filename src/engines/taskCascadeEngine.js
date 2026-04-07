@@ -1271,7 +1271,7 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = [], option
     case 'social_benefits': {
       // Pension cascade: all steps done → production_completed + auto-create next in chain
       const allDone = service.steps.every(s => isStepComplete(updatedSteps?.[s.key]));
-      if (allDone && task.status !== 'production_completed') {
+      if (allDone) {
         const nextInChain = PENSION_CASCADE[service.key];
         const autoCreateTasks = [];
         if (nextInChain) {
