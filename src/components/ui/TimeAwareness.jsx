@@ -222,7 +222,15 @@ export default function TimeAwareness() {
             return true;
           });
           const incomplete = matching.filter(t => !DONE_STATUSES.has(t.status));
-          counts[dl.day] = { total: matching.length, incomplete: incomplete.length };
+          // Find actual latest due date from incomplete tasks (may differ from default)
+          let effectiveDay = dl.day;
+          if (incomplete.length > 0) {
+            const latestDate = incomplete.reduce((latest, t) => t.due_date > latest ? t.due_date : latest, '');
+            if (latestDate) {
+              effectiveDay = parseInt(latestDate.split('-')[2], 10);
+            }
+          }
+          counts[dl.day] = { total: matching.length, incomplete: incomplete.length, effectiveDay };
         }
         setDeadlineTasks(counts);
 
@@ -254,15 +262,17 @@ export default function TimeAwareness() {
   const isShabbat = dayNum === 6;
   const daysLeftThisWeek = dayNum <= 5 ? 5 - dayNum : 0;
 
-  // Build upcoming deadlines — check current month AND next month
+  // Build upcoming deadlines — use ACTUAL task deadlines when available, fallback to defaults
   const upcomingDeadlines = (() => {
     const thisMonth = REPORTING_DEADLINES
       .map(d => {
-        const deadlineDate = new Date(now.getFullYear(), now.getMonth(), d.day);
+        const taskInfo = deadlineTasks[d.day] || { total: 0, incomplete: 0 };
+        // Use effective day from actual tasks if available, otherwise use default
+        const actualDay = taskInfo.effectiveDay || d.day;
+        const deadlineDate = new Date(now.getFullYear(), now.getMonth(), actualDay);
         const calendarDays = differenceInCalendarDays(deadlineDate, now);
         const wd = calendarDays > 0 ? getWorkDaysUntil(deadlineDate, true) : { count: 0, details: '' };
-        const taskInfo = deadlineTasks[d.day] || { total: 0, incomplete: 0 };
-        return { ...d, calendarDays, workDays: wd.count, workDaysDetails: wd.details, passed: calendarDays < 0, ...taskInfo };
+        return { ...d, actualDay, calendarDays, workDays: wd.count, workDaysDetails: wd.details, passed: calendarDays < 0, ...taskInfo };
       })
       .filter(d => !d.passed);
 
@@ -272,7 +282,7 @@ export default function TimeAwareness() {
         const deadlineDate = new Date(now.getFullYear(), now.getMonth() + 1, d.day);
         const calendarDays = differenceInCalendarDays(deadlineDate, now);
         const wd = calendarDays > 0 ? getWorkDaysUntil(deadlineDate, true) : { count: 0, details: '' };
-        return { ...d, calendarDays, workDays: wd.count, workDaysDetails: wd.details, passed: false, total: 0, incomplete: 0, nextMonth: true };
+        return { ...d, actualDay: d.day, calendarDays, workDays: wd.count, workDaysDetails: wd.details, passed: false, total: 0, incomplete: 0, nextMonth: true };
       });
       return nextMonthDeadlines.filter(d => d.calendarDays <= 14); // show next 14 days only
     }
@@ -331,11 +341,11 @@ export default function TimeAwareness() {
                   {d.calendarDays === 0 && hasIncomplete && <AlertTriangle className="w-3 h-3" />}
                   {d.calendarDays <= 2 && !(d.calendarDays === 0 && hasIncomplete) && <Clock className="w-3 h-3" />}
                   {d.calendarDays === 0 ? (
-                    <span>היום! {d.label} (ה-{d.day})</span>
+                    <span>היום! {d.label} (ה-{d.actualDay})</span>
                   ) : d.calendarDays === 1 ? (
-                    <span>מחר! {d.label} (ה-{d.day}){d.nextMonth ? ' (חודש הבא)' : ''}</span>
+                    <span>מחר! {d.label} (ה-{d.actualDay}){d.nextMonth ? ' (חודש הבא)' : ''}</span>
                   ) : (
-                    <span title={d.workDaysDetails} className="cursor-help border-b border-dotted border-gray-400">{d.workDays} ימ"ע {d.label} (ה-{d.day}){d.nextMonth ? ' (חודש הבא)' : ''}</span>
+                    <span title={d.workDaysDetails} className="cursor-help border-b border-dotted border-gray-400">{d.workDays} ימ"ע {d.label} (ה-{d.actualDay}){d.nextMonth ? ' (חודש הבא)' : ''}</span>
                   )}
                   {d.calendarDays === 0 && d.total > 0 && (
                     <span className={`mr-0.5 px-1 py-0 rounded text-[12px] font-bold ${

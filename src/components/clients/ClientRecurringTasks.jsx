@@ -12,7 +12,7 @@ import {
   Clock, FileText, Calculator, Building, Trash2,
   ChevronDown, ChevronRight, Sparkles, Eye, EyeOff, Zap, XCircle
 } from 'lucide-react';
-import { Client, Task } from '@/api/entities';
+import { Client, Task, SystemConfig } from '@/api/entities';
 import { format, addMonths, setDate, startOfMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
@@ -747,17 +747,56 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
   const [expandedCard, setExpandedCard] = useState(null); // catKey of expanded card
   const [isClearingCache, setIsClearingCache] = useState(false);
   // deadlineOverrides: { [month]: { [categoryKey]: day } } — per-month per-category
-  // PERSISTED in localStorage so they survive page navigation and injection
+  // PERSISTED in localStorage + DB (SystemConfig) for cross-device sync
   const [deadlineOverrides, setDeadlineOverrides] = useState(() => {
     try {
       const saved = localStorage.getItem(`calmplan_deadline_overrides_${selectedYear}`);
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
-  // Save overrides to localStorage whenever they change
+  const [deadlineOverridesConfigId, setDeadlineOverridesConfigId] = useState(null);
+  const [deadlineOverridesSaved, setDeadlineOverridesSaved] = useState(true);
+
+  // Load deadline overrides from DB on mount
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const configs = await SystemConfig.filter({ config_key: `deadline_overrides_${selectedYear}` }).catch(() => []);
+        if (configs.length > 0) {
+          const dbData = configs[0].config_value;
+          if (dbData && typeof dbData === 'object' && Object.keys(dbData).length > 0) {
+            setDeadlineOverrides(dbData);
+            try { localStorage.setItem(`calmplan_deadline_overrides_${selectedYear}`, JSON.stringify(dbData)); } catch {}
+          }
+          setDeadlineOverridesConfigId(configs[0].id);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [selectedYear]);
+
+  // Auto-save to localStorage on change, mark as unsaved for DB
   React.useEffect(() => {
     try { localStorage.setItem(`calmplan_deadline_overrides_${selectedYear}`, JSON.stringify(deadlineOverrides)); } catch {}
+    setDeadlineOverridesSaved(false);
   }, [deadlineOverrides, selectedYear]);
+
+  // Save deadline overrides to DB
+  const saveDeadlineOverridesToDB = async () => {
+    try {
+      if (deadlineOverridesConfigId) {
+        await SystemConfig.update(deadlineOverridesConfigId, { config_value: deadlineOverrides });
+      } else {
+        const created = await SystemConfig.create({
+          config_key: `deadline_overrides_${selectedYear}`,
+          config_value: deadlineOverrides,
+        });
+        setDeadlineOverridesConfigId(created?.id || null);
+      }
+      setDeadlineOverridesSaved(true);
+    } catch (err) {
+      console.error('שגיאה בשמירת דדליינים:', err);
+    }
+  };
   const [systemDueDates, setSystemDueDates] = useState(null);
   const [systemDueDatesConfigId, setSystemDueDatesConfigId] = useState(null);
   const [systemExecutionPeriods, setSystemExecutionPeriods] = useState(null);
@@ -1400,14 +1439,25 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                 <span className="text-sm font-bold text-gray-800">דדליינים — דריסה לפי חודש</span>
                 <span className="text-[12px] text-blue-500 font-medium">(חגים / דחייה)</span>
               </div>
+              <div className="flex items-center gap-2">
+              {Object.keys(deadlineOverrides).length > 0 && !deadlineOverridesSaved && (
+                <Button variant="outline" size="sm" onClick={saveDeadlineOverridesToDB}
+                  className="text-xs h-7 px-3 border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold">
+                  שמור דדליינים
+                </Button>
+              )}
+              {deadlineOverridesSaved && Object.keys(deadlineOverrides).length > 0 && (
+                <span className="text-xs text-emerald-500 font-medium">✓ נשמר</span>
+              )}
               {Object.keys(deadlineOverrides).length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => setDeadlineOverrides({})}
+                <Button variant="ghost" size="sm" onClick={() => { setDeadlineOverrides({}); setDeadlineOverridesSaved(false); }}
                   className="text-xs h-7 px-2 text-red-400 hover:text-red-600 hover:bg-red-50">
                   איפוס הכל
                 </Button>
               )}
+              </div>
             </div>
-            <p className="text-[11px] text-blue-400">ברירות מחדל מהגדרות מערכת. שנה רק מה שצריך — חל על ההזרקה הנוכחית בלבד.</p>
+            <p className="text-[11px] text-blue-400">ברירות מחדל מהגדרות מערכת. שנה רק מה שצריך — נשמר אוטומטית + כפתור שמור ל-DB.</p>
 
             {(() => {
               const DEADLINE_CATS = [
