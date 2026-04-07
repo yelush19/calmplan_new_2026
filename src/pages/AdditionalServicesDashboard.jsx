@@ -40,6 +40,9 @@ import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
+import FocusMapView from '@/components/canvas/FocusMapView';
+import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
+import { getServiceWeight } from '@/config/serviceWeights';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 
 // P1 Board 2 — פנסיות וקרנות: מתפעל/טמל + הנחיות מס"ב + מס"ב סוציאליות
@@ -118,6 +121,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState(null);
+  const [cognitiveFilter, setCognitiveFilter] = useState(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
@@ -202,8 +206,14 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
     if (statusFilter) {
       result = result.filter(t => (t.status || 'not_started') === statusFilter);
     }
+    if (cognitiveFilter !== null) {
+      result = result.filter(t => {
+        const w = getServiceWeight(t.category);
+        return (w.cognitiveLoad ?? 0) === cognitiveFilter;
+      });
+    }
     return result;
-  }, [tasks, clientFilter, searchTerm, statusFilter, showCompleted]);
+  }, [tasks, clientFilter, searchTerm, statusFilter, showCompleted, cognitiveFilter]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
@@ -519,7 +529,9 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       </div>
 
       <div className="flex items-center gap-2">
-        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial']} />
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
+
+      <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
         <Button
           variant="outline"
           size="sm"
@@ -613,6 +625,10 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         ) : viewMode === 'radial' ? (
           <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
             <AyoaRadialView tasks={filteredTasks} centerLabel="שירותים נוספים" centerSub="P1" />
+          </div>
+        ) : viewMode === 'focus' ? (
+          <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+            <FocusMapView tasks={filteredTasks} allTasks={tasks} centerLabel="שירותים נוספים" centerSub={`${filteredTasks.length} משימות`} />
           </div>
         ) : viewMode === 'workbook' ? (
           <TaxWorkbookView

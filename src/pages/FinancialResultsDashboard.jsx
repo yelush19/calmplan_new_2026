@@ -18,7 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   RefreshCw, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp,
-  CheckCircle, AlertTriangle, Clock, Minus,
+  CheckCircle, AlertTriangle, Clock, Minus, Target,
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck,
 } from 'lucide-react';
 import { format, subMonths, addMonths } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -26,8 +27,23 @@ import ResizableTable from '@/components/ui/ResizableTable';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
+import KanbanView from '@/components/tasks/KanbanView';
+import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
+import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import FocusMapView from '@/components/canvas/FocusMapView';
 import { ADDITIONAL_SERVICES, TAX_SERVICES } from '@/config/processTemplates';
 
+
+// Status pipeline for DNA-style KPI cards (ordered by workflow progression)
+const STATUS_PIPELINE = [
+  { key: 'waiting_for_materials', label: 'ממתין לחומרים',       color: '#F59E0B', bg1: '#fffbeb', bg2: '#fef3c7', Icon: Inbox },
+  { key: 'not_started',          label: 'לבצע',                color: '#64748B', bg1: '#f8fafc', bg2: '#f1f5f9', Icon: PlayCircle },
+  { key: 'ready_to_broadcast',   label: 'מוכן לשידור',         color: '#0D9488', bg1: '#f0fdfa', bg2: '#ccfbf1', Icon: Radio },
+  { key: 'reported_pending_payment', label: 'ממתין לתשלום',     color: '#4F46E5', bg1: '#eef2ff', bg2: '#e0e7ff', Icon: Send },
+  { key: 'sent_for_review',      label: 'הועבר לעיון',         color: '#7C3AED', bg1: '#faf5ff', bg2: '#f3e8ff', Icon: Eye },
+  { key: 'needs_corrections',    label: 'לתיקון',              color: '#EA580C', bg1: '#fff7ed', bg2: '#ffedd5', Icon: FileWarning },
+  { key: 'production_completed', label: 'הושלם',               color: '#16A34A', bg1: '#f0fdf4', bg2: '#dcfce7', Icon: CircleCheck },
+];
 
 // ============================================================
 // Hebrew labels
@@ -200,6 +216,17 @@ export default function FinancialResultsDashboard() {
     return { total, ready, inProgress, waiting };
   }, [rows]);
 
+  // Pipeline stats from actual task statuses (for DNA pipeline cards)
+  const pipelineStats = useMemo(() => {
+    const byStatus = {};
+    STATUS_PIPELINE.forEach(s => { byStatus[s.key] = 0; });
+    pnlMapTasks.forEach(t => {
+      const s = t.status || 'not_started';
+      if (byStatus[s] !== undefined) byStatus[s]++;
+    });
+    return { total: pnlMapTasks.length, byStatus };
+  }, [pnlMapTasks]);
+
   const handleMonthChange = (dir) => {
     setSelectedMonth(c => dir === 'prev' ? subMonths(c, 1) : addMonths(c, 1));
   };
@@ -305,9 +332,56 @@ export default function FinancialResultsDashboard() {
       </div>
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro']} />
+      {/* DNA Pipeline Status Cards */}
+      <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
+        <div className="rounded-xl px-2 py-1.5 flex items-center gap-1.5 shrink-0 border border-slate-200"
+          style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
+          <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(70,130,180,0.1)' }}>
+            <Target className="w-3.5 h-3.5" style={{ color: '#4682B4' }} />
+          </div>
+          <div className="text-center">
+            <div className="text-base leading-tight font-black text-slate-700">{pipelineStats.total}</div>
+            <div className="text-[9px] text-slate-400 font-medium">משימות</div>
+          </div>
+        </div>
+        {STATUS_PIPELINE.map((phase, idx) => {
+          const count = pipelineStats.byStatus[phase.key] || 0;
+          const pct = pipelineStats.total > 0 ? Math.round((count / pipelineStats.total) * 100) : 0;
+          const Icon = phase.Icon;
+          return (
+            <React.Fragment key={phase.key}>
+              {idx > 0 && <div className="flex items-center shrink-0"><div className="w-1 h-1 rounded-full bg-slate-300" /></div>}
+              <div className="rounded-xl px-2 py-1.5 flex items-center gap-1.5 shrink-0 border shadow-sm"
+                style={{ background: `linear-gradient(135deg, ${phase.bg1} 0%, ${phase.bg2} 100%)`, borderColor: count > 0 ? phase.color + '30' : '#e2e8f0', opacity: count === 0 ? 0.5 : 1 }}>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: phase.color + '15' }}>
+                  <Icon className="w-3 h-3" style={{ color: phase.color }} />
+                </div>
+                <div className="text-center min-w-[28px]">
+                  <div className="text-base font-black leading-tight" style={{ color: count > 0 ? phase.color : '#94a3b8' }}>{count}</div>
+                  <div className="text-[9px] text-slate-600 font-bold leading-tight whitespace-nowrap">{phase.label}</div>
+                </div>
+                {count > 0 && <div className="text-[9px] font-bold rounded-full px-1 py-0.5" style={{ color: phase.color, background: phase.color + '15' }}>{pct}%</div>}
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
 
-      {viewMode === 'miro' ? (
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
+
+      {viewMode === 'kanban' ? (
+        <KanbanView tasks={pnlMapTasks} onTaskStatusChange={async (task, status) => { await Task.update(task.id, { status }); loadData(); }} clients={clients} />
+      ) : viewMode === 'timeline' ? (
+        <ProjectTimelineView tasks={pnlMapTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} />
+      ) : viewMode === 'radial' ? (
+        <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+          <AyoaRadialView tasks={pnlMapTasks} centerLabel="תוצרים" centerSub="רווח והפסד" />
+        </div>
+      ) : viewMode === 'focus' ? (
+        <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+          <FocusMapView tasks={pnlMapTasks} allTasks={tasks} centerLabel="תוצרים" centerSub={`${pnlMapTasks.length} משימות`} />
+        </div>
+      ) : viewMode === 'miro' ? (
         <MiroProcessMap
           tasks={pnlMapTasks}
           centerLabel="התאמות ומאזנים"

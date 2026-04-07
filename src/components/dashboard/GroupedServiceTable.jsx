@@ -488,7 +488,7 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
     const updated = subTasks.map(st => st.id === subId ? { ...st, done: !st.done } : st);
     onSubTaskChange(task, updated);
     if (updated.every(st => st.done) && updated.length > 0 && task.status !== 'production_completed') {
-      onStatusChange(task, 'ready_to_broadcast');
+      onStatusChange(task, 'production_completed');
     }
   };
 

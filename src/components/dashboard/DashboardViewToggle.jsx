@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, GanttChart, List, Circle, Table2, Map } from 'lucide-react';
+import { LayoutGrid, GanttChart, List, Circle, Table2, Map, Crosshair } from 'lucide-react';
 
 const VIEW_OPTIONS = [
   { key: 'table', label: 'טבלה', icon: List },
@@ -8,6 +8,7 @@ const VIEW_OPTIONS = [
   { key: 'kanban', label: 'קנבן', icon: LayoutGrid },
   { key: 'timeline', label: 'גאנט', icon: GanttChart },
   { key: 'radial', label: 'טבעות', icon: Circle },
+  { key: 'focus', label: 'מיקוד', icon: Crosshair },
 ];
 
 export default function DashboardViewToggle({ value, onChange, options }) {

@@ -1567,6 +1567,31 @@ export function computeInsights(tasks, clients = []) {
     });
   }
 
+  // --- Stuck Tasks (3+ days without status change) → SmartNudge ---
+  const STUCK_THRESHOLD_DAYS = 3;
+  const stuckTasks = tasks.filter(t => {
+    if (t.status === 'production_completed' || t.context === 'archived') return false;
+    const lastChange = t.updated_at || t.created_at;
+    if (!lastChange) return false;
+    const lastDate = new Date(lastChange);
+    if (isNaN(lastDate.getTime())) return false;
+    const daysSince = (now - lastDate) / (1000 * 60 * 60 * 24);
+    return daysSince >= STUCK_THRESHOLD_DAYS;
+  });
+  if (stuckTasks.length > 0) {
+    const topStuck = stuckTasks.slice(0, 3).map(t => t.client_name || t.title).join(', ');
+    insights.push({
+      type: 'warning',
+      category: 'stuck',
+      icon: 'AlertTriangle',
+      color: 'orange',
+      title: `${stuckTasks.length} משימות תקועות ${STUCK_THRESHOLD_DAYS}+ ימים`,
+      description: `כשתהיי מוכנה — ${topStuck}${stuckTasks.length > 3 ? ` ועוד ${stuckTasks.length - 3}` : ''} מחכות לך`,
+      count: stuckTasks.length,
+      priority: 1,
+    });
+  }
+
   // Sort by priority (0 = most urgent)
   insights.sort((a, b) => a.priority - b.priority);
 
