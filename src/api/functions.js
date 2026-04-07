@@ -1188,16 +1188,35 @@ export const cleanupGhostTasks = async ({ dryRun = true } = {}) => {
     const ghostTasks = [];
     const validTasks = [];
 
+    // Detect future-month tasks (tasks with due_date beyond current month)
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const nextMonthStart = `${now.getFullYear()}-${pad(now.getMonth() + 2)}-01`;
+
     for (const task of allTasks) {
       const cat = (task.category || '').trim();
 
-      // Only check auto-generated recurring tasks
+      // Rule 1: Future-month tasks — due_date beyond current month = ghost
+      if (task.due_date && task.due_date >= nextMonthStart) {
+        ghostTasks.push({
+          id: task.id,
+          title: task.title,
+          category: cat,
+          client_name: task.client_name,
+          due_date: task.due_date,
+          status: task.status,
+          reason: `תאריך יעד עתידי: ${task.due_date}`,
+        });
+        continue;
+      }
+
+      // Only check auto-generated recurring tasks for category rules
       if (!task.is_recurring) {
         validTasks.push(task);
         continue;
       }
 
-      // Check if category is a known ghost
+      // Rule 2: Deprecated category
       if (GHOST_CATEGORIES.has(cat)) {
         ghostTasks.push({
           id: task.id,

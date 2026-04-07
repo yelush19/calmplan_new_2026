@@ -7,6 +7,22 @@ import { toast } from 'sonner';
 const DONE_STATUSES = ['completed', 'production_completed', 'not_relevant', 'cancelled', 'reported_waiting_for_payment'];
 
 /**
+ * Delete ALL auto-generated sticky notes (one-time cleanup).
+ * Call this from console or a button to clear the flood.
+ */
+export async function purgeAllAutoNotes() {
+  try {
+    const allNotes = await StickyNote.list(null, 5000).catch(() => []);
+    const autoNotes = (allNotes || []).filter(n => n.linked_task_id || n.category === 'client_work');
+    let deleted = 0;
+    for (const note of autoNotes) {
+      try { await StickyNote.delete(note.id); deleted++; } catch { /* ignore */ }
+    }
+    return deleted;
+  } catch { return 0; }
+}
+
+/**
  * Remove sticky notes linked to tasks that are now completed/cancelled/not_relevant.
  * Can be called from anywhere after a task status change.
  */
@@ -47,7 +63,19 @@ export default function useAutoReminders() {
         const notesArr = existingNotes || [];
 
         // --- Step 1: Clean up notes linked to completed/cancelled/not_relevant tasks ---
+        // If there's a flood (>10 auto notes), purge ALL auto-generated notes first
         let removed = 0;
+        const autoNotes = notesArr.filter(n => n.linked_task_id || n.category === 'client_work');
+        if (autoNotes.length > 6) {
+          // Flood detected — purge all auto notes
+          for (const note of autoNotes) {
+            try { await StickyNote.delete(note.id); removed++; } catch { /* ignore */ }
+          }
+          toast.info(`נוקו ${removed} פתקים אוטומטיים (הצפה)`, { duration: 5000 });
+          // Don't create new ones this cycle — let next load handle it cleanly
+          return;
+        }
+
         for (const note of notesArr) {
           if (!note.linked_task_id) continue;
           const linkedTask = taskMap.get(note.linked_task_id);
@@ -93,20 +121,19 @@ export default function useAutoReminders() {
           if (daysUntilDue <= 3) {
             const urgency = daysUntilDue <= 0 ? 'urgent' : daysUntilDue <= 1 ? 'high' : 'medium';
             const colorMap = { urgent: 'purple', high: 'purple', medium: 'yellow' };
-            const prefix = daysUntilDue < 0
-              ? `⚠️ באיחור ${Math.abs(daysUntilDue)} ימים!`
-              : daysUntilDue === 0
-                ? '🔴 היום!'
-                : `⏰ עוד ${daysUntilDue} ימים`;
+            const timeLabel = daysUntilDue < 0
+              ? `באיחור ${Math.abs(daysUntilDue)} ימים`
+              : daysUntilDue === 0 ? 'היום' : `עוד ${daysUntilDue} ימים`;
 
-            const contentParts = [prefix];
-            if (task.client_name) contentParts.push(`לקוח: ${task.client_name}`);
-            if (task.category) contentParts.push(`קטגוריה: ${resolveCategoryLabel(task.category)}`);
-            if (task.description) contentParts.push(task.description);
+            // Compact: client + task title (e.g. "לון שרמן — יצור שכר")
+            const shortTitle = task.title || resolveCategoryLabel(task.category) || '';
+            const compactTitle = task.client_name
+              ? `${task.client_name} — ${shortTitle}`
+              : shortTitle;
 
             await StickyNote.create({
-              title: `📌 ${task.title}`,
-              content: contentParts.join('\n'),
+              title: compactTitle,
+              content: `${timeLabel} | ${task.due_date}`,
               color: colorMap[urgency] || 'yellow',
               pinned: true,
               linked_task_id: task.id,
