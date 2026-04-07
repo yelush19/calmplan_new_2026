@@ -1270,23 +1270,41 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             </div>
           )}
 
-          {/* Branch summary — grouped under P1/P2 headers */}
-          <div className="space-y-4">
-            {branchSummary.map((branch) => (
+          {/* Branch summary — grouped under P1/P2 headers, collapsible */}
+          <div className="space-y-3">
+            {branchSummary.map((branch) => {
+              const isBranchCollapsed = collapsedCategories.has(`branch_${branch.key}`);
+              return (
               <motion.div
                 key={branch.key}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`rounded-2xl border-2 ${branch.accent} overflow-hidden`}
               >
-                {/* Branch header */}
-                <div className={`px-4 py-3 ${branch.bgSoft} flex items-center gap-3`}>
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: design.getBranchColor(branch.key) }} />
-                  <span className="text-lg font-black text-gray-800">{branch.label}</span>
-                  <span className="text-base font-bold text-gray-500 mr-auto">{branch.totalClients} לקוחות · {branch.totalServices} שירותים</span>
+                {/* Branch header — clickable to collapse */}
+                <div
+                  className={`px-4 py-2.5 ${branch.bgSoft} flex items-center gap-3 cursor-pointer select-none`}
+                  onClick={() => toggleCollapseCategory(`branch_${branch.key}`)}
+                >
+                  <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: design.getBranchColor(branch.key) }} />
+                  <span className="text-base font-black text-gray-800">{branch.label}</span>
+                  <span className="text-sm font-bold text-gray-500 mr-auto">{branch.totalClients} לקוחות · {branch.totalServices} שירותים</span>
+                  {isBranchCollapsed ?
+                    <ChevronRight className="w-4 h-4 text-gray-400" /> :
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  }
                 </div>
-                {/* Category cards within branch — AYOA glass style */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3">
+                {/* Category cards within branch — compact grid */}
+                <AnimatePresence>
+                {!isBranchCollapsed && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-2.5">
                   {branch.branchCategories.map((cat, catIdx) => {
                     const Icon = cat.icon;
                     const isExpanded = expandedCard === cat.key;
@@ -1296,27 +1314,27 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                         key={cat.key}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: catIdx * 0.05 }}
-                        className={`rounded-xl transition-all cursor-pointer border-2 ${
-                          isExpanded ? 'col-span-1 md:col-span-2' : 'hover:scale-[1.01]'
+                        transition={{ delay: catIdx * 0.03 }}
+                        className={`rounded-lg transition-all cursor-pointer border ${
+                          isExpanded ? 'col-span-2 md:col-span-3 lg:col-span-4' : 'hover:shadow-sm'
                         }`}
                         style={{
-                          background: `${(cat.cardColor || branchColor)}0A`,
-                          borderColor: isExpanded ? (cat.cardColor || branchColor) : `${cat.cardColor || branchColor}30`,
+                          background: `${(cat.cardColor || branchColor)}08`,
+                          borderColor: isExpanded ? (cat.cardColor || branchColor) : `${cat.cardColor || branchColor}25`,
                         }}
                         onClick={() => setExpandedCard(isExpanded ? null : cat.key)}
                       >
-                        <div className="p-4">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-xl">{cat.emoji || '📄'}</span>
-                            <span className="text-base font-black" style={{ color: cat.cardColor || branchColor }}>{cat.label}</span>
-                            <ChevronDown className={`w-4 h-4 mr-auto transition-transform ${isExpanded ? 'rotate-180' : ''}`} style={{ color: cat.cardColor || branchColor }} />
+                        <div className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">{cat.emoji || '📄'}</span>
+                            <span className="text-sm font-bold flex-1 truncate" style={{ color: cat.cardColor || branchColor }}>{cat.label}</span>
+                            <span className="text-lg font-black" style={{ color: cat.cardColor || branchColor }}>{cat.clientCount}</span>
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} style={{ color: cat.cardColor || branchColor }} />
                           </div>
-                          <p className="text-4xl font-black mb-2" style={{ color: cat.cardColor || branchColor }}>{cat.clientCount}</p>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1 mt-1">
                             {Object.entries(cat.frequencies).map(([freq, count]) => (
-                              <span key={freq} className="text-xs px-2.5 py-1 rounded-full font-bold"
-                                style={{ backgroundColor: `${cat.cardColor || branchColor}15`, color: cat.cardColor || branchColor }}>
+                              <span key={freq} className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                                style={{ backgroundColor: `${cat.cardColor || branchColor}12`, color: cat.cardColor || branchColor }}>
                                 {FREQUENCY_LABELS[freq] || freq} ({count})
                               </span>
                             ))}
@@ -1324,16 +1342,15 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                         </div>
                         {/* ── Expanded Client List ── */}
                         {isExpanded && cat.matchedClients && (
-                          <div className="border-t px-4 py-3 max-h-64 overflow-y-auto" style={{ borderColor: `${cat.cardColor || branchColor}20`, background: `${cat.cardColor || branchColor}08` }}>
-                            <div className="text-xs font-bold mb-2" style={{ color: cat.cardColor || branchColor }}>{cat.clientCount} לקוחות:</div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                          <div className="border-t px-3 py-2 max-h-48 overflow-y-auto" style={{ borderColor: `${cat.cardColor || branchColor}20`, background: `${cat.cardColor || branchColor}06` }}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1">
                               {cat.matchedClients
                                 .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
                                 .map((mc, idx) => (
-                                <div key={mc.id || idx} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-sm"
-                                  style={{ background: 'white', borderColor: `${cat.cardColor || branchColor}25` }}>
+                                <div key={mc.id || idx} className="flex items-center gap-1.5 px-2 py-1 rounded border text-xs"
+                                  style={{ background: 'white', borderColor: `${cat.cardColor || branchColor}20` }}>
                                   <span className="font-medium text-gray-800 truncate flex-1">{mc.name}</span>
-                                  <span className="text-[12px] font-bold flex-shrink-0" style={{ color: `${cat.cardColor || branchColor}99` }}>
+                                  <span className="text-[10px] font-bold flex-shrink-0" style={{ color: `${cat.cardColor || branchColor}80` }}>
                                     {FREQUENCY_LABELS[mc.frequency] || mc.frequency}
                                   </span>
                                 </div>
@@ -1344,9 +1361,13 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
                       </motion.div>
                     );
                   })}
-                </div>
+                  </div>
+                  </motion.div>
+                )}
+                </AnimatePresence>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
 
           {/* ============================================================ */}
