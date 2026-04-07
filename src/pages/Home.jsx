@@ -219,7 +219,10 @@ export default function HomePage() {
       });
 
       // Payment tab: tasks with payment_due_date set, OR completed production awaiting payment step
+      // Exclude "ghost" tasks — missing critical data (no due_date AND no client_size)
       const waitingPayment = allTasks.filter(t => {
+        // Ghost tasks: missing critical data — don't show on home page
+        if (!t.due_date && !t.client_size) return false;
         // Include tasks explicitly marked with legacy status
         if (t.status === 'reported_waiting_for_payment') return true;
         // Include completed tasks that have a payment_due_date (payment pending)
