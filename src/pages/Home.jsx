@@ -36,6 +36,7 @@ import MoodCheckerInline from "@/components/home/MoodCheckerInline";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
 import BadDayMode from "@/components/tasks/BadDayMode";
 import SmartNudge from "@/components/home/SmartNudge";
+import TaskInsights from "@/components/home/TaskInsights";
 import CategoryBreakdown from "@/components/tasks/CategoryBreakdown";
 import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
 import { StickyNote } from "@/api/entities";
@@ -634,6 +635,9 @@ export default function HomePage() {
 
         {/* ═══ 1.5 SmartNudge — one gentle nudge ═══ */}
         <SmartNudge nudge={smartNudge} />
+
+        {/* ═══ 1.5b Task Insights — 3-4 proactive insights from Cascade ═══ */}
+        <TaskInsights insights={insights} />
 
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
