@@ -213,20 +213,21 @@ export default function TimeAwareness() {
 
         const counts = {};
         for (const dl of REPORTING_DEADLINES) {
+          // Only count tasks due THIS month (current reporting period)
           const matching = allTasks.filter(t => {
             if (!t || !t.category) return false;
             if (!dl.categories.includes(t.category)) return false;
-            // Tasks due this month or next month
             if (!t.due_date) return false;
-            if (!t.due_date.startsWith(currentMonthPrefix) && !t.due_date.startsWith(nextMonthPrefix)) return false;
+            if (!t.due_date.startsWith(currentMonthPrefix)) return false;
             return true;
           });
           const incomplete = matching.filter(t => !DONE_STATUSES.has(t.status));
-          // Find actual latest due date from incomplete tasks (may differ from default)
+          // Find actual latest due date from THIS MONTH's incomplete tasks only
           let effectiveDay = dl.day;
           if (incomplete.length > 0) {
-            const latestDate = incomplete.reduce((latest, t) => t.due_date > latest ? t.due_date : latest, '');
-            if (latestDate) {
+            const thisMonthIncomplete = incomplete.filter(t => t.due_date.startsWith(currentMonthPrefix));
+            if (thisMonthIncomplete.length > 0) {
+              const latestDate = thisMonthIncomplete.reduce((latest, t) => t.due_date > latest ? t.due_date : latest, '');
               effectiveDay = parseInt(latestDate.split('-')[2], 10);
             }
           }
