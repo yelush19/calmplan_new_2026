@@ -32,6 +32,7 @@ import { useDesign } from "@/contexts/DesignContext";
 import FocusMapView from "@/components/canvas/FocusMapView";
 import { useBiologicalClock } from "@/contexts/BiologicalClockContext";
 import OverdueAlert from "@/components/tasks/OverdueAlert";
+import MoodCheckerInline from "@/components/home/MoodCheckerInline";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
 import BadDayMode from "@/components/tasks/BadDayMode";
 import CategoryBreakdown from "@/components/tasks/CategoryBreakdown";
@@ -118,6 +119,16 @@ export default function HomePage() {
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { focusMode, filterByEnergy, energyLevel, setEnergyLevel } = useApp();
   const [stickyNotes, setStickyNotes] = useState([]);
+  const [currentMood, setCurrentMood] = useState(null);
+
+  // When mood changes, auto-adjust energy level for ADHD support
+  const handleMoodChange = useCallback((mood) => {
+    setCurrentMood(mood);
+    if (!mood) return;
+    if (mood <= 4) setEnergyLevel('low');
+    else if (mood <= 7) setEnergyLevel('medium');
+    // mood >= 8: don't override — let user keep their chosen energy level
+  }, [setEnergyLevel]);
 
   let design = null;
   try { design = useDesign(); } catch { /* not mounted */ }
@@ -525,6 +536,7 @@ export default function HomePage() {
                   </span>
                 </div>
               )}
+              <MoodCheckerInline onMoodChange={handleMoodChange} />
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
