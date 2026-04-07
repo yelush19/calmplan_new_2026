@@ -771,6 +771,56 @@ export const SERVICE_DEPENDENCIES = {
 };
 
 /**
+ * Find sibling tasks that depend on the completed service and unlock them.
+ * When operator_reporting completes → find social_benefits for same client+month → unlock.
+ * Returns array of { task, newStatus } objects to update.
+ *
+ * @param {Object} completedTask - The task that just reached production_completed
+ * @param {Object[]} siblingTasks - All tasks for same client + reporting month
+ * @returns {Object[]} Array of { task, newStatus } to update
+ */
+export function unlockDependentTasks(completedTask, siblingTasks = []) {
+  const service = getServiceForTask(completedTask);
+  const completedServiceKey = service?.key || completedTask.serviceKey;
+  if (!completedServiceKey) return [];
+
+  const unlocks = [];
+
+  // Find all services that list this service as a dependency
+  for (const [dependentKey, deps] of Object.entries(SERVICE_DEPENDENCIES)) {
+    if (!deps.includes(completedServiceKey)) continue;
+
+    // Find the dependent sibling task(s) for same client
+    const dependentTasks = siblingTasks.filter(t => {
+      const s = getServiceForTask(t);
+      const tKey = s?.key || t.serviceKey;
+      return tKey === dependentKey && t.client_name === completedTask.client_name;
+    });
+
+    for (const depTask of dependentTasks) {
+      // Only unlock if currently waiting
+      if (depTask.status !== 'waiting_for_materials') continue;
+
+      // Check if ALL dependencies are now met (not just the one that just completed)
+      const allDepsMet = deps.every(depKey => {
+        if (depKey === completedServiceKey) return true; // The one we just completed
+        const depSibling = siblingTasks.find(t => {
+          const s = getServiceForTask(t);
+          return (s?.key || t.serviceKey) === depKey && t.client_name === completedTask.client_name;
+        });
+        return depSibling && depSibling.status === 'production_completed';
+      });
+
+      if (allDepsMet) {
+        unlocks.push({ task: depTask, newStatus: 'not_started' });
+      }
+    }
+  }
+
+  return unlocks;
+}
+
+/**
  * Get open prerequisite tasks that should be auto-completed when a downstream
  * task is marked as production_completed.
  *
