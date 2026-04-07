@@ -44,6 +44,7 @@ import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
+import FocusMapView from '@/components/canvas/FocusMapView';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 
 // P1 Board 1 — ייצור + הפצה: שכר → תלושים → מס"ב עובדים
@@ -612,7 +613,7 @@ export default function PayrollDashboardPage() {
             className="pe-10 h-9"
           />
         </div>
-        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial']} />
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
       </div>
 
       {/* DNA Pipeline Status Cards */}
@@ -782,6 +783,10 @@ export default function PayrollDashboardPage() {
         />
       ) : viewMode === 'kanban' ? (
         <KanbanView tasks={filteredTasks} onStatusChange={handleStatusChange} onEdit={setEditingTask} />
+      ) : viewMode === 'focus' ? (
+        <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+          <FocusMapView tasks={filteredTasks} allTasks={tasks} centerLabel="שכר" centerSub={`${filteredTasks.length} משימות`} />
+        </div>
       ) : null}
 
       <QuickAddTaskDialog

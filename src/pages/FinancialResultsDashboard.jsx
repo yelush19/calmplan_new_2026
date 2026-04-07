@@ -26,6 +26,10 @@ import ResizableTable from '@/components/ui/ResizableTable';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
+import KanbanView from '@/components/tasks/KanbanView';
+import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
+import AyoaRadialView from '@/components/canvas/AyoaRadialView';
+import FocusMapView from '@/components/canvas/FocusMapView';
 import { ADDITIONAL_SERVICES, TAX_SERVICES } from '@/config/processTemplates';
 
 
@@ -305,9 +309,21 @@ export default function FinancialResultsDashboard() {
       </div>
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
 
-      {viewMode === 'miro' ? (
+      {viewMode === 'kanban' ? (
+        <KanbanView tasks={pnlMapTasks} onTaskStatusChange={async (task, status) => { await Task.update(task.id, { status }); loadData(); }} clients={clients} />
+      ) : viewMode === 'timeline' ? (
+        <ProjectTimelineView tasks={pnlMapTasks} month={selectedMonth.getMonth() + 1} year={selectedMonth.getFullYear()} />
+      ) : viewMode === 'radial' ? (
+        <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+          <AyoaRadialView tasks={pnlMapTasks} centerLabel="תוצרים" centerSub="רווח והפסד" />
+        </div>
+      ) : viewMode === 'focus' ? (
+        <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+          <FocusMapView tasks={pnlMapTasks} allTasks={tasks} centerLabel="תוצרים" centerSub={`${pnlMapTasks.length} משימות`} />
+        </div>
+      ) : viewMode === 'miro' ? (
         <MiroProcessMap
           tasks={pnlMapTasks}
           centerLabel="התאמות ומאזנים"

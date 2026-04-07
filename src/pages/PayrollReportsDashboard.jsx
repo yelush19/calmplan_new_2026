@@ -41,6 +41,7 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
+import FocusMapView from '@/components/canvas/FocusMapView';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 
 // P1 Board 3 — דיווחים + קליטה: ב"ל + ניכויים + תשלום רשויות + מילואים + קליטה להנה"ח
@@ -588,7 +589,7 @@ export default function PayrollReportsDashboardPage() {
         )}
       </AnimatePresence>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
@@ -685,6 +686,10 @@ export default function PayrollReportsDashboardPage() {
         ) : viewMode === 'radial' ? (
           <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
             <AyoaRadialView tasks={filteredTasks} centerLabel="דיווחי שכר" centerSub="P1" />
+          </div>
+        ) : viewMode === 'focus' ? (
+          <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+            <FocusMapView tasks={filteredTasks} allTasks={tasks} centerLabel="דיווחי שכר" centerSub={`${filteredTasks.length} משימות`} />
           </div>
         ) : (
           <Tabs defaultValue={sortedServiceKeys[0]} className="w-full" dir="rtl">

@@ -37,6 +37,9 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
+import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
+import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
+import FocusMapView from '@/components/canvas/FocusMapView';
 
 // Admin dashboard services (dashboard: 'admin')
 const adminDashboardServices = Object.fromEntries(
@@ -367,7 +370,7 @@ export default function AdminTasksDashboardPage() {
         </div>
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro', 'kanban', 'timeline', 'radial']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
@@ -450,6 +453,21 @@ export default function AdminTasksDashboardPage() {
           ) : viewMode === 'radial' ? (
             <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
               <AyoaRadialView tasks={filteredTasks} centerLabel="ניהול" centerSub="P3" />
+            </div>
+          ) : viewMode === 'timeline' ? (
+            <ProjectTimelineView tasks={filteredTasks} month={new Date().getMonth() + 1} year={new Date().getFullYear()} onEdit={setEditingTask} />
+          ) : viewMode === 'workbook' ? (
+            <TaxWorkbookView
+              tasks={filteredTasks}
+              clients={clients}
+              services={adminDashboardServices}
+              onToggleStep={handleToggleStep}
+              onStatusChange={handleStatusChange}
+              onEdit={setEditingTask}
+            />
+          ) : viewMode === 'focus' ? (
+            <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
+              <FocusMapView tasks={filteredTasks} allTasks={tasks} centerLabel="ניהול" centerSub={`${filteredTasks.length} משימות`} />
             </div>
           ) : (
           <div className="space-y-4">
