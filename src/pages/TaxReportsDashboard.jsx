@@ -29,6 +29,7 @@ import GanttView from '@/components/views/GanttView';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
 import FocusMapView from '@/components/canvas/FocusMapView';
+import AyoaWorkflowView from '@/components/canvas/AyoaWorkflowView';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
 import TaskToNoteDialog from '@/components/tasks/TaskToNoteDialog';
@@ -1028,7 +1029,7 @@ export default function TaxReportsDashboardPage() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
         {phaseFilter && (
           <Badge className="bg-slate-100 text-slate-700 gap-1 px-2.5 py-1 text-xs font-bold cursor-pointer hover:bg-slate-200" onClick={() => setPhaseFilter(null)}>
             סינון: {STATUS_PIPELINE.find(s => s.key === phaseFilter)?.label || (phaseFilter === 'collect' ? 'קליטה' : phaseFilter === 'process' ? 'עיבוד' : phaseFilter === 'review' ? 'מוכן לשידור' : 'שודר')}
@@ -1138,6 +1139,8 @@ export default function TaxReportsDashboardPage() {
           <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
             <FocusMapView tasks={filteredTasks} allTasks={tasks} centerLabel="דיווחי מס" centerSub={`${filteredTasks.length} משימות`} />
           </div>
+        ) : viewMode === 'workflow' ? (
+          <AyoaWorkflowView tasks={filteredTasks} onEditTask={setEditingTask} />
         ) : null
       ) : (
         <Card className="p-12 text-center border-[#E0E0E0]">

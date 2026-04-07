@@ -40,6 +40,7 @@ import MiroProcessMap from '@/components/views/MiroProcessMap';
 import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import FocusMapView from '@/components/canvas/FocusMapView';
+import AyoaWorkflowView from '@/components/canvas/AyoaWorkflowView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
 import { getServiceWeight } from '@/config/serviceWeights';
 
@@ -379,7 +380,7 @@ export default function AdminTasksDashboardPage() {
         </div>
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
 
       <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
 
@@ -480,6 +481,8 @@ export default function AdminTasksDashboardPage() {
             <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
               <FocusMapView tasks={filteredTasks} allTasks={tasks} centerLabel="ניהול" centerSub={`${filteredTasks.length} משימות`} />
             </div>
+          ) : viewMode === 'workflow' ? (
+            <AyoaWorkflowView tasks={filteredTasks} onEditTask={setEditingTask} />
           ) : (
           <div className="space-y-4">
             {Object.entries(serviceData).map(([serviceKey, { service, clientRows }]) => {

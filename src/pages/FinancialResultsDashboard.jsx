@@ -31,6 +31,7 @@ import KanbanView from '@/components/tasks/KanbanView';
 import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import FocusMapView from '@/components/canvas/FocusMapView';
+import AyoaWorkflowView from '@/components/canvas/AyoaWorkflowView';
 import { ADDITIONAL_SERVICES, TAX_SERVICES } from '@/config/processTemplates';
 
 
@@ -367,7 +368,7 @@ export default function FinancialResultsDashboard() {
         })}
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
 
       {viewMode === 'kanban' ? (
         <KanbanView tasks={pnlMapTasks} onTaskStatusChange={async (task, status) => { await Task.update(task.id, { status }); loadData(); }} clients={clients} />
@@ -381,6 +382,8 @@ export default function FinancialResultsDashboard() {
         <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
           <FocusMapView tasks={pnlMapTasks} allTasks={tasks} centerLabel="תוצרים" centerSub={`${pnlMapTasks.length} משימות`} />
         </div>
+      ) : viewMode === 'workflow' ? (
+        <AyoaWorkflowView tasks={pnlMapTasks} />
       ) : viewMode === 'miro' ? (
         <MiroProcessMap
           tasks={pnlMapTasks}
