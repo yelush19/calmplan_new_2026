@@ -90,7 +90,6 @@ function sortByPriority(tasks) {
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 
 const FOCUS_TABS = [
-  { key: 'overdue', label: 'באיחור', icon: AlertTriangle, color: 'text-[#7B1FA2]', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
   { key: 'today', label: 'היום', icon: Target, color: 'text-[#F57C00]', activeBg: 'bg-orange-50 border-orange-300 text-orange-700', badgeColor: 'bg-orange-100 text-orange-700' },
   { key: 'upcoming', label: '3 ימים', icon: Clock, color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-300 text-gray-700', badgeColor: 'bg-gray-100 text-gray-700' },
   { key: 'events', label: 'אירועים', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
@@ -102,7 +101,7 @@ export default function HomePage() {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("");
-  const [activeTab, setActiveTab] = useState('overdue');
+  const [activeTab, setActiveTab] = useState('today');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [badDayActive, setBadDayActive] = useState(false);
@@ -110,7 +109,6 @@ export default function HomePage() {
   const [noteTask, setNoteTask] = useState(null);
   const [showFullMap, setShowFullMap] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
-    overdue: true,
     today: false,
     upcoming: true,
     events: true,
@@ -264,8 +262,7 @@ export default function HomePage() {
         }).length,
       });
 
-      if (overdue.length > 0) setActiveTab('overdue');
-      else if (todayTasks.length > 0) setActiveTab('today');
+      if (overdue.length > 0 || todayTasks.length > 0) setActiveTab('today');
       else if (upcoming.length > 0) setActiveTab('upcoming');
       else if (todayEvents.length > 0) setActiveTab('events');
       else setActiveTab('today');
@@ -482,6 +479,8 @@ export default function HomePage() {
 
   const getSectionData = (tabKey) => {
     if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
+    // Merge overdue into "today" — single unified section
+    if (tabKey === 'today') return filterBySearch([...(data.overdue || []), ...(data.today || [])]);
     return filterBySearch(data[tabKey] || []);
   };
 
@@ -623,16 +622,17 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
-        <CategoryBreakdown tasks={data.allTasks || []} />
+        {/* ═══ 3.5 Category Breakdown — what remains for today (overdue + today) ═══ */}
+        <CategoryBreakdown tasks={[...(data.overdue || []), ...(data.today || [])]} />
 
-        {/* ═══ 3.6 Collapsible Sections — overdue/today/upcoming/events/payment ═══ */}
+        {/* ═══ 3.6 Collapsible Sections — today (merged with overdue)/upcoming/events/payment ═══ */}
         <div className="space-y-2">
           {FOCUS_TABS.map(tab => {
             const Icon = tab.icon;
             const items = getSectionData(tab.key);
             const count = items.length;
             const isOpen = !collapsedSections[tab.key];
+            const overdueCount = tab.key === 'today' ? (data.overdue?.length || 0) : 0;
 
             return (
               <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
@@ -647,6 +647,11 @@ export default function HomePage() {
                     {count > 0 && (
                       <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${tab.badgeColor}`}>
                         {count}
+                      </span>
+                    )}
+                    {overdueCount > 0 && (
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        {overdueCount} באיחור
                       </span>
                     )}
                   </div>
@@ -687,12 +692,10 @@ export default function HomePage() {
                         ) : (
                           items.length === 0 ? (
                             <EmptyState
-                              icon={tab.key === 'overdue' ? <CheckCircle className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
-                                    tab.key === 'today' ? <Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
+                              icon={tab.key === 'today' ? <Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
                                     tab.key === 'payment' ? <CreditCard className="w-10 h-10 text-yellow-300" /> :
                                     <Clock className="w-10 h-10 text-gray-300" />}
-                              text={tab.key === 'overdue' ? 'אין משימות באיחור' :
-                                    tab.key === 'today' ? 'אין משימות להיום - כל הכבוד!' :
+                              text={tab.key === 'today' ? 'אין משימות להיום - כל הכבוד!' :
                                     tab.key === 'payment' ? 'אין משימות ממתינות לתשלום' :
                                     'אין משימות ל-3 ימים הקרובים'}
                             />
@@ -703,7 +706,7 @@ export default function HomePage() {
                               onPaymentDateChange={handlePaymentDateChange}
                               onEdit={setEditingTask}
                               onNote={setNoteTask}
-                              showDeadlineContext={tab.key === 'overdue' || tab.key === 'today'}
+                              showDeadlineContext={tab.key === 'today'}
                               showDate={tab.key === 'upcoming'}
                               showPaymentDate={tab.key === 'payment'}
                             />
