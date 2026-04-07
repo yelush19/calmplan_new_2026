@@ -540,8 +540,24 @@ export default function TasksPage() {
       }));
     }
     if (groupBy === 'p_branch') {
+      // Use ALL tasks (bypass context filter) so all branches show up
+      // Apply other filters (search, status, priority, category) but not context
+      let branchTasks = [...timeFilteredTasks];
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        branchTasks = branchTasks.filter(t =>
+          t.title?.toLowerCase().includes(term) ||
+          t.client_name?.toLowerCase().includes(term) ||
+          t.description?.toLowerCase().includes(term)
+        );
+      }
+      if (statusFilter.length > 0) branchTasks = branchTasks.filter(t => statusFilter.includes(t.status));
+      if (priorityFilter !== "all") branchTasks = branchTasks.filter(t => t.priority === priorityFilter);
+      if (categoryFilter !== "all") branchTasks = branchTasks.filter(t => t.category === categoryFilter);
+      if (tagFilter !== "all") branchTasks = branchTasks.filter(t => t.tags && t.tags.includes(tagFilter));
+
       const groups = {};
-      sortedTasks.forEach(task => {
+      branchTasks.forEach(task => {
         const branch = getTaskPBranch(task) || '__none__';
         if (!groups[branch]) groups[branch] = [];
         groups[branch].push(task);
