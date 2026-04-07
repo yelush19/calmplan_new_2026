@@ -141,36 +141,41 @@
 
 ## פירוט משימה 1.9 — תיקון באגים קריטיים
 
-### 1.9.1: חגים — 4 עותקים לא מסונכרנים + HolidayAnalyzer תקוע על 2024
+### באג 1: חגים — 4 עותקים לא מסונכרנים + HolidayAnalyzer תקוע על 2024 ✅ תוקן
 
-**4 קבצים עם חגים hardcoded שלא מדברים זה עם זה:**
+**פתרון:** נוצר קובץ מרכזי `src/config/israeliHolidays.js` עם כל החגים ל-2026.
+- כולל: תאריך, שם, סוג, `isWorkDay`
+- פונקציות: `isHoliday()`, `isWorkDay()`, `getHolidayName()`, `getWorkDaysBefore()`, `adjustForRestDayWithHolidays()`
+- 4 קבצים מייבאים מהמרכזי: `AdvanceWarningPanel`, `HolidayAnalyzer` (עודכן מ-2024!), `TimeAwareness`, `LifeSettings`
+- **ארוך טווח:** Hebcal API (טרם מומש)
 
-| קובץ | מצב |
-|-------|------|
-| `AdvanceWarningPanel.jsx` שורה 9 | **שגוי** — שביעי פסח 09/04 (צריך 08/04), יום העצמאות 15/04 (צריך 22/04), חסר יום הזיכרון |
-| `LifeSettings.jsx` שורה 25 | נכון אבל hardcoded ל-2026 בלבד |
-| `TimeAwareness.jsx` שורה 22 | נכון אבל hardcoded ל-2026 בלבד |
-| `HolidayAnalyzer.jsx` שורה 9 | **עדיין חגי 2024!** שנתיים מיושן |
+### באג 2: מס"ב ספקים — דדליין שגוי ✅ תוקן
 
-**פתרון:**
-1. ליצור `src/config/israeliHolidays.js` — קובץ מרכזי אחד עם פונקציות `isHoliday(date)`, `isWorkDay(date)`, `getHolidayName(date)`
-2. להחליף בכל 4 הקבצים את ה-hardcoded בייבוא מהקובץ המרכזי
-3. **ייבוא אוטומטי מ-Hebcal API** (`hebcal.com/hebcal?cfg=json&year=YYYY`) — כך 2027, 2028 וכל שנה עתידית מכוסים בלי לגעת בקוד. Fallback: cache מקומי
+**תיקון:** `masavSuppliersDay` שונה מ-10 ל-15 ב-`taxCalendar2026.js`
 
-### 1.9.2: מס"ב ספקים — דדליין שגוי
-`taxCalendar2026.js` שורה 77: `masavSuppliersDay = 10` — צריך **15 או 30**, עם הכנה 3 ימי עבודה קודם.
+### באג 3: התעלמות משישי-שבת-חג בחישוב ימי עבודה ✅ תוקן
 
-### 1.9.3: התעלמות משישי-שבת-חג בחישוב ימי עבודה
-`adjustForRestDay` לא דולגת על חגים ולא מחשבת ימי עבודה. להוסיף `getWorkDaysBefore(date, count)`.
+**תיקון:** `adjustForRestDay` מפנה עכשיו ל-`adjustForRestDayWithHolidays()` מ-`israeliHolidays.js` — דולג על שישי, שבת, ערבי חג וחגים. פונקציה `getWorkDaysBefore(date, count)` נוספה.
 
-### 1.9.4: פתקים דביקים לא מתעדכנים
-`Home.jsx` — `handleEditTask` לא קורא `loadStickyNotes()` אחרי `loadData()`. תיקון שורה אחת.
+### באג 4: פתקים דביקים לא מתעדכנים ✅ תוקן
 
-### 1.9.5: כרטיסי Insight ללא הפניות
-כרטיסי "תובנות מהמערכת" ללא כפתור שמוביל לעמוד הרלוונטי. כל כרטיס = קישור ישיר.
+**תיקון:** `loadStickyNotes()` נקרא אחרי כל פעולה: `handleEditTask`, `handleStatusChange`, `handleDeleteTask` ב-`Home.jsx`
 
-### 1.9.6: משיכה כפולה — "ממתינות לחומרים"
-לבדוק ב-`taskCascadeEngine.js` ו-`useTaskCascade.js` אם אותו נתון מוצג פעמיים.
+### באג 5: כרטיסי Insight ללא הפניות ✅ תוקן
+
+**תיקון:** כרטיסי `TaskInsights` הפכו לקישורים — vat→TaxReportsDashboard, payroll→PayrollDashboard, external/overdue→Tasks. חץ ניווט מופיע בכרטיסים עם קישור.
+
+### באג 6: משיכה כפולה — "ממתינות לחומרים" ✅ תוקן
+
+**תיקון:** ה-insight שנבחר ל-SmartNudge מסונן מרשימת TaskInsights כדי למנוע הצגה כפולה.
+
+### באגים נוספים שהתגלו ותוקנו:
+
+- **באג 7: timezone ב-getSubTaskDueDate** — `toISOString()` גרם ל-14/05 במקום 15/05. תוקן עם פורמט ידני.
+- **באג 8: "מחר שכר" בכותרת בזמן חג** — `daysLeft` חישוב שגוי (truncation bug). תוקן + הוספת אזהרת חגים בבאדג'.
+- **באג 9: סרגל דדליינים מציג defaults** — TimeAwareness הציג (ה-19) גם כשמשימות הוזרקו עם 26. תוקן — מציג תאריכים אמיתיים מהמשימות.
+- **באג 10: דדליינים בהזרקה לא נשמרים ל-DB** — הוספת כפתור "שמור דדליינים" + שמירה ל-SystemConfig (DB) בנוסף ל-localStorage.
+- **באג 11: רפאים** — משימות שנוצרו אוטומטית לחודשים עתידיים. הוספת כפתור "ניקוי רפאים" עם תצוגה מקדימה.
 
 ---
 
