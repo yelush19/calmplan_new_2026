@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Task, Event, Client, SystemConfig } from "@/api/entities";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Task, Event, Client } from "@/api/entities";
 import { parseISO, format, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,7 +18,6 @@ import {
   Map, ArrowRight, X,
 } from "lucide-react";
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
-import { resolveCollisions, clampRadius, relocateBubblesForRing, splitVisibleOverflow } from '@/utils/ringCollision';
 import TaskSidePanel from "@/components/tasks/TaskSidePanel";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Pencil, Trash2, Pin } from "lucide-react";
@@ -90,7 +89,6 @@ function sortByPriority(tasks) {
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 
 const FOCUS_TABS = [
-  { key: 'overdue', label: 'באיחור', icon: AlertTriangle, color: 'text-[#7B1FA2]', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
   { key: 'today', label: 'היום', icon: Target, color: 'text-[#F57C00]', activeBg: 'bg-orange-50 border-orange-300 text-orange-700', badgeColor: 'bg-orange-100 text-orange-700' },
   { key: 'upcoming', label: '3 ימים', icon: Clock, color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-300 text-gray-700', badgeColor: 'bg-gray-100 text-gray-700' },
   { key: 'events', label: 'אירועים', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
@@ -102,7 +100,7 @@ export default function HomePage() {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("");
-  const [activeTab, setActiveTab] = useState('overdue');
+  const [activeTab, setActiveTab] = useState('today');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [badDayActive, setBadDayActive] = useState(false);
@@ -110,7 +108,6 @@ export default function HomePage() {
   const [noteTask, setNoteTask] = useState(null);
   const [showFullMap, setShowFullMap] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
-    overdue: true,
     today: false,
     upcoming: true,
     events: true,
@@ -220,8 +217,9 @@ export default function HomePage() {
         return taskDate >= tomorrow && taskDate <= in3Days;
       });
 
-      // Payment tab: tasks with payment_due_date set, OR completed production awaiting payment step
+      // Payment tab — exclude ghost tasks (no due_date AND no client_size)
       const waitingPayment = allTasks.filter(t => {
+        if (!t.due_date && !t.client_size) return false;
         // Include tasks explicitly marked with legacy status
         if (t.status === 'reported_waiting_for_payment') return true;
         // Include completed tasks that have a payment_due_date (payment pending)
@@ -245,11 +243,14 @@ export default function HomePage() {
       const workCount = activeTasks.filter(t => getTaskContext(t) === 'work').length;
       const homeCount = activeTasks.filter(t => getTaskContext(t) === 'home').length;
 
+      const sortedOverdue = sortByPriority(overdue);
+      const sortedToday = sortByPriority(todayTasks);
       setData({
         allTasks,
         activeTasks,
-        overdue: sortByPriority(overdue),
-        today: sortByPriority(todayTasks),
+        overdue: sortedOverdue,
+        today: sortedToday,
+        mergedToday: sortByPriority([...overdue, ...todayTasks]),
         upcoming: sortByPriority(upcoming),
         payment: sortByPriority(waitingPayment),
         todayEvents,
@@ -264,8 +265,7 @@ export default function HomePage() {
         }).length,
       });
 
-      if (overdue.length > 0) setActiveTab('overdue');
-      else if (todayTasks.length > 0) setActiveTab('today');
+      if (overdue.length > 0 || todayTasks.length > 0) setActiveTab('today');
       else if (upcoming.length > 0) setActiveTab('upcoming');
       else if (todayEvents.length > 0) setActiveTab('events');
       else setActiveTab('today');
@@ -300,9 +300,13 @@ export default function HomePage() {
         }
 
         return {
+        const newOverdue = filterCompleted(updateInList(prev.overdue));
+        const newToday = filterCompleted(updateInList(prev.today));
+        return {
           ...prev,
-          overdue: filterCompleted(updateInList(prev.overdue)),
-          today: filterCompleted(updateInList(prev.today)),
+          overdue: newOverdue,
+          today: newToday,
+          mergedToday: sortByPriority([...newOverdue, ...newToday]),
           upcoming: filterCompleted(updateInList(prev.upcoming)),
           payment: newPayment,
           completedToday: newStatus === 'production_completed' ? prev.completedToday + 1 : prev.completedToday,
@@ -377,8 +381,7 @@ export default function HomePage() {
   // Energy filter: when energy is low/medium, show only matching cognitive-load tasks
   const calmTasks = useMemo(() => {
     if (!data) return [];
-    const merged = [...(data.overdue || []), ...(data.today || [])];
-    const energyFiltered = filterByEnergy(merged);
+    const energyFiltered = filterByEnergy(data.mergedToday || []);
     return sortByPriority(energyFiltered).slice(0, 5);
   }, [data, filterByEnergy]);
 
@@ -482,6 +485,7 @@ export default function HomePage() {
 
   const getSectionData = (tabKey) => {
     if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
+    if (tabKey === 'today') return filterBySearch(data.mergedToday || []);
     return filterBySearch(data[tabKey] || []);
   };
 
@@ -624,7 +628,7 @@ export default function HomePage() {
         )}
 
         {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
-        <CategoryBreakdown tasks={data.allTasks || []} />
+        <CategoryBreakdown tasks={data.mergedToday || []} />
 
         {/* ═══ 3.6 Collapsible Sections — overdue/today/upcoming/events/payment ═══ */}
         <div className="space-y-2">
@@ -633,6 +637,7 @@ export default function HomePage() {
             const items = getSectionData(tab.key);
             const count = items.length;
             const isOpen = !collapsedSections[tab.key];
+            const overdueCount = tab.key === 'today' ? (data.overdue?.length || 0) : 0;
 
             return (
               <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
@@ -647,6 +652,11 @@ export default function HomePage() {
                     {count > 0 && (
                       <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${tab.badgeColor}`}>
                         {count}
+                      </span>
+                    )}
+                    {overdueCount > 0 && (
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        {overdueCount} באיחור
                       </span>
                     )}
                   </div>
@@ -687,12 +697,10 @@ export default function HomePage() {
                         ) : (
                           items.length === 0 ? (
                             <EmptyState
-                              icon={tab.key === 'overdue' ? <CheckCircle className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
-                                    tab.key === 'today' ? <Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
+                              icon={tab.key === 'today' ? <Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
                                     tab.key === 'payment' ? <CreditCard className="w-10 h-10 text-yellow-300" /> :
                                     <Clock className="w-10 h-10 text-gray-300" />}
-                              text={tab.key === 'overdue' ? 'אין משימות באיחור' :
-                                    tab.key === 'today' ? 'אין משימות להיום - כל הכבוד!' :
+                              text={tab.key === 'today' ? 'אין משימות להיום - כל הכבוד!' :
                                     tab.key === 'payment' ? 'אין משימות ממתינות לתשלום' :
                                     'אין משימות ל-3 ימים הקרובים'}
                             />
@@ -703,7 +711,7 @@ export default function HomePage() {
                               onPaymentDateChange={handlePaymentDateChange}
                               onEdit={setEditingTask}
                               onNote={setNoteTask}
-                              showDeadlineContext={tab.key === 'overdue' || tab.key === 'today'}
+                              showDeadlineContext={tab.key === 'today'}
                               showDate={tab.key === 'upcoming'}
                               showPaymentDate={tab.key === 'payment'}
                             />
@@ -792,762 +800,6 @@ function EmptyState({ icon, text }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// AYOA Circle Map — v4
-//   Full-width responsive canvas (viewBox coordinate system)
-//   Glass/diamond rings with animated shimmer
-//   Ring-coloured bubbles, drag-and-drop, persisted via SystemConfig
-//   Overlap rule: smallest-radius ring wins + 12px nudge toward centre
-// ═══════════════════════════════════════════════════════════════════
-
-// ViewBox coordinate system — abstract, not pixel sizes.
-// The SVG + HTML layers scale to fill available width via aspect-ratio.
-// CANVAS_PAD adds internal margin so rings near edges aren't clipped.
-const VB_W = 1100;
-const VB_H = 650;
-const CANVAS_PAD = 30; // viewBox units of internal padding
-
-// Max visible task bubbles per ring before overflow kicks in.
-// Customize per ring if needed: { A: 3, B: 2, C: 2, D: 2 }
-const MAX_VISIBLE_PER_RING = 3;
-
-// ── Ring colours — NO pink/fuchsia/red (ADHD-friendly, calm palette) ──
-const RING_COLOR = { A: '#F97316', B: '#7C3AED', C: '#06B6D4', D: '#2E7D32' };
-
-// ── Bubble colour palettes per ring ────────────────────────────
-const RING_PALETTE = {
-  A: { fill: '#FFEDD5', border: '#F97316' },    // orange — work
-  B: { fill: '#EDE9FE', border: '#7C3AED' },    // purple — urgent (was fuchsia)
-  C: { fill: '#E0F2FE', border: '#06B6D4' },    // cyan — home
-  D: { fill: '#DCFCE7', border: '#2E7D32' },    // green — quick (was duplicate orange)
-};
-const NEUTRAL_PALETTE = { fill: '#FFF7ED', border: '#FED7AA' };
-
-// ── Bubble sizes ───────────────────────────────────────────────
-const SIZE_BY_PRIORITY = { urgent: 160, high: 125, medium: 95, low: 70 };
-
-// ── Status helpers ─────────────────────────────────────────────
-const QUICK_STATUSES = [
-  { key: 'production_completed',  label: 'הושלם',         dot: '#10B981' },
-  { key: 'waiting_for_materials', label: 'ממתין לחומרים', dot: '#6366F1' },
-  { key: 'needs_corrections',     label: 'לבצע תיקונים', dot: '#F59E0B' },
-  { key: 'not_started',           label: 'לבצע',          dot: '#94A3B8' },
-];
-const STATUS_DOT = {
-  production_completed: '#10B981', waiting_for_materials: '#6366F1',
-  needs_corrections: '#F59E0B', sent_for_review: '#6366F1', not_started: '#94A3B8',
-  ready_to_broadcast: '#0D9488', reported_pending_payment: '#6366F1',
-};
-
-// ═══════════════════════════════════════════════════════════════════
-// §1  CircleMapLayout defaults
-// ═══════════════════════════════════════════════════════════════════
-
-const DEFAULT_RINGS = {
-  A: { id: 'A', cx: 340, cy: 320, r: 230 },
-  B: { id: 'B', cx: 700, cy: 200, r: 160 },
-  C: { id: 'C', cx: 780, cy: 460, r: 150 },
-  D: { id: 'D', cx: 100, cy: 480, r:  90 },
-};
-
-const AUTO_SLOTS_WORK = [
-  { cx: 300, cy: 260, ringId: 'A' },
-  { cx: 200, cy: 400, ringId: 'A' },
-  { cx: 480, cy: 220, ringId: 'A' },
-  { cx: 200, cy: 200, ringId: 'A' },
-  { cx: 710, cy: 170, ringId: 'B' },
-  { cx: 400, cy: 130, ringId: 'A' },
-];
-const AUTO_SLOTS_HOME = [
-  { cx: 760, cy: 420, ringId: 'C' },
-  { cx: 820, cy: 530, ringId: 'C' },
-  { cx: 100, cy: 490, ringId: 'D' },
-];
-
-const LAYOUT_CONFIG_KEY = 'circle_map_layout';
-
-// ═══════════════════════════════════════════════════════════════════
-// §2  Persistence
-// ═══════════════════════════════════════════════════════════════════
-
-async function loadCircleMapLayout() {
-  try {
-    const rows = await SystemConfig.filter({ config_key: LAYOUT_CONFIG_KEY });
-    if (rows.length > 0 && rows[0].data) return rows[0];
-  } catch { /* fall through */ }
-  return null;
-}
-
-async function saveCircleMapLayout(layout, existingId) {
-  const payload = { config_key: LAYOUT_CONFIG_KEY, data: layout };
-  try {
-    if (existingId) { await SystemConfig.update(existingId, payload); }
-    else { const c = await SystemConfig.create(payload); return c.id; }
-  } catch (err) { console.warn('[CircleMap] persist failed', err); }
-  localStorage.setItem('calmplan_circle_map_layout', JSON.stringify(layout));
-  return existingId;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §3  useCircleMapLayout hook
-// ═══════════════════════════════════════════════════════════════════
-
-function useCircleMapLayout(tasks) {
-  const [layout, setLayout] = useState({ rings: DEFAULT_RINGS, bubbles: {} });
-  const [configId, setConfigId] = useState(null);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const record = await loadCircleMapLayout();
-      if (cancelled) return;
-      if (record?.data) {
-        setLayout({ rings: { ...DEFAULT_RINGS, ...record.data.rings }, bubbles: record.data.bubbles || {} });
-        setConfigId(record.id);
-      } else {
-        try {
-          const ls = localStorage.getItem('calmplan_circle_map_layout');
-          if (ls) { const p = JSON.parse(ls); setLayout({ rings: { ...DEFAULT_RINGS, ...p.rings }, bubbles: p.bubbles || {} }); }
-        } catch { /* ignore */ }
-      }
-      setLoaded(true);
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-    let changed = false;
-    const newBubbles = { ...layout.bubbles };
-    let wi = Object.values(newBubbles).filter(b => b.ringId === 'A' || b.ringId === 'B').length;
-    let hi = Object.values(newBubbles).filter(b => b.ringId === 'C' || b.ringId === 'D').length;
-
-    for (const task of tasks) {
-      if (newBubbles[task.id]) continue;
-      changed = true;
-      const ctx = getTaskContext(task);
-      let slot;
-      if (ctx === 'home' && hi < AUTO_SLOTS_HOME.length) { slot = AUTO_SLOTS_HOME[hi++]; }
-      else if (wi < AUTO_SLOTS_WORK.length) { slot = AUTO_SLOTS_WORK[wi++]; }
-      else { slot = AUTO_SLOTS_WORK[wi % AUTO_SLOTS_WORK.length]; wi++; }
-      // Run overlap assignment: if the slot sits inside multiple rings,
-      // assign to the smallest-radius ring and nudge 12px toward its centre.
-      const assigned = detectRingAndNudge(slot.cx, slot.cy, layout.rings);
-      newBubbles[task.id] = {
-        taskId: task.id,
-        cx: assigned.cx,
-        cy: assigned.cy,
-        ringId: assigned.ringId || slot.ringId,
-      };
-    }
-    if (changed) {
-      const nl = { ...layout, bubbles: newBubbles };
-      setLayout(nl);
-      saveCircleMapLayout(nl, configId).then(id => { if (id && !configId) setConfigId(id); });
-    }
-  }, [tasks, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const persist = useCallback((nl) => {
-    setLayout(nl);
-    saveCircleMapLayout(nl, configId).then(id => { if (id && !configId) setConfigId(id); });
-  }, [configId]);
-
-  return { layout, persist, loaded };
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §4  Ring detection — smallest-radius wins + 12px nudge
-// ═══════════════════════════════════════════════════════════════════
-const RING_TOLERANCE = 20;
-const NUDGE_PX = 12;
-
-function detectRingAndNudge(px, py, rings) {
-  const candidates = [];
-  for (const rid of ['A', 'B', 'C', 'D']) {
-    const ring = rings[rid];
-    const dx = px - ring.cx, dy = py - ring.cy;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist <= ring.r + RING_TOLERANCE) {
-      candidates.push({ rid, ring, dist });
-    }
-  }
-  if (candidates.length === 0) return { ringId: null, cx: px, cy: py };
-
-  // Smallest radius wins (most specific group)
-  candidates.sort((a, b) => a.ring.r - b.ring.r);
-  const winner = candidates[0];
-
-  let nx = px, ny = py;
-  // If the bubble sits inside more than one ring, nudge 12px towards
-  // the winning ring's centre so it clearly belongs to one group.
-  if (candidates.length > 1) {
-    const dx = winner.ring.cx - px;
-    const dy = winner.ring.cy - py;
-    const d = Math.sqrt(dx * dx + dy * dy);
-    if (d > 1) { nx = px + (dx / d) * NUDGE_PX; ny = py + (dy / d) * NUDGE_PX; }
-  }
-
-  return { ringId: winner.rid, cx: nx, cy: ny };
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §5  Pointer-drag hook
-// ═══════════════════════════════════════════════════════════════════
-
-function usePointerDrag(onDragEnd) {
-  const [dragging, setDragging] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const containerRef = useRef(null);
-
-  const onPointerDown = useCallback((e, startX, startY, containerEl) => {
-    e.preventDefault();
-    e.stopPropagation();
-    containerRef.current = containerEl;
-    const rect = containerEl.getBoundingClientRect();
-    const totalVBW = VB_W + CANVAS_PAD * 2;
-    const totalVBH = VB_H + CANVAS_PAD * 2;
-    const scaleX = totalVBW / rect.width;
-    const scaleY = totalVBH / rect.height;
-    // Map screen pixel to viewBox coord: pixel * scale - CANVAS_PAD
-    const offX = startX - ((e.clientX - rect.left) * scaleX - CANVAS_PAD);
-    const offY = startY - ((e.clientY - rect.top) * scaleY - CANVAS_PAD);
-    setPos({ x: startX, y: startY });
-    setDragging(true);
-
-    const toCanvas = (ev) => ({
-      x: Math.max(0, Math.min(VB_W, (ev.clientX - rect.left) * scaleX - CANVAS_PAD + offX)),
-      y: Math.max(0, Math.min(VB_H, (ev.clientY - rect.top) * scaleY - CANVAS_PAD + offY)),
-    });
-
-    const onMove = (ev) => { const p = toCanvas(ev); setPos(p); };
-    const onUp = (ev) => {
-      const p = toCanvas(ev);
-      setDragging(false);
-      onDragEnd(p.x, p.y);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }, [onDragEnd]);
-
-  return { dragging, pos, onPointerDown };
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §5b  Resize-drag hook — drag handle changes ring radius
-// ═══════════════════════════════════════════════════════════════════
-
-function useResizeDrag(onResizeEnd) {
-  const [resizing, setResizing] = useState(false);
-  const [liveRadius, setLiveRadius] = useState(0);
-
-  const onPointerDown = useCallback((e, ringCx, ringCy, currentR, containerEl) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const rect = containerEl.getBoundingClientRect();
-    const totalVBW = VB_W + CANVAS_PAD * 2;
-    const totalVBH = VB_H + CANVAS_PAD * 2;
-    const scaleX = totalVBW / rect.width;
-    const scaleY = totalVBH / rect.height;
-    setLiveRadius(currentR);
-    setResizing(true);
-
-    const onMove = (ev) => {
-      const mx = (ev.clientX - rect.left) * scaleX - CANVAS_PAD;
-      const my = (ev.clientY - rect.top) * scaleY - CANVAS_PAD;
-      const dx = mx - ringCx;
-      const dy = my - ringCy;
-      const newR = Math.sqrt(dx * dx + dy * dy);
-      setLiveRadius(newR);
-    };
-    const onUp = (ev) => {
-      const mx = (ev.clientX - rect.left) * scaleX - CANVAS_PAD;
-      const my = (ev.clientY - rect.top) * scaleY - CANVAS_PAD;
-      const dx = mx - ringCx;
-      const dy = my - ringCy;
-      const newR = Math.sqrt(dx * dx + dy * dy);
-      setResizing(false);
-      onResizeEnd(newR);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }, [onResizeEnd]);
-
-  return { resizing, liveRadius, onPointerDown };
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §6  Glass ring SVG defs (glow + shimmer keyframes)
-// ═══════════════════════════════════════════════════════════════════
-
-const SHIMMER_CSS = `
-@keyframes cm-shimmer {
-  0%   { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -2000; }
-}
-`;
-
-function GlassRingDefs() {
-  return (
-    <defs>
-      <filter id="cm-glow" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-      </filter>
-      <style>{SHIMMER_CSS}</style>
-    </defs>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §7  DraggableRing — glass/diamond style with shimmer
-// ═══════════════════════════════════════════════════════════════════
-
-function DraggableRing({ ring, canvasRef, onDragEnd, onResize, onRingClick }) {
-  const { dragging, pos, onPointerDown } = usePointerDrag(onDragEnd);
-  const { resizing, liveRadius, onPointerDown: onResizeDown } = useResizeDrag(onResize);
-  const cx = dragging ? pos.x : ring.cx;
-  const cy = dragging ? pos.y : ring.cy;
-  const r = resizing ? clampRadius(liveRadius, 40, 300) : ring.r;
-  const color = RING_COLOR[ring.id];
-  const circumference = 2 * Math.PI * r;
-  const dragStartRef = useRef(null);
-
-  const startDrag = (e) => {
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-    onPointerDown(e, cx, cy, canvasRef.current);
-  };
-  const handleClick = (e) => {
-    if (dragStartRef.current) {
-      const dx = Math.abs(e.clientX - dragStartRef.current.x);
-      const dy = Math.abs(e.clientY - dragStartRef.current.y);
-      if (dx > 5 || dy > 5) return; // was a drag, not a click
-    }
-    onRingClick?.(ring.id);
-  };
-  const startResize = (e) => onResizeDown(e, ring.cx, ring.cy, ring.r, canvasRef.current);
-
-  // Resize handle position: right side of ring (3 o'clock)
-  const handleX = cx + r;
-  const handleY = cy;
-
-  return (
-    <g>
-      {/* Layer 0: invisible wide hit-area for easier grabbing + click to open panel */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="transparent" strokeWidth={18}
-        style={{ cursor: dragging ? 'grabbing' : 'pointer', pointerEvents: 'stroke' }}
-        onPointerDown={startDrag} onClick={handleClick} />
-      {/* Layer 1: soft glow */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={6} opacity={0.15} filter="url(#cm-glow)" style={{ pointerEvents: 'none' }} />
-      {/* Layer 2: glass stroke — white core + coloured edge */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={3} style={{ pointerEvents: 'none' }} />
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={2} opacity={0.55}
-        style={{ pointerEvents: 'none' }} />
-      {/* Layer 3: shimmer — bright dash travelling along ring */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={3}
-        strokeDasharray={`${circumference * 0.08} ${circumference * 0.92}`} strokeLinecap="round"
-        style={{ animation: 'cm-shimmer 10s linear infinite', pointerEvents: 'none' }} />
-      {/* Resize handle — visible grip on ring edge */}
-      <circle cx={handleX} cy={handleY} r={7} fill="white" stroke={color} strokeWidth={2}
-        style={{ cursor: 'ew-resize', pointerEvents: 'all', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }}
-        onPointerDown={startResize} />
-      <line x1={handleX - 2.5} y1={handleY - 3} x2={handleX - 2.5} y2={handleY + 3}
-        stroke={color} strokeWidth={1} opacity={0.6} style={{ pointerEvents: 'none' }} />
-      <line x1={handleX + 2.5} y1={handleY - 3} x2={handleX + 2.5} y2={handleY + 3}
-        stroke={color} strokeWidth={1} opacity={0.6} style={{ pointerEvents: 'none' }} />
-    </g>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §7b  RingTasksPanel — slide-in panel showing all tasks for a ring
-// ═══════════════════════════════════════════════════════════════════
-
-const PRIORITY_LABEL = { urgent: 'דחוף', high: 'גבוה', medium: 'בינוני', low: 'נמוך' };
-const PRIORITY_DOT   = { urgent: '#EF4444', high: '#F59E0B', medium: '#6366F1', low: '#10B981' };
-
-function RingTasksPanel({ ringId, ringLabel, ringColor, tasks, onClose, onEdit }) {
-  // Sort by priority
-  const sorted = useMemo(() => {
-    const order = { urgent: 0, high: 1, medium: 2, low: 3 };
-    return [...tasks].sort((a, b) => (order[a.priority] ?? 4) - (order[b.priority] ?? 4));
-  }, [tasks]);
-
-  return (
-    <motion.div
-      initial={{ x: '-100%' }}
-      animate={{ x: 0 }}
-      exit={{ x: '-100%' }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed top-0 left-0 h-full z-50 shadow-2xl flex flex-col"
-      style={{ width: 340, maxWidth: '90vw', backgroundColor: '#FAFAFA', borderRight: `3px solid ${ringColor}` }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${ringColor}30` }}>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: ringColor }} />
-          <span className="font-bold text-sm" style={{ color: '#1E293B' }}>{ringLabel}</span>
-          <span className="text-[11px] text-slate-400">{sorted.length} משימות</span>
-        </div>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 transition-colors">
-          <X className="w-4 h-4 text-slate-400" />
-        </button>
-      </div>
-
-      {/* Task list */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
-        {sorted.map(task => {
-          const dot = PRIORITY_DOT[task.priority] || '#94A3B8';
-          const label = PRIORITY_LABEL[task.priority] || '';
-          const sCfg = statusConfig[task.status] || statusConfig.not_started;
-          return (
-            <button key={task.id}
-              onClick={() => onEdit(task)}
-              className="w-full text-right p-2.5 rounded-xl transition-colors hover:bg-white group"
-              style={{ border: '1px solid #E5E7EB' }}>
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: dot }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate" style={{ color: '#1E293B' }}>{task.title}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {label && <span className="text-[10px]" style={{ color: dot }}>{label}</span>}
-                    <span className="text-[10px] text-slate-400">{sCfg.text}</span>
-                    {task.due_date && (
-                      <span className="text-[10px] text-slate-400">{task.due_date.slice(5)}</span>
-                    )}
-                  </div>
-                </div>
-                <ChevronDown className="w-3 h-3 text-slate-300 rotate-[-90deg] opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
-              </div>
-            </button>
-          );
-        })}
-        {sorted.length === 0 && (
-          <p className="text-center text-xs text-slate-400 py-8">אין משימות בטבעת זו</p>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §8  AyoaMiniCanvas — full-width responsive
-// ═══════════════════════════════════════════════════════════════════
-
-// Ring label names (Hebrew)
-const RING_LABEL = { A: 'עבודה', B: 'דחוף', C: 'בית', D: 'מהיר' };
-
-// Map each task to a ring ID based on context
-function taskToRingId(task) {
-  if (!task) return 'A';
-  const ctx = getTaskContext(task);
-  if (ctx === 'home') return 'C';
-  if (task.priority === 'urgent') return 'B';
-  return 'A';
-}
-
-function AyoaMiniCanvas({ tasks, allTasks = [], totalExtra, onEdit, onStatusChange, onShowFullMap }) {
-  const safeTasks = tasks || [];
-  const safeAllTasks = allTasks || [];
-  const { layout, persist, loaded } = useCircleMapLayout(safeTasks);
-  const canvasRef = useRef(null);
-  const [ringPanel, setRingPanel] = useState(null); // ring ID for side panel
-
-  const handleRingDragEnd = useCallback((ringId) => (nx, ny) => {
-    const oldRing = layout.rings[ringId];
-    const movedRing = { ...oldRing, cx: nx, cy: ny };
-    const others = Object.values(layout.rings).filter(r => r.id !== ringId);
-    const resolved = resolveCollisions(movedRing, others, 16, { width: VB_W, height: VB_H });
-    const newRing = { ...oldRing, cx: resolved.cx, cy: resolved.cy };
-    const newBubbles = relocateBubblesForRing(layout.bubbles, ringId, oldRing, newRing);
-    persist({ ...layout, rings: { ...layout.rings, [ringId]: newRing }, bubbles: newBubbles });
-  }, [layout, persist]);
-
-  const handleRingResize = useCallback((ringId) => (newRadius) => {
-    const oldRing = layout.rings[ringId];
-    const r = clampRadius(newRadius, 40, 300);
-    const ring = { ...oldRing, r };
-    const others = Object.values(layout.rings).filter(o => o.id !== ringId);
-    const resolved = resolveCollisions(ring, others, 16, { width: VB_W, height: VB_H });
-    const newRing = { ...ring, cx: resolved.cx, cy: resolved.cy };
-    const newBubbles = relocateBubblesForRing(layout.bubbles, ringId, oldRing, newRing);
-    persist({ ...layout, rings: { ...layout.rings, [ringId]: newRing }, bubbles: newBubbles });
-  }, [layout, persist]);
-
-  const handleBubbleDragEnd = useCallback((taskId) => (nx, ny) => {
-    const { ringId, cx, cy } = detectRingAndNudge(nx, ny, layout.rings);
-    persist({ ...layout, bubbles: { ...layout.bubbles, [taskId]: { taskId, cx, cy, ringId } } });
-  }, [layout, persist]);
-
-  // Per-ring task breakdown: which bubbles to show vs overflow
-  const ringData = useMemo(() => {
-    const bubbles = layout.bubbles || {};
-    // Group visible tasks by ring
-    const byRing = { A: [], B: [], C: [], D: [] };
-    for (const task of safeTasks) {
-      const bl = bubbles[task.id];
-      if (bl?.ringId && byRing[bl.ringId]) byRing[bl.ringId].push(task);
-    }
-    // Total tasks per ring (from allTasks)
-    const totals = { A: 0, B: 0, C: 0, D: 0 };
-    for (const task of safeAllTasks) {
-      const rid = taskToRingId(task);
-      if (totals[rid] !== undefined) totals[rid]++;
-    }
-    // Split visible vs overflow per ring
-    const result = {};
-    for (const rid of ['A', 'B', 'C', 'D']) {
-      const { visible, overflow } = splitVisibleOverflow(byRing[rid], MAX_VISIBLE_PER_RING);
-      result[rid] = { visible, overflow, total: totals[rid] };
-    }
-    return result;
-  }, [safeTasks, safeAllTasks, layout.bubbles]);
-
-  // Flat set of task IDs that should render as bubbles
-  const visibleTaskIds = useMemo(() => {
-    const ids = new Set();
-    for (const rid of ['A', 'B', 'C', 'D']) {
-      for (const t of ringData[rid].visible) ids.add(t.id);
-    }
-    return ids;
-  }, [ringData]);
-
-  if (!loaded) return null;
-
-  const ringEntries = ['A', 'B', 'C', 'D'].map(id => ({ id, ...layout.rings[id] }));
-
-  return (
-    <div style={{ backgroundColor: '#FFFFFF', width: '95%', maxWidth: 1400, margin: '0 auto' }}>
-      <div ref={canvasRef} className="relative w-full" style={{ aspectRatio: `${VB_W} / ${VB_H}` }}>
-        {/* SVG layer — glass rings with padded viewBox */}
-        <svg className="absolute inset-0 w-full h-full"
-          viewBox={`${-CANVAS_PAD} ${-CANVAS_PAD} ${VB_W + CANVAS_PAD * 2} ${VB_H + CANVAS_PAD * 2}`}
-          preserveAspectRatio="xMidYMid meet">
-          <GlassRingDefs />
-          {ringEntries.map(ring => (
-            <DraggableRing key={ring.id} ring={ring} canvasRef={canvasRef}
-              onDragEnd={handleRingDragEnd(ring.id)} onResize={handleRingResize(ring.id)}
-              onRingClick={setRingPanel} />
-          ))}
-        </svg>
-
-        {/* HTML layer — draggable bubbles (only visible ones per ring) */}
-        <AnimatePresence>
-          {safeTasks.map(task => {
-            if (!visibleTaskIds.has(task.id)) return null;
-            const bl = (layout.bubbles || {})[task.id];
-            if (!bl) return null;
-            const size = SIZE_BY_PRIORITY[task.priority] || 95;
-            const palette = bl.ringId ? (RING_PALETTE[bl.ringId] || NEUTRAL_PALETTE) : NEUTRAL_PALETTE;
-            return (
-              <CircleBubble key={task.id} task={task} size={size} cx={bl.cx} cy={bl.cy}
-                palette={palette} canvasRef={canvasRef} onEdit={onEdit} onStatusChange={onStatusChange}
-                onDragEnd={handleBubbleDragEnd(task.id)} />
-            );
-          })}
-        </AnimatePresence>
-
-        {/* Per-ring "+N more" badges — positioned near each ring */}
-        {ringEntries.map(ring => {
-          const rd = ringData[ring.id];
-          if (!rd || rd.overflow.length === 0) return null;
-          // Position badge at bottom of ring
-          const badgeLeft = ((ring.cx + CANVAS_PAD) / (VB_W + CANVAS_PAD * 2)) * 100;
-          const badgeTop = ((ring.cy + ring.r * 0.7 + CANVAS_PAD) / (VB_H + CANVAS_PAD * 2)) * 100;
-          return (
-            <button key={`overflow-${ring.id}`}
-              onClick={() => setRingPanel(ring.id)}
-              className="absolute z-20 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-all hover:scale-105"
-              style={{
-                left: `${badgeLeft}%`, top: `${badgeTop}%`,
-                transform: 'translate(-50%, -50%)',
-                backgroundColor: '#fff',
-                color: RING_COLOR[ring.id],
-                border: `1.5px solid ${RING_COLOR[ring.id]}`,
-              }}>
-              +{rd.overflow.length} עוד
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Per-ring count pills */}
-      {(() => {
-        const activeRings = ringEntries.filter(ring => ringData[ring.id]?.total > 0);
-        if (activeRings.length === 0) return null;
-        return (
-          <div className="flex justify-center gap-3 mt-1.5 flex-wrap">
-            {activeRings.map(ring => {
-              const rd = ringData[ring.id];
-              return (
-                <button key={ring.id}
-                  onClick={() => setRingPanel(ring.id)}
-                  className="inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2.5 py-0.5 transition-colors hover:opacity-80"
-                  style={{ color: RING_COLOR[ring.id], backgroundColor: `${RING_COLOR[ring.id]}10`, border: `1px solid ${RING_COLOR[ring.id]}30` }}>
-                  {RING_LABEL[ring.id]} {rd.visible.length}/{rd.total}
-                </button>
-              );
-            })}
-          </div>
-        );
-      })()}
-
-      {totalExtra > 0 && (
-        <button
-          onClick={onShowFullMap}
-          className="w-full text-center mt-2 py-1.5 rounded-lg transition-colors hover:bg-slate-50"
-          style={{ color: '#64748B', fontSize: 12, fontWeight: 500 }}
-        >
-          +{totalExtra} משימות נוספות במפה המלאה →
-        </button>
-      )}
-
-      {/* Ring tasks side panel */}
-      {ringPanel && (
-        <RingTasksPanel
-          ringId={ringPanel}
-          ringLabel={RING_LABEL[ringPanel]}
-          ringColor={RING_COLOR[ringPanel]}
-          tasks={safeAllTasks.filter(t => taskToRingId(t) === ringPanel)}
-          onClose={() => setRingPanel(null)}
-          onEdit={onEdit}
-        />
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// §9  CircleBubble — percentage-positioned, ring-coloured, draggable
-// ═══════════════════════════════════════════════════════════════════
-
-function CircleBubble({ task, size, cx, cy, palette, canvasRef, onEdit, onStatusChange, onDragEnd }) {
-  const [picker, setPicker] = useState(false);
-  const [fading, setFading] = useState(false);
-  const { dragging, pos, onPointerDown } = usePointerDrag(onDragEnd);
-  const sCfg   = statusConfig[task.status] || statusConfig.not_started;
-  const dotClr = STATUS_DOT[task.status] || '#94A3B8';
-
-  const bx = dragging ? pos.x : cx;
-  const by = dragging ? pos.y : cy;
-
-  // Convert viewBox coords to percentages for the HTML layer
-  // Account for CANVAS_PAD: viewBox starts at -CANVAS_PAD
-  const leftPct = ((bx + CANVAS_PAD) / (VB_W + CANVAS_PAD * 2)) * 100;
-  const topPct  = ((by + CANVAS_PAD) / (VB_H + CANVAS_PAD * 2)) * 100;
-  const half = size / 2;
-
-  const dragStartRef = useRef(null);
-
-  const changeStatus = (e, ns) => {
-    e.stopPropagation(); setPicker(false);
-    if (ns === 'production_completed') { setFading(true); setTimeout(() => onStatusChange(task, ns), 400); }
-    else onStatusChange(task, ns);
-  };
-
-  const titlePx  = size >= 160 ? 15 : size >= 125 ? 13 : size >= 95 ? 11 : 10;
-  const labelPx  = size >= 160 ? 13 : 11;
-  const monthPx  = size >= 160 ? 11 : 9;
-  const textMaxW = size - 36;
-
-  const reportMonthLabel = useMemo(() => {
-    const rm = task.reporting_month || task.report_month;
-    if (!rm) return null;
-    try {
-      const d = parseISO(rm + '-01');
-      return format(d, 'MMM yy', { locale: he });
-    } catch { return null; }
-  }, [task.reporting_month, task.report_month]);
-
-  // Detect zero income/expenses flag from process_steps
-  const isZeroReport = task.process_steps?.zero_income?.done || task.process_steps?.zero_expenses?.done;
-
-  const handlePointerDown = (e) => {
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-    onPointerDown(e, cx, cy, canvasRef.current);
-  };
-  const handleClick = (e) => {
-    if (dragStartRef.current) {
-      const dx = Math.abs(e.clientX - dragStartRef.current.x);
-      const dy = Math.abs(e.clientY - dragStartRef.current.y);
-      if (dx > 5 || dy > 5) return;
-    }
-    onEdit(task);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.6 }}
-      animate={{ opacity: fading ? 0 : 1, scale: fading ? 0.4 : 1 }}
-      exit={{ opacity: 0, scale: 0.4 }}
-      transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-      className="absolute"
-      style={{
-        left: `calc(${leftPct}% - ${half}px)`,
-        top:  `calc(${topPct}%  - ${half}px)`,
-        width: size, height: size,
-        zIndex: dragging ? 50 : 10,
-        cursor: dragging ? 'grabbing' : 'grab',
-        touchAction: 'none',
-      }}
-      onPointerDown={handlePointerDown}
-    >
-      {/* Zero report badge */}
-      {isZeroReport && (
-        <span className="absolute -top-1 -right-1 z-20 flex items-center justify-center rounded-full text-[10px] font-bold"
-          style={{ width: 22, height: 22, backgroundColor: '#94A3B8', color: '#FFF', border: '2px solid #FFF' }}>
-          0
-        </span>
-      )}
-      <div onClick={handleClick}
-        className="w-full h-full rounded-full flex flex-col items-center justify-center text-center transition-shadow hover:shadow-md p-2 select-none"
-        style={{ backgroundColor: isZeroReport ? '#F1F5F9' : palette.fill, border: `2px solid ${isZeroReport ? '#94A3B8' : palette.border}` }}>
-        <span className="font-bold leading-tight line-clamp-2" style={{ fontSize: titlePx, color: '#000', maxWidth: textMaxW }}>
-          {task.title}
-        </span>
-        {reportMonthLabel && size >= 95 && (
-          <span className="opacity-60 leading-none" style={{ fontSize: monthPx, color: '#000' }}>
-            {reportMonthLabel}
-          </span>
-        )}
-        {size >= 95 ? (
-          <span className="mt-1 flex items-center gap-1 hover:bg-white/50 rounded-full px-1.5 py-0.5 transition-colors"
-            onClick={e => { e.stopPropagation(); setPicker(!picker); }} title="שנה סטטוס">
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: dotClr }} />
-            <span style={{ fontSize: labelPx, color: '#000' }}>{sCfg.text}</span>
-            <ChevronDown className="w-2.5 h-2.5" style={{ color: '#000' }} />
-          </span>
-        ) : (
-          <span className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ backgroundColor: dotClr }} />
-        )}
-      </div>
-
-      <AnimatePresence>
-        {picker && (
-          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            className="absolute left-1/2 -translate-x-1/2 z-50 rounded-xl shadow-lg py-1.5 px-1"
-            style={{ top: size + 4, minWidth: 150, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}>
-            {QUICK_STATUSES.map(s => (
-              <button key={s.key} onClick={e => changeStatus(e, s.key)}
-                className={`flex items-center gap-2 w-full text-right px-3 py-1.5 rounded-lg transition-colors ${task.status === s.key ? 'font-bold' : ''}`}
-                style={{ fontSize: 13, color: '#000', backgroundColor: task.status === s.key ? '#F7F7F7' : undefined }}
-                onMouseEnter={e => { if (task.status !== s.key) e.currentTarget.style.backgroundColor = '#F7F7F7'; }}
-                onMouseLeave={e => { if (task.status !== s.key) e.currentTarget.style.backgroundColor = ''; }}>
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.dot }} />
-                <span>{s.label}</span>
-                {s.key === 'production_completed' && <CheckCircle className="w-3 h-3 mr-auto" style={{ color: '#10B981' }} />}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
 function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, showDeadlineContext, showDate, showPaymentDate }) {
   const [collapsedClients, setCollapsedClients] = useState({});
   const [allExpanded, setAllExpanded] = useState(false);

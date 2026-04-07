@@ -112,7 +112,7 @@ export default function CategoryBreakdown({ tasks }) {
 
   return (
     <div className="rounded-2xl p-4 space-y-3" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-      <h3 className="text-sm font-bold text-slate-600 px-1">סיכום לפי קטגוריה — מה נותר?</h3>
+      <h3 className="text-sm font-bold text-slate-600 px-1">סיכום היום לפי קטגוריה</h3>
 
       <div className="space-y-2">
         {breakdown.map(({ category, label, total, phases }) => (

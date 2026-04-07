@@ -93,25 +93,15 @@ export default function FocusMapView({
   // All sibling tasks for dependency checking — use allTasks if provided, else tasks
   const siblingPool = allTasks || tasks;
 
-  // Guard clause: if no tasks or design not ready, show loading state
-  if (!tasks || tasks.length === 0) {
-    return (
-      <div className="flex items-center justify-center w-full h-full min-h-[300px]">
-        <div className="text-center">
-          <div className="text-4xl mb-3">🎯</div>
-          <div className="text-sm font-bold" style={{ color: 'var(--cp-text-secondary, #64748B)' }}>
-            אין משימות להציג
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Cognitive load alert
+  // ── ALL hooks MUST be called before any early return (Rules of Hooks) ──
+  const safeTasks = tasks || [];
   const cogLoadThreshold = design?.cognitiveLoadLimit || 480;
-  const cogLoad = useMemo(() => computeCognitiveLoad(tasks, cogLoadThreshold), [tasks, cogLoadThreshold]);
+  const cogLoad = useMemo(() => computeCognitiveLoad(safeTasks, cogLoadThreshold), [safeTasks, cogLoadThreshold]);
 
   const { unlockedNodes, lockedNodes, categoryNodes, stats } = useMemo(() => {
+    if (safeTasks.length === 0) {
+      return { unlockedNodes: [], lockedNodes: [], categoryNodes: [], stats: { unlockedCount: 0, lockedCount: 0, totalMinutes: 0 } };
+    }
     const unlocked = [];
     const locked = [];
     const catMap = {};
@@ -120,7 +110,7 @@ export default function FocusMapView({
     let totalMinutes = 0;
 
     // Classify tasks: unlocked (prerequisites met) vs locked (prerequisites NOT met)
-    tasks.forEach(task => {
+    safeTasks.forEach(task => {
       if (task.status === 'production_completed') return; // Skip completed
 
       const depsOk = areDependenciesMet(task, siblingPool);
@@ -223,7 +213,7 @@ export default function FocusMapView({
       categoryNodes: catNodes,
       stats: { unlockedCount, lockedCount, totalMinutes },
     };
-  }, [tasks, siblingPool, design?.nodeOverrides, design?.stickerMap, branchColors, globalShape]);
+  }, [safeTasks, siblingPool, design?.nodeOverrides, design?.stickerMap, branchColors, globalShape]);
 
   const handleNodeClick = useCallback((e, nodeId) => {
     e.stopPropagation();
@@ -240,6 +230,20 @@ export default function FocusMapView({
     e.stopPropagation();
     if (onEditTask) onEditTask(task);
   }, [onEditTask]);
+
+  // Guard clause — AFTER all hooks (Rules of Hooks compliance)
+  if (!tasks || tasks.length === 0) {
+    return (
+      <div className="flex items-center justify-center w-full h-full min-h-[300px]">
+        <div className="text-center">
+          <div className="text-4xl mb-3">🎯</div>
+          <div className="text-sm font-bold" style={{ color: 'var(--cp-text-secondary, #64748B)' }}>
+            אין משימות להציג
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-full" style={{
