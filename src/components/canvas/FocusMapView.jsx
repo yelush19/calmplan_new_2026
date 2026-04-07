@@ -93,25 +93,14 @@ export default function FocusMapView({
   // All sibling tasks for dependency checking — use allTasks if provided, else tasks
   const siblingPool = allTasks || tasks;
 
-  // Guard clause: if no tasks or design not ready, show loading state
-  if (!tasks || tasks.length === 0) {
-    return (
-      <div className="flex items-center justify-center w-full h-full min-h-[300px]">
-        <div className="text-center">
-          <div className="text-4xl mb-3">🎯</div>
-          <div className="text-sm font-bold" style={{ color: 'var(--cp-text-secondary, #64748B)' }}>
-            אין משימות להציג
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Cognitive load alert
+  // Cognitive load alert — hooks MUST be before any early return (Rules of Hooks)
   const cogLoadThreshold = design?.cognitiveLoadLimit || 480;
-  const cogLoad = useMemo(() => computeCognitiveLoad(tasks, cogLoadThreshold), [tasks, cogLoadThreshold]);
+  const cogLoad = useMemo(() => computeCognitiveLoad(tasks || [], cogLoadThreshold), [tasks, cogLoadThreshold]);
 
   const { unlockedNodes, lockedNodes, categoryNodes, stats } = useMemo(() => {
+    if (!tasks || tasks.length === 0) {
+      return { unlockedNodes: [], lockedNodes: [], categoryNodes: [], stats: { unlockedCount: 0, lockedCount: 0, totalMinutes: 0 } };
+    }
     const unlocked = [];
     const locked = [];
     const catMap = {};
@@ -240,6 +229,20 @@ export default function FocusMapView({
     e.stopPropagation();
     if (onEditTask) onEditTask(task);
   }, [onEditTask]);
+
+  // Guard clause AFTER all hooks (Rules of Hooks compliance)
+  if (!tasks || tasks.length === 0) {
+    return (
+      <div className="flex items-center justify-center w-full h-full min-h-[300px]">
+        <div className="text-center">
+          <div className="text-4xl mb-3">🎯</div>
+          <div className="text-sm font-bold" style={{ color: 'var(--cp-text-secondary, #64748B)' }}>
+            אין משימות להציג
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-full" style={{
