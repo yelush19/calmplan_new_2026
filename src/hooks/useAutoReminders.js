@@ -125,11 +125,11 @@ export default function useAutoReminders() {
               ? `באיחור ${Math.abs(daysUntilDue)} ימים`
               : daysUntilDue === 0 ? 'היום' : `עוד ${daysUntilDue} ימים`;
 
-            // Compact title: client + category
-            const catLabel = resolveCategoryLabel(task.category) || '';
+            // Compact: client + task title (e.g. "לון שרמן — יצור שכר")
+            const shortTitle = task.title || resolveCategoryLabel(task.category) || '';
             const compactTitle = task.client_name
-              ? `${task.client_name} — ${catLabel}`
-              : task.title;
+              ? `${task.client_name} — ${shortTitle}`
+              : shortTitle;
 
             await StickyNote.create({
               title: compactTitle,
