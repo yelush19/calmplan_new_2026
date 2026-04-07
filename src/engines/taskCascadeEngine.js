@@ -765,6 +765,9 @@ export const SERVICE_DEPENDENCIES = {
   tax_advances:   ['income_collection'],
   // P&L convergence: requires BOTH מע"מ (VAT) AND התאמות (Reconciliation) to be Done
   pnl_reports:    ['vat_reporting', 'reconciliation'],
+  // P1 Pension chain: מתפעל → הנחיות מס"ב → מס"ב סוציאליות
+  social_benefits: ['operator_reporting'],       // הנחיות מס"ב ממתפעל — ממתין לדיווח למתפעל
+  masav_social:    ['social_benefits'],           // מס"ב סוציאליות — ממתין להנחיות מס"ב
 };
 
 /**

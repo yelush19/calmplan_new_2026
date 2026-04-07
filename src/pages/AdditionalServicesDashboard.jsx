@@ -41,10 +41,10 @@ import MiroProcessMap from '@/components/views/MiroProcessMap';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 
-// P1 Board 2 — פנסיות וקרנות: מתפעל/טמל + מס"ב סוציאליות + תשלום רשויות
+// P1 Board 2 — פנסיות וקרנות: מתפעל/טמל + הנחיות מס"ב + מס"ב סוציאליות
 const P1_PAYROLL_EXTRAS = [
   'operator_reporting', 'taml_reporting', 'social_benefits',
-  'masav_social', 'authorities_payment',
+  'masav_social',
 ];
 
 // P2 Bookkeeping extras: supplier MASAV, operator/taml, consulting
@@ -75,7 +75,7 @@ const STATUS_PIPELINE = [
 const SCOPE_CONFIG = {
   p1: {
     title: 'פנסיות וקרנות',
-    subtitle: 'מתפעל, טמל, מס"ב סוציאליות, תשלום רשויות, מילואים',
+    subtitle: 'מתפעל, טמל, הנחיות מס"ב, מס"ב סוציאליות',
     gradientFrom: 'from-[#0277BD]',
     gradientTo: 'to-[#01579B]',
     backHref: 'PayrollDashboard',
