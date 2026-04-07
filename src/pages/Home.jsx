@@ -108,6 +108,13 @@ export default function HomePage() {
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const [showFullMap, setShowFullMap] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState({
+    overdue: true,
+    today: false,
+    upcoming: true,
+    events: true,
+    payment: true,
+  });
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { focusMode, filterByEnergy, energyLevel } = useApp();
   const [stickyNotes, setStickyNotes] = useState([]);
@@ -458,6 +465,15 @@ export default function HomePage() {
     }
   };
 
+  const toggleSection = (key) => {
+    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const getSectionData = (tabKey) => {
+    if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
+    return filterBySearch(data[tabKey] || []);
+  };
+
   const todayTotal = data.today.length + (data.overdue?.length || 0);
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
 
@@ -567,6 +583,98 @@ export default function HomePage() {
 
         {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
         <CategoryBreakdown tasks={data.allTasks || []} />
+
+        {/* ═══ 3.6 Collapsible Sections — overdue/today/upcoming/events/payment ═══ */}
+        <div className="space-y-2">
+          {FOCUS_TABS.map(tab => {
+            const Icon = tab.icon;
+            const items = getSectionData(tab.key);
+            const count = items.length;
+            const isOpen = !collapsedSections[tab.key];
+
+            return (
+              <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+                {/* Section header — always visible */}
+                <button
+                  onClick={() => toggleSection(tab.key)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className={`w-4 h-4 ${tab.color}`} />
+                    <span className="text-sm font-semibold text-slate-700">{tab.label}</span>
+                    {count > 0 && (
+                      <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${tab.badgeColor}`}>
+                        {count}
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`}
+                  />
+                </button>
+
+                {/* Section content — collapsible */}
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-3">
+                        {tab.key === 'events' ? (
+                          items.length === 0 ? (
+                            <EmptyState icon={<Calendar className="w-10 h-10 text-purple-300" />} text="אין אירועים היום" />
+                          ) : (
+                            <div className="space-y-2">
+                              {items.map(event => (
+                                <div key={event.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-purple-50 border border-purple-100">
+                                  <div className="text-sm font-mono font-semibold text-purple-700 min-w-[50px]">
+                                    {format(parseISO(event.start_date), 'HH:mm')}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm text-purple-900 truncate">{event.title}</div>
+                                    {event.description && <div className="text-xs text-purple-600 truncate">{event.description}</div>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        ) : (
+                          items.length === 0 ? (
+                            <EmptyState
+                              icon={tab.key === 'overdue' ? <CheckCircle className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
+                                    tab.key === 'today' ? <Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
+                                    tab.key === 'payment' ? <CreditCard className="w-10 h-10 text-yellow-300" /> :
+                                    <Clock className="w-10 h-10 text-gray-300" />}
+                              text={tab.key === 'overdue' ? 'אין משימות באיחור' :
+                                    tab.key === 'today' ? 'אין משימות להיום - כל הכבוד!' :
+                                    tab.key === 'payment' ? 'אין משימות ממתינות לתשלום' :
+                                    'אין משימות ל-3 ימים הקרובים'}
+                            />
+                          ) : (
+                            <TaskList
+                              tasks={items}
+                              onStatusChange={handleStatusChange}
+                              onPaymentDateChange={handlePaymentDateChange}
+                              onEdit={setEditingTask}
+                              onNote={setNoteTask}
+                              showDeadlineContext={tab.key === 'overdue' || tab.key === 'today'}
+                              showDate={tab.key === 'upcoming'}
+                              showPaymentDate={tab.key === 'payment'}
+                            />
+                          )
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
 
         {/* ═══ 4. Sticky Notes — max 3 ═══ */}
         {stickyNotes.length > 0 && (
