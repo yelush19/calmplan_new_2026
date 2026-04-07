@@ -34,6 +34,7 @@ import {
 } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
+import { unlockDependentTasks } from '@/engines/taskCascadeEngine';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
@@ -55,9 +56,12 @@ const P2_BOOKKEEPING_EXTRAS = [
 
 function getServicesForScope(scope) {
   const keys = scope === 'p2' ? P2_BOOKKEEPING_EXTRAS : P1_PAYROLL_EXTRAS;
-  return Object.fromEntries(
-    Object.entries(ADDITIONAL_SERVICES).filter(([key]) => keys.includes(key))
-  );
+  // Preserve array order (= flow order) instead of ADDITIONAL_SERVICES key order
+  const result = {};
+  for (const key of keys) {
+    if (ADDITIONAL_SERVICES[key]) result[key] = ADDITIONAL_SERVICES[key];
+  }
+  return result;
 }
 
 // Status pipeline for DNA-style KPI cards (ordered by workflow progression)
@@ -114,6 +118,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState(null);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
@@ -180,6 +185,9 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
 
   const filteredTasks = useMemo(() => {
     let result = tasks;
+    if (!showCompleted) {
+      result = result.filter(t => t.status !== 'production_completed');
+    }
     if (clientFilter) {
       result = result.filter(t => t.client_name === clientFilter);
     }
@@ -195,7 +203,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       result = result.filter(t => (t.status || 'not_started') === statusFilter);
     }
     return result;
-  }, [tasks, clientFilter, searchTerm, statusFilter]);
+  }, [tasks, clientFilter, searchTerm, statusFilter, showCompleted]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
@@ -279,9 +287,18 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       }
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
-      if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);
+      if (updatePayload.status) {
+        syncNotesWithTaskStatus(task.id, updatePayload.status);
+        // Unlock dependent tasks in the cascade chain
+        const completedTask = { ...task, ...updatePayload };
+        const unlocks = unlockDependentTasks(completedTask, tasks);
+        for (const { task: depTask, newStatus: depStatus } of unlocks) {
+          await Task.update(depTask.id, { status: depStatus });
+          setTasks(prev => prev.map(t => t.id === depTask.id ? { ...t, status: depStatus } : t));
+        }
+      }
     } catch (error) { console.error("Error updating step:", error); }
-  }, []);
+  }, [tasks]);
 
   const handleDateChange = useCallback(async (task, stepKey, newDate) => {
     const currentSteps = getTaskProcessSteps(task);
@@ -303,8 +320,18 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       syncNotesWithTaskStatus(task.id, newStatus);
+
+      // Unlock dependent tasks in the cascade chain
+      if (newStatus === 'production_completed') {
+        const completedTask = { ...task, ...updatePayload };
+        const unlocks = unlockDependentTasks(completedTask, tasks);
+        for (const { task: depTask, newStatus: depStatus } of unlocks) {
+          await Task.update(depTask.id, { status: depStatus });
+          setTasks(prev => prev.map(t => t.id === depTask.id ? { ...t, status: depStatus } : t));
+        }
+      }
     } catch (error) { console.error("Error updating status:", error); }
-  }, []);
+  }, [tasks]);
 
   const handlePaymentDateChange = useCallback(async (task, paymentDate) => {
     try {
@@ -441,7 +468,18 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         </div>
       </div>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial']} />
+      <div className="flex items-center gap-2">
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial']} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCompleted(prev => !prev)}
+          className={`h-9 gap-1.5 rounded-xl text-xs font-bold ${showCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'text-slate-500 border-slate-200'}`}
+        >
+          <CircleCheck className="w-3.5 h-3.5" />
+          {showCompleted ? 'מסתיר הושלמו' : 'הצג הושלמו'}
+        </Button>
+      </div>
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
