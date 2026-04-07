@@ -316,9 +316,9 @@ export default function GroupedServiceTable({
                     key={step.key}
                     className="text-center py-2.5 px-2 font-bold text-[12px] min-w-[80px]"
                     style={{
-                      backgroundColor: stepAllDone ? '#DCFCE7' : stepSomeDone ? accent.headerBg : '#F9FAFB',
-                      color: stepAllDone ? '#14532D' : stepSomeDone ? (accent.headerText || '#1F2937') : '#374151',
-                      borderBottom: `2px solid ${stepAllDone ? '#10B981' : stepSomeDone ? accent.border : '#E5E7EB'}`,
+                      backgroundColor: stepAllDone ? '#E5E7EB' : stepSomeDone ? accent.headerBg : '#F9FAFB',
+                      color: stepAllDone ? '#374151' : stepSomeDone ? (accent.headerText || '#1F2937') : '#374151',
+                      borderBottom: `2px solid ${stepAllDone ? '#9CA3AF' : stepSomeDone ? accent.border : '#E5E7EB'}`,
                     }}
                   >
                     {step.label}
@@ -432,6 +432,19 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
 
+  // ── Visual hierarchy: overdue/urgent detection for row background ──
+  const rowUrgency = useMemo(() => {
+    if (allDone || task.status === 'production_completed') return 'done';
+    if (!task.due_date) return 'normal';
+    const d = parseISO(task.due_date);
+    if (!isValid(d)) return 'normal';
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    const rem = differenceInDays(d, t);
+    if (rem < 0) return 'overdue';
+    if (rem <= 3) return 'urgent';
+    return 'normal';
+  }, [task.due_date, task.status, allDone]);
+
   // Determine the "current" step index: first unchecked step after any checked ones
   const currentStepIndex = useMemo(() => {
     for (let i = 0; i < service.steps.length; i++) {
@@ -488,11 +501,11 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
       <tr
         ref={ref}
         {...(draggableProps || {})}
-        className={`border-b border-gray-50 transition-colors ${allDone ? 'bg-emerald-50' : ''} hover:bg-[#F5F5F5] ${isDragging ? 'shadow-lg bg-white z-50' : ''}`}
+        className={`border-b border-gray-50 transition-colors ${rowUrgency === 'done' ? 'bg-gray-50' : rowUrgency === 'overdue' ? 'bg-amber-50/60' : rowUrgency === 'urgent' ? 'bg-amber-50/40' : ''} hover:bg-[#F5F5F5] ${isDragging ? 'shadow-lg bg-white z-50' : ''}`}
         style={{
           ...(draggableProps?.style || {}),
           borderRight: `3px solid ${accent.border}`,
-          backgroundColor: isDragging ? '#FFF' : allDone ? undefined : accent.bg,
+          backgroundColor: isDragging ? '#FFF' : rowUrgency === 'done' ? '#F9FAFB' : rowUrgency === 'overdue' ? '#FEF3C7' : rowUrgency === 'urgent' ? '#FFFBEB' : accent.bg,
         }}
       >
         {bulkMode && (
@@ -502,7 +515,7 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
           </td>
         )}
         {/* Drag handle + Client name + IDs */}
-        <td className="py-1.5 px-4 sticky right-0 z-10" style={{ backgroundColor: isDragging ? '#FFF' : allDone ? '#ECFDF5' : accent.bg }}>
+        <td className="py-1.5 px-4 sticky right-0 z-10" style={{ backgroundColor: isDragging ? '#FFF' : rowUrgency === 'done' ? '#F3F4F6' : rowUrgency === 'overdue' ? '#FEF3C7' : rowUrgency === 'urgent' ? '#FFFBEB' : accent.bg }}>
           <div className="flex items-center gap-1">
             <span {...(dragHandleProps || {})} className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0" title="גרור לשינוי סדר">
               <GripVertical className="w-3.5 h-3.5" />
@@ -593,7 +606,7 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
               <td
                 key={stepDef.key}
                 className="py-1.5 px-2 text-center"
-                style={isCurrent ? { backgroundColor: accent.border + '18', boxShadow: `inset 0 0 0 1px ${accent.border}40` } : stepData.done ? { backgroundColor: '#F0FDF4' } : {}}
+                style={isCurrent ? { backgroundColor: accent.border + '18', boxShadow: `inset 0 0 0 1px ${accent.border}40` } : stepData.done ? { backgroundColor: '#F3F4F6' } : {}}
               >
                 <StepCell
                   stepData={stepData}
@@ -617,7 +630,7 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
             <td
               key={stepDef.key}
               className="py-1.5 px-2 text-center"
-              style={isCurrent ? { backgroundColor: accent.border + '18', boxShadow: `inset 0 0 0 1px ${accent.border}40` } : allSubsDone ? { backgroundColor: '#F0FDF4' } : {}}
+              style={isCurrent ? { backgroundColor: accent.border + '18', boxShadow: `inset 0 0 0 1px ${accent.border}40` } : allSubsDone ? { backgroundColor: '#F3F4F6' } : {}}
             >
               <Popover>
                 <PopoverTrigger asChild>

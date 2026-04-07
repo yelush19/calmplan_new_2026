@@ -8,7 +8,7 @@
 export const PILLAR_COLORS = {
   P1: { color: '#00A3E0', light: '#B3E5FC', label: 'P1 שכר',      name: 'תכלת שמיים' },
   P2: { color: '#4682B4', light: '#B2C8DF', label: 'P2 הנה"ח',    name: 'כחול פלדה' },
-  P3: { color: '#6366F1', light: '#C7D2FE', label: 'P3 ניהול',     name: 'אינדיגו' },
+  P3: { color: '#F59E0B', light: '#FEF3C7', label: 'P3 ניהול',     name: 'כתום' },
   P4: { color: '#FACC15', light: '#FEF9C3', label: 'P4 בית',      name: 'צהוב לימון' },
   P5: { color: '#2E7D32', light: '#C8E6C9', label: 'P5 מאזנים',   name: 'ירוק יער' },
   P6: { color: '#7C3AED', light: '#DDD6FE', label: 'P6 פרוייקטים', name: 'סגול' },
