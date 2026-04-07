@@ -126,6 +126,16 @@ export const MSB_COLLECTOR_SERVICES = [
 const POST_PAYROLL_SERVICES = [...PHASE_B_SERVICES, ...PHASE_C_SERVICES, ...MSB_COLLECTOR_SERVICES];
 
 // ============================================================
+// PENSION CASCADE CHAIN (Board 2 — פנסיות וקרנות)
+// ============================================================
+// operator_reporting done → create social_benefits
+// social_benefits done → create masav_social
+const PENSION_CASCADE = {
+  operator_reporting: { serviceKey: 'social_benefits', title: 'הנחיות מס"ב ממתפעל' },
+  social_benefits:    { serviceKey: 'masav_social',    title: 'מס"ב סוציאליות' },
+};
+
+// ============================================================
 // SERVICE FILTERING (חוק בל יעבור)
 // ============================================================
 // Maps cascade serviceKey → process tree node ID.
@@ -1255,6 +1265,54 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = [], option
       // Social Security Chain: full dependency chain evaluation
       evaluation = evaluateMasavSocialStatus(task, updatedSteps);
       break;
+
+    case 'operator_reporting':
+    case 'taml_reporting':
+    case 'social_benefits': {
+      // Pension cascade: all steps done → production_completed + auto-create next in chain
+      const allDone = service.steps.every(s => isStepComplete(updatedSteps?.[s.key]));
+      if (allDone && task.status !== 'production_completed') {
+        const nextInChain = PENSION_CASCADE[service.key];
+        const autoCreateTasks = [];
+        if (nextInChain) {
+          // Check if the next task already exists for this client+month
+          const existsAlready = siblingTasks.some(t => {
+            const s = getServiceForTask(t);
+            return (s?.key || t.serviceKey) === nextInChain.serviceKey &&
+              t.client_name === task.client_name;
+          });
+          if (!existsAlready) {
+            const templateSteps = getStepsForService(nextInChain.serviceKey);
+            const processSteps = {};
+            templateSteps.forEach(step => {
+              processSteps[step.key] = { done: false, date: null, notes: '' };
+            });
+            autoCreateTasks.push({
+              serviceKey: nextInChain.serviceKey,
+              title: `${nextInChain.title} - ${task.client_name}`,
+              client_name: task.client_name,
+              client_id: task.client_id,
+              category: ALL_SERVICES[nextInChain.serviceKey]?.createCategory || nextInChain.title,
+              status: 'not_started',
+              branch: 'P1',
+              due_date: task.due_date,
+              report_month: task.report_month,
+              report_year: task.report_year,
+              report_period: task.report_period,
+              reporting_month: task.reporting_month,
+              context: 'work',
+              is_recurring: true,
+              workflow_phase: 'pension_cascade',
+              triggered_by: task.id,
+              source: 'pension_cascade',
+              process_steps: processSteps,
+            });
+          }
+        }
+        evaluation = { status: 'production_completed', autoCreateTasks: autoCreateTasks.length > 0 ? autoCreateTasks : undefined };
+      }
+      break;
+    }
 
     case 'reserve_claims':
     case 'consulting':

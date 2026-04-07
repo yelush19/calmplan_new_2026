@@ -34,7 +34,7 @@ import {
 } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
-import { unlockDependentTasks } from '@/engines/taskCascadeEngine';
+import { unlockDependentTasks, processTaskCascade } from '@/engines/taskCascadeEngine';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
@@ -280,16 +280,38 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
     const updatedSteps = toggleStep(currentSteps, stepKey);
     try {
       const updatedTask = { ...task, process_steps: updatedSteps };
-      const allDone = areAllStepsDone(updatedTask);
       const updatePayload = { process_steps: updatedSteps };
-      if (allDone && task.status !== 'production_completed') {
-        updatePayload.status = 'production_completed';
+
+      // Run cascade engine for pension chain (operator → social_benefits → masav_social)
+      const client = clientByName[task.client_name];
+      const cascade = processTaskCascade(updatedTask, updatedSteps, tasks, {
+        clientServices: client?.service_types || [],
+        clientReportingInfo: client?.reporting_info || {},
+      });
+
+      if (cascade.statusUpdate) {
+        updatePayload.status = cascade.statusUpdate.status;
+      } else {
+        const allDone = areAllStepsDone(updatedTask);
+        if (allDone && task.status !== 'production_completed') {
+          updatePayload.status = 'production_completed';
+        }
       }
+
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
+
+      // Auto-create next task in pension cascade chain
+      if (cascade.tasksToCreate?.length > 0) {
+        for (const childDef of cascade.tasksToCreate) {
+          const created = await Task.create(childDef);
+          setTasks(prev => [...prev, created]);
+        }
+      }
+
       if (updatePayload.status) {
         syncNotesWithTaskStatus(task.id, updatePayload.status);
-        // Unlock dependent tasks in the cascade chain
+        // Unlock existing dependent tasks
         const completedTask = { ...task, ...updatePayload };
         const unlocks = unlockDependentTasks(completedTask, tasks);
         for (const { task: depTask, newStatus: depStatus } of unlocks) {
@@ -298,7 +320,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         }
       }
     } catch (error) { console.error("Error updating step:", error); }
-  }, [tasks]);
+  }, [tasks, clientByName]);
 
   const handleDateChange = useCallback(async (task, stepKey, newDate) => {
     const currentSteps = getTaskProcessSteps(task);
@@ -321,9 +343,22 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       syncNotesWithTaskStatus(task.id, newStatus);
 
-      // Unlock dependent tasks in the cascade chain
       if (newStatus === 'production_completed') {
+        // Run cascade to auto-create next task in pension chain
+        const client = clientByName[task.client_name];
         const completedTask = { ...task, ...updatePayload };
+        const cascade = processTaskCascade(completedTask, updatePayload.process_steps || task.process_steps, tasks, {
+          clientServices: client?.service_types || [],
+          clientReportingInfo: client?.reporting_info || {},
+        });
+        if (cascade.tasksToCreate?.length > 0) {
+          for (const childDef of cascade.tasksToCreate) {
+            const created = await Task.create(childDef);
+            setTasks(prev => [...prev, created]);
+          }
+        }
+
+        // Unlock existing dependent tasks
         const unlocks = unlockDependentTasks(completedTask, tasks);
         for (const { task: depTask, newStatus: depStatus } of unlocks) {
           await Task.update(depTask.id, { status: depStatus });
@@ -331,7 +366,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         }
       }
     } catch (error) { console.error("Error updating status:", error); }
-  }, [tasks]);
+  }, [tasks, clientByName]);
 
   const handlePaymentDateChange = useCallback(async (task, paymentDate) => {
     try {
