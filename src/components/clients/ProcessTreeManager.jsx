@@ -45,7 +45,7 @@ import { inferClientServices, mergeInferredNodes } from '@/services/inferClientS
 // ── Branch colors ──
 const BRANCH_COLORS = {
   P1: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800', dot: 'bg-blue-500' },
-  P2: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
+  P2: { bg: 'bg-slate-50', border: 'border-slate-300', text: 'text-slate-700', badge: 'bg-slate-100 text-slate-700', dot: 'bg-slate-500' },
   P3: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
   P5: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-100 text-green-800', dot: 'bg-green-500' },
 };
@@ -266,7 +266,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
   // Branch-specific accent colors for depth > 0
   const depthAccentColors = {
     P1: { line: 'border-blue-300', inset: 'shadow-blue-400', dashedBorder: 'border-blue-200' },
-    P2: { line: 'border-amber-300', inset: 'shadow-amber-400', dashedBorder: 'border-amber-200' },
+    P2: { line: 'border-slate-300', inset: 'shadow-slate-400', dashedBorder: 'border-slate-200' },
     P3: { line: 'border-amber-300', inset: 'shadow-amber-400', dashedBorder: 'border-amber-200' },
     P5: { line: 'border-green-300', inset: 'shadow-green-400', dashedBorder: 'border-green-200' },
   };
@@ -539,7 +539,7 @@ function TreeNode({ node, depth, branchId, clientTree, companyTree, onToggle, on
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddChild(); if (e.key === 'Escape') setAddingChild(false); }}
           />
           <Button type="button" size="sm" onClick={handleAddChild} disabled={!newChildName.trim()}
-            className={`h-6 px-2 text-[12px] text-white ${branchId === 'P1' ? 'bg-blue-600' : branchId === 'P2' ? 'bg-amber-600' : branchId === 'P3' ? 'bg-amber-600' : branchId === 'P5' ? 'bg-green-600' : 'bg-purple-600'}`}>
+            className={`h-6 px-2 text-[12px] text-white ${branchId === 'P1' ? 'bg-blue-600' : branchId === 'P2' ? 'bg-slate-600' : branchId === 'P3' ? 'bg-amber-600' : branchId === 'P5' ? 'bg-green-600' : 'bg-purple-600'}`}>
             <Plus className="w-3 h-3" /> הוסף
           </Button>
           <button type="button" onClick={() => setAddingChild(false)} className="text-gray-400"><X className="w-3.5 h-3.5" /></button>

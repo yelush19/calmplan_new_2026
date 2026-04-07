@@ -18,7 +18,7 @@ import { ALL_SERVICES, getStepsForService } from '@/config/processTemplates';
 // ── Branch DNA (mirrored from SettingsMindMap) ──
 const BRANCHES = [
   { key: 'P1', label: 'P1 | חשבות שכר', color: '#00A3E0', dashboards: ['payroll'] },
-  { key: 'P2', label: 'P2 | הנהלת חשבונות ומיסים', color: '#B2AC88', dashboards: ['tax'] },
+  { key: 'P2', label: 'P2 | הנהלת חשבונות ומיסים', color: '#4682B4', dashboards: ['tax'] },
   { key: 'P3', label: 'P3 | ניהול ותכנון', color: '#F59E0B', dashboards: ['admin', 'additional'] },
   { key: 'P4', label: 'P4 | בית', color: '#FACC15', dashboards: ['home'] },
   { key: 'P5', label: 'P5 | דוחות שנתיים והצהרות', color: '#2E7D32', dashboards: ['annual_reports'] },

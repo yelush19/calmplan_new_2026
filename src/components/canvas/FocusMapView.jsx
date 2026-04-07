@@ -32,7 +32,7 @@ const CX = VB / 2, CY = VB / 2;
 
 // Default Focus DNA — overridden by Design Engine branchColors
 const FOCUS_DNA_DEFAULTS = {
-  P1: '#0288D1', P2: '#7B6B43', P3: '#B45309', P4: '#FACC15', P5: '#2E7D32',
+  P1: '#00A3E0', P2: '#4682B4', P3: '#F59E0B', P4: '#FACC15', P5: '#2E7D32',
 };
 
 // Ring radii — tighter than Architect for "actionable focus"

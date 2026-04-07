@@ -140,7 +140,7 @@ function ProcessTreeSection({ processTree }) {
   // Branch group config
   const branchConfig = {
     P1: { label: 'שכר', bg: 'bg-sky-600', border: 'border-sky-300', count: 'bg-sky-400' },
-    P2: { label: 'הנה"ח ודוחות', bg: 'bg-teal-700', border: 'border-teal-300', count: 'bg-teal-500' },
+    P2: { label: 'הנה"ח ודוחות', bg: 'bg-slate-600', border: 'border-slate-300', count: 'bg-slate-500' },
     P3: { label: 'ניהול', bg: 'bg-amber-600', border: 'border-amber-300', count: 'bg-amber-400' },
     P5: { label: 'דוחות שנתיים', bg: 'bg-emerald-700', border: 'border-emerald-300', count: 'bg-emerald-500' },
   };
