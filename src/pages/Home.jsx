@@ -246,11 +246,15 @@ export default function HomePage() {
       const workCount = activeTasks.filter(t => getTaskContext(t) === 'work').length;
       const homeCount = activeTasks.filter(t => getTaskContext(t) === 'home').length;
 
+      const sortedOverdue = sortByPriority(overdue);
+      const sortedToday = sortByPriority(todayTasks);
+
       setData({
         allTasks,
         activeTasks,
-        overdue: sortByPriority(overdue),
-        today: sortByPriority(todayTasks),
+        overdue: sortedOverdue,
+        today: sortedToday,
+        mergedToday: sortByPriority([...overdue, ...todayTasks]),
         upcoming: sortByPriority(upcoming),
         payment: sortByPriority(waitingPayment),
         todayEvents,
@@ -299,10 +303,14 @@ export default function HomePage() {
           }
         }
 
+        const newOverdue = filterCompleted(updateInList(prev.overdue));
+        const newToday = filterCompleted(updateInList(prev.today));
+
         return {
           ...prev,
-          overdue: filterCompleted(updateInList(prev.overdue)),
-          today: filterCompleted(updateInList(prev.today)),
+          overdue: newOverdue,
+          today: newToday,
+          mergedToday: sortByPriority([...newOverdue, ...newToday]),
           upcoming: filterCompleted(updateInList(prev.upcoming)),
           payment: newPayment,
           completedToday: newStatus === 'production_completed' ? prev.completedToday + 1 : prev.completedToday,
@@ -372,20 +380,14 @@ export default function HomePage() {
     return calculateCapacity(data.activeTasks || []);
   }, [data]);
 
-  // ── Merged today list (overdue + today) — single memoized reference ──
-  const mergedToday = useMemo(() => {
-    if (!data) return [];
-    return sortByPriority([...(data.overdue || []), ...(data.today || [])]);
-  }, [data]);
-
   // ── Top 5 tasks for the calm "מה אפשר לעשות היום" section ──
   // Must be above the early return so hook count is stable across renders
   // Energy filter: when energy is low/medium, show only matching cognitive-load tasks
   const calmTasks = useMemo(() => {
     if (!data) return [];
-    const energyFiltered = filterByEnergy(mergedToday);
-    return energyFiltered.slice(0, 5);
-  }, [mergedToday, filterByEnergy]);
+    const energyFiltered = filterByEnergy(data.mergedToday || []);
+    return sortByPriority(energyFiltered).slice(0, 5);
+  }, [data, filterByEnergy]);
 
   if (isLoading || !data) {
     return (
@@ -487,8 +489,8 @@ export default function HomePage() {
 
   const getSectionData = (tabKey) => {
     if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
-    // Merge overdue into "today" — uses memoized mergedToday
-    if (tabKey === 'today') return filterBySearch(mergedToday);
+    // Merge overdue into "today" — pre-computed in data.mergedToday
+    if (tabKey === 'today') return filterBySearch(data.mergedToday || []);
     return filterBySearch(data[tabKey] || []);
   };
 
@@ -627,7 +629,7 @@ export default function HomePage() {
         )}
 
         {/* ═══ 3.5 Category Breakdown — what remains for today (overdue + today) ═══ */}
-        <CategoryBreakdown tasks={mergedToday} />
+        <CategoryBreakdown tasks={data.mergedToday || []} />
 
         {/* ═══ 3.6 Collapsible Sections — today (merged with overdue)/upcoming/events/payment ═══ */}
         <div className="space-y-2">
