@@ -626,25 +626,10 @@ export default function HomePage() {
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
-        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map ═══ */}
-        <MapErrorBoundary>
-          {calmTasks.length === 0 ? (
-            <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-              <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
-            </div>
-          ) : (
-            <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '400px' }}>
-              <FocusMapView
-                tasks={calmTasks}
-                allTasks={data.activeTasks || []}
-                centerLabel="מה לעשות היום"
-                centerSub={`${data.overdue.length + data.today.length} משימות`}
-                onEditTask={setEditingTask}
-                onStatusChange={handleStatusChange}
-              />
-            </div>
-          )}
-        </MapErrorBoundary>
+        {/* ═══ 3. "מה אפשר לעשות היום" — temporarily disabled to isolate #310 ═══ */}
+        <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+          <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text={calmTasks.length === 0 ? "אין משימות להיום — כל הכבוד!" : `${calmTasks.length} משימות להיום`} />
+        </div>
 
         {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
         <CategoryBreakdown tasks={data.mergedToday || []} />
