@@ -265,6 +265,20 @@ export default function HomePage() {
           if (!d) return false;
           try { return isToday(parseISO(d)); } catch { return false; }
         }).length,
+        completedYesterday: (() => {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          return allTasks.filter(t => {
+            if (t.status !== 'production_completed') return false;
+            const d = t.updated_date || t.due_date;
+            if (!d) return false;
+            try {
+              const parsed = parseISO(d);
+              parsed.setHours(0, 0, 0, 0);
+              return parsed.getTime() === yesterday.getTime();
+            } catch { return false; }
+          }).length;
+        })(),
       });
 
       if (overdue.length > 0 || todayTasks.length > 0) setActiveTab('today');
@@ -564,6 +578,13 @@ export default function HomePage() {
                 {getGreeting()}{userName ? `, ${userName}` : ''}
               </h2>
               <p className="text-sm text-slate-500 mt-1">{getDailyMessage()}</p>
+              {data.completedYesterday > 0 && (
+                <p className="text-xs text-slate-400 mt-1">
+                  <CheckCircle className="w-3 h-3 inline ml-1" style={{ color: '#5A9EB5' }} />
+                  אתמול סיימת {data.completedYesterday} משימות.{' '}
+                  היום יש {data.today.length + data.overdue.length}
+                </p>
+              )}
               {bioClockZone && (
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-base">{bioClockZone.icon}</span>
