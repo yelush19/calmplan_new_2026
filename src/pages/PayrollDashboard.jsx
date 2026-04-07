@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader, RefreshCw, Briefcase, ChevronLeft, ChevronRight,
   ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus, ChevronDown, Trash2,
-  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target, GitBranchPlus
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
@@ -44,6 +44,7 @@ import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
+import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 
 // P1 Board 1 — ייצור + הפצה: שכר → תלושים → מס"ב עובדים
 // Board 2 (פנסיות): PeriodicSummaryReports
@@ -96,6 +97,7 @@ export default function PayrollDashboardPage() {
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [cognitiveFilter, setCognitiveFilter] = useState(null);
   const [statusFilter, setStatusFilter] = useState(null);
+  const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   const localUpdateRef = React.useRef(false);
@@ -524,6 +526,14 @@ export default function PayrollDashboardPage() {
             <Plus className="w-4 h-4" />
             משימה מהירה
           </Button>
+          <Button
+            onClick={() => setShowInjectionPanel(prev => !prev)}
+            size="sm"
+            className={`h-9 gap-1.5 rounded-xl ${showInjectionPanel ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'}`}
+          >
+            <GitBranchPlus className="w-3.5 h-3.5" />
+            הזרקת משימות
+          </Button>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -661,6 +671,16 @@ export default function PayrollDashboardPage() {
       {!isLoading && tasks.length > 0 && (
         <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
       )}
+
+      {/* Injection Panel */}
+      <AnimatePresence>
+        {showInjectionPanel && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="border-2 border-orange-200 bg-orange-50/30 rounded-2xl overflow-hidden">
+            <ClientRecurringTasks onGenerateComplete={loadData} branchFilter="P1" categoryFilter={allPayrollCategories} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
