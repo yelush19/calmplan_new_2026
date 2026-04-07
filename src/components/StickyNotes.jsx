@@ -505,6 +505,11 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                           {URGENCY_OPTIONS.find(u => u.value === note.urgency)?.label}
                         </Badge>
                       )}
+                      {note._isVirtual && (
+                        <Badge className="bg-amber-100 text-amber-700 text-[12px] px-1 py-0 h-4">
+                          כלל 3 ימים
+                        </Badge>
+                      )}
                     </div>
                     {note.linked_task_title && (
                       <div className="flex items-center gap-1 mt-1 text-xs opacity-70">
@@ -524,10 +529,30 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                     {/* Actions - show on hover */}
                     <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {note._isVirtual ? (
-                        <Badge className="bg-amber-100 text-amber-700 text-[12px] px-1 py-0">
-                          <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
-                          כלל 3 ימים
-                        </Badge>
+                        <>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const tomorrow = new Date();
+                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                const newDate = tomorrow.toISOString().split('T')[0];
+                                await Task.update(note._taskId, { due_date: newDate });
+                                loadNotes();
+                              } catch { /* ignore */ }
+                            }}
+                            className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
+                            title="דחה יום"
+                          >
+                            <Calendar className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteNote(note.id)}
+                            className="p-1 rounded-full hover:bg-[#F5F5F5] transition-colors"
+                            title="מחק"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
                       ) : (
                         <>
                           <button
