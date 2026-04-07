@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight, ChevronDown,
   ArrowRight, Users, X, FileBarChart, List, LayoutGrid, Search, GanttChart, Plus, Trash2,
-  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target, GitBranchPlus
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -41,6 +41,7 @@ import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
+import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 
 // P1 Board 3 — דיווחים + קליטה: ב"ל + ניכויים + מילואים + תביעות מילואים + קליטה להנה"ח
 const REPORTING_SERVICES = {
@@ -85,6 +86,7 @@ export default function PayrollReportsDashboardPage() {
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState(null);
+  const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   const localUpdateRef = React.useRef(false);
@@ -506,6 +508,14 @@ export default function PayrollReportsDashboardPage() {
           >
             🎖️ דיווח מילואים
           </Button>
+          <Button
+            onClick={() => setShowInjectionPanel(prev => !prev)}
+            size="sm"
+            className={`h-9 gap-1.5 rounded-xl ${showInjectionPanel ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'}`}
+          >
+            <GitBranchPlus className="w-3.5 h-3.5" />
+            הזרקת משימות
+          </Button>
           <Button onClick={loadData} variant="outline" size="icon" className="h-9 w-9" disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -635,6 +645,16 @@ export default function PayrollReportsDashboardPage() {
           );
         })}
       </div>
+
+      {/* Injection Panel */}
+      <AnimatePresence>
+        {showInjectionPanel && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="border-2 border-orange-200 bg-orange-50/30 rounded-2xl overflow-hidden">
+            <ClientRecurringTasks onGenerateComplete={loadData} branchFilter="P1" categoryFilter={allReportingCategories} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
