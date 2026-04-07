@@ -410,15 +410,27 @@ export default function TasksPage() {
     return Array.from(cats).sort();
   }, [tasks]);
 
-  // Time-based filtering
+  // Time-based filtering — uses reporting_month when available, fallback to due_date
   const timeFilteredTasks = useMemo(() => {
     return tasks.filter(task => {
       const dueDate = task.due_date ? parseISO(task.due_date) : null;
+      // For month filters: prefer reporting_month (e.g. "2026-03") over due_date
+      const getTaskMonth = () => {
+        if (task.reporting_month) {
+          const parts = task.reporting_month.split('-');
+          return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 15);
+        }
+        return dueDate;
+      };
       switch (timeTab) {
-        case 'prev_month':
-          return dueDate && dueDate >= prevMonthStart && dueDate <= prevMonthEnd;
-        case 'curr_month':
-          return dueDate && dueDate >= currMonthStart && dueDate <= currMonthEnd;
+        case 'prev_month': {
+          const taskMonth = getTaskMonth();
+          return taskMonth && taskMonth >= prevMonthStart && taskMonth <= prevMonthEnd;
+        }
+        case 'curr_month': {
+          const taskMonth = getTaskMonth();
+          return taskMonth && taskMonth >= currMonthStart && taskMonth <= currMonthEnd;
+        }
         case 'active':
           return task.status !== 'production_completed';
         case 'completed':
