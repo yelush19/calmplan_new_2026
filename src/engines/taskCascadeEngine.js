@@ -160,6 +160,44 @@ const CASCADE_SERVICE_TO_CLIENT_SERVICE = {
   pnl_reports:         'pnl_reports',
 };
 
+// ============================================================
+// FREQUENCY FILTERING — prevent cascade from creating tasks
+// in months that don't match the client's reporting frequency.
+// E.g., bimonthly deductions → skip odd months (1,3,5,7,9,11)
+// ============================================================
+const CASCADE_SERVICE_FREQUENCY_FIELD = {
+  deductions:        { field: 'deductions_frequency',        fallback: 'payroll_frequency' },
+  social_security:   { field: 'social_security_frequency',   fallback: 'payroll_frequency' },
+};
+
+/**
+ * Check if a cascade-created task should exist for the given reporting month
+ * based on the client's frequency setting for that service.
+ * Returns true if the task should be created, false if the month is off-cycle.
+ */
+function isMonthValidForFrequency(serviceKey, reportMonth, clientReportingInfo) {
+  const freqConfig = CASCADE_SERVICE_FREQUENCY_FIELD[serviceKey];
+  if (!freqConfig) return true; // No frequency constraint for this service
+
+  const reporting = clientReportingInfo || {};
+  let freq = reporting[freqConfig.field];
+  if (!freq || freq === 'not_applicable') {
+    freq = reporting[freqConfig.fallback];
+  }
+  if (!freq || freq === 'not_applicable' || freq === 'monthly') return true;
+
+  const month = typeof reportMonth === 'number' ? reportMonth : parseInt(reportMonth);
+  if (isNaN(month)) return true;
+
+  switch (freq) {
+    case 'bimonthly':   return month % 2 === 0;          // 2,4,6,8,10,12
+    case 'quarterly':   return [3, 6, 9, 12].includes(month);
+    case 'semi_annual': return [6, 12].includes(month);
+    case 'yearly':      return month === 12;
+    default:            return true;
+  }
+}
+
 /**
  * Filter auto-created tasks based on client's process_tree or service_types[].
  * PRIMARY: process_tree node enabled check.
@@ -1206,6 +1244,18 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = [], option
   // Filter out auto-created tasks for services the client doesn't have
   if (result.tasksToCreate.length > 0 && options.clientServices) {
     result.tasksToCreate = filterByClientServices(result.tasksToCreate, options.clientServices);
+  }
+
+  // ── FREQUENCY FILTERING ──
+  // Filter out tasks for months that don't match the client's reporting frequency.
+  // E.g., bimonthly deductions → skip odd months like March.
+  if (result.tasksToCreate.length > 0 && options.clientReportingInfo) {
+    const reportMonth = task.report_month || (task.reporting_month ? parseInt(task.reporting_month.split('-')[1]) : null);
+    if (reportMonth) {
+      result.tasksToCreate = result.tasksToCreate.filter(t =>
+        isMonthValidForFrequency(t.serviceKey, reportMonth, options.clientReportingInfo)
+      );
+    }
   }
 
   // ── PAYMENT METHOD INJECTION ──

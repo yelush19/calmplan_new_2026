@@ -61,6 +61,7 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
     const cascadeOptions = {
       clientServices: client?.service_types || [],
       clientPaymentMethod: client?.authorities_payment_method || '',
+      clientReportingInfo: client?.reporting_info || {},
     };
     const cascade = processTaskCascade({ ...task, process_steps: steps }, steps, siblings, cascadeOptions);
 
@@ -168,7 +169,11 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
     const siblings = tasks.filter(t => t.client_name === task.client_name && t.reporting_month === task.reporting_month && t.id !== task.id);
     
     const client = clients.find(c => c.name === task.client_name || c.id === task.client_id);
-    const cascade = processTaskCascade({ ...task, process_steps: updatedSteps }, updatedSteps, siblings, { clientServices: client?.service_types || [] });
+    const cascade = processTaskCascade({ ...task, process_steps: updatedSteps }, updatedSteps, siblings, {
+      clientServices: client?.service_types || [],
+      clientPaymentMethod: client?.authorities_payment_method || '',
+      clientReportingInfo: client?.reporting_info || {},
+    });
 
     const updates = { process_steps: updatedSteps };
     if (cascade.statusUpdate) updates.status = cascade.statusUpdate.status;

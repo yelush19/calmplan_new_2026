@@ -270,7 +270,12 @@ export default function PayrollDashboardPage() {
       const updatePayload = { process_steps: updatedSteps };
 
       // Run cascade engine for status transitions
-      const cascade = processTaskCascade(updatedTask, updatedSteps, filteredTasks);
+      const client = clientByName[task.client_name];
+      const cascade = processTaskCascade(updatedTask, updatedSteps, filteredTasks, {
+        clientServices: client?.service_types || [],
+        clientPaymentMethod: client?.authorities_payment_method || '',
+        clientReportingInfo: client?.reporting_info || {},
+      });
 
       if (cascade.statusUpdate) {
         updatePayload.status = cascade.statusUpdate.status;
