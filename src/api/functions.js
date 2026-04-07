@@ -1217,19 +1217,26 @@ export const cleanupGhostTasks = async ({ dryRun = true } = {}) => {
       }
 
       // Rule 1b: Future reporting_month — beyond current reporting period
-      // e.g., in April, currentReportingMonth = "2026-03". Any task with reporting_month >= "2026-04" is a ghost.
-      if (task.reporting_month && task.reporting_month > currentReportingMonth) {
-        ghostTasks.push({
-          id: task.id,
-          title: task.title,
-          category: cat,
-          client_name: task.client_name,
-          due_date: task.due_date,
-          reporting_month: task.reporting_month,
-          status: task.status,
-          reason: `חודש דיווח עתידי: ${task.reporting_month}`,
-        });
-        continue;
+      // SAFE: normalize to YYYY-MM format before comparing to avoid "2026-3" > "2026-03" bug
+      if (task.reporting_month) {
+        const rm = task.reporting_month;
+        // Parse to numeric comparison to avoid string comparison bugs
+        const rmParts = rm.split('-');
+        const rmYear = parseInt(rmParts[0], 10);
+        const rmMonth = parseInt(rmParts[1], 10);
+        if (rmYear > prevMonthYear || (rmYear === prevMonthYear && rmMonth > prevMonth)) {
+          ghostTasks.push({
+            id: task.id,
+            title: task.title,
+            category: cat,
+            client_name: task.client_name,
+            due_date: task.due_date,
+            reporting_month: rm,
+            status: task.status,
+            reason: `חודש דיווח עתידי: ${rm} (נוכחי: ${currentReportingMonth})`,
+          });
+          continue;
+        }
       }
 
       // Only check auto-generated recurring tasks for category rules

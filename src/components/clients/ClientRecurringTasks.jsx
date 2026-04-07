@@ -915,8 +915,13 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     const ghosts = existingTasks.filter(t => {
       // Future due_date
       if (t.due_date && t.due_date >= nextMonthStart) return true;
-      // Future reporting_month
-      if (t.reporting_month && t.reporting_month > currentReportingMonth) return true;
+      // Future reporting_month (numeric comparison to avoid string bugs)
+      if (t.reporting_month) {
+        const parts = t.reporting_month.split('-');
+        const rmYear = parseInt(parts[0], 10);
+        const rmMonth = parseInt(parts[1], 10);
+        if (rmYear > prevMonthYear || (rmYear === prevMonthYear && rmMonth > prevMonth)) return true;
+      }
       return false;
     });
     // Group by category for display
