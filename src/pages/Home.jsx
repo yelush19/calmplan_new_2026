@@ -15,7 +15,7 @@ import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   Target, AlertTriangle, ChevronDown, Sparkles,
   Plus, CreditCard, Search, Eye, Sun, Moon, Coffee, Heart,
-  Map, ArrowRight, X,
+  Map, ArrowRight, X, FileBarChart, Calculator, GitBranch, Zap, TrendingUp,
 } from "lucide-react";
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import { resolveCollisions, clampRadius, relocateBubblesForRing, splitVisibleOverflow } from '@/utils/ringCollision';
@@ -35,6 +35,7 @@ import OverdueAlert from "@/components/tasks/OverdueAlert";
 import MoodCheckerInline from "@/components/home/MoodCheckerInline";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
 import BadDayMode from "@/components/tasks/BadDayMode";
+import SmartNudge from "@/components/home/SmartNudge";
 import CategoryBreakdown from "@/components/tasks/CategoryBreakdown";
 import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
 import { StickyNote } from "@/api/entities";
@@ -487,6 +488,33 @@ export default function HomePage() {
   const todayTotal = data.today.length + (data.overdue?.length || 0);
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
 
+  // ── SmartNudge: pick top insight and convert to gentle nudge ──
+  const INSIGHT_ICON_MAP = { FileBarChart, Clock, Calculator, GitBranch, Zap, AlertTriangle, TrendingUp };
+  const INSIGHT_COLOR_MAP = { teal: 'blue', amber: 'orange', blue: 'blue', sky: 'blue', emerald: 'green' };
+  const smartNudge = useMemo(() => {
+    if (!insights || insights.length === 0) return null;
+    // Pick the highest-priority actionable insight (skip celebration for nudge)
+    const top = insights.find(i => i.type !== 'celebration') || insights[0];
+    if (!top) return null;
+
+    const IconComp = INSIGHT_ICON_MAP[top.icon] || Sparkles;
+    const color = INSIGHT_COLOR_MAP[top.color] || 'blue';
+
+    // Build gentle, non-accusatory message per ADHD-first design
+    let message = top.description || '';
+    if (top.type === 'action') {
+      message = `כשתהיי מוכנה — ${top.title.toLowerCase()}. אפשר לפי הקצב שלך`;
+    } else if (top.type === 'warning') {
+      message = `יש ${top.count} משימות שכדאי לתת להן תשומת לב כשיהיה לך רגע`;
+    } else if (top.type === 'celebration') {
+      message = top.description;
+    } else {
+      message = top.description || top.title;
+    }
+
+    return { icon: IconComp, title: top.title, message, color };
+  }, [insights]);
+
   // ── Full Map View ──
   if (showFullMap) {
     return (
@@ -600,6 +628,9 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
+        {/* ═══ 1.5 SmartNudge — one gentle nudge ═══ */}
+        <SmartNudge nudge={smartNudge} />
 
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
