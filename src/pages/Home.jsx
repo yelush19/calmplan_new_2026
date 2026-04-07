@@ -604,12 +604,8 @@ export default function HomePage() {
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
-        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map (replaces old ring canvas) ═══ */}
-        {calmTasks.length === 0 ? (
-          <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-            <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
-          </div>
-        ) : (
+        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map (only when there are tasks) ═══ */}
+        {calmTasks.length > 0 && (
           <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '400px' }}>
             <FocusMapView
               tasks={calmTasks}
