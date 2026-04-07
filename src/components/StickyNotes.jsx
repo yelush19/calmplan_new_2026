@@ -142,6 +142,7 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
   const [notes, setNotes] = useState([]);
   const [clients, setClients] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
+  const [expandedNoteId, setExpandedNoteId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
@@ -266,19 +267,31 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
     loadUrgentTasks();
   }, [notes]);
 
-  // Build virtual notes from urgent tasks (3-day rule)
-  const threeDayNotes = urgentTasks.map(t => ({
-    id: `__3day_${t.id}`,
-    title: `${t.title}`,
-    content: `${resolveCategoryLabel(t.category)} | ${t.client_name || ''} | יעד: ${t.due_date}`,
-    color: 'pink',
-    pinned: false,
-    _isVirtual: true,
-    _taskId: t.id,
-    due_date: t.due_date,
-    urgency: 'urgent',
-    client_name: t.client_name,
-  }));
+  // Build virtual notes from urgent tasks (3-day rule) — compact format
+  const threeDayNotes = urgentTasks.map(t => {
+    // Strip client name from title to avoid duplication
+    let shortTitle = t.title || '';
+    if (t.client_name && shortTitle.startsWith(t.client_name)) {
+      shortTitle = shortTitle.slice(t.client_name.length).replace(/^\s*[-—]\s*/, '').trim();
+    }
+    const catLabel = resolveCategoryLabel(t.category) || '';
+    const displayTitle = shortTitle || catLabel;
+    const daysLeft = differenceInDays(parseISO(t.due_date), new Date());
+    const timeLabel = daysLeft < 0 ? `באיחור ${Math.abs(daysLeft)} ימים` : daysLeft === 0 ? 'היום' : `עוד ${daysLeft} ימים`;
+
+    return {
+      id: `__3day_${t.id}`,
+      title: t.client_name ? `${t.client_name} — ${displayTitle}` : displayTitle,
+      content: `${timeLabel} | ${t.due_date}`,
+      color: 'pink',
+      pinned: false,
+      _isVirtual: true,
+      _taskId: t.id,
+      due_date: t.due_date,
+      urgency: 'urgent',
+      client_name: t.client_name,
+    };
+  });
 
   const pinnedNotes = notes.filter(n => n.pinned);
   const unpinnedNotes = notes.filter(n => !n.pinned);
@@ -475,10 +488,62 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                     </div>
                   </div>
                 ) : (
-                  <>
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => setExpandedNoteId(expandedNoteId === note.id ? null : note.id)}
+                  >
                     <h4 className="font-bold text-sm leading-tight pr-6">{note.title}</h4>
                     {note.content && (
-                      <p className="text-xs mt-1 opacity-80 leading-relaxed line-clamp-3">{note.content}</p>
+                      <p className={`text-xs mt-1 opacity-80 leading-relaxed ${expandedNoteId === note.id ? '' : 'line-clamp-2'}`}>{note.content}</p>
+                    )}
+                    {/* Expanded: show action buttons */}
+                    {expandedNoteId === note.id && (
+                      <div className="flex gap-1.5 mt-2 pt-2 border-t border-current/10">
+                        {(note._isVirtual || note.linked_task_id) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-[11px] h-6 px-2 gap-1"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const taskId = note._taskId || note.linked_task_id;
+                              if (!taskId) return;
+                              const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+                              await Task.update(taskId, { due_date: tomorrow.toISOString().split('T')[0] });
+                              loadNotes();
+                            }}
+                          >
+                            <Calendar className="w-3 h-3" /> דחה יום
+                          </Button>
+                        )}
+                        {(note._isVirtual || note.linked_task_id) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-[11px] h-6 px-2 gap-1"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const taskId = note._taskId || note.linked_task_id;
+                              if (!taskId) return;
+                              const next = new Date(); next.setDate(next.getDate() + 3);
+                              await Task.update(taskId, { due_date: next.toISOString().split('T')[0] });
+                              loadNotes();
+                            }}
+                          >
+                            <Calendar className="w-3 h-3" /> דחה 3 ימים
+                          </Button>
+                        )}
+                        {!note._isVirtual && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-[11px] h-6 px-2 gap-1"
+                            onClick={(e) => { e.stopPropagation(); startEdit(note); }}
+                          >
+                            <Edit3 className="w-3 h-3" /> ערוך
+                          </Button>
+                        )}
+                      </div>
                     )}
                     {/* Extra fields */}
                     <div className="flex flex-wrap gap-1 mt-1.5">
@@ -579,7 +644,7 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
                         </>
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
               </motion.div>
             );
