@@ -414,13 +414,18 @@ export default function TasksPage() {
   const timeFilteredTasks = useMemo(() => {
     return tasks.filter(task => {
       const dueDate = task.due_date ? parseISO(task.due_date) : null;
-      // For month filters: prefer reporting_month (e.g. "2026-03") over due_date
+      // For month filters: prefer reporting_month over due_date
+      // If reporting_month missing, derive from due_date - 1 month (deadline = report + 1)
       const getTaskMonth = () => {
         if (task.reporting_month) {
           const parts = task.reporting_month.split('-');
           return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 15);
         }
-        return dueDate;
+        if (dueDate) {
+          // due_date is always report_month + 1, so subtract 1 month
+          return new Date(dueDate.getFullYear(), dueDate.getMonth() - 1, 15);
+        }
+        return null;
       };
       switch (timeTab) {
         case 'prev_month': {
