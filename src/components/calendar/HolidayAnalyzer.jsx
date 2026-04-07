@@ -6,22 +6,8 @@ import { Info, AlertTriangle, PartyPopper, CalendarDays, Moon } from 'lucide-rea
 import { isToday, isTomorrow, isSameDay, parseISO, format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 
-const ISRAELI_HOLIDAYS_2024 = {
-  "2024-10-02": { name: "ערב ראש השנה", type: "erev" },
-  "2024-10-03": { name: "ראש השנה א'", type: "holiday" },
-  "2024-10-04": { name: "ראש השנה ב'", type: "holiday" },
-  "2024-10-11": { name: "ערב יום כיפור", type: "erev" },
-  "2024-10-12": { name: "יום כיפור", type: "holiday" },
-  "2024-10-16": { name: "ערב סוכות", type: "erev" },
-  "2024-10-17": { name: "סוכות", type: "holiday" },
-  "2024-10-18": { name: "חול המועד סוכות", type: "chol_hamoed" },
-  "2024-10-19": { name: "חול המועד סוכות", type: "chol_hamoed" },
-  "2024-10-20": { name: "חול המועד סוכות", type: "chol_hamoed" },
-  "2024-10-21": { name: "חול המועד סוכות", type: "chol_hamoed" },
-  "2024-10-22": { name: "חול המועד סוכות", type: "chol_hamoed" },
-  "2024-10-23": { name: "ערב שמחת תורה", type: "erev" },
-  "2024-10-24": { name: "שמחת תורה", type: "holiday" },
-};
+// ── חגים ישראליים — מקובץ מרכזי אחד (2026) ──
+import { HOLIDAYS_LOOKUP as ISRAELI_HOLIDAYS } from '@/config/israeliHolidays';
 
 export default function HolidayAnalyzer({ task, date, onDateChange }) {
   const analysis = useMemo(() => {
@@ -32,8 +18,8 @@ export default function HolidayAnalyzer({ task, date, onDateChange }) {
       const dateString = format(selectedDate, "yyyy-MM-dd");
       const dayOfWeek = selectedDate.getDay();
 
-      if (ISRAELI_HOLIDAYS_2024[dateString]) {
-        const holiday = ISRAELI_HOLIDAYS_2024[dateString];
+      if (ISRAELI_HOLIDAYS[dateString]) {
+        const holiday = ISRAELI_HOLIDAYS[dateString];
         if (holiday.type === 'holiday') {
           return {
             level: 'error',
@@ -106,7 +92,7 @@ export default function HolidayAnalyzer({ task, date, onDateChange }) {
     while (true) {
         const dayOfWeek = currentDate.getDay();
         const dateString = format(currentDate, "yyyy-MM-dd");
-        if (dayOfWeek !== 5 && dayOfWeek !== 6 && (!ISRAELI_HOLIDAYS_2024[dateString] || ISRAELI_HOLIDAYS_2024[dateString].type !== 'holiday')) {
+        if (dayOfWeek !== 5 && dayOfWeek !== 6 && (!ISRAELI_HOLIDAYS[dateString] || ISRAELI_HOLIDAYS[dateString].type !== 'holiday')) {
             onDateChange(format(currentDate, "yyyy-MM-dd'T'HH:mm"));
             break;
         }

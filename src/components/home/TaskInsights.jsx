@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
   FileBarChart, Clock, Calculator, GitBranch, Zap,
-  AlertTriangle, TrendingUp, Sparkles,
+  AlertTriangle, TrendingUp, Sparkles, ArrowLeft,
 } from 'lucide-react';
 
 const ICON_MAP = { FileBarChart, Clock, Calculator, GitBranch, Zap, AlertTriangle, TrendingUp, Sparkles };
@@ -13,6 +14,16 @@ const COLOR_MAP = {
   blue:    { bg: 'bg-blue-50',    border: 'border-blue-200',   icon: 'text-blue-600',    text: 'text-blue-800' },
   sky:     { bg: 'bg-sky-50',     border: 'border-sky-200',    icon: 'text-sky-600',     text: 'text-sky-800' },
   emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200',icon: 'text-emerald-600', text: 'text-emerald-800' },
+};
+
+// Map insight categories to relevant dashboard routes
+const CATEGORY_LINKS = {
+  vat: '/TaxReportsDashboard',
+  payroll: '/PayrollDashboard',
+  payroll_workflow: '/PayrollDashboard',
+  payroll_nano: '/PayrollDashboard',
+  external: '/Tasks',
+  overdue: '/Tasks',
 };
 
 const MAX_INSIGHTS = 4;
@@ -31,16 +42,10 @@ export default function TaskInsights({ insights }) {
           {visible.map((insight, idx) => {
             const Icon = ICON_MAP[insight.icon] || Sparkles;
             const colors = COLOR_MAP[insight.color] || COLOR_MAP.blue;
+            const linkTo = CATEGORY_LINKS[insight.category];
 
-            return (
-              <motion.div
-                key={insight.category}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3, delay: idx * 0.05 }}
-                className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${colors.bg} ${colors.border}`}
-              >
+            const cardContent = (
+              <>
                 <div className={`w-8 h-8 rounded-lg bg-white flex-shrink-0 flex items-center justify-center ${colors.icon}`}>
                   <Icon className="w-4 h-4" />
                 </div>
@@ -54,6 +59,32 @@ export default function TaskInsights({ insights }) {
                     </p>
                   )}
                 </div>
+                {linkTo && (
+                  <ArrowLeft className={`w-4 h-4 flex-shrink-0 opacity-40 ${colors.icon}`} />
+                )}
+              </>
+            );
+
+            return (
+              <motion.div
+                key={insight.category}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3, delay: idx * 0.05 }}
+              >
+                {linkTo ? (
+                  <Link
+                    to={linkTo}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-shadow hover:shadow-md cursor-pointer ${colors.bg} ${colors.border}`}
+                  >
+                    {cardContent}
+                  </Link>
+                ) : (
+                  <div className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${colors.bg} ${colors.border}`}>
+                    {cardContent}
+                  </div>
+                )}
               </motion.div>
             );
           })}

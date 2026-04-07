@@ -22,13 +22,10 @@ function getDayOfWeek(year, month, day) {
   return new Date(year, month - 1, day).getDay();
 }
 
-// Helper: adjust date to next Monday if it falls on Fri(5)/Sat(6)/Sun(0)
+// Helper: adjust date to next work day if it falls on Fri/Sat/Sun or holiday
+import { adjustForRestDayWithHolidays } from '@/config/israeliHolidays';
 function adjustForRestDay(year, month, day) {
-  const dow = getDayOfWeek(year, month, day);
-  if (dow === 5) return day + 3; // Fri → Mon
-  if (dow === 6) return day + 2; // Sat → Mon
-  if (dow === 0) return day + 1; // Sun → Mon
-  return day;
+  return adjustForRestDayWithHolidays(year, month, day);
 }
 
 // Helper: adjust national insurance (only if Saturday → 16th)
@@ -73,8 +70,8 @@ function generateTaxCalendar2026() {
     const masavSocialDay = 12;
     // מס"ב רשויות / תשלום רשויות — 15th
     const masavAuthoritiesDay = 15;
-    // מס"ב ספקים — 10th
-    const masavSuppliersDay = 10;
+    // מס"ב ספקים — 15th (תיקון: היה 10, הנכון הוא 15 לחודש)
+    const masavSuppliersDay = 15;
     // דיווח למתפעל/טמל — 5th
     const operatorReportDay = 5;
     // הנחיות מס"ב ממתפעל — 1st
