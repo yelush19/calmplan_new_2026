@@ -418,6 +418,29 @@ export default function HomePage() {
     return sortByPriority(energyFiltered).slice(0, 5);
   }, [data, filterByEnergy]);
 
+  // ── SmartNudge: pick top insight and convert to gentle nudge ──
+  // MUST be before early returns (Rules of Hooks)
+  const INSIGHT_ICON_MAP = { FileBarChart, Clock, Calculator, GitBranch, Zap, AlertTriangle, TrendingUp };
+  const INSIGHT_COLOR_MAP = { teal: 'blue', amber: 'orange', blue: 'blue', sky: 'blue', emerald: 'green' };
+  const smartNudge = useMemo(() => {
+    if (!insights || insights.length === 0) return null;
+    const top = insights.find(i => i.type !== 'celebration') || insights[0];
+    if (!top) return null;
+    const IconComp = INSIGHT_ICON_MAP[top.icon] || Sparkles;
+    const color = INSIGHT_COLOR_MAP[top.color] || 'blue';
+    let message = top.description || '';
+    if (top.type === 'action') {
+      message = `כשתהיי מוכנה — ${top.title.toLowerCase()}. אפשר לפי הקצב שלך`;
+    } else if (top.type === 'warning') {
+      message = `יש ${top.count} משימות שכדאי לתת להן תשומת לב כשיהיה לך רגע`;
+    } else if (top.type === 'celebration') {
+      message = top.description;
+    } else {
+      message = top.description || top.title;
+    }
+    return { icon: IconComp, title: top.title, message, color };
+  }, [insights]);
+
   if (isLoading || !data) {
     return (
       <div className="space-y-6 p-6">
@@ -524,33 +547,6 @@ export default function HomePage() {
 
   const todayTotal = data.today.length + (data.overdue?.length || 0);
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
-
-  // ── SmartNudge: pick top insight and convert to gentle nudge ──
-  const INSIGHT_ICON_MAP = { FileBarChart, Clock, Calculator, GitBranch, Zap, AlertTriangle, TrendingUp };
-  const INSIGHT_COLOR_MAP = { teal: 'blue', amber: 'orange', blue: 'blue', sky: 'blue', emerald: 'green' };
-  const smartNudge = useMemo(() => {
-    if (!insights || insights.length === 0) return null;
-    // Pick the highest-priority actionable insight (skip celebration for nudge)
-    const top = insights.find(i => i.type !== 'celebration') || insights[0];
-    if (!top) return null;
-
-    const IconComp = INSIGHT_ICON_MAP[top.icon] || Sparkles;
-    const color = INSIGHT_COLOR_MAP[top.color] || 'blue';
-
-    // Build gentle, non-accusatory message per ADHD-first design
-    let message = top.description || '';
-    if (top.type === 'action') {
-      message = `כשתהיי מוכנה — ${top.title.toLowerCase()}. אפשר לפי הקצב שלך`;
-    } else if (top.type === 'warning') {
-      message = `יש ${top.count} משימות שכדאי לתת להן תשומת לב כשיהיה לך רגע`;
-    } else if (top.type === 'celebration') {
-      message = top.description;
-    } else {
-      message = top.description || top.title;
-    }
-
-    return { icon: IconComp, title: top.title, message, color };
-  }, [insights]);
 
   // ── Full Map View ──
   if (showFullMap) {
@@ -682,10 +678,23 @@ export default function HomePage() {
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
-        {/* ═══ 3. "מה אפשר לעשות היום" — temporarily disabled to isolate #310 ═══ */}
-        <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-          <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text={calmTasks.length === 0 ? "אין משימות להיום — כל הכבוד!" : `${calmTasks.length} משימות להיום`} />
-        </div>
+        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map ═══ */}
+        {calmTasks.length === 0 ? (
+          <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+            <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
+          </div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '400px' }}>
+            <FocusMapView
+              tasks={calmTasks}
+              allTasks={data.activeTasks || []}
+              centerLabel="מה לעשות היום"
+              centerSub={`${data.overdue.length + data.today.length} משימות`}
+              onEditTask={setEditingTask}
+              onStatusChange={handleStatusChange}
+            />
+          </div>
+        )}
 
         {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
         <CategoryBreakdown tasks={data.mergedToday || []} />
