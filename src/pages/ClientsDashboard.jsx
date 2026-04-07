@@ -365,7 +365,12 @@ export default function ClientsDashboardPage() {
         // Run cascade with ORIGINAL task so production_completed guard works correctly
         const steps = getTaskProcessSteps(taskObj);
         const siblings = tasks.filter(t => t.client_name === taskObj.client_name && t.id !== taskObj.id);
-        const cascade = processTaskCascade(taskObj, steps, siblings);
+        const clientObj = clients.find(c => c.name === taskObj.client_name || c.id === taskObj.client_id);
+        const cascade = processTaskCascade(taskObj, steps, siblings, {
+          clientServices: clientObj?.service_types || [],
+          clientPaymentMethod: clientObj?.authorities_payment_method || '',
+          clientReportingInfo: clientObj?.reporting_info || {},
+        });
         const finalStatus = cascade.statusUpdate?.status || newStatus;
         await Task.update(taskObj.id, { status: finalStatus });
 
