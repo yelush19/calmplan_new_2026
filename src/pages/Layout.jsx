@@ -167,10 +167,12 @@ const getVisibleSections = (mode) => {
 
 // Deadline countdown — connected to real TAX_CALENDAR_2026
 import { TAX_CALENDAR_2026 } from "@/config/taxCalendar2026";
+import { getHolidayName } from "@/config/israeliHolidays";
 
 const getNextDeadline = () => {
   const now = new Date();
-  const today = now.toISOString().slice(0, 10); // YYYY-MM-DD
+  now.setHours(0, 0, 0, 0); // normalize to midnight to avoid truncation bugs
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
   // Collect all upcoming deadlines from the tax calendar
   const allDeadlines = [];
@@ -209,7 +211,20 @@ const getNextDeadline = () => {
   }
 
   const daysLeft = differenceInDays(parseISO(next.date), now);
-  return { daysLeft, label: next.label, reportMonth: next.reportMonth };
+
+  // Check if days between now and deadline include holidays
+  let holidayWarning = null;
+  if (daysLeft > 0 && daysLeft <= 3) {
+    const d = new Date(now);
+    for (let i = 1; i <= daysLeft; i++) {
+      d.setDate(d.getDate() + 1);
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const hName = getHolidayName(ds);
+      if (hName) { holidayWarning = hName; break; }
+    }
+  }
+
+  return { daysLeft, label: next.label, reportMonth: next.reportMonth, holidayWarning };
 };
 
 // ─── Draggable FAB component (useMotionValue localStorage persist) ─────────
@@ -550,7 +565,7 @@ function LayoutInner({ children }) {
   }, [location.pathname, isHomePage, sidebarSections]);
 
   const emergencyCount = emergencyTasks.length;
-  const { daysLeft, label: deadlineLabel, reportMonth: deadlineReportMonth } = getNextDeadline();
+  const { daysLeft, label: deadlineLabel, reportMonth: deadlineReportMonth, holidayWarning } = getNextDeadline();
 
   return (
     <TooltipProvider>
@@ -603,7 +618,7 @@ function LayoutInner({ children }) {
               backgroundColor: daysLeft <= 3 ? '#FFF8E7' : '#F0F7FA',
               color: daysLeft <= 3 ? '#B8860B' : '#5A8FA0',
             }}>
-              {daysLeft <= 0 ? 'היום' : daysLeft === 1 ? 'מחר' : `עוד ${daysLeft} ימים`} — {deadlineLabel}{deadlineReportMonth ? ` (${deadlineReportMonth})` : ''}
+              {daysLeft <= 0 ? 'היום' : daysLeft === 1 ? 'מחר' : `עוד ${daysLeft} ימים`} — {deadlineLabel}{deadlineReportMonth ? ` (${deadlineReportMonth})` : ''}{holidayWarning ? ` ⚠ ${holidayWarning}` : ''}
             </Badge>
 
             {/* Energy Filter */}

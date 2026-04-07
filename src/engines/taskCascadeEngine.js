@@ -199,15 +199,17 @@ export function filterByClientServices(tasksToCreate, clientServices, clientProc
  * @returns {string} YYYY-MM-DD (15th of next month)
  */
 export function getSubTaskDueDate(parentDueDate) {
+  const pad = (n) => String(n).padStart(2, '0');
   if (!parentDueDate) {
     // Fallback: 15th of next month from now
     const now = new Date();
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 15);
-    return nextMonth.toISOString().split('T')[0];
+    const y = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+    const m = now.getMonth() === 11 ? 1 : now.getMonth() + 2;
+    return `${y}-${pad(m)}-15`;
   }
-  const d = new Date(parentDueDate);
+  const d = new Date(parentDueDate + 'T12:00:00');
   const nextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 15);
-  return nextMonth.toISOString().split('T')[0];
+  return `${nextMonth.getFullYear()}-${pad(nextMonth.getMonth() + 1)}-${pad(nextMonth.getDate())}`;
 }
 
 // ============================================================
