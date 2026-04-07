@@ -374,15 +374,20 @@ export default function HomePage() {
     return calculateCapacity(data.activeTasks || []);
   }, [data]);
 
+  // ── Merged today list (overdue + today) — single memoized reference ──
+  const mergedToday = useMemo(() => {
+    if (!data) return [];
+    return sortByPriority([...(data.overdue || []), ...(data.today || [])]);
+  }, [data]);
+
   // ── Top 5 tasks for the calm "מה אפשר לעשות היום" section ──
   // Must be above the early return so hook count is stable across renders
   // Energy filter: when energy is low/medium, show only matching cognitive-load tasks
   const calmTasks = useMemo(() => {
     if (!data) return [];
-    const merged = [...(data.overdue || []), ...(data.today || [])];
-    const energyFiltered = filterByEnergy(merged);
-    return sortByPriority(energyFiltered).slice(0, 5);
-  }, [data, filterByEnergy]);
+    const energyFiltered = filterByEnergy(mergedToday);
+    return energyFiltered.slice(0, 5);
+  }, [mergedToday, filterByEnergy]);
 
   if (isLoading || !data) {
     return (
@@ -484,8 +489,8 @@ export default function HomePage() {
 
   const getSectionData = (tabKey) => {
     if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
-    // Merge overdue into "today" — single unified section
-    if (tabKey === 'today') return filterBySearch([...(data.overdue || []), ...(data.today || [])]);
+    // Merge overdue into "today" — uses memoized mergedToday
+    if (tabKey === 'today') return filterBySearch(mergedToday);
     return filterBySearch(data[tabKey] || []);
   };
 
@@ -657,7 +662,7 @@ export default function HomePage() {
         )}
 
         {/* ═══ 3.5 Category Breakdown — what remains for today (overdue + today) ═══ */}
-        <CategoryBreakdown tasks={[...(data.overdue || []), ...(data.today || [])]} />
+        <CategoryBreakdown tasks={mergedToday} />
 
         {/* ═══ 3.6 Collapsible Sections — today (merged with overdue)/upcoming/events/payment ═══ */}
         <div className="space-y-2">
