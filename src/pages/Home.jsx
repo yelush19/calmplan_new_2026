@@ -221,9 +221,8 @@ export default function HomePage() {
       });
 
       // Payment tab: tasks with payment_due_date set, OR completed production awaiting payment step
-      // Exclude "ghost" tasks — missing critical data (no due_date AND no client_size)
+      // Exclude ghost tasks — missing critical data
       const waitingPayment = allTasks.filter(t => {
-        // Ghost tasks: missing critical data — don't show on home page
         if (!t.due_date && !t.client_size) return false;
         // Include tasks explicitly marked with legacy status
         if (t.status === 'reported_waiting_for_payment') return true;
@@ -250,7 +249,6 @@ export default function HomePage() {
 
       const sortedOverdue = sortByPriority(overdue);
       const sortedToday = sortByPriority(todayTasks);
-
       setData({
         allTasks,
         activeTasks,
@@ -321,7 +319,6 @@ export default function HomePage() {
 
         const newOverdue = filterCompleted(updateInList(prev.overdue));
         const newToday = filterCompleted(updateInList(prev.today));
-
         return {
           ...prev,
           overdue: newOverdue,
@@ -505,7 +502,6 @@ export default function HomePage() {
 
   const getSectionData = (tabKey) => {
     if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
-    // Merge overdue into "today" — pre-computed in data.mergedToday
     if (tabKey === 'today') return filterBySearch(data.mergedToday || []);
     return filterBySearch(data[tabKey] || []);
   };
@@ -670,8 +666,12 @@ export default function HomePage() {
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
-        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map (only when there are tasks) ═══ */}
-        {calmTasks.length > 0 && (
+        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map (replaces old ring canvas) ═══ */}
+        {calmTasks.length === 0 ? (
+          <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+            <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
+          </div>
+        ) : (
           <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '400px' }}>
             <FocusMapView
               tasks={calmTasks}
@@ -684,10 +684,10 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ═══ 3.5 Category Breakdown — what remains for today (overdue + today) ═══ */}
+        {/* ═══ 3.5 Category Breakdown — what remains for today ═══ */}
         <CategoryBreakdown tasks={data.mergedToday || []} />
 
-        {/* ═══ 3.6 Collapsible Sections — today (merged with overdue)/upcoming/events/payment ═══ */}
+        {/* ═══ 3.6 Collapsible Sections — overdue/today/upcoming/events/payment ═══ */}
         <div className="space-y-2">
           {FOCUS_TABS.map(tab => {
             const Icon = tab.icon;
