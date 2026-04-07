@@ -302,10 +302,11 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
 
       // Auto-create next task in pension cascade chain
+      let didCreate = false;
       if (cascade.tasksToCreate?.length > 0) {
         for (const childDef of cascade.tasksToCreate) {
-          const created = await Task.create(childDef);
-          setTasks(prev => [...prev, created]);
+          await Task.create(childDef);
+          didCreate = true;
         }
       }
 
@@ -316,7 +317,9 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         const unlocks = unlockDependentTasks(completedTask, tasks);
         for (const { task: depTask, newStatus: depStatus } of unlocks) {
           await Task.update(depTask.id, { status: depStatus });
-          setTasks(prev => prev.map(t => t.id === depTask.id ? { ...t, status: depStatus } : t));
+        }
+        if (didCreate || unlocks.length > 0) {
+          loadData();
         }
       }
     } catch (error) { console.error("Error updating step:", error); }
@@ -345,24 +348,36 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
 
       if (newStatus === 'production_completed') {
         // Run cascade to auto-create next task in pension chain
+        // Pass task with ORIGINAL status so cascade guard doesn't block
         const client = clientByName[task.client_name];
-        const completedTask = { ...task, ...updatePayload };
-        const cascade = processTaskCascade(completedTask, updatePayload.process_steps || task.process_steps, tasks, {
-          clientServices: client?.service_types || [],
-          clientReportingInfo: client?.reporting_info || {},
-        });
+        const stepsForCascade = updatePayload.process_steps || task.process_steps || {};
+        const cascade = processTaskCascade(
+          { ...task, process_steps: stepsForCascade },
+          stepsForCascade,
+          tasks,
+          {
+            clientServices: client?.service_types || [],
+            clientReportingInfo: client?.reporting_info || {},
+          }
+        );
+        let didCreate = false;
         if (cascade.tasksToCreate?.length > 0) {
           for (const childDef of cascade.tasksToCreate) {
-            const created = await Task.create(childDef);
-            setTasks(prev => [...prev, created]);
+            await Task.create(childDef);
+            didCreate = true;
           }
         }
 
         // Unlock existing dependent tasks
+        const completedTask = { ...task, ...updatePayload };
         const unlocks = unlockDependentTasks(completedTask, tasks);
         for (const { task: depTask, newStatus: depStatus } of unlocks) {
           await Task.update(depTask.id, { status: depStatus });
-          setTasks(prev => prev.map(t => t.id === depTask.id ? { ...t, status: depStatus } : t));
+        }
+
+        // Reload data to show new tasks
+        if (didCreate || unlocks.length > 0) {
+          loadData();
         }
       }
     } catch (error) { console.error("Error updating status:", error); }
