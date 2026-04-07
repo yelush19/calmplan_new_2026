@@ -66,7 +66,7 @@ export default function useAutoReminders() {
         // If there's a flood (>10 auto notes), purge ALL auto-generated notes first
         let removed = 0;
         const autoNotes = notesArr.filter(n => n.linked_task_id || n.category === 'client_work');
-        if (autoNotes.length > 10) {
+        if (autoNotes.length > 6) {
           // Flood detected — purge all auto notes
           for (const note of autoNotes) {
             try { await StickyNote.delete(note.id); removed++; } catch { /* ignore */ }
@@ -121,20 +121,19 @@ export default function useAutoReminders() {
           if (daysUntilDue <= 3) {
             const urgency = daysUntilDue <= 0 ? 'urgent' : daysUntilDue <= 1 ? 'high' : 'medium';
             const colorMap = { urgent: 'purple', high: 'purple', medium: 'yellow' };
-            const prefix = daysUntilDue < 0
-              ? `⚠️ באיחור ${Math.abs(daysUntilDue)} ימים!`
-              : daysUntilDue === 0
-                ? '🔴 היום!'
-                : `⏰ עוד ${daysUntilDue} ימים`;
+            const timeLabel = daysUntilDue < 0
+              ? `באיחור ${Math.abs(daysUntilDue)} ימים`
+              : daysUntilDue === 0 ? 'היום' : `עוד ${daysUntilDue} ימים`;
 
-            const contentParts = [prefix];
-            if (task.client_name) contentParts.push(`לקוח: ${task.client_name}`);
-            if (task.category) contentParts.push(`קטגוריה: ${resolveCategoryLabel(task.category)}`);
-            if (task.description) contentParts.push(task.description);
+            // Compact title: client + category
+            const catLabel = resolveCategoryLabel(task.category) || '';
+            const compactTitle = task.client_name
+              ? `${task.client_name} — ${catLabel}`
+              : task.title;
 
             await StickyNote.create({
-              title: `📌 ${task.title}`,
-              content: contentParts.join('\n'),
+              title: compactTitle,
+              content: `${timeLabel} | ${task.due_date}`,
               color: colorMap[urgency] || 'yellow',
               pinned: true,
               linked_task_id: task.id,
