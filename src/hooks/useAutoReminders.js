@@ -4,7 +4,7 @@ import { Task, StickyNote } from '@/api/entities';
 import { differenceInDays, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
-const DONE_STATUSES = ['completed', 'not_relevant', 'cancelled'];
+const DONE_STATUSES = ['completed', 'production_completed', 'not_relevant', 'cancelled', 'reported_waiting_for_payment'];
 
 /**
  * Remove sticky notes linked to tasks that are now completed/cancelled/not_relevant.
@@ -79,9 +79,13 @@ export default function useAutoReminders() {
 
         const today = startOfDay(new Date());
         let created = 0;
+        const MAX_NEW_NOTES = 6; // Limit to avoid flooding — ADHD-friendly
 
         for (const task of activeTasks) {
+          if (created >= MAX_NEW_NOTES) break;
           if (stillLinked.has(task.id)) continue;
+          // Skip waiting_for_materials — user can't act on these
+          if (task.status === 'waiting_for_materials') continue;
 
           const dueDate = startOfDay(new Date(task.due_date));
           const daysUntilDue = differenceInDays(dueDate, today);
