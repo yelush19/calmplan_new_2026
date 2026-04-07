@@ -42,6 +42,8 @@ import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
 import FocusMapView from '@/components/canvas/FocusMapView';
+import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
+import { getServiceWeight } from '@/config/serviceWeights';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
 
 // P1 Board 3 — דיווחים + קליטה: ב"ל + ניכויים + תשלום רשויות + מילואים + קליטה להנה"ח
@@ -88,6 +90,7 @@ export default function PayrollReportsDashboardPage() {
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState(null);
+  const [cognitiveFilter, setCognitiveFilter] = useState(null);
   const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
@@ -175,8 +178,14 @@ export default function PayrollReportsDashboardPage() {
     if (statusFilter) {
       result = result.filter(t => (t.status || 'not_started') === statusFilter);
     }
+    if (cognitiveFilter !== null) {
+      result = result.filter(t => {
+        const w = getServiceWeight(t.category);
+        return (w.cognitiveLoad ?? 0) === cognitiveFilter;
+      });
+    }
     return result;
-  }, [tasks, clientFilter, searchTerm, statusFilter]);
+  }, [tasks, clientFilter, searchTerm, statusFilter, cognitiveFilter]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
@@ -590,6 +599,8 @@ export default function PayrollReportsDashboardPage() {
       </AnimatePresence>
 
       <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
+
+      <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">

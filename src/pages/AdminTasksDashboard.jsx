@@ -40,6 +40,8 @@ import MiroProcessMap from '@/components/views/MiroProcessMap';
 import ProjectTimelineView from '@/components/dashboard/ProjectTimelineView';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import FocusMapView from '@/components/canvas/FocusMapView';
+import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
+import { getServiceWeight } from '@/config/serviceWeights';
 
 // Admin dashboard services (dashboard: 'admin')
 const adminDashboardServices = Object.fromEntries(
@@ -81,6 +83,7 @@ export default function AdminTasksDashboardPage() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState(null);
+  const [cognitiveFilter, setCognitiveFilter] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
@@ -140,8 +143,14 @@ export default function AdminTasksDashboardPage() {
     if (statusFilter) {
       result = result.filter(t => (t.status || 'not_started') === statusFilter);
     }
+    if (cognitiveFilter !== null) {
+      result = result.filter(t => {
+        const w = getServiceWeight(t.category);
+        return (w.cognitiveLoad ?? 0) === cognitiveFilter;
+      });
+    }
     return result;
-  }, [tasks, clientFilter, searchTerm, statusFilter]);
+  }, [tasks, clientFilter, searchTerm, statusFilter, cognitiveFilter]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
@@ -371,6 +380,8 @@ export default function AdminTasksDashboardPage() {
       </div>
 
       <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
+
+      <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
 
       {/* DNA Pipeline Status Cards */}
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
