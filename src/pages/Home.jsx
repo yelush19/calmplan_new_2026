@@ -116,7 +116,7 @@ export default function HomePage() {
     payment: true,
   });
   const { confirm, ConfirmDialogComponent } = useConfirm();
-  const { focusMode, filterByEnergy, energyLevel } = useApp();
+  const { focusMode, filterByEnergy, energyLevel, setEnergyLevel } = useApp();
   const [stickyNotes, setStickyNotes] = useState([]);
 
   let design = null;
@@ -557,6 +557,36 @@ export default function HomePage() {
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: '#5A9EB5' }} />
             </div>
             <span className="text-[10px] font-bold text-slate-400">{Math.round(progress)}%</span>
+          </div>
+
+          {/* Energy level buttons */}
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-[10px] text-slate-400">רמת אנרגיה:</span>
+            <div className="flex gap-1.5">
+              {[
+                { key: 'full', emoji: '☀️', label: 'מלא', bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' },
+                { key: 'medium', emoji: '☕', label: 'בינוני', bg: '#DBEAFE', border: '#3B82F6', text: '#1E40AF' },
+                { key: 'low', emoji: '🔋', label: 'נמוך', bg: '#D1FAE5', border: '#10B981', text: '#065F46' },
+              ].map(opt => {
+                const isActive = energyLevel === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    onClick={() => setEnergyLevel(opt.key)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200"
+                    style={{
+                      backgroundColor: isActive ? opt.bg : 'transparent',
+                      border: isActive ? `1.5px solid ${opt.border}` : '1.5px solid #E5E7EB',
+                      color: isActive ? opt.text : '#64748B',
+                      transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                    }}
+                  >
+                    <span>{opt.emoji}</span>
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
