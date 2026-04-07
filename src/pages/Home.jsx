@@ -237,9 +237,9 @@ export default function HomePage() {
         return taskDate >= tomorrow && taskDate <= in3Days;
       });
 
-      // Payment tab — exclude ghost tasks (no due_date AND no client_size)
+      // Payment tab — exclude ghost tasks (missing critical data)
       const waitingPayment = allTasks.filter(t => {
-        if (!t.due_date && !t.client_size) return false;
+        if (!t.due_date || !t.client_name) return false;
         // Include tasks explicitly marked with legacy status
         if (t.status === 'reported_waiting_for_payment') return true;
         // Include completed tasks that have a payment_due_date (payment pending)
