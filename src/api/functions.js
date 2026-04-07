@@ -1173,13 +1173,13 @@ export const cleanupGhostTasks = async ({ dryRun = true } = {}) => {
   ]);
 
   // Known deprecated/ghost categories from old code
+  // NOTE: ביטוח לאומי was here but it's ACTIVE — injection creates tasks with this category!
   const GHOST_CATEGORIES = new Set([
     'סוציאליות',           // old generic — replaced by פנסיות וקרנות
     'סוציאליות מתפעל',     // old — replaced by פנסיות — מתפעל
     'סוציאליות טמל',       // old — replaced by פנסיות — טמל
     'סוציאליות - מתפעל',   // old variant
     'סוציאליות - טמל',     // old variant
-    'ביטוח לאומי',         // old generic social_security
     'social_security',      // old English category
   ]);
 
