@@ -901,15 +901,23 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     setIsClearingCache(false);
   };
 
-  // Find ghost tasks: ALL tasks with due_date beyond the current month
-  // If you only injected for March (due in April), anything in May+ is a ghost
+  // Find ghost tasks: tasks for reporting periods that haven't been injected
+  // In April, current reporting period = March ("2026-03"). Anything with reporting_month >= "2026-04" OR due_date >= May = ghost
   const ghostTasks = useMemo(() => {
     if (!existingTasks) return [];
     const now = new Date();
-    const nextMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, '0')}-01`;
+    const pad = (n) => String(n).padStart(2, '0');
+    const currentMonth = now.getMonth() + 1;
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevMonthYear = currentMonth === 1 ? now.getFullYear() - 1 : now.getFullYear();
+    const currentReportingMonth = `${prevMonthYear}-${pad(prevMonth)}`;
+    const nextMonthStart = `${now.getFullYear()}-${pad(now.getMonth() + 2)}-01`;
     const ghosts = existingTasks.filter(t => {
-      if (!t.due_date) return false;
-      return t.due_date >= nextMonthStart;
+      // Future due_date
+      if (t.due_date && t.due_date >= nextMonthStart) return true;
+      // Future reporting_month
+      if (t.reporting_month && t.reporting_month > currentReportingMonth) return true;
+      return false;
     });
     // Group by category for display
     const byCategory = {};

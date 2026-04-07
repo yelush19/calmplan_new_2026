@@ -1188,15 +1188,20 @@ export const cleanupGhostTasks = async ({ dryRun = true } = {}) => {
     const ghostTasks = [];
     const validTasks = [];
 
-    // Detect future-month tasks (tasks with due_date beyond current month)
+    // Detect future-month tasks
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevMonthYear = currentMonth === 1 ? now.getFullYear() - 1 : now.getFullYear();
+    // Current reporting period = previous month (e.g., in April we report for March)
+    const currentReportingMonth = `${prevMonthYear}-${pad(prevMonth)}`;
     const nextMonthStart = `${now.getFullYear()}-${pad(now.getMonth() + 2)}-01`;
 
     for (const task of allTasks) {
       const cat = (task.category || '').trim();
 
-      // Rule 1: Future-month tasks — due_date beyond current month = ghost
+      // Rule 1a: Future due_date — beyond current month
       if (task.due_date && task.due_date >= nextMonthStart) {
         ghostTasks.push({
           id: task.id,
@@ -1204,8 +1209,25 @@ export const cleanupGhostTasks = async ({ dryRun = true } = {}) => {
           category: cat,
           client_name: task.client_name,
           due_date: task.due_date,
+          reporting_month: task.reporting_month,
           status: task.status,
           reason: `תאריך יעד עתידי: ${task.due_date}`,
+        });
+        continue;
+      }
+
+      // Rule 1b: Future reporting_month — beyond current reporting period
+      // e.g., in April, currentReportingMonth = "2026-03". Any task with reporting_month >= "2026-04" is a ghost.
+      if (task.reporting_month && task.reporting_month > currentReportingMonth) {
+        ghostTasks.push({
+          id: task.id,
+          title: task.title,
+          category: cat,
+          client_name: task.client_name,
+          due_date: task.due_date,
+          reporting_month: task.reporting_month,
+          status: task.status,
+          reason: `חודש דיווח עתידי: ${task.reporting_month}`,
         });
         continue;
       }
