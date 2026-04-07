@@ -149,7 +149,7 @@ const mondayStatusMapping = {
   'לבצע תיקונים': 'needs_corrections',
 };
 
-// Time period tabs
+// Time period tabs — dynamic based on actual reporting months in tasks
 function getTimePeriods() {
   const now = new Date();
   return {
@@ -158,10 +158,9 @@ function getTimePeriods() {
     prevMonthEnd: endOfMonth(subMonths(now, 1)),
     currMonthStart: startOfMonth(now),
     currMonthEnd: endOfMonth(now),
-    tabs: [
+    // Static tabs — dynamic month tabs added in component from actual task data
+    staticTabs: [
       { key: 'active', label: 'פעילות (כל התקופות)', icon: AlertTriangle },
-      { key: 'prev_month', label: format(subMonths(now, 1), 'MMMM', { locale: he }), icon: Calendar },
-      { key: 'curr_month', label: format(now, 'MMMM', { locale: he }), icon: Clock },
       { key: 'all', label: 'הכל', icon: List },
       { key: 'completed', label: 'הושלם ייצור', icon: CheckCircle },
     ],
@@ -174,7 +173,7 @@ export default function TasksPage() {
   const design = useDesign();
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { getClientDisplayIds } = useApp();
-  const { prevMonthStart, prevMonthEnd, currMonthStart, currMonthEnd, tabs: TIME_TABS } = useMemo(() => getTimePeriods(), []);
+  const { prevMonthStart, prevMonthEnd, currMonthStart, currMonthEnd, staticTabs } = useMemo(() => getTimePeriods(), []);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -427,6 +426,14 @@ export default function TasksPage() {
         }
         return null;
       };
+      // Dynamic month filter: "month_2026-03" → filter by reporting month
+      if (timeTab.startsWith('month_')) {
+        const targetRM = timeTab.replace('month_', '');
+        const taskMonth = getTaskMonth();
+        if (!taskMonth) return false;
+        const taskRM = `${taskMonth.getFullYear()}-${String(taskMonth.getMonth() + 1).padStart(2, '0')}`;
+        return taskRM === targetRM;
+      }
       switch (timeTab) {
         case 'prev_month': {
           const taskMonth = getTaskMonth();
@@ -944,45 +951,72 @@ export default function TasksPage() {
         )}
       </AnimatePresence>
 
-      {/* Time Period Tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {TIME_TABS.map(tab => {
-          const Icon = tab.icon;
-          const isActive = timeTab === tab.key;
-          const contextTasks = contextFilter !== 'all'
-            ? tasks.filter(t => getTaskContext(t) === contextFilter)
-            : tasks;
-          const count = contextTasks.filter(t => {
-            const d = t.due_date ? parseISO(t.due_date) : null;
-            switch (tab.key) {
-              case 'prev_month': return d && d >= prevMonthStart && d <= prevMonthEnd;
-              case 'curr_month': return d && d >= currMonthStart && d <= currMonthEnd;
-              case 'active': return t.status !== 'production_completed';
-              case 'completed': return t.status === 'production_completed';
-              case 'all': return true;
-              default: return true;
-            }
-          }).length;
-          return (
-            <Button
-              variant={isActive ? 'default' : 'outline'}
-              key={tab.key}
-              onClick={() => setTimeTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap border h-auto ${
-                isActive
-                  ? 'bg-primary text-white border-primary shadow-md'
-                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-              <Badge className={`text-[12px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? 'bg-[#F5F5F5] text-white' : 'bg-gray-100 text-gray-500'}`}>
-                {count}
-              </Badge>
-            </Button>
-          );
-        })}
-      </div>
+      {/* Time Period Tabs — dynamic months from actual task data */}
+      {(() => {
+        // Build dynamic month tabs from tasks
+        const monthCounts = {};
+        const HEBREW_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+        tasks.forEach(t => {
+          let rm = t.reporting_month;
+          if (!rm && t.due_date) {
+            const d = parseISO(t.due_date);
+            const m = d.getMonth(); // 0-indexed, subtract 1 for reporting
+            const y = m === 0 ? d.getFullYear() - 1 : d.getFullYear();
+            const rm_month = m === 0 ? 12 : m;
+            rm = `${y}-${String(rm_month).padStart(2, '0')}`;
+          }
+          if (rm) monthCounts[rm] = (monthCounts[rm] || 0) + 1;
+        });
+        const monthKeys = Object.keys(monthCounts).sort();
+        const monthTabs = monthKeys.map(rm => {
+          const parts = rm.split('-');
+          const monthIdx = parseInt(parts[1], 10) - 1;
+          return { key: `month_${rm}`, rm, label: HEBREW_MONTHS[monthIdx] || rm, icon: Calendar, count: monthCounts[rm] };
+        });
+
+        const allTabs = [
+          ...staticTabs.filter(t => t.key === 'active'),
+          ...monthTabs,
+          ...staticTabs.filter(t => t.key === 'all'),
+          ...staticTabs.filter(t => t.key === 'completed'),
+        ];
+
+        return (
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {allTabs.map(tab => {
+              const Icon = tab.icon;
+              const isActive = timeTab === tab.key;
+              const count = tab.count != null ? tab.count : tasks.filter(t => {
+                switch (tab.key) {
+                  case 'active': return t.status !== 'production_completed';
+                  case 'completed': return t.status === 'production_completed';
+                  case 'all': return true;
+                  default: return true;
+                }
+              }).length;
+              return (
+                <Button
+                  variant={isActive ? 'default' : 'outline'}
+                  key={tab.key}
+                  onClick={() => setTimeTab(tab.key)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap border h-auto ${
+                    isActive
+                      ? 'bg-primary text-white border-primary shadow-md'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  <Badge className={`text-[12px] px-1.5 py-0 h-4 min-w-[20px] ${isActive ? 'bg-[#F5F5F5] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    {count}
+                  </Badge>
+                </Button>
+              );
+            })}
+          </div>
+        );
+      })()}
+
 
       {/* Filters */}
       <Card className="border-0 shadow-sm">
