@@ -5,20 +5,8 @@ import { format, differenceInCalendarDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { TAX_CALENDAR_2026, HEBREW_MONTH_NAMES } from '@/config/taxCalendar2026';
 
-// ── חגים ישראליים 2026 (תאריכים גרגוריאניים) ──
-const ISRAELI_HOLIDAYS_2026 = {
-  "2026-03-21": { name: "פורים" },
-  "2026-04-02": { name: "פסח - ערב חג" },
-  "2026-04-03": { name: "פסח א׳" },
-  "2026-04-09": { name: "שביעי של פסח" },
-  "2026-04-15": { name: "יום העצמאות" },
-  "2026-05-22": { name: "שבועות" },
-  "2026-09-12": { name: "ראש השנה א׳" },
-  "2026-09-13": { name: "ראש השנה ב׳" },
-  "2026-09-21": { name: "יום כיפור" },
-  "2026-09-26": { name: "סוכות א׳" },
-  "2026-10-03": { name: "שמחת תורה" },
-};
+// ── חגים ישראליים — מקובץ מרכזי אחד ──
+import { HOLIDAYS_LOOKUP as ISRAELI_HOLIDAYS_2026 } from '@/config/israeliHolidays';
 
 // ── שמות דדליינים בעברית ──
 const DEADLINE_LABELS = {

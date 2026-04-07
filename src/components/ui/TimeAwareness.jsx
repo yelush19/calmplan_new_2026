@@ -17,18 +17,8 @@ const REPORTING_DEADLINES = [
 // Statuses that mean the report has been filed / is done
 const DONE_STATUSES = new Set(['completed', 'not_relevant', 'reported_waiting_for_payment', 'production_completed']);
 
-// Israeli holidays 2026 — non-work days (imported from LifeSettings calendar)
-const HOLIDAY_DATES_2026 = new Set([
-  '2026-03-03','2026-03-04','2026-03-05', // פורים
-  '2026-04-01','2026-04-02','2026-04-03','2026-04-04','2026-04-05','2026-04-06','2026-04-07','2026-04-08', // פסח מלא (ערב + חג + חול המועד + שביעי)
-  '2026-04-21','2026-04-22', // יום הזיכרון + עצמאות
-  '2026-05-05', // ל"ג בעומר
-  '2026-05-21','2026-05-22', // שבועות
-  '2026-07-23','2026-07-24', // ט' באב
-  '2026-09-11','2026-09-12','2026-09-13', // ראש השנה
-  '2026-09-20','2026-09-21', // יום כיפור
-  '2026-09-25','2026-09-26','2026-09-27','2026-09-28','2026-09-29','2026-09-30','2026-10-01','2026-10-02','2026-10-03', // סוכות מלא (ערב + חג + חול המועד + שמחת תורה)
-]);
+// Israeli holidays 2026 — from central config
+import { HOLIDAY_DATES_SET as HOLIDAY_DATES_2026 } from '@/config/israeliHolidays';
 
 const HE_DAYS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
 

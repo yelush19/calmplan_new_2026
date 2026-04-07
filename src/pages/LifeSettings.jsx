@@ -19,61 +19,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 
-// ── Israeli Holidays 2026 (complete: erev chag, chag, chol hamoed) ──
-const ISRAELI_HOLIDAYS_2026 = [
-  // פורים
-  { date: "2026-03-03", title: "תענית אסתר", type: "day_off", subtype: "erev" },
-  { date: "2026-03-04", title: "פורים", type: "day_off", subtype: "holiday" },
-  { date: "2026-03-05", title: "שושן פורים", type: "day_off", subtype: "holiday" },
-  // פסח
-  { date: "2026-04-01", title: "ערב פסח", type: "day_off", subtype: "erev" },
-  { date: "2026-04-02", title: "פסח א׳", type: "day_off", subtype: "holiday" },
-  { date: "2026-04-03", title: "חול המועד פסח א׳", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-04-04", title: "חול המועד פסח ב׳", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-04-05", title: "חול המועד פסח ג׳", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-04-06", title: "חול המועד פסח ד׳", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-04-07", title: "חול המועד פסח ה׳", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-04-08", title: "שביעי של פסח", type: "day_off", subtype: "holiday" },
-  // יום הזיכרון + יום העצמאות
-  { date: "2026-04-21", title: "יום הזיכרון", type: "day_off", subtype: "erev" },
-  { date: "2026-04-22", title: "יום העצמאות", type: "day_off", subtype: "holiday" },
-  // ל״ג בעומר
-  { date: "2026-05-05", title: "ל״ג בעומר", type: "day_off", subtype: "holiday" },
-  // שבועות
-  { date: "2026-05-21", title: "ערב שבועות", type: "day_off", subtype: "erev" },
-  { date: "2026-05-22", title: "שבועות", type: "day_off", subtype: "holiday" },
-  // ט׳ באב
-  { date: "2026-07-23", title: "ערב ט׳ באב", type: "day_off", subtype: "erev" },
-  { date: "2026-07-24", title: "ט׳ באב", type: "day_off", subtype: "holiday" },
-  // ראש השנה
-  { date: "2026-09-11", title: "ערב ראש השנה", type: "day_off", subtype: "erev" },
-  { date: "2026-09-12", title: "ראש השנה א׳", type: "day_off", subtype: "holiday" },
-  { date: "2026-09-13", title: "ראש השנה ב׳", type: "day_off", subtype: "holiday" },
-  // צום גדליה
-  { date: "2026-09-14", title: "צום גדליה", type: "day_off", subtype: "erev" },
-  // יום כיפור
-  { date: "2026-09-20", title: "ערב יום כיפור", type: "day_off", subtype: "erev" },
-  { date: "2026-09-21", title: "יום כיפור", type: "day_off", subtype: "holiday" },
-  // סוכות
-  { date: "2026-09-25", title: "ערב סוכות", type: "day_off", subtype: "erev" },
-  { date: "2026-09-26", title: "סוכות א׳", type: "day_off", subtype: "holiday" },
-  { date: "2026-09-27", title: "חול המועד סוכות א׳", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-09-28", title: "חול המועד סוכות ב׳", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-09-29", title: "חול המועד סוכות ג׳", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-09-30", title: "חול המועד סוכות ד׳", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-10-01", title: "הושענא רבה", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-10-02", title: "שמיני עצרת", type: "day_off", subtype: "holiday" },
-  { date: "2026-10-03", title: "שמחת תורה", type: "day_off", subtype: "holiday" },
-  // חנוכה
-  { date: "2026-12-12", title: "חנוכה - נר ראשון", type: "day_off", subtype: "holiday" },
-  { date: "2026-12-13", title: "חנוכה - נר שני", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-12-14", title: "חנוכה - נר שלישי", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-12-15", title: "חנוכה - נר רביעי", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-12-16", title: "חנוכה - נר חמישי", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-12-17", title: "חנוכה - נר שישי", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-12-18", title: "חנוכה - נר שביעי", type: "chol_hamoed", subtype: "chol_hamoed" },
-  { date: "2026-12-19", title: "חנוכה - נר שמיני", type: "chol_hamoed", subtype: "chol_hamoed" },
-];
+// ── Israeli Holidays 2026 — from central config ──
+import { HOLIDAYS_LIST } from '@/config/israeliHolidays';
+const ISRAELI_HOLIDAYS_2026 = HOLIDAYS_LIST.map(h => ({
+  date: h.date,
+  title: h.name,
+  type: h.isWorkDay ? 'chol_hamoed' : 'day_off',
+  subtype: h.type,
+}));
 
 // ── August quiet period (הדממה) ──
 const AUGUST_QUIET_2026 = (() => {

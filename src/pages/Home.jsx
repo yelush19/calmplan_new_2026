@@ -314,6 +314,7 @@ export default function HomePage() {
     try {
       await Task.update(task.id, { status: newStatus });
       syncNotesWithTaskStatus(task.id, newStatus);
+      loadStickyNotes();
       if (newStatus === 'production_completed') {
         window.dispatchEvent(new CustomEvent('calmplan:task-completed', { detail: { task } }));
       }
@@ -367,6 +368,7 @@ export default function HomePage() {
     try {
       await Task.update(taskId, updatedData);
       loadData();
+      loadStickyNotes();
     } catch (err) {
       console.error('שגיאה בעדכון משימה:', err);
     }
@@ -384,6 +386,7 @@ export default function HomePage() {
       try {
         await Task.delete(task.id);
         loadData();
+        loadStickyNotes();
       } catch (err) {
         console.error('שגיאה במחיקת משימה:', err);
       }
@@ -672,8 +675,8 @@ export default function HomePage() {
         {/* ═══ 1.5 SmartNudge — one gentle nudge ═══ */}
         <SmartNudge nudge={smartNudge} />
 
-        {/* ═══ 1.5b Task Insights — 3-4 proactive insights from Cascade ═══ */}
-        <TaskInsights insights={insights} />
+        {/* ═══ 1.5b Task Insights — 3-4 proactive insights from Cascade (excluding nudge) ═══ */}
+        <TaskInsights insights={smartNudge ? insights.filter(i => i.title !== smartNudge.title) : insights} />
 
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
