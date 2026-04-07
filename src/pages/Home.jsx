@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Component } from "react";
 import { Task, Event, Client } from "@/api/entities";
 import { parseISO, format, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { he } from "date-fns/locale";
@@ -87,6 +87,24 @@ function sortByPriority(tasks) {
 }
 
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+
+// Error Boundary to catch React #310 and other render errors
+class MapErrorBoundary extends Component {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err) { console.warn('[MapErrorBoundary]', err.message); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-2xl py-6 text-center" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+          <Sparkles className="w-10 h-10 mx-auto mb-2" style={{ color: '#10B981' }} />
+          <p className="text-sm text-gray-500">אין משימות להיום — כל הכבוד!</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const FOCUS_TABS = [
   { key: 'today', label: 'היום', icon: Target, color: 'text-[#F57C00]', activeBg: 'bg-orange-50 border-orange-300 text-orange-700', badgeColor: 'bg-orange-100 text-orange-700' },
@@ -608,23 +626,25 @@ export default function HomePage() {
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
-        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map (replaces old ring canvas) ═══ */}
-        {calmTasks.length === 0 ? (
-          <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-            <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
-          </div>
-        ) : (
-          <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '400px' }}>
-            <FocusMapView
-              tasks={calmTasks}
-              allTasks={data.activeTasks || []}
-              centerLabel="מה לעשות היום"
-              centerSub={`${data.overdue.length + data.today.length} משימות`}
-              onEditTask={setEditingTask}
-              onStatusChange={handleStatusChange}
-            />
-          </div>
-        )}
+        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map ═══ */}
+        <MapErrorBoundary>
+          {calmTasks.length === 0 ? (
+            <div className="rounded-2xl py-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+              <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: '#10B981' }} />} text="אין משימות להיום — כל הכבוד!" />
+            </div>
+          ) : (
+            <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '400px' }}>
+              <FocusMapView
+                tasks={calmTasks}
+                allTasks={data.activeTasks || []}
+                centerLabel="מה לעשות היום"
+                centerSub={`${data.overdue.length + data.today.length} משימות`}
+                onEditTask={setEditingTask}
+                onStatusChange={handleStatusChange}
+              />
+            </div>
+          )}
+        </MapErrorBoundary>
 
         {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
         <CategoryBreakdown tasks={data.mergedToday || []} />
