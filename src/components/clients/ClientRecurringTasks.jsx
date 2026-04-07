@@ -724,7 +724,7 @@ function generateTasksForMonths(categoryKey, client, selectedMonths, year, deadl
 // ============================================================
 // Main Component — ADHD-Friendly Design
 // ============================================================
-export default function ClientRecurringTasks({ onGenerateComplete }) {
+export default function ClientRecurringTasks({ onGenerateComplete, branchFilter = null, categoryFilter = null }) {
   const design = useDesign();
   const [clients, setClients] = useState([]);
   const [existingTasks, setExistingTasks] = useState([]);
@@ -965,7 +965,9 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
     'דוח שנתי': 'דוח רו"ה',     // Annual report depends on monthly P&L
   };
 
-  const generateTasksPreview = (overrideMonths, branchFilter = null) => {
+  const generateTasksPreview = (overrideMonths, branchFilterArg = null) => {
+    // Merge: use explicit arg, or fall back to prop-level filters
+    const effectiveBranchFilter = branchFilterArg || branchFilter;
     const monthsArray = overrideMonths instanceof Set
       ? Array.from(overrideMonths).sort((a, b) => a - b)
       : Array.from(selectedMonths).sort((a, b) => a - b);
@@ -985,7 +987,9 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
 
       for (const [categoryKey, categoryDef] of Object.entries(REPORT_CATEGORIES)) {
         // ── BRANCH FILTER: skip categories not in the selected branch ──
-        if (branchFilter && categoryDef.branch !== branchFilter) continue;
+        if (effectiveBranchFilter && categoryDef.branch !== effectiveBranchFilter) continue;
+        // ── CATEGORY FILTER: skip categories not in the allowed list ──
+        if (categoryFilter && !categoryFilter.includes(categoryKey)) continue;
         // ── SERVICE FILTER: strict check against client's actual services ──
         if (!expandedServices.has(categoryDef.serviceTypeKey)) continue;
 
@@ -1688,6 +1692,7 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             <p className="text-base font-bold text-gray-700">הזרקה לפי ענף:</p>
             <div className="grid grid-cols-2 gap-3">
               {Object.entries(P_BRANCHES)
+                .filter(([key]) => !branchFilter || key === branchFilter)
                 .sort(([, a], [, b]) => a.order - b.order)
                 .map(([branchKey, branch]) => {
                   const branchCatCount = branch.categories.length;
@@ -1724,20 +1729,22 @@ export default function ClientRecurringTasks({ onGenerateComplete }) {
             </div>
           </div>
 
-          {/* Generate ALL branches button */}
-          <Button
-            onClick={() => generateTasksPreview()}
-            disabled={selectedMonths.size === 0}
-            className="w-full h-14 text-lg font-bold rounded-2xl hover:scale-[1.01] transition-all disabled:opacity-40 border-2"
-            style={{ background: 'white', color: '#047857', borderColor: '#10B981' }}
-            size="lg"
-          >
-            <Eye className="w-6 h-6 ml-3" />
-            {selectedMonths.size === 0
-              ? 'בחרי לפחות חודש אחד'
-              : `טען הכל — כל הענפים ל-${selectedMonths.size} ${selectedMonths.size === 1 ? 'חודש' : 'חודשים'}`
-            }
-          </Button>
+          {/* Generate ALL branches button — hidden when branchFilter limits to a single branch */}
+          {!branchFilter && (
+            <Button
+              onClick={() => generateTasksPreview()}
+              disabled={selectedMonths.size === 0}
+              className="w-full h-14 text-lg font-bold rounded-2xl hover:scale-[1.01] transition-all disabled:opacity-40 border-2"
+              style={{ background: 'white', color: '#047857', borderColor: '#10B981' }}
+              size="lg"
+            >
+              <Eye className="w-6 h-6 ml-3" />
+              {selectedMonths.size === 0
+                ? 'בחרי לפחות חודש אחד'
+                : `טען הכל — כל הענפים ל-${selectedMonths.size} ${selectedMonths.size === 1 ? 'חודש' : 'חודשים'}`
+              }
+            </Button>
+          )}
 
           {/* Results */}
           {results && (
