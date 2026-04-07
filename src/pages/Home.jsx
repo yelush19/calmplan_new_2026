@@ -299,7 +299,6 @@ export default function HomePage() {
           }
         }
 
-        return {
         const newOverdue = filterCompleted(updateInList(prev.overdue));
         const newToday = filterCompleted(updateInList(prev.today));
         return {
