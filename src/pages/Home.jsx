@@ -92,6 +92,7 @@ function sortByPriority(tasks) {
 import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
 
 const FOCUS_TABS = [
+  { key: 'overdue', label: 'באיחור', icon: AlertTriangle, color: 'text-[#7B1FA2]', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
   { key: 'today', label: 'היום', icon: Target, color: 'text-[#F57C00]', activeBg: 'bg-orange-50 border-orange-300 text-orange-700', badgeColor: 'bg-orange-100 text-orange-700' },
   { key: 'upcoming', label: '3 ימים', icon: Clock, color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-300 text-gray-700', badgeColor: 'bg-gray-100 text-gray-700' },
   { key: 'events', label: 'אירועים', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
@@ -103,7 +104,7 @@ export default function HomePage() {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("");
-  const [activeTab, setActiveTab] = useState('today');
+  const [activeTab, setActiveTab] = useState('overdue');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [badDayActive, setBadDayActive] = useState(false);
@@ -111,6 +112,7 @@ export default function HomePage() {
   const [noteTask, setNoteTask] = useState(null);
   const [showFullMap, setShowFullMap] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
+    overdue: true,
     today: false,
     upcoming: true,
     events: true,
@@ -221,9 +223,7 @@ export default function HomePage() {
       });
 
       // Payment tab: tasks with payment_due_date set, OR completed production awaiting payment step
-      // Exclude ghost tasks — missing critical data
       const waitingPayment = allTasks.filter(t => {
-        if (!t.due_date && !t.client_size) return false;
         // Include tasks explicitly marked with legacy status
         if (t.status === 'reported_waiting_for_payment') return true;
         // Include completed tasks that have a payment_due_date (payment pending)
@@ -247,14 +247,11 @@ export default function HomePage() {
       const workCount = activeTasks.filter(t => getTaskContext(t) === 'work').length;
       const homeCount = activeTasks.filter(t => getTaskContext(t) === 'home').length;
 
-      const sortedOverdue = sortByPriority(overdue);
-      const sortedToday = sortByPriority(todayTasks);
       setData({
         allTasks,
         activeTasks,
-        overdue: sortedOverdue,
-        today: sortedToday,
-        mergedToday: sortByPriority([...overdue, ...todayTasks]),
+        overdue: sortByPriority(overdue),
+        today: sortByPriority(todayTasks),
         upcoming: sortByPriority(upcoming),
         payment: sortByPriority(waitingPayment),
         todayEvents,
@@ -283,7 +280,8 @@ export default function HomePage() {
         })(),
       });
 
-      if (overdue.length > 0 || todayTasks.length > 0) setActiveTab('today');
+      if (overdue.length > 0) setActiveTab('overdue');
+      else if (todayTasks.length > 0) setActiveTab('today');
       else if (upcoming.length > 0) setActiveTab('upcoming');
       else if (todayEvents.length > 0) setActiveTab('events');
       else setActiveTab('today');
@@ -317,13 +315,10 @@ export default function HomePage() {
           }
         }
 
-        const newOverdue = filterCompleted(updateInList(prev.overdue));
-        const newToday = filterCompleted(updateInList(prev.today));
         return {
           ...prev,
-          overdue: newOverdue,
-          today: newToday,
-          mergedToday: sortByPriority([...newOverdue, ...newToday]),
+          overdue: filterCompleted(updateInList(prev.overdue)),
+          today: filterCompleted(updateInList(prev.today)),
           upcoming: filterCompleted(updateInList(prev.upcoming)),
           payment: newPayment,
           completedToday: newStatus === 'production_completed' ? prev.completedToday + 1 : prev.completedToday,
@@ -398,7 +393,8 @@ export default function HomePage() {
   // Energy filter: when energy is low/medium, show only matching cognitive-load tasks
   const calmTasks = useMemo(() => {
     if (!data) return [];
-    const energyFiltered = filterByEnergy(data.mergedToday || []);
+    const merged = [...(data.overdue || []), ...(data.today || [])];
+    const energyFiltered = filterByEnergy(merged);
     return sortByPriority(energyFiltered).slice(0, 5);
   }, [data, filterByEnergy]);
 
@@ -502,7 +498,6 @@ export default function HomePage() {
 
   const getSectionData = (tabKey) => {
     if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
-    if (tabKey === 'today') return filterBySearch(data.mergedToday || []);
     return filterBySearch(data[tabKey] || []);
   };
 
@@ -684,8 +679,8 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ═══ 3.5 Category Breakdown — what remains for today ═══ */}
-        <CategoryBreakdown tasks={data.mergedToday || []} />
+        {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
+        <CategoryBreakdown tasks={data.allTasks || []} />
 
         {/* ═══ 3.6 Collapsible Sections — overdue/today/upcoming/events/payment ═══ */}
         <div className="space-y-2">
@@ -694,7 +689,6 @@ export default function HomePage() {
             const items = getSectionData(tab.key);
             const count = items.length;
             const isOpen = !collapsedSections[tab.key];
-            const overdueCount = tab.key === 'today' ? (data.overdue?.length || 0) : 0;
 
             return (
               <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
@@ -709,11 +703,6 @@ export default function HomePage() {
                     {count > 0 && (
                       <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${tab.badgeColor}`}>
                         {count}
-                      </span>
-                    )}
-                    {overdueCount > 0 && (
-                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                        {overdueCount} באיחור
                       </span>
                     )}
                   </div>
@@ -754,10 +743,12 @@ export default function HomePage() {
                         ) : (
                           items.length === 0 ? (
                             <EmptyState
-                              icon={tab.key === 'today' ? <Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
+                              icon={tab.key === 'overdue' ? <CheckCircle className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
+                                    tab.key === 'today' ? <Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
                                     tab.key === 'payment' ? <CreditCard className="w-10 h-10 text-yellow-300" /> :
                                     <Clock className="w-10 h-10 text-gray-300" />}
-                              text={tab.key === 'today' ? 'אין משימות להיום - כל הכבוד!' :
+                              text={tab.key === 'overdue' ? 'אין משימות באיחור' :
+                                    tab.key === 'today' ? 'אין משימות להיום - כל הכבוד!' :
                                     tab.key === 'payment' ? 'אין משימות ממתינות לתשלום' :
                                     'אין משימות ל-3 ימים הקרובים'}
                             />
@@ -768,7 +759,7 @@ export default function HomePage() {
                               onPaymentDateChange={handlePaymentDateChange}
                               onEdit={setEditingTask}
                               onNote={setNoteTask}
-                              showDeadlineContext={tab.key === 'today'}
+                              showDeadlineContext={tab.key === 'overdue' || tab.key === 'today'}
                               showDate={tab.key === 'upcoming'}
                               showPaymentDate={tab.key === 'payment'}
                             />
