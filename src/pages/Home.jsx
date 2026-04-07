@@ -773,16 +773,34 @@ export default function HomePage() {
                                     'אין משימות ל-3 ימים הקרובים'}
                             />
                           ) : (
-                            <TaskList
-                              tasks={items}
-                              onStatusChange={handleStatusChange}
-                              onPaymentDateChange={handlePaymentDateChange}
-                              onEdit={setEditingTask}
-                              onNote={setNoteTask}
-                              showDeadlineContext={tab.key === 'today'}
-                              showDate={tab.key === 'upcoming'}
-                              showPaymentDate={tab.key === 'payment'}
-                            />
+                          (() => {
+                            const HOME_MAX_TASKS = 5;
+                            const limitedItems = items.slice(0, HOME_MAX_TASKS);
+                            const hasMore = items.length > HOME_MAX_TASKS;
+                            return (
+                              <>
+                                <TaskList
+                                  tasks={limitedItems}
+                                  onStatusChange={handleStatusChange}
+                                  onPaymentDateChange={handlePaymentDateChange}
+                                  onEdit={setEditingTask}
+                                  onNote={setNoteTask}
+                                  showDeadlineContext={tab.key === 'today'}
+                                  showDate={tab.key === 'upcoming'}
+                                  showPaymentDate={tab.key === 'payment'}
+                                />
+                                {hasMore && (
+                                  <Link
+                                    to={createPageUrl('Tasks')}
+                                    className="flex items-center justify-center gap-1.5 mt-2 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                                  >
+                                    הצג הכל ({items.length})
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                  </Link>
+                                )}
+                              </>
+                            );
+                          })()
                           )
                         )}
                       </div>
