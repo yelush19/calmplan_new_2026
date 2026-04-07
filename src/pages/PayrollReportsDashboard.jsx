@@ -42,6 +42,7 @@ import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
 import MiroProcessMap from '@/components/views/MiroProcessMap';
 import FocusMapView from '@/components/canvas/FocusMapView';
+import AyoaWorkflowView from '@/components/canvas/AyoaWorkflowView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
 import { getServiceWeight } from '@/config/serviceWeights';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
@@ -598,7 +599,7 @@ export default function PayrollReportsDashboardPage() {
         )}
       </AnimatePresence>
 
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus']} />
+      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
 
       <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
 
@@ -702,6 +703,8 @@ export default function PayrollReportsDashboardPage() {
           <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ minHeight: '500px' }}>
             <FocusMapView tasks={filteredTasks} allTasks={tasks} centerLabel="דיווחי שכר" centerSub={`${filteredTasks.length} משימות`} />
           </div>
+        ) : viewMode === 'workflow' ? (
+          <AyoaWorkflowView tasks={filteredTasks} onEditTask={setEditingTask} />
         ) : (
           <Tabs defaultValue={sortedServiceKeys[0]} className="w-full" dir="rtl">
             <TabsList className="flex gap-1 h-auto p-1.5 rounded-xl bg-slate-100 border mb-3 flex-wrap">
