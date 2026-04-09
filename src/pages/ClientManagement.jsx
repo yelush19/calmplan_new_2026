@@ -21,6 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label'; // Added Label import
 
@@ -99,14 +101,11 @@ export default function ClientManagementPage() {
 
   const [view, setView] = useState('grid');
   const [allCardsOpen, setAllCardsOpen] = useState(true); // Controls all cards open/collapsed
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [showClientForm, setShowClientForm] = useState(false);
-  const [selectedAccountsClient, setSelectedAccountsClient] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null); // old data for diff in handleSaveClient
+  const [selectedPanelClient, setSelectedPanelClient] = useState(null);
+  const [panelTab, setPanelTab] = useState('details');
   const [selectedCollectionsClient, setSelectedCollectionsClient] = useState(null);
   const [selectedContractsClient, setSelectedContractsClient] = useState(null);
-  const [selectedTasksClient, setSelectedTasksClient] = useState(null);
-  const [selectedFilesClient, setSelectedFilesClient] = useState(null);
-  const [selectedProvidersClient, setSelectedProvidersClient] = useState(null);
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -154,14 +153,26 @@ export default function ClientManagementPage() {
     loadAutomationRules().then(({ rules }) => setAutomationRules(rules));
   }, []);
 
+  const openPanel = (client, tab = 'details') => {
+    setSelectedPanelClient(client);
+    setPanelTab(tab);
+  };
+  const closePanel = () => {
+    if (!isSaving) {
+      setSelectedPanelClient(null);
+      setSelectedClient(null);
+      setPanelTab('details');
+    }
+  };
+
   // Auto-open client card from URL param (e.g. from ClientsDashboard link)
   useEffect(() => {
     const clientId = searchParams.get('clientId');
-    if (clientId && clients.length > 0 && !showClientForm) {
+    if (clientId && clients.length > 0 && !selectedPanelClient) {
       const client = clients.find(c => c.id === clientId);
       if (client) {
         setSelectedClient(client);
-        setShowClientForm(true);
+        openPanel(client, 'details');
         setSearchParams({}, { replace: true });
       }
     }
@@ -813,7 +824,8 @@ export default function ClientManagementPage() {
       // Monday push removed — DNA is sole source of truth
 
       setSelectedClient(null);
-      setShowClientForm(false);
+      setSelectedPanelClient(null);
+      setPanelTab('details');
       await loadClients();
     } catch (error) {
       console.error("Error saving client:", error);
@@ -849,13 +861,9 @@ export default function ClientManagementPage() {
   };
 
   const handleAddNewClient = () => {
-    setSelectedClient({
-      name: '',
-      contacts: [],
-      service_types: [],
-      status: 'potential',
-    });
-    setShowClientForm(true);
+    const empty = { name: '', contacts: [], service_types: [], status: 'potential' };
+    setSelectedClient(empty);
+    openPanel(empty, 'details');
   };
 
   return (
@@ -1176,13 +1184,13 @@ export default function ClientManagementPage() {
                               isSelected={selectedClientIds.has(client.id)}
                               forceOpen={allCardsOpen}
                               onToggleSelect={() => handleToggleSelectClient(client.id)}
-                              onEdit={(c) => { setSelectedClient(c); setShowClientForm(true); }}
-                              onSelectTasks={setSelectedTasksClient}
-                              onSelectAccounts={setSelectedAccountsClient}
+                              onEdit={(c) => { setSelectedClient(c); openPanel(c, 'details'); }}
+                              onSelectTasks={(c) => openPanel(c, 'tasks')}
+                              onSelectAccounts={(c) => openPanel(c, 'accounts')}
                               onSelectCollections={setSelectedCollectionsClient}
                               onSelectContracts={setSelectedContractsClient}
-                              onSelectFiles={setSelectedFilesClient}
-                              onSelectProviders={setSelectedProvidersClient}
+                              onSelectFiles={(c) => openPanel(c, 'files')}
+                              onSelectProviders={(c) => openPanel(c, 'providers')}
                               onDelete={() => handleDeleteClient(client.id)}
                             />
                           ))}
@@ -1218,13 +1226,13 @@ export default function ClientManagementPage() {
                                 client={client}
                                 isSelected={selectedClientIds.has(client.id)}
                                 onToggleSelect={() => handleToggleSelectClient(client.id)}
-                                onEdit={(c) => { setSelectedClient(c); setShowClientForm(true); }}
-                                onSelectTasks={setSelectedTasksClient}
-                                onSelectAccounts={setSelectedAccountsClient}
+                                onEdit={(c) => { setSelectedClient(c); openPanel(c, 'details'); }}
+                                onSelectTasks={(c) => openPanel(c, 'tasks')}
+                                onSelectAccounts={(c) => openPanel(c, 'accounts')}
                                 onSelectCollections={setSelectedCollectionsClient}
                                 onSelectContracts={setSelectedContractsClient}
-                                onSelectFiles={setSelectedFilesClient}
-                              onSelectProviders={setSelectedProvidersClient}
+                                onSelectFiles={(c) => openPanel(c, 'files')}
+                                onSelectProviders={(c) => openPanel(c, 'providers')}
                                 onDelete={() => handleDeleteClient(client.id)}
                               />
                             ))}
@@ -1323,52 +1331,78 @@ export default function ClientManagementPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showClientForm} onOpenChange={(open) => {
-        if (!open && !isSaving) {
-          setSelectedClient(null);
-          setShowClientForm(false);
-        }
-      }}>
-        <DialogContent className="sm:max-w-[950px] lg:max-w-[1100px] h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">{selectedClient?.id ? `עריכת לקוח: ${selectedClient.name}` : 'יצירת לקוח חדש'}</DialogTitle>
-            <DialogDescription className="text-sm">
-              {selectedClient?.id ? 'עדכן את פרטי הלקוח.' : 'מלא את הפרטים ליצירת לקוח חדש.'}
-            </DialogDescription>
-          </DialogHeader>
-          <ClientForm
-            client={selectedClient}
-            onSubmit={handleSaveClient}
-            onCancel={() => {
-              if (!isSaving) {
-                setSelectedClient(null);
-                setShowClientForm(false);
-              }
-            }}
-            onClientUpdate={loadClients}
-          />
-          {isSaving && (
-            <div className="absolute inset-0 bg-white flex items-center justify-center">
-              <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-3">
-                <RefreshCw className="w-5 h-5 animate-spin text-primary" />
-                <span className="font-medium">שומר...</span>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* ===== Client Detail Panel — 5 tabs ===== */}
+      <Sheet open={!!selectedPanelClient} onOpenChange={(open) => { if (!open) closePanel(); }}>
+        <SheetContent
+          side="right"
+          className="p-0 flex flex-col overflow-hidden"
+          style={{ width: '90vw', maxWidth: '1100px' }}
+        >
+          <SheetHeader className="px-5 pt-5 pb-3 border-b flex-shrink-0">
+            <SheetTitle className="text-xl font-bold">
+              {selectedPanelClient?.id ? selectedPanelClient.name : 'לקוח חדש'}
+            </SheetTitle>
+          </SheetHeader>
 
-      <Dialog open={!!selectedAccountsClient} onOpenChange={(open) => {
-        if (!open) setSelectedAccountsClient(null);
-      }}>
-        <DialogContent className="sm:max-w-[1000px] h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>חשבונות בנק עבור {selectedAccountsClient?.name}</DialogTitle>
-            <DialogDescription>ניהול חשבונות הבנק המשויכים ללקוח.</DialogDescription>
-          </DialogHeader>
-          {selectedAccountsClient && <ClientAccountsManager clientId={selectedAccountsClient.id} clientName={selectedAccountsClient.name} />}
-        </DialogContent>
-      </Dialog>
+          <Tabs value={panelTab} onValueChange={setPanelTab} className="flex flex-col flex-1 overflow-hidden">
+            <div className="px-5 pt-3 flex-shrink-0">
+              <TabsList className="w-full flex gap-0.5 h-auto bg-gray-100 p-1 rounded-xl">
+                <TabsTrigger value="details" className="flex-1 rounded-lg">פרטים</TabsTrigger>
+                <TabsTrigger value="accounts" className="flex-1 rounded-lg" disabled={!selectedPanelClient?.id}>חשבונות</TabsTrigger>
+                <TabsTrigger value="tasks" className="flex-1 rounded-lg" disabled={!selectedPanelClient?.id}>משימות</TabsTrigger>
+                <TabsTrigger value="files" className="flex-1 rounded-lg" disabled={!selectedPanelClient?.id}>קבצים</TabsTrigger>
+                <TabsTrigger value="providers" className="flex-1 rounded-lg" disabled={!selectedPanelClient?.id}>ספקים</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className="flex-1 overflow-y-auto relative">
+              <TabsContent value="details" className="p-5 m-0">
+                {selectedPanelClient && (
+                  <ClientForm
+                    client={selectedPanelClient}
+                    onSubmit={handleSaveClient}
+                    onCancel={closePanel}
+                    onClientUpdate={loadClients}
+                  />
+                )}
+                {isSaving && (
+                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                    <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-3">
+                      <RefreshCw className="w-5 h-5 animate-spin text-primary" />
+                      <span className="font-medium">שומר...</span>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="accounts" className="p-5 m-0">
+                {selectedPanelClient?.id && (
+                  <ClientAccountsManager clientId={selectedPanelClient.id} clientName={selectedPanelClient.name} />
+                )}
+              </TabsContent>
+
+              <TabsContent value="tasks" className="p-5 m-0">
+                {selectedPanelClient?.id && (
+                  <ClientTasksTab clientId={selectedPanelClient.id} clientName={selectedPanelClient.name} />
+                )}
+              </TabsContent>
+
+              <TabsContent value="files" className="p-5 m-0">
+                {selectedPanelClient?.id && (
+                  <ClientFilesManager clientId={selectedPanelClient.id} clientName={selectedPanelClient.name} />
+                )}
+              </TabsContent>
+
+              <TabsContent value="providers" className="p-5 m-0">
+                {selectedPanelClient?.id && (
+                  <ClientServiceProvidersTab clientId={selectedPanelClient.id} clientName={selectedPanelClient.name} />
+                )}
+              </TabsContent>
+            </div>
+          </Tabs>
+        </SheetContent>
+      </Sheet>
+      {/* ===== End Client Detail Panel ===== */}
 
       <Dialog open={!!selectedCollectionsClient} onOpenChange={(open) => {
         if (!open) setSelectedCollectionsClient(null);
@@ -1391,44 +1425,6 @@ export default function ClientManagementPage() {
             <DialogDescription>ניהול חוזים והסכמים עם הלקוח.</DialogDescription>
           </DialogHeader>
           {selectedContractsClient && <ClientContractsManager clientId={selectedContractsClient.id} clientName={selectedContractsClient.name} />}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!selectedTasksClient} onOpenChange={(open) => {
-        if (!open) setSelectedTasksClient(null);
-      }}>
-        <DialogContent className="sm:max-w-[1000px] h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>משימות עבור {selectedTasksClient?.name}</DialogTitle>
-            <DialogDescription>ניהול משימות הקשורות ללקוח.</DialogDescription>
-          </DialogHeader>
-          {selectedTasksClient && <ClientTasksTab clientId={selectedTasksClient.id} clientName={selectedTasksClient.name} />}
-        </DialogContent>
-      </Dialog>
-
-      {/* Files Dialog */}
-      <Dialog open={!!selectedFilesClient} onOpenChange={(open) => {
-        if (!open) setSelectedFilesClient(null);
-      }}>
-        <DialogContent className="sm:max-w-[1100px] h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>קבצים עבור {selectedFilesClient?.name}</DialogTitle>
-            <DialogDescription>ניהול קבצים ומסמכים של הלקוח.</DialogDescription>
-          </DialogHeader>
-          {selectedFilesClient && <ClientFilesManager clientId={selectedFilesClient.id} clientName={selectedFilesClient.name} />}
-        </DialogContent>
-      </Dialog>
-
-      {/* Service Providers Dialog */}
-      <Dialog open={!!selectedProvidersClient} onOpenChange={(open) => {
-        if (!open) setSelectedProvidersClient(null);
-      }}>
-        <DialogContent className="sm:max-w-[1100px] h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>ספקי שירות עבור {selectedProvidersClient?.name}</DialogTitle>
-            <DialogDescription>ניהול ספקי שירות המשויכים ללקוח.</DialogDescription>
-          </DialogHeader>
-          {selectedProvidersClient && <ClientServiceProvidersTab clientId={selectedProvidersClient.id} clientName={selectedProvidersClient.name} />}
         </DialogContent>
       </Dialog>
 
