@@ -158,15 +158,23 @@ export default function GlobalSearch() {
 
   // ── Service Catalog index (static — from processTemplates DNA) ──
   const serviceIndex = useMemo(() => {
-    return Object.entries(ALL_SERVICES).map(([key, svc]) => ({
-      id: key,
-      key,
-      label: svc.label,
-      dashboard: svc.dashboard,
-      branch: svc.branch || ((Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard) === 'payroll' ? 'P1' : (Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard) === 'home' ? 'P4' : (Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard) === 'annual_reports' ? 'P5' : 'P2'),
-      categories: (svc.taskCategories || []).join(' '),
-      stepLabels: (svc.steps || []).map(s => s.label).join(' '),
-    }));
+    return Object.entries(ALL_SERVICES).map(([key, svc]) => {
+      const primaryDashboard = Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard;
+      const dashboardSearch = Array.isArray(svc.dashboard)
+        ? svc.dashboard.filter(Boolean).join(' ')
+        : (typeof svc.dashboard === 'string' ? svc.dashboard : '');
+      return {
+        id: key,
+        key,
+        label: typeof svc.label === 'string' ? svc.label : String(svc.label || ''),
+        dashboard: svc.dashboard,
+        primaryDashboard,
+        dashboardSearch,
+        branch: svc.branch || (primaryDashboard === 'payroll' ? 'P1' : primaryDashboard === 'home' ? 'P4' : primaryDashboard === 'annual_reports' ? 'P5' : 'P2'),
+        categories: (svc.taskCategories || []).join(' '),
+        stepLabels: (svc.steps || []).map(s => s.label).join(' '),
+      };
+    });
   }, []);
 
   // Determine current page for context-aware boosting
@@ -342,7 +350,7 @@ export default function GlobalSearch() {
       svc.categories.toLowerCase().includes(q) ||
       svc.stepLabels.toLowerCase().includes(q) ||
       svc.branch.toLowerCase().includes(q) ||
-      (svc.dashboard || '').toLowerCase().includes(q)
+      svc.dashboardSearch.toLowerCase().includes(q)
     ).slice(0, 6);
     if (serviceMatches.length > 0) filtered['services'] = serviceMatches;
 
@@ -478,7 +486,7 @@ export default function GlobalSearch() {
                       admin: 'Settings',
                       home: 'LifeSettings',
                     };
-                    const targetPage = dashboardMap[svc.dashboard] || 'Settings';
+                    const targetPage = dashboardMap[svc.primaryDashboard] || 'Settings';
                     navigate(createPageUrl(targetPage));
                     setOpen(false);
                   }}
@@ -488,7 +496,7 @@ export default function GlobalSearch() {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{svc.label}</div>
                     <div className="text-[11px] text-gray-400 truncate">
-                      {svc.branch} | {svc.dashboard} | {svc.key}
+                      {svc.branch} | {svc.dashboardSearch || svc.primaryDashboard || ''} | {svc.key}
                     </div>
                   </div>
                   <ArrowLeft className="w-3 h-3 text-gray-300 shrink-0" />
