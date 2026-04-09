@@ -245,13 +245,35 @@ export default function WeeklyPlanningDashboard() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [groupByCategory, setGroupByCategory] = useState(false);
-  const [collapsedDays, setCollapsedDays] = useState({});
+  // ADHD-friendly: start with only today's day expanded, others collapsed
+  const [collapsedDays, setCollapsedDays] = useState(() => {
+    const todayIdx = new Date().getDay(); // 0=Sun..4=Thu within WORK_DAYS
+    const initial = {};
+    WORK_DAYS.forEach(wd => {
+      if (wd.dayIndex !== todayIdx) initial[wd.dayIndex] = true;
+    });
+    return initial;
+  });
   const [expandedCompletedDays, setExpandedCompletedDays] = useState({});
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [assigningTaskId, setAssigningTaskId] = useState(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
+
+  // When switching between weeks: current week → open today only, other weeks → collapse all
+  useEffect(() => {
+    const collapsed = {};
+    if (weekOffset === 0) {
+      const todayIdx = new Date().getDay();
+      WORK_DAYS.forEach(wd => {
+        if (wd.dayIndex !== todayIdx) collapsed[wd.dayIndex] = true;
+      });
+    } else {
+      WORK_DAYS.forEach(wd => { collapsed[wd.dayIndex] = true; });
+    }
+    setCollapsedDays(collapsed);
+  }, [weekOffset]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -1044,6 +1066,16 @@ export default function WeeklyPlanningDashboard() {
                     </span>
                     <span className="text-sm text-gray-400">{format(day.date, 'dd/MM')}</span>
                     {day.isToday && <Badge className="bg-indigo-600 text-white text-[12px]">היום</Badge>}
+                    {/* Task count badge */}
+                    <Badge
+                      className={`text-[12px] font-bold px-2 py-0.5 ${
+                        taskCount === 0 ? 'bg-gray-100 text-gray-400'
+                        : isOverloaded ? 'bg-amber-100 text-amber-700'
+                        : 'bg-indigo-100 text-indigo-700'
+                      }`}
+                    >
+                      {taskCount} {taskCount === 1 ? 'משימה' : 'משימות'}
+                    </Badge>
                     {/* Category chips in header */}
                     {taskCount > 0 && (
                       <div className="flex gap-1 me-2">

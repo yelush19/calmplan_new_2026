@@ -404,6 +404,9 @@ export default function Projects() {
   });
   const [allExpanded, setAllExpanded] = useState(true);
   const [pendingDelete, setPendingDelete] = useState(null); // { id, name, backup }
+  // Smart pagination — 10 projects per status group by default (ADHD-friendly)
+  const PROJECTS_PAGE_SIZE = 10;
+  const [visibleCounts, setVisibleCounts] = useState({}); // { [statusKey]: number }
 
   useEffect(() => {
     loadProjects();
@@ -928,30 +931,67 @@ export default function Projects() {
 
                     {/* Cards grid */}
                     <AnimatePresence>
-                      {!isCollapsed && (
-                        <motion.div
-                          variants={groupVariants}
-                          initial="hidden"
-                          animate="visible"
-                          exit={{ opacity: 0, height: 0 }}
-                          className="mt-2 grid md:grid-cols-2 lg:grid-cols-3 gap-4"
-                        >
-                          {groupProjects.map((project, idx) => (
-                            <ProjectCard
-                              key={project.id}
-                              project={project}
-                              statusConf={getStatusConfig(project.status)}
-                              platform={getPlatformForProject(project)}
-                              platforms={platforms}
-                              onEdit={startEdit}
-                              onDelete={handleDelete}
-                              onOpenWorkbook={openWorkbook}
-                              onQuickStatus={handleQuickStatus}
-                              custom={idx}
-                            />
-                          ))}
-                        </motion.div>
-                      )}
+                      {!isCollapsed && (() => {
+                        const visibleCount = visibleCounts[groupKey] ?? PROJECTS_PAGE_SIZE;
+                        const visibleProjects = groupProjects.slice(0, visibleCount);
+                        const remaining = groupProjects.length - visibleCount;
+                        return (
+                          <motion.div
+                            variants={groupVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-2 space-y-3"
+                          >
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {visibleProjects.map((project, idx) => (
+                                <ProjectCard
+                                  key={project.id}
+                                  project={project}
+                                  statusConf={getStatusConfig(project.status)}
+                                  platform={getPlatformForProject(project)}
+                                  platforms={platforms}
+                                  onEdit={startEdit}
+                                  onDelete={handleDelete}
+                                  onOpenWorkbook={openWorkbook}
+                                  onQuickStatus={handleQuickStatus}
+                                  custom={idx}
+                                />
+                              ))}
+                            </div>
+                            {remaining > 0 && (
+                              <div className="flex justify-center pt-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setVisibleCounts(prev => ({
+                                    ...prev,
+                                    [groupKey]: (prev[groupKey] ?? PROJECTS_PAGE_SIZE) + PROJECTS_PAGE_SIZE,
+                                  }))}
+                                  className="rounded-2xl gap-1.5 text-xs"
+                                  style={{
+                                    borderColor: `${statusOpt.accent}40`,
+                                    color: statusOpt.accent,
+                                  }}
+                                >
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                  הצג עוד {Math.min(PROJECTS_PAGE_SIZE, remaining)} מתוך {remaining} נוספים
+                                </Button>
+                              </div>
+                            )}
+                            {visibleCount > PROJECTS_PAGE_SIZE && (
+                              <div className="flex justify-center">
+                                <button
+                                  onClick={() => setVisibleCounts(prev => ({ ...prev, [groupKey]: PROJECTS_PAGE_SIZE }))}
+                                  className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                  כווץ חזרה
+                                </button>
+                              </div>
+                            )}
+                          </motion.div>
+                        );
+                      })()}
                     </AnimatePresence>
                   </motion.div>
                 );
