@@ -298,6 +298,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       const cascade = processTaskCascade(updatedTask, updatedSteps, tasks, {
         clientServices: client?.service_types || [],
         clientReportingInfo: client?.reporting_info || {},
+        clientProcessTree: client?.process_tree || {},
       });
 
       if (cascade.statusUpdate) {
@@ -369,6 +370,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
           {
             clientServices: client?.service_types || [],
             clientReportingInfo: client?.reporting_info || {},
+            clientProcessTree: client?.process_tree || {},
           }
         );
         let didCreate = false;

@@ -1352,9 +1352,15 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = [], option
   }
 
   // ── SERVICE FILTERING (חוק בל יעבור) ──
-  // Filter out auto-created tasks for services the client doesn't have
+  // Filter out auto-created tasks for services the client doesn't have.
+  // Exception: pension_cascade tasks (operator_reporting → social_benefits → masav_social)
+  // bypass filtering — the chain is deterministic; masav_social is always the next step
+  // after social_benefits, regardless of client service_types config.
   if (result.tasksToCreate.length > 0 && options.clientServices) {
-    result.tasksToCreate = filterByClientServices(result.tasksToCreate, options.clientServices);
+    const pensionTasks = result.tasksToCreate.filter(t => t.source === 'pension_cascade');
+    const otherTasks   = result.tasksToCreate.filter(t => t.source !== 'pension_cascade');
+    const filteredOther = filterByClientServices(otherTasks, options.clientServices, options.clientProcessTree);
+    result.tasksToCreate = [...pensionTasks, ...filteredOther];
   }
 
   // ── FREQUENCY FILTERING ──
