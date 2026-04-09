@@ -286,6 +286,11 @@ export default function FinancialResultsDashboard() {
         </div>
       </div>
 
+      {/* View toggle — sticky frozen header */}
+      <div className="sticky top-0 z-40 -mx-4 md:-mx-6 px-4 md:px-6 py-2 bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-sm flex justify-center">
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-3 text-center">
@@ -367,8 +372,6 @@ export default function FinancialResultsDashboard() {
           );
         })}
       </div>
-
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
 
       {viewMode === 'kanban' ? (
         <KanbanView tasks={pnlMapTasks} onTaskStatusChange={async (task, status) => { await Task.update(task.id, { status }); loadData(); }} clients={clients} />

@@ -741,9 +741,10 @@ export default function TaxReportsDashboardPage() {
         </div>
       </motion.div>
 
-      {/* KPI + P2 Flow — sticky combined bar */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm pb-2 -mx-4 px-4 pt-1 border-b border-slate-100 shadow-sm flex gap-2 items-stretch">
+      {/* KPI + P2 Flow + View Toggle — sticky combined bar */}
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm pb-2 -mx-4 px-4 pt-1 border-b border-slate-100 shadow-sm flex flex-col gap-1">
 
+      <div className="flex gap-2 items-stretch">
       {/* DNA Pipeline Status Cards — left side */}
       <div className="flex items-stretch gap-1 overflow-x-auto shrink-0 min-w-0">
         {/* Total summary capsule */}
@@ -873,6 +874,11 @@ export default function TaxReportsDashboardPage() {
         );
       })()}
 
+      </div>{/* end KPI+P2 row */}
+      {/* View toggle row */}
+      <div className="flex justify-center">
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
+      </div>
       </div>{/* end sticky bar */}
 
       {/* ── Breakdown cards: קליטת הכנסות | קליטת הוצאות | דיווחים ── */}
@@ -1029,7 +1035,6 @@ export default function TaxReportsDashboardPage() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
         {phaseFilter && (
           <Badge className="bg-slate-100 text-slate-700 gap-1 px-2.5 py-1 text-xs font-bold cursor-pointer hover:bg-slate-200" onClick={() => setPhaseFilter(null)}>
             סינון: {STATUS_PIPELINE.find(s => s.key === phaseFilter)?.label || (phaseFilter === 'collect' ? 'קליטה' : phaseFilter === 'process' ? 'עיבוד' : phaseFilter === 'review' ? 'מוכן לשידור' : 'שודר')}

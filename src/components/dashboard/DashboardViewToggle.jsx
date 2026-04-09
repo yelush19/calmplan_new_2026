@@ -18,27 +18,25 @@ export default function DashboardViewToggle({ value, onChange, options }) {
     : VIEW_OPTIONS;
 
   return (
-    <div className="sticky top-2 z-30 flex justify-center">
-      <div className="flex bg-[#1E3A5F] rounded-xl p-1 shadow-lg text-xs gap-0.5 backdrop-blur-sm">
-        {items.map(opt => {
-          const Icon = opt.icon;
-          const isActive = value === opt.key;
-          return (
-            <button
-              key={opt.key}
-              onClick={() => onChange(opt.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
-                isActive
-                  ? 'bg-white text-[#1E3A5F] shadow-sm'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
+    <div className="flex bg-[#1E3A5F] rounded-xl p-1 shadow-lg text-xs gap-0.5 backdrop-blur-sm">
+      {items.map(opt => {
+        const Icon = opt.icon;
+        const isActive = value === opt.key;
+        return (
+          <button
+            key={opt.key}
+            onClick={() => onChange(opt.key)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
+              isActive
+                ? 'bg-white text-[#1E3A5F] shadow-sm'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
