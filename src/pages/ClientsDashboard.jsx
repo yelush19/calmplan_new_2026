@@ -110,6 +110,9 @@ export default function ClientsDashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(() => subMonths(new Date(), 1)); // Default to reporting month (previous)
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState([]);
+  // Smart pagination — 15 clients visible by default (ADHD-friendly)
+  const CLIENTS_PAGE_SIZE = 15;
+  const [visibleClientsCount, setVisibleClientsCount] = useState(CLIENTS_PAGE_SIZE);
 
   // Column visibility — users can hide columns they don't need
   const [hiddenColumns, setHiddenColumns] = useState(() => {
@@ -174,6 +177,11 @@ export default function ClientsDashboardPage() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => { loadData(); }, [selectedMonth]);
+
+  // Reset pagination when filters/search/month change
+  useEffect(() => {
+    setVisibleClientsCount(CLIENTS_PAGE_SIZE);
+  }, [searchTerm, statusFilter, selectedMonth]);
 
   // Cross-page sync: re-fetch when other pages update tasks
   useEffect(() => {
@@ -657,7 +665,7 @@ export default function ClientsDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredClients.map((client, index) => {
+                  {filteredClients.slice(0, visibleClientsCount).map((client, index) => {
                     const data = clientDataMap[client.name] || {};
                     const allClientTasks = Object.values(data).flat();
                     const relevantTasks = allClientTasks;
@@ -762,6 +770,55 @@ export default function ClientsDashboardPage() {
                       </tr>
                     );
                   })}
+                  {(() => {
+                    const remaining = filteredClients.length - visibleClientsCount;
+                    const hasMore = remaining > 0;
+                    const canCollapse = visibleClientsCount > CLIENTS_PAGE_SIZE && filteredClients.length > CLIENTS_PAGE_SIZE;
+                    if (!hasMore && !canCollapse) return null;
+                    const nextChunk = Math.min(CLIENTS_PAGE_SIZE, remaining);
+                    const totalCols = 1 + visibleColumnGroups.reduce((s, g) => s + g.columns.length, 0);
+                    const shown = Math.min(visibleClientsCount, filteredClients.length);
+                    return (
+                      <tr className="bg-slate-50 border-t border-[#E0E0E0]">
+                        <td colSpan={totalCols} className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-3 flex-wrap">
+                            <span className="text-xs text-slate-500">
+                              מציג {shown} מתוך {filteredClients.length} לקוחות
+                            </span>
+                            {hasMore && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setVisibleClientsCount(v => v + CLIENTS_PAGE_SIZE)}
+                                className="gap-1.5 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                              >
+                                <ChevronLeft className="w-3.5 h-3.5 rotate-90" />
+                                הצג עוד {nextChunk} ({remaining} נוספים)
+                              </Button>
+                            )}
+                            {hasMore && filteredClients.length <= 200 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setVisibleClientsCount(filteredClients.length)}
+                                className="text-xs text-slate-500 hover:text-emerald-700"
+                              >
+                                הצג את כולם
+                              </Button>
+                            )}
+                            {canCollapse && (
+                              <button
+                                onClick={() => setVisibleClientsCount(CLIENTS_PAGE_SIZE)}
+                                className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                כווץ חזרה ל-{CLIENTS_PAGE_SIZE}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })()}
                 </tbody>
                 {/* Footer */}
                 <tfoot>
