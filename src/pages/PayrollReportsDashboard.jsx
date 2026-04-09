@@ -534,6 +534,11 @@ export default function PayrollReportsDashboardPage() {
         </div>
       </motion.div>
 
+      {/* View toggle — sticky frozen header */}
+      <div className="sticky top-0 z-40 -mx-4 md:-mx-6 px-4 md:px-6 py-2 bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-sm flex justify-center">
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
+      </div>
+
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -598,8 +603,6 @@ export default function PayrollReportsDashboardPage() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
 
       <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
 

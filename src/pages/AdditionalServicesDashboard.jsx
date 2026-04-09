@@ -503,6 +503,11 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         </div>
       </motion.div>
 
+      {/* View toggle — sticky frozen header */}
+      <div className="sticky top-0 z-40 -mx-4 md:-mx-6 px-4 md:px-6 py-2 bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-sm flex justify-center">
+        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
+      </div>
+
       {/* Injection Panel */}
       <AnimatePresence>
         {showInjectionPanel && (
@@ -530,9 +535,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       </div>
 
       <div className="flex items-center gap-2">
-        <DashboardViewToggle value={viewMode} onChange={setViewMode} options={['table', 'workbook', 'miro', 'kanban', 'timeline', 'radial', 'focus', 'workflow']} />
-
-      <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
+        <CognitiveCapacityHeader tasks={tasks} onFilterTier={setCognitiveFilter} />
         <Button
           variant="outline"
           size="sm"
