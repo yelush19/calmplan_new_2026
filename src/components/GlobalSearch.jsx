@@ -162,7 +162,7 @@ export default function GlobalSearch() {
       id: key,
       key,
       label: svc.label,
-      dashboard: svc.dashboard,
+      dashboard: Array.isArray(svc.dashboard) ? svc.dashboard.join(' ') : (svc.dashboard || ''),
       branch: svc.branch || ((Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard) === 'payroll' ? 'P1' : (Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard) === 'home' ? 'P4' : (Array.isArray(svc.dashboard) ? svc.dashboard[0] : svc.dashboard) === 'annual_reports' ? 'P5' : 'P2'),
       categories: (svc.taskCategories || []).join(' '),
       stepLabels: (svc.steps || []).map(s => s.label).join(' '),
@@ -352,7 +352,15 @@ export default function GlobalSearch() {
   const handleSelect = useCallback((config, item) => {
     const url = config.getUrl(item);
     if (url) {
-      navigate(url);
+      const isSameUrl = window.location.pathname + window.location.search === url ||
+        window.location.href.endsWith(url);
+      if (isSameUrl) {
+        // Same URL — force reload so the page re-fetches its data
+        navigate(url, { replace: true });
+        window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { type: 'force-reload' } }));
+      } else {
+        navigate(url);
+      }
     }
     setOpen(false);
   }, [navigate]);

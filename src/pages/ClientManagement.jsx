@@ -165,16 +165,16 @@ export default function ClientManagementPage() {
     }
   };
 
-  // Auto-open client card from URL param (e.g. from ClientsDashboard link)
+  // Auto-open client card from URL param (e.g. from ClientsDashboard link or GlobalSearch)
+  // Note: !selectedPanelClient removed intentionally — must also re-open when same client is selected again
   useEffect(() => {
     const clientId = searchParams.get('clientId');
-    if (clientId && clients.length > 0 && !selectedPanelClient) {
-      const client = clients.find(c => c.id === clientId);
-      if (client) {
-        setSelectedClient(client);
-        openPanel(client, 'details');
-        setSearchParams({}, { replace: true });
-      }
+    if (!clientId || clients.length === 0) return;
+    const client = clients.find(c => c.id === clientId);
+    if (client) {
+      setSelectedClient(client);
+      openPanel(client, searchParams.get('tab') || 'details');
+      setSearchParams({}, { replace: true });
     }
   }, [clients, searchParams]);
 
