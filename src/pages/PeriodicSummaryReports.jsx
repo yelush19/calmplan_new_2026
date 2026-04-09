@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
@@ -328,6 +329,8 @@ export default function PeriodicSummaryReports() {
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState(new Set(['all_submitted', 'partial', 'no_reports']));
   const [allGroupsExpanded, setAllGroupsExpanded] = useState(false);
+  // Period tabs — ADHD focus: narrow the visible columns to a single period
+  const [selectedPeriod, setSelectedPeriod] = useState('all'); // 'all' | 'h1' | 'h2' | 'annual'
 
   useEffect(() => { loadData(); }, []);
 
@@ -412,21 +415,23 @@ export default function PeriodicSummaryReports() {
 
   const groupedFilteredClients = useMemo(() => {
     const groups = { no_reports: [], partial: [], all_submitted: [] };
-    const columns = Object.entries(REPORT_TYPES).flatMap(([typeKey, typeDef]) =>
-      typeDef.periods.map(period => ({ typeKey, period }))
-    );
+    // When a specific period tab is active, group by completion within that period only
+    // (so "כל הדיווחים הוגשו" matches what the user actually sees on screen).
+    const groupingCols = Object.entries(REPORT_TYPES)
+      .flatMap(([typeKey, typeDef]) => typeDef.periods.map(period => ({ typeKey, period })))
+      .filter(col => selectedPeriod === 'all' || col.period === selectedPeriod);
     filteredClients.forEach(client => {
       const clientReports = reportLookup[client.id] || {};
-      const totalCols = columns.length;
-      const submittedCols = columns.filter(col =>
+      const totalCols = groupingCols.length;
+      const submittedCols = groupingCols.filter(col =>
         clientReports[col.typeKey]?.[col.period]?.status === 'submitted'
       ).length;
       if (submittedCols === 0 && !reportLookup[client.id]) groups.no_reports.push(client);
-      else if (submittedCols === totalCols) groups.all_submitted.push(client);
+      else if (totalCols > 0 && submittedCols === totalCols) groups.all_submitted.push(client);
       else groups.partial.push(client);
     });
     return CLIENT_STATUS_GROUPS.map(g => ({ ...g, clients: groups[g.key] })).filter(g => g.clients.length > 0);
-  }, [filteredClients, reportLookup]);
+  }, [filteredClients, reportLookup, selectedPeriod]);
 
   // Stats
   const stats = useMemo(() => {
@@ -570,22 +575,45 @@ export default function PeriodicSummaryReports() {
     }
   };
 
-  // Column definitions for the table
-  const columns = [];
-  for (const [typeKey, typeDef] of Object.entries(REPORT_TYPES)) {
-    for (const period of typeDef.periods) {
-      columns.push({
-        typeKey,
-        period,
-        label: `${typeDef.shortLabel} - ${PERIOD_CONFIG[period].shortLabel}`,
-        targetLabel: period === 'h1'
-          ? `18/07/${selectedYear}`
-          : period === 'h2'
-            ? `18/01/${parseInt(selectedYear) + 1}`
-            : `30/04/${parseInt(selectedYear) + 1}`,
-      });
+  // Column definitions — ALL columns regardless of selected period
+  const allColumns = useMemo(() => {
+    const cols = [];
+    for (const [typeKey, typeDef] of Object.entries(REPORT_TYPES)) {
+      for (const period of typeDef.periods) {
+        cols.push({
+          typeKey,
+          period,
+          label: `${typeDef.shortLabel} - ${PERIOD_CONFIG[period].shortLabel}`,
+          targetLabel: period === 'h1'
+            ? `18/07/${selectedYear}`
+            : period === 'h2'
+              ? `18/01/${parseInt(selectedYear) + 1}`
+              : `30/04/${parseInt(selectedYear) + 1}`,
+        });
+      }
     }
-  }
+    return cols;
+  }, [selectedYear]);
+
+  // Visible columns — filtered by selected period tab
+  const columns = useMemo(
+    () => selectedPeriod === 'all' ? allColumns : allColumns.filter(c => c.period === selectedPeriod),
+    [allColumns, selectedPeriod]
+  );
+
+  // Per-period submission counts for tab badges
+  const periodStats = useMemo(() => {
+    const byPeriod = { all: { total: 0, submitted: 0 }, h1: { total: 0, submitted: 0 }, h2: { total: 0, submitted: 0 }, annual: { total: 0, submitted: 0 } };
+    yearReports.forEach(r => {
+      byPeriod.all.total++;
+      if (r.status === 'submitted') byPeriod.all.submitted++;
+      if (byPeriod[r.period]) {
+        byPeriod[r.period].total++;
+        if (r.status === 'submitted') byPeriod[r.period].submitted++;
+      }
+    });
+    return byPeriod;
+  }, [yearReports]);
 
   if (isLoading) {
     return (
@@ -678,6 +706,35 @@ export default function PeriodicSummaryReports() {
           </CardContent>
         </Card>
       )}
+
+      {/* Period tabs — narrow focus to a single reporting period (ADHD focus) */}
+      <Tabs value={selectedPeriod} onValueChange={setSelectedPeriod}>
+        <TabsList className="h-auto">
+          {[
+            { key: 'all', label: 'הכל' },
+            { key: 'h1', label: PERIOD_CONFIG.h1.label },
+            { key: 'h2', label: PERIOD_CONFIG.h2.label },
+            { key: 'annual', label: PERIOD_CONFIG.annual.label },
+          ].map(({ key, label }) => {
+            const { total, submitted } = periodStats[key] || { total: 0, submitted: 0 };
+            return (
+              <TabsTrigger key={key} value={key} className="gap-2 py-1.5">
+                <span>{label}</span>
+                {total > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className={`text-[11px] px-1.5 py-0 ${
+                      submitted === total ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {submitted}/{total}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
 
       {/* Search + Add + Bulk actions */}
       <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">

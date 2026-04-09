@@ -734,7 +734,11 @@ export default function ClientRecurringTasks({ onGenerateComplete, branchFilter 
   const [previewTasks, setPreviewTasks] = useState([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [results, setResults] = useState(null);
-  const [collapsedCategories, setCollapsedCategories] = useState(new Set());
+  // ADHD focus: all branches start COLLAPSED so the injection panel opens
+  // as a compact one-line-per-branch summary rather than a wall of service cards.
+  const [collapsedCategories, setCollapsedCategories] = useState(
+    () => new Set(Object.keys(P_BRANCHES).map(k => `branch_${k}`))
+  );
 
   // Month selection state — default to PREVIOUS month (work is retroactive)
   const currentYear = new Date().getFullYear();
@@ -1298,22 +1302,22 @@ export default function ClientRecurringTasks({ onGenerateComplete, branchFilter 
 
   return (
     <div className="space-y-6">
-      {/* Main Card — Clean & Calm */}
+      {/* Main Card — Clean & Calm (compact header for ADHD focus) */}
       <Card className="border overflow-hidden">
-        <CardHeader className="bg-emerald-50 pb-6">
-          <CardTitle className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white rounded-2xl border border-emerald-200 flex items-center justify-center">
-              <Sparkles className="w-7 h-7 text-emerald-600" />
+        <CardHeader className="bg-emerald-50 py-3 px-4">
+          <CardTitle className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-white rounded-xl border border-emerald-200 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-emerald-600" />
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">משימות חוזרות</h3>
-              <p className="text-base text-emerald-600 font-normal mt-1">
-                {clients.length} לקוחות פעילים
-              </p>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <h3 className="text-base font-bold text-gray-800">משימות חוזרות</h3>
+              <span className="text-xs text-emerald-700 font-medium">
+                · {clients.length} לקוחות פעילים
+              </span>
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="p-4 space-y-4">
           {/* Duplicate alert — clients with both מתפעל AND טמל enabled */}
           {duplicateClients.length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
@@ -1336,8 +1340,32 @@ export default function ClientRecurringTasks({ onGenerateComplete, branchFilter 
             </div>
           )}
 
-          {/* Branch summary — grouped under P1/P2 headers, collapsible */}
-          <div className="space-y-3">
+          {/* Branch summary — grouped under P1/P2 headers, collapsed by default for ADHD focus */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">ענפים</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const allKeys = branchSummary.map(b => `branch_${b.key}`);
+                  const allCollapsed = allKeys.every(k => collapsedCategories.has(k));
+                  setCollapsedCategories(prev => {
+                    const next = new Set(prev);
+                    if (allCollapsed) {
+                      allKeys.forEach(k => next.delete(k));
+                    } else {
+                      allKeys.forEach(k => next.add(k));
+                    }
+                    return next;
+                  });
+                }}
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 hover:underline"
+              >
+                {branchSummary.every(b => collapsedCategories.has(`branch_${b.key}`))
+                  ? 'פתח הכל'
+                  : 'סגור הכל'}
+              </button>
+            </div>
             {branchSummary.map((branch) => {
               const isBranchCollapsed = collapsedCategories.has(`branch_${branch.key}`);
               return (
