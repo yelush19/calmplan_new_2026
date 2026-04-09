@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Zap, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Settings, Play, Loader2, X, CheckSquare, Square, CalendarDays, ChevronDown, ChevronRight, Pause, PlayCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useDesign } from '@/contexts/DesignContext';
 import {
   loadAutomationRules, saveAutomationRules,
@@ -1174,166 +1175,184 @@ export default function AutomationRules() {
         </Card>
       )}
 
-      {/* Rules - 2-column layout with collapsible sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        {/* Service Auto-Link Rules */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Badge className="bg-blue-100 text-blue-800">שירותים</Badge>
-              סימון שירות אוטומטי
-            </CardTitle>
-            <Button size="sm" onClick={() => { setNewRuleType('service_auto_link'); setEditingRule(getEmptyRule('service_auto_link')); }} className="gap-1 h-7 text-xs">
-              <Plus className="w-3 h-3" /> חוק חדש
-            </Button>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {serviceAutoLinkRules.length === 0 ? (
-              <p className="text-gray-400 text-center py-3 text-sm">אין חוקים</p>
-            ) : (
-              <div className="space-y-1.5">
-                {serviceAutoLinkRules.map(rule => (
-                  <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Main Tabs - by category */}
+      <Tabs defaultValue="service_rules" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="service_rules" className="gap-1">
+            חוקי שירות
+            <span className="text-[11px] opacity-60">({serviceAutoLinkRules.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="board_rules" className="gap-1">
+            חוקי לוחות
+            <span className="text-[11px] opacity-60">({reportAutoCreateRules.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="due_dates">תאריכי יעד</TabsTrigger>
+          <TabsTrigger value="cleanup">כלי ניקוי</TabsTrigger>
+        </TabsList>
 
-        {/* Report Auto-Create Rules - collapsible by board */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Badge className="bg-green-100 text-green-800">לוחות</Badge>
-              יצירה אוטומטית בלוחות
-            </CardTitle>
-            <Button size="sm" onClick={() => { setNewRuleType('report_auto_create'); setEditingRule(getEmptyRule('report_auto_create')); }} className="gap-1 h-7 text-xs">
-              <Plus className="w-3 h-3" /> חוק חדש
-            </Button>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-1">
-            {Object.keys(REPORT_ENTITIES).map(entityKey => {
-              const entityRules = reportRulesByEntity[entityKey] || [];
-              const cfg = entityDisplayConfig[entityKey] || {};
-              const isOpen = expandedSections.has(entityKey);
-              return (
-                <div key={entityKey} className="border rounded-lg overflow-hidden">
-                  <button
-                    className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-end"
-                    onClick={() => setExpandedSections(prev => {
-                      const next = new Set(prev);
-                      if (next.has(entityKey)) next.delete(entityKey); else next.add(entityKey);
-                      return next;
-                    })}
-                  >
-                    {isOpen ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                    <Badge className={`text-[12px] ${cfg.color || 'bg-gray-100'}`}>{REPORT_ENTITIES[entityKey]}</Badge>
-                    <span className="text-xs font-medium">{cfg.label || entityKey}</span>
-                    <span className="text-[12px] text-gray-400 mr-auto">{entityRules.length}</span>
-                  </button>
-                  {isOpen && (
-                    <div className="p-2 space-y-1.5 bg-white">
-                      {entityRules.length === 0 ? (
-                        <p className="text-gray-400 text-center py-1 text-[12px]">אין חוקים</p>
-                      ) : entityRules.map(rule => (
-                        <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
-                      ))}
-                    </div>
-                  )}
+        {/* Tab 1: Service Auto-Link Rules */}
+        <TabsContent value="service_rules">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Badge className="bg-blue-100 text-blue-800">שירותים</Badge>
+                סימון שירות אוטומטי
+              </CardTitle>
+              <Button size="sm" onClick={() => { setNewRuleType('service_auto_link'); setEditingRule(getEmptyRule('service_auto_link')); }} className="gap-1 h-7 text-xs">
+                <Plus className="w-3 h-3" /> חוק חדש
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {serviceAutoLinkRules.length === 0 ? (
+                <p className="text-gray-400 text-center py-3 text-sm">אין חוקים</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {serviceAutoLinkRules.map(rule => (
+                    <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
+                  ))}
                 </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Due Dates + Cleanup Tool - side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-      {/* Service Due Dates Editor */}
-      <Card className="border-2 border-blue-200 bg-blue-50">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarDays className="w-5 h-5 text-blue-600" />
-            תאריכי יעד לפי שירות
-          </CardTitle>
-          <p className="text-xs text-gray-500">
-            הגדר יום בחודש כתאריך יעד לכל סוג שירות. ריק = סוף החודש.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {allCategoriesFlat.map(cat => {
-              const hasPaymentVariants = PAYMENT_METHOD_CATEGORIES.includes(cat.key);
-              const entry = serviceDueDates[cat.key] || {};
-              if (hasPaymentVariants) {
+        {/* Tab 2: Report Auto-Create Rules - collapsible by board */}
+        <TabsContent value="board_rules">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Badge className="bg-green-100 text-green-800">לוחות</Badge>
+                יצירה אוטומטית בלוחות
+              </CardTitle>
+              <Button size="sm" onClick={() => { setNewRuleType('report_auto_create'); setEditingRule(getEmptyRule('report_auto_create')); }} className="gap-1 h-7 text-xs">
+                <Plus className="w-3 h-3" /> חוק חדש
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-1">
+              {Object.keys(REPORT_ENTITIES).map(entityKey => {
+                const entityRules = reportRulesByEntity[entityKey] || [];
+                const cfg = entityDisplayConfig[entityKey] || {};
+                const isOpen = expandedSections.has(entityKey);
                 return (
-                  <div key={cat.key} className="p-2 border rounded-lg bg-white border-blue-200">
-                    <span className="text-xs font-medium text-gray-700 block mb-1">{cat.label}</span>
-                    <div className="flex items-center gap-1">
-                      <div className="flex-1 text-center">
-                        <span className="text-[12px] text-blue-600 block">דיגיטלי</span>
-                        <Input type="number" min="1" max="31"
-                          value={entry.digital || ''}
-                          onChange={(e) => handleDueDateChange(cat.key, e.target.value, 'digital')}
-                          className="w-full text-center text-xs h-7" placeholder="-" />
+                  <div key={entityKey} className="border rounded-lg overflow-hidden">
+                    <button
+                      className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-end"
+                      onClick={() => setExpandedSections(prev => {
+                        const next = new Set(prev);
+                        if (next.has(entityKey)) next.delete(entityKey); else next.add(entityKey);
+                        return next;
+                      })}
+                    >
+                      {isOpen ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                      <Badge className={`text-[12px] ${cfg.color || 'bg-gray-100'}`}>{REPORT_ENTITIES[entityKey]}</Badge>
+                      <span className="text-xs font-medium">{cfg.label || entityKey}</span>
+                      <span className="text-[12px] text-gray-400 mr-auto">{entityRules.length}</span>
+                    </button>
+                    {isOpen && (
+                      <div className="p-2 space-y-1.5 bg-white">
+                        {entityRules.length === 0 ? (
+                          <p className="text-gray-400 text-center py-1 text-[12px]">אין חוקים</p>
+                        ) : entityRules.map(rule => (
+                          <RuleRow key={rule.id} rule={rule} onToggle={handleToggleRule} onEdit={setEditingRule} onDelete={handleDeleteRule} onRun={handleRunSingleRule} isRunning={runningRuleId === rule.id} />
+                        ))}
                       </div>
-                      <div className="flex-1 text-center">
-                        <span className="text-[12px] text-amber-600 block">המחאה</span>
-                        <Input type="number" min="1" max="31"
-                          value={entry.check || ''}
-                          onChange={(e) => handleDueDateChange(cat.key, e.target.value, 'check')}
-                          className="w-full text-center text-xs h-7" placeholder="-" />
-                      </div>
-                    </div>
+                    )}
                   </div>
                 );
-              }
-              return (
-                <div key={cat.key} className="flex items-center gap-2 p-2 border rounded-lg bg-white">
-                  <span className="text-xs flex-1 text-gray-700">{cat.label}</span>
-                  <Input type="number" min="1" max="31"
-                    value={entry.due_day ?? ''}
-                    onChange={(e) => handleDueDateChange(cat.key, e.target.value)}
-                    className="w-14 text-center text-xs h-7" placeholder="-" />
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-2 mt-3">
-            <Button onClick={handleSaveDueDates} size="sm" disabled={dueDatesSaving}
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-1">
-              {dueDatesSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
-              שמור תאריכי יעד
-            </Button>
-            <span className="text-[12px] text-gray-400">יעד = חודש שאחרי תקופת הדיווח. דיגיטלי/המחאה = לפי הגדרת לקוח.</span>
-          </div>
-        </CardContent>
-      </Card>
+              })}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Cleanup Tool */}
-      <CleanupTool rules={rules} />
-      </div>
+        {/* Tab 3: Service Due Dates */}
+        <TabsContent value="due_dates">
+          <Card className="border-2 border-blue-200 bg-blue-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarDays className="w-5 h-5 text-blue-600" />
+                תאריכי יעד לפי שירות
+              </CardTitle>
+              <p className="text-xs text-gray-500">
+                הגדר יום בחודש כתאריך יעד לכל סוג שירות. ריק = סוף החודש.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {allCategoriesFlat.map(cat => {
+                  const hasPaymentVariants = PAYMENT_METHOD_CATEGORIES.includes(cat.key);
+                  const entry = serviceDueDates[cat.key] || {};
+                  if (hasPaymentVariants) {
+                    return (
+                      <div key={cat.key} className="p-2 border rounded-lg bg-white border-blue-200">
+                        <span className="text-xs font-medium text-gray-700 block mb-1">{cat.label}</span>
+                        <div className="flex items-center gap-1">
+                          <div className="flex-1 text-center">
+                            <span className="text-[12px] text-blue-600 block">דיגיטלי</span>
+                            <Input type="number" min="1" max="31"
+                              value={entry.digital || ''}
+                              onChange={(e) => handleDueDateChange(cat.key, e.target.value, 'digital')}
+                              className="w-full text-center text-xs h-7" placeholder="-" />
+                          </div>
+                          <div className="flex-1 text-center">
+                            <span className="text-[12px] text-amber-600 block">המחאה</span>
+                            <Input type="number" min="1" max="31"
+                              value={entry.check || ''}
+                              onChange={(e) => handleDueDateChange(cat.key, e.target.value, 'check')}
+                              className="w-full text-center text-xs h-7" placeholder="-" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={cat.key} className="flex items-center gap-2 p-2 border rounded-lg bg-white">
+                      <span className="text-xs flex-1 text-gray-700">{cat.label}</span>
+                      <Input type="number" min="1" max="31"
+                        value={entry.due_day ?? ''}
+                        onChange={(e) => handleDueDateChange(cat.key, e.target.value)}
+                        className="w-14 text-center text-xs h-7" placeholder="-" />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-2 mt-3">
+                <Button onClick={handleSaveDueDates} size="sm" disabled={dueDatesSaving}
+                  className="bg-blue-600 hover:bg-blue-700 text-white gap-1">
+                  {dueDatesSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                  שמור תאריכי יעד
+                </Button>
+                <span className="text-[12px] text-gray-400">יעד = חודש שאחרי תקופת הדיווח. דיגיטלי/המחאה = לפי הגדרת לקוח.</span>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* How it works */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-lg">איך זה עובד?</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-gray-600 space-y-2">
-          <p><strong>חוקי סימון שירות:</strong> כשאת בוחרת שירות בכרטיס לקוח, שירותים קשורים יסומנו אוטומטית. למשל: בחירת "שכר" תסמן גם "ביטוח לאומי" ו"ניכויים".</p>
-          <p><strong>חוקי יצירה בלוחות:</strong> כששומרים לקוח פעיל עם שירותים מסוימים, נוצרות רשומות אוטומטית:</p>
-          <ul className="list-disc me-6 space-y-1">
-            <li><strong>דיווחים מרכזים:</strong> שורות 126 (ביטוח לאומי, ניכויים) לפי תקופות</li>
-            <li><strong>מאזנים:</strong> שורת מאזן שנתי ללקוח</li>
-            <li><strong>התאמות:</strong> שורות התאמה לחשבונות הלקוח</li>
-            <li><strong>ריכוז חודשי:</strong> משימות דיווח חודשי (מע"מ, מקדמות, שכר וכו')</li>
-            <li><strong>דיווחי מיסים:</strong> משימות דיווחי מיסים חודשיים</li>
-            <li><strong>שכר:</strong> משימות שכר ודיווחי רשויות</li>
-          </ul>
-          <p><strong>תנאים:</strong> ניתן להגביל חוק לסוג עסק מסוים (למשל: רק חברות בע"מ).</p>
-          <p><strong>הפעלה/כיבוי:</strong> כל חוק ניתן להפעלה או כיבוי בלחיצה בלי למחוק אותו.</p>
-        </CardContent>
-      </Card>
+        {/* Tab 4: Cleanup Tool + How it works */}
+        <TabsContent value="cleanup">
+          <div className="space-y-4">
+            <CleanupTool rules={rules} />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">איך זה עובד?</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-gray-600 space-y-2">
+                <p><strong>חוקי סימון שירות:</strong> כשאת בוחרת שירות בכרטיס לקוח, שירותים קשורים יסומנו אוטומטית. למשל: בחירת "שכר" תסמן גם "ביטוח לאומי" ו"ניכויים".</p>
+                <p><strong>חוקי יצירה בלוחות:</strong> כששומרים לקוח פעיל עם שירותים מסוימים, נוצרות רשומות אוטומטית:</p>
+                <ul className="list-disc me-6 space-y-1">
+                  <li><strong>דיווחים מרכזים:</strong> שורות 126 (ביטוח לאומי, ניכויים) לפי תקופות</li>
+                  <li><strong>מאזנים:</strong> שורת מאזן שנתי ללקוח</li>
+                  <li><strong>התאמות:</strong> שורות התאמה לחשבונות הלקוח</li>
+                  <li><strong>ריכוז חודשי:</strong> משימות דיווח חודשי (מע"מ, מקדמות, שכר וכו')</li>
+                  <li><strong>דיווחי מיסים:</strong> משימות דיווחי מיסים חודשיים</li>
+                  <li><strong>שכר:</strong> משימות שכר ודיווחי רשויות</li>
+                </ul>
+                <p><strong>תנאים:</strong> ניתן להגביל חוק לסוג עסק מסוים (למשל: רק חברות בע"מ).</p>
+                <p><strong>הפעלה/כיבוי:</strong> כל חוק ניתן להפעלה או כיבוי בלחיצה בלי למחוק אותו.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Rule Editor Dialog */}
       <Dialog open={!!editingRule} onOpenChange={(open) => { if (!open) { setEditingRule(null); setNewRuleType(null); } }}>
