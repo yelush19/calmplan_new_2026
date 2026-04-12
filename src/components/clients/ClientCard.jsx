@@ -110,10 +110,10 @@ const serviceGroupLabels = {
 };
 
 const serviceGroupIcons = {
-  1: 'bg-teal-700 border-teal-500',         // טורקיז כהה — הנה"ח
-  2: 'bg-sky-600 border-sky-400',           // כחול שמיים — שכר
+  1: 'bg-indigo-700 border-indigo-500',     // סגול-כחול — הנה"ח (קונטרסט גבוה)
+  2: 'bg-sky-700 border-sky-500',           // כחול שמיים — שכר
   3: 'bg-emerald-700 border-emerald-500',   // ירוק אמרלד — דוחות שנתיים
-  4: 'bg-amber-600 border-amber-400',       // כתום-ענבר — ניהול (לא ורוד!)
+  4: 'bg-amber-700 border-amber-500',       // כתום-ענבר — ניהול
 };
 
 /**
@@ -137,11 +137,11 @@ function ProcessTreeSection({ processTree }) {
   const enabledIds = getEnabledNodeIds(clientTree);
   if (enabledIds.length === 0) return null;
 
-  // Branch group config
+  // Branch group config — strong, high-contrast colors so white text is always readable
   const branchConfig = {
-    P1: { label: 'שכר', bg: 'bg-sky-600', border: 'border-sky-300', count: 'bg-sky-400' },
-    P2: { label: 'הנה"ח ודוחות', bg: 'bg-slate-600', border: 'border-slate-300', count: 'bg-slate-500' },
-    P3: { label: 'ניהול', bg: 'bg-amber-600', border: 'border-amber-300', count: 'bg-amber-400' },
+    P1: { label: 'שכר', bg: 'bg-sky-700', border: 'border-sky-300', count: 'bg-sky-500' },
+    P2: { label: 'הנה"ח ודוחות', bg: 'bg-indigo-700', border: 'border-indigo-300', count: 'bg-indigo-500' },
+    P3: { label: 'ניהול', bg: 'bg-amber-700', border: 'border-amber-300', count: 'bg-amber-500' },
     P5: { label: 'דוחות שנתיים', bg: 'bg-emerald-700', border: 'border-emerald-300', count: 'bg-emerald-500' },
   };
 
@@ -468,18 +468,18 @@ export default function ClientCard({ client, isSelected, forceOpen, onToggleSele
         </div>
         <div className="flex items-center gap-3 mt-1 flex-wrap">
           {mainContact?.name && (
-            <span className="text-sm text-gray-700 flex items-center gap-1 font-medium">
+            <span className="text-sm text-gray-800 flex items-center gap-1 font-semibold">
               <User className="w-3.5 h-3.5 flex-shrink-0" />
               {mainContact.name}
             </span>
           )}
           {mainContact?.phone && (
-            <span className="text-sm text-gray-500">{mainContact.phone}</span>
+            <span className="text-sm text-gray-700 font-medium">{mainContact.phone}</span>
           )}
           {client.entity_number && (
-            <span className="text-xs text-gray-400">ח"פ: {client.entity_number}</span>
+            <span className="text-xs text-gray-700 font-medium">ח"פ: {client.entity_number}</span>
           )}
-          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ms-auto ${isCardOpen ? '' : '-rotate-90'}`} />
+          <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ms-auto ${isCardOpen ? '' : '-rotate-90'}`} />
         </div>
       </CardHeader>
       

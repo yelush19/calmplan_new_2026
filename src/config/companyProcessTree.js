@@ -220,8 +220,10 @@ const P2_BRANCH = {
     // ══════════════════════════════════════════════════════
 
     // ── קליטת הכנסות ──
+    // Data-collection node: skipped when no downstream consumer (VAT/tax_advances/pnl) is active this month.
     node('P2_income', 'קליטת הכנסות', 'income_entry', {
       default_frequency: 'monthly',
+      is_data_collection: true,
       steps: [
         { key: 'receive_data', label: 'קבלת נתונים' },
         { key: 'entry',        label: 'קליטה' },
@@ -229,8 +231,10 @@ const P2_BRANCH = {
     }),
 
     // ── קליטת הוצאות (שוטף — לקוחות שולחים למערכת דיגיטלית) ──
+    // Data-collection node: skipped when no downstream consumer (VAT/pnl) is active this month.
     node('P2_expenses', 'קליטת הוצאות', 'expense_entry', {
       default_frequency: 'monthly',
+      is_data_collection: true,
       steps: [
         { key: 'receive_data', label: 'קבלת נתונים' },
         { key: 'entry',        label: 'קליטה' },
@@ -238,8 +242,10 @@ const P2_BRANCH = {
     }),
 
     // ── התאמות חשבונות (שוטף — על פני החודש) ──
+    // Data-collection node: skipped when no downstream consumer (pnl) is active this month.
     node('P2_reconciliation', 'התאמות חשבונות', 'reconciliation', {
       default_frequency: 'monthly',
+      is_data_collection: true,
       smart_link: 'bank_accounts',
       steps: [
         { key: 'bank_statements',    label: 'קבלת דפי בנק' },

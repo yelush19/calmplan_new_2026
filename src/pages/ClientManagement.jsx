@@ -121,6 +121,22 @@ export default function ClientManagementPage() {
   const [automationRules, setAutomationRules] = useState([]);
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set()); // All groups start OPEN
 
+  // Smart pagination — 15 clients visible per status group by default (ADHD-friendly)
+  const CLIENTS_PAGE_SIZE = 15;
+  const [visibleCountByGroup, setVisibleCountByGroup] = useState({});
+
+  const handleShowMoreInGroup = useCallback((status) => {
+    setVisibleCountByGroup(prev => ({
+      ...prev,
+      [status]: (prev[status] || CLIENTS_PAGE_SIZE) + CLIENTS_PAGE_SIZE,
+    }));
+  }, []);
+
+  // Reset pagination when filters/search change
+  useEffect(() => {
+    setVisibleCountByGroup({});
+  }, [searchTerm, statusFilter]);
+
   const handleMigrateDevToProjects = async (clientsList) => {
     const devClients = (clientsList || clients).filter(c => c.status === 'development');
     if (devClients.length === 0) return;
@@ -1165,39 +1181,62 @@ export default function ClientManagementPage() {
                   exit={{ opacity: 0 }}
                   className="space-y-4"
                 >
-                  {groupedClients.map(group => (
-                    <div key={group.status}>
-                      <button
-                        onClick={() => toggleGroup(group.status)}
-                        className="flex items-center gap-2 w-full text-end py-2 px-3 rounded-lg hover:bg-[#F5F5F5] transition-colors mb-2"
-                      >
-                        <ChevronDown className={`w-4 h-4 text-[#455A64] transition-transform ${collapsedGroups.has(group.status) ? '-rotate-90' : ''}`} />
-                        <span className="text-sm font-semibold text-[#263238]">{group.label}</span>
-                        <Badge variant="outline" className="text-[12px] px-1.5 py-0">{group.clients.length}</Badge>
-                      </button>
-                      {!collapsedGroups.has(group.status) && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
-                          {group.clients.map(client => (
-                            <ClientCard
-                              key={client.id}
-                              client={client}
-                              isSelected={selectedClientIds.has(client.id)}
-                              forceOpen={allCardsOpen}
-                              onToggleSelect={() => handleToggleSelectClient(client.id)}
-                              onEdit={(c) => { setSelectedClient(c); openPanel(c, 'details'); }}
-                              onSelectTasks={(c) => openPanel(c, 'tasks')}
-                              onSelectAccounts={(c) => openPanel(c, 'accounts')}
-                              onSelectCollections={setSelectedCollectionsClient}
-                              onSelectContracts={setSelectedContractsClient}
-                              onSelectFiles={(c) => openPanel(c, 'files')}
-                              onSelectProviders={(c) => openPanel(c, 'providers')}
-                              onDelete={() => handleDeleteClient(client.id)}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  {groupedClients.map(group => {
+                    const visibleCount = visibleCountByGroup[group.status] || CLIENTS_PAGE_SIZE;
+                    const visibleClients = group.clients.slice(0, visibleCount);
+                    const hiddenCount = group.clients.length - visibleClients.length;
+                    return (
+                      <div key={group.status}>
+                        <button
+                          onClick={() => toggleGroup(group.status)}
+                          className="flex items-center gap-2 w-full text-end py-2 px-3 rounded-lg hover:bg-[#F5F5F5] transition-colors mb-2"
+                        >
+                          <ChevronDown className={`w-4 h-4 text-[#455A64] transition-transform ${collapsedGroups.has(group.status) ? '-rotate-90' : ''}`} />
+                          <span className="text-sm font-semibold text-[#263238]">{group.label}</span>
+                          <Badge variant="outline" className="text-[12px] px-1.5 py-0">{group.clients.length}</Badge>
+                          {hiddenCount > 0 && (
+                            <Badge className="text-[11px] px-1.5 py-0 bg-amber-100 text-amber-800 border border-amber-200">
+                              מציג {visibleClients.length} מתוך {group.clients.length}
+                            </Badge>
+                          )}
+                        </button>
+                        {!collapsedGroups.has(group.status) && (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
+                              {visibleClients.map(client => (
+                                <ClientCard
+                                  key={client.id}
+                                  client={client}
+                                  isSelected={selectedClientIds.has(client.id)}
+                                  forceOpen={allCardsOpen}
+                                  onToggleSelect={() => handleToggleSelectClient(client.id)}
+                                  onEdit={(c) => { setSelectedClient(c); openPanel(c, 'details'); }}
+                                  onSelectTasks={(c) => openPanel(c, 'tasks')}
+                                  onSelectAccounts={(c) => openPanel(c, 'accounts')}
+                                  onSelectCollections={setSelectedCollectionsClient}
+                                  onSelectContracts={setSelectedContractsClient}
+                                  onSelectFiles={(c) => openPanel(c, 'files')}
+                                  onSelectProviders={(c) => openPanel(c, 'providers')}
+                                  onDelete={() => handleDeleteClient(client.id)}
+                                />
+                              ))}
+                            </div>
+                            {hiddenCount > 0 && (
+                              <div className="flex justify-center mt-4">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => handleShowMoreInGroup(group.status)}
+                                  className="text-sm border-[#4682B4] text-[#4682B4] hover:bg-[#4682B4]/5"
+                                >
+                                  הצג עוד {Math.min(CLIENTS_PAGE_SIZE, hiddenCount)} לקוחות ({hiddenCount} נותרו)
+                                </Button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </motion.div>
               ) : (
                 <motion.div
