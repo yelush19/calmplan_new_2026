@@ -28,8 +28,9 @@ import useRealtimeRefresh from "@/hooks/useRealtimeRefresh";
 import useTaskCascade from "@/hooks/useTaskCascade";
 import { useApp } from "@/contexts/AppContext";
 import { useDesign } from "@/contexts/DesignContext";
-import FocusMapView from "@/components/canvas/FocusMapView";
 import { useBiologicalClock } from "@/contexts/BiologicalClockContext";
+// Stage 5.6: FocusMapView import removed — Home no longer embeds a canvas; the
+// dedicated /MindMap page (RadialMindMapView from stage 5.3) owns that view now.
 import OverdueAlert from "@/components/tasks/OverdueAlert";
 import MoodCheckerInline from "@/components/home/MoodCheckerInline";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
@@ -730,22 +731,41 @@ export default function HomePage() {
         {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
         <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
 
-        {/* ═══ 3. "מה אפשר לעשות היום" — Focus Map (only when tasks exist) ═══ */}
+        {/* ═══ 3. "מה אפשר לעשות היום" — quiet link to the full mind map ═══ */}
+        {/* Stage 5.6: the embedded FocusMapView (canvas + floating sticker panel)
+            was dominating Home. We replaced it with a 1-line link that opens
+            the dedicated /MindMap page (RadialMindMapView from stage 5.3),
+            keeping Home focused on "what do I do right now?" instead of
+            "here is a picture of everything I might need to think about". */}
         {calmTasks.length > 0 && (
-          <div className="rounded-2xl overflow-hidden border border-amber-100 bg-white" style={{ minHeight: '400px' }}>
-            <FocusMapView
-              tasks={calmTasks}
-              allTasks={data.activeTasks || []}
-              centerLabel="מה לעשות היום"
-              centerSub={`${data.overdue.length + data.today.length} משימות`}
-              onEditTask={setEditingTask}
-              onStatusChange={handleStatusChange}
-            />
-          </div>
+          <Link
+            to={createPageUrl('MindMap')}
+            className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm text-slate-700">
+              <Map className="w-4 h-4 text-slate-400" />
+              <span className="font-semibold">מפת חשיבה</span>
+              <span className="text-xs text-slate-500">— פתחי את המפה המלאה כשאת מוכנה להסתכל על התמונה הרחבה</span>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-400" />
+          </Link>
         )}
 
-        {/* ═══ 3.5 Category Breakdown — what remains per service ═══ */}
-        <CategoryBreakdown tasks={data.mergedToday || []} />
+        {/* ═══ 3.5 Category Breakdown — collapsed by default (Stage 5.6) ═══ */}
+        {/* Was a dumping ground of 9+ rows. Now hidden behind a toggle so
+            the morning view stays quiet. */}
+        <details className="rounded-2xl bg-white border border-gray-200 overflow-hidden group">
+          <summary className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors list-none">
+            <div className="flex items-center gap-2 text-sm">
+              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
+              <span className="font-semibold text-slate-700">סיכום היום לפי קטגוריה</span>
+              <span className="text-xs text-slate-400">(פירוט מעמיק — מוסתר כברירת מחדל)</span>
+            </div>
+          </summary>
+          <div className="px-4 pb-4 pt-1 border-t border-gray-100">
+            <CategoryBreakdown tasks={data.mergedToday || []} />
+          </div>
+        </details>
 
         {/* ═══ 3.6 Collapsible Sections — overdue/today/upcoming/events/payment ═══ */}
         <div className="space-y-2">
