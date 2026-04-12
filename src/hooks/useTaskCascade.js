@@ -12,6 +12,7 @@ import {
   getTaskProcessSteps,
   toggleStep,
   ALL_SERVICES,
+  markAllStepsDone,
 } from '@/config/processTemplates';
 import {
   PHASE_B_SERVICES,
@@ -68,6 +69,13 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
     const finalUpdates = { ...updates };
     if (cascade.statusUpdate && !updates.status) {
       finalUpdates.status = cascade.statusUpdate.status;
+    }
+
+    // Whenever the new status is production_completed, ensure all template
+    // process_steps are flagged as done so the UI checkboxes match the state.
+    if (finalUpdates.status === 'production_completed' && task.status !== 'production_completed') {
+      const baseSteps = finalUpdates.process_steps || task.process_steps || {};
+      finalUpdates.process_steps = markAllStepsDone({ ...task, process_steps: baseSteps });
     }
 
     const isDirectProduction = updates.status === 'production_completed' &&
@@ -177,6 +185,12 @@ export default function useTaskCascade(tasks, setTasks, clients = []) {
 
     const updates = { process_steps: updatedSteps };
     if (cascade.statusUpdate) updates.status = cascade.statusUpdate.status;
+
+    // When the cascade decides this step toggle promotes the task to
+    // production_completed, fill in all template steps so the UI matches.
+    if (updates.status === 'production_completed' && task.status !== 'production_completed') {
+      updates.process_steps = markAllStepsDone({ ...task, process_steps: updates.process_steps });
+    }
 
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
 

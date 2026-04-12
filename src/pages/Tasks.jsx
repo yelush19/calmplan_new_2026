@@ -38,6 +38,8 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 import { TASK_STATUS_CONFIG as statusConfig, STATUS_CONFIG, ALL_SERVICES, getTaskProcessSteps, toggleStep } from '@/config/processTemplates';
 import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
+import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getCategoryLabel } from '@/utils/categoryLabels';
 import { useDesign } from '@/contexts/DesignContext';
 import { useApp } from '@/contexts/AppContext';
@@ -231,7 +233,7 @@ export default function TasksPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [domainFilter, setDomainFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
-  const [view, setView] = useState("list"); // Default: list/table (client prefers spreadsheet view)
+  const [view, setView] = useState("table"); // Default: per-service table (client prefers spreadsheet view)
   const [isClearing, setIsClearing] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
@@ -551,6 +553,46 @@ export default function TasksPage() {
     }
     return result;
   }, [timeFilteredTasks, searchTerm, statusFilter, priorityFilter, categoryFilter, domainFilter, contextFilter, tagFilter]);
+
+  // Group filteredTasks by service for the per-service Table view (טבלה).
+  // Tasks whose category does not map to a known service are bucketed under
+  // a synthetic "אחר" service so they are still visible.
+  const tableServiceData = useMemo(() => {
+    const result = {};
+    Object.values(ALL_SERVICES).forEach(service => {
+      const cats = service.taskCategories || [];
+      const matched = filteredTasks.filter(t => cats.includes(t.category));
+      if (matched.length === 0) return;
+      result[service.key] = {
+        service,
+        clientRows: matched
+          .map(task => ({
+            clientName: task.client_name || 'ללא לקוח',
+            task,
+            client: clientByName[task.client_name] || null,
+          }))
+          .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
+      };
+    });
+    // Bucket for tasks whose category isn't mapped to a service
+    const knownCats = new Set(
+      Object.values(ALL_SERVICES).flatMap(s => s.taskCategories || [])
+    );
+    const unmapped = filteredTasks.filter(t => !knownCats.has(t.category));
+    if (unmapped.length > 0) {
+      result.__other__ = {
+        service: { key: '__other__', label: 'אחר', steps: [], taskCategories: [] },
+        clientRows: unmapped
+          .map(task => ({
+            clientName: task.client_name || 'ללא לקוח',
+            task,
+            client: clientByName[task.client_name] || null,
+          }))
+          .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
+      };
+    }
+    return result;
+  }, [filteredTasks, clientByName]);
 
   // Sorting
   const sortedTasks = useMemo(() => {
@@ -1189,12 +1231,13 @@ export default function TasksPage() {
         <span className="text-xs text-gray-500 font-medium">תצוגה:</span>
         <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
           {[
-            { key: 'list', label: 'טבלה', icon: Table2 },
+            { key: 'table', label: 'טבלה', icon: Table2 },
             { key: 'gantt', label: 'גאנט', icon: BarChart3 },
             { key: 'mindmap', label: 'מיינדמפ', icon: Network },
             { key: 'flow', label: 'זרימה', icon: ArrowRight },
+            { key: 'list', label: 'רשימה', icon: List },
             { key: 'kanban', label: 'קנבן', icon: LayoutGrid },
-            { key: 'workbook', label: 'גיליון', icon: List },
+            { key: 'workbook', label: 'גיליון', icon: Table2 },
             { key: 'focus', label: 'מיקוד', icon: Eye },
             { key: 'miro', label: 'מפה', icon: Network },
           ].map(({ key, label, icon: Icon }) => (
@@ -1647,6 +1690,55 @@ export default function TasksPage() {
             </ResizableTable>
           </Card>
         )
+      ) : view === 'table' ? (
+        (() => {
+          const entries = Object.entries(tableServiceData);
+          if (entries.length === 0) {
+            return (
+              <Card className="p-12 text-center text-gray-500">
+                אין משימות להצגה בטבלה.
+              </Card>
+            );
+          }
+          const TAB_COLORS = ['#4682B4', '#2E7D32', '#7C3AED', '#F59E0B', '#0D9488', '#6366F1'];
+          return (
+            <Tabs defaultValue={entries[0][0]} className="w-full" dir="rtl">
+              <TabsList className="flex flex-wrap gap-2 h-auto p-2 rounded-xl bg-white border mb-3 justify-start">
+                {entries.map(([serviceKey, { service, clientRows }], idx) => {
+                  const completed = clientRows.filter(r => r.task.status === 'production_completed').length;
+                  const color = TAB_COLORS[idx % TAB_COLORS.length];
+                  return (
+                    <TabsTrigger
+                      key={serviceKey}
+                      value={serviceKey}
+                      className="rounded-xl px-4 py-2 text-sm font-bold border-2 transition-all data-[state=active]:shadow-lg"
+                      style={{ borderColor: color, color }}
+                    >
+                      {service.label}
+                      <span className="ms-1.5 text-xs opacity-70">({completed}/{clientRows.length})</span>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+              {entries.map(([serviceKey, { service, clientRows }]) => (
+                <TabsContent key={serviceKey} value={serviceKey} className="mt-0">
+                  <div className="border border-[#E0E0E0] rounded-xl overflow-hidden">
+                    <GroupedServiceTable
+                      service={service}
+                      clientRows={clientRows}
+                      onToggleStep={handleToggleStep}
+                      onStatusChange={handleStatusChange}
+                      onEdit={handleEditTask}
+                      onDelete={(task) => handleDeleteTask(task.id)}
+                      onNote={setNoteTask}
+                      allTasks={filteredTasks}
+                    />
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          );
+        })()
       ) : view === 'workbook' ? (
         <TaxWorkbookView
           tasks={filteredTasks}

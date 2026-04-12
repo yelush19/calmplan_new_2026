@@ -268,6 +268,11 @@ export default function PayrollReportsDashboardPage() {
       const allDone = areAllStepsDone(updatedTask);
       const updatePayload = { process_steps: updatedSteps };
       if (allDone && task.status !== 'production_completed') updatePayload.status = 'production_completed';
+      // When toggling to production_completed, mark all template steps done
+      // so the UI checkboxes reflect the auto-completed state.
+      if (updatePayload.status === 'production_completed') {
+        updatePayload.process_steps = markAllStepsDone({ ...task, process_steps: updatePayload.process_steps });
+      }
       localUpdateRef.current = true;
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       await Task.update(task.id, updatePayload);
@@ -693,7 +698,15 @@ export default function PayrollReportsDashboardPage() {
             }))}
           />
         ) : viewMode === 'workbook' ? (
-          <TaxWorkbookView tasks={filteredTasks} clients={clients} services={REPORTING_SERVICES} onStatusChange={handleStatusChange} onEditTask={setEditingTask} />
+          <TaxWorkbookView
+            tasks={filteredTasks}
+            clients={clients}
+            services={REPORTING_SERVICES}
+            onToggleStep={handleToggleStep}
+            onStatusChange={handleStatusChange}
+            onDateChange={handleDateChange}
+            onEdit={setEditingTask}
+          />
         ) : viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (

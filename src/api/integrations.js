@@ -8,40 +8,54 @@ const notAvailable = async () => {
   return { success: false, error: 'Not available' };
 };
 
-// Ensure the storage bucket exists (called once on first upload)
-let bucketChecked = false;
+// The "calmplan-files" bucket must be created manually in Supabase Dashboard
+// (Storage → New Bucket → "calmplan-files"), and storage policies must be set
+// up via /setup-storage.sql. We do NOT call listBuckets/createBucket here:
+// the anon key is filtered by RLS on storage.buckets and listBuckets() returns
+// an empty list, which would falsely trigger a doomed createBucket() attempt.
+// Instead we let the upload itself surface any real error.
 async function ensureBucket() {
-  if (bucketChecked || !isSupabaseConfigured) return;
-  try {
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    if (listError) {
-      // RLS may block listBuckets — try uploading directly and let it fail naturally
-      console.warn('Cannot list buckets (RLS?):', listError.message);
-      bucketChecked = true;
-      return;
-    }
-    const exists = buckets?.some(b => b.name === BUCKET_NAME);
-    if (!exists) {
-      const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
-        public: false,
-        fileSizeLimit: 52428800, // 50MB
-      });
-      if (createError) {
-        console.error('Bucket creation failed:', createError.message);
-        throw new Error(
-          `לא ניתן ליצור bucket "${BUCKET_NAME}" ב-Supabase. ` +
-          `צור אותו ידנית בלוח הבקרה של Supabase: Storage → New Bucket → "${BUCKET_NAME}"`
-        );
-      }
-    }
-    bucketChecked = true;
-  } catch (err) {
-    // Don't mark as checked so next upload retries
-    if (err.message?.includes('Bucket')) throw err;
-    console.warn('Bucket check failed:', err.message);
-    // Still allow upload attempt — the upload itself will give the real error
-    bucketChecked = true;
+  // No-op by design — see comment above.
+}
+
+// Sanitize a filename for use as a Supabase Storage object key.
+// Supabase Storage validates keys against an ASCII-only character set
+// (Hebrew/Unicode chars cause "Invalid key"). We strip the extension first,
+// transliterate the base to ASCII-safe chars, then re-attach the extension.
+// The original filename is preserved in the returned `file_name` field.
+function sanitizeStorageKey(fileName) {
+  const lastDot = fileName.lastIndexOf('.');
+  const base = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+  const ext = lastDot > 0 ? fileName.slice(lastDot) : '';
+  const safeBase = base.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  const safeExt = ext.replace(/[^a-zA-Z0-9.]/g, '');
+  const result = (safeBase || 'file') + safeExt;
+  return result;
+}
+
+// Translate raw Supabase storage errors into actionable Hebrew messages.
+function describeStorageError(error) {
+  const msg = (error?.message || '').toLowerCase();
+  const status = error?.statusCode || error?.status;
+
+  if (msg.includes('bucket') && (msg.includes('not found') || status === 404)) {
+    return `Bucket "${BUCKET_NAME}" לא נמצא. צור אותו ב-Supabase Dashboard → Storage → New Bucket → "${BUCKET_NAME}"`;
   }
+  if (
+    msg.includes('row-level security') ||
+    msg.includes('rls') ||
+    msg.includes('policy') ||
+    msg.includes('not authorized') ||
+    msg.includes('unauthorized') ||
+    status === 401 ||
+    status === 403
+  ) {
+    return (
+      `אין הרשאת העלאה ל-bucket "${BUCKET_NAME}". ` +
+      `הרץ את הסקריפט /setup-storage.sql ב-Supabase Dashboard → SQL Editor כדי להוסיף policies.`
+    );
+  }
+  return `שגיאה בהעלאת קובץ: ${error?.message || 'שגיאה לא ידועה'}`;
 }
 
 /**
@@ -56,7 +70,7 @@ async function uploadFile({ file }) {
   await ensureBucket();
 
   const timestamp = Date.now();
-  const safeName = file.name.replace(/[^a-zA-Z0-9._\u0590-\u05FF-]/g, '_');
+  const safeName = sanitizeStorageKey(file.name);
   const filePath = `uploads/${timestamp}_${safeName}`;
 
   const { data, error } = await supabase.storage
@@ -67,13 +81,7 @@ async function uploadFile({ file }) {
     });
 
   if (error) {
-    if (error.message?.toLowerCase().includes('bucket') || error.statusCode === 404) {
-      bucketChecked = false;
-      throw new Error(
-        `Bucket "${BUCKET_NAME}" לא נמצא. צור אותו ב-Supabase Dashboard → Storage → New Bucket → "${BUCKET_NAME}" (Private)`
-      );
-    }
-    throw new Error(`שגיאה בהעלאת קובץ: ${error.message}`);
+    throw new Error(describeStorageError(error));
   }
 
   // Get a signed URL (valid for 1 year)
@@ -128,8 +136,10 @@ async function uploadClientFile({ file, clientId, documentType = 'other', onProg
   await ensureBucket();
 
   const timestamp = Date.now();
-  const safeName = file.name.replace(/[^a-zA-Z0-9._\u0590-\u05FF-]/g, '_');
-  const folderPath = `clients/${clientId}/${documentType}`;
+  const safeName = sanitizeStorageKey(file.name);
+  const safeClientId = String(clientId).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const safeDocType = String(documentType).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const folderPath = `clients/${safeClientId}/${safeDocType}`;
   const filePath = `${folderPath}/${timestamp}_${safeName}`;
 
   // Simulate progress for smaller files since Supabase JS SDK doesn't expose upload progress natively
@@ -155,13 +165,7 @@ async function uploadClientFile({ file, clientId, documentType = 'other', onProg
     if (onProgress) onProgress(90);
 
     if (error) {
-      if (error.message?.toLowerCase().includes('bucket') || error.statusCode === 404) {
-        bucketChecked = false;
-        throw new Error(
-          `Bucket "${BUCKET_NAME}" לא נמצא. צור אותו ב-Supabase Dashboard → Storage → New Bucket → "${BUCKET_NAME}" (Private)`
-        );
-      }
-      throw new Error(`שגיאה בהעלאת קובץ: ${error.message}`);
+      throw new Error(describeStorageError(error));
     }
 
     // Get a signed URL (valid for 1 year)

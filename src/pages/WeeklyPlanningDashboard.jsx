@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectLabel, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Calendar, Clock, CheckCircle, Target,
   Brain, TrendingUp, ChevronLeft, ChevronRight,
@@ -75,17 +75,27 @@ function MiniStatusDropdown({ task, onStatusChange }) {
   );
 }
 
-function RescheduleDropdown({ task, weekDays, onReschedule }) {
+function RescheduleDropdown({ task, weekGroups, onReschedule }) {
   return (
     <Select value={undefined} onValueChange={(dayStr) => onReschedule(task, dayStr)}>
       <SelectTrigger className="h-6 text-[12px] px-1.5 w-auto min-w-[50px] border border-gray-200 bg-white">
         <ArrowLeftRight className="w-3 h-3" />
       </SelectTrigger>
-      <SelectContent>
-        {weekDays.map(wd => (
-          <SelectItem key={wd.dateStr} value={wd.dateStr} className="text-xs">
-            יום {wd.name} ({format(wd.date, 'dd/MM')})
-          </SelectItem>
+      <SelectContent className="max-h-[400px]">
+        {weekGroups.map((group, gIdx) => (
+          <React.Fragment key={group.key}>
+            {gIdx > 0 && <SelectSeparator />}
+            <SelectGroup>
+              <SelectLabel className="text-[11px] text-indigo-600 font-bold py-1">
+                {group.label}
+              </SelectLabel>
+              {group.days.map(wd => (
+                <SelectItem key={wd.dateStr} value={wd.dateStr} className="text-xs">
+                  יום {wd.name} ({format(wd.date, 'dd/MM')})
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </React.Fragment>
         ))}
       </SelectContent>
     </Select>
@@ -245,13 +255,37 @@ export default function WeeklyPlanningDashboard() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [groupByCategory, setGroupByCategory] = useState(false);
-  const [collapsedDays, setCollapsedDays] = useState({});
+  // ADHD-friendly: start with only today's day expanded, others collapsed
+  const [collapsedDays, setCollapsedDays] = useState(() => {
+    const todayIdx = new Date().getDay(); // 0=Sun..4=Thu within WORK_DAYS
+    const initial = {};
+    WORK_DAYS.forEach(wd => {
+      if (wd.dayIndex !== todayIdx) initial[wd.dayIndex] = true;
+    });
+    return initial;
+  });
   const [expandedCompletedDays, setExpandedCompletedDays] = useState({});
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [assigningTaskId, setAssigningTaskId] = useState(null);
+  // ADHD-friendly: summary panel (stats + heatmap + category breakdown) collapsed by default
+  const [showSummaryPanel, setShowSummaryPanel] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   useEffect(() => { loadData(); }, []);
+
+  // When switching between weeks: current week → open today only, other weeks → collapse all
+  useEffect(() => {
+    const collapsed = {};
+    if (weekOffset === 0) {
+      const todayIdx = new Date().getDay();
+      WORK_DAYS.forEach(wd => {
+        if (wd.dayIndex !== todayIdx) collapsed[wd.dayIndex] = true;
+      });
+    } else {
+      WORK_DAYS.forEach(wd => { collapsed[wd.dayIndex] = true; });
+    }
+    setCollapsedDays(collapsed);
+  }, [weekOffset]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -373,6 +407,28 @@ export default function WeeklyPlanningDashboard() {
     });
     return Array.from(catSet).sort();
   }, [tasks]);
+
+  // Reschedule pool: 4 weeks starting from the displayed week (allows deferring tasks beyond current week)
+  const rescheduleWeekGroups = useMemo(() => {
+    const groups = [];
+    for (let i = 0; i < 4; i++) {
+      const wkStart = addDays(weekStart, i * 7);
+      const days = WORK_DAYS.map(wd => {
+        const d = addDays(wkStart, wd.dayIndex);
+        return { ...wd, date: d, dateStr: format(d, 'yyyy-MM-dd') };
+      });
+      let label;
+      if (i === 0) {
+        label = weekOffset === 0 ? 'השבוע' : `שבוע ${format(wkStart, 'dd/MM')}`;
+      } else if (i === 1 && weekOffset === 0) {
+        label = 'שבוע הבא';
+      } else {
+        label = `שבוע ${format(wkStart, 'dd/MM')} — ${format(addDays(wkStart, 4), 'dd/MM')}`;
+      }
+      groups.push({ key: `week-${i}`, label, days });
+    }
+    return groups;
+  }, [weekStart, weekOffset]);
 
   const recommendations = useMemo(() => {
     const recs = [];
@@ -589,7 +645,7 @@ export default function WeeklyPlanningDashboard() {
           {catLabel}
         </Badge>
         <MiniStatusDropdown task={task} onStatusChange={handleStatusChange} />
-        <RescheduleDropdown task={task} weekDays={weekDaysData} onReschedule={handleReschedule} />
+        <RescheduleDropdown task={task} weekGroups={rescheduleWeekGroups} onReschedule={handleReschedule} />
         <button
           onClick={() => setNoteTask(task)}
           className="p-1 rounded hover:bg-amber-100 transition-colors opacity-0 group-hover:opacity-100"
@@ -783,57 +839,112 @@ export default function WeeklyPlanningDashboard() {
         </Button>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-5 gap-3">
-        {[
-          { label: 'סה"כ משימות', value: stats.total, color: 'text-gray-800', bg: '' },
-          { label: 'הושלמו', value: stats.completed, color: 'text-emerald-600', bg: '' },
-          { label: 'נותרו', value: stats.remaining, color: 'text-blue-600', bg: '' },
-          { label: 'באיחור', value: stats.overdue, color: stats.overdue > 0 ? 'text-amber-600' : 'text-gray-400', bg: stats.overdue > 0 ? 'bg-amber-50' : '' },
-          { label: 'ללא תאריך', value: stats.unassigned, color: stats.unassigned > 0 ? 'text-indigo-600' : 'text-gray-400', bg: stats.unassigned > 0 ? 'bg-indigo-50' : '' },
-        ].map(({ label, value, color, bg }) => (
-          <Card key={label} className={`border-0 shadow-sm ${bg}`}>
-            <CardContent className="p-3 text-center">
-              <p className={`text-2xl font-black ${color}`}>{value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Compact summary strip — always visible, one-line */}
+      <div className="flex items-center gap-2 flex-wrap bg-white border border-gray-100 rounded-xl px-3 py-2 shadow-sm">
+        <button
+          onClick={() => setShowSummaryPanel(p => !p)}
+          className="flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-700 transition-colors"
+          title={showSummaryPanel ? 'הסתר פרטים' : 'הצג פרטים'}
+        >
+          {showSummaryPanel ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          <span className="font-bold">סיכום</span>
+        </button>
+        <div className="h-4 w-px bg-gray-200" />
+        <span className="text-xs text-gray-600">
+          <span className="font-bold text-gray-800">{stats.total}</span> משימות
+        </span>
+        {stats.completed > 0 && (
+          <span className="text-xs text-emerald-600">
+            • <span className="font-bold">{stats.completed}</span>✓ הושלמו
+            {stats.total > 0 && ` (${Math.round((stats.completed / stats.total) * 100)}%)`}
+          </span>
+        )}
+        {stats.remaining > 0 && (
+          <span className="text-xs text-blue-600">
+            • <span className="font-bold">{stats.remaining}</span> נותרו
+          </span>
+        )}
+        {stats.overdue > 0 && (
+          <span className="text-xs text-amber-600">
+            • <span className="font-bold">{stats.overdue}</span> באיחור
+          </span>
+        )}
+        {stats.unassigned > 0 && (
+          <span className="text-xs text-indigo-600">
+            • <span className="font-bold">{stats.unassigned}</span> ללא תאריך
+          </span>
+        )}
+        {recommendations.length > 0 && !showSummaryPanel && (
+          <>
+            <div className="h-4 w-px bg-gray-200" />
+            <span className="text-[11px] text-gray-400">
+              {recommendations.length} {recommendations.length === 1 ? 'המלצה' : 'המלצות'}
+            </span>
+          </>
+        )}
       </div>
 
-      {/* Workload Heatmap + Category Summary */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <WorkloadHeatmap dailyTasks={dailyTasks} weekCategories={weekCategories} />
-        <CategoryWeekSummary weekTasks={weekTasks} />
-      </div>
+      {/* Expanded summary panel — hidden by default to save space for day content */}
+      {showSummaryPanel && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="space-y-4"
+        >
+          {/* Stats row */}
+          <div className="grid grid-cols-5 gap-3">
+            {[
+              { label: 'סה"כ משימות', value: stats.total, color: 'text-gray-800', bg: '' },
+              { label: 'הושלמו', value: stats.completed, color: 'text-emerald-600', bg: '' },
+              { label: 'נותרו', value: stats.remaining, color: 'text-blue-600', bg: '' },
+              { label: 'באיחור', value: stats.overdue, color: stats.overdue > 0 ? 'text-amber-600' : 'text-gray-400', bg: stats.overdue > 0 ? 'bg-amber-50' : '' },
+              { label: 'ללא תאריך', value: stats.unassigned, color: stats.unassigned > 0 ? 'text-indigo-600' : 'text-gray-400', bg: stats.unassigned > 0 ? 'bg-indigo-50' : '' },
+            ].map(({ label, value, color, bg }) => (
+              <Card key={label} className={`border-0 shadow-sm ${bg}`}>
+                <CardContent className="p-3 text-center">
+                  <p className={`text-2xl font-black ${color}`}>{value}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-      {/* Recommendations */}
-      {recommendations.length > 0 && (
-        <div className="space-y-2">
-          {recommendations.map((rec, i) => {
-            const Icon = rec.icon;
-            const bg = rec.type === 'warning' ? 'bg-amber-50 border-amber-200'
-              : rec.type === 'success' ? 'bg-emerald-50 border-emerald-200'
-              : rec.type === 'balance' ? 'bg-violet-50 border-violet-200'
-              : 'bg-sky-50 border-sky-200';
-            const textColor = rec.type === 'warning' ? 'text-amber-800'
-              : rec.type === 'success' ? 'text-emerald-800'
-              : rec.type === 'balance' ? 'text-violet-800'
-              : 'text-sky-800';
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className={`flex items-center gap-3 p-3 rounded-xl border ${bg}`}
-              >
-                <Icon className={`w-5 h-5 flex-shrink-0 ${textColor}`} />
-                <p className={`text-sm font-medium ${textColor}`}>{rec.text}</p>
-              </motion.div>
-            );
-          })}
-        </div>
+          {/* Workload Heatmap + Category Summary */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <WorkloadHeatmap dailyTasks={dailyTasks} weekCategories={weekCategories} />
+            <CategoryWeekSummary weekTasks={weekTasks} />
+          </div>
+
+          {/* Recommendations */}
+          {recommendations.length > 0 && (
+            <div className="space-y-2">
+              {recommendations.map((rec, i) => {
+                const Icon = rec.icon;
+                const bg = rec.type === 'warning' ? 'bg-amber-50 border-amber-200'
+                  : rec.type === 'success' ? 'bg-emerald-50 border-emerald-200'
+                  : rec.type === 'balance' ? 'bg-violet-50 border-violet-200'
+                  : 'bg-sky-50 border-sky-200';
+                const textColor = rec.type === 'warning' ? 'text-amber-800'
+                  : rec.type === 'success' ? 'text-emerald-800'
+                  : rec.type === 'balance' ? 'text-violet-800'
+                  : 'text-sky-800';
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className={`flex items-center gap-3 p-3 rounded-xl border ${bg}`}
+                  >
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${textColor}`} />
+                    <p className={`text-sm font-medium ${textColor}`}>{rec.text}</p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </motion.div>
       )}
 
       {/* Planning Tools */}
@@ -902,16 +1013,18 @@ export default function WeeklyPlanningDashboard() {
                     {catLabel}
                   </Badge>
                   {isAssigning ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 items-center flex-wrap">
                       {weekDaysData.map(wd => (
                         <button
                           key={wd.dateStr}
                           onClick={() => handleAssignToDay(task, wd.dateStr)}
                           className="px-2 py-1 text-[12px] font-bold rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition-colors"
+                          title={`שבץ ל-${wd.name} (${format(wd.date, 'dd/MM')})`}
                         >
                           {wd.short}׳
                         </button>
                       ))}
+                      <RescheduleDropdown task={task} weekGroups={rescheduleWeekGroups} onReschedule={handleAssignToDay} />
                       <button onClick={() => setAssigningTaskId(null)} className="px-1.5 text-gray-400 hover:text-gray-600">
                         ✕
                       </button>
@@ -973,7 +1086,7 @@ export default function WeeklyPlanningDashboard() {
                       {catLabel}
                     </Badge>
                     <MiniStatusDropdown task={task} onStatusChange={handleStatusChange} />
-                    <RescheduleDropdown task={task} weekDays={weekDaysData} onReschedule={handleReschedule} />
+                    <RescheduleDropdown task={task} weekGroups={rescheduleWeekGroups} onReschedule={handleReschedule} />
                     <button onClick={() => setEditingTask(task)} className="p-1 rounded hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Pencil className="w-3 h-3 text-gray-400" />
                     </button>
@@ -1006,14 +1119,17 @@ export default function WeeklyPlanningDashboard() {
           </button>
         </div>
       </div>
-      <div className="space-y-3">
+      {/* Daily breakdown — calendar-style columns (5 work days side by side on desktop) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-start">
         {WORK_DAYS.map((wd, idx) => {
           const day = dailyTasks[wd.dayIndex];
           if (!day) return null;
           const taskCount = day.tasks.length;
-          const isOverloaded = taskCount > MAX_DAILY_TASKS;
           const completedCount = day.tasks.filter(t => t.status === 'production_completed').length;
           const activeCount = taskCount - completedCount;
+          // Overload only matters for active (non-completed) tasks
+          const isOverloaded = activeCount > MAX_DAILY_TASKS;
+          const isAllDone = taskCount > 0 && activeCount === 0;
           const isDayCollapsed = !!collapsedDays[wd.dayIndex];
 
           // Category mini-summary for the day header
@@ -1029,39 +1145,63 @@ export default function WeeklyPlanningDashboard() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.04 }}
+              className="min-w-0"
             >
-              <Card className={`border-0 shadow-sm overflow-hidden ${day.isToday ? 'ring-2 ring-indigo-400/50' : ''}`}>
-                {/* Day header */}
+              <Card className={`border-0 shadow-sm overflow-hidden h-full ${
+                isAllDone ? 'ring-2 ring-emerald-400/50'
+                : day.isToday ? 'ring-2 ring-indigo-400/50'
+                : ''
+              }`}>
+                {/* Day header — vertical layout to fit narrow column */}
                 <div
-                  className={`flex items-center justify-between px-4 py-2.5 cursor-pointer ${
-                    day.isToday ? 'bg-indigo-50' : day.isPast ? 'bg-gray-50' : 'bg-white'
+                  className={`px-3 py-2 cursor-pointer ${
+                    isAllDone ? 'bg-emerald-50'
+                    : day.isToday ? 'bg-indigo-50'
+                    : day.isPast ? 'bg-gray-50'
+                    : 'bg-white'
                   }`}
                   onClick={() => toggleDay(wd.dayIndex)}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className={`text-base font-bold ${day.isToday ? 'text-indigo-700' : 'text-gray-700'}`}>
-                      יום {wd.name}
-                    </span>
-                    <span className="text-sm text-gray-400">{format(day.date, 'dd/MM')}</span>
-                    {day.isToday && <Badge className="bg-indigo-600 text-white text-[12px]">היום</Badge>}
-                    {/* Category chips in header */}
-                    {taskCount > 0 && (
-                      <div className="flex gap-1 me-2">
-                        {Object.entries(dayCats).slice(0, 4).map(([cat, cnt]) => (
-                          <span key={cat} className={`text-[12px] px-1.5 py-0 rounded ${CATEGORY_BADGE_COLORS[cat] || 'bg-gray-100 text-gray-500'}`}>
-                            {cat} {cnt}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                  {/* Top row: day name + date + chevron */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-baseline gap-1.5 min-w-0">
+                      <span className={`text-sm font-bold truncate ${
+                        isAllDone ? 'text-emerald-700'
+                        : day.isToday ? 'text-indigo-700'
+                        : 'text-gray-700'
+                      }`}>
+                        יום {wd.name}
+                      </span>
+                      <span className="text-[11px] text-gray-400 flex-shrink-0">{format(day.date, 'dd/MM')}</span>
+                    </div>
+                    {isDayCollapsed
+                      ? <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      : <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />}
                   </div>
-                  <div className="flex items-center gap-3">
-                    {/* Compact capacity */}
+                  {/* Second row: today + count badges */}
+                  <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                    {day.isToday && !isAllDone && <Badge className="bg-indigo-600 text-white text-[11px] px-1.5 py-0">היום</Badge>}
+                    {day.isToday && isAllDone && <Badge className="bg-emerald-600 text-white text-[11px] px-1.5 py-0">היום ✓</Badge>}
+                    <Badge
+                      className={`text-[11px] font-bold px-1.5 py-0 ${
+                        taskCount === 0 ? 'bg-gray-100 text-gray-400'
+                        : isAllDone ? 'bg-emerald-100 text-emerald-700'
+                        : isOverloaded ? 'bg-amber-100 text-amber-700'
+                        : 'bg-indigo-100 text-indigo-700'
+                      }`}
+                    >
+                      {isAllDone
+                        ? `${taskCount} ✓`
+                        : `${taskCount} ${taskCount === 1 ? 'משימה' : 'משימות'}`}
+                    </Badge>
+                  </div>
+                  {/* Third row: capacity dots + active/done count */}
+                  <div className="flex items-center justify-between gap-2 mt-1.5">
                     <div className="flex gap-0.5">
                       {Array.from({ length: Math.min(MAX_DAILY_TASKS, 7) }, (_, i) => (
                         <div
                           key={i}
-                          className={`w-1.5 h-4 rounded-full ${
+                          className={`w-1 h-3 rounded-full ${
                             i < taskCount
                               ? i < completedCount ? 'bg-emerald-400' : isOverloaded ? 'bg-amber-400' : 'bg-indigo-400'
                               : 'bg-gray-200'
@@ -1069,24 +1209,37 @@ export default function WeeklyPlanningDashboard() {
                         />
                       ))}
                       {taskCount > MAX_DAILY_TASKS &&
-                        Array.from({ length: Math.min(taskCount - MAX_DAILY_TASKS, 3) }, (_, i) => (
-                          <div key={`over-${i}`} className="w-1.5 h-4 rounded-full bg-amber-400" />
-                        ))
+                        Array.from({ length: Math.min(taskCount - MAX_DAILY_TASKS, 3) }, (_, i) => {
+                          const absoluteIdx = MAX_DAILY_TASKS + i;
+                          const isDoneSlot = absoluteIdx < completedCount;
+                          return (
+                            <div
+                              key={`over-${i}`}
+                              className={`w-1 h-3 rounded-full ${isDoneSlot ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                            />
+                          );
+                        })
                       }
                     </div>
-                    <span className={`text-xs font-bold ${isOverloaded ? 'text-amber-600' : activeCount > 0 ? 'text-gray-500' : 'text-emerald-600'}`}>
-                      {completedCount > 0 ? `${completedCount}✓ ` : ''}{activeCount} פעילות
+                    <span className={`text-[10px] font-bold whitespace-nowrap ${
+                      isAllDone ? 'text-emerald-600'
+                      : isOverloaded ? 'text-amber-600'
+                      : activeCount > 0 ? 'text-gray-500'
+                      : 'text-emerald-600'
+                    }`}>
+                      {isAllDone
+                        ? `${completedCount}✓`
+                        : `${completedCount > 0 ? `${completedCount}✓ ` : ''}${activeCount} פעילות`}
                     </span>
-                    {isDayCollapsed ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
                   </div>
                 </div>
 
                 {/* Tasks */}
                 {!isDayCollapsed && (
-                  <CardContent className={`px-4 py-2.5 ${taskCount === 0 ? 'py-4' : ''}`}>
+                  <CardContent className={`px-2 py-2 ${taskCount === 0 ? 'py-4' : ''}`}>
                     {taskCount === 0 ? (
-                      <p className="text-sm text-gray-400 text-center">
-                        {day.isPast ? 'לא היו משימות' : 'יום פנוי — אפשר להעביר לכאן משימות מימים עמוסים'}
+                      <p className="text-[12px] text-gray-400 text-center">
+                        {day.isPast ? 'לא היו משימות' : 'יום פנוי'}
                       </p>
                     ) : (
                       <div className="space-y-1.5">
