@@ -18,6 +18,21 @@ async function ensureBucket() {
   // No-op by design — see comment above.
 }
 
+// Sanitize a filename for use as a Supabase Storage object key.
+// Supabase Storage validates keys against an ASCII-only character set
+// (Hebrew/Unicode chars cause "Invalid key"). We strip the extension first,
+// transliterate the base to ASCII-safe chars, then re-attach the extension.
+// The original filename is preserved in the returned `file_name` field.
+function sanitizeStorageKey(fileName) {
+  const lastDot = fileName.lastIndexOf('.');
+  const base = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+  const ext = lastDot > 0 ? fileName.slice(lastDot) : '';
+  const safeBase = base.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  const safeExt = ext.replace(/[^a-zA-Z0-9.]/g, '');
+  const result = (safeBase || 'file') + safeExt;
+  return result;
+}
+
 // Translate raw Supabase storage errors into actionable Hebrew messages.
 function describeStorageError(error) {
   const msg = (error?.message || '').toLowerCase();
@@ -55,7 +70,7 @@ async function uploadFile({ file }) {
   await ensureBucket();
 
   const timestamp = Date.now();
-  const safeName = file.name.replace(/[^a-zA-Z0-9._\u0590-\u05FF-]/g, '_');
+  const safeName = sanitizeStorageKey(file.name);
   const filePath = `uploads/${timestamp}_${safeName}`;
 
   const { data, error } = await supabase.storage
@@ -121,8 +136,10 @@ async function uploadClientFile({ file, clientId, documentType = 'other', onProg
   await ensureBucket();
 
   const timestamp = Date.now();
-  const safeName = file.name.replace(/[^a-zA-Z0-9._\u0590-\u05FF-]/g, '_');
-  const folderPath = `clients/${clientId}/${documentType}`;
+  const safeName = sanitizeStorageKey(file.name);
+  const safeClientId = String(clientId).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const safeDocType = String(documentType).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const folderPath = `clients/${safeClientId}/${safeDocType}`;
   const filePath = `${folderPath}/${timestamp}_${safeName}`;
 
   // Simulate progress for smaller files since Supabase JS SDK doesn't expose upload progress natively

@@ -184,7 +184,11 @@ export const ADDITIONAL_SERVICES = {
     label: 'שירותים נלווים לשכר',
     dashboard: 'payroll',
     taskType: 'linear',
-    taskCategories: ['שירותים נלווים לשכר', 'קליטה להנה"ח', 'work_payroll_ancillary'],
+    // NOTE: 'קליטה להנה"ח' was previously listed here by mistake. It belongs
+    // exclusively to payroll_closing — keeping it here would cause
+    // getServiceForTask() to route those tasks to payroll_ancillary first,
+    // leaving the קליטה להנה"ח column empty in the workbook view.
+    taskCategories: ['שירותים נלווים לשכר', 'work_payroll_ancillary'],
     createCategory: 'שירותים נלווים לשכר',
     steps: [
       { key: 'payslip_sending', label: 'משלוח תלושים',     icon: 'send' },
