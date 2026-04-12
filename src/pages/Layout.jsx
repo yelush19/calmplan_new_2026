@@ -36,6 +36,8 @@ import CompletionFeedback from "@/components/tasks/CompletionFeedback";
 import DesktopBridge from "@/components/desktop/DesktopBridge";
 import { AyoaViewProvider, useAyoaView } from "@/contexts/AyoaViewContext";
 import { DesignProvider } from "@/contexts/DesignContext";
+import { UndoProvider } from "@/contexts/UndoContext";
+import FloatingUndoButton from "@/components/FloatingUndoButton";
 import { BiologicalClockProvider } from "@/contexts/BiologicalClockContext";
 import DesignFloatingTab from "@/components/canvas/DesignFloatingTab";
 import BiologicalClockIndicator from "@/components/canvas/BiologicalClockIndicator";
@@ -1403,11 +1405,15 @@ export default function Layout({ children, currentPageName }) {
   return (
     <AppProvider>
       <DesignProvider>
-        <AyoaViewProvider>
-          <BiologicalClockProvider>
-            <LayoutInner>{children}</LayoutInner>
-          </BiologicalClockProvider>
-        </AyoaViewProvider>
+        <UndoProvider>
+          <AyoaViewProvider>
+            <BiologicalClockProvider>
+              <LayoutInner>{children}</LayoutInner>
+              {/* Stage 5.5: global Undo pill (Ctrl+Z) */}
+              <FloatingUndoButton />
+            </BiologicalClockProvider>
+          </AyoaViewProvider>
+        </UndoProvider>
       </DesignProvider>
     </AppProvider>
   );
