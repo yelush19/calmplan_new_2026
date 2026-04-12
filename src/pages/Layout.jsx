@@ -14,7 +14,7 @@ import {
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
   CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2,
   Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import, Activity, Search,
-  BookOpen
+  BookOpen, GitBranch
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -36,6 +36,8 @@ import CompletionFeedback from "@/components/tasks/CompletionFeedback";
 import DesktopBridge from "@/components/desktop/DesktopBridge";
 import { AyoaViewProvider, useAyoaView } from "@/contexts/AyoaViewContext";
 import { DesignProvider } from "@/contexts/DesignContext";
+import { UndoProvider } from "@/contexts/UndoContext";
+import FloatingUndoButton from "@/components/FloatingUndoButton";
 import { BiologicalClockProvider } from "@/contexts/BiologicalClockContext";
 import DesignFloatingTab from "@/components/canvas/DesignFloatingTab";
 import BiologicalClockIndicator from "@/components/canvas/BiologicalClockIndicator";
@@ -104,6 +106,7 @@ const getSidebarSections = () => ({
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+      { name: "מפת חשיבה", href: createPageUrl("MindMap"), icon: GitBranch },
     ],
     subGroups: [
       { key: 'sg_payroll', label: '💰 שכר', icon: Calculator, items: [
@@ -1402,11 +1405,15 @@ export default function Layout({ children, currentPageName }) {
   return (
     <AppProvider>
       <DesignProvider>
-        <AyoaViewProvider>
-          <BiologicalClockProvider>
-            <LayoutInner>{children}</LayoutInner>
-          </BiologicalClockProvider>
-        </AyoaViewProvider>
+        <UndoProvider>
+          <AyoaViewProvider>
+            <BiologicalClockProvider>
+              <LayoutInner>{children}</LayoutInner>
+              {/* Stage 5.5: global Undo pill (Ctrl+Z) */}
+              <FloatingUndoButton />
+            </BiologicalClockProvider>
+          </AyoaViewProvider>
+        </UndoProvider>
       </DesignProvider>
     </AppProvider>
   );

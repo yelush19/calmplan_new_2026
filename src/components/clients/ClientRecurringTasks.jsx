@@ -23,6 +23,7 @@ import { computeComplexityTier } from '@/lib/complexity';
 import { COMPLEXITY_TIERS } from '@/lib/theme-constants';
 import { onTreeChange } from '@/services/processTreeService';
 import { useDesign } from '@/contexts/DesignContext';
+import { getBranchVar } from '@/lib/branchStyles';
 
 // ============================================================
 // P-Branch definitions: P1-P5 full pipeline
@@ -1744,12 +1745,11 @@ export default function ClientRecurringTasks({ onGenerateComplete, branchFilter 
                         }
                       }}
                       className="h-14 text-base font-bold rounded-2xl transition-all hover:scale-[1.02] border-2"
-                      style={
-                        branchKey === 'P1' ? { background: 'white', color: '#0369A1', borderColor: '#0EA5E9' } :
-                        branchKey === 'P2' ? { background: 'white', color: '#2C5F8A', borderColor: '#4682B4' } :
-                        branchKey === 'P3' ? { background: 'white', color: '#92400E', borderColor: '#F59E0B' } :
-                                             { background: 'white', color: '#166534', borderColor: '#2E7D32' }
-                      }
+                      style={{
+                        background: 'white',
+                        color: getBranchVar(branchKey),
+                        borderColor: getBranchVar(branchKey),
+                      }}
                       size="lg"
                     >
                       <Zap className="w-5 h-5 ml-2" />

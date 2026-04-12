@@ -2,6 +2,7 @@ import * as React from "react"
 import { cva } from "class-variance-authority";
 
 import { cn } from "@/lib/utils"
+import { getBranchStyle, normalizeBranchKey } from "@/lib/branchStyles"
 
 const badgeVariants = cva(
   "inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
@@ -23,12 +24,37 @@ const badgeVariants = cva(
   }
 )
 
+/**
+ * Badge
+ *
+ * Extensions over the base shadcn Badge:
+ * - `branch` prop — pass 'P1'..'P6' (or a Hebrew label / task category) to
+ *   get DesignContext-aware branch colors via CSS vars. Any user palette
+ *   override propagates live without re-rendering this component.
+ * - `branchVariant` — 'soft' (default), 'solid', or 'outline'.
+ *
+ * Other props behave exactly like the upstream shadcn Badge.
+ */
 function Badge({
   className,
   variant,
+  branch,
+  branchVariant = 'soft',
+  style,
   ...props
 }) {
-  return (<div className={cn(badgeVariants({ variant }), className)} {...props} />);
+  const resolvedBranch = branch ? normalizeBranchKey(branch) : null;
+  const branchStyle = resolvedBranch
+    ? getBranchStyle(resolvedBranch, { variant: branchVariant })
+    : null;
+
+  return (
+    <div
+      className={cn(badgeVariants({ variant }), className)}
+      style={branchStyle ? { ...branchStyle, ...style } : style}
+      {...props}
+    />
+  );
 }
 
 export { Badge, badgeVariants }

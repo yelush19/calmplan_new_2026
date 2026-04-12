@@ -113,6 +113,8 @@ import TreatmentInput from "./TreatmentInput";
 
 import AutomationPage from "./AutomationPage";
 
+import MindMap from "./MindMap";
+
 import CalendarView from "./CalendarView";
 
 import ClientWorkbook from "./ClientWorkbook";
@@ -252,6 +254,8 @@ const PAGES = {
     CalendarView: CalendarView,
 
     ClientWorkbook: ClientWorkbook,
+
+    MindMap: MindMap,
 
 }
 
@@ -398,6 +402,8 @@ function PagesContent() {
                 <Route path="/CalendarView" element={<AnimatedPage><CalendarView /></AnimatedPage>} />
 
                 <Route path="/ClientWorkbook" element={<AnimatedPage><ClientWorkbook /></AnimatedPage>} />
+
+                <Route path="/MindMap" element={<AnimatedPage><MindMap /></AnimatedPage>} />
 
                 <Route path="*" element={
                     <div className="flex flex-col items-center justify-center py-20 text-center">

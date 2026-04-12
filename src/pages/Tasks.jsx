@@ -30,6 +30,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { format, parseISO, isValid, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { he } from "date-fns/locale";
 import KanbanView from "../components/tasks/KanbanView";
+import { selectNodeByTask } from '@/lib/nodeSelection';
 import MultiStatusFilter from '@/components/ui/MultiStatusFilter';
 import ResizableTable from '@/components/ui/ResizableTable';
 import useTaskCascade from '@/hooks/useTaskCascade';
@@ -1486,7 +1487,13 @@ export default function TasksPage() {
                       return (
                         <React.Fragment key={task.id}>
                           <tr
-                            className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isCompleted ? 'opacity-50' : ''} ${bulkMode && selectedTaskIds.has(task.id) ? 'bg-violet-50' : ''}`}
+                            className={`border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${isCompleted ? 'opacity-50' : ''} ${bulkMode && selectedTaskIds.has(task.id) ? 'bg-violet-50' : ''}`}
+                            onClick={(e) => {
+                              // Stage 5.2: broadcast selection → MindMap highlights this task's node.
+                              // Ignore clicks on interactive children to avoid double-handling.
+                              if (e.target.closest('button, [role="combobox"], input, select, textarea, a')) return;
+                              selectNodeByTask(task, 'tasks-page-list');
+                            }}
                           >
                             {/* Bulk checkbox */}
                             {bulkMode && (

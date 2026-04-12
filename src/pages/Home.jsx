@@ -39,6 +39,7 @@ import TaskInsights from "@/components/home/TaskInsights";
 import CategoryBreakdown from "@/components/tasks/CategoryBreakdown";
 import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
 import { StickyNote } from "@/api/entities";
+import { selectNodeByTask } from '@/lib/nodeSelection';
 
 // ─── Zero-Panic Colors (NO RED) ─────────────────────────────────
 const ZERO_PANIC = {
@@ -984,9 +985,18 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
     ? differenceInDays(parseISO(task.payment_due_date), today)
     : null;
 
+  // Stage 5.2: Hover/focus a row to highlight the matching node in the MindMap
+  // (works even when the mind map is open in a separate tab/dialog via window event).
+  const handleRowClick = (e) => {
+    // Don't hijack clicks on interactive children (select, buttons, inputs)
+    if (e.target.closest('button, [role="combobox"], input, select, textarea, a')) return;
+    selectNodeByTask(task, 'home-task-list');
+  };
+
   return (
     <div
-      className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${priorityStyles[task.priority] || 'border-e-4 border-e-gray-200'} ${isOverdue ? 'bg-orange-50' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}
+      onClick={handleRowClick}
+      className={`flex items-center gap-3 p-2.5 rounded-lg border bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${priorityStyles[task.priority] || 'border-e-4 border-e-gray-200'} ${isOverdue ? 'bg-orange-50' : ''} ${isMissingData ? 'opacity-60 border-dashed' : ''}`}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

@@ -789,6 +789,24 @@ export default function MindMapView({ tasks, clients, inboxItems = [], onInboxDi
   // ── Feature 8: Auto-open drawer from search deep-link ──
   const [highlightTaskId, setHighlightTaskId] = useState(null);
 
+  // ── Stage 5.2: Listen for global node-selected events from task lists ──
+  // Any TaskRow/Card can dispatch `calmplan:node-selected` with { taskId, serviceKey }
+  // to highlight the matching node inside the mind map regardless of which tab/dialog it lives in.
+  useEffect(() => {
+    const handler = (e) => {
+      const { taskId, nodeId } = e.detail || {};
+      const id = taskId || nodeId;
+      if (!id) return;
+      setHighlightTaskId(String(id));
+      // Auto-clear highlight after 4s so the map doesn't stay "pinned"
+      setTimeout(() => {
+        setHighlightTaskId((curr) => (curr === String(id) ? null : curr));
+      }, 4000);
+    };
+    window.addEventListener('calmplan:node-selected', handler);
+    return () => window.removeEventListener('calmplan:node-selected', handler);
+  }, []);
+
   // Measure container
   useEffect(() => {
     if (!containerRef.current) return;

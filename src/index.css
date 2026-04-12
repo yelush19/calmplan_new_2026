@@ -165,7 +165,8 @@ button:focus-visible {
   }
   body {
     @apply text-foreground;
-    font-family: 'Varela Round', 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
+    /* Stage 5.4: Heebo first (strongest Hebrew readability), Assistant fallback. */
+    font-family: 'Heebo', 'Assistant', 'Arial Hebrew', system-ui, sans-serif;
     background: #FFFFFF;
     min-height: 100vh;
     color: #000000;
@@ -176,13 +177,17 @@ button:focus-visible {
     text-rendering: optimizeLegibility;
   }
   h1, h2, h3, h4, h5, h6, .heading {
-    font-family: 'Assistant', 'Heebo', 'Arial Hebrew', sans-serif;
+    font-family: 'Assistant', 'Heebo', 'Arial Hebrew', system-ui, sans-serif;
     font-weight: 700;
     color: #000000;
     letter-spacing: 0.01em;
   }
+  h1 { font-weight: 700; }
+  h2 { font-weight: 700; }
+  h3 { font-weight: 600; }
+  h4, h5, h6 { font-weight: 600; }
   .btn, button {
-    font-family: 'Assistant', 'Varela Round', 'Heebo', sans-serif;
+    font-family: 'Heebo', 'Assistant', system-ui, sans-serif;
     font-weight: 600;
   }
 }
@@ -426,9 +431,9 @@ button:focus-visible {
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Typography */
-  --cp-font: 'Heebo', 'Assistant', sans-serif;
-  --cp-font-heading: 'Assistant', 'Heebo', sans-serif;
+  /* Typography — Stage 5.4: full 400-700 weight range now loaded via index.html */
+  --cp-font: 'Heebo', 'Assistant', 'Arial Hebrew', system-ui, sans-serif;
+  --cp-font-heading: 'Assistant', 'Heebo', 'Arial Hebrew', system-ui, sans-serif;
   --cp-font-size-xs: 12px;   /* Minimum readable — was 10px, now 12px */
   --cp-font-size-sm: 14px;   /* Small but clear — was 13px, now 14px for tabs/labels */
   --cp-font-size-md: 15px;   /* Normal baseline — was 14px */
