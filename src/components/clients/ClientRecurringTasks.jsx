@@ -513,8 +513,15 @@ function getClientFrequency(categoryKey, client) {
   if (!cat) return 'monthly';
   // Hard-coded frequency override (e.g., annual reports = yearly)
   if (cat.frequency) return cat.frequency;
+  // 1. Client-level process_tree override (saved by ProcessTreeManager UI)
+  if (cat.treeNodeId) {
+    const treeOverride = client?.process_tree?.[cat.treeNodeId]?.frequency;
+    if (treeOverride && treeOverride !== 'inherit' && treeOverride !== 'not_applicable') {
+      return treeOverride;
+    }
+  }
   const reporting = client.reporting_info || {};
-  // Try primary frequency field first
+  // Try primary frequency field first (legacy reporting_info)
   const field = cat.frequencyField;
   if (field) {
     const freq = reporting[field];
