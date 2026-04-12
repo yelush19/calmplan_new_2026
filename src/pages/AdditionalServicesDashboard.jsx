@@ -123,7 +123,7 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
   const [collapsedServices, setCollapsedServices] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState(null);
   const [cognitiveFilter, setCognitiveFilter] = useState(null);
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(true);
   const [showInjectionPanel, setShowInjectionPanel] = useState(false);
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
@@ -153,7 +153,10 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
       const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
       const filtered = allRaw.filter(t => {
         if (!allAdditionalCategories.includes(t.category)) return false;
-        return getTaskReportingMonth(t) === selectedMonthStr;
+        // Include tasks tagged for the selected month, OR tasks with no
+        // detectable reporting-month tag at all (so they aren't lost forever).
+        const rm = getTaskReportingMonth(t);
+        return rm === selectedMonthStr || rm == null;
       });
       // DATA SURVIVAL: if month filter kills everything, show all matching category tasks
       if (filtered.length === 0 && allRaw.length > 0) {
@@ -541,7 +544,18 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setShowCompleted(prev => !prev)}
+          onClick={() => {
+            setShowCompleted(prev => {
+              const next = !prev;
+              // When re-enabling "show completed", clear hidden filters that
+              // could otherwise still hide rows the user expects to see.
+              if (next) {
+                setStatusFilter(null);
+                setCognitiveFilter(null);
+              }
+              return next;
+            });
+          }}
           className={`h-9 gap-1.5 rounded-xl text-xs font-bold ${showCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'text-slate-500 border-slate-200'}`}
         >
           <CircleCheck className="w-3.5 h-3.5" />
