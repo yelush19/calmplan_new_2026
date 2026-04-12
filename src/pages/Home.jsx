@@ -40,6 +40,7 @@ import CategoryBreakdown from "@/components/tasks/CategoryBreakdown";
 import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
 import { StickyNote } from "@/api/entities";
 import { selectNodeByTask } from '@/lib/nodeSelection';
+import { useUndo } from '@/contexts/UndoContext';
 
 // ─── Zero-Panic Colors (NO RED) ─────────────────────────────────
 const ZERO_PANIC = {
@@ -150,6 +151,9 @@ export default function HomePage() {
 
   let design = null;
   try { design = useDesign(); } catch { /* not mounted */ }
+
+  // Stage 5.5: undo stack — push entries on destructive/status changes.
+  const { pushUndo } = useUndo();
 
   let bioClockZone = null;
   try {
@@ -312,8 +316,20 @@ export default function HomePage() {
   };
 
   const handleStatusChange = async (task, newStatus) => {
+    const previousStatus = task.status;
     try {
       await Task.update(task.id, { status: newStatus });
+      // Stage 5.5: allow Ctrl+Z to revert the status change.
+      if (previousStatus && previousStatus !== newStatus) {
+        pushUndo({
+          label: `שינוי סטטוס: ${task.title}`,
+          undo: async () => {
+            await Task.update(task.id, { status: previousStatus });
+            loadData();
+            loadStickyNotes();
+          },
+        });
+      }
       syncNotesWithTaskStatus(task.id, newStatus);
       loadStickyNotes();
       if (newStatus === 'production_completed') {
@@ -366,8 +382,25 @@ export default function HomePage() {
   };
 
   const handleEditTask = async (taskId, updatedData) => {
+    // Stage 5.5: capture previous values for undo before overwriting.
+    const previousTask = (data?.allTasks || []).find(t => t.id === taskId);
+    const changedKeys = Object.keys(updatedData || {});
+    const previousValues = {};
+    if (previousTask) {
+      for (const k of changedKeys) previousValues[k] = previousTask[k];
+    }
     try {
       await Task.update(taskId, updatedData);
+      if (previousTask && changedKeys.length > 0) {
+        pushUndo({
+          label: `עריכת משימה: ${previousTask.title || 'ללא שם'}`,
+          undo: async () => {
+            await Task.update(taskId, previousValues);
+            loadData();
+            loadStickyNotes();
+          },
+        });
+      }
       loadData();
       loadStickyNotes();
     } catch (err) {
@@ -384,8 +417,23 @@ export default function HomePage() {
       cancelText: 'ביטול',
     });
     if (ok) {
+      // Stage 5.5: snapshot the task so Ctrl+Z can re-create it.
+      // Drop auto-managed fields so we don't fight the backend on recreate.
+      const { id, created_date, updated_date, ...taskPayload } = task || {};
       try {
         await Task.delete(task.id);
+        pushUndo({
+          label: `מחיקת משימה: ${task.title || 'ללא שם'}`,
+          undo: async () => {
+            try {
+              await Task.create(taskPayload);
+            } catch (err) {
+              console.warn('undo delete-task failed:', err);
+            }
+            loadData();
+            loadStickyNotes();
+          },
+        });
         loadData();
         loadStickyNotes();
       } catch (err) {
