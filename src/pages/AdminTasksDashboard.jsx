@@ -478,6 +478,7 @@ export default function AdminTasksDashboardPage() {
               services={adminDashboardServices}
               onToggleStep={handleToggleStep}
               onStatusChange={handleStatusChange}
+              onDateChange={handleDateChange}
               onEdit={setEditingTask}
             />
           ) : viewMode === 'focus' ? (

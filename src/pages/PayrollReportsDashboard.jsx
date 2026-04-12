@@ -693,7 +693,15 @@ export default function PayrollReportsDashboardPage() {
             }))}
           />
         ) : viewMode === 'workbook' ? (
-          <TaxWorkbookView tasks={filteredTasks} clients={clients} services={REPORTING_SERVICES} onStatusChange={handleStatusChange} onEditTask={setEditingTask} />
+          <TaxWorkbookView
+            tasks={filteredTasks}
+            clients={clients}
+            services={REPORTING_SERVICES}
+            onToggleStep={handleToggleStep}
+            onStatusChange={handleStatusChange}
+            onDateChange={handleDateChange}
+            onEdit={setEditingTask}
+          />
         ) : viewMode === 'kanban' ? (
           <KanbanView tasks={filteredTasks} onTaskStatusChange={handleStatusChange} onEditTask={setEditingTask} clients={clients} />
         ) : viewMode === 'timeline' ? (
