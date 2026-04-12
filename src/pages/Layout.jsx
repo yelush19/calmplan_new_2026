@@ -14,7 +14,7 @@ import {
   BatteryLow, BatteryMedium, BatteryFull, Shield, Upload, CheckCircle, AlertTriangle,
   CalendarPlus, LayoutGrid, TrendingUp, HardDrive, Workflow, Building2, Link2,
   Receipt, FileSignature, Briefcase, FolderOpen, Layers, Import, Activity, Search,
-  BookOpen
+  BookOpen, GitBranch
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { differenceInDays, parseISO } from "date-fns";
@@ -104,6 +104,7 @@ const getSidebarSections = () => ({
       { name: "תכנון שבועי", href: createPageUrl("WeeklyPlanningDashboard"), icon: Brain },
       { name: "לוח שנה", href: createPageUrl("Calendar"), icon: Calendar },
       { name: "כל המשימות", href: createPageUrl("Tasks"), icon: CheckSquare },
+      { name: "מפת חשיבה", href: createPageUrl("MindMap"), icon: GitBranch },
     ],
     subGroups: [
       { key: 'sg_payroll', label: '💰 שכר', icon: Calculator, items: [
