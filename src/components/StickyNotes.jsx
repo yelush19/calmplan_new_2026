@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Pin, PinOff, Trash2, Link2, Edit3, Check, User, Calendar, Tag, Paperclip, Upload, Loader2, FileText, Download, AlertTriangle } from 'lucide-react';
+import { useUndo } from '@/contexts/UndoContext';
 
 // ADHD-friendly: soft muted pastels, low contrast, calming tones
 const NOTE_COLORS = [
@@ -139,6 +140,7 @@ function NoteAttachments({ noteId, attachments = [], clientName, onUpdate }) {
 }
 
 export default function StickyNotes({ compact = false, onTaskLink }) {
+  const { pushUndo } = useUndo();
   const [notes, setNotes] = useState([]);
   const [clients, setClients] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
@@ -215,7 +217,19 @@ export default function StickyNotes({ compact = false, onTaskLink }) {
   };
 
   const deleteNote = async (id) => {
+    // Stage 5.5: capture the note so Ctrl+Z can restore it.
+    const original = notes.find(n => n.id === id);
     await StickyNote.delete(id);
+    if (original) {
+      const { id: _omit, created_date, updated_date, ...payload } = original;
+      pushUndo({
+        label: `מחיקת פתק: ${original.title || 'ללא שם'}`,
+        undo: async () => {
+          try { await StickyNote.create(payload); } catch (err) { console.warn('undo delete-sticky failed:', err); }
+          loadNotes();
+        },
+      });
+    }
     loadNotes();
   };
 

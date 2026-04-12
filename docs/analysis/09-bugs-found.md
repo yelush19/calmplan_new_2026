@@ -159,6 +159,7 @@
 ### באג 11: ✅ ClientCard — טקסט לבן בלתי קריא בכותרות שירות
 **קומיט:** `af18548` · **קובץ:** `src/components/clients/ClientCard.jsx`
 - חולשת ניגודיות. חוזק ל-`bg-sky-700` / `bg-indigo-700` / `bg-amber-700` / `bg-emerald-700`.
+- **המשך בשלב ה' (5.1):** הקונפיג הזה הוחלף ב-CSS vars מ-DesignContext כך שהשינוי מתפשט לייב לכל הפלטה המותאמת.
 
 ### באג 12: ✅ ClientManagement — רשימת לקוחות אינסופית (mageelat Esther)
 **קומיט:** `af18548` · **קובץ:** `src/pages/ClientManagement.jsx`
@@ -184,3 +185,22 @@
 - **תופעה דווחה:** לקוח שעודכן ל-monthly ביטוח לאומי דרך ProcessTreeManager לא הופיע בהזרקה לחודש בודד; לקוחות bimonthly המשיכו להופיע.
 - **שורש הבעיה:** `getClientFrequency()` קרא רק `client.reporting_info[frequencyField]`, לא את ה-override החדש שנשמר ב-`client.process_tree[treeNodeId].frequency` על ידי ProcessTreeManager.
 - **תיקון:** הוסף שלב 1 ב-resolution chain — קודם קוראים `client.process_tree[cat.treeNodeId].frequency` (אם קיים ושונה מ-'inherit'/'not_applicable'), ורק אז fallback ל-reporting_info הישן. תואם ל-`resolveFrequency()` ב-`processTreeService.js:1213`.
+
+---
+
+## תצפיות משלב ה' (12/04/2026)
+
+במהלך עבודת שלב ה' (מנוע עיצוב + מפת חשיבה) התגלו 2 שטחי קוד-מת שלא
+נדרשים לתיקון מיידי אבל כדאי לדעת עליהם:
+
+1. **`src/components/tasks/TaskCard.jsx`** (554 שורות) — לא מיובא לאף עמוד.
+   `KanbanView` מגדיר TaskCard משלו מקומית. מומלץ למחוק בסוף השלב הבא
+   כדי להפחית סימפטומים של הבלבול "איזה TaskCard מופיע איפה".
+
+2. **`serviceTypeColors`** ב-`src/components/clients/ClientCard.jsx`
+   (שורות 46-76) — אובייקט צבעים המקודד במערכת classes קשיחים שאינו
+   בשימוש בתוך הקובץ (legacy `ServiceTreeSection` קורא ממנו אבל
+   הקומפוננטה עצמה אינה נקראת ב-build הנוכחי).
+
+**לא** נפתחו באגים חדשים ממוספרים — זיהוי הבעיות האלו נרשם כאן לצורכי
+מעקב בשלבים הבאים.
