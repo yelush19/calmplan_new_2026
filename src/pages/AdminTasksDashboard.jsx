@@ -252,6 +252,11 @@ export default function AdminTasksDashboardPage() {
       if (allDone && task.status !== 'production_completed') {
         updatePayload.status = 'production_completed';
       }
+      // When toggling to production_completed, mark all template steps done
+      // so the UI checkboxes reflect the auto-completed state.
+      if (updatePayload.status === 'production_completed') {
+        updatePayload.process_steps = markAllStepsDone({ ...task, process_steps: updatePayload.process_steps });
+      }
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
       if (updatePayload.status) syncNotesWithTaskStatus(task.id, updatePayload.status);

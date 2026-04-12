@@ -430,6 +430,11 @@ export default function TaxReportsDashboardPage() {
           updatePayload.execution_date = new Date().toISOString().split('T')[0];
         }
       }
+      // When toggling to production_completed, fill in all template steps
+      // as done so the UI reflects the auto-completed state.
+      if (updatePayload.status === 'production_completed') {
+        updatePayload.process_steps = markAllStepsDone({ ...task, process_steps: updatePayload.process_steps });
+      }
       // Guard: prevent sync listener from overwriting optimistic update
       localUpdateRef.current = true;
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));

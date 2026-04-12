@@ -1284,8 +1284,22 @@ export function processTaskCascade(task, updatedSteps, siblingTasks = [], option
           if (!existsAlready) {
             const templateSteps = getStepsForService(nextInChain.serviceKey);
             const processSteps = {};
+            // For masav_social, the first three prep steps are implicitly
+            // done by the time the previous chain task (social_benefits =
+            // הנחיות מס"ב ממתפעל) is completed: data was already sent to
+            // the operator, instructions were received, and the masav file
+            // was prepared. Pre-mark them so the user only needs to handle
+            // upload + send_receipts.
+            const PRE_DONE_KEYS = nextInChain.serviceKey === 'masav_social'
+              ? new Set(['send_to_operator', 'receive_file', 'file_prep'])
+              : new Set();
+            const today = new Date().toISOString().split('T')[0];
             templateSteps.forEach(step => {
-              processSteps[step.key] = { done: false, date: null, notes: '' };
+              if (PRE_DONE_KEYS.has(step.key)) {
+                processSteps[step.key] = { done: true, date: today, notes: '' };
+              } else {
+                processSteps[step.key] = { done: false, date: null, notes: '' };
+              }
             });
             autoCreateTasks.push({
               serviceKey: nextInChain.serviceKey,

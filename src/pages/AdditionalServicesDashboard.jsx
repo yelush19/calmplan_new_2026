@@ -313,6 +313,13 @@ export default function AdditionalServicesDashboardPage({ scope = 'p1' }) {
         }
       }
 
+      // When the cascade decides the task is now production_completed,
+      // implicit prior steps must also be marked done so the UI checkboxes
+      // reflect the completed state — not just the single step that was toggled.
+      if (updatePayload.status === 'production_completed') {
+        updatePayload.process_steps = markAllStepsDone({ ...task, process_steps: updatePayload.process_steps });
+      }
+
       await Task.update(task.id, updatePayload);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...updatePayload } : t));
 
