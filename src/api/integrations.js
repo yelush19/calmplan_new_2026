@@ -8,31 +8,38 @@ const notAvailable = async () => {
   return { success: false, error: 'Not available' };
 };
 
-// Ensure the storage bucket exists (called once on first upload)
+// Ensure the storage bucket exists (called once on first upload).
+// Note: the bucket should already be created manually in Supabase Dashboard
+// (Storage → New Bucket → "calmplan-files"), and storage RLS policies should
+// be set up via /setup-storage.sql. We only attempt creation as a fallback.
 let bucketChecked = false;
 async function ensureBucket() {
   if (bucketChecked || !isSupabaseConfigured) return;
   try {
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     if (listError) {
-      // RLS may block listBuckets — try uploading directly and let it fail naturally
+      // RLS may block listBuckets — assume the bucket exists and let upload validate it
       console.warn('Cannot list buckets (RLS?):', listError.message);
       bucketChecked = true;
       return;
     }
     const exists = buckets?.some(b => b.name === BUCKET_NAME);
-    if (!exists) {
-      const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
-        public: false,
-        fileSizeLimit: 52428800, // 50MB
-      });
-      if (createError) {
-        console.error('Bucket creation failed:', createError.message);
-        throw new Error(
-          `לא ניתן ליצור bucket "${BUCKET_NAME}" ב-Supabase. ` +
-          `צור אותו ידנית בלוח הבקרה של Supabase: Storage → New Bucket → "${BUCKET_NAME}"`
-        );
-      }
+    if (exists) {
+      bucketChecked = true;
+      return;
+    }
+    // Bucket doesn't exist — try to create it (will likely fail with anon key,
+    // but we attempt anyway in case the user is running with a service role)
+    const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
+      public: false,
+      fileSizeLimit: 52428800, // 50MB
+    });
+    if (createError) {
+      console.error('Bucket creation failed:', createError.message);
+      throw new Error(
+        `לא ניתן ליצור bucket "${BUCKET_NAME}" ב-Supabase. ` +
+        `צור אותו ידנית בלוח הבקרה של Supabase: Storage → New Bucket → "${BUCKET_NAME}"`
+      );
     }
     bucketChecked = true;
   } catch (err) {
@@ -42,6 +49,31 @@ async function ensureBucket() {
     // Still allow upload attempt — the upload itself will give the real error
     bucketChecked = true;
   }
+}
+
+// Translate raw Supabase storage errors into actionable Hebrew messages.
+function describeStorageError(error) {
+  const msg = (error?.message || '').toLowerCase();
+  const status = error?.statusCode || error?.status;
+
+  if (msg.includes('bucket') && (msg.includes('not found') || status === 404)) {
+    return `Bucket "${BUCKET_NAME}" לא נמצא. צור אותו ב-Supabase Dashboard → Storage → New Bucket → "${BUCKET_NAME}"`;
+  }
+  if (
+    msg.includes('row-level security') ||
+    msg.includes('rls') ||
+    msg.includes('policy') ||
+    msg.includes('not authorized') ||
+    msg.includes('unauthorized') ||
+    status === 401 ||
+    status === 403
+  ) {
+    return (
+      `אין הרשאת העלאה ל-bucket "${BUCKET_NAME}". ` +
+      `הרץ את הסקריפט /setup-storage.sql ב-Supabase Dashboard → SQL Editor כדי להוסיף policies.`
+    );
+  }
+  return `שגיאה בהעלאת קובץ: ${error?.message || 'שגיאה לא ידועה'}`;
 }
 
 /**
@@ -69,11 +101,8 @@ async function uploadFile({ file }) {
   if (error) {
     if (error.message?.toLowerCase().includes('bucket') || error.statusCode === 404) {
       bucketChecked = false;
-      throw new Error(
-        `Bucket "${BUCKET_NAME}" לא נמצא. צור אותו ב-Supabase Dashboard → Storage → New Bucket → "${BUCKET_NAME}" (Private)`
-      );
     }
-    throw new Error(`שגיאה בהעלאת קובץ: ${error.message}`);
+    throw new Error(describeStorageError(error));
   }
 
   // Get a signed URL (valid for 1 year)
@@ -157,11 +186,8 @@ async function uploadClientFile({ file, clientId, documentType = 'other', onProg
     if (error) {
       if (error.message?.toLowerCase().includes('bucket') || error.statusCode === 404) {
         bucketChecked = false;
-        throw new Error(
-          `Bucket "${BUCKET_NAME}" לא נמצא. צור אותו ב-Supabase Dashboard → Storage → New Bucket → "${BUCKET_NAME}" (Private)`
-        );
       }
-      throw new Error(`שגיאה בהעלאת קובץ: ${error.message}`);
+      throw new Error(describeStorageError(error));
     }
 
     // Get a signed URL (valid for 1 year)
