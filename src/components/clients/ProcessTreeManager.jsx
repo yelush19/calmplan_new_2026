@@ -41,6 +41,7 @@ import { getStepsForService } from '@/config/processTemplates';
 import { toast } from '@/components/ui/use-toast';
 import { ClientAccount } from '@/api/entities';
 import { inferClientServices, mergeInferredNodes } from '@/services/inferClientServices';
+import { getBranchVar } from '@/lib/branchStyles';
 
 // ── Branch colors ──
 const BRANCH_COLORS = {
@@ -1062,15 +1063,23 @@ export default function ProcessTreeManager({ processTree, onChange, clientId, cl
         const hiddenCount = branchTotalCount - branchEnabledCount;
 
         return (
-          <div key={branchId} className={`border-2 rounded-xl overflow-hidden ${colors.border} shadow-sm`}>
-            {/* Branch header */}
+          <div
+            key={branchId}
+            className="border-2 rounded-xl overflow-hidden shadow-sm"
+            style={{ borderColor: getBranchVar(branchId) }}
+          >
+            {/* Branch header — accent bar from DesignContext CSS var */}
             <button
               type="button"
               onClick={() => setExpandedBranches(prev => ({ ...prev, [branchId]: !isExpanded }))}
-              className={`w-full flex items-center justify-between px-4 py-3 ${colors.bg} hover:opacity-90 transition-opacity`}
+              className={`w-full flex items-center justify-between px-4 py-3 ${colors.bg} hover:opacity-90 transition-opacity border-r-4`}
+              style={{ borderRightColor: getBranchVar(branchId) }}
             >
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${colors.dot}`} />
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: getBranchVar(branchId) }}
+                />
                 <span className={`text-base font-black ${colors.text}`}>{branchId} | {branch.label}</span>
                 {branchEnabledCount > 0 && (
                   <Badge className={`${colors.badge} text-[12px] px-1.5 py-0`}>

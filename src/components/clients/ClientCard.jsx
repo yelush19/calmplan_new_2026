@@ -9,6 +9,7 @@ import TaxInfoDialog from '@/components/clients/TaxInfoDialog';
 import { ALL_SERVICES } from '@/config/processTemplates';
 import { loadCompanyTree, isNodeEnabled, getEnabledNodeIds } from '@/services/processTreeService';
 import { flattenTree } from '@/config/companyProcessTree';
+import { getBranchVar, getBranchLabel } from '@/lib/branchStyles';
 
 // Fallback labels (used when tree hasn't loaded yet)
 const DEFAULT_SERVICE_LABELS = {
@@ -137,12 +138,14 @@ function ProcessTreeSection({ processTree }) {
   const enabledIds = getEnabledNodeIds(clientTree);
   if (enabledIds.length === 0) return null;
 
-  // Branch group config — strong, high-contrast colors so white text is always readable
-  const branchConfig = {
-    P1: { label: 'שכר', bg: 'bg-sky-700', border: 'border-sky-300', count: 'bg-sky-500' },
-    P2: { label: 'הנה"ח ודוחות', bg: 'bg-indigo-700', border: 'border-indigo-300', count: 'bg-indigo-500' },
-    P3: { label: 'ניהול', bg: 'bg-amber-700', border: 'border-amber-300', count: 'bg-amber-500' },
-    P5: { label: 'דוחות שנתיים', bg: 'bg-emerald-700', border: 'border-emerald-300', count: 'bg-emerald-500' },
+  // Branch group labels — visual colors come from DesignContext CSS vars (SSOT).
+  // `bg` / `border` / `count` are inline styles so user palette overrides
+  // propagate live without rebuilding Tailwind.
+  const branchLabels = {
+    P1: 'שכר',
+    P2: 'הנה"ח ודוחות',
+    P3: 'ניהול',
+    P5: 'דוחות שנתיים',
   };
 
   // Collect enabled nodes per branch
@@ -161,17 +164,22 @@ function ProcessTreeSection({ processTree }) {
   return (
     <div className="border-t border-gray-100 pt-3 mt-2 space-y-1.5">
       {Object.entries(branchGroups).map(([branchId, nodes]) => {
-        const config = branchConfig[branchId] || { label: branchId, bg: 'bg-gray-600', border: 'border-gray-300' };
+        const label = branchLabels[branchId] || getBranchLabel(branchId) || branchId;
+        const branchColor = getBranchVar(branchId);
         const isExpanded = expandedBranches.has(branchId);
         return (
           <div key={branchId} className="rounded-lg border border-gray-100 overflow-hidden">
             <button
               onClick={(e) => { e.stopPropagation(); setExpandedBranches(prev => { const n = new Set(prev); n.has(branchId) ? n.delete(branchId) : n.add(branchId); return n; }); }}
-              className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm ${config.bg} rounded-lg`}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg"
+              style={{ backgroundColor: branchColor }}
             >
               {isExpanded ? <ChevronDown className="w-4 h-4 text-white" /> : <ChevronLeft className="w-4 h-4 text-white" />}
-              <span className="text-white font-black text-[15px] tracking-wide">{config.label}</span>
-              <Badge className={`${config.count} text-white text-xs font-black px-2 py-0.5 border border-white/40 mr-auto rounded-full`}>
+              <span className="text-white font-black text-[15px] tracking-wide">{label}</span>
+              <Badge
+                className="text-white text-xs font-black px-2 py-0.5 border border-white/40 mr-auto rounded-full"
+                style={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
+              >
                 {nodes.length}
               </Badge>
             </button>
@@ -183,7 +191,11 @@ function ProcessTreeSection({ processTree }) {
                   const freq = clientTree[node.id]?.frequency;
                   const slaDay = node.sla_day;
                   return (
-                    <div key={node.id} className={`mr-2 border-r-2 pr-2 ${config.border}`}>
+                    <div
+                      key={node.id}
+                      className="mr-2 border-r-2 pr-2"
+                      style={{ borderRightColor: branchColor }}
+                    >
                       <button
                         onClick={(e) => { e.stopPropagation(); if (steps.length > 0) setExpandedNodes(prev => { const n = new Set(prev); n.has(node.id) ? n.delete(node.id) : n.add(node.id); return n; }); }}
                         className="w-full flex items-center gap-2 py-1 text-sm hover:text-gray-900"
