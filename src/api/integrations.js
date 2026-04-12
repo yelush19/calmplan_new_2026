@@ -8,47 +8,14 @@ const notAvailable = async () => {
   return { success: false, error: 'Not available' };
 };
 
-// Ensure the storage bucket exists (called once on first upload).
-// Note: the bucket should already be created manually in Supabase Dashboard
-// (Storage → New Bucket → "calmplan-files"), and storage RLS policies should
-// be set up via /setup-storage.sql. We only attempt creation as a fallback.
-let bucketChecked = false;
+// The "calmplan-files" bucket must be created manually in Supabase Dashboard
+// (Storage → New Bucket → "calmplan-files"), and storage policies must be set
+// up via /setup-storage.sql. We do NOT call listBuckets/createBucket here:
+// the anon key is filtered by RLS on storage.buckets and listBuckets() returns
+// an empty list, which would falsely trigger a doomed createBucket() attempt.
+// Instead we let the upload itself surface any real error.
 async function ensureBucket() {
-  if (bucketChecked || !isSupabaseConfigured) return;
-  try {
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    if (listError) {
-      // RLS may block listBuckets — assume the bucket exists and let upload validate it
-      console.warn('Cannot list buckets (RLS?):', listError.message);
-      bucketChecked = true;
-      return;
-    }
-    const exists = buckets?.some(b => b.name === BUCKET_NAME);
-    if (exists) {
-      bucketChecked = true;
-      return;
-    }
-    // Bucket doesn't exist — try to create it (will likely fail with anon key,
-    // but we attempt anyway in case the user is running with a service role)
-    const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
-      public: false,
-      fileSizeLimit: 52428800, // 50MB
-    });
-    if (createError) {
-      console.error('Bucket creation failed:', createError.message);
-      throw new Error(
-        `לא ניתן ליצור bucket "${BUCKET_NAME}" ב-Supabase. ` +
-        `צור אותו ידנית בלוח הבקרה של Supabase: Storage → New Bucket → "${BUCKET_NAME}"`
-      );
-    }
-    bucketChecked = true;
-  } catch (err) {
-    // Don't mark as checked so next upload retries
-    if (err.message?.includes('Bucket')) throw err;
-    console.warn('Bucket check failed:', err.message);
-    // Still allow upload attempt — the upload itself will give the real error
-    bucketChecked = true;
-  }
+  // No-op by design — see comment above.
 }
 
 // Translate raw Supabase storage errors into actionable Hebrew messages.
@@ -99,9 +66,6 @@ async function uploadFile({ file }) {
     });
 
   if (error) {
-    if (error.message?.toLowerCase().includes('bucket') || error.statusCode === 404) {
-      bucketChecked = false;
-    }
     throw new Error(describeStorageError(error));
   }
 
@@ -184,9 +148,6 @@ async function uploadClientFile({ file, clientId, documentType = 'other', onProg
     if (onProgress) onProgress(90);
 
     if (error) {
-      if (error.message?.toLowerCase().includes('bucket') || error.statusCode === 404) {
-        bucketChecked = false;
-      }
       throw new Error(describeStorageError(error));
     }
 
