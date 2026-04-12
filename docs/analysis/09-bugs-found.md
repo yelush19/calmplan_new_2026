@@ -142,6 +142,52 @@
 
 ---
 
+## באגים שתוקנו בסשן 12/04/2026 — branch `claude/add-injection-buttons-filtering-9InNw`
+
+### באג 8: ✅ ClientWorkbook קורס בלשונית פירוט משימות
+**קומיט:** `af18548` · **קובץ:** `src/pages/ClientWorkbook.jsx`
+- Radix `<SelectItem value="">` זרק חריגה. הוחלף ב-`__empty__` sentinel ב-`COMPLEXITY_OPTIONS`.
+
+### באג 9: ✅ לשונית "חשבונות בנק" בכרטיס לקוח הציגה שדות שגויים
+**קומיט:** `af18548` · **קובץ:** `src/pages/ClientWorkbook.jsx`
+- היה מציג שדות מטא של לקוח. עובר עכשיו לטעון `ClientAccount` (account_type='bank') עם השדות הנכונים: account_name, bank_name, account_number, bookkeeping_card_number, loading_system, reconciliation_frequency.
+
+### באג 10: ✅ לשוניות בעברית נטענו LTR במקום RTL
+**קומיט:** `af18548` · **קובץ:** `src/pages/ClientWorkbook.jsx`
+- נוסף `dir="rtl"` ל-Tabs + צבע ייחודי לכל לשונית (emerald/blue/purple/amber/cyan).
+
+### באג 11: ✅ ClientCard — טקסט לבן בלתי קריא בכותרות שירות
+**קומיט:** `af18548` · **קובץ:** `src/components/clients/ClientCard.jsx`
+- חולשת ניגודיות. חוזק ל-`bg-sky-700` / `bg-indigo-700` / `bg-amber-700` / `bg-emerald-700`.
+- **המשך בשלב ה' (5.1):** הקונפיג הזה הוחלף ב-CSS vars מ-DesignContext כך שהשינוי מתפשט לייב לכל הפלטה המותאמת.
+
+### באג 12: ✅ ClientManagement — רשימת לקוחות אינסופית (mageelat Esther)
+**קומיט:** `af18548` · **קובץ:** `src/pages/ClientManagement.jsx`
+- הוסף עימוד חכם פר-status: 15 גלויים + כפתור "הצג עוד" + Badge מונה. מאופס בכל שינוי חיפוש/סינון.
+
+### באג 13: ✅ Tasks (כל המשימות) — סדר תצוגות לא הגיוני + חסר סינון domain
+**קומיט:** `af18548` · **קובץ:** `src/pages/Tasks.jsx`
+- סדר חדש: טבלה → גאנט → מיינדמפ → זרימה → רשימה → קנבן → סדנה → מיקוד → מירו.
+- ברירת מחדל שונתה ל-"table".
+- הוספת רצועת לשוניות domain (שכר / הנה"ח ומיסים / מאזנים / ניהול) מעל הסינונים, עם מונה קטגוריות, שמצמצמת את התפריט לפי הבחירה.
+
+### באג 14: ✅ הזרקת משימות דו-חודשיות גם כשאין דיווח דורש
+**קומיט:** `af18548` · **קבצים:** `src/engines/recurringTaskEngine.js`, `src/config/companyProcessTree.js`
+- **תופעה:** "קליטת הכנסות/הוצאות/התאמות" יוצרו אוטומטית גם בחודשים שאין שום דיווח (מע"מ/מקדמות/רו"ה) שמושך מהן.
+- **תיקון:** סומנו `is_data_collection: true` על P2_income/P2_expenses/P2_reconciliation. הוסף guard `hasActiveDependentThisMonth()` שבודק אם יש לפחות צרכן downstream פעיל ולא off-month — אחרת מדלג על ההזרקה.
+
+### באג 15: ✅ Tasks.jsx merge conflict עם main (תצוגת table חדשה)
+**קומיט:** `a935f21` · **קובץ:** `src/pages/Tasks.jsx`
+- main הוסיף תצוגת `table` חדשה (GroupedServiceTable) שאינה זהה ל-`list`. הסיכסוך נפתר על ידי שמירת שתי התצוגות והחלת הסדר החדש.
+
+### באג 16: ✅ ProcessTreeManager override מתעלם בהזרקה (קריטי)
+**קומיט:** `d8fe209` · **קובץ:** `src/components/clients/ClientRecurringTasks.jsx`
+- **תופעה דווחה:** לקוח שעודכן ל-monthly ביטוח לאומי דרך ProcessTreeManager לא הופיע בהזרקה לחודש בודד; לקוחות bimonthly המשיכו להופיע.
+- **שורש הבעיה:** `getClientFrequency()` קרא רק `client.reporting_info[frequencyField]`, לא את ה-override החדש שנשמר ב-`client.process_tree[treeNodeId].frequency` על ידי ProcessTreeManager.
+- **תיקון:** הוסף שלב 1 ב-resolution chain — קודם קוראים `client.process_tree[cat.treeNodeId].frequency` (אם קיים ושונה מ-'inherit'/'not_applicable'), ורק אז fallback ל-reporting_info הישן. תואם ל-`resolveFrequency()` ב-`processTreeService.js:1213`.
+
+---
+
 ## תצפיות משלב ה' (12/04/2026)
 
 במהלך עבודת שלב ה' (מנוע עיצוב + מפת חשיבה) התגלו 2 שטחי קוד-מת שלא
