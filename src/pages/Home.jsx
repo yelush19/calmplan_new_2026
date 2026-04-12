@@ -30,7 +30,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useDesign } from "@/contexts/DesignContext";
 import { useBiologicalClock } from "@/contexts/BiologicalClockContext";
 // Stage 5.6: FocusMapView import removed — Home no longer embeds a canvas; the
-// dedicated /MindMap page (RadialMindMapView from stage 5.3) owns that view now.
+// dedicated /MindMap page (AyoaRadialView — Stage 5.3c) owns that view now.
 import OverdueAlert from "@/components/tasks/OverdueAlert";
 import MoodCheckerInline from "@/components/home/MoodCheckerInline";
 import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
@@ -734,9 +734,10 @@ export default function HomePage() {
         {/* ═══ 3. "מה אפשר לעשות היום" — quiet link to the full mind map ═══ */}
         {/* Stage 5.6: the embedded FocusMapView (canvas + floating sticker panel)
             was dominating Home. We replaced it with a 1-line link that opens
-            the dedicated /MindMap page (RadialMindMapView from stage 5.3),
-            keeping Home focused on "what do I do right now?" instead of
-            "here is a picture of everything I might need to think about". */}
+            the dedicated /MindMap page (AyoaRadialView, wired to live
+            Task.list data in stage 5.3c), keeping Home focused on "what do I
+            do right now?" instead of "here is a picture of everything I might
+            need to think about". */}
         {calmTasks.length > 0 && (
           <Link
             to={createPageUrl('MindMap')}
