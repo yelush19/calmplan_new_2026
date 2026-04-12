@@ -110,6 +110,7 @@ export function buildServiceGroupsFromTree(companyTree) {
       defaultFrequency: node.default_frequency || 'monthly',
       sla_day: node.sla_day || null,
       depends_on: node.depends_on || [],
+      isDataCollection: node.is_data_collection === true,
       steps: node.steps || [],
     });
   }
@@ -376,6 +377,36 @@ function isOffMonth(client, serviceDef, reportMonth, companyTree) {
 }
 
 /**
+ * Smart skip rule for data-collection nodes (קליטת הכנסות/הוצאות/התאמות).
+ *
+ * A data-collection task only exists to feed downstream consumers (VAT, מקדמות מס,
+ * רווח והפסד). When NO consumer is active for the client this month — e.g. a
+ * bi-monthly VAT client in an off-month with no other dependent — the collector
+ * should be skipped to avoid clutter.
+ *
+ * @returns {boolean} true if the collector has at least one active dependent this month.
+ */
+function hasActiveDependentThisMonth(collectorService, client, reportMonth, companyTree, allServices) {
+  if (!collectorService.isDataCollection) return true; // Not a collector → always active
+  if (!collectorService.treeNodeId) return true;       // Defensive
+
+  // Find services that list this collector in their depends_on
+  const dependents = allServices.filter(s =>
+    Array.isArray(s.depends_on) && s.depends_on.includes(collectorService.treeNodeId)
+  );
+
+  if (dependents.length === 0) return true; // No declared dependents → don't skip (safer default)
+
+  // Active iff at least one dependent is enabled for this client AND not off-month
+  for (const dep of dependents) {
+    if (!clientHasService(client, dep)) continue;
+    if (isOffMonth(client, dep, reportMonth, companyTree)) continue;
+    return true;
+  }
+  return false;
+}
+
+/**
  * Initializes empty process steps from a service definition.
  * V4.3: Uses tree node steps directly.
  * Fallback: Uses ALL_SERVICES templateKey.
@@ -445,6 +476,10 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
     existingIndex.add(`${t.client_name}|${t.category}|${t.report_period}`);
   });
 
+  // Flat service list across all branches — used to resolve cross-group dependents
+  // for data-collection skip rule (e.g. P2_expenses depends on P2_vat in same group).
+  const allServicesFlat = Object.values(serviceGroups).flatMap(g => g.services);
+
   for (const client of activeClients) {
     const clientNode = {
       client_name: client.name,
@@ -466,6 +501,15 @@ export function generateRecurringTasks({ clients, reportMonth, reportYear, exist
 
         // RULE 2: Is this an off-month?
         if (isOffMonth(client, serviceDef, reportMonth, companyTree)) continue;
+
+        // RULE 2b: Data-collection skip — if this is a collector node and no
+        // downstream consumer (VAT, מקדמות, רו"ה) is active for this client this
+        // month, skip it. Fixes "expense intake created when only tax_advances
+        // is active and VAT is bi-monthly off-month".
+        if (serviceDef.isDataCollection &&
+            !hasActiveDependentThisMonth(serviceDef, client, reportMonth, companyTree, allServicesFlat)) {
+          continue;
+        }
 
         // RULE 3: Duplicate detection (by tree_node_id AND category)
         const period = `${reportYear}-${String(reportMonth).padStart(2, '0')}`;

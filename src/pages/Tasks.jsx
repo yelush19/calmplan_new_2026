@@ -171,6 +171,55 @@ function getTimePeriods() {
 
 // getCategoryLabel imported from @/utils/categoryLabels
 
+// ── Domain tabs for category filter ──
+// Mirrors the sidebar's grouping (שכר / הנה"ח / מאזנים / ניהול) so users can
+// quickly narrow categories by business domain — ADHD-friendly visual chunking.
+const DOMAIN_TABS = [
+  { key: 'all', label: '🌐 הכל', activeClass: 'bg-slate-100 text-slate-800 border-slate-300' },
+  { key: 'payroll', label: '💰 שכר', activeClass: 'bg-sky-100 text-sky-800 border-sky-300' },
+  { key: 'bookkeeping', label: '📊 הנה"ח ומיסים', activeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  { key: 'annual', label: '📋 מאזנים ודוחות', activeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  { key: 'admin', label: '⚙️ ניהול', activeClass: 'bg-amber-100 text-amber-800 border-amber-300' },
+];
+
+const DOMAIN_CATEGORIES = {
+  payroll: new Set([
+    'work_payroll', 'work_deductions', 'work_social_security', 'work_masav',
+    'work_masav_social', 'work_masav_authorities', 'work_payslip_sending',
+    'work_taml_reporting', 'work_operator_reporting', 'work_social_benefits',
+    'work_reserve_claims',
+    'שכר', 'ניכויים', 'ביטוח לאומי', 'מס"ב עובדים', 'מס"ב סוציאליות',
+    'מס"ב רשויות', 'משלוח תלושים', 'דיווח לטמל', 'דיווח למתפעל',
+    'הנחיות מס"ב ממתפעל', 'תביעות מילואים',
+  ]),
+  bookkeeping: new Set([
+    'work_vat_reporting', 'work_vat_874', 'work_tax_advances', 'work_bookkeeping',
+    'work_reconciliation', 'work_authorities', 'work_authorities_payment',
+    'work_income_collection', 'work_expense_collection', 'work_masav_suppliers',
+    'מע"מ', 'מע"מ 874', 'מקדמות מס', 'הנהלת חשבונות', 'התאמות חשבונות',
+    'רשויות', 'תשלום רשויות', 'קליטת הכנסות', 'קליטת הוצאות', 'מס"ב ספקים',
+    'קליטה להנה"ח',
+  ]),
+  annual: new Set([
+    'work_annual_reports', 'work_capital_statement', 'work_update_reports_folder',
+    'דוח שנתי', 'הצהרת הון', 'עדכון דוחות בתיקייה',
+  ]),
+  admin: new Set([
+    'work_admin', 'work_client_management', 'work_general', 'work_consulting',
+    'work_meeting', 'work_callback', 'work_marketing',
+    'אדמיניסטרציה', 'ניהול לקוח', 'כללי', 'ייעוץ', 'פגישה', 'לחזור ללקוח',
+    'מעקב שיווק', 'אחר',
+  ]),
+};
+
+function getCategoryDomain(category) {
+  if (!category) return 'admin';
+  for (const [domain, set] of Object.entries(DOMAIN_CATEGORIES)) {
+    if (set.has(category)) return domain;
+  }
+  return 'admin';
+}
+
 export default function TasksPage() {
   const design = useDesign();
   const { confirm, ConfirmDialogComponent } = useConfirm();
@@ -182,8 +231,9 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState([]);
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [domainFilter, setDomainFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
-  const [view, setView] = useState("list"); // Default: list/table (client prefers spreadsheet view)
+  const [view, setView] = useState("table"); // Default: per-service table (client prefers spreadsheet view)
   const [isClearing, setIsClearing] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
@@ -411,6 +461,21 @@ export default function TasksPage() {
     return Array.from(cats).sort();
   }, [tasks]);
 
+  // Categories filtered by selected domain — narrows the dropdown to relevant types only
+  const categoriesForDomain = useMemo(() => {
+    if (domainFilter === 'all') return categories;
+    return categories.filter(cat => getCategoryDomain(cat) === domainFilter);
+  }, [categories, domainFilter]);
+
+  // Reset categoryFilter when domain changes if current category not in the new domain
+  useEffect(() => {
+    if (categoryFilter !== 'all' && domainFilter !== 'all') {
+      if (!categoriesForDomain.includes(categoryFilter)) {
+        setCategoryFilter('all');
+      }
+    }
+  }, [domainFilter, categoryFilter, categoriesForDomain]);
+
   // Time-based filtering — uses reporting_month when available, fallback to due_date
   const timeFilteredTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -480,11 +545,14 @@ export default function TasksPage() {
     if (categoryFilter !== "all") {
       result = result.filter(t => t.category === categoryFilter);
     }
+    if (domainFilter !== "all") {
+      result = result.filter(t => getCategoryDomain(t.category) === domainFilter);
+    }
     if (tagFilter !== "all") {
       result = result.filter(t => t.tags && t.tags.includes(tagFilter));
     }
     return result;
-  }, [timeFilteredTasks, searchTerm, statusFilter, priorityFilter, categoryFilter, contextFilter, tagFilter]);
+  }, [timeFilteredTasks, searchTerm, statusFilter, priorityFilter, categoryFilter, domainFilter, contextFilter, tagFilter]);
 
   // Group filteredTasks by service for the per-service Table view (טבלה).
   // Tasks whose category does not map to a known service are bucketed under
@@ -620,6 +688,7 @@ export default function TasksPage() {
       if (statusFilter.length > 0) branchTasks = branchTasks.filter(t => statusFilter.includes(t.status));
       if (priorityFilter !== "all") branchTasks = branchTasks.filter(t => t.priority === priorityFilter);
       if (categoryFilter !== "all") branchTasks = branchTasks.filter(t => t.category === categoryFilter);
+      if (domainFilter !== "all") branchTasks = branchTasks.filter(t => getCategoryDomain(t.category) === domainFilter);
       if (tagFilter !== "all") branchTasks = branchTasks.filter(t => t.tags && t.tags.includes(tagFilter));
 
       const groups = {};
@@ -1060,6 +1129,37 @@ export default function TasksPage() {
       })()}
 
 
+      {/* Domain tabs — group category filters by business area (mirrors sidebar) */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-gray-500 font-medium">תחום:</span>
+        <div className="flex flex-wrap gap-1.5">
+          {DOMAIN_TABS.map(tab => {
+            const isActive = domainFilter === tab.key;
+            const count = tab.key === 'all'
+              ? timeFilteredTasks.length
+              : timeFilteredTasks.filter(t => getCategoryDomain(t.category) === tab.key).length;
+            return (
+              <Button
+                key={tab.key}
+                variant="outline"
+                size="sm"
+                onClick={() => setDomainFilter(tab.key)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all h-auto ${
+                  isActive
+                    ? `${tab.activeClass} shadow-sm`
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                {tab.label}
+                <Badge className={`ms-1.5 text-[10px] px-1.5 py-0 ${isActive ? 'bg-white/60' : 'bg-gray-100'}`}>
+                  {count}
+                </Badge>
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Filters */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-3">
@@ -1099,7 +1199,7 @@ export default function TasksPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">כל הסוגים</SelectItem>
-                {categories.map(cat => (
+                {categoriesForDomain.map(cat => (
                   <SelectItem key={cat} value={cat}>{getCategoryLabel(cat)}</SelectItem>
                 ))}
               </SelectContent>
@@ -1126,20 +1226,20 @@ export default function TasksPage() {
         </CardContent>
       </Card>
 
-      {/* View Toggle: list / kanban / mindmap / gantt */}
+      {/* View Toggle: ordered Table → Gantt → Mindmap → Flow → rest */}
       <div className="flex items-center gap-2">
         <span className="text-xs text-gray-500 font-medium">תצוגה:</span>
         <div className="flex bg-white rounded-lg p-0.5 shadow-sm border text-xs">
           {[
-            { key: 'kanban', label: 'קנבן', icon: LayoutGrid },
-            { key: 'list', label: 'רשימה', icon: List },
             { key: 'table', label: 'טבלה', icon: Table2 },
+            { key: 'gantt', label: 'גאנט', icon: BarChart3 },
+            { key: 'mindmap', label: 'מיינדמפ', icon: Network },
+            { key: 'flow', label: 'זרימה', icon: ArrowRight },
+            { key: 'list', label: 'רשימה', icon: List },
+            { key: 'kanban', label: 'קנבן', icon: LayoutGrid },
             { key: 'workbook', label: 'גיליון', icon: Table2 },
             { key: 'focus', label: 'מיקוד', icon: Eye },
-            { key: 'flow', label: 'זרימה', icon: ArrowRight },
             { key: 'miro', label: 'מפה', icon: Network },
-            { key: 'mindmap', label: 'מיינדמפ', icon: Network },
-            { key: 'gantt', label: 'גאנט', icon: BarChart3 },
           ].map(({ key, label, icon: Icon }) => (
             <Button
               variant="ghost"

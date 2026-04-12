@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Client } from '@/api/entities';
+import { Client, ClientAccount } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,8 +45,11 @@ const BUSINESS_SIZE_OPTIONS = [
   { value: 'large', label: 'גדול' },
 ];
 
+// Sentinel for "no value" — Radix Select forbids empty-string values
+const EMPTY_SENTINEL = '__empty__';
+
 const COMPLEXITY_OPTIONS = [
-  { value: '', label: 'אוטומטי' },
+  { value: EMPTY_SENTINEL, label: 'אוטומטי' },
   { value: '0', label: '0 - ננו' },
   { value: '1', label: '1 - פשוט' },
   { value: '2', label: '2 - בינוני' },
@@ -120,11 +123,16 @@ function EditableSelectCell({ value, onChange, options }) {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(null);
 
+  // Translate empty/null incoming value to sentinel for Radix Select compatibility
+  const displayValue = (value == null || value === '') ? EMPTY_SENTINEL : String(value);
+
   const handleChange = async (newVal) => {
-    if (newVal === value) return;
+    // Translate sentinel back to empty string for parent handler
+    const realVal = newVal === EMPTY_SENTINEL ? '' : newVal;
+    if (realVal === (value ?? '')) return;
     setSaving(true);
     try {
-      await onChange(newVal);
+      await onChange(realVal);
       setStatus('saved');
       setTimeout(() => setStatus(null), 1500);
     } catch {
@@ -135,7 +143,7 @@ function EditableSelectCell({ value, onChange, options }) {
   };
 
   return (
-    <Select value={value || ''} onValueChange={handleChange}>
+    <Select value={displayValue} onValueChange={handleChange}>
       <SelectTrigger
         className={`h-8 text-xs
           ${status === 'saved' ? 'border-green-400 bg-green-50' : status === 'error' ? 'border-red-400 bg-red-50' : ''}
@@ -159,16 +167,38 @@ function fmtNum(val) {
 }
 
 // ── Tab definitions ──
+// Each tab gets a distinct color for ADHD-friendly visual identification.
 const TABS = [
-  { key: 'financial', label: 'כספי' },
-  { key: 'tax', label: 'מס' },
-  { key: 'processes', label: 'תהליכים' },
-  { key: 'providers', label: 'נ.שירותים' },
-  { key: 'bank', label: 'בנק' },
+  {
+    key: 'financial',
+    label: 'כספי',
+    activeClass: 'data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm',
+  },
+  {
+    key: 'tax',
+    label: 'מס',
+    activeClass: 'data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 data-[state=active]:shadow-sm',
+  },
+  {
+    key: 'processes',
+    label: 'תהליכים',
+    activeClass: 'data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 data-[state=active]:shadow-sm',
+  },
+  {
+    key: 'providers',
+    label: 'נ.שירותים',
+    activeClass: 'data-[state=active]:bg-amber-100 data-[state=active]:text-amber-700 data-[state=active]:shadow-sm',
+  },
+  {
+    key: 'bank',
+    label: 'בנק',
+    activeClass: 'data-[state=active]:bg-cyan-100 data-[state=active]:text-cyan-700 data-[state=active]:shadow-sm',
+  },
 ];
 
 export default function ClientWorkbook({ embedded = false }) {
   const [clients, setClients] = useState([]);
+  const [clientAccounts, setClientAccounts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('financial');
   const [statusFilter, setStatusFilter] = useState('active');
@@ -183,13 +213,28 @@ export default function ClientWorkbook({ embedded = false }) {
   const loadClients = async () => {
     setIsLoading(true);
     try {
-      const data = await Client.list(null, 1000);
+      const [data, accounts] = await Promise.all([
+        Client.list(null, 1000),
+        ClientAccount.list(null, 5000).catch(() => []),
+      ]);
       setClients(data || []);
+      setClientAccounts(accounts || []);
     } catch (err) {
       console.error('Error loading clients:', err);
     }
     setIsLoading(false);
   };
+
+  // Group bank accounts by client_id (only account_type === 'bank')
+  const bankAccountsByClient = useMemo(() => {
+    const map = {};
+    for (const acc of clientAccounts) {
+      if (acc.account_type !== 'bank') continue;
+      if (!map[acc.client_id]) map[acc.client_id] = [];
+      map[acc.client_id].push(acc);
+    }
+    return map;
+  }, [clientAccounts]);
 
   // ── Save cell ──
   const saveField = useCallback(async (clientId, fieldPath, value) => {
@@ -560,42 +605,88 @@ export default function ClientWorkbook({ embedded = false }) {
     </div>
   );
 
-  const renderBankTab = () => (
-    <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
-      <Table>
-        <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
-          <TableRow>
-            <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
-            <SortHeader label="מספר ישות" sortKey="entity_number" />
-            <SortHeader label="מזהה דוחות שנתיים" sortKey="integration_info.annual_reports_client_id" />
-            <SortHeader label="LastPass Payment ID" sortKey="integration_info.lastpass_payment_entry_id" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredClients.map(c => (
-            <TableRow key={c.id} className="hover:bg-blue-50/30">
-              <StickyNameCell client={c} />
-              <TableCell>
-                <EditableCell value={c.entity_number} onChange={v => saveField(c.id, 'entity_number', v)} />
-              </TableCell>
-              <TableCell>
-                <EditableCell
-                  value={deepGet(c, 'integration_info.annual_reports_client_id')}
-                  onChange={v => saveField(c.id, 'integration_info.annual_reports_client_id', v)}
-                />
-              </TableCell>
-              <TableCell>
-                <EditableCell
-                  value={deepGet(c, 'integration_info.lastpass_payment_entry_id')}
-                  onChange={v => saveField(c.id, 'integration_info.lastpass_payment_entry_id', v)}
-                />
-              </TableCell>
+  const renderBankTab = () => {
+    const loadingSystemLabels = {
+      bizibox: 'BIZIBOX',
+      summit: 'SUMMIT',
+      manual: 'ידני',
+      other: 'אחר',
+    };
+    const frequencyLabels = {
+      monthly: 'חודשי',
+      bimonthly: 'דו-חודשי',
+      quarterly: 'רבעוני',
+      semi_annual: 'חצי שנתי',
+      yearly: 'שנתי',
+    };
+
+    // Build flat row list: one row per (client × bank account); clients with no bank accounts get a single empty row
+    const rows = [];
+    filteredClients.forEach(c => {
+      const accs = bankAccountsByClient[c.id] || [];
+      if (accs.length === 0) {
+        rows.push({ client: c, account: null, isFirstForClient: true, totalForClient: 0 });
+      } else {
+        accs.forEach((acc, idx) => {
+          rows.push({ client: c, account: acc, isFirstForClient: idx === 0, totalForClient: accs.length });
+        });
+      }
+    });
+
+    return (
+      <div className="overflow-auto" style={{ maxHeight: '70vh' }}>
+        <Table>
+          <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-sm">
+            <TableRow>
+              <TableHead className="sticky right-0 bg-gray-50 z-10 border-l text-xs">שם לקוח</TableHead>
+              <TableHead className="text-xs">שם החשבון</TableHead>
+              <TableHead className="text-xs">שם הבנק</TableHead>
+              <TableHead className="text-xs">מספר חשבון</TableHead>
+              <TableHead className="text-xs">כרטיס בהנה״ח</TableHead>
+              <TableHead className="text-xs">אופן טעינה</TableHead>
+              <TableHead className="text-xs">תדירות התאמה</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, i) => {
+              const c = row.client;
+              const acc = row.account;
+              return (
+                <TableRow key={`${c.id}-${acc?.id || 'none'}-${i}`} className="hover:bg-blue-50/30">
+                  <TableCell className="sticky right-0 bg-white z-10 border-l font-medium text-sm whitespace-nowrap min-w-[140px]">
+                    {row.isFirstForClient ? (
+                      <span>
+                        {c.name || '—'}
+                        {row.totalForClient > 1 && (
+                          <Badge variant="outline" className="ms-2 text-[10px] px-1 py-0">
+                            {row.totalForClient} חשבונות
+                          </Badge>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">↳</span>
+                    )}
+                  </TableCell>
+                  {acc ? (
+                    <>
+                      <TableCell className="text-sm">{acc.account_name || '—'}</TableCell>
+                      <TableCell className="text-sm">{acc.bank_name || '—'}</TableCell>
+                      <TableCell className="text-sm font-mono">{acc.account_number || '—'}</TableCell>
+                      <TableCell className="text-sm">{acc.bookkeeping_card_number || '—'}</TableCell>
+                      <TableCell className="text-sm">{loadingSystemLabels[acc.loading_system] || '—'}</TableCell>
+                      <TableCell className="text-sm">{frequencyLabels[acc.reconciliation_frequency] || '—'}</TableCell>
+                    </>
+                  ) : (
+                    <TableCell colSpan={6} className="text-xs text-gray-400 italic">אין חשבונות בנק</TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
 
   const tabRenderers = {
     financial: renderFinancialTab,
@@ -668,11 +759,15 @@ export default function ClientWorkbook({ embedded = false }) {
       {/* Tabs + Table */}
       <Card>
         <CardContent className="p-0">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
             <div className="border-b px-4 pt-2">
-              <TabsList className="bg-transparent">
+              <TabsList className="bg-transparent gap-1">
                 {TABS.map(t => (
-                  <TabsTrigger key={t.key} value={t.key} className="text-sm">
+                  <TabsTrigger
+                    key={t.key}
+                    value={t.key}
+                    className={`text-sm font-semibold ${t.activeClass}`}
+                  >
                     {t.label}
                   </TabsTrigger>
                 ))}
