@@ -77,15 +77,85 @@
 
 **למה:** הלקוחה ביקשה שמנוע העיצוב ישמש לעבודה שוטפת, ושמפת החשיבה תהיה שמישה.
 
-| # | משימה | פירוט | מורכבות |
-|---|--------|--------|---------|
-| 5.1 | צבעי ענפים גלובליים | צבעי P1-P5 מ-DesignContext משפיעים על Badge, כרטיסי משימות, דשבורדים | בינונית |
-| 5.2 | בחירת node מרשימות | לחיצה על משימה ברשימה → מדגישה אותה ב-MindMap (ולא רק מקנבס) | בינונית |
-| 5.3 | מפת חשיבה שמישה | מפה רדיאלית עם 5 ענפים ראשיים + קיפול עומק > 2 + כפתורי zoom + מיני-מפה | גבוהה |
-| 5.4 | פונטים חזקים לעברית | בדיקה ושדרוג פונטים — Heebo או Assistant במשקלים 400-700 | קלה |
-| 5.5 | UNDO לפעולות | כפתור ביטול (Ctrl+Z) לפעולות אחרונות — מחיקה, שינוי סטטוס, עריכה | גבוהה |
+| # | משימה | פירוט | מורכבות | סטטוס |
+|---|--------|--------|---------|--------|
+| 5.1 | צבעי ענפים גלובליים | צבעי P1-P5 מ-DesignContext משפיעים על Badge, כרטיסי משימות, דשבורדים | בינונית | ✅ |
+| 5.2 | בחירת node מרשימות | לחיצה על משימה ברשימה → מדגישה אותה ב-MindMap (ולא רק מקנבס) | בינונית | ✅ |
+| 5.3 | מפת חשיבה שמישה | מפה רדיאלית עם 5 ענפים ראשיים + קיפול עומק > 2 + כפתורי zoom + מיני-מפה | גבוהה | ✅ |
+| 5.4 | פונטים חזקים לעברית | בדיקה ושדרוג פונטים — Heebo או Assistant במשקלים 400-700 | קלה | ✅ |
+| 5.5 | UNDO לפעולות | כפתור ביטול (Ctrl+Z) לפעולות אחרונות — מחיקה, שינוי סטטוס, עריכה | גבוהה | ✅ |
 
 **תוצאה:** העיצוב עובד בכל המערכת, מפת החשיבה שמישה, ואפשר לבטל טעויות.
+
+---
+
+### סטטוס ביצוע שלב ה' — 12/04/2026
+
+כל 5 סעיפי שלב ה' נסגרו בסניף `claude/stage-5-design-engine-71cvw`:
+
+**5.1 — צבעי ענפים גלובליים** ✅
+- קובץ חדש `src/lib/branchStyles.js` — SSOT אחד לצבעי P1-P6.
+  חושף `getBranchVar()` / `getBranchHex()` / `getBranchStyle()` /
+  `normalizeBranchKey()` שכולם קוראים מ-`--cp-p1..--cp-p6` CSS vars
+  (DesignContext מתחזק אותם), עם fallback ל-`PILLAR_COLORS`.
+- `Badge` קיבל props חדשים `branch` + `branchVariant` (`soft`/`solid`/`outline`).
+- `ClientCard` — הסרת `branchConfig` עם classes קשיחים, עכשיו משתמש
+  ב-inline style עם CSS vars. Headers ו-node gutters זורמים מ-DesignContext.
+- `ClientRecurringTasks` — כפתורי ה-injection per-branch קוראים מ-`getBranchVar()`.
+- `ProcessTreeManager` — border + dot + accent של branch header משתמשים ב-CSS vars.
+- כשמשנים את הפלטה ב-Design Panel — השינוי מתפשט לייב לכל הקומפוננטות בלי re-render.
+
+**5.2 — בחירת node מרשימות** ✅
+- קובץ חדש `src/lib/nodeSelection.js` — חושף `selectNode()` / `selectNodeByTask()`
+  שמשדרים `calmplan:node-selected` window event.
+- `Home.jsx` TaskRow וגם `Tasks.jsx` table rows קוראים ל-`selectNodeByTask()`
+  ב-click (דולגים על clicks שפגעו ב-children אינטרקטיביים).
+- `MindMapView` מאזין ל-event, מדגיש את הצומת התואם ומנקה אוטומטית אחרי 4s.
+- `DesignContext.activeTaskId` כבר היה מאזין — עכשיו גם הוא מתעדכן אוטומטית.
+
+**5.3 — מפת חשיבה שמישה** ✅
+- קומפוננטה חדשה `src/components/views/RadialMindMapView.jsx` (~530 שורות):
+  - Layout רדיאלי מ-`PROCESS_TREE_SEED` — 5 ענפים סביב מרכז.
+  - Depth > 2 מתקפל כברירת מחדל; `+/−` על כל צומת מרחיב/מכווץ.
+  - Pan (click+drag), wheel-zoom עם cursor anchoring, Toolbar:
+    ZoomIn / ZoomOut / Fit / פתח-הכל / סגור-הכל.
+  - **מיני-מפה** בפינה השמאלית-תחתונה עם תיבת viewport חיה.
+  - RTL מלא + `var(--cp-font)` לטיפוגרפיה עברית.
+  - צבעי ענפים מ-`getBranchVar()` (תואם 5.1).
+  - מאזין ל-`calmplan:node-selected` ומתמרכז אוטומטית על הצומת הנבחר.
+- דף חדש `src/pages/MindMap.jsx` + route `/MindMap` + ערך ניווט
+  "מפת חשיבה" (GitBranch icon) בסקשן "מרכז עסקי".
+- **לא** נוגע ב-MindMapView הקיים — זו עבודה שקטה תוספתית.
+
+**5.4 — פונטים חזקים לעברית** ✅
+- `index.html` — עבר מטעינה של Assistant (400/600) + Varela Round בלבד,
+  ל-Heebo 400/500/600/700 + Assistant 400/500/600/700 בבקשה אחת.
+- `index.css` — Heebo ראשון ב-`body` (קריאות חזקה יותר ל-body text),
+  Assistant ראשון ב-headings. הוגדרו משקלים מפורשים לכל h1-h6.
+  `--cp-font` / `--cp-font-heading` CSS vars עודכנו כדי שה-Design Panel
+  ישתמש באותו stack.
+
+**5.5 — Undo לפעולות** ✅
+- `src/contexts/UndoContext.jsx` — LIFO stack עם cap של 5 כניסות.
+  כל action הוא `{ label, icon?, undo }` — `undo` יכול להיות async.
+  חושף `useUndo()` עם `pushUndo` / `undo` / `canUndo` / `lastLabel`.
+- `src/components/FloatingUndoButton.jsx` — כפתור floating כדור בפינה
+  הימנית-תחתונה (RTL), עם קיצור Ctrl+Z / Cmd+Z גלובלי.
+  הקיצור דולג על פעילות בתוך input/textarea/contenteditable.
+  אחרי undo מוצג flash קצר "בוטל: &lt;label&gt;".
+- `Layout.jsx` עוטף את העץ ב-`<UndoProvider>` ומעלה את הכפתור פעם אחת גלובלית.
+- `Home.jsx` — `handleStatusChange`, `handleEditTask`, `handleDeleteTask`
+  דוחפים revert handlers מתאימים. `handleEditTask` שומר snapshot רק של
+  ה-keys שעומדים להשתנות. `handleDeleteTask` משחזר דרך `Task.create`.
+- `StickyNotes.jsx` — `deleteNote` שומר snapshot ומשחזר דרך `StickyNote.create`.
+
+**כללי ברזל שנשמרו:**
+- אף שינוי ב"פירוט משימה 1.9" (sub-tasks panel ב-Home).
+- אף שינוי בסמנטיקה `reporting_month` vs `due_date`.
+- אף שינוי ב-resolution chain של תדירויות (5 שלבים).
+- כל שלב = קומיט נפרד (5.1, 5.2, 5.3a, 5.3b, 5.4, 5.5a, 5.5b).
+- UI חדש שקט: RadialMindMap לבן עם accents מה-CSS vars,
+  FloatingUndoButton בצבע slate-900 נייטרלי, בלי צבעוניות-יתר.
 
 ---
 
