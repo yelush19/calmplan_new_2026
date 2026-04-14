@@ -37,6 +37,7 @@ import AdvanceWarningPanel from "@/components/calendar/AdvanceWarningPanel";
 import BadDayMode from "@/components/tasks/BadDayMode";
 import SmartNudge from "@/components/home/SmartNudge";
 import TaskInsights from "@/components/home/TaskInsights";
+import AyoaMiniMap from "@/components/home/AyoaMiniMap";
 import CategoryBreakdown from "@/components/tasks/CategoryBreakdown";
 import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
 import { StickyNote } from "@/api/entities";
@@ -717,6 +718,9 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
+        {/* ═══ 1.2 Ayoa Mini-Map — SVG client overview (Phase 2) ═══ */}
+        <AyoaMiniMap tasks={data.activeTasks} />
 
         {/* ═══ 1.5 SmartNudge — one gentle nudge ═══ */}
         <SmartNudge nudge={smartNudge} />
