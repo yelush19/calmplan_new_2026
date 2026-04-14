@@ -130,12 +130,12 @@ export default function HomePage() {
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   const [showFullMap, setShowFullMap] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState({
+  const smartCollapse = useMemo(() => ({
     today: false,
-    upcoming: true,
-    events: true,
-    payment: true,
-  });
+    upcoming: (data?.upcoming?.length ?? 0) === 0,
+    events: (data?.todayEvents?.length ?? 0) === 0,
+    payment: (data?.payment?.length ?? 0) === 0,
+  }), [data]);
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { focusMode, filterByEnergy, energyLevel, setEnergyLevel } = useApp();
   const [stickyNotes, setStickyNotes] = useState([]);
@@ -343,13 +343,13 @@ export default function HomePage() {
         const filterCompleted = (list) => list.filter(t => !(t.id === task.id && newStatus === 'production_completed'));
 
         // When production completed, check if task should flow to payment tab
+        const shouldMoveToPayment =
+          newStatus === 'production_completed' &&
+          ((task.process_steps?.payment && !task.process_steps.payment.done) ||
+            !!task.payment_due_date);
         let newPayment = prev.payment.filter(t => t.id !== task.id);
-        if (newStatus === 'production_completed') {
-          // Add to payment tab if it has a payment step or payment_due_date
-          const hasPaymentStep = task.process_steps?.payment && !task.process_steps.payment.done;
-          if (hasPaymentStep || task.payment_due_date) {
-            newPayment = [...newPayment, updatedTask];
-          }
+        if (shouldMoveToPayment) {
+          newPayment = [...newPayment, updatedTask];
         }
 
         const newOverdue = filterCompleted(updateInList(prev.overdue));
@@ -588,10 +588,6 @@ export default function HomePage() {
     }
   };
 
-  const toggleSection = (key) => {
-    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const getSectionData = (tabKey) => {
     if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
     if (tabKey === 'today') return filterBySearch(data.mergedToday || []);
@@ -684,16 +680,16 @@ export default function HomePage() {
 
           {/* Progress bar */}
           <div className="flex items-center gap-2 mt-3">
-            <span className="text-[10px] text-slate-400">התקדמות היום</span>
+            <span className="text-[13px] text-slate-400">התקדמות היום</span>
             <div className="flex-1 bg-slate-100 rounded-full h-1 overflow-hidden">
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: '#5A9EB5' }} />
             </div>
-            <span className="text-[10px] font-bold text-slate-400">{Math.round(progress)}%</span>
+            <span className="text-[13px] font-bold text-slate-400">{Math.round(progress)}%</span>
           </div>
 
           {/* Energy level buttons */}
           <div className="flex items-center gap-2 mt-3">
-            <span className="text-[10px] text-slate-400">רמת אנרגיה:</span>
+            <span className="text-[13px] text-slate-400">רמת אנרגיה:</span>
             <div className="flex gap-1.5">
               {[
                 { key: 'full', emoji: '☀️', label: 'מלא', bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' },
@@ -774,14 +770,13 @@ export default function HomePage() {
             const Icon = tab.icon;
             const items = getSectionData(tab.key);
             const count = items.length;
-            const isOpen = !collapsedSections[tab.key];
+            const isOpen = !smartCollapse[tab.key];
             const overdueCount = tab.key === 'today' ? (data.overdue?.length || 0) : 0;
 
             return (
               <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
                 {/* Section header — always visible */}
                 <button
-                  onClick={() => toggleSection(tab.key)}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
@@ -859,6 +854,9 @@ export default function HomePage() {
                                   showDate={tab.key === 'upcoming'}
                                   showPaymentDate={tab.key === 'payment'}
                                 />
+                                <div className="text-[13px] text-slate-500 text-center mt-2">
+                                  מוצגות {limitedItems.length} מתוך {items.length}
+                                </div>
                                 {hasMore && (
                                   <Link
                                     to={createPageUrl('Tasks')}
@@ -887,7 +885,7 @@ export default function HomePage() {
           <div className="space-y-1.5">
             <h3 className="text-xs font-bold px-1" style={{ color: '#000000' }}>פתקים דביקים</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {stickyNotes.slice(0, 3).map(note => {
+              {stickyNotes.slice(0, 4).map(note => {
                 const urgencyDots = {
                   urgent: '#F59E0B',
                   high:   '#F59E0B',
@@ -1071,10 +1069,10 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm text-gray-800 truncate">{task.title}</span>
           {task.priority === 'urgent' && (
-            <Badge style={{ backgroundColor: '#FFF3E0', color: '#E65100' }} className="text-[11px] px-1.5 py-0">דחוף</Badge>
+            <Badge dir="rtl" style={{ backgroundColor: '#FFF3E0', color: '#E65100' }} className="text-[11px] px-1.5 py-0">דחוף</Badge>
           )}
           {isMissingData && (
-            <Badge className="text-[11px] px-1.5 py-0 bg-gray-100 text-gray-500 border border-dashed border-gray-300">חסר מידע</Badge>
+            <Badge dir="rtl" className="text-[11px] px-1.5 py-0 bg-gray-100 text-gray-500 border border-dashed border-gray-300">חסר מידע</Badge>
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -1082,13 +1080,13 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
             <span className="text-[11px] text-gray-500 truncate max-w-[120px]">{task.client_name}</span>
           )}
           {task.category && (
-            <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-4">{task.category}</Badge>
+            <Badge dir="rtl" variant="outline" className="text-[11px] px-1.5 py-0 h-4">{task.category}</Badge>
           )}
           {task.client_size && (
-            <Badge variant="outline" className="text-[11px] px-1 py-0 h-4 font-bold">{task.client_size}</Badge>
+            <Badge dir="rtl" variant="outline" className="text-[11px] px-1 py-0 h-4 font-bold">{task.client_size}</Badge>
           )}
           {showDeadlineContext && isOverdue && (
-            <Badge style={{ backgroundColor: '#F3E5F5', color: '#7B1FA2' }} className="text-[11px] px-1.5 py-0">
+            <Badge dir="rtl" style={{ backgroundColor: '#F3E5F5', color: '#7B1FA2' }} className="text-[11px] px-1.5 py-0">
               {daysFromDue === 1 ? 'אתמול' : `${daysFromDue} ימים באיחור`}
             </Badge>
           )}
@@ -1101,7 +1099,7 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
             </span>
           )}
           {showPaymentDate && task.payment_due_date && (
-            <Badge className={`text-[11px] px-1.5 py-0 ${paymentDaysLeft <= 0 ? 'bg-purple-100 text-purple-700' : paymentDaysLeft <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
+            <Badge dir="rtl" className={`text-[11px] px-1.5 py-0 ${paymentDaysLeft <= 0 ? 'bg-purple-100 text-purple-700' : paymentDaysLeft <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>
               {paymentDaysLeft < 0 ? `${Math.abs(paymentDaysLeft)} ימים באיחור תשלום` : paymentDaysLeft === 0 ? 'תשלום היום' : `${paymentDaysLeft} ימים לתשלום`}
             </Badge>
           )}
