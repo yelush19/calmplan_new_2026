@@ -131,10 +131,10 @@ export default function HomePage() {
   const [noteTask, setNoteTask] = useState(null);
   const [showFullMap, setShowFullMap] = useState(false);
   const smartCollapse = useMemo(() => ({
-    today: false,
-    upcoming: (data?.upcoming?.length ?? 0) === 0,
-    events: (data?.todayEvents?.length ?? 0) === 0,
-    payment: (data?.payment?.length ?? 0) === 0,
+    today: true,
+    upcoming: (data?.upcoming?.length ?? 0) > 0,
+    events: (data?.todayEvents?.length ?? 0) > 0,
+    payment: (data?.payment?.length ?? 0) > 0,
   }), [data]);
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { focusMode, filterByEnergy, energyLevel, setEnergyLevel } = useApp();
@@ -770,7 +770,7 @@ export default function HomePage() {
             const Icon = tab.icon;
             const items = getSectionData(tab.key);
             const count = items.length;
-            const isOpen = !smartCollapse[tab.key];
+            const isOpen = smartCollapse[tab.key];
             const overdueCount = tab.key === 'today' ? (data.overdue?.length || 0) : 0;
 
             return (
