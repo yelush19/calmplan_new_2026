@@ -1,141 +1,157 @@
 # 🗺️ מדריך עבודה — שיפור עמוד הבית CalmPlan
-### מסמך לנה | עודכן 14/04/2026
+### מסמך לנה | עודכן 15/04/2026
 ---
 
-## 📍 איפה אנחנו עכשיו
+## 📍 איפה אנחנו עכשיו — Stage 5.8 הושלם
 
-✅ button.jsx — עודכן (commit 516a006)  
-✅ card.jsx — עודכן (commit 516a006)  
-✅ כל קבצי האפיון — הועלו ל-Git  
-⏳ Home.jsx Phase 1 — הצעד הבא  
-⏱️ AyoaMiniMap.jsx — אחרי Phase 1  
+### ✅ הושלם
+| Stage | מה בוצע | קבצים שנגעו |
+|-------|---------|-------------|
+| 5.6 | AyoaMiniMap — עיגולי SVG לפי לקוח | AyoaMiniMap.jsx |
+| 5.6 | button.jsx + card.jsx עודכנו לפי CLAUDE.md | button.jsx, card.jsx |
+| 5.7 | smartCollapse הוחלף ב-openSections (toggle אמיתי) | Home.jsx |
+| 5.7 | 2-column grid — RTL, סקציות עם תוכן פתוחות | Home.jsx |
+| 5.7 | Battery Banner, Energy buttons, BadDayMode inline | Home.jsx |
+| 5.7 | ביטול FocusMapView, הוספת Mind Map link | Home.jsx |
+| 5.8 | הסרת OverdueAlert + AdvanceWarningPanel מה-grid | Home.jsx |
+| 5.8 | CategoryBreakdown כפול הוסר (נשאר רק ב-tab "לפי תחום") | Home.jsx |
+| 5.8 | Drawer — קיבוץ לפי קטגוריה + צבעי סטטוס | AyoaMiniMap.jsx |
+| 5.8 | Drawer — Attachments + Thumbnail + Popover | AyoaMiniMap.jsx |
+| 5.8 | Attachments גלובלי בלוחות | GroupedServiceTable.jsx, ClientTasksTab.jsx |
+| 5.8 | smartCollapse ניקוי — לא נמצאו references בקוד | — |
 
----
-
-## 🧭 מה השינויים האמיתיים ולמה (הסבר אנושי)
-
-**הבעיה שראית:** נכנסת לעמוד → רואה רשימות מקופלות → לא יודעת מה לעשות.
-
-**למה זה קרה:** בשלב 5.6 הפיתוח הוסרה המפה הויזואלית (עיגולים) ובמקומה שמו לינק טקסטואלי.  
-גם הוגדר ברירת מחדל שסקציות יהיו *תמיד* מקופלות — גם כשיש בהן תוכן.
-
-**מה נתקן:** 3 דברים עיקריים —
-1. סקציות ייפתחו *אוטומטית* כשיש בהן תוכן
-2. יוחזרו עיגולים ויזואליים לדף (AYOA Mini-Map)  
-3. יוצג כרטיס "משימה אחת עכשיו" בראש הדף
-
----
-
-## 📋 Phase 1 — מה קלוד יעשה בשיחה הבאה
-
-**⏱️ זמן משוער: 1-2 שעות פיתוח**
-
-| # | שינוי | קובץ | מה זה אומר בפועל |
-|---|-------|------|-----------------|
-| 1 | smartCollapse | Home.jsx | סקציה עם תוכן = פתוחה. ריקה = מקופלת |
-| 2 | "מוצגות X מתוך Y" | Home.jsx | תמיד תדעי כמה משימות יש |
-| 3 | dir="rtl" ל-Badges | Home.jsx | טקסט עברי לא יהיה הפוך |
-| 4 | פונט עברי | index.css | Rubik/Assistant במקום ברירת מחדל |
-| 5 | גופן מינימום 13px | Home.jsx | text-[10px] → text-[13px] |
-| 6 | פתק 4 | Home.jsx | slice(0,3) → slice(0,4) |
-| 7 | תיקון payment | Home.jsx | לשלם לא ייעלם מהרשימה |
-
-**מה קלוד לא יעשה:** לא יגע ל-BiologicalClockContext, BadDayMode, MoodChecker, UndoContext, capacityEngine, filterByEnergy — אלה עובדים ✅
+### ⏳ הצעד הבא — Stage 5.9
+בדיקת עמידות ותיקונים קטנים מה-Stage 5.8 (ראה הנחיה למטה).
 
 ---
 
-## 💬 פרומפט פתיחת שיחה — העתיקי כולו
+## 🧭 ארכיטקטורת עמוד הבית — מצב נוכחי
 
 ```
-אנחנו עובדות על CalmPlan — CRM לחשבאית עם ADHD.
+Home.jsx
+├── 1. Greeting Card (שם, הודעה יומית, MoodChecker, Battery Banner)
+│   ├── כפתור "חדש" + Link "מפת חשיבה"
+│   └── Energy buttons + BadDayMode (inline)
+│
+├── 2. AyoaMiniMap — עיגולי SVG לפי לקוח
+│   └── Drawer לכל לקוח:
+│       ├── משימות מקובצות לפי קטגוריה
+│       ├── צבעי סטטוס (TASK_STATUS_CONFIG)
+│       └── 📎 Popover → TaskFileAttachments
+│
+└── 3. Grid 2-עמודות (RTL)
+    ├── עמודה ימין (ראשית):
+    │   ├── Tab "היום" (mergedToday, max 5)
+    │   ├── Tab "לפי תחום" → CategoryBreakdown ✅ (נשאר כאן)
+    │   ├── StickyNotes (slice 0,4)
+    │   ├── SmartNudge
+    │   └── TaskInsights
+    └── עמודה שמאל (משנית):
+        ├── Tab "3 ימים"
+        ├── Tab "אירועים"
+        └── Tab "ממתין לתשלום"
+```
 
-הקשר:
-- button.jsx + card.jsx עודכנו לפי CLAUDE.md (commit 516a006) ✅
-- כל קבצי האפיון ב-docs/designupgrade/
+**Scope Fence קבוע — אל תיגע לעולם:**
+- `App.jsx`, `pages/index.jsx`, `processTemplates.js`
+- `CategoryBreakdown` — שני המקומות ב-Home נשארים
+- לוגיקת SVG / groupByClient / calcX / AyoaCircle ב-AyoaMiniMap
+- sort של drawerTasks
 
-המשימה — Phase 1 בלבד:
-תקראי את הקובץ src/components/Home.jsx ואת docs/designupgrade/אפיון ADHD-First.md
+---
 
-בצעי רק את 7 השינויים האלה — אל תיצרי קבצים חדשים:
+## 💬 הנחיה לקלוד — Stage 5.9 (בדיקת עמידות)
 
-1. collapsedSections → smartCollapse:
-   const smartCollapse = useMemo(() => ({
-     today: false,
-     upcoming: data.upcoming.length === 0,
-     events: data.todayEvents.length === 0,
-     payment: data.payment.length === 0,
-   }), [data]);
+```
+שלום קלוד.
+Branch: claude/review-home-category-yH2dQ
+Repo: yelush19/calmplan_new_2026
 
-2. הוסיפי "מוצגות X מתוך Y" ב-TaskList
+לפני שתתחיל — קרא:
+1. src/components/home/AyoaMiniMap.jsx
+2. src/components/tasks/TaskFileAttachments.jsx
+3. src/components/dashboard/GroupedServiceTable.jsx
+4. src/components/clients/ClientTasksTab.jsx
 
-3. הוסיפי dir="rtl" לכל רכיבי Badge
+---
 
-4. הוסיפי ל-index.css:
-   :root { --font-he: 'Rubik', 'Assistant', system-ui, sans-serif; }
-   body { font-family: var(--font-he); }
+## Stage 5.9 — בדיקת עמידות ל-Stage 5.8
 
-5. שני text-[10px] → text-[13px]
+### משימה 1: DrawerContent overflow
 
-6. stickyNotes.slice(0, 3) → stickyNotes.slice(0, 4)
+ב-AyoaMiniMap.jsx — ודא שה-DrawerContent מקבל:
+style={{ overflow: 'visible' }}
 
-7. תיקון payment: הוסיפי shouldMoveToPayment בתוך handleStatusChange
+אם ה-DrawerContent מה-@/components/ui/drawer.jsx
+כולל overflow-hidden קשיח — הוסף !important,
+או עטוף את התוכן ב-div עם overflow:visible.
 
-אחרי הביצוע — הצגי רשימת השינויים שביצעת בלבד.
-לא לגעת ב: BiologicalClockContext, BadDayMode, MoodChecker, UndoContext, capacityEngine.
+### משימה 2: stopPropagation ב-Popover
+
+בכל PopoverTrigger שנוסף (AyoaMiniMap, GroupedServiceTable, ClientTasksTab) —
+ודא שיש e.stopPropagation() ב-onClick כדי שקליק 📎
+לא יסגור את ה-Drawer.
+
+### משימה 3: Thumbnail accessibility
+
+ב-TaskFileAttachments.jsx — ודא שה-thumbnail כולל alt="":
+<img src={att.file_url} className="w-10 h-10 object-cover rounded" alt="" />
+
+---
+
+## Scope Fence
+- אל תיגע ב-Home.jsx, App.jsx, processTemplates.js
+- אל תיגע ב-CategoryBreakdown
+- אל תשנה לוגיקת SVG ב-AyoaMiniMap
+
+## דו"ח בסיום
+1. האם overflow:visible תקין?
+2. האם stopPropagation קיים בכל 3 הקבצים?
+3. האם alt="" קיים ב-thumbnail?
+4. האם יש PR פתוח ל-branch?
 ```
 
 ---
 
-## 💬 הנחיה לאמצע השיחה — כשקלוד מציע יותר מדי
+## 🚀 Stage 6.0 — מה אחרי (לא עכשיו)
 
-אם קלוד מתחיל לכתוב קבצים חדשים או להציע AyoaMiniMap בשיחה הזו — כתבי לו:
+אחרי שה-Stage 5.9 מאומת ומוזג, הצעדים הבאים:
 
-```
-עצור. Phase 1 בלבד. 
-AyoaMiniMap ו"משימה אחת עכשיו" הם Phase 2 — שיחה נפרדת.
-תסיים רק את 7 השינויים ברשימה.
-```
-
----
-
-## 💬 הנחיה לסיום שיחה — לפני שמאשרת commit
-
-לפני שלוחצת אישור — בדקי שקלוד ענה על כל אלה:
-
-```
-לפני שאני מאשרת — תענה:
-1. האם שינית collapsedSections? הצג את הקוד החדש.
-2. האם נגעת ב-BiologicalClockContext? (תשובה צריכה להיות: לא)
-3. האם יצרת קובץ חדש? (תשובה צריכה להיות: לא)
-4. מה גודל הפונט המינימלי עכשיו?
-```
+| # | פיצ'ר | קבצים צפויים |
+|---|-------|-------------|
+| 6.1 | 3 כפתורי סטטוס inline בכרטיסיית משימה (במקום dropdown) | TaskRow.jsx / רכיב חדש |
+| 6.2 | כפתור "שבצי לי את היום" — AI-assisted scheduling | Home.jsx + API |
+| 6.3 | Drag & Drop סדר עדיפויות בHome | Home.jsx |
+| 6.4 | Notification center — תגובה לאירועים בזמן אמת | AppContext / WebSocket |
 
 ---
 
-## 🚀 Phase 2 — מה אחרי (שיחה נפרדת!)
-
-**לא עכשיו.** רק אחרי שה-Phase 1 מאומת ועובד.
-
-מה יבוא ב-Phase 2:
-- `AyoaMiniMap.jsx` — עיגולים SVG לפי לקוח
-- כרטיס "משימה אחת עכשיו"  
-- 3 כפתורי סטטוס inline (במקום dropdown)
-- כפתור "שבצי לי את היום"
-
----
-
-## 🔍 איך לבדוק שה-Phase 1 עבד
+## 🔍 Checklist בדיקה ידנית לאחר כל Stage
 
 פתחי את האפליקציה ובדקי:
 
-- [ ] סקציות עם משימות — פתוחות אוטומטית
-- [ ] מתחת לרשימת משימות כתוב "מוצגות X מתוך Y"
-- [ ] פונט עברי נראה יותר עגול/קריא (Rubik)
-- [ ] אין טקסטים קטנטנים מתחת ל-13px
-- [ ] רואה 4 פתקים דביקים (לא 3)
-- [ ] שינוי סטטוס לתשלום → מופיע בטאב הנכון
+- [ ] AyoaMiniMap מציג עיגולים לפי לקוח
+- [ ] לחיצה על עיגול → Drawer נפתח
+- [ ] Drawer מציג משימות מקובצות לפי קטגוריה
+- [ ] כרטיסיות בצבעי סטטוס (לא לבן אחיד)
+- [ ] 📎 פותח Popover (לא ניווט)
+- [ ] Popover לא נחתך מהDrawer (overflow visible)
+- [ ] Thumbnail מוצג לתמונות ב-Attachments
+- [ ] CategoryBreakdown קיים בtab "לפי תחום" (עמודה ימין)
+- [ ] CategoryBreakdown לא מופיע מעל ה-grid (הוסר)
+- [ ] OverdueAlert + AdvanceWarningPanel לא מופיעים ב-grid
 
 ---
 
-*האפיון המלא: `docs/designupgrade/אפיון ADHD-First.md`*  
-*מסמך זה: `docs/designupgrade/WORK_GUIDE.md`*
+## 📁 קבצי אפיון רלוונטיים
+
+| קובץ | תוכן |
+|------|------|
+| `docs/designupgrade/אפיון ADHD-First.md` | אפיון מלא UX/UI |
+| `docs/designupgrade/WORK_GUIDE.md` | מדריך ישן (Phase 1-2) |
+| `docs/PerPl-Upgrade/WORK_GUIDE.md` | **המסמך הזה** — מעודכן |
+
+---
+
+*Branch פעיל: `claude/review-home-category-yH2dQ`*
+*עודכן: 15/04/2026 | Stage 5.8 ✅*
