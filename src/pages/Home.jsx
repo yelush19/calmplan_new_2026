@@ -114,6 +114,7 @@ class MapErrorBoundary extends Component {
 
 const FOCUS_TABS = [
   { key: 'today', label: 'היום', icon: Target, color: 'text-[#F57C00]', activeBg: 'bg-orange-50 border-orange-300 text-orange-700', badgeColor: 'bg-orange-100 text-orange-700' },
+  { key: 'byCategory', label: 'לפי תחום', icon: GitBranch, color: 'text-indigo-600', activeBg: 'bg-indigo-50 border-indigo-300 text-indigo-700', badgeColor: 'bg-indigo-100 text-indigo-700' },
   { key: 'upcoming', label: '3 ימים', icon: Clock, color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-300 text-gray-700', badgeColor: 'bg-gray-100 text-gray-700' },
   { key: 'events', label: 'אירועים', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
   { key: 'payment', label: 'ממתין לתשלום', icon: CreditCard, color: 'text-yellow-600', activeBg: 'bg-yellow-50 border-yellow-300 text-yellow-700', badgeColor: 'bg-yellow-100 text-yellow-700' },
@@ -130,12 +131,15 @@ export default function HomePage() {
   const [badDayActive, setBadDayActive] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
-  const smartCollapse = useMemo(() => ({
+  // Stage 5.7: real toggle state — was a useMemo before, so the section
+  // headers had no working onClick. Now each tab can be opened/closed by tap.
+  const [openSections, setOpenSections] = useState({
     today: true,
-    upcoming: (data?.upcoming?.length ?? 0) > 0,
-    events: (data?.todayEvents?.length ?? 0) > 0,
-    payment: (data?.payment?.length ?? 0) > 0,
-  }), [data]);
+    byCategory: true,
+    upcoming: false,
+    events: false,
+    payment: false,
+  });
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { focusMode, filterByEnergy, energyLevel, setEnergyLevel } = useApp();
   const [stickyNotes, setStickyNotes] = useState([]);
@@ -519,6 +523,15 @@ export default function HomePage() {
 
   const getTabCount = (tabKey) => {
     if (tabKey === 'events') return filterBySearch(data.todayEvents, true).length;
+    if (tabKey === 'today') return filterBySearch(data.mergedToday || []).length;
+    if (tabKey === 'byCategory') {
+      // Stage 5.7: byCategory shows the number of unique work-domains, not tasks
+      return [...new Set(
+        filterBySearch(data.mergedToday || [])
+          .map(t => t.category)
+          .filter(Boolean)
+      )].length;
+    }
     return filterBySearch(data[tabKey] || []).length;
   };
 
@@ -591,6 +604,7 @@ export default function HomePage() {
   const getSectionData = (tabKey) => {
     if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
     if (tabKey === 'today') return filterBySearch(data.mergedToday || []);
+    if (tabKey === 'byCategory') return filterBySearch(data.mergedToday || []);
     return filterBySearch(data[tabKey] || []);
   };
 
@@ -750,6 +764,13 @@ export default function HomePage() {
         {/* ═══ 1.2 Ayoa Mini-Map — SVG client overview (Phase 2) ═══ */}
         <AyoaMiniMap tasks={data.activeTasks} />
 
+        {/* ═══ 1.3 Category Breakdown — Stage 5.7: open by default ═══
+            Used to be hidden inside a <details> toggle in section 3.5. The
+            user's actual mental model is "what are my domains today?", so
+            this is now visible and unfolded, full-width, right above the
+            2-column grid. Stage 5.7's "first thing she sees" intent. */}
+        <CategoryBreakdown tasks={data.mergedToday || []} />
+
         {/* ═══ Stage 5.7.3 — 2-column grid below the AyoaMiniMap ═══
             Cuts the page height nearly in half so most of the morning view
             fits in one viewport. On mobile (single col) the right column
@@ -765,19 +786,23 @@ export default function HomePage() {
 
           {/* ─── RIGHT column (visually first in RTL) ─── */}
           <div className="space-y-3">
-            {/* היום section only */}
+            {/* היום + לפי תחום (Stage 5.7 byCategory tab) */}
             <div className="space-y-2">
-              {FOCUS_TABS.filter(t => t.key === 'today').map(tab => {
+              {FOCUS_TABS.filter(t => t.key === 'today' || t.key === 'byCategory').map(tab => {
                 const Icon = tab.icon;
                 const items = getSectionData(tab.key);
-                const count = items.length;
-                const isOpen = smartCollapse[tab.key];
+                // Stage 5.7: byCategory header counts unique work-domains, not tasks
+                const count = getTabCount(tab.key);
+                const isOpen = openSections[tab.key];
                 const overdueCount = tab.key === 'today' ? (data.overdue?.length || 0) : 0;
 
                 return (
                   <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
                     <button
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                      type="button"
+                      dir="rtl"
+                      onClick={() => setOpenSections(prev => ({ ...prev, [tab.key]: !prev[tab.key] }))}
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <Icon className={`w-4 h-4 ${tab.color}`} />
@@ -808,7 +833,13 @@ export default function HomePage() {
                           className="overflow-hidden"
                         >
                           <div className="px-4 pb-3">
-                            {items.length === 0 ? (
+                            {tab.key === 'byCategory' ? (
+                              items.length === 0 ? (
+                                <EmptyState icon={<GitBranch className="w-10 h-10 text-indigo-300" />} text="אין משימות לסיווג היום" />
+                              ) : (
+                                <CategoryBreakdown tasks={items} />
+                              )
+                            ) : items.length === 0 ? (
                               <EmptyState
                                 icon={<Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />}
                                 text="אין משימות להיום - כל הכבוד!"
@@ -898,16 +929,19 @@ export default function HomePage() {
           <div className="space-y-3">
             {/* upcoming / events / payment focus tabs */}
             <div className="space-y-2">
-              {FOCUS_TABS.filter(t => t.key !== 'today').map(tab => {
+              {FOCUS_TABS.filter(t => t.key !== 'today' && t.key !== 'byCategory').map(tab => {
                 const Icon = tab.icon;
                 const items = getSectionData(tab.key);
-                const count = items.length;
-                const isOpen = smartCollapse[tab.key];
+                const count = getTabCount(tab.key);
+                const isOpen = openSections[tab.key];
 
                 return (
                   <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
                     <button
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                      type="button"
+                      dir="rtl"
+                      onClick={() => setOpenSections(prev => ({ ...prev, [tab.key]: !prev[tab.key] }))}
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <Icon className={`w-4 h-4 ${tab.color}`} />
@@ -1007,19 +1041,12 @@ export default function HomePage() {
               <AdvanceWarningPanel />
             </div>
 
-            {/* Category Breakdown — collapsed by default */}
-            <details className="rounded-2xl bg-white border border-gray-200 overflow-hidden group">
-              <summary className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors list-none">
-                <div className="flex items-center gap-2 text-sm">
-                  <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
-                  <span className="font-semibold text-slate-700">סיכום היום לפי קטגוריה</span>
-                  <span className="text-xs text-slate-400">(פירוט מעמיק — מוסתר כברירת מחדל)</span>
-                </div>
-              </summary>
-              <div className="px-4 pb-4 pt-1 border-t border-gray-100">
-                <CategoryBreakdown tasks={data.mergedToday || []} />
-              </div>
-            </details>
+            {/* Stage 5.7.3+5.7 merge: the <details> wrapper around
+                CategoryBreakdown is gone. The unwrapped CategoryBreakdown
+                now lives full-width above the 2-column grid (section 1.3),
+                AND the byCategory tab in the right column also renders it
+                when expanded. Same as main's Stage 5.7 layout — both
+                entries kept on purpose. */}
           </div>
         </div>
 
