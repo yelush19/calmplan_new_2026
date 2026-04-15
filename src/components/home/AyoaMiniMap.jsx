@@ -161,11 +161,48 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
   // drawer is organised "תחומים ללקוח" rather than a flat status list.
   // Categories with any urgent task are sorted to the top so the most
   // pressing domain is the first thing the user sees when the drawer opens.
+  //
+  // Stage 5.9 fix: tasks were all falling into 'כללי' because only
+  // `task.category` was being checked. In this codebase, service identity
+  // can live in several places depending on where the task was created:
+  //   - `task.category`      Hebrew label ('שכר') or English key ('work_vat_reporting')
+  //                          set by QuickAddTaskDialog, TaskForm, seed data, and
+  //                          recurringTaskEngine (see recurringTaskEngine.js:278).
+  //   - `task.service_key`   normalised English key ('payroll', 'vat_reporting')
+  //                          set by recurringTaskEngine.js:287 — this is the
+  //                          canonical service identifier per nodeSelection.js:44.
+  //   - `task.service_group` service group key — recurringTaskEngine.js:286.
+  // Falling through these is what nodeSelection.js already does, so the drawer
+  // should honour the same order: category first (human-readable), then the
+  // structural fallbacks. 'כללי' is now only a last-resort bucket for tasks
+  // that truly have no domain assignment.
   const drawerTasksByCategory = useMemo(() => {
     if (!selectedGroup) return {};
+
+    // Stage 5.9: temporary diagnostic log so the live shape of task records
+    // can be inspected from the browser console. Safe to remove once the
+    // 'כללי' bucket is empty for real users.
+    if (typeof window !== 'undefined' && drawerTasks.length > 0) {
+      // eslint-disable-next-line no-console
+      console.log('[AyoaDrawer] sample tasks:',
+        drawerTasks.slice(0, 5).map((t) => ({
+          title: t.title,
+          category: t.category,
+          service_key: t.service_key,
+          service_group: t.service_group,
+          service_node_id: t.service_node_id,
+          branch: t.branch,
+        }))
+      );
+    }
+
     const grouped = {};
     drawerTasks.forEach((task) => {
-      const cat = task.category || 'כללי';
+      const cat =
+        task.category ||
+        task.service_key ||
+        task.service_group ||
+        'כללי';
       if (!grouped[cat]) grouped[cat] = [];
       grouped[cat].push(task);
     });
