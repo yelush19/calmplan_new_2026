@@ -30,10 +30,47 @@ import {
 //
 // Pure SVG — NO canvas, NO Konva.
 
-// User-specified palette — calming, no red.
+// User-specified palette — calming, no red. Kept as the source of truth
+// for the canonical 5 colours so SERVICE_COLOR_MAP below can reference
+// them without duplicating hex values.
 const PALETTE = ['#0288D1', '#F57C00', '#2E7D32', '#7B1FA2', '#5A9EB5'];
 // Small orange dot marking "has at least one urgent task".
 const URGENT_DOT_COLOR = '#F57C00';
+
+// Stage 5.9 spec — colour consistency ("דרישת חובה"): every service
+// domain must always render in the SAME colour, independent of sort
+// order or task count. Previously colours were assigned by sorted
+// position (`PALETTE[i % PALETTE.length]`), which meant urgency/count
+// changes could repaint a domain — e.g. שכר turning from blue to
+// orange when a new urgent task tipped the sort. The map below pins
+// each normalised Hebrew label to one palette slot so the eye can
+// learn "שכר = blue, מע"מ = orange" etc. and keep that association
+// across renders.
+//
+// The map is keyed by the DISPLAY LABEL (post-normalization) so that
+// every raw key that maps to "שכר" inherits the same colour.
+const SERVICE_COLOR_MAP = {
+  'שכר':              '#0288D1', // blue
+  'מע"מ':             '#F57C00', // orange
+  'מע"מ 874':         '#E65100', // deep orange — distinguishable from מע"מ
+  'ביטוח לאומי':      '#7B1FA2', // purple
+  'הנהלת חשבונות':    '#2E7D32', // green
+  'מקדמות מס':        '#5A9EB5', // steel blue
+  'דו"ח שנתי':        '#00796B', // teal
+  'פנסיות':           '#C2185B', // pink
+  'קליטת לקוח':       '#455A64', // slate
+  'ניכויים':          '#8D6E63', // brown
+  'התאמות':           '#6A1B9A', // deep purple
+  'משלוח תלושים':     '#00695C', // dark teal
+  'כללי':             '#9E9E9E', // neutral grey
+};
+
+// Resolve a display label to its canonical colour. Unknown labels
+// (shouldn't happen after normalization, but defensive) fall back to
+// the neutral grey used for 'כללי'.
+function colorForService(label) {
+  return SERVICE_COLOR_MAP[label] || SERVICE_COLOR_MAP['כללי'];
+}
 
 // Canonical display labels for service domains. Tasks in this codebase
 // store their domain in several different fields and formats (see the
@@ -41,8 +78,12 @@ const URGENT_DOT_COLOR = '#F57C00';
 // and recurringTaskEngine.js:287). This map normalises the raw key to a
 // single Hebrew label so the circles don't splinter — e.g. 'payroll'
 // from recurringTaskEngine and 'שכר' from QuickAddTaskDialog collapse
-// into ONE domain called שכר. Unknown values pass through as-is so a
-// misspelled or new category still gets its own bucket.
+// into ONE domain called שכר.
+//
+// Stage 5.9 spec: unknown raw keys no longer pass through — they fall
+// into the 'כללי' bucket (see normalizeServiceLabel below) AND are
+// logged ONCE to the console via loggedUnknownKeys, so the unmapped
+// values can be added to this map in a follow-up commit.
 const SERVICE_LABEL_MAP = {
   // Payroll
   payroll: 'שכר',
@@ -66,8 +107,9 @@ const SERVICE_LABEL_MAP = {
   work_social_security: 'ביטוח לאומי',
   'ביטוח לאומי': 'ביטוח לאומי',
 
-  // Bookkeeping
+  // Bookkeeping (incl. monthly variant requested in Stage 5.9 spec)
   bookkeeping: 'הנהלת חשבונות',
+  bookkeeping_monthly: 'הנהלת חשבונות',
   work_bookkeeping: 'הנהלת חשבונות',
   'הנהלת חשבונות': 'הנהלת חשבונות',
   'הנה"ח': 'הנהלת חשבונות',
@@ -77,8 +119,9 @@ const SERVICE_LABEL_MAP = {
   work_tax_advances: 'מקדמות מס',
   'מקדמות מס': 'מקדמות מס',
 
-  // Annual report
+  // Annual report (incl. financials variant requested in Stage 5.9 spec)
   annual_report: 'דו"ח שנתי',
+  annual_financials: 'דו"ח שנתי',
   work_annual_report: 'דו"ח שנתי',
   'דו"ח שנתי': 'דו"ח שנתי',
 
@@ -86,15 +129,20 @@ const SERVICE_LABEL_MAP = {
   pensions: 'פנסיות',
   'פנסיות': 'פנסיות',
 
-  // Client onboarding
+  // Client onboarding (incl. short + bookkeeping_onboarding variants
+  // requested in Stage 5.9 spec)
   client_onboarding: 'קליטת לקוח',
+  onboarding: 'קליטת לקוח',
+  bookkeeping_onboarding: 'קליטת לקוח',
   'קליטת לקוח': 'קליטת לקוח',
 
-  // Misc domains that appear in seed data and live tasks
+  // Misc domains that appear in seed data and live tasks (incl.
+  // 'adjustments' variant requested in Stage 5.9 spec)
   'ניכויים': 'ניכויים',
   deductions: 'ניכויים',
   'התאמות': 'התאמות',
   reconciliations: 'התאמות',
+  adjustments: 'התאמות',
   'משלוח תלושים': 'משלוח תלושים',
   payslips: 'משלוח תלושים',
 
@@ -102,13 +150,22 @@ const SERVICE_LABEL_MAP = {
   'כללי': 'כללי',
 };
 
+// Module-level dedup set — we only want to log each unknown raw key
+// ONCE per session, not every time groupByServiceDomain re-runs (which
+// happens on every edit that mutates localTasks).
+const loggedUnknownKeys = new Set();
+
 function normalizeServiceLabel(rawKey) {
   if (!rawKey) return 'כללי';
-  return SERVICE_LABEL_MAP[rawKey] || rawKey;
+  // Stage 5.9 spec: unknown values fall back to 'כללי' (not pass-through)
+  // so the circles don't get polluted with raw technical keys.
+  return SERVICE_LABEL_MAP[rawKey] || 'כללי';
 }
 
 function groupByServiceDomain(tasks) {
   const groups = new Map();
+  const freshUnknowns = [];
+
   (tasks || []).forEach((task) => {
     // Fallback chain — same order as nodeSelection.js:44. `category`
     // is preferred because it's human-readable in live data, then
@@ -120,14 +177,41 @@ function groupByServiceDomain(tasks) {
       task.service_group ||
       'כללי';
     const label = normalizeServiceLabel(rawKey);
+
+    // Collect unmapped raw keys so the console can be used to extend
+    // SERVICE_LABEL_MAP. We only report each key ONCE per session via
+    // the module-level loggedUnknownKeys set — otherwise the log would
+    // fire on every state update that rebuilds localTasks.
+    if (
+      rawKey !== 'כללי' &&
+      !SERVICE_LABEL_MAP[rawKey] &&
+      !loggedUnknownKeys.has(rawKey)
+    ) {
+      loggedUnknownKeys.add(rawKey);
+      freshUnknowns.push(rawKey);
+    }
+
     if (!groups.has(label)) {
-      groups.set(label, { serviceLabel: label, rawKey, tasks: [] });
+      groups.set(label, { serviceLabel: label, tasks: [] });
     }
     groups.get(label).tasks.push(task);
   });
 
+  if (typeof window !== 'undefined' && freshUnknowns.length > 0) {
+    // eslint-disable-next-line no-console
+    console.log(
+      '[AyoaMiniMap] unmapped service keys (add to SERVICE_LABEL_MAP):',
+      freshUnknowns
+    );
+  }
+
   // Urgent domains first, then by task count. i=0 lands on the right
   // in the RTL layout below — most urgent is the first thing the eye hits.
+  //
+  // IMPORTANT: the sort determines POSITION on the map, but NOT the
+  // colour. Colour is resolved from SERVICE_COLOR_MAP by label, so
+  // 'שכר' stays blue whether it's at position 0 or position 5. This
+  // is the Stage 5.9 "colour consistency" hard requirement.
   const arr = Array.from(groups.values()).sort((a, b) => {
     const aUrgent = a.tasks.some((t) => t.priority === 'urgent') ? 1 : 0;
     const bUrgent = b.tasks.some((t) => t.priority === 'urgent') ? 1 : 0;
@@ -137,9 +221,9 @@ function groupByServiceDomain(tasks) {
 
   // Cap at 8 domains — matches the original 8-client cap and keeps the
   // mini-map readable at the 360px minimum viewBox width.
-  return arr.slice(0, 8).map((group, i) => ({
+  return arr.slice(0, 8).map((group) => ({
     ...group,
-    color: PALETTE[i % PALETTE.length],
+    color: colorForService(group.serviceLabel),
   }));
 }
 
@@ -173,7 +257,10 @@ function calcX(i, total, viewWidth = 360) {
 }
 
 function AyoaCircle({ cx, cy, r, color, label, count, urgent, onClick }) {
-  const labelText = label.length > 6 ? `${label.slice(0, 6)}…` : label;
+  // Stage 5.9: trimEnd() so long labels like 'הנהלת חשבונות' don't
+  // render as 'הנהלת …' with a visible space before the ellipsis.
+  const labelText =
+    label.length > 6 ? `${label.slice(0, 6).trimEnd()}…` : label;
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
