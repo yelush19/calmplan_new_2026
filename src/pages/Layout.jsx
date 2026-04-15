@@ -109,6 +109,26 @@ const getSidebarSections = () => ({
       { name: "מפת חשיבה", href: createPageUrl("MindMap"), icon: GitBranch },
     ],
     subGroups: [
+      // Stage 5.7.2: quick-access view that drills into existing dashboards
+      // by service-key (?service=<key>). Each link points at the dashboard
+      // that already owns that service in processTemplates.js. Filtering
+      // logic in the dashboards is added separately, after this subGroup
+      // is approved on its own.
+      { key: 'sg_services_by_category', label: '🗂 שירותים לפי קטגוריה', icon: LayoutGrid, items: [
+        // ── מס ──
+        { name: "מע\"מ",        href: createPageUrl("TaxReportsDashboard") + "?service=vat",          icon: Receipt },
+        { name: "מקדמות מס",    href: createPageUrl("TaxReportsDashboard") + "?service=tax_advances", icon: Receipt },
+        { name: "מע\"מ 874",    href: createPageUrl("TaxReportsDashboard") + "?service=vat_874",      icon: Receipt },
+        // ── שכר ──
+        { name: "ייצור שכר",    href: createPageUrl("PayrollDashboard") + "?service=payroll",         icon: Calculator },
+        { name: "ביטוח לאומי",  href: createPageUrl("PayrollDashboard") + "?service=social_security", icon: Calculator },
+        { name: "ניכויים",      href: createPageUrl("PayrollDashboard") + "?service=deductions",      icon: Calculator },
+        // ── הנה"ח ──
+        { name: "הנהלת חשבונות", href: createPageUrl("TaxReportsDashboard") + "?service=bookkeeping", icon: BookOpen },
+        { name: "התאמות",        href: createPageUrl("Reconciliations"),                              icon: BookCheck },
+        // ── אדמין ──
+        { name: "משימות אדמין",  href: createPageUrl("AdminTasksDashboard") + "?service=admin",       icon: Settings },
+      ]},
       { key: 'sg_payroll', label: '💰 שכר', icon: Calculator, items: [
         { name: "ייצור + הפצה", href: createPageUrl("PayrollDashboard"), icon: Zap },
         { name: "פנסיות וקרנות", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },

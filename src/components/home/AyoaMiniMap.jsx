@@ -5,6 +5,11 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import {
+  TASK_STATUS_CONFIG,
+  STATUS_CONFIG,
+  migrateStatus,
+} from '@/config/processTemplates';
 
 // Phase 2: compact SVG "mind-map" overview of today's active clients.
 // Pure SVG — NO canvas, NO Konva. Clicking a circle opens a Drawer with
@@ -14,8 +19,6 @@ import {
 const PALETTE = ['#0288D1', '#F57C00', '#2E7D32', '#7B1FA2', '#5A9EB5'];
 // Small orange dot marking "has at least one urgent task".
 const URGENT_DOT_COLOR = '#F57C00';
-
-const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3 };
 
 function groupByClient(tasks) {
   const groups = new Map();
@@ -125,11 +128,21 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
 
   const groups = useMemo(() => groupByClient(tasks), [tasks]);
 
+  // Stage 5.7.2: sort by canonical status priority (from STATUS_CONFIG)
+  // then by due date. Legacy statuses are normalized via migrateStatus so
+  // older tasks still group correctly. STATUS_CONFIG priorities (low → high
+  // = urgent → done) are: waiting_for_materials=1, not_started=2,
+  // sent_for_review/needs_corrections=3, ready_to_broadcast=3.5,
+  // reported_pending_payment=4, production_completed=5.
   const drawerTasks = useMemo(() => {
     if (!selectedGroup) return [];
+    const statusPriority = (status) => {
+      const normalized = migrateStatus(status);
+      return STATUS_CONFIG[normalized]?.priority ?? 99;
+    };
     return [...selectedGroup.tasks].sort((a, b) => {
-      const pa = PRIORITY_ORDER[a.priority] ?? 2;
-      const pb = PRIORITY_ORDER[b.priority] ?? 2;
+      const pa = statusPriority(a.status);
+      const pb = statusPriority(b.status);
       if (pa !== pb) return pa - pb;
       const da = a.due_date ? new Date(a.due_date).getTime() : Infinity;
       const db = b.due_date ? new Date(b.due_date).getTime() : Infinity;
@@ -234,20 +247,34 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
                     >
                       {task.title || 'ללא שם'}
                     </span>
-                    {task.priority === 'urgent' && (
-                      <span
-                        className="font-bold"
-                        style={{
-                          backgroundColor: '#FDF2EE',
-                          color: '#9A3E1E',
-                          padding: '2px 10px',
-                          borderRadius: '9999px',
-                          fontSize: '12px',
-                        }}
-                      >
-                        דחוף
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {(() => {
+                        // Stage 5.7.2: status badge from canonical
+                        // TASK_STATUS_CONFIG (legacy statuses normalized).
+                        const cfg = TASK_STATUS_CONFIG[migrateStatus(task.status)];
+                        return cfg ? (
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cfg.color}`}
+                          >
+                            {cfg.text}
+                          </span>
+                        ) : null;
+                      })()}
+                      {task.priority === 'urgent' && (
+                        <span
+                          className="font-bold"
+                          style={{
+                            backgroundColor: '#FDF2EE',
+                            color: '#9A3E1E',
+                            padding: '2px 10px',
+                            borderRadius: '9999px',
+                            fontSize: '12px',
+                          }}
+                        >
+                          דחוף
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {(task.category || task.due_date) && (
                     <div
