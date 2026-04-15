@@ -27,30 +27,103 @@ const PALETTE = ['#0288D1', '#F57C00', '#2E7D32', '#7B1FA2', '#5A9EB5'];
 // Small orange dot marking "has at least one urgent task".
 const URGENT_DOT_COLOR = '#F57C00';
 
-function groupByClient(tasks) {
-  const groups = new Map();
-  (tasks || []).forEach((task) => {
-    const key = task.client_name || 'ללא לקוח';
-    if (!groups.has(key)) groups.set(key, { clientName: key, tasks: [] });
-    groups.get(key).tasks.push(task);
-  });
+// Stage 5.9: group tasks by SERVICE DOMAIN instead of by client.
+// Sources of truth for raw category strings are messy — Hebrew labels from
+// the UI ("שכר"), English keys from templates ("payroll"), legacy keys
+// from older data ("work_vat_reporting") — all of which must collapse into
+// one of a small set of canonical domain buckets.
+const SERVICE_NORMALIZATION = {
+  'שכר': 'payroll', 'תלושים': 'payroll', 'קליטת שכר': 'payroll',
+  'payroll': 'payroll', 'salary': 'payroll', 'payroll_monthly': 'payroll',
+  'מ.ע.ב': 'payroll',
+  'פנסיות': 'pensions', 'קרן פנסיה': 'pensions',
+  'pensions': 'pensions', 'pension_reporting': 'pensions',
+  'מע"מ': 'vat', 'מעמ': 'vat', 'מקדמות מס': 'vat',
+  'vat_reporting': 'vat', 'work_vat_reporting': 'vat',
+  'הנהלת חשבונות': 'bookkeeping', 'ניכויים': 'bookkeeping',
+  'bookkeeping': 'bookkeeping', 'bookkeeping_monthly': 'bookkeeping',
+  'דוח שנתי': 'annual_report', 'דו"ח שנתי': 'annual_report',
+  'מאזן': 'annual_report', 'annual_report': 'annual_report',
+  'annual_financials': 'annual_report',
+  'ביטוח לאומי': 'national_insurance', 'בט"ל': 'national_insurance',
+  'national_insurance': 'national_insurance',
+  'קליטה': 'client_onboarding', 'קליטת לקוח': 'client_onboarding',
+  'client_onboarding': 'client_onboarding',
+  'bookkeeping_onboarding': 'client_onboarding',
+  'התאמות': 'reconciliations', 'reconciliations': 'reconciliations',
+  'adjustments': 'reconciliations',
+};
 
-  // Urgent groups first, then by task count (descending).
-  // This is what puts the "most urgent" group at index 0, which — because
-  // of the RTL x-coordinate math below — lands on the right.
-  const arr = Array.from(groups.values()).sort((a, b) => {
-    const aUrgent = a.tasks.some((t) => t.priority === 'urgent') ? 1 : 0;
-    const bUrgent = b.tasks.some((t) => t.priority === 'urgent') ? 1 : 0;
-    if (aUrgent !== bUrgent) return bUrgent - aUrgent;
-    return b.tasks.length - a.tasks.length;
-  });
+const LABEL_MAP = {
+  payroll: 'שכר',
+  pensions: 'פנסיות',
+  vat: 'מע"מ',
+  bookkeeping: 'הנהלת ח-ב',
+  annual_report: 'דוח שנתי',
+  national_insurance: 'ביטוח לאומי',
+  client_onboarding: 'קליטת לקוח',
+  reconciliations: 'התאמות',
+  unknown: 'כללי',
+};
 
-  // Cap at 8 so the mini-map stays readable at 360px wide.
-  return arr.slice(0, 8).map((group, i) => ({
-    ...group,
-    color: PALETTE[i % PALETTE.length],
-  }));
+function normalizeServiceKey(rawCategory) {
+  if (!rawCategory) return 'unknown';
+  const trimmed = String(rawCategory).trim();
+  if (SERVICE_NORMALIZATION[trimmed]) return SERVICE_NORMALIZATION[trimmed];
+  // Loose prefix match so slight variations still hit the right bucket.
+  for (const [key, val] of Object.entries(SERVICE_NORMALIZATION)) {
+    if (trimmed.startsWith(key) || key.startsWith(trimmed)) return val;
+  }
+  return 'unknown';
 }
+
+function groupByServiceDomain(tasks) {
+  const groups = new Map();
+  const unknownKeys = new Set();
+  (tasks || []).forEach((task) => {
+    const raw = task.category || task.service_key || task.service_group || '';
+    const normalized = normalizeServiceKey(raw);
+    if (normalized === 'unknown' && raw) unknownKeys.add(raw);
+    if (!groups.has(normalized)) {
+      groups.set(normalized, {
+        normalized_key: normalized,
+        label: LABEL_MAP[normalized] || 'כללי',
+        tasks: [],
+      });
+    }
+    groups.get(normalized).tasks.push(task);
+  });
+  if (unknownKeys.size > 0) {
+    // Dev aid: surface raw keys we don't know so they can be added to
+    // SERVICE_NORMALIZATION. Only logs when something falls through.
+    console.log('[AyoaMiniMap] Unknown service keys:', [...unknownKeys]);
+  }
+  // Urgent domains first, then by task count (descending).
+  // This puts the "most urgent" domain at index 0, which — because of the
+  // RTL x-coordinate math below — lands on the right.
+  return Array.from(groups.values())
+    .sort((a, b) => {
+      const aU = a.tasks.some((t) => t.priority === 'urgent') ? 0 : 1;
+      const bU = b.tasks.some((t) => t.priority === 'urgent') ? 0 : 1;
+      if (aU !== bU) return aU - bU;
+      return b.tasks.length - a.tasks.length;
+    })
+    .slice(0, 9)
+    .map((group, i) => ({ ...group, color: PALETTE[i % PALETTE.length] }));
+}
+
+// Stage 5.9: canonical bucket order for the drawer's status groups.
+// Legacy/unmapped statuses fall through to the end via migrateStatus.
+const STATUS_ORDER = [
+  'not_started',
+  'waiting_for_materials',
+  'in_progress',
+  'sent_for_review',
+  'needs_corrections',
+  'ready_to_broadcast',
+  'reported_pending_payment',
+  'production_completed',
+];
 
 // Fixed circle-to-circle step so gaps don't collapse when the client count
 // grows. The viewBox width is computed from `total` below, so circles land
@@ -133,7 +206,12 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, onClick }) {
 export default function AyoaMiniMap({ tasks, onGroupClick }) {
   const [selectedGroup, setSelectedGroup] = useState(null);
 
-  const groups = useMemo(() => groupByClient(tasks), [tasks]);
+  // Stage 5.9: groupByServiceDomain replaces groupByClient. Each circle
+  // now represents a WORK DOMAIN (שכר / מע"מ / ביטוח לאומי / ...), not a
+  // client — AYOA-style "what kind of work am I doing today", not "who do
+  // I need to call". Clicking a circle opens a Drawer with the tasks in
+  // that domain, bucketed by status.
+  const groups = useMemo(() => groupByServiceDomain(tasks), [tasks]);
 
   // Stage 5.7.2: sort by canonical status priority (from STATUS_CONFIG)
   // then by due date. Legacy statuses are normalized via migrateStatus so
@@ -157,28 +235,38 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
     });
   }, [selectedGroup]);
 
-  // Stage 5.8 (JKAj2): group drawer tasks by category/service domain so
-  // the drawer is organised "תחומים ללקוח" — each client drawer shows
-  // their tasks bucketed by שכר / מע"מ / הנהלת חשבונות / ... with the
-  // internal drawerTasks sort (status priority → due date) preserved
-  // inside each bucket. Categories with any urgent task are sorted to
-  // the top so the most pressing domain is the first thing the user
-  // sees when the drawer opens.
-  const drawerTasksByCategory = useMemo(() => {
+  // Stage 5.9: since each circle is already one service domain, the
+  // drawer groups its tasks by STATUS instead of by category. Buckets
+  // follow STATUS_ORDER so the user always reads top-down from "לבצע" to
+  // "הושלם ייצור". Legacy statuses are remapped via migrateStatus.
+  const drawerTasksByStatus = useMemo(() => {
     if (!selectedGroup) return {};
     const grouped = {};
     drawerTasks.forEach((task) => {
-      const cat = task.category || 'כללי';
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(task);
+      const s = migrateStatus(task.status) || 'not_started';
+      if (!grouped[s]) grouped[s] = [];
+      grouped[s].push(task);
     });
     return Object.fromEntries(
-      Object.entries(grouped).sort(([, a], [, b]) => {
-        const aU = a.some((t) => t.priority === 'urgent') ? 0 : 1;
-        const bU = b.some((t) => t.priority === 'urgent') ? 0 : 1;
-        return aU - bU;
-      })
+      STATUS_ORDER.filter((s) => grouped[s]).map((s) => [s, grouped[s]])
     );
+  }, [drawerTasks, selectedGroup]);
+
+  // Stage 5.9: unique client names for the drawer sub-title. Preserves
+  // first-seen order (which itself is status-priority sorted via
+  // drawerTasks), caps at 5 and shows "+N" overflow.
+  const drawerClientNames = useMemo(() => {
+    if (!selectedGroup) return [];
+    const seen = new Set();
+    const out = [];
+    drawerTasks.forEach((t) => {
+      const name = t.client_name || 'ללא לקוח';
+      if (!seen.has(name)) {
+        seen.add(name);
+        out.push(name);
+      }
+    });
+    return out;
   }, [drawerTasks, selectedGroup]);
 
   if (groups.length === 0) return null;
@@ -205,10 +293,10 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold" style={{ color: '#1A2332' }}>
-          מפה לפי לקוחות
+          מפה לפי תחומי שירות
         </h3>
         <span className="text-[12px]" style={{ color: '#9AA5B4' }}>
-          {groups.length} לקוחות · לחצי על עיגול
+          {groups.length} תחומים · לחצי על עיגול
         </span>
       </div>
       <svg
@@ -220,12 +308,12 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
       >
         {groups.map((group, i) => (
           <AyoaCircle
-            key={group.clientName}
+            key={group.normalized_key}
             cx={calcX(i, groups.length, viewWidth)}
             cy={90}
             r={Math.min(36, Math.max(18, group.tasks.length * 4))}
             color={group.color}
-            label={group.clientName}
+            label={group.label}
             count={group.tasks.length}
             urgent={group.tasks.some((t) => t.priority === 'urgent')}
             onClick={() => handleClick(group)}
@@ -243,17 +331,20 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
             Popover can escape the drawer's rounded clip without getting cut off. */}
         <DrawerContent style={{ overflow: 'visible' }}>
           <DrawerHeader className="relative">
+            {/* Stage 5.9: header describes the DOMAIN (שכר / מע"מ / ...),
+                not a client. Subtitle lists up to 5 unique client names with
+                "+N" overflow so the user sees who is involved in this domain
+                today at a glance. */}
             <DrawerTitle
               className="text-center"
               style={{ fontFamily: 'Heebo, sans-serif', color: '#1A2332' }}
             >
-              {selectedGroup?.clientName} · {selectedGroup?.tasks.length || 0} משימות
+              {selectedGroup?.label || ''} · {selectedGroup?.tasks.length || 0} משימות
             </DrawerTitle>
-            {/* Stage 5.8 (JKAj2): category summary strip — gives immediate
-                orientation of the domains this client is currently running. */}
-            {Object.keys(drawerTasksByCategory).length > 0 && (
+            {drawerClientNames.length > 0 && (
               <div className="text-xs text-slate-400 text-center mt-0.5">
-                {Object.keys(drawerTasksByCategory).join(' · ')}
+                {drawerClientNames.slice(0, 5).join(' · ')}
+                {drawerClientNames.length > 5 && ` +${drawerClientNames.length - 5}`}
               </div>
             )}
             <button
@@ -269,111 +360,108 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
             className="px-4 pb-6 max-h-[60vh] overflow-y-auto"
             style={{ fontFamily: 'Heebo, sans-serif' }}
           >
-            {/* Stage 5.8 (JKAj2): tasks grouped by category instead of a flat
-                list. Card background uses TASK_STATUS_CONFIG[migrateStatus(
-                task.status)]?.color (e.g. amber for waiting_for_materials,
-                purple for sent_for_review). Border is now neutral #EEF1F5
-                (no more 4px client colour on inline-start). Each card has a
-                paperclip Popover wired to TaskFileAttachments so files can
-                be attached/viewed without leaving Home. */}
-            {Object.entries(drawerTasksByCategory).map(([cat, catTasks]) => (
-              <div key={cat} className="mb-3">
-                <div className="text-xs font-bold text-slate-500 mb-1.5 px-1">
-                  {cat} ({catTasks.length})
-                </div>
-                {catTasks.map((task) => {
-                  const cfg = TASK_STATUS_CONFIG[migrateStatus(task.status)];
-                  return (
-                    <div
-                      key={task.id}
-                      className={`p-3 rounded-xl mb-1.5 ${cfg?.color || 'bg-white text-gray-700'}`}
-                      style={{ border: '1px solid #EEF1F5' }}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className="text-sm font-semibold"
-                          style={{ color: '#1A2332' }}
-                        >
-                          {task.title || 'ללא שם'}
-                        </span>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {cfg && (
-                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/70">
-                              {cfg.text}
-                            </span>
-                          )}
-                          {task.priority === 'urgent' && (
-                            <span
-                              className="font-bold"
-                              style={{
-                                backgroundColor: '#FDF2EE',
-                                color: '#9A3E1E',
-                                padding: '2px 10px',
-                                borderRadius: '9999px',
-                                fontSize: '12px',
-                              }}
-                            >
-                              דחוף
-                            </span>
-                          )}
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className="flex items-center gap-0.5 text-[11px] text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded hover:bg-white/60"
-                                aria-label="קבצים מצורפים"
+            {/* Stage 5.9: tasks bucketed by STATUS (STATUS_ORDER), not by
+                category. Bucket header uses TASK_STATUS_CONFIG[s]?.text.
+                Each card shows title → client_name → due_date, and keeps
+                the paperclip Popover wired to TaskFileAttachments so files
+                can be attached/viewed without leaving Home. */}
+            {Object.entries(drawerTasksByStatus).map(([status, statusTasks]) => {
+              const statusCfg = TASK_STATUS_CONFIG[status];
+              return (
+                <div key={status} className="mb-3">
+                  <div className="text-xs font-bold text-slate-500 mb-1.5 px-1">
+                    {statusCfg?.text || status} ({statusTasks.length})
+                  </div>
+                  {statusTasks.map((task) => {
+                    const cfg = TASK_STATUS_CONFIG[migrateStatus(task.status)];
+                    return (
+                      <div
+                        key={task.id}
+                        className={`p-3 rounded-xl mb-1.5 ${cfg?.color || 'bg-white text-gray-700'}`}
+                        style={{ border: '1px solid #EEF1F5' }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className="text-sm font-semibold"
+                            style={{ color: '#1A2332' }}
+                          >
+                            {task.title || 'ללא שם'}
+                          </span>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {task.priority === 'urgent' && (
+                              <span
+                                className="font-bold"
+                                style={{
+                                  backgroundColor: '#FDF2EE',
+                                  color: '#9A3E1E',
+                                  padding: '2px 10px',
+                                  borderRadius: '9999px',
+                                  fontSize: '12px',
+                                }}
+                              >
+                                דחוף
+                              </span>
+                            )}
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-0.5 text-[11px] text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded hover:bg-white/60"
+                                  aria-label="קבצים מצורפים"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Paperclip className="w-3 h-3" />
+                                  {(task.attachments?.length || 0) > 0 && (
+                                    <span>{task.attachments.length}</span>
+                                  )}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-72 p-3"
+                                style={{ zIndex: 9999 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <Paperclip className="w-3 h-3" />
-                                {(task.attachments?.length || 0) > 0 && (
-                                  <span>{task.attachments.length}</span>
-                                )}
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-72 p-3"
-                              style={{ zIndex: 9999 }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <TaskFileAttachments
-                                taskId={task.id}
-                                attachments={task.attachments || []}
-                                clientId={
-                                  selectedGroup?.clientId ||
-                                  task.client_id ||
-                                  null
-                                }
-                                clientName={selectedGroup?.clientName}
-                                onUpdate={(updated) => {
-                                  setSelectedGroup((prev) =>
-                                    prev
-                                      ? {
-                                          ...prev,
-                                          tasks: prev.tasks.map((t) =>
-                                            t.id === task.id
-                                              ? { ...t, attachments: updated }
-                                              : t
-                                          ),
-                                        }
-                                      : prev
-                                  );
-                                }}
-                              />
-                            </PopoverContent>
-                          </Popover>
+                                <TaskFileAttachments
+                                  taskId={task.id}
+                                  attachments={task.attachments || []}
+                                  clientId={task.client_id || null}
+                                  clientName={task.client_name || ''}
+                                  onUpdate={(updated) => {
+                                    setSelectedGroup((prev) =>
+                                      prev
+                                        ? {
+                                            ...prev,
+                                            tasks: prev.tasks.map((t) =>
+                                              t.id === task.id
+                                                ? { ...t, attachments: updated }
+                                                : t
+                                            ),
+                                          }
+                                        : prev
+                                    );
+                                  }}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </div>
+                        {task.client_name && (
+                          <div className="text-[12px] mt-1 opacity-80">
+                            {task.client_name}
+                          </div>
+                        )}
+                        {task.due_date && (
+                          <div className="text-[11px] mt-0.5 opacity-70">
+                            {task.due_date}
+                          </div>
+                        )}
                       </div>
-                      {task.due_date && (
-                        <div className="text-[12px] mt-1 opacity-80">
-                          {task.due_date}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-            {Object.keys(drawerTasksByCategory).length === 0 && (
+                    );
+                  })}
+                </div>
+              );
+            })}
+            {Object.keys(drawerTasksByStatus).length === 0 && (
               <div
                 className="text-center py-8 text-sm"
                 style={{ color: '#9AA5B4' }}
