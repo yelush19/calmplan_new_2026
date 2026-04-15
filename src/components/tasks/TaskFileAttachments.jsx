@@ -151,9 +151,25 @@ export default function TaskFileAttachments({ taskId, attachments = [], onUpdate
         <div className="space-y-1">
           {attachments.map(att => {
             const IconComp = getFileIcon(att.file_name);
+            // Stage 5.8 (JKAj2): render a 40×40 thumbnail for image files
+            // (jpg/jpeg/png/gif) so the attachment list reads as a visual
+            // strip instead of text-only. Cascades to every consumer of
+            // TaskFileAttachments — AyoaMiniMap drawer, GroupedServiceTable
+            // expanded row, ClientTasksTab, TaskSidePanel, etc.
+            const ext = (att.file_name || '').split('.').pop()?.toLowerCase();
+            const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(ext);
             return (
               <div key={att.id} className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded-md text-xs group hover:bg-gray-100 transition-colors">
-                <IconComp className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                {isImage && att.file_url ? (
+                  <img
+                    src={att.file_url}
+                    alt={att.file_name}
+                    className="w-10 h-10 object-cover rounded flex-shrink-0"
+                    loading="lazy"
+                  />
+                ) : (
+                  <IconComp className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                )}
                 <a
                   href={att.file_url}
                   target="_blank"

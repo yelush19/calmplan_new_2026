@@ -1035,11 +1035,13 @@ export default function HomePage() {
               })}
             </div>
 
-            {/* Soft Alerts: Overdue + AdvanceWarning */}
-            <div className="space-y-1.5">
-              <OverdueAlert tasks={allFocusTasks} />
-              <AdvanceWarningPanel />
-            </div>
+            {/* Stage 5.8 (JKAj2): Soft Alerts (OverdueAlert + AdvanceWarningPanel)
+                block was removed from the grid. The components themselves
+                still exist and are imported elsewhere — OverdueAlert renders
+                conditional context inside TaskList, and AdvanceWarningPanel
+                is kept available for future placement. Overdue visibility is
+                now carried by the purple "באיחור" badge on the היום section
+                header, and the advance-warning panel was too noisy for Home. */}
 
             {/* Stage 5.7.3+5.7 merge: the <details> wrapper around
                 CategoryBreakdown is gone. The unwrapped CategoryBreakdown
