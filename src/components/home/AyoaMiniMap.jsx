@@ -42,16 +42,22 @@ function groupByClient(tasks) {
   }));
 }
 
-function calcX(i, total, viewWidth = 360, margin = 36) {
-  // RTL layout: i=0 (most urgent) sits at the right edge.
+// Fixed circle-to-circle step so gaps don't collapse when the client count
+// grows. The viewBox width is computed from `total` below, so circles land
+// inside the SVG with breathing room instead of clipping the edges.
+const STEP = 52;
+
+function calcX(i, total, viewWidth = 360) {
+  // RTL layout: i=0 (most urgent) sits at the right. We center the row
+  // inside viewWidth so a small count (1-3) isn't pinned hard to the right.
   if (total <= 1) return viewWidth / 2;
-  const usable = viewWidth - margin * 2;
-  const step = usable / (total - 1);
-  return viewWidth - margin - i * step;
+  const usedWidth = (total - 1) * STEP;
+  const startRight = viewWidth - (viewWidth - usedWidth) / 2;
+  return startRight - i * STEP;
 }
 
 function AyoaCircle({ cx, cy, r, color, label, count, urgent, onClick }) {
-  const labelText = label.length > 10 ? `${label.slice(0, 10)}…` : label;
+  const labelText = label.length > 6 ? `${label.slice(0, 6)}…` : label;
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -100,9 +106,9 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, onClick }) {
       )}
       <text
         x={cx}
-        y={cy + r + 16}
+        y={cy + r + 14}
         textAnchor="middle"
-        fontSize={12}
+        fontSize={11}
         fill="#5A6A7A"
         style={{ fontFamily: 'Heebo, sans-serif', pointerEvents: 'none' }}
       >
@@ -131,6 +137,10 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
 
   if (groups.length === 0) return null;
 
+  // Grow the viewBox with the client count so 6-8 circles don't collapse
+  // into each other. Minimum 360 keeps small counts at a natural size.
+  const viewWidth = Math.max(360, (groups.length - 1) * STEP + 60);
+
   const handleClick = (group) => {
     setSelectedGroup(group);
     if (onGroupClick) onGroupClick(group);
@@ -158,16 +168,16 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
       <svg
         width="100%"
         height="200"
-        viewBox="0 0 360 200"
+        viewBox={`0 0 ${viewWidth} 200`}
         dir="rtl"
-        style={{ display: 'block', overflow: 'visible' }}
+        style={{ display: 'block', overflow: 'hidden' }}
       >
         {groups.map((group, i) => (
           <AyoaCircle
             key={group.clientName}
-            cx={calcX(i, groups.length)}
+            cx={calcX(i, groups.length, viewWidth)}
             cy={90}
-            r={Math.min(40, Math.max(20, group.tasks.length * 6))}
+            r={Math.min(24, Math.max(14, group.tasks.length * 3))}
             color={group.color}
             label={group.clientName}
             count={group.tasks.length}
