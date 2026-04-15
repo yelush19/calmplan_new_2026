@@ -535,8 +535,12 @@ export default function HomePage() {
     return filterBySearch(data[tabKey] || []).length;
   };
 
-  // Stage 5.8: allFocusTasks used to feed <OverdueAlert> below — that
-  // component is no longer rendered on Home, so the merged list is gone too.
+  const allFocusTasks = filterByEnergy(filterBySearch([
+    ...(data.overdue || []),
+    ...(data.today || []),
+    ...(data.upcoming || []),
+    ...(data.payment || []),
+  ]));
 
   const getTabContent = () => {
     switch (activeTab) {
@@ -760,10 +764,12 @@ export default function HomePage() {
         {/* ═══ 1.2 Ayoa Mini-Map — SVG client overview (Phase 2) ═══ */}
         <AyoaMiniMap tasks={data.activeTasks} />
 
-        {/* Stage 5.8: the full-width CategoryBreakdown that lived here was
-            a duplicate — CategoryBreakdown is still rendered inside the
-            "לפי תחום" tab in the right column of the 2-column grid below.
-            Keeping it in only one place removes vertical noise. */}
+        {/* ═══ 1.3 Category Breakdown — Stage 5.7: open by default ═══
+            Used to be hidden inside a <details> toggle in section 3.5. The
+            user's actual mental model is "what are my domains today?", so
+            this is now visible and unfolded, full-width, right above the
+            2-column grid. Stage 5.7's "first thing she sees" intent. */}
+        <CategoryBreakdown tasks={data.mergedToday || []} />
 
         {/* ═══ Stage 5.7.3 — 2-column grid below the AyoaMiniMap ═══
             Cuts the page height nearly in half so most of the morning view
@@ -1029,12 +1035,20 @@ export default function HomePage() {
               })}
             </div>
 
-            {/* Stage 5.8: OverdueAlert + AdvanceWarningPanel removed from
-                the left grid column. Overdue visibility is already carried
-                by the purple "באיחור" badge on the היום section header,
-                and the advance-warning panel was too noisy for Home. The
-                imports are intentionally kept — these components still
-                render elsewhere in the app. */}
+            {/* Stage 5.8 (JKAj2): Soft Alerts (OverdueAlert + AdvanceWarningPanel)
+                block was removed from the grid. The components themselves
+                still exist and are imported elsewhere — OverdueAlert renders
+                conditional context inside TaskList, and AdvanceWarningPanel
+                is kept available for future placement. Overdue visibility is
+                now carried by the purple "באיחור" badge on the היום section
+                header, and the advance-warning panel was too noisy for Home. */}
+
+            {/* Stage 5.7.3+5.7 merge: the <details> wrapper around
+                CategoryBreakdown is gone. The unwrapped CategoryBreakdown
+                now lives full-width above the 2-column grid (section 1.3),
+                AND the byCategory tab in the right column also renders it
+                when expanded. Same as main's Stage 5.7 layout — both
+                entries kept on purpose. */}
           </div>
         </div>
 
