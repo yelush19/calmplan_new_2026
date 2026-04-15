@@ -51,17 +51,19 @@ const URGENT_DOT_COLOR = '#F57C00';
 // every raw key that maps to "שכר" inherits the same colour.
 const SERVICE_COLOR_MAP = {
   'שכר':              '#0288D1', // blue
+  'שכר ורשויות':      '#1565C0', // deeper blue — umbrella for unclassified payroll tasks
   'מע"מ':             '#F57C00', // orange
   'מע"מ 874':         '#E65100', // deep orange — distinguishable from מע"מ
   'ביטוח לאומי':      '#7B1FA2', // purple
-  'הנהלת חשבונות':    '#2E7D32', // green
+  'הנהלת חשבונות':    '#2E7D32', // green (also catches the __umbrella_tax fallback)
   'מקדמות מס':        '#5A9EB5', // steel blue
-  'דו"ח שנתי':        '#00796B', // teal
+  'דו"ח שנתי':        '#00796B', // teal (also catches the __umbrella_annual fallback)
   'פנסיות':           '#C2185B', // pink
   'קליטת לקוח':       '#455A64', // slate
   'ניכויים':          '#8D6E63', // brown
   'התאמות':           '#6A1B9A', // deep purple
   'משלוח תלושים':     '#00695C', // dark teal
+  'משרד':             '#37474F', // dark slate — umbrella for unclassified admin tasks
   'כללי':             '#9E9E9E', // neutral grey
 };
 
@@ -74,8 +76,8 @@ function colorForService(label) {
 
 // Canonical display labels for service domains. Tasks in this codebase
 // store their domain in several different fields and formats (see the
-// fallback chain in groupByServiceDomain below, nodeSelection.js:44,
-// and recurringTaskEngine.js:287). This map normalises the raw key to a
+// fallback chain in resolveRawKey below, nodeSelection.js:44, and
+// recurringTaskEngine.js:287). This map normalises the raw key to a
 // single Hebrew label so the circles don't splinter — e.g. 'payroll'
 // from recurringTaskEngine and 'שכר' from QuickAddTaskDialog collapse
 // into ONE domain called שכר.
@@ -84,6 +86,16 @@ function colorForService(label) {
 // into the 'כללי' bucket (see normalizeServiceLabel below) AND are
 // logged ONCE to the console via loggedUnknownKeys, so the unmapped
 // values can be added to this map in a follow-up commit.
+//
+// Stage 5.9 bug-fix: "כללי" was previously swallowing many tasks that
+// had an empty category string but DID carry dashboard-level metadata
+// (parent_service / branch) from recurringTaskEngine.js:289. The
+// resolveRawKey helper below now routes those tasks into per-dashboard
+// umbrella labels (שכר ורשויות / הנהלת חשבונות / משרד / דו"ח שנתי)
+// instead of letting them all collapse into 'כללי'. The umbrella
+// entries below are keyed with a '__umbrella_' sentinel prefix so it's
+// obvious at a glance that they're fallback-synthesised and not raw
+// values coming from task.category.
 const SERVICE_LABEL_MAP = {
   // Payroll
   payroll: 'שכר',
@@ -146,6 +158,16 @@ const SERVICE_LABEL_MAP = {
   'משלוח תלושים': 'משלוח תלושים',
   payslips: 'משלוח תלושים',
 
+  // Dashboard-level umbrella fallbacks (Stage 5.9 bug-fix).
+  // Synthesised by resolveRawKey when a task has no explicit category /
+  // service_key / service_group but DOES have parent_service or branch.
+  // Prefixed with '__umbrella_' so they don't collide with real raw keys
+  // and so they're easy to spot in the diagnostic console log.
+  __umbrella_payroll: 'שכר ורשויות',
+  __umbrella_tax: 'הנהלת חשבונות', // intentionally merges with explicit 'הנהלת חשבונות'
+  __umbrella_admin: 'משרד',
+  __umbrella_annual: 'דו"ח שנתי',  // intentionally merges with explicit 'דו"ח שנתי'
+
   // Final fallback bucket
   'כללי': 'כללי',
 };
@@ -162,28 +184,73 @@ function normalizeServiceLabel(rawKey) {
   return SERVICE_LABEL_MAP[rawKey] || 'כללי';
 }
 
+// Stage 5.9 bug-fix: resolve a task to a raw key for grouping.
+//
+// Old behaviour (one-liner): task.category || task.service_key ||
+// task.service_group || 'כללי'. That worked for tasks from
+// recurringTaskEngine (which sets service_key), but tasks created via
+// QuickAddTaskDialog / TaskForm that end up with an empty category
+// AND no service_key at all fell straight into 'כללי'. That was most
+// of the live data.
+//
+// New behaviour: after the explicit fields, fall back to the
+// DASHBOARD-LEVEL metadata that recurringTaskEngine.js:289 sets on
+// every recurring task — `parent_service` ('payroll' / 'tax' / 'admin'
+// / 'home' / 'annual') and `branch` ('P1' / 'P2' / 'P3' / 'P4' / 'P5').
+// That metadata is enough to salvage the task into a domain-level
+// umbrella (שכר ורשויות / הנהלת חשבונות / משרד / דו"ח שנתי) instead of
+// leaving it in 'כללי'.
+//
+// Note on getServiceForTask (processTemplates.js:693): deliberately
+// NOT called here, because its very first line is `if (!task?.category)
+// return null` — so for the exact case we're trying to salvage (tasks
+// with empty category) it always returns null. Calling it would be
+// theatre. The MoM diagnosis that general.taskCategories: ['', ...]
+// was routing empty-category tasks into 'general' is incorrect for
+// this reason — the short-circuit fires first.
+//
+// Note on task.dashboard (from the MoM diagnosis): this field does
+// NOT exist on task records in this codebase. `dashboard` is a field
+// on SERVICE definitions in processTemplates.js (see line 7 of that
+// file). The real task-level fields that express the same concept are
+// `parent_service` and `branch`.
+function resolveRawKey(task) {
+  // 1. Explicit human-readable category (Hebrew label or English work_* key)
+  if (task.category && task.category !== '') return task.category;
+  // 2. Structural identifiers set by recurringTaskEngine
+  if (task.service_key) return task.service_key;
+  if (task.service_group) return task.service_group;
+  // 3. Dashboard-level umbrella via parent_service (preferred) or branch
+  const ps = task.parent_service;
+  const br = task.branch;
+  if (ps === 'payroll' || br === 'P1') return '__umbrella_payroll';
+  if (ps === 'tax' || br === 'P2') return '__umbrella_tax';
+  if (ps === 'admin' || br === 'P3') return '__umbrella_admin';
+  if (ps === 'annual' || br === 'P5') return '__umbrella_annual';
+  // 4. Genuinely unclassifiable — last-resort bucket
+  return 'כללי';
+}
+
 function groupByServiceDomain(tasks) {
   const groups = new Map();
   const freshUnknowns = [];
 
   (tasks || []).forEach((task) => {
-    // Fallback chain — same order as nodeSelection.js:44. `category`
-    // is preferred because it's human-readable in live data, then
-    // `service_key` / `service_group` from recurringTaskEngine as the
-    // structural fallbacks.
-    const rawKey =
-      task.category ||
-      task.service_key ||
-      task.service_group ||
-      'כללי';
+    // Stage 5.9 bug-fix: resolveRawKey walks the full fallback chain
+    // including parent_service / branch umbrellas, so tasks that used
+    // to collapse into 'כללי' now land in a dashboard-level domain.
+    const rawKey = resolveRawKey(task);
     const label = normalizeServiceLabel(rawKey);
 
     // Collect unmapped raw keys so the console can be used to extend
     // SERVICE_LABEL_MAP. We only report each key ONCE per session via
     // the module-level loggedUnknownKeys set — otherwise the log would
     // fire on every state update that rebuilds localTasks.
+    // Umbrella keys (__umbrella_*) and the 'כללי' fallback are never
+    // "unknown" — they're intentional sentinels.
     if (
       rawKey !== 'כללי' &&
+      !rawKey.startsWith('__umbrella_') &&
       !SERVICE_LABEL_MAP[rawKey] &&
       !loggedUnknownKeys.has(rawKey)
     ) {
