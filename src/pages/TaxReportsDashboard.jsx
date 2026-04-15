@@ -61,7 +61,9 @@ const taxDashboardServices = {
   authorities_payment: ADDITIONAL_SERVICES.authorities_payment,
 };
 
-const allTaxCategories = Object.values(taxDashboardServices).flatMap(s => Array.isArray(s.taskCategories) ? s.taskCategories : []);
+// Stage 5.7.2 (option β): allTaxCategories was a static derivation of the
+// above. It's now computed inside the component as effectiveTaxCategories
+// because it depends on the ?service= filter.
 
 // Only actual reports (authority filings) — NOT data entry (קליטת הכנסות/הוצאות)
 const REPORT_ONLY_CATEGORIES = Object.values(TAX_SERVICES).flatMap(s => s.taskCategories);
@@ -104,6 +106,25 @@ export default function TaxReportsDashboardPage() {
   // ALL_SERVICES so the filter stays in sync with processTemplates.js.
   const serviceFilter = searchParams.get('service') || '';
 
+  // Stage 5.7.2 (option β): when ?service= points at a service that's NOT
+  // in the default taxDashboardServices map (e.g. ?service=bookkeeping),
+  // inject it temporarily for THIS render only. The default landing page
+  // (no filter) stays exactly as it was — bookkeeping isn't loaded or
+  // rendered. With the filter active, loadData accepts those categories
+  // AND serviceData renders that block. This is the "filtered view only"
+  // behaviour the user asked for.
+  const effectiveTaxDashboardServices = useMemo(() => {
+    if (!serviceFilter) return taxDashboardServices;
+    if (taxDashboardServices[serviceFilter]) return taxDashboardServices;
+    const extra = ALL_SERVICES[serviceFilter];
+    if (!extra) return taxDashboardServices;
+    return { ...taxDashboardServices, [serviceFilter]: extra };
+  }, [serviceFilter]);
+  const effectiveTaxCategories = useMemo(() => {
+    return Object.values(effectiveTaxDashboardServices)
+      .flatMap(s => Array.isArray(s.taskCategories) ? s.taskCategories : []);
+  }, [effectiveTaxDashboardServices]);
+
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -129,7 +150,9 @@ export default function TaxReportsDashboardPage() {
   // Guard: skip external sync reloads briefly after local updates
   const localUpdateRef = React.useRef(false);
 
-  useEffect(() => { loadData(); }, [selectedMonth]);
+  // serviceFilter added to deps so navigating with a new ?service= triggers
+  // a fresh load that respects the (possibly-expanded) effectiveTaxCategories.
+  useEffect(() => { loadData(); }, [selectedMonth, serviceFilter]);
 
   // Live-refresh: listen for cascade events from other pages
   useEffect(() => {
@@ -164,7 +187,10 @@ export default function TaxReportsDashboardPage() {
       // Post-filter: only show tasks belonging to the selected reporting month
       const selectedMonthStr = format(selectedMonth, 'yyyy-MM');
       const filtered = (tasksData || []).filter(t => {
-        if (!allTaxCategories.includes(t.category)) return false;
+        // Stage 5.7.2 (option β): use effectiveTaxCategories so a filter
+        // like ?service=bookkeeping can pull in categories that aren't in
+        // the static default whitelist.
+        if (!effectiveTaxCategories.includes(t.category)) return false;
         return getTaskReportingMonth(t) === selectedMonthStr;
       });
       setTasks(filtered);
@@ -246,9 +272,12 @@ export default function TaxReportsDashboardPage() {
   };
 
   // Build data per service: { serviceKey: { service, clientRows: [{clientName, task, client}] } }
+  // Stage 5.7.2 (option β): iterate effectiveTaxDashboardServices so that
+  // a temporarily-injected service (e.g. bookkeeping when filtered) gets
+  // its own table. Without a filter this is identical to taxDashboardServices.
   const serviceData = useMemo(() => {
     const result = {};
-    Object.values(taxDashboardServices).forEach(service => {
+    Object.values(effectiveTaxDashboardServices).forEach(service => {
       const serviceTasks = filteredTasks.filter(t => service.taskCategories.includes(t.category));
       if (serviceTasks.length > 0) {
         result[service.key] = {
@@ -264,7 +293,7 @@ export default function TaxReportsDashboardPage() {
       }
     });
     return result;
-  }, [filteredTasks, clientByName]);
+  }, [filteredTasks, clientByName, effectiveTaxDashboardServices]);
 
   const serviceKeys = useMemo(() => Object.keys(serviceData), [serviceData]);
 
@@ -1144,7 +1173,7 @@ export default function TaxReportsDashboardPage() {
           <TaxWorkbookView
             tasks={filteredTasks}
             clients={clients}
-            services={taxDashboardServices}
+            services={effectiveTaxDashboardServices}
             onToggleStep={handleToggleStep}
             onStatusChange={handleStatusChange}
             onDateChange={handleDateChange}
@@ -1157,7 +1186,7 @@ export default function TaxReportsDashboardPage() {
             centerSub={`חודש ${format(selectedMonth, 'MMMM', { locale: he })}`}
             onEditTask={setEditingTask}
             onStatusChange={handleStatusChange}
-            phases={Object.values(taxDashboardServices).map(svc => ({
+            phases={Object.values(effectiveTaxDashboardServices).map(svc => ({
               label: svc.label,
               serviceKeys: [svc.key, ...(svc.taskCategories || [])],
               services: [svc],
