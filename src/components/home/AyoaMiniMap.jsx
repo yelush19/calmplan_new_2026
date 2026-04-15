@@ -45,7 +45,9 @@ function groupByClient(tasks) {
 // Fixed circle-to-circle step so gaps don't collapse when the client count
 // grows. The viewBox width is computed from `total` below, so circles land
 // inside the SVG with breathing room instead of clipping the edges.
-const STEP = 52;
+// STEP must stay >= max-circle-diameter + small gap. With r_max=36 (below)
+// the diameter is 72, so STEP=78 leaves a 6px gap between neighbours.
+const STEP = 78;
 
 function calcX(i, total, viewWidth = 360) {
   // RTL layout: i=0 (most urgent) sits at the right. We center the row
@@ -177,7 +179,7 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
             key={group.clientName}
             cx={calcX(i, groups.length, viewWidth)}
             cy={90}
-            r={Math.min(24, Math.max(14, group.tasks.length * 3))}
+            r={Math.min(36, Math.max(18, group.tasks.length * 4))}
             color={group.color}
             label={group.clientName}
             count={group.tasks.length}
@@ -194,13 +196,20 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
         }}
       >
         <DrawerContent>
-          <DrawerHeader>
+          <DrawerHeader className="relative">
             <DrawerTitle
               className="text-center"
               style={{ fontFamily: 'Heebo, sans-serif', color: '#1A2332' }}
             >
               {selectedGroup?.clientName} · {selectedGroup?.tasks.length || 0} משימות
             </DrawerTitle>
+            <button
+              onClick={() => setSelectedGroup(null)}
+              className="absolute top-3 left-3 text-gray-400 hover:text-gray-700 text-lg font-bold"
+              aria-label="סגור"
+            >
+              ✕
+            </button>
           </DrawerHeader>
           <div
             dir="rtl"
