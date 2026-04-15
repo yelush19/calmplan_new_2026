@@ -26,6 +26,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   PAYROLL_SERVICES,
   ADDITIONAL_SERVICES,
+  ALL_SERVICES,
   STATUS_CONFIG,
   getServiceForTask,
   getTaskProcessSteps,
@@ -74,6 +75,10 @@ const STATUS_PIPELINE = [
 export default function PayrollReportsDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const clientFilter = searchParams.get('client') || '';
+  // Stage 5.7.2: ?service=<key> filter — mirrored from the other three
+  // dashboards. Used by the sidebar 'sg_services_by_category' subGroup
+  // for ביטוח לאומי / ניכויים / קליטה להנה"ח links.
+  const serviceFilter = searchParams.get('service') || '';
 
   const [tasks, setTasks] = useState([]);
   const [clients, setClients] = useState([]);
@@ -168,6 +173,12 @@ export default function PayrollReportsDashboardPage() {
   const filteredTasks = useMemo(() => {
     let result = tasks;
     if (clientFilter) result = result.filter(t => t.client_name === clientFilter);
+    if (serviceFilter) {
+      const svc = ALL_SERVICES[serviceFilter];
+      if (svc) {
+        result = result.filter(t => svc.taskCategories.includes(t.category));
+      }
+    }
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
       result = result.filter(t =>
@@ -186,10 +197,15 @@ export default function PayrollReportsDashboardPage() {
       });
     }
     return result;
-  }, [tasks, clientFilter, searchTerm, statusFilter, cognitiveFilter]);
+  }, [tasks, clientFilter, serviceFilter, searchTerm, statusFilter, cognitiveFilter]);
 
   const clearClientFilter = () => {
     searchParams.delete('client');
+    setSearchParams(searchParams);
+  };
+
+  const clearServiceFilter = () => {
+    searchParams.delete('service');
     setSearchParams(searchParams);
   };
 
@@ -458,6 +474,12 @@ export default function PayrollReportsDashboardPage() {
           <Badge className="bg-[#0277BD] text-white text-sm px-3 py-1.5 gap-2">
             <Users className="w-3.5 h-3.5" />{clientFilter}
             <button onClick={clearClientFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ms-1"><X className="w-3 h-3" /></button>
+          </Badge>
+        )}
+        {serviceFilter && (
+          <Badge className="bg-indigo-600 text-white text-sm px-3 py-1.5 gap-2">
+            מסנן שירות: {ALL_SERVICES[serviceFilter]?.label || serviceFilter}
+            <button onClick={clearServiceFilter} className="hover:bg-[#F5F5F5] rounded-full p-0.5 ms-1"><X className="w-3 h-3" /></button>
           </Badge>
         )}
       </div>

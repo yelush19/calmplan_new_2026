@@ -115,15 +115,19 @@ const getSidebarSections = () => ({
       // logic in the dashboards is added separately, after this subGroup
       // is approved on its own.
       { key: 'sg_services_by_category', label: '🗂 שירותים לפי קטגוריה', icon: LayoutGrid, items: [
-        // ── מס ──
+        // ── מס (TaxReportsDashboard) ──
         { name: "מע\"מ",        href: createPageUrl("TaxReportsDashboard") + "?service=vat",          icon: Receipt },
         { name: "מקדמות מס",    href: createPageUrl("TaxReportsDashboard") + "?service=tax_advances", icon: Receipt },
         { name: "מע\"מ 874",    href: createPageUrl("TaxReportsDashboard") + "?service=vat_874",      icon: Receipt },
         // ── שכר ──
-        { name: "ייצור שכר",    href: createPageUrl("PayrollDashboard") + "?service=payroll",         icon: Calculator },
-        { name: "ביטוח לאומי",  href: createPageUrl("PayrollDashboard") + "?service=social_security", icon: Calculator },
-        { name: "ניכויים",      href: createPageUrl("PayrollDashboard") + "?service=deductions",      icon: Calculator },
+        // ייצור שכר חי ב-PayrollDashboard. ב"ל וניכויים חיים ב-PayrollReportsDashboard
+        // (Board 3 — דיווחים), לפי ההערה ב-PayrollDashboard.jsx:53.
+        { name: "ייצור שכר",    href: createPageUrl("PayrollDashboard") + "?service=payroll",                  icon: Calculator },
+        { name: "ביטוח לאומי",  href: createPageUrl("PayrollReportsDashboard") + "?service=social_security",   icon: Calculator },
+        { name: "ניכויים",      href: createPageUrl("PayrollReportsDashboard") + "?service=deductions",        icon: Calculator },
         // ── הנה"ח ──
+        // bookkeeping מוזרק ל-TaxReportsDashboard רק כשה-?service= פעיל
+        // (לא בברירת המחדל — כדי לא לזהם את ה-default render של דיווחי המס).
         { name: "הנהלת חשבונות", href: createPageUrl("TaxReportsDashboard") + "?service=bookkeeping", icon: BookOpen },
         { name: "התאמות",        href: createPageUrl("Reconciliations"),                              icon: BookCheck },
         // ── אדמין ──
