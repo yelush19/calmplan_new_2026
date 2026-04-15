@@ -130,7 +130,6 @@ export default function HomePage() {
   const [badDayActive, setBadDayActive] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
-  const [showFullMap, setShowFullMap] = useState(false);
   const smartCollapse = useMemo(() => ({
     today: true,
     upcoming: (data?.upcoming?.length ?? 0) > 0,
@@ -598,33 +597,6 @@ export default function HomePage() {
   const todayTotal = data.today.length + (data.overdue?.length || 0);
   const progress = todayTotal > 0 ? (data.completedToday / (todayTotal + data.completedToday)) * 100 : 0;
 
-  // ── Full Map View ──
-  if (showFullMap) {
-    return (
-      <div className="w-full h-full flex-1 flex flex-col">
-        {/* Back button */}
-        <div className="px-4 pt-3 pb-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFullMap(false)}
-            className="gap-1.5 text-xs font-semibold text-slate-600 border-slate-200 hover:bg-slate-50"
-          >
-            <ArrowRight className="w-3.5 h-3.5" />
-            חזרה לעמוד הבית
-          </Button>
-        </div>
-
-
-        {/* Dialogs */}
-        <QuickAddTaskDialog open={showQuickAdd} onOpenChange={setShowQuickAdd} onCreated={loadData} />
-        <TaskSidePanel task={editingTask} open={!!editingTask} onClose={() => setEditingTask(null)} onSave={handleEditTask} onDelete={handleDeleteTask} />
-        <TaskToNoteDialog task={noteTask} open={!!noteTask} onClose={() => setNoteTask(null)} />
-        {ConfirmDialogComponent}
-      </div>
-    );
-  }
-
   // ── Default: Calm Home View ──
   return (
     <div className="w-full h-full flex-1 flex flex-col" style={{ backgroundColor: '#F7F7F7' }}>
@@ -672,26 +644,62 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-              <Button size="sm" onClick={() => setShowQuickAdd(true)} className="bg-[#5A9EB5] hover:bg-[#4A8EA5] text-white gap-1 h-7 text-xs px-3">
-                <Plus className="w-3.5 h-3.5" />
-                חדש
+            </div>
+          </div>
+
+          {/* Stage 5.7.3: action button row — replaces both the old standalone
+              "מפת חשיבה" link card AND the bottom "הצג מפה מלאה" button.
+              "חדש" moves out of the right-cluster so both actions sit
+              together in one obvious row. */}
+          <div className="flex items-center gap-2 mt-2">
+            <Button
+              size="sm"
+              onClick={() => setShowQuickAdd(true)}
+              className="bg-[#5A9EB5] hover:bg-[#4A8EA5] text-white gap-1 h-7 text-xs px-3"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              חדש
+            </Button>
+            <Link to={createPageUrl('MindMap')}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1 h-7 text-xs px-3 border-slate-300 text-slate-600 hover:bg-slate-50"
+              >
+                <Map className="w-3.5 h-3.5" />
+                מפת חשיבה
               </Button>
-            </div>
+            </Link>
           </div>
 
-          {/* Progress bar */}
-          <div className="flex items-center gap-2 mt-3">
-            <span className="text-[13px] text-slate-400">התקדמות היום</span>
-            <div className="flex-1 bg-slate-100 rounded-full h-1 overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: '#5A9EB5' }} />
+          {/* Battery Banner — Stage 5.7.3 (replaces the old 1px progress bar).
+              Big completed-today number on the right (RTL), thick coloured bar
+              in the middle, total-tasks descriptor on the left. Bar colour
+              shifts amber → blue → green as progress climbs. */}
+          <div className="flex items-center gap-3 mt-3 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-base font-black text-slate-700 tabular-nums min-w-[3ch]">
+              {data.completedToday}
+            </span>
+            <div className="flex-1 relative bg-slate-200 rounded-full h-3 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${progress}%`,
+                  background: progress >= 80 ? '#10B981' : progress >= 40 ? '#5A9EB5' : '#F59E0B',
+                }}
+              />
             </div>
-            <span className="text-[13px] font-bold text-slate-400">{Math.round(progress)}%</span>
+            <span className="text-xs text-slate-500 whitespace-nowrap">
+              מתוך {todayTotal + data.completedToday} משימות
+            </span>
           </div>
 
-          {/* Energy level buttons */}
-          <div className="flex items-center gap-2 mt-3">
+          {/* Energy level buttons — Stage 5.7.3: bad-day toggle now lives
+              inline at the end of this row instead of as a standalone card.
+              flex-wrap added so the row can break on narrow screens. */}
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
             <span className="text-[13px] text-slate-400">רמת אנרגיה:</span>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 flex-wrap">
               {[
                 { key: 'full', emoji: '☀️', label: 'מלא', bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' },
                 { key: 'medium', emoji: '☕', label: 'בינוני', bg: '#DBEAFE', border: '#3B82F6', text: '#1E40AF' },
@@ -715,228 +723,309 @@ export default function HomePage() {
                   </button>
                 );
               })}
+              {/* Stage 5.7.3: bad-day toggle inline */}
+              <button
+                onClick={() => setBadDayActive(v => !v)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                style={{
+                  backgroundColor: badDayActive ? '#FEE2E2' : 'transparent',
+                  border: badDayActive ? '1.5px solid #F87171' : '1.5px solid #E5E7EB',
+                  color: badDayActive ? '#991B1B' : '#64748B',
+                }}
+              >
+                <span>😮‍💨</span>
+                <span>יום קשה?</span>
+              </button>
             </div>
           </div>
+
+          {/* BadDayMode card — only when the inline toggle above is active */}
+          {badDayActive && (
+            <div className="mt-3">
+              <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
+            </div>
+          )}
         </div>
 
         {/* ═══ 1.2 Ayoa Mini-Map — SVG client overview (Phase 2) ═══ */}
         <AyoaMiniMap tasks={data.activeTasks} />
 
-        {/* ═══ 1.5 SmartNudge — one gentle nudge ═══ */}
-        <SmartNudge nudge={smartNudge} />
+        {/* ═══ Stage 5.7.3 — 2-column grid below the AyoaMiniMap ═══
+            Cuts the page height nearly in half so most of the morning view
+            fits in one viewport. On mobile (single col) the right column
+            stacks on top so 'היום' is still the first thing seen.
+            Right column (RTL first child)  = primary: היום + StickyNotes
+                                              + SmartNudge + TaskInsights
+            Left column  (RTL second child) = secondary: upcoming/events/
+                                              payment + alerts + categories.
+            Stage 5.7.3: BadDayMode standalone card removed — now lives
+            inline in the greeting. Mind-map link card also removed —
+            replaced by the button next to 'חדש'. */}
+        <div dir="rtl" className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* ═══ 1.5b Task Insights — 3-4 proactive insights from Cascade (excluding nudge) ═══ */}
-        <TaskInsights insights={smartNudge ? insights.filter(i => i.title !== smartNudge.title) : insights} />
+          {/* ─── RIGHT column (visually first in RTL) ─── */}
+          <div className="space-y-3">
+            {/* היום section only */}
+            <div className="space-y-2">
+              {FOCUS_TABS.filter(t => t.key === 'today').map(tab => {
+                const Icon = tab.icon;
+                const items = getSectionData(tab.key);
+                const count = items.length;
+                const isOpen = smartCollapse[tab.key];
+                const overdueCount = tab.key === 'today' ? (data.overdue?.length || 0) : 0;
 
-        {/* ═══ 2. BadDayMode — prominent, right under greeting ═══ */}
-        <BadDayMode isActive={badDayActive} onToggle={setBadDayActive} onPostponeTasks={handlePostponeBadDay} />
-
-        {/* ═══ 3. "מה אפשר לעשות היום" — quiet link to the full mind map ═══ */}
-        {/* Stage 5.6: the embedded FocusMapView (canvas + floating sticker panel)
-            was dominating Home. We replaced it with a 1-line link that opens
-            the dedicated /MindMap page (AyoaRadialView, wired to live
-            Task.list data in stage 5.3c), keeping Home focused on "what do I
-            do right now?" instead of "here is a picture of everything I might
-            need to think about". */}
-        {calmTasks.length > 0 && (
-          <Link
-            to={createPageUrl('MindMap')}
-            className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-2 text-sm text-slate-700">
-              <Map className="w-4 h-4 text-slate-400" />
-              <span className="font-semibold">מפת חשיבה</span>
-              <span className="text-xs text-slate-500">— פתחי את המפה המלאה כשאת מוכנה להסתכל על התמונה הרחבה</span>
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400" />
-          </Link>
-        )}
-
-        {/* ═══ 3.5 Category Breakdown — collapsed by default (Stage 5.6) ═══ */}
-        {/* Was a dumping ground of 9+ rows. Now hidden behind a toggle so
-            the morning view stays quiet. */}
-        <details className="rounded-2xl bg-white border border-gray-200 overflow-hidden group">
-          <summary className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors list-none">
-            <div className="flex items-center gap-2 text-sm">
-              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
-              <span className="font-semibold text-slate-700">סיכום היום לפי קטגוריה</span>
-              <span className="text-xs text-slate-400">(פירוט מעמיק — מוסתר כברירת מחדל)</span>
-            </div>
-          </summary>
-          <div className="px-4 pb-4 pt-1 border-t border-gray-100">
-            <CategoryBreakdown tasks={data.mergedToday || []} />
-          </div>
-        </details>
-
-        {/* ═══ 3.6 Collapsible Sections — overdue/today/upcoming/events/payment ═══ */}
-        <div className="space-y-2">
-          {FOCUS_TABS.map(tab => {
-            const Icon = tab.icon;
-            const items = getSectionData(tab.key);
-            const count = items.length;
-            const isOpen = smartCollapse[tab.key];
-            const overdueCount = tab.key === 'today' ? (data.overdue?.length || 0) : 0;
-
-            return (
-              <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-                {/* Section header — always visible */}
-                <button
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon className={`w-4 h-4 ${tab.color}`} />
-                    <span className="text-sm font-semibold text-slate-700">{tab.label}</span>
-                    {count > 0 && (
-                      <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${tab.badgeColor}`}>
-                        {count}
-                      </span>
-                    )}
-                    {overdueCount > 0 && (
-                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                        {overdueCount} באיחור
-                      </span>
-                    )}
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`}
-                  />
-                </button>
-
-                {/* Section content — collapsible */}
-                <AnimatePresence initial={false}>
-                  {isOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2, ease: 'easeInOut' }}
-                      className="overflow-hidden"
+                return (
+                  <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+                    <button
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
                     >
-                      <div className="px-4 pb-3">
-                        {tab.key === 'events' ? (
-                          items.length === 0 ? (
-                            <EmptyState icon={<Calendar className="w-10 h-10 text-purple-300" />} text="אין אירועים היום" />
-                          ) : (
-                            <div className="space-y-2">
-                              {items.map(event => (
-                                <div key={event.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-purple-50 border border-purple-100">
-                                  <div className="text-sm font-mono font-semibold text-purple-700 min-w-[50px]">
-                                    {format(parseISO(event.start_date), 'HH:mm')}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-sm text-purple-900 truncate">{event.title}</div>
-                                    {event.description && <div className="text-xs text-purple-600 truncate">{event.description}</div>}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )
-                        ) : (
-                          items.length === 0 ? (
-                            <EmptyState
-                              icon={tab.key === 'today' ? <Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} /> :
-                                    tab.key === 'payment' ? <CreditCard className="w-10 h-10 text-yellow-300" /> :
-                                    <Clock className="w-10 h-10 text-gray-300" />}
-                              text={tab.key === 'today' ? 'אין משימות להיום - כל הכבוד!' :
-                                    tab.key === 'payment' ? 'אין משימות ממתינות לתשלום' :
-                                    'אין משימות ל-3 ימים הקרובים'}
-                            />
-                          ) : (
-                          (() => {
-                            const HOME_MAX_TASKS = 5;
-                            const limitedItems = items.slice(0, HOME_MAX_TASKS);
-                            const hasMore = items.length > HOME_MAX_TASKS;
-                            return (
-                              <>
-                                <TaskList
-                                  tasks={limitedItems}
-                                  onStatusChange={handleStatusChange}
-                                  onPaymentDateChange={handlePaymentDateChange}
-                                  onEdit={setEditingTask}
-                                  onNote={setNoteTask}
-                                  showDeadlineContext={tab.key === 'today'}
-                                  showDate={tab.key === 'upcoming'}
-                                  showPaymentDate={tab.key === 'payment'}
-                                />
-                                <div className="text-[13px] text-slate-500 text-center mt-2">
-                                  מוצגות {limitedItems.length} מתוך {items.length}
-                                </div>
-                                {hasMore && (
-                                  <Link
-                                    to={createPageUrl('Tasks')}
-                                    className="flex items-center justify-center gap-1.5 mt-2 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors"
-                                  >
-                                    הצג הכל ({items.length})
-                                    <ArrowRight className="w-3.5 h-3.5" />
-                                  </Link>
-                                )}
-                              </>
-                            );
-                          })()
-                          )
+                      <div className="flex items-center gap-2">
+                        <Icon className={`w-4 h-4 ${tab.color}`} />
+                        <span className="text-sm font-semibold text-slate-700">{tab.label}</span>
+                        {count > 0 && (
+                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${tab.badgeColor}`}>
+                            {count}
+                          </span>
+                        )}
+                        {overdueCount > 0 && (
+                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                            {overdueCount} באיחור
+                          </span>
                         )}
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
-        </div>
+                      <ChevronDown
+                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`}
+                      />
+                    </button>
 
-        {/* ═══ 4. Sticky Notes — max 3 ═══ */}
-        {stickyNotes.length > 0 && (
-          <div className="space-y-1.5">
-            <h3 className="text-xs font-bold px-1" style={{ color: '#000000' }}>פתקים דביקים</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {stickyNotes.slice(0, 4).map(note => {
-                const urgencyDots = {
-                  urgent: '#F59E0B',
-                  high:   '#F59E0B',
-                  medium: '#6366F1',
-                  low:    '#10B981',
-                  none:   '#94A3B8',
-                };
-                const noteDot = urgencyDots[note.urgency] || urgencyDots.none;
-                return (
-                  <div key={note.id} className="p-2.5 rounded-xl text-sm" style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E5E7EB',
-                  }}>
-                    <div className="flex items-start gap-1.5">
-                      {note.pinned && <Pin className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-xs truncate" style={{ color: '#000000' }}>{note.title || 'פתק'}</p>
-                        {note.content && <p className="text-[11px] truncate mt-0.5" style={{ color: '#000000' }}>{note.content}</p>}
-                      </div>
-                      <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: noteDot }} />
-                    </div>
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: 'easeInOut' }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-4 pb-3">
+                            {items.length === 0 ? (
+                              <EmptyState
+                                icon={<Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />}
+                                text="אין משימות להיום - כל הכבוד!"
+                              />
+                            ) : (
+                              (() => {
+                                const HOME_MAX_TASKS = 5;
+                                const limitedItems = items.slice(0, HOME_MAX_TASKS);
+                                const hasMore = items.length > HOME_MAX_TASKS;
+                                return (
+                                  <>
+                                    <TaskList
+                                      tasks={limitedItems}
+                                      onStatusChange={handleStatusChange}
+                                      onPaymentDateChange={handlePaymentDateChange}
+                                      onEdit={setEditingTask}
+                                      onNote={setNoteTask}
+                                      showDeadlineContext
+                                    />
+                                    <div className="text-[13px] text-slate-500 text-center mt-2">
+                                      מוצגות {limitedItems.length} מתוך {items.length}
+                                    </div>
+                                    {hasMore && (
+                                      <Link
+                                        to={createPageUrl('Tasks')}
+                                        className="flex items-center justify-center gap-1.5 mt-2 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                                      >
+                                        הצג הכל ({items.length})
+                                        <ArrowRight className="w-3.5 h-3.5" />
+                                      </Link>
+                                    )}
+                                  </>
+                                );
+                              })()
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })}
             </div>
-          </div>
-        )}
 
-        {/* ═══ 5. Soft Alerts ═══ */}
-        <div className="space-y-1.5">
-          <OverdueAlert tasks={allFocusTasks} />
-          <AdvanceWarningPanel />
+            {/* Sticky Notes — max 4 */}
+            {stickyNotes.length > 0 && (
+              <div className="space-y-1.5">
+                <h3 className="text-xs font-bold px-1" style={{ color: '#000000' }}>פתקים דביקים</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {stickyNotes.slice(0, 4).map(note => {
+                    const urgencyDots = {
+                      urgent: '#F59E0B',
+                      high:   '#F59E0B',
+                      medium: '#6366F1',
+                      low:    '#10B981',
+                      none:   '#94A3B8',
+                    };
+                    const noteDot = urgencyDots[note.urgency] || urgencyDots.none;
+                    return (
+                      <div key={note.id} className="p-2.5 rounded-xl text-sm" style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E5E7EB',
+                      }}>
+                        <div className="flex items-start gap-1.5">
+                          {note.pinned && <Pin className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-xs truncate" style={{ color: '#000000' }}>{note.title || 'פתק'}</p>
+                            {note.content && <p className="text-[11px] truncate mt-0.5" style={{ color: '#000000' }}>{note.content}</p>}
+                          </div>
+                          <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: noteDot }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* SmartNudge — one gentle nudge */}
+            <SmartNudge nudge={smartNudge} />
+
+            {/* Task Insights — proactive insights from Cascade */}
+            <TaskInsights insights={smartNudge ? insights.filter(i => i.title !== smartNudge.title) : insights} />
+          </div>
+
+          {/* ─── LEFT column (visually second in RTL) ─── */}
+          <div className="space-y-3">
+            {/* upcoming / events / payment focus tabs */}
+            <div className="space-y-2">
+              {FOCUS_TABS.filter(t => t.key !== 'today').map(tab => {
+                const Icon = tab.icon;
+                const items = getSectionData(tab.key);
+                const count = items.length;
+                const isOpen = smartCollapse[tab.key];
+
+                return (
+                  <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+                    <button
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className={`w-4 h-4 ${tab.color}`} />
+                        <span className="text-sm font-semibold text-slate-700">{tab.label}</span>
+                        {count > 0 && (
+                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${tab.badgeColor}`}>
+                            {count}
+                          </span>
+                        )}
+                      </div>
+                      <ChevronDown
+                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`}
+                      />
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: 'easeInOut' }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-4 pb-3">
+                            {tab.key === 'events' ? (
+                              items.length === 0 ? (
+                                <EmptyState icon={<Calendar className="w-10 h-10 text-purple-300" />} text="אין אירועים היום" />
+                              ) : (
+                                <div className="space-y-2">
+                                  {items.map(event => (
+                                    <div key={event.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-purple-50 border border-purple-100">
+                                      <div className="text-sm font-mono font-semibold text-purple-700 min-w-[50px]">
+                                        {format(parseISO(event.start_date), 'HH:mm')}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-sm text-purple-900 truncate">{event.title}</div>
+                                        {event.description && <div className="text-xs text-purple-600 truncate">{event.description}</div>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            ) : (
+                              items.length === 0 ? (
+                                <EmptyState
+                                  icon={tab.key === 'payment' ? <CreditCard className="w-10 h-10 text-yellow-300" /> :
+                                        <Clock className="w-10 h-10 text-gray-300" />}
+                                  text={tab.key === 'payment' ? 'אין משימות ממתינות לתשלום' :
+                                        'אין משימות ל-3 ימים הקרובים'}
+                                />
+                              ) : (
+                                (() => {
+                                  const HOME_MAX_TASKS = 5;
+                                  const limitedItems = items.slice(0, HOME_MAX_TASKS);
+                                  const hasMore = items.length > HOME_MAX_TASKS;
+                                  return (
+                                    <>
+                                      <TaskList
+                                        tasks={limitedItems}
+                                        onStatusChange={handleStatusChange}
+                                        onPaymentDateChange={handlePaymentDateChange}
+                                        onEdit={setEditingTask}
+                                        onNote={setNoteTask}
+                                        showDate={tab.key === 'upcoming'}
+                                        showPaymentDate={tab.key === 'payment'}
+                                      />
+                                      <div className="text-[13px] text-slate-500 text-center mt-2">
+                                        מוצגות {limitedItems.length} מתוך {items.length}
+                                      </div>
+                                      {hasMore && (
+                                        <Link
+                                          to={createPageUrl('Tasks')}
+                                          className="flex items-center justify-center gap-1.5 mt-2 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                                        >
+                                          הצג הכל ({items.length})
+                                          <ArrowRight className="w-3.5 h-3.5" />
+                                        </Link>
+                                      )}
+                                    </>
+                                  );
+                                })()
+                              )
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Soft Alerts: Overdue + AdvanceWarning */}
+            <div className="space-y-1.5">
+              <OverdueAlert tasks={allFocusTasks} />
+              <AdvanceWarningPanel />
+            </div>
+
+            {/* Category Breakdown — collapsed by default */}
+            <details className="rounded-2xl bg-white border border-gray-200 overflow-hidden group">
+              <summary className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors list-none">
+                <div className="flex items-center gap-2 text-sm">
+                  <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
+                  <span className="font-semibold text-slate-700">סיכום היום לפי קטגוריה</span>
+                  <span className="text-xs text-slate-400">(פירוט מעמיק — מוסתר כברירת מחדל)</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4 pt-1 border-t border-gray-100">
+                <CategoryBreakdown tasks={data.mergedToday || []} />
+              </div>
+            </details>
+          </div>
         </div>
 
-        {/* ═══ 6. "הצג מפה מלאה" button ═══ */}
-        <Button
-          variant="outline"
-          onClick={() => setShowFullMap(true)}
-          className="w-full gap-2 py-5 text-sm font-semibold text-slate-600 rounded-xl"
-          style={{ border: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F7F7F7'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-        >
-          <Map className="w-4 h-4" style={{ color: ZERO_PANIC.blue }} />
-          הצג מפה מלאה
-          <span className="text-[11px] text-slate-400 font-normal">({data.totalActive} משימות)</span>
-        </Button>
+        {/* Stage 5.7.3: 'הצג מפה מלאה' button removed — replaced by the
+            'מפת חשיבה' Button in the greeting action row. The route still
+            exists at /MindMap; the in-page showFullMap branch was unused. */}
 
       </div>
 
