@@ -562,11 +562,40 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
                 {subTasks.filter(s => s.done).length}/{subTasks.length}
               </Badge>
             )}
-            {(task.attachments || []).length > 0 && (
-              <span className="text-gray-400 shrink-0" title={`${task.attachments.length} קבצים`}>
-                <Paperclip className="w-3 h-3" />
-              </span>
-            )}
+            {/* Stage 5.8: the paperclip is now a clickable Popover trigger
+                so users can upload / preview files directly from the row,
+                without expanding into the detail view. Count chip appears
+                only when there are existing attachments. */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-0.5 text-gray-400 hover:text-gray-700 shrink-0 rounded hover:bg-gray-100 px-1 py-0.5"
+                  title={`${(task.attachments || []).length} קבצים`}
+                  aria-label="קבצים מצורפים"
+                >
+                  <Paperclip className="w-3 h-3" />
+                  {(task.attachments || []).length > 0 && (
+                    <span className="text-[10px] font-semibold">{task.attachments.length}</span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-72 p-3"
+                align="center"
+                side="top"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <TaskFileAttachments
+                  taskId={task.id}
+                  attachments={task.attachments || []}
+                  onUpdate={(updated) => onAttachmentUpdate(task, updated)}
+                  clientId={task.client_id}
+                  clientName={task.client_name}
+                />
+              </PopoverContent>
+            </Popover>
             {task.notes && (
               <span className="text-amber-400 shrink-0" title={task.notes}>
                 <StickyNote className="w-3 h-3" />

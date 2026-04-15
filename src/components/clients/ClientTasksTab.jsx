@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar, Clock, CheckCircle, AlertCircle, Search, Filter, Pencil, Trash2, ChevronDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar, Clock, CheckCircle, AlertCircle, Search, Filter, Pencil, Trash2, ChevronDown, Paperclip } from 'lucide-react';
 import TaskEditDialog from '@/components/tasks/TaskEditDialog';
+import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -62,7 +64,7 @@ const statusColors = {
 
 const DEFAULT_COLLAPSED = new Set(['completed', 'not_relevant']);
 
-function TaskGroupedList({ filteredTasks, allTasksCount, clientName, statusTranslations, statusColors, categoryTranslations, onEditTask, onDeleteTask }) {
+function TaskGroupedList({ filteredTasks, allTasksCount, clientName, clientId, statusTranslations, statusColors, categoryTranslations, onEditTask, onDeleteTask, onAttachmentUpdate }) {
   const [collapsed, setCollapsed] = useState(() => {
     const init = {};
     DEFAULT_COLLAPSED.forEach(s => { init[s] = true; });
@@ -161,6 +163,34 @@ function TaskGroupedList({ filteredTasks, allTasksCount, clientName, statusTrans
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {/* Stage 5.8: attachments Popover — same pattern as
+                              the dashboard rows and the AyoaMiniMap drawer. */}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="flex items-center gap-0.5 p-1.5 rounded hover:bg-blue-50 transition-colors"
+                                title="קבצים מצורפים"
+                                aria-label="קבצים מצורפים"
+                              >
+                                <Paperclip className="w-4 h-4 text-gray-400 hover:text-blue-600" />
+                                {(task.attachments || []).length > 0 && (
+                                  <span className="text-[11px] font-semibold text-blue-600">
+                                    {task.attachments.length}
+                                  </span>
+                                )}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-72 p-3" align="center" side="top">
+                              <TaskFileAttachments
+                                taskId={task.id}
+                                attachments={task.attachments || []}
+                                onUpdate={(updated) => onAttachmentUpdate?.(task, updated)}
+                                clientId={clientId}
+                                clientName={clientName}
+                              />
+                            </PopoverContent>
+                          </Popover>
                           <button onClick={() => onEditTask(task)} className="p-1.5 rounded hover:bg-blue-50 transition-colors" title="עריכת משימה">
                             <Pencil className="w-4 h-4 text-gray-400 hover:text-blue-600" />
                           </button>
@@ -228,6 +258,13 @@ export default function ClientTasksTab({ clientId, clientName }) {
     } catch (error) {
       console.error("Error updating task:", error);
     }
+  };
+
+  // Stage 5.8: local cache update when TaskFileAttachments uploads/deletes
+  // a file via its inline Popover. TaskFileAttachments persists through
+  // Task.update internally, so here we only refresh local state.
+  const handleAttachmentUpdate = (task, attachments) => {
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, attachments } : t));
   };
 
   const filteredTasks = tasks.filter(task => {
@@ -326,11 +363,13 @@ export default function ClientTasksTab({ clientId, clientName }) {
         filteredTasks={filteredTasks}
         allTasksCount={tasks.length}
         clientName={clientName}
+        clientId={clientId}
         statusTranslations={statusTranslations}
         statusColors={statusColors}
         categoryTranslations={categoryTranslations}
         onEditTask={handleEditTask}
         onDeleteTask={handleDeleteTask}
+        onAttachmentUpdate={handleAttachmentUpdate}
       />
       <TaskEditDialog
         task={editingTask}
