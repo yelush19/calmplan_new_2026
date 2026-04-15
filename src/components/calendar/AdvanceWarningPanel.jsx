@@ -36,7 +36,11 @@ function computeWarnings(today) {
       const deadlineDate = new Date(dateStr);
       const daysUntil = differenceInCalendarDays(deadlineDate, today);
 
-      if (daysUntil < 0 || daysUntil > 14) continue;
+      // Stage 5.9: narrowed the lookahead from 14 → 7 days per WORKPLAN.
+      // 14 was too noisy for Home; 7 matches the panel's own "upcoming"
+      // bucket threshold below (line 49), so the widest bucket that
+      // actually renders is now also the widest bucket that's collected.
+      if (daysUntil < 0 || daysUntil > 7) continue;
 
       const label = DEADLINE_LABELS[field] || field;
       const reportMonthName = HEBREW_MONTH_NAMES[reportMonth - 1];

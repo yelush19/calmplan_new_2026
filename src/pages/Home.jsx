@@ -7,14 +7,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   Briefcase, Home as HomeIcon, Calendar, CheckCircle, Clock,
   Target, AlertTriangle, ChevronDown, Sparkles,
-  Plus, CreditCard, Search, Eye, Sun, Moon, Coffee, Heart,
+  Plus, CreditCard,
   Map, ArrowRight, X, FileBarChart, Calculator, GitBranch, Zap, TrendingUp,
 } from "lucide-react";
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
@@ -38,8 +37,9 @@ import BadDayMode from "@/components/tasks/BadDayMode";
 import SmartNudge from "@/components/home/SmartNudge";
 import TaskInsights from "@/components/home/TaskInsights";
 import AyoaMiniMap from "@/components/home/AyoaMiniMap";
-import CategoryBreakdown from "@/components/tasks/CategoryBreakdown";
-import { calculateCapacity, getTaskFeed, LOAD_COLORS } from '@/engines/capacityEngine';
+// Stage 5.9: CategoryBreakdown removed — the byCategory tab that rendered it
+// is gone from Home (duplicated what AyoaMiniMap already surfaces).
+// Stage 5.9: capacityEngine import removed with the dead capacityKPIs useMemo.
 import { StickyNote } from "@/api/entities";
 import { selectNodeByTask } from '@/lib/nodeSelection';
 import { useUndo } from '@/contexts/UndoContext';
@@ -114,7 +114,6 @@ class MapErrorBoundary extends Component {
 
 const FOCUS_TABS = [
   { key: 'today', label: 'היום', icon: Target, color: 'text-[#F57C00]', activeBg: 'bg-orange-50 border-orange-300 text-orange-700', badgeColor: 'bg-orange-100 text-orange-700' },
-  { key: 'byCategory', label: 'לפי תחום', icon: GitBranch, color: 'text-indigo-600', activeBg: 'bg-indigo-50 border-indigo-300 text-indigo-700', badgeColor: 'bg-indigo-100 text-indigo-700' },
   { key: 'upcoming', label: '3 ימים', icon: Clock, color: 'text-gray-600', activeBg: 'bg-gray-50 border-gray-300 text-gray-700', badgeColor: 'bg-gray-100 text-gray-700' },
   { key: 'events', label: 'אירועים', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50 border-purple-300 text-purple-700', badgeColor: 'bg-purple-100 text-purple-700' },
   { key: 'payment', label: 'ממתין לתשלום', icon: CreditCard, color: 'text-yellow-600', activeBg: 'bg-yellow-50 border-yellow-300 text-yellow-700', badgeColor: 'bg-yellow-100 text-yellow-700' },
@@ -125,17 +124,15 @@ export default function HomePage() {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("");
-  const [activeTab, setActiveTab] = useState('today');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [badDayActive, setBadDayActive] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
   // Stage 5.7: real toggle state — was a useMemo before, so the section
   // headers had no working onClick. Now each tab can be opened/closed by tap.
+  // Stage 5.9: byCategory removed — duplicated AyoaMiniMap and CategoryBreakdown.
   const [openSections, setOpenSections] = useState({
     today: true,
-    byCategory: true,
     upcoming: false,
     events: false,
     payment: false,
@@ -309,10 +306,6 @@ export default function HomePage() {
         })(),
       });
 
-      if (overdue.length > 0 || todayTasks.length > 0) setActiveTab('today');
-      else if (upcoming.length > 0) setActiveTab('upcoming');
-      else if (todayEvents.length > 0) setActiveTab('events');
-      else setActiveTab('today');
     } catch (error) {
       console.error("Error loading home page data:", error);
     } finally {
@@ -460,20 +453,9 @@ export default function HomePage() {
     }
   }, [data]);
 
-  // KPI capacity metrics
-  const capacityKPIs = useMemo(() => {
-    if (!data) return { efficiencyScore: 0, cognitiveLoadMix: {}, totalMinutes: 0, totalTasks: 0, dailyCapacityMinutes: 480, utilizationPercent: 0, loadByPriority: {} };
-    return calculateCapacity(data.activeTasks || []);
-  }, [data]);
-
-  // ── Top 5 tasks for the calm "מה אפשר לעשות היום" section ──
-  // Must be above the early return so hook count is stable across renders
-  // Energy filter: when energy is low/medium, show only matching cognitive-load tasks
-  const calmTasks = useMemo(() => {
-    if (!data) return [];
-    const energyFiltered = filterByEnergy(data.mergedToday || []);
-    return sortByPriority(energyFiltered).slice(0, 5);
-  }, [data, filterByEnergy]);
+  // Stage 5.9: capacityKPIs + calmTasks useMemos removed — neither was
+  // rendered anywhere in JSX, and capacityKPIs was the last consumer of
+  // capacityEngine, so that import is gone too.
 
   // ── SmartNudge: pick top insight and convert to gentle nudge ──
   // MUST be before early returns (Rules of Hooks)
@@ -510,102 +492,21 @@ export default function HomePage() {
     );
   }
 
-  const filterBySearch = (items, isEvent = false) => {
-    if (!searchTerm) return items;
-    const lower = searchTerm.toLowerCase();
-    return items.filter(item =>
-      item.title?.toLowerCase().includes(lower) ||
-      (!isEvent && item.client_name?.toLowerCase().includes(lower)) ||
-      (!isEvent && item.category?.toLowerCase().includes(lower)) ||
-      (isEvent && item.description?.toLowerCase().includes(lower))
-    );
-  };
+  // Stage 5.9: filterBySearch + allFocusTasks + getTabContent removed.
+  // searchTerm state is gone (there's no <Input> driving it), so every
+  // filterBySearch call was a no-op. getTabContent was the old single-tab
+  // switch that the 2-column grid replaced.
 
   const getTabCount = (tabKey) => {
-    if (tabKey === 'events') return filterBySearch(data.todayEvents, true).length;
-    if (tabKey === 'today') return filterBySearch(data.mergedToday || []).length;
-    if (tabKey === 'byCategory') {
-      // Stage 5.7: byCategory shows the number of unique work-domains, not tasks
-      return [...new Set(
-        filterBySearch(data.mergedToday || [])
-          .map(t => t.category)
-          .filter(Boolean)
-      )].length;
-    }
-    return filterBySearch(data[tabKey] || []).length;
-  };
-
-  const allFocusTasks = filterByEnergy(filterBySearch([
-    ...(data.overdue || []),
-    ...(data.today || []),
-    ...(data.upcoming || []),
-    ...(data.payment || []),
-  ]));
-
-  const getTabContent = () => {
-    switch (activeTab) {
-      case 'overdue': {
-        const filtered = filterBySearch(data.overdue);
-        return filtered.length === 0 ? (
-          <EmptyState icon={<CheckCircle className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />} text="אין משימות באיחור" />
-        ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDeadlineContext />
-        );
-      }
-      case 'today': {
-        const filtered = filterBySearch(data.today);
-        return filtered.length === 0 ? (
-          <EmptyState icon={<Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />} text="אין משימות להיום - כל הכבוד!" />
-        ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDeadlineContext />
-        );
-      }
-      case 'upcoming': {
-        const filtered = filterBySearch(data.upcoming);
-        return filtered.length === 0 ? (
-          <EmptyState icon={<Clock className="w-10 h-10 text-gray-300" />} text="אין משימות ל-3 ימים הקרובים" />
-        ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showDate />
-        );
-      }
-      case 'events': {
-        const filtered = filterBySearch(data.todayEvents, true);
-        return filtered.length === 0 ? (
-          <EmptyState icon={<Calendar className="w-10 h-10 text-purple-300" />} text="אין אירועים היום" />
-        ) : (
-          <div className="space-y-2">
-            {filtered.map(event => (
-              <div key={event.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-purple-50 border border-purple-100">
-                <div className="text-sm font-mono font-semibold text-purple-700 min-w-[50px]">
-                  {format(parseISO(event.start_date), 'HH:mm')}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm text-purple-900 truncate">{event.title}</div>
-                  {event.description && <div className="text-xs text-purple-600 truncate">{event.description}</div>}
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      }
-      case 'payment': {
-        const filtered = filterBySearch(data.payment);
-        return filtered.length === 0 ? (
-          <EmptyState icon={<CreditCard className="w-10 h-10 text-yellow-300" />} text="אין משימות ממתינות לתשלום" />
-        ) : (
-          <TaskList tasks={filtered} onStatusChange={handleStatusChange} onPaymentDateChange={handlePaymentDateChange} onEdit={setEditingTask} onNote={setNoteTask} showPaymentDate />
-        );
-      }
-      default:
-        return null;
-    }
+    if (tabKey === 'events') return (data.todayEvents || []).length;
+    if (tabKey === 'today') return (data.mergedToday || []).length;
+    return (data[tabKey] || []).length;
   };
 
   const getSectionData = (tabKey) => {
-    if (tabKey === 'events') return filterBySearch(data.todayEvents, true);
-    if (tabKey === 'today') return filterBySearch(data.mergedToday || []);
-    if (tabKey === 'byCategory') return filterBySearch(data.mergedToday || []);
-    return filterBySearch(data[tabKey] || []);
+    if (tabKey === 'events') return data.todayEvents || [];
+    if (tabKey === 'today') return data.mergedToday || [];
+    return data[tabKey] || [];
   };
 
   const todayTotal = data.today.length + (data.overdue?.length || 0);
@@ -764,12 +665,10 @@ export default function HomePage() {
         {/* ═══ 1.2 Ayoa Mini-Map — SVG client overview (Phase 2) ═══ */}
         <AyoaMiniMap tasks={data.activeTasks} />
 
-        {/* ═══ 1.3 Category Breakdown — Stage 5.7: open by default ═══
-            Used to be hidden inside a <details> toggle in section 3.5. The
-            user's actual mental model is "what are my domains today?", so
-            this is now visible and unfolded, full-width, right above the
-            2-column grid. Stage 5.7's "first thing she sees" intent. */}
-        <CategoryBreakdown tasks={data.mergedToday || []} />
+        {/* Stage 5.9: standalone CategoryBreakdown removed — it duplicated
+            what the AyoaMiniMap + the byCategory tab both already surface.
+            Home keeps a single source of truth for "what domains do I have
+            today?" — the AyoaMiniMap circles. */}
 
         {/* ═══ Stage 5.7.3 — 2-column grid below the AyoaMiniMap ═══
             Cuts the page height nearly in half so most of the morning view
@@ -786,15 +685,15 @@ export default function HomePage() {
 
           {/* ─── RIGHT column (visually first in RTL) ─── */}
           <div className="space-y-3">
-            {/* היום + לפי תחום (Stage 5.7 byCategory tab) */}
+            {/* Stage 5.9: היום only — the "לפי תחום" byCategory tab was
+                removed because it duplicated AyoaMiniMap + CategoryBreakdown. */}
             <div className="space-y-2">
-              {FOCUS_TABS.filter(t => t.key === 'today' || t.key === 'byCategory').map(tab => {
+              {FOCUS_TABS.filter(t => t.key === 'today').map(tab => {
                 const Icon = tab.icon;
                 const items = getSectionData(tab.key);
-                // Stage 5.7: byCategory header counts unique work-domains, not tasks
                 const count = getTabCount(tab.key);
                 const isOpen = openSections[tab.key];
-                const overdueCount = tab.key === 'today' ? (data.overdue?.length || 0) : 0;
+                const overdueCount = data.overdue?.length || 0;
 
                 return (
                   <div key={tab.key} className="rounded-xl overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB' }}>
@@ -833,13 +732,12 @@ export default function HomePage() {
                           className="overflow-hidden"
                         >
                           <div className="px-4 pb-3">
-                            {tab.key === 'byCategory' ? (
-                              items.length === 0 ? (
-                                <EmptyState icon={<GitBranch className="w-10 h-10 text-indigo-300" />} text="אין משימות לסיווג היום" />
-                              ) : (
-                                <CategoryBreakdown tasks={items} />
-                              )
-                            ) : items.length === 0 ? (
+                            {/* Stage 5.9: OverdueAlert lives inside the
+                                היום section — sky-toned, self-hides when
+                                data.overdue is empty, renders the overdue
+                                tasks as a gentle header above the list. */}
+                            <OverdueAlert tasks={data.overdue} />
+                            {items.length === 0 ? (
                               <EmptyState
                                 icon={<Sparkles className="w-10 h-10" style={{ color: ZERO_PANIC.green }} />}
                                 text="אין משימות להיום - כל הכבוד!"
@@ -929,7 +827,7 @@ export default function HomePage() {
           <div className="space-y-3">
             {/* upcoming / events / payment focus tabs */}
             <div className="space-y-2">
-              {FOCUS_TABS.filter(t => t.key !== 'today' && t.key !== 'byCategory').map(tab => {
+              {FOCUS_TABS.filter(t => t.key !== 'today').map(tab => {
                 const Icon = tab.icon;
                 const items = getSectionData(tab.key);
                 const count = getTabCount(tab.key);
@@ -1035,20 +933,11 @@ export default function HomePage() {
               })}
             </div>
 
-            {/* Stage 5.8 (JKAj2): Soft Alerts (OverdueAlert + AdvanceWarningPanel)
-                block was removed from the grid. The components themselves
-                still exist and are imported elsewhere — OverdueAlert renders
-                conditional context inside TaskList, and AdvanceWarningPanel
-                is kept available for future placement. Overdue visibility is
-                now carried by the purple "באיחור" badge on the היום section
-                header, and the advance-warning panel was too noisy for Home. */}
-
-            {/* Stage 5.7.3+5.7 merge: the <details> wrapper around
-                CategoryBreakdown is gone. The unwrapped CategoryBreakdown
-                now lives full-width above the 2-column grid (section 1.3),
-                AND the byCategory tab in the right column also renders it
-                when expanded. Same as main's Stage 5.7 layout — both
-                entries kept on purpose. */}
+            {/* Stage 5.9: AdvanceWarningPanel sits at the bottom of the left
+                column — 7-day lookahead (calendar days; see the panel for
+                the working-days note). The component self-hides when there
+                are no upcoming deadlines, so this is free real estate. */}
+            <AdvanceWarningPanel />
           </div>
         </div>
 
