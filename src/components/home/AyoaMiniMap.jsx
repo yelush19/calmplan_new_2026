@@ -10,7 +10,14 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from '@/components/ui/popover';
-import { Paperclip } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Paperclip, Pencil, Pin } from 'lucide-react';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
 import {
   TASK_STATUS_CONFIG,
@@ -282,7 +289,26 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick }) 
   );
 }
 
-export default function AyoaMiniMap({ tasks, onGroupClick }) {
+// Stage 5.10: AyoaMiniMap can now be driven end-to-end by the parent.
+// All handler props are OPTIONAL and backwards-compatible:
+//   • onStatusChange(task, newStatus)     — if provided, each drawer row
+//       renders a live Status <Select> that persists via the parent.
+//   • onEditTask(task)                    — if provided, a pencil button
+//       appears that opens the parent's task side panel.
+//   • onPaymentDateChange(task, dateStr)  — reserved for future rows that
+//       surface payment_due_date inline.
+//   • onNote(task)                        — if provided, a pin button is
+//       shown so rows can be promoted into sticky notes.
+// Without any of those props, the drawer falls back to the read-only
+// cards it had in Stage 5.9 — so existing callers stay unaffected.
+export default function AyoaMiniMap({
+  tasks,
+  onGroupClick,
+  onStatusChange,
+  onEditTask,
+  onPaymentDateChange,
+  onNote,
+}) {
   const [selectedGroup, setSelectedGroup] = useState(null);
 
   // Stage 5.9: groupByServiceDomain replaces groupByClient. Each circle
@@ -353,6 +379,25 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
   const handleClick = (group) => {
     setSelectedGroup(group);
     if (onGroupClick) onGroupClick(group);
+  };
+
+  // Stage 5.10: optimistic local update for inline status changes inside
+  // the drawer. We patch selectedGroup.tasks immediately so the card moves
+  // to the right status bucket without waiting for the parent to round-trip,
+  // THEN let the parent persist via onStatusChange. If the parent refreshes
+  // the tasks prop later, it'll overwrite via the next click on a circle.
+  const handleRowStatusChange = (task, newStatus) => {
+    setSelectedGroup((prev) =>
+      prev
+        ? {
+            ...prev,
+            tasks: prev.tasks.map((t) =>
+              t.id === task.id ? { ...t, status: newStatus } : t
+            ),
+          }
+        : prev
+    );
+    if (onStatusChange) onStatusChange(task, newStatus);
   };
 
   // Precompute each circle's geometry so the connecting lines can terminate
@@ -542,6 +587,77 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
                               >
                                 דחוף
                               </span>
+                            )}
+                            {/* Stage 5.10: when the parent passes
+                                onStatusChange we upgrade the status badge
+                                into a live Select — same pattern as the
+                                TaskRow in Home.jsx, so the drawer behaves
+                                like an inline table view. When the parent
+                                doesn't, we fall back to a read-only badge
+                                (previous Stage 5.9 behaviour). */}
+                            {onStatusChange ? (
+                              <Select
+                                value={migrateStatus(task.status) || 'not_started'}
+                                onValueChange={(newStatus) =>
+                                  handleRowStatusChange(task, newStatus)
+                                }
+                              >
+                                <SelectTrigger
+                                  className={`h-7 text-[11px] px-2 min-w-[110px] border-0 bg-white/70 ${cfg?.color || ''}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent
+                                  style={{ zIndex: 10000 }}
+                                >
+                                  {Object.entries(TASK_STATUS_CONFIG).map(
+                                    ([key, { text }]) => (
+                                      <SelectItem
+                                        key={key}
+                                        value={key}
+                                        className="text-xs"
+                                      >
+                                        {text}
+                                      </SelectItem>
+                                    )
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              cfg && (
+                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/70">
+                                  {cfg.text}
+                                </span>
+                              )
+                            )}
+                            {onNote && (
+                              <button
+                                type="button"
+                                className="p-1 rounded hover:bg-white/60 text-slate-400 hover:text-amber-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onNote(task);
+                                }}
+                                aria-label="הוסף לפתק"
+                                title="הוסף לפתק"
+                              >
+                                <Pin className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {onEditTask && (
+                              <button
+                                type="button"
+                                className="p-1 rounded hover:bg-white/60 text-slate-400 hover:text-slate-700"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditTask(task);
+                                }}
+                                aria-label="ערוך משימה"
+                                title="ערוך משימה"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
                             )}
                             <Popover>
                               <PopoverTrigger asChild>
