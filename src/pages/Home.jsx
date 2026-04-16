@@ -351,8 +351,18 @@ export default function HomePage() {
 
         const newOverdue = filterCompleted(updateInList(prev.overdue));
         const newToday = filterCompleted(updateInList(prev.today));
+        // Stage 5.10: also refresh the mirrored lists that AyoaMiniMap and
+        // any other consumer reads from. allTasks keeps every task with
+        // the new status; activeTasks filters out production_completed so
+        // the mind-map circle counts immediately reflect the change.
+        const newAllTasks = (prev.allTasks || []).map(t =>
+          t.id === task.id ? { ...t, status: newStatus } : t
+        );
+        const newActiveTasks = newAllTasks.filter(t => t.status !== 'production_completed');
         return {
           ...prev,
+          allTasks: newAllTasks,
+          activeTasks: newActiveTasks,
           overdue: newOverdue,
           today: newToday,
           mergedToday: sortByPriority([...newOverdue, ...newToday]),
@@ -662,8 +672,18 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* ═══ 1.2 Ayoa Mini-Map — SVG client overview (Phase 2) ═══ */}
-        <AyoaMiniMap tasks={data.activeTasks} />
+        {/* ═══ 1.2 Ayoa Mini-Map — service-domain overview (Stage 5.10) ═══
+            Handlers are passed down so the drawer can edit status, open the
+            side panel, and promote tasks to sticky notes without the user
+            having to leave Home. The mini-map still renders its SVG on its
+            own; these props just unlock the editable drawer. */}
+        <AyoaMiniMap
+          tasks={data.activeTasks}
+          onStatusChange={handleStatusChange}
+          onEditTask={setEditingTask}
+          onPaymentDateChange={handlePaymentDateChange}
+          onNote={setNoteTask}
+        />
 
         {/* Stage 5.9: standalone CategoryBreakdown removed — it duplicated
             what the AyoaMiniMap + the byCategory tab both already surface.
