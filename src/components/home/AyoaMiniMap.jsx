@@ -16,6 +16,7 @@ import {
   TASK_STATUS_CONFIG,
   STATUS_CONFIG,
   migrateStatus,
+  getServiceForTask,
 } from '@/config/processTemplates';
 
 // Phase 2: compact SVG "mind-map" overview of today's active clients.
@@ -63,7 +64,29 @@ const LABEL_MAP = {
   national_insurance: 'ביטוח לאומי',
   client_onboarding: 'קליטת לקוח',
   reconciliations: 'התאמות',
-  unknown: 'כללי',
+  // Stage 5.10: 'unknown' is no longer a single mega-bucket. Tasks whose
+  // raw category doesn't match any known domain are further split by the
+  // dashboard they belong to (via processTemplates.getServiceForTask),
+  // so the user sees distinct sub-domains on the mind map instead of
+  // one undifferentiated 'כללי' blob.
+  unknown_admin: 'אדמיניסטרציה',
+  unknown_home: 'משימות בית',
+  unknown_additional: 'שירותים נוספים',
+  unknown_annual_reports: 'דוחות שנתיים',
+  unknown_payroll: 'שכר — כללי',
+  unknown_tax: 'מס — כללי',
+  unknown_misc: 'אחר',
+};
+
+// Map a dashboard key (as returned by getServiceForTask(task).dashboard)
+// to the corresponding unknown_* sub-bucket.
+const DASHBOARD_TO_UNKNOWN_KEY = {
+  admin: 'unknown_admin',
+  home: 'unknown_home',
+  additional: 'unknown_additional',
+  annual_reports: 'unknown_annual_reports',
+  payroll: 'unknown_payroll',
+  tax: 'unknown_tax',
 };
 
 function normalizeServiceKey(rawCategory) {
@@ -77,13 +100,33 @@ function normalizeServiceKey(rawCategory) {
   return 'unknown';
 }
 
+// Stage 5.10: resolve the sub-bucket for an 'unknown' task by looking it up
+// in ALL_SERVICES via its category. Returns a key like 'unknown_admin' so the
+// task lands in a dashboard-aware bucket rather than the catch-all 'כללי'.
+// getServiceForTask may return a service whose `dashboard` field is either a
+// string or an array — we pick the first string in that case.
+function resolveUnknownSubKey(task) {
+  const service = getServiceForTask(task);
+  if (!service) return 'unknown_misc';
+  const dashboard = Array.isArray(service.dashboard)
+    ? service.dashboard[0]
+    : service.dashboard;
+  return DASHBOARD_TO_UNKNOWN_KEY[dashboard] || 'unknown_misc';
+}
+
 function groupByServiceDomain(tasks) {
   const groups = new Map();
   const unknownKeys = new Set();
   (tasks || []).forEach((task) => {
     const raw = task.category || task.service_key || task.service_group || '';
-    const normalized = normalizeServiceKey(raw);
-    if (normalized === 'unknown' && raw) unknownKeys.add(raw);
+    let normalized = normalizeServiceKey(raw);
+    if (normalized === 'unknown') {
+      if (raw) unknownKeys.add(raw);
+      // Stage 5.10: split unknowns by dashboard so "כללי" doesn't collect
+      // everything. A task falls through to 'unknown_misc' only if its
+      // category also isn't in ALL_SERVICES.taskCategories.
+      normalized = resolveUnknownSubKey(task);
+    }
     if (!groups.has(normalized)) {
       groups.set(normalized, {
         normalized_key: normalized,
@@ -99,8 +142,8 @@ function groupByServiceDomain(tasks) {
     console.log('[AyoaMiniMap] Unknown service keys:', [...unknownKeys]);
   }
   // Urgent domains first, then by task count (descending).
-  // This puts the "most urgent" domain at index 0, which — because of the
-  // RTL x-coordinate math below — lands on the right.
+  // This puts the "most urgent" domain at index 0, which lands at the top
+  // of the radial layout below (angle -π/2).
   return Array.from(groups.values())
     .sort((a, b) => {
       const aU = a.tasks.some((t) => t.priority === 'urgent') ? 0 : 1;
@@ -125,30 +168,48 @@ const STATUS_ORDER = [
   'production_completed',
 ];
 
-// Fixed circle-to-circle step so gaps don't collapse when the client count
-// grows. The viewBox width is computed from `total` below, so circles land
-// inside the SVG with breathing room instead of clipping the edges.
-// STEP must stay >= max-circle-diameter + small gap. With r_max=36 (below)
-// the diameter is 72, so STEP=78 leaves a 6px gap between neighbours.
-const STEP = 78;
+// Stage 5.10: radial AYOA-style layout. Each group becomes one circle
+// positioned on a ring around a central hub, with a connecting line from
+// the hub to the circle's edge ("branch" metaphor). The most-urgent group
+// lands at the top (angle = -π/2) and subsequent groups walk clockwise.
+// Geometry is fixed (viewBox = 480×340) so the SVG scales cleanly on any
+// screen width without the circles colliding or the labels clipping.
+const VIEW_WIDTH = 480;
+const VIEW_HEIGHT = 340;
+const CENTER_X = VIEW_WIDTH / 2;
+const CENTER_Y = VIEW_HEIGHT / 2;
+const RING_RADIUS = 118; // distance from centre to each group circle
+const HUB_RADIUS = 34;   // size of the central hub
+const LABEL_OFFSET = 10; // gap between circle edge and its label box
 
-function calcX(i, total, viewWidth = 360) {
-  // RTL layout: i=0 (most urgent) sits at the right. We center the row
-  // inside viewWidth so a small count (1-3) isn't pinned hard to the right.
-  if (total <= 1) return viewWidth / 2;
-  const usedWidth = (total - 1) * STEP;
-  const startRight = viewWidth - (viewWidth - usedWidth) / 2;
-  return startRight - i * STEP;
+function computeRadialPosition(i, n) {
+  // For a single group, park it directly above the hub so the layout
+  // doesn't collapse into a zero-angle edge case.
+  if (n <= 1) return { cx: CENTER_X, cy: CENTER_Y - RING_RADIUS, angle: -Math.PI / 2 };
+  const startAngle = -Math.PI / 2; // 12 o'clock
+  const step = (2 * Math.PI) / n;
+  const angle = startAngle + i * step;
+  return {
+    cx: CENTER_X + Math.cos(angle) * RING_RADIUS,
+    cy: CENTER_Y + Math.sin(angle) * RING_RADIUS,
+    angle,
+  };
 }
 
-function AyoaCircle({ cx, cy, r, color, label, count, urgent, onClick }) {
-  const labelText = label.length > 6 ? `${label.slice(0, 6)}…` : label;
+function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick }) {
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick();
     }
   };
+  // Label sits just outside the circle along the same radial direction as
+  // the circle's own position from the hub. foreignObject lets the browser
+  // render Hebrew with native RTL wrapping — no truncation, no manual "…".
+  const labelBoxWidth = 92;
+  const labelBoxHeight = 34;
+  const labelCenterX = cx + Math.cos(angle) * (r + LABEL_OFFSET + labelBoxHeight / 2);
+  const labelCenterY = cy + Math.sin(angle) * (r + LABEL_OFFSET + labelBoxHeight / 2);
   return (
     <g
       style={{ cursor: 'pointer' }}
@@ -189,16 +250,34 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, onClick }) {
           style={{ pointerEvents: 'none' }}
         />
       )}
-      <text
-        x={cx}
-        y={cy + r + 14}
-        textAnchor="middle"
-        fontSize={11}
-        fill="#5A6A7A"
-        style={{ fontFamily: 'Heebo, sans-serif', pointerEvents: 'none' }}
+      <foreignObject
+        x={labelCenterX - labelBoxWidth / 2}
+        y={labelCenterY - labelBoxHeight / 2}
+        width={labelBoxWidth}
+        height={labelBoxHeight}
+        style={{ pointerEvents: 'none' }}
       >
-        {labelText}
-      </text>
+        <div
+          xmlns="http://www.w3.org/1999/xhtml"
+          dir="rtl"
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            fontFamily: 'Heebo, sans-serif',
+            fontSize: '11px',
+            lineHeight: 1.15,
+            color: '#475569',
+            wordBreak: 'break-word',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {label}
+        </div>
+      </foreignObject>
     </g>
   );
 }
@@ -271,14 +350,20 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
 
   if (groups.length === 0) return null;
 
-  // Grow the viewBox with the client count so 6-8 circles don't collapse
-  // into each other. Minimum 360 keeps small counts at a natural size.
-  const viewWidth = Math.max(360, (groups.length - 1) * STEP + 60);
-
   const handleClick = (group) => {
     setSelectedGroup(group);
     if (onGroupClick) onGroupClick(group);
   };
+
+  // Precompute each circle's geometry so the connecting lines can terminate
+  // at the CIRCLE's edge (not its centre), which keeps the "branch" look
+  // clean for small and large circles alike.
+  const totalTasks = groups.reduce((sum, g) => sum + g.tasks.length, 0);
+  const placedGroups = groups.map((group, i) => {
+    const pos = computeRadialPosition(i, groups.length);
+    const r = Math.min(34, Math.max(18, group.tasks.length * 4));
+    return { ...group, ...pos, r };
+  });
 
   return (
     <div
@@ -301,17 +386,73 @@ export default function AyoaMiniMap({ tasks, onGroupClick }) {
       </div>
       <svg
         width="100%"
-        height="200"
-        viewBox={`0 0 ${viewWidth} 200`}
-        dir="rtl"
-        style={{ display: 'block', overflow: 'hidden' }}
+        height="auto"
+        viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: 'block' }}
       >
-        {groups.map((group, i) => (
+        {/* Branches first — rendered under the circles so the circle
+            strokes always sit on top of the line ends. */}
+        {placedGroups.map((g) => {
+          const dx = g.cx - CENTER_X;
+          const dy = g.cy - CENTER_Y;
+          const len = Math.hypot(dx, dy) || 1;
+          const ux = dx / len;
+          const uy = dy / len;
+          return (
+            <line
+              key={`branch-${g.normalized_key}`}
+              x1={CENTER_X + ux * HUB_RADIUS}
+              y1={CENTER_Y + uy * HUB_RADIUS}
+              x2={g.cx - ux * g.r}
+              y2={g.cy - uy * g.r}
+              stroke="#E5E7EB"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+            />
+          );
+        })}
+
+        {/* Central hub — anchors the mind map and shows today's total. */}
+        <g style={{ pointerEvents: 'none' }}>
+          <circle
+            cx={CENTER_X}
+            cy={CENTER_Y}
+            r={HUB_RADIUS}
+            fill="#FFFFFF"
+            stroke="#CBD5E1"
+            strokeWidth={1.5}
+          />
+          <text
+            x={CENTER_X}
+            y={CENTER_Y - 3}
+            textAnchor="middle"
+            fontSize={12}
+            fontWeight={600}
+            fill="#1A2332"
+            style={{ fontFamily: 'Heebo, sans-serif' }}
+          >
+            היום
+          </text>
+          <text
+            x={CENTER_X}
+            y={CENTER_Y + 13}
+            textAnchor="middle"
+            fontSize={11}
+            fill="#64748B"
+            style={{ fontFamily: 'Heebo, sans-serif' }}
+          >
+            {totalTasks} משימות
+          </text>
+        </g>
+
+        {placedGroups.map((group) => (
           <AyoaCircle
             key={group.normalized_key}
-            cx={calcX(i, groups.length, viewWidth)}
-            cy={90}
-            r={Math.min(36, Math.max(18, group.tasks.length * 4))}
+            cx={group.cx}
+            cy={group.cy}
+            r={group.r}
+            angle={group.angle}
             color={group.color}
             label={group.label}
             count={group.tasks.length}
