@@ -576,7 +576,7 @@ export default function ClientsDashboardPage() {
         </div>
         <MultiStatusFilter
           options={[
-            { value: 'has_issues', label: 'לבצע תיקונים' },
+            { value: 'has_issues', label: 'לבצע תיקונים/השלמות' },
             { value: 'in_progress', label: 'הועבר לעיון' },
             { value: 'not_started', label: 'לבצע' },
             { value: 'all_done', label: 'הושלם ייצור' },

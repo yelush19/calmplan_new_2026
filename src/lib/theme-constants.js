@@ -49,7 +49,7 @@ export const STATUS_STYLES = {
   review_after_corrections:   { color: '#8b5cf6', glowIntensity: 0.5, animation: null,         label: 'לעיון לאחר תיקונים' },
   ready_to_broadcast:         { color: '#0d9488', glowIntensity: 0.5, animation: null,         label: 'מוכן לשידור' },
   reported_pending_payment:   { color: '#6366f1', glowIntensity: 0.4, animation: 'calm-pulse', label: 'שודר, ממתין לתשלום' },
-  needs_corrections:          { color: '#f97316', glowIntensity: 0.7, animation: 'glow-pulse', label: 'לבצע תיקונים' },
+  needs_corrections:          { color: '#f97316', glowIntensity: 0.7, animation: 'glow-pulse', label: 'לבצע תיקונים/השלמות' },
   production_completed:       { color: '#22c55e', glowIntensity: 0.2, animation: null,         label: 'הושלם ייצור' },
 };
 
@@ -169,7 +169,7 @@ export const PRODUCTION_FLOW_COLORS = {
   review_after_corrections:  { color: '#8B5CF6', progress: 0.78, label: 'לעיון לאחר תיקונים' },
   ready_to_broadcast:        { color: '#0D9488', progress: 0.8,  label: 'מוכן לשידור' },
   reported_pending_payment:  { color: '#6366F1', progress: 0.9,  label: 'שודר, ממתין לתשלום' },
-  needs_corrections:         { color: '#F97316', progress: 0.6,  label: 'לבצע תיקונים' },
+  needs_corrections:         { color: '#F97316', progress: 0.6,  label: 'לבצע תיקונים/השלמות' },
   production_completed:      { color: '#2E7D32', progress: 1.0,  label: 'הושלם ייצור' },
 };
 
