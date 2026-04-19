@@ -205,6 +205,18 @@ export default function ClientAccountsManager({ clientId, clientName }) {
         return () => window.removeEventListener('calmplan:data-synced', handler);
     }, [clientId]);
 
+    // Reload when the tab becomes visible / window regains focus
+    useEffect(() => {
+        const onVisibility = () => { if (document.visibilityState === 'visible') loadAccounts(); };
+        const onFocus = () => loadAccounts();
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('focus', onFocus);
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('focus', onFocus);
+        };
+    }, [clientId]);
+
     const loadAccounts = async () => {
         try {
             // FIX: Increased read limit

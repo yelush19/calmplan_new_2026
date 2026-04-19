@@ -422,6 +422,168 @@ function ReconciliationEditDialog({ reconciliation, clients, open, onClose, onSa
   );
 }
 
+// ─── Account Edit Dialog (create/edit ClientAccount from Reconciliations) ───────
+function AccountEditDialog({ account, clients, open, onClose, onSave }) {
+  const emptyForm = {
+    client_id: '', account_type: 'bank', account_status: 'active',
+    account_name: '', account_number: '', bank_name: '',
+    loading_system: 'bizibox', loading_system_notes: '',
+    reconciliation_frequency: 'monthly', bookkeeping_card_number: '',
+    last_reconciliation_date: '', next_reconciliation_due: '', notes: '',
+  };
+  const [formData, setFormData] = useState(emptyForm);
+
+  useEffect(() => {
+    if (account) {
+      setFormData({
+        client_id: account.client_id || '',
+        account_type: account.account_type || 'bank',
+        account_status: account.account_status || 'active',
+        account_name: account.account_name || '',
+        account_number: account.account_number || '',
+        bank_name: account.bank_name || '',
+        loading_system: account.loading_system || 'bizibox',
+        loading_system_notes: account.loading_system_notes || '',
+        reconciliation_frequency: account.reconciliation_frequency || 'monthly',
+        bookkeeping_card_number: account.bookkeeping_card_number || '',
+        last_reconciliation_date: account.last_reconciliation_date || '',
+        next_reconciliation_due: account.next_reconciliation_due || '',
+        notes: account.notes || '',
+      });
+    } else {
+      setFormData(emptyForm);
+    }
+  }, [account, open]);
+
+  const update = (key, value) => {
+    setFormData(prev => {
+      const next = { ...prev, [key]: value };
+      if (key === 'last_reconciliation_date' || key === 'reconciliation_frequency') {
+        if (next.last_reconciliation_date) {
+          next.next_reconciliation_due = calcNextDate(next.last_reconciliation_date, next.reconciliation_frequency);
+        }
+      }
+      return next;
+    });
+  };
+
+  const handleSubmit = () => {
+    if (!formData.client_id || !formData.account_name) return;
+    onSave({ ...(account || {}), ...formData });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="bg-white border-[#E0E0E0] rounded-[24px] max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{account?.id ? 'עריכת חשבון' : 'הוספת חשבון חדש'}</DialogTitle>
+          <DialogDescription>פרטי חשבון עבור לקוח</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <Label>לקוח</Label>
+              <Select value={formData.client_id} onValueChange={(v) => update('client_id', v)} disabled={!!account?.id}>
+                <SelectTrigger className="rounded-[12px] bg-white border-[#E0E0E0]"><SelectValue placeholder="בחר לקוח" /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E0E0E0] rounded-[12px]">
+                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>סוג חשבון</Label>
+              <Select value={formData.account_type} onValueChange={(v) => update('account_type', v)}>
+                <SelectTrigger className="rounded-[12px] bg-white border-[#E0E0E0]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E0E0E0] rounded-[12px]">
+                  <SelectItem value="bank">בנק</SelectItem>
+                  <SelectItem value="credit_card">כרטיס אשראי</SelectItem>
+                  <SelectItem value="bookkeeping">הנהלת חשבונות</SelectItem>
+                  <SelectItem value="clearing">סליקה</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>סטטוס</Label>
+              <Select value={formData.account_status} onValueChange={(v) => update('account_status', v)}>
+                <SelectTrigger className="rounded-[12px] bg-white border-[#E0E0E0]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E0E0E0] rounded-[12px]">
+                  <SelectItem value="active">פעיל</SelectItem>
+                  <SelectItem value="inactive">לא פעיל</SelectItem>
+                  <SelectItem value="in_review">בבדיקה</SelectItem>
+                  <SelectItem value="problem">תקלה</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2">
+              <Label>שם החשבון</Label>
+              <Input value={formData.account_name} onChange={(e) => update('account_name', e.target.value)} placeholder="לדוגמה: בנק לאומי - עסקי" className="rounded-[12px] bg-white border-[#E0E0E0]" />
+            </div>
+            <div>
+              <Label>שם הבנק / חברה</Label>
+              <Input value={formData.bank_name} onChange={(e) => update('bank_name', e.target.value)} placeholder="בנק, חברת אשראי, סולק" className="rounded-[12px] bg-white border-[#E0E0E0]" />
+            </div>
+            <div>
+              <Label>מספר חשבון</Label>
+              <Input value={formData.account_number} onChange={(e) => update('account_number', e.target.value)} placeholder="מספר חשבון מלא" className="rounded-[12px] bg-white border-[#E0E0E0]" />
+            </div>
+            <div>
+              <Label>מספר כרטיס בהנה״ח</Label>
+              <Input value={formData.bookkeeping_card_number} onChange={(e) => update('bookkeeping_card_number', e.target.value)} className="rounded-[12px] bg-white border-[#E0E0E0]" />
+            </div>
+            <div>
+              <Label>אופן טעינה</Label>
+              <Select value={formData.loading_system} onValueChange={(v) => update('loading_system', v)}>
+                <SelectTrigger className="rounded-[12px] bg-white border-[#E0E0E0]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E0E0E0] rounded-[12px]">
+                  <SelectItem value="bizibox">BIZIBOX</SelectItem>
+                  <SelectItem value="summit">SUMMIT</SelectItem>
+                  <SelectItem value="manual">ידני</SelectItem>
+                  <SelectItem value="other">אחר</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>תדירות התאמה</Label>
+              <Select value={formData.reconciliation_frequency} onValueChange={(v) => update('reconciliation_frequency', v)}>
+                <SelectTrigger className="rounded-[12px] bg-white border-[#E0E0E0]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E0E0E0] rounded-[12px]">
+                  <SelectItem value="monthly">חודשי</SelectItem>
+                  <SelectItem value="bimonthly">דו-חודשי</SelectItem>
+                  <SelectItem value="quarterly">רבעוני</SelectItem>
+                  <SelectItem value="semi_annual">חצי שנתי</SelectItem>
+                  <SelectItem value="yearly">שנתי</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>התאמה אחרונה</Label>
+              <Input type="date" value={formData.last_reconciliation_date} onChange={(e) => update('last_reconciliation_date', e.target.value)} className="rounded-[12px] bg-white border-[#E0E0E0]" />
+            </div>
+            <div>
+              <Label>יעד הבא</Label>
+              <Input type="date" value={formData.next_reconciliation_due} onChange={(e) => update('next_reconciliation_due', e.target.value)} className="rounded-[12px] bg-white border-[#E0E0E0]" />
+            </div>
+          </div>
+          <div>
+            <Label>הערות</Label>
+            <Textarea value={formData.notes} onChange={(e) => update('notes', e.target.value)} placeholder="הערות..." className="min-h-[60px] rounded-[12px] bg-white border-[#E0E0E0]" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} className="rounded-[12px]">ביטול</Button>
+          <Button
+            onClick={handleSubmit}
+            className="bg-[#4682B4] hover:bg-[#2C3E50] text-white rounded-[12px]"
+            disabled={!formData.client_id || !formData.account_name}
+          >
+            שמור
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Client Group Accordion Header — AYOA Organic Style ─────────
 function ClientGroupHeader({
   clientName, client, accounts, isExpanded, onToggle,
@@ -522,6 +684,8 @@ export default function ReconciliationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingRec, setEditingRec] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null);
+  const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [drawerClient, setDrawerClient] = useState(null);
 
   // Sorting
@@ -543,15 +707,27 @@ export default function ReconciliationsPage() {
 
   useEffect(() => { loadData(); }, []);
 
-  // Bi-directional sync listener
+  // Bi-directional sync listener — reload whenever another page updates accounts/reconciliations
   useEffect(() => {
     const handler = (e) => {
-      if (e.detail?.source === 'reconciliations') return; // skip own events
+      if (e.detail?.source === 'Reconciliations') return; // skip events dispatched by this page
       console.log('[Reconciliations] 📡 Data synced from:', e.detail?.source);
       loadData();
     };
     window.addEventListener('calmplan:data-synced', handler);
     return () => window.removeEventListener('calmplan:data-synced', handler);
+  }, []);
+
+  // Refresh data when the tab/page becomes visible again (covers cross-tab and back-nav cases)
+  useEffect(() => {
+    const onVisibility = () => { if (document.visibilityState === 'visible') loadData(); };
+    const onFocus = () => loadData();
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   // Listen for tree changes → reload (e.g., reconciliation node disabled in Architect)
@@ -561,17 +737,6 @@ export default function ReconciliationsPage() {
       loadData();
     });
     return unsub;
-  }, []);
-
-  // Listen for data-synced events (e.g., account updated in ClientAccountsManager)
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.detail?.source === 'Reconciliations') return; // skip own events
-      console.log('[Reconciliations] 📡 Data synced — reloading...');
-      loadData();
-    };
-    window.addEventListener('calmplan:data-synced', handler);
-    return () => window.removeEventListener('calmplan:data-synced', handler);
   }, []);
 
   const loadData = async () => {
@@ -654,6 +819,29 @@ export default function ReconciliationsPage() {
       }));
     } catch (error) {
       console.error("Error in bulk update:", error);
+    }
+  };
+
+  const handleSaveAccount = async (accountData) => {
+    try {
+      const client = clients.find(c => c.id === accountData.client_id);
+      const payload = { ...accountData, client_name: client?.name || accountData.client_name };
+      if (accountData.id) {
+        await ClientAccount.update(accountData.id, payload);
+        toast.success('החשבון עודכן');
+      } else {
+        await ClientAccount.create(payload);
+        toast.success('החשבון נוסף');
+      }
+      setShowAccountDialog(false);
+      setEditingAccount(null);
+      await loadData();
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', {
+        detail: { type: 'client_account', source: 'Reconciliations', timestamp: new Date().toISOString() }
+      }));
+    } catch (error) {
+      console.error('Error saving account:', error);
+      toast.error('שגיאה בשמירת חשבון');
     }
   };
 
@@ -887,6 +1075,14 @@ export default function ReconciliationsPage() {
               עדכון גורף ({selectedAccounts.size})
             </Button>
           )}
+          <Button
+            variant="outline"
+            className="border-[#4682B4]/40 text-[#4682B4] hover:bg-[#4682B4]/10 rounded-xl text-xs shadow-sm"
+            onClick={() => { setEditingAccount(null); setShowAccountDialog(true); }}
+          >
+            <Plus className="w-3.5 h-3.5 ms-1.5" />
+            הוסף חשבון
+          </Button>
           <Button
             className="bg-[#4682B4] hover:bg-[#2C3E50] text-white rounded-xl text-xs shadow-sm"
             onClick={() => { setEditingRec(null); setShowEditDialog(true); }}
@@ -1599,6 +1795,15 @@ export default function ReconciliationsPage() {
         open={showEditDialog}
         onClose={() => { setShowEditDialog(false); setEditingRec(null); }}
         onSave={handleSaveReconciliation}
+      />
+
+      {/* ── Account Add/Edit Dialog (bi-directional sync with ClientAccountsManager) ─── */}
+      <AccountEditDialog
+        account={editingAccount}
+        clients={clients}
+        open={showAccountDialog}
+        onClose={() => { setShowAccountDialog(false); setEditingAccount(null); }}
+        onSave={handleSaveAccount}
       />
 
       {/* ── Bulk Action Dialog ─────────────────────────────────── */}

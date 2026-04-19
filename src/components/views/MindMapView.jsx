@@ -118,7 +118,7 @@ const STATUS_LABELS = {
   sent_for_review:            'הועבר לעיון',
   ready_to_broadcast:         'מוכן לשידור',
   reported_pending_payment:   'שודר, ממתין לתשלום',
-  needs_corrections:          'לבצע תיקונים',
+  needs_corrections:          'לבצע תיקונים/השלמות',
   production_completed:       'הושלם ייצור',
 };
 

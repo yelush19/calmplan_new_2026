@@ -150,6 +150,7 @@ const mondayStatusMapping = {
   'לבצע': 'not_started',
   'הועבר לעיון': 'sent_for_review',
   'לבצע תיקונים': 'needs_corrections',
+  'לבצע תיקונים/השלמות': 'needs_corrections',
 };
 
 // Time period tabs — dynamic based on actual reporting months in tasks

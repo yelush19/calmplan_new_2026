@@ -999,7 +999,7 @@ export const STATUS_CONFIG = {
   review_after_corrections:   { label: 'הועבר לעיון לאחר תיקונים', bg: 'bg-violet-200', text: 'text-violet-800', border: 'border-violet-300', priority: 3.2 },
   ready_to_broadcast:         { label: 'מוכן לשידור',          bg: 'bg-teal-200',    text: 'text-teal-800',    border: 'border-teal-300',    priority: 3.5 },
   reported_pending_payment:   { label: 'שודר, ממתין לתשלום',   bg: 'bg-indigo-200',  text: 'text-indigo-800',  border: 'border-indigo-300',  priority: 4 },
-  needs_corrections:          { label: 'לבצע תיקונים',         bg: 'bg-orange-200',  text: 'text-orange-800',  border: 'border-orange-300',  priority: 3 },
+  needs_corrections:          { label: 'לבצע תיקונים/השלמות',  bg: 'bg-orange-200',  text: 'text-orange-800',  border: 'border-orange-300',  priority: 3 },
   production_completed:       { label: 'הושלם ייצור',          bg: 'bg-emerald-400', text: 'text-white',       border: 'border-emerald-500', priority: 5 },
 };
 
@@ -1009,7 +1009,7 @@ export const TASK_STATUS_CONFIG = {
   sent_for_review:            { text: 'הועבר לעיון',          color: 'bg-purple-100 text-purple-700',   dot: 'bg-purple-500' },
   ready_to_broadcast:         { text: 'מוכן לשידור',          color: 'bg-teal-100 text-teal-700',       dot: 'bg-teal-500' },
   reported_pending_payment:   { text: 'שודר, ממתין לתשלום',   color: 'bg-indigo-100 text-indigo-700',   dot: 'bg-indigo-500' },
-  needs_corrections:          { text: 'לבצע תיקונים',         color: 'bg-orange-100 text-orange-700',   dot: 'bg-orange-500' },
+  needs_corrections:          { text: 'לבצע תיקונים/השלמות',  color: 'bg-orange-100 text-orange-700',   dot: 'bg-orange-500' },
   production_completed:       { text: 'הושלם ייצור',          color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
 };
 
