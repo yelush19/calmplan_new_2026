@@ -136,6 +136,26 @@ export function getWorkDaysBefore(dateStr, count) {
 }
 
 /**
+ * Count N work days after a given date (skipping Fri/Sat/holidays).
+ * Returns the date string of the Nth work day after the target.
+ * @param {string} dateStr - Start date (YYYY-MM-DD)
+ * @param {number} count - Number of work days to advance
+ * @returns {string} Date string (YYYY-MM-DD)
+ */
+export function getWorkDaysAfter(dateStr, count) {
+  let d = new Date(dateStr + 'T12:00:00');
+  let remaining = count;
+  while (remaining > 0) {
+    d.setDate(d.getDate() + 1);
+    const ds = d.toISOString().slice(0, 10);
+    if (isWorkDay(ds)) {
+      remaining--;
+    }
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+/**
  * Adjust a deadline that falls on a non-work day to the next work day.
  * Skips Fri/Sat AND holidays.
  * @param {number} year

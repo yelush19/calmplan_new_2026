@@ -117,7 +117,7 @@ export const PAYROLL_SERVICES = {
     ],
   },
 
-  // דיווח מילואים לביטוח לאומי — לא שגרתי, נוצר ידנית כשיש עובדים במילואים
+  // דיווח מילואים לביטוח לאומי — לא שגרתי, נוצר כשמסמנים "היה מילואים" בייצור שכר
   reserve_report: {
     key: 'reserve_report',
     label: 'דיווח מילואים לב"ל',
@@ -126,10 +126,10 @@ export const PAYROLL_SERVICES = {
     taskCategories: ['מילואים', 'work_reserve_claims'],
     createCategory: 'מילואים',
     depends_on_nodes: ['P1_social_security'],
-    manual_only: true,  // NOT auto-injected — only created manually per month
+    manual_only: true,  // NOT auto-injected — only created when user marks reserve in payroll production
     steps: [
-      { key: 'collect_data',   label: 'קבלת נתוני מילואים מעובד', icon: 'inbox' },
-      { key: 'report_bl',      label: 'דיווח לביטוח לאומי',        icon: 'send' },
+      { key: 'generate_file',            label: 'הפקת קובץ',           icon: 'file-text' },
+      { key: 'report_in_payroll_system', label: 'דיווח במערכת שכר',    icon: 'send' },
     ],
   },
 };

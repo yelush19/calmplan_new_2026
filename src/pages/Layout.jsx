@@ -125,6 +125,7 @@ const getSidebarSections = () => ({
         { name: "ייצור שכר",    href: createPageUrl("PayrollDashboard") + "?service=payroll",                  icon: Calculator },
         { name: "ביטוח לאומי",  href: createPageUrl("PayrollReportsDashboard") + "?service=social_security",   icon: Calculator },
         { name: "ניכויים",      href: createPageUrl("PayrollReportsDashboard") + "?service=deductions",        icon: Calculator },
+        { name: "דיווחי מילואים", href: createPageUrl("PayrollReportsDashboard") + "?service=reserve_report",  icon: Calculator },
         // ── הנה"ח ──
         // bookkeeping מוזרק ל-TaxReportsDashboard רק כשה-?service= פעיל
         // (לא בברירת המחדל — כדי לא לזהם את ה-default render של דיווחי המס).
@@ -137,6 +138,7 @@ const getSidebarSections = () => ({
         { name: "ייצור + הפצה", href: createPageUrl("PayrollDashboard"), icon: Zap },
         { name: "פנסיות וקרנות", href: createPageUrl("AdditionalServicesDashboard"), icon: LayoutGrid },
         { name: "דיווחים שוטפים (102)", href: createPageUrl("PayrollReportsDashboard"), icon: FileBarChart },
+        { name: "דיווחי מילואים", href: createPageUrl("PayrollReportsDashboard") + "?service=reserve_report", icon: FileBarChart },
         { name: "דיווחים תקופתיים", href: createPageUrl("PeriodicSummaryReports"), icon: FileBarChart },
       ]},
       { key: 'sg_bookkeeping', label: '📊 הנהלת חשבונות', icon: FileBarChart, items: [
