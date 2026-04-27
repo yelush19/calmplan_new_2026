@@ -48,6 +48,7 @@ import TaxWorkbookView from '@/components/dashboard/TaxWorkbookView';
 import FocusMapView from '@/components/canvas/FocusMapView';
 import AyoaWorkflowView from '@/components/canvas/AyoaWorkflowView';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
+import { createReserveTask, removeReserveTaskIfUnstarted } from '@/engines/reserveDutyEngine';
 
 // P1 Board 1 — ייצור + הפצה: שכר → תלושים → מס"ב עובדים
 // Board 2 (פנסיות): PeriodicSummaryReports
@@ -81,6 +82,7 @@ export default function PayrollDashboardPage() {
   const serviceFilter = searchParams.get('service') || '';
 
   const [tasks, setTasks] = useState([]);
+  const [reserveTasks, setReserveTasks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -138,6 +140,11 @@ export default function PayrollDashboardPage() {
       // Filter to ONLY payroll categories — prevents other services from appearing in Kanban/Gantt/Radial
       const payrollOnly = allRaw.filter(t => allPayrollCategories.includes(t.category));
       setTasks(payrollOnly);
+      // Reserve-duty tasks live outside payroll categories but are linked per
+      // (client, reporting_month). Keep them in a side-state so the toggle on
+      // each payroll row can detect whether a task already exists.
+      const reserveOnly = allRaw.filter(t => t.category === 'מילואים' || t.category === 'work_reserve_claims');
+      setReserveTasks(reserveOnly);
       setClients(clientsData || []);
       syncCompletedTaskSteps(payrollOnly);
     } catch (error) {
@@ -509,6 +516,39 @@ export default function PayrollDashboardPage() {
     setSelectedMonth(c => dir === 'prev' ? subMonths(c, 1) : addMonths(c, 1));
   };
 
+  const handleReserveToggle = useCallback(async (payrollTask, existingReserveTask, reportingMonth) => {
+    if (!reportingMonth) return;
+    try {
+      if (existingReserveTask) {
+        const result = await removeReserveTaskIfUnstarted({
+          clientName: payrollTask.client_name,
+          reportingMonth,
+          tasks: reserveTasks,
+        });
+        if (result.removed) {
+          setReserveTasks(prev => prev.filter(t => t.id !== existingReserveTask.id));
+          window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'reserve-removed', source: 'payroll' } }));
+        } else if (result.reason === 'already_started') {
+          await confirm({
+            title: 'לא ניתן להסיר',
+            description: 'משימת דיווח המילואים כבר החלה בביצוע — גש ללוח "דיווחי מילואים" כדי לבטל ידנית.',
+            confirmText: 'הבנתי',
+            destructive: false,
+          });
+        }
+      } else {
+        const client = clientByName[payrollTask.client_name] || { name: payrollTask.client_name, id: payrollTask.client_id };
+        const created = await createReserveTask({ client, reportingMonth, tasks: reserveTasks });
+        if (created) {
+          setReserveTasks(prev => (prev.some(t => t.id === created.id) ? prev : [...prev, created]));
+          window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'reserve-created', source: 'payroll' } }));
+        }
+      }
+    } catch (err) {
+      console.error('Reserve-duty toggle failed:', err);
+    }
+  }, [clientByName, reserveTasks, confirm]);
+
   return (
     <div className="p-4 md:p-6 space-y-5 bg-white dark:bg-gray-900 border border-[#E0E0E0] dark:border-gray-700 shadow-xl rounded-[32px]">
       <div className="flex items-center gap-2 flex-wrap">
@@ -753,6 +793,8 @@ export default function PayrollDashboardPage() {
                       service={service}
                       clientRows={clientRows}
                       allTasks={filteredTasks}
+                      reserveTasks={reserveTasks}
+                      onReserveToggle={handleReserveToggle}
                       onToggleStep={handleToggleStep}
                       onDateChange={handleDateChange}
                       onStatusChange={handleStatusChange}

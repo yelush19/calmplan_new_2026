@@ -5,7 +5,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar, Zap, FastForward, Paperclip, GripVertical, StickyNote, Brain, Copy } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, Plus, Trash2, Pencil, Pin, FileText, Timer, Calendar, Zap, FastForward, Paperclip, GripVertical, StickyNote, Brain, Copy, Shield, ShieldCheck, Lock } from 'lucide-react';
 import { differenceInDays, parseISO, isValid, format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ResizableTable from '@/components/ui/ResizableTable';
@@ -176,6 +176,8 @@ export default function GroupedServiceTable({
   onToggleSelect,
   onReorder,
   allTasks = [],
+  reserveTasks = [],
+  onReserveToggle,
 }) {
   const relevantRows = clientRows;
   const completedCount = relevantRows.filter(r => r.task.status === 'production_completed').length;
@@ -403,6 +405,8 @@ export default function GroupedServiceTable({
                                     isSelected={selectedTaskIds.has(task.id)}
                                     onToggleSelect={onToggleSelect}
                                     allTasks={allTasks}
+                                    reserveTasks={reserveTasks}
+                                    onReserveToggle={onReserveToggle}
                                   />
                                 )}
                               </Draggable>
@@ -427,7 +431,7 @@ export default function GroupedServiceTable({
 // CLIENT ROW
 // =====================================================
 
-const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client, service, accent, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote, bulkMode, isSelected, onToggleSelect, dragHandleProps, draggableProps, isDragging, allTasks = [] }, ref) {
+const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client, service, accent, isEven, onToggleStep, onDateChange, onStatusChange, onPaymentDateChange, onSubTaskChange, onAttachmentUpdate, getClientIds, onEdit, onDelete, onNote, bulkMode, isSelected, onToggleSelect, dragHandleProps, draggableProps, isDragging, allTasks = [], reserveTasks = [], onReserveToggle }, ref) {
   const steps = getTaskProcessSteps(task);
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.not_started;
   const allDone = service.steps.every(s => steps[s.key]?.done);
@@ -620,6 +624,58 @@ const ClientRow = React.forwardRef(function ClientRow({ clientName, task, client
               if (rem < 0) return <Badge className="text-[12px] px-1 py-0 bg-amber-100 text-amber-700 shrink-0">-{Math.abs(rem)}d</Badge>;
               if (rem <= 3) return <Badge className="text-[12px] px-1 py-0 bg-amber-100 text-amber-700 shrink-0">{rem}d</Badge>;
               return null;
+            })()}
+            {service.key === 'payroll' && onReserveToggle && (() => {
+              const reportingMonth = task.reporting_month || (task.due_date ? (() => {
+                const d = parseISO(task.due_date);
+                if (!isValid(d)) return null;
+                const m = d.getMonth() === 0 ? 11 : d.getMonth() - 1;
+                const y = d.getMonth() === 0 ? d.getFullYear() - 1 : d.getFullYear();
+                return `${y}-${String(m + 1).padStart(2, '0')}`;
+              })() : null);
+              const reserveTask = reserveTasks.find(rt =>
+                rt.client_name === clientName && rt.reporting_month === reportingMonth
+              );
+              const hasReserve = !!reserveTask;
+              const started = reserveTask && (
+                (reserveTask.status && reserveTask.status !== 'waiting_for_materials' && reserveTask.status !== 'not_started') ||
+                Object.values(reserveTask.process_steps || {}).some((s) => s?.done)
+              );
+              const disabled = started; // locked once work began
+              const handleClick = (e) => {
+                e.stopPropagation();
+                if (disabled) return;
+                onReserveToggle(task, reserveTask, reportingMonth);
+              };
+              if (hasReserve) {
+                return (
+                  <button
+                    type="button"
+                    onClick={handleClick}
+                    disabled={disabled}
+                    className={`shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-bold border transition-colors ${
+                      disabled
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300 cursor-not-allowed'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                    }`}
+                    title={disabled ? 'משימת מילואים כבר החלה — לא ניתן להסיר' : 'לחץ להסרת משימת המילואים לחודש זה'}
+                  >
+                    {disabled ? <Lock className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
+                    מילואים
+                  </button>
+                );
+              }
+              return (
+                <button
+                  type="button"
+                  onClick={handleClick}
+                  className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-bold border border-dashed border-slate-300 text-slate-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                  title="סמן אם היה מילואים החודש — תיווצר משימת דיווח מילואים לב״ל"
+                >
+                  <Shield className="w-3 h-3" />
+                  מילואים?
+                </button>
+              );
             })()}
           </div>
         </td>
