@@ -14,7 +14,7 @@ import {
   ChevronDown, ChevronRight, ChevronUp, RefreshCw, Pin, ExternalLink, Plus,
   ArrowUpDown, Clock, AlertTriangle, Briefcase, Home as HomeIcon, X,
   Network, BarChart3, GitBranchPlus, Table2,
-  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target, ArrowRight
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target, ArrowRight, BookOpen
 } from "lucide-react";
 import { cleanupGhostTasks } from '@/api/functions';
 import MindMapView from "../components/views/MindMapView";
@@ -115,6 +115,7 @@ const STATUS_PIPELINE = [
   { key: 'not_started', label: 'לבצע', color: '#64748B', bg1: '#f8fafc', bg2: '#f1f5f9', Icon: PlayCircle },
   { key: 'ready_to_broadcast', label: 'מוכן לשידור', color: '#0D9488', bg1: '#f0fdfa', bg2: '#ccfbf1', Icon: Radio },
   { key: 'reported_pending_payment', label: 'ממתין לתשלום', color: '#4F46E5', bg1: '#eef2ff', bg2: '#e0e7ff', Icon: Send },
+  { key: 'awaiting_recording', label: 'ממתין לרישום', color: '#0284C7', bg1: '#f0f9ff', bg2: '#e0f2fe', Icon: BookOpen },
   { key: 'sent_for_review', label: 'הועבר לעיון', color: '#7C3AED', bg1: '#faf5ff', bg2: '#f3e8ff', Icon: Eye },
   { key: 'review_after_corrections', label: 'לעיון לאחר תיקונים', color: '#8B5CF6', bg1: '#faf5ff', bg2: '#ede9fe', Icon: Eye },
   { key: 'needs_corrections', label: 'לתיקון', color: '#EA580C', bg1: '#fff7ed', bg2: '#ffedd5', Icon: FileWarning },
