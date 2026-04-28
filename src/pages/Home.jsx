@@ -101,6 +101,7 @@ import {
   areAllStepsDone,
 } from '@/config/processTemplates';
 import { evaluateAuthorityStatus } from '@/engines/taskCascadeEngine';
+import { getEffectiveStatus } from '@/utils/effectiveStatus';
 
 // Error Boundary to catch React #310 and other render errors
 class MapErrorBoundary extends Component {
@@ -231,8 +232,14 @@ export default function HomePage() {
       // their primary workflow (דיווח+תשלום) and are only awaiting bookkeeping
       // recording — those are surfaced in their own dedicated section so they
       // don't visually compete with tasks that still need real work.
-      const activeTasks = allTasks.filter(t => t.status !== 'production_completed' && t.status !== 'awaiting_recording');
-      const awaitingRecording = allTasks.filter(t => t.status === 'awaiting_recording');
+      // Uses getEffectiveStatus so legacy tasks whose persisted status is
+      // stale (e.g. submission+payment ticked but task.status still
+      // "not_started") are still classified correctly.
+      const activeTasks = allTasks.filter(t => {
+        const s = getEffectiveStatus(t);
+        return s !== 'production_completed' && s !== 'awaiting_recording';
+      });
+      const awaitingRecording = allTasks.filter(t => getEffectiveStatus(t) === 'awaiting_recording');
 
       const overdue = activeTasks.filter(task => {
         const d = task.due_date;
@@ -377,8 +384,11 @@ export default function HomePage() {
         const newAllTasks = (prev.allTasks || []).map(t =>
           t.id === task.id ? { ...t, status: newStatus } : t
         );
-        const newActiveTasks = newAllTasks.filter(t => t.status !== 'production_completed' && t.status !== 'awaiting_recording');
-        const newAwaitingRecording = newAllTasks.filter(t => t.status === 'awaiting_recording');
+        const newActiveTasks = newAllTasks.filter(t => {
+          const s = getEffectiveStatus(t);
+          return s !== 'production_completed' && s !== 'awaiting_recording';
+        });
+        const newAwaitingRecording = newAllTasks.filter(t => getEffectiveStatus(t) === 'awaiting_recording');
         return {
           ...prev,
           allTasks: newAllTasks,
@@ -425,8 +435,11 @@ export default function HomePage() {
       setData(prev => {
         if (!prev) return prev;
         const newAllTasks = (prev.allTasks || []).map(t => t.id === task.id ? { ...t, ...updatePayload } : t);
-        const newActive = newAllTasks.filter(t => t.status !== 'production_completed' && t.status !== 'awaiting_recording');
-        const newAwaitingRec = newAllTasks.filter(t => t.status === 'awaiting_recording');
+        const newActive = newAllTasks.filter(t => {
+          const s = getEffectiveStatus(t);
+          return s !== 'production_completed' && s !== 'awaiting_recording';
+        });
+        const newAwaitingRec = newAllTasks.filter(t => getEffectiveStatus(t) === 'awaiting_recording');
         const updateInList = (list) => list
           .map(t => t.id === task.id ? { ...t, ...updatePayload } : t)
           .filter(t => !(t.id === task.id && (updatePayload.status === 'production_completed' || updatePayload.status === 'awaiting_recording')));

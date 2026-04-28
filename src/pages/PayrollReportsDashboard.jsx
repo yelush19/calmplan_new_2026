@@ -168,6 +168,17 @@ export default function PayrollReportsDashboardPage() {
         await Task.update(task.id, { status: 'production_completed' });
         setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'production_completed' } : t));
         syncNotesWithTaskStatus(task.id, 'production_completed');
+      } else {
+        // Cascade backfill: bring legacy tasks (saved before the awaiting_recording
+        // status existed) in line with what the cascade would say. Without
+        // this, a task with submission+payment ticked but recording untouched
+        // stays on "לבצע" forever and HOME flags it as overdue.
+        const cascade = evaluateAuthorityStatus(task, task.process_steps || {});
+        if (cascade?.status && cascade.status !== task.status) {
+          await Task.update(task.id, { status: cascade.status });
+          setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: cascade.status } : t));
+          syncNotesWithTaskStatus(task.id, cascade.status);
+        }
       }
     }
   };
