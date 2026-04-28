@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Paperclip, Pencil, Pin, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
 import {
   TASK_STATUS_CONFIG,
@@ -399,8 +399,27 @@ export default function AyoaMiniMap({
   onEditTask,
   onPaymentDateChange,
   onNote,
+  onToggleStep,
 }) {
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [expandedSteps, setExpandedSteps] = useState({});
+  const navigate = useNavigate();
+
+  // Click on the row body (not on a control) navigates to the task's
+  // owning dashboard in table mode. Interactive children
+  // (Select, buttons, attachments popover) already stopPropagation,
+  // so they don't accidentally trigger this.
+  const handleRowClick = (task) => (e) => {
+    if (e.target.closest('button, a, [role="combobox"], input, select, textarea, [data-no-row-nav]')) {
+      return;
+    }
+    const url = getDashboardUrlForTask(task, { view: 'table' });
+    if (url) navigate(url);
+  };
+
+  const toggleStepsExpanded = (taskId) => {
+    setExpandedSteps((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
 
   // Stage 5.9: groupByServiceDomain replaces groupByClient. Each circle
   // now represents a WORK DOMAIN (שכר / מע"מ / ביטוח לאומי / ...), not a
@@ -688,10 +707,18 @@ export default function AyoaMiniMap({
                   </div>
                   {statusTasks.map((task) => {
                     const cfg = TASK_STATUS_CONFIG[migrateStatus(task.status)];
+                    const taskService = getServiceForTask(task);
+                    const taskSteps = taskService?.steps || [];
+                    const stepsExpanded = !!expandedSteps[task.id];
+                    const navLabel = getDashboardLabelForTask(task);
                     return (
                       <div
                         key={task.id}
-                        className={`p-3 rounded-xl mb-1.5 ${cfg?.color || 'bg-white text-gray-700'}`}
+                        onClick={handleRowClick(task)}
+                        role="link"
+                        tabIndex={0}
+                        title={`לחיצה על השורה — פתח ב${navLabel} (טבלה)`}
+                        className={`p-3 rounded-xl mb-1.5 cursor-pointer hover:ring-2 hover:ring-emerald-200 transition-shadow ${cfg?.color || 'bg-white text-gray-700'}`}
                         style={{ border: '1px solid #EEF1F5' }}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -774,16 +801,15 @@ export default function AyoaMiniMap({
                               </button>
                             )}
                             {(() => {
-                              const url = getDashboardUrlForTask(task);
+                              const url = getDashboardUrlForTask(task, { view: 'table' });
                               if (!url) return null;
-                              const label = getDashboardLabelForTask(task);
                               return (
                                 <Link
                                   to={url}
                                   className="p-1 rounded hover:bg-white/60 text-slate-400 hover:text-emerald-700"
                                   onClick={(e) => e.stopPropagation()}
-                                  aria-label={`פתח ב${label}`}
-                                  title={`פתח ב${label}`}
+                                  aria-label={`פתח ב${navLabel}`}
+                                  title={`פתח ב${navLabel}`}
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </Link>
@@ -854,6 +880,65 @@ export default function AyoaMiniMap({
                         {task.due_date && (
                           <div className="text-[11px] mt-0.5 opacity-70">
                             {task.due_date}
+                          </div>
+                        )}
+                        {/* Inline step controls — same template as the dashboards
+                            so the user can advance a task through its workflow
+                            without navigating away. Only shown when the parent
+                            wires onToggleStep AND the task has a service template
+                            with steps. Collapsed by default to keep the drawer
+                            scannable. */}
+                        {onToggleStep && taskSteps.length > 0 && (
+                          <div className="mt-2" data-no-row-nav>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleStepsExpanded(task.id);
+                              }}
+                              className="text-[11px] font-semibold inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/70 text-slate-600 hover:bg-white"
+                              title={stepsExpanded ? 'הסתר שלבים' : 'הצג שלבים'}
+                            >
+                              <span>שלבים</span>
+                              <span className="opacity-70">
+                                {(() => {
+                                  const steps = task.process_steps || {};
+                                  const done = taskSteps.filter((s) => steps[s.key]?.done).length;
+                                  return `${done}/${taskSteps.length}`;
+                                })()}
+                              </span>
+                            </button>
+                            {stepsExpanded && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {taskSteps.map((step) => {
+                                  const stepData = (task.process_steps || {})[step.key] || { done: false };
+                                  const isDone = !!stepData.done;
+                                  return (
+                                    <button
+                                      key={step.key}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleStep(task, step.key);
+                                      }}
+                                      className={`text-[11px] inline-flex items-center gap-1 px-2 py-1 rounded-full border transition-colors ${
+                                        isDone
+                                          ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
+                                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                      }`}
+                                      title={isDone ? 'בטל סימון' : 'סמן כבוצע'}
+                                    >
+                                      <span
+                                        className={`inline-block w-3 h-3 rounded-sm border ${
+                                          isDone ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300'
+                                        }`}
+                                      />
+                                      <span>{step.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

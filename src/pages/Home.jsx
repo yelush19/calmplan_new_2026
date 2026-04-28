@@ -93,7 +93,14 @@ function sortByPriority(tasks) {
   });
 }
 
-import { TASK_STATUS_CONFIG as statusConfig } from '@/config/processTemplates';
+import {
+  TASK_STATUS_CONFIG as statusConfig,
+  getTaskProcessSteps,
+  toggleStep,
+  markAllStepsDone,
+  areAllStepsDone,
+} from '@/config/processTemplates';
+import { evaluateAuthorityStatus } from '@/engines/taskCascadeEngine';
 
 // Error Boundary to catch React #310 and other render errors
 class MapErrorBoundary extends Component {
@@ -387,6 +394,59 @@ export default function HomePage() {
       });
     } catch (err) {
       console.error('שגיאה בעדכון סטטוס:', err);
+    }
+  };
+
+  // Inline step toggle from the AyoaMiniMap drawer. Matches the cascade
+  // semantics used in PayrollReportsDashboard / TaxReportsDashboard so the
+  // status flows through ready_to_broadcast → reported_pending_payment →
+  // awaiting_recording → production_completed without the user having to
+  // open the dashboard for routine ticks.
+  const handleToggleStep = async (task, stepKey) => {
+    try {
+      const currentSteps = getTaskProcessSteps(task);
+      const updatedSteps = toggleStep(currentSteps, stepKey);
+      const updatedTask = { ...task, process_steps: updatedSteps };
+      const allDone = areAllStepsDone(updatedTask);
+      const updatePayload = { process_steps: updatedSteps };
+
+      const authorityResult = evaluateAuthorityStatus(updatedTask, updatedSteps);
+      if (authorityResult?.status && authorityResult.status !== task.status) {
+        updatePayload.status = authorityResult.status;
+      } else if (allDone && task.status !== 'production_completed') {
+        updatePayload.status = 'production_completed';
+      }
+      if (updatePayload.status === 'production_completed') {
+        updatePayload.process_steps = markAllStepsDone({ ...task, process_steps: updatePayload.process_steps });
+      }
+
+      await Task.update(task.id, updatePayload);
+
+      setData(prev => {
+        if (!prev) return prev;
+        const newAllTasks = (prev.allTasks || []).map(t => t.id === task.id ? { ...t, ...updatePayload } : t);
+        const newActive = newAllTasks.filter(t => t.status !== 'production_completed' && t.status !== 'awaiting_recording');
+        const newAwaitingRec = newAllTasks.filter(t => t.status === 'awaiting_recording');
+        const updateInList = (list) => list
+          .map(t => t.id === task.id ? { ...t, ...updatePayload } : t)
+          .filter(t => !(t.id === task.id && (updatePayload.status === 'production_completed' || updatePayload.status === 'awaiting_recording')));
+        return {
+          ...prev,
+          allTasks: newAllTasks,
+          activeTasks: newActive,
+          awaitingRecording: newAwaitingRec,
+          overdue: updateInList(prev.overdue),
+          today: updateInList(prev.today),
+          upcoming: updateInList(prev.upcoming),
+          payment: prev.payment.map(t => t.id === task.id ? { ...t, ...updatePayload } : t),
+        };
+      });
+      if (updatePayload.status) {
+        syncNotesWithTaskStatus(task.id, updatePayload.status);
+      }
+      window.dispatchEvent(new CustomEvent('calmplan:data-synced', { detail: { collection: 'tasks', type: 'step-toggle', source: 'home' } }));
+    } catch (err) {
+      console.error('שגיאה בעדכון שלב:', err);
     }
   };
 
@@ -709,6 +769,7 @@ export default function HomePage() {
           onEditTask={setEditingTask}
           onPaymentDateChange={handlePaymentDateChange}
           onNote={setNoteTask}
+          onToggleStep={handleToggleStep}
         />
 
         {/* Stage 5.9: standalone CategoryBreakdown removed — it duplicated

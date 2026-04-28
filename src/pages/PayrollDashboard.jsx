@@ -97,7 +97,12 @@ export default function PayrollDashboardPage() {
   useEffect(() => {
     try { localStorage.setItem('calmplan_payroll_month', selectedMonth.toISOString()); } catch {}
   }, [selectedMonth]);
-  const [viewMode, setViewMode] = useState('table');
+  const [viewMode, setViewMode] = useState(() => searchParams.get('view') || 'table');
+  useEffect(() => {
+    const v = searchParams.get('view');
+    if (v && v !== viewMode) setViewMode(v);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('view')]);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);

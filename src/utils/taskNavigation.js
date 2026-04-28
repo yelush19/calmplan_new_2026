@@ -107,10 +107,12 @@ function resolveServiceKey(task) {
  * @param {Object} task - The task object
  * @param {Object} [options]
  * @param {boolean} [options.includeHighlight=true] - Append &highlight=<task.id>
+ * @param {string} [options.view='table'] - Initial dashboard view mode
+ *   ('table'|'workbook'|'kanban'|...). Set to null to skip the param.
  * @returns {string|null} URL to navigate to, or null if unresolvable
  */
 export function getDashboardUrlForTask(task, options = {}) {
-  const { includeHighlight = true } = options;
+  const { includeHighlight = true, view = 'table' } = options;
   if (!task) return null;
 
   // Home (life-side) tasks → Tasks page (no specialized dashboard)
@@ -127,6 +129,7 @@ export function getDashboardUrlForTask(task, options = {}) {
     const params = [];
     if (target.service) params.push(`service=${encodeURIComponent(target.service)}`);
     if (task.client_name) params.push(`client=${encodeURIComponent(task.client_name)}`);
+    if (view) params.push(`view=${encodeURIComponent(view)}`);
     if (includeHighlight && task.id) params.push(`highlight=${encodeURIComponent(task.id)}`);
     if (params.length > 0) url += `?${params.join('&')}`;
     return url;
