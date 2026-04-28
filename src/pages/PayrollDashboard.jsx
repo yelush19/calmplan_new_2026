@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader, RefreshCw, Briefcase, ChevronLeft, ChevronRight,
   ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus, ChevronDown, Trash2,
-  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target, GitBranchPlus
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target, GitBranchPlus, BookOpen
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
@@ -67,6 +67,7 @@ const STATUS_PIPELINE = [
   { key: 'not_started',          label: 'לבצע',                color: '#64748B', bg1: '#f8fafc', bg2: '#f1f5f9', Icon: PlayCircle },
   { key: 'ready_to_broadcast',   label: 'מוכן לשידור',         color: '#0D9488', bg1: '#f0fdfa', bg2: '#ccfbf1', Icon: Radio },
   { key: 'reported_pending_payment', label: 'ממתין לתשלום',     color: '#4F46E5', bg1: '#eef2ff', bg2: '#e0e7ff', Icon: Send },
+  { key: 'awaiting_recording',   label: 'ממתין לרישום',        color: '#0284C7', bg1: '#f0f9ff', bg2: '#e0f2fe', Icon: BookOpen },
   { key: 'sent_for_review',      label: 'הועבר לעיון',         color: '#7C3AED', bg1: '#faf5ff', bg2: '#f3e8ff', Icon: Eye },
   { key: 'review_after_corrections', label: 'לעיון לאחר תיקונים', color: '#8B5CF6', bg1: '#f5f3ff', bg2: '#ede9fe', Icon: Eye },
   { key: 'needs_corrections',    label: 'לתיקון',              color: '#D97706', bg1: '#fffbeb', bg2: '#fef3c7', Icon: FileWarning },

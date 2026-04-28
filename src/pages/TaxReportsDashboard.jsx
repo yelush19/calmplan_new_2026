@@ -13,7 +13,7 @@ import {
   ArrowRight, Users, X, List, LayoutGrid, Search, GanttChart, Plus,
   Zap, Flame, ChevronDown, Network, Target, TrendingUp, Clock, GitBranchPlus,
   CheckSquare, Download, CalendarDays, AlertCircle, Hourglass, CheckCircle2,
-  Send, Radio, Eye, FileWarning, CircleCheck, Inbox, PlayCircle
+  Send, Radio, Eye, FileWarning, CircleCheck, Inbox, PlayCircle, BookOpen
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import CognitiveCapacityHeader from '@/components/dashboard/CognitiveCapacityHeader';
@@ -47,7 +47,7 @@ import {
   areAllStepsDone,
 } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
-import { getOpenPrerequisitesForCompletion } from '@/engines/taskCascadeEngine';
+import { getOpenPrerequisitesForCompletion, evaluateAuthorityStatus } from '@/engines/taskCascadeEngine';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import ClientRecurringTasks from '@/components/clients/ClientRecurringTasks';
@@ -77,6 +77,7 @@ const STATUS_PIPELINE = [
   { key: 'not_started',          label: 'לבצע',                color: '#64748B', bg1: '#f8fafc', bg2: '#f1f5f9', Icon: PlayCircle },
   { key: 'ready_to_broadcast',   label: 'מוכן לשידור',         color: '#0D9488', bg1: '#f0fdfa', bg2: '#ccfbf1', Icon: Radio },
   { key: 'reported_pending_payment', label: 'ממתין לתשלום',     color: '#4F46E5', bg1: '#eef2ff', bg2: '#e0e7ff', Icon: Send },
+  { key: 'awaiting_recording',   label: 'ממתין לרישום',        color: '#0284C7', bg1: '#f0f9ff', bg2: '#e0f2fe', Icon: BookOpen },
   { key: 'sent_for_review',      label: 'הועבר לעיון',         color: '#7C3AED', bg1: '#faf5ff', bg2: '#f3e8ff', Icon: Eye },
   { key: 'review_after_corrections', label: 'לעיון לאחר תיקונים', color: '#8B5CF6', bg1: '#f5f3ff', bg2: '#ede9fe', Icon: Eye },
   { key: 'needs_corrections',    label: 'לתיקון',              color: '#D97706', bg1: '#fff7ed', bg2: '#ffedd5', Icon: FileWarning },
@@ -469,11 +470,18 @@ export default function TaxReportsDashboardPage() {
       const updatedTask = { ...task, process_steps: updatedSteps };
       const allDone = areAllStepsDone(updatedTask);
       const updatePayload = { process_steps: updatedSteps };
-      if (allDone && task.status !== 'production_completed') {
+
+      // Authority cascade: surface intermediate statuses (ready_to_broadcast,
+      // reported_pending_payment, awaiting_recording, production_completed)
+      // before all steps are done.
+      const authorityResult = evaluateAuthorityStatus(updatedTask, updatedSteps);
+      if (authorityResult?.status && authorityResult.status !== task.status) {
+        updatePayload.status = authorityResult.status;
+      } else if (allDone && task.status !== 'production_completed') {
         updatePayload.status = 'production_completed';
-        if (!task.execution_date) {
-          updatePayload.execution_date = new Date().toISOString().split('T')[0];
-        }
+      }
+      if (updatePayload.status === 'production_completed' && !task.execution_date) {
+        updatePayload.execution_date = new Date().toISOString().split('T')[0];
       }
       // When toggling to production_completed, fill in all template steps
       // as done so the UI reflects the auto-completed state.

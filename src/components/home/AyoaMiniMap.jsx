@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Paperclip, Pencil, Pin } from 'lucide-react';
+import { Paperclip, Pencil, Pin, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
 import {
   TASK_STATUS_CONFIG,
@@ -25,6 +26,7 @@ import {
   migrateStatus,
   getServiceForTask,
 } from '@/config/processTemplates';
+import { getDashboardUrlForTask, getDashboardLabelForTask } from '@/utils/taskNavigation';
 
 // Phase 2: compact SVG "mind-map" overview of today's active clients.
 // Pure SVG — NO canvas, NO Konva. Clicking a circle opens a Drawer with
@@ -172,6 +174,7 @@ const STATUS_ORDER = [
   'needs_corrections',
   'ready_to_broadcast',
   'reported_pending_payment',
+  'awaiting_recording',
   'production_completed',
 ];
 
@@ -645,6 +648,22 @@ export default function AyoaMiniMap({
                                 <Pin className="w-3.5 h-3.5" />
                               </button>
                             )}
+                            {(() => {
+                              const url = getDashboardUrlForTask(task);
+                              if (!url) return null;
+                              const label = getDashboardLabelForTask(task);
+                              return (
+                                <Link
+                                  to={url}
+                                  className="p-1 rounded hover:bg-white/60 text-slate-400 hover:text-emerald-700"
+                                  onClick={(e) => e.stopPropagation()}
+                                  aria-label={`פתח ב${label}`}
+                                  title={`פתח ב${label}`}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </Link>
+                              );
+                            })()}
                             {onEditTask && (
                               <button
                                 type="button"

@@ -19,7 +19,8 @@ import {
 import { getActiveTreeTasks } from '@/utils/taskTreeFilter';
 import TaskSidePanel from "@/components/tasks/TaskSidePanel";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
-import { Pencil, Trash2, Pin } from "lucide-react";
+import { Pencil, Trash2, Pin, ExternalLink, BookOpen } from "lucide-react";
+import { getDashboardUrlForTask, getDashboardLabelForTask } from '@/utils/taskNavigation';
 import TaskToNoteDialog from "@/components/tasks/TaskToNoteDialog";
 import QuickAddTaskDialog from "@/components/tasks/QuickAddTaskDialog";
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
@@ -218,7 +219,13 @@ export default function HomePage() {
       in3Days.setDate(in3Days.getDate() + 3);
 
       const allTasks = rawTasks;
-      const activeTasks = allTasks.filter(t => t.status !== 'production_completed');
+      // Active tasks for HOME visualizations (circles, today/upcoming/overdue
+      // sections) exclude both fully-completed tasks AND tasks that finished
+      // their primary workflow (דיווח+תשלום) and are only awaiting bookkeeping
+      // recording — those are surfaced in their own dedicated section so they
+      // don't visually compete with tasks that still need real work.
+      const activeTasks = allTasks.filter(t => t.status !== 'production_completed' && t.status !== 'awaiting_recording');
+      const awaitingRecording = allTasks.filter(t => t.status === 'awaiting_recording');
 
       const overdue = activeTasks.filter(task => {
         const d = task.due_date;
@@ -275,6 +282,7 @@ export default function HomePage() {
       setData({
         allTasks,
         activeTasks,
+        awaitingRecording,
         overdue: sortedOverdue,
         today: sortedToday,
         mergedToday: sortByPriority([...overdue, ...todayTasks]),
@@ -337,7 +345,11 @@ export default function HomePage() {
         if (!prev) return prev;
         const updatedTask = { ...task, status: newStatus };
         const updateInList = (list) => list.map(t => t.id === task.id ? { ...t, status: newStatus } : t);
-        const filterCompleted = (list) => list.filter(t => !(t.id === task.id && newStatus === 'production_completed'));
+        // Remove this task from active lists when its new status pushes it
+        // out of the "things you still need to actively work on" set —
+        // covers both production_completed AND awaiting_recording.
+        const isLeavingActive = newStatus === 'production_completed' || newStatus === 'awaiting_recording';
+        const filterCompleted = (list) => list.filter(t => !(t.id === task.id && isLeavingActive));
 
         // When production completed, check if task should flow to payment tab
         const shouldMoveToPayment =
@@ -358,11 +370,13 @@ export default function HomePage() {
         const newAllTasks = (prev.allTasks || []).map(t =>
           t.id === task.id ? { ...t, status: newStatus } : t
         );
-        const newActiveTasks = newAllTasks.filter(t => t.status !== 'production_completed');
+        const newActiveTasks = newAllTasks.filter(t => t.status !== 'production_completed' && t.status !== 'awaiting_recording');
+        const newAwaitingRecording = newAllTasks.filter(t => t.status === 'awaiting_recording');
         return {
           ...prev,
           allTasks: newAllTasks,
           activeTasks: newActiveTasks,
+          awaitingRecording: newAwaitingRecording,
           overdue: newOverdue,
           today: newToday,
           mergedToday: sortByPriority([...newOverdue, ...newToday]),
@@ -567,6 +581,18 @@ export default function HomePage() {
                     <Clock className="w-3 h-3 text-slate-400" />
                     <span className="text-xs font-bold text-slate-500">{data.overdue.length}</span>
                   </div>
+                )}
+                {data.awaitingRecording?.length > 0 && (
+                  <Link
+                    to={createPageUrl("Tasks") + "?status=awaiting_recording"}
+                    className="flex items-center gap-1 hover:opacity-80"
+                    title="ממתין לרישום בהנה״ש — דיווח+תשלום בוצעו, חסר רק רישום"
+                  >
+                    <BookOpen className="w-3 h-3" style={{ color: '#0284C7' }} />
+                    <span className="text-xs font-bold" style={{ color: '#0284C7' }}>
+                      {data.awaitingRecording.length}
+                    </span>
+                  </Link>
                 )}
               </div>
             </div>
@@ -1137,6 +1163,22 @@ function TaskRow({ task, onStatusChange, onPaymentDateChange, onEdit, onNote, sh
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        {(() => {
+          const url = getDashboardUrlForTask(task);
+          if (!url) return null;
+          const label = getDashboardLabelForTask(task);
+          return (
+            <Link
+              to={url}
+              onClick={(e) => e.stopPropagation()}
+              className="p-1 h-auto rounded hover:bg-emerald-50 transition-colors inline-flex items-center"
+              title={`פתח ב${label}`}
+              aria-label={`פתח ב${label}`}
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-gray-400 hover:text-emerald-700" />
+            </Link>
+          );
+        })()}
         {onNote && (
           <Button variant="ghost" size="sm" onClick={() => onNote(task)} className="p-1 h-auto rounded hover:bg-amber-100 transition-colors" title="הוסף לפתק דביק">
             <Pin className="w-3.5 h-3.5 text-gray-400 hover:text-amber-600" />

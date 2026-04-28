@@ -89,7 +89,7 @@ function getTaskPhase(task) {
   if (isExplicitlyOpen) return 'process';
   const reportDone = steps?.report_prep?.done;
   const submissionDone = steps?.submission?.done;
-  if (submissionDone || task.status === 'production_completed' || task.status === 'reported_pending_payment') return 'done';
+  if (submissionDone || task.status === 'production_completed' || task.status === 'reported_pending_payment' || task.status === 'awaiting_recording') return 'done';
   if (reportDone || task.status === 'ready_to_broadcast') return 'ready';
   return 'process';
 }

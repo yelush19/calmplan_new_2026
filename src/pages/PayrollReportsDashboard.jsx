@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader, RefreshCw, ChevronLeft, ChevronRight, ChevronDown,
   ArrowRight, Users, X, FileBarChart, List, LayoutGrid, Search, GanttChart, Plus, Trash2,
-  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target, GitBranchPlus
+  Inbox, PlayCircle, Radio, Send, Eye, FileWarning, CircleCheck, Target, GitBranchPlus, BookOpen
 } from 'lucide-react';
 import KanbanView from '@/components/tasks/KanbanView';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
@@ -37,7 +37,7 @@ import {
 } from '@/config/processTemplates';
 import { getTaskReportingMonth } from '@/config/automationRules';
 import { syncNotesWithTaskStatus } from '@/hooks/useAutoReminders';
-import { getOpenPrerequisitesForCompletion } from '@/engines/taskCascadeEngine';
+import { getOpenPrerequisitesForCompletion, evaluateAuthorityStatus } from '@/engines/taskCascadeEngine';
 import QuickAddTaskDialog from '@/components/tasks/QuickAddTaskDialog';
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle';
 import AyoaRadialView from '@/components/canvas/AyoaRadialView';
@@ -66,6 +66,7 @@ const STATUS_PIPELINE = [
   { key: 'not_started',          label: 'לבצע',                color: '#64748B', bg1: '#f8fafc', bg2: '#f1f5f9', Icon: PlayCircle },
   { key: 'ready_to_broadcast',   label: 'מוכן לשידור',         color: '#0D9488', bg1: '#f0fdfa', bg2: '#ccfbf1', Icon: Radio },
   { key: 'reported_pending_payment', label: 'ממתין לתשלום',     color: '#4F46E5', bg1: '#eef2ff', bg2: '#e0e7ff', Icon: Send },
+  { key: 'awaiting_recording',   label: 'ממתין לרישום',        color: '#0284C7', bg1: '#f0f9ff', bg2: '#e0f2fe', Icon: BookOpen },
   { key: 'sent_for_review',      label: 'הועבר לעיון',         color: '#7C3AED', bg1: '#faf5ff', bg2: '#f3e8ff', Icon: Eye },
   { key: 'review_after_corrections', label: 'לעיון לאחר תיקונים', color: '#8B5CF6', bg1: '#f5f3ff', bg2: '#ede9fe', Icon: Eye },
   { key: 'needs_corrections',    label: 'לתיקון',              color: '#D97706', bg1: '#fff7ed', bg2: '#ffedd5', Icon: FileWarning },
@@ -283,7 +284,18 @@ export default function PayrollReportsDashboardPage() {
       const updatedTask = { ...task, process_steps: updatedSteps };
       const allDone = areAllStepsDone(updatedTask);
       const updatePayload = { process_steps: updatedSteps };
-      if (allDone && task.status !== 'production_completed') updatePayload.status = 'production_completed';
+
+      // Authority cascade: deduce intermediate status (ready_to_broadcast,
+      // reported_pending_payment, awaiting_recording, production_completed)
+      // from which steps are now checked. Falls back to allDone heuristic
+      // for non-authority services.
+      const authorityResult = evaluateAuthorityStatus(updatedTask, updatedSteps);
+      if (authorityResult?.status && authorityResult.status !== task.status) {
+        updatePayload.status = authorityResult.status;
+      } else if (allDone && task.status !== 'production_completed') {
+        updatePayload.status = 'production_completed';
+      }
+
       // When toggling to production_completed, mark all template steps done
       // so the UI checkboxes reflect the auto-completed state.
       if (updatePayload.status === 'production_completed') {

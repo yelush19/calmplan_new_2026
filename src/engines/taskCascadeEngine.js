@@ -1131,10 +1131,16 @@ export function evaluateMasavSocialStatus(task, updatedSteps) {
 
 /**
  * Evaluate authority tasks (מע"מ, מקדמות, בט"ל, ניכויים).
- * These have דיווח (submission) + תשלום (payment) as final sub-steps.
- * Payment step completion → production_completed.
- * Submission without payment → reported_pending_payment (שודר, ממתין לתשלום).
- * Report prep done (no submission yet) → ready_to_broadcast (מוכן לשידור).
+ * Steps progression for authority tasks (when present):
+ *   report_prep → submission → payment → record_report → record_payment
+ *
+ * Status mapping:
+ *   - report_prep + file_prep done (no submission yet) → ready_to_broadcast
+ *   - submission done, payment not yet → reported_pending_payment
+ *   - submission + payment done, but recording (record_report / record_payment) not finished → awaiting_recording
+ *   - all primary + recording steps done → production_completed
+ *
+ * If the service has no recording steps in its template, payment alone closes the task.
  *
  * @param {Object} task - The authority task
  * @param {Object} updatedSteps - The new process_steps
@@ -1149,8 +1155,21 @@ export function evaluateAuthorityStatus(task, updatedSteps) {
   const reportPrep = updatedSteps?.report_prep?.done;
   const filePrep = updatedSteps?.file_prep?.done;
 
-  // Both דיווח + תשלום done → production_completed
+  // Determine which recording steps belong to this service template (if any)
+  const stepKeys = (service.steps || []).map((s) => s.key);
+  const hasRecordReport = stepKeys.includes('record_report');
+  const hasRecordPayment = stepKeys.includes('record_payment');
+  const hasAnyRecording = hasRecordReport || hasRecordPayment;
+
   if (submission && payment) {
+    if (hasAnyRecording) {
+      const recordReportDone = !hasRecordReport || updatedSteps?.record_report?.done;
+      const recordPaymentDone = !hasRecordPayment || updatedSteps?.record_payment?.done;
+      if (recordReportDone && recordPaymentDone) {
+        return { status: 'production_completed' };
+      }
+      return { status: 'awaiting_recording' };
+    }
     return { status: 'production_completed' };
   }
 
