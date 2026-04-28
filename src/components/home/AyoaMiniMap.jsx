@@ -28,6 +28,7 @@ import {
 } from '@/config/processTemplates';
 import { getDashboardUrlForTask, getDashboardLabelForTask } from '@/utils/taskNavigation';
 import { getWorkDaysAfter } from '@/config/israeliHolidays';
+import { getEffectiveStatus } from '@/utils/effectiveStatus';
 
 // Phase 2: compact SVG "mind-map" overview of today's active clients.
 // Pure SVG — NO canvas, NO Konva. Clicking a circle opens a Drawer with
@@ -553,7 +554,7 @@ export default function AyoaMiniMap({
     if (!selectedGroup) return {};
     const grouped = {};
     drawerTasks.forEach((task) => {
-      const s = migrateStatus(task.status) || 'not_started';
+      const s = getEffectiveStatus(task);
       if (!grouped[s]) grouped[s] = [];
       grouped[s].push(task);
     });
@@ -622,7 +623,7 @@ export default function AyoaMiniMap({
     // remapped via migrateStatus so the buckets always match STATUS_RING_COLORS.
     const statusBuckets = {};
     group.tasks.forEach((t) => {
-      const s = migrateStatus(t.status) || 'not_started';
+      const s = getEffectiveStatus(t);
       statusBuckets[s] = (statusBuckets[s] || 0) + 1;
     });
     // Deadline urgency breakdown. The user can't tell from a status-only ring
@@ -632,8 +633,11 @@ export default function AyoaMiniMap({
     // to spin up Date objects per task.
     const urgency = { overdue: 0, today: 0, soon: 0 };  // soon = up to 3 working days ahead
     group.tasks.forEach((t) => {
-      // Skip tasks that have already left the active workflow
-      if (t.status === 'production_completed' || t.status === 'awaiting_recording') return;
+      // Skip tasks that have already left the active workflow.
+      // Uses effective status so a stale "not_started" task whose steps
+      // already say "awaiting_recording" doesn't get flagged as overdue.
+      const eff = getEffectiveStatus(t);
+      if (eff === 'production_completed' || eff === 'awaiting_recording') return;
       const due = (t.due_date || '').slice(0, 10);
       if (!due) return;
       if (due < todayStr) urgency.overdue += 1;
@@ -853,7 +857,7 @@ export default function AyoaMiniMap({
                     {statusCfg?.text || status} ({statusTasks.length})
                   </div>
                   {statusTasks.map((task) => {
-                    const cfg = TASK_STATUS_CONFIG[migrateStatus(task.status)];
+                    const cfg = TASK_STATUS_CONFIG[getEffectiveStatus(task)];
                     const taskService = getServiceForTask(task);
                     const taskSteps = taskService?.steps || [];
                     const stepsExpanded = !!expandedSteps[task.id];
@@ -899,7 +903,7 @@ export default function AyoaMiniMap({
                                 (previous Stage 5.9 behaviour). */}
                             {onStatusChange ? (
                               <Select
-                                value={migrateStatus(task.status) || 'not_started'}
+                                value={getEffectiveStatus(task)}
                                 onValueChange={(newStatus) =>
                                   handleRowStatusChange(task, newStatus)
                                 }

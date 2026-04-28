@@ -210,7 +210,10 @@ export default function TaxReportsDashboardPage() {
     setIsLoading(false);
   };
 
-  // Auto-fix: completed tasks should have all steps marked done
+  // Auto-fix: completed tasks should have all steps marked done.
+  // Also: cascade backfill — tasks saved before the awaiting_recording
+  // status existed get their persisted status realigned with what the
+  // authority cascade would say given their current process_steps.
   const syncCompletedTaskSteps = async (tasksList) => {
     for (const task of tasksList) {
       if (task.status === 'production_completed' && !areAllStepsDone(task)) {
@@ -218,6 +221,12 @@ export default function TaxReportsDashboardPage() {
         if (Object.keys(updatedSteps).length > 0) {
           await Task.update(task.id, { process_steps: updatedSteps });
           setTasks(prev => prev.map(t => t.id === task.id ? { ...t, process_steps: updatedSteps } : t));
+        }
+      } else {
+        const cascade = evaluateAuthorityStatus(task, task.process_steps || {});
+        if (cascade?.status && cascade.status !== task.status) {
+          await Task.update(task.id, { status: cascade.status });
+          setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: cascade.status } : t));
         }
       }
     }
