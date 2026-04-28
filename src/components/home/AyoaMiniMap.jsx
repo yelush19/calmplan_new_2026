@@ -206,7 +206,91 @@ function computeRadialPosition(i, n) {
   };
 }
 
-function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick }) {
+// Solid colors for each status — mirrors the STATUS_PIPELINE palette used in
+// PayrollDashboard / PayrollReportsDashboard so the ring is recognisable.
+const STATUS_RING_COLORS = {
+  waiting_for_materials:    '#F59E0B',
+  not_started:              '#94A3B8',
+  ready_to_broadcast:       '#0D9488',
+  reported_pending_payment: '#4F46E5',
+  awaiting_recording:       '#0284C7',
+  sent_for_review:          '#7C3AED',
+  review_after_corrections: '#8B5CF6',
+  needs_corrections:        '#D97706',
+  production_completed:     '#16A34A',
+};
+
+const STATUS_RING_ORDER = [
+  'waiting_for_materials',
+  'not_started',
+  'needs_corrections',
+  'sent_for_review',
+  'review_after_corrections',
+  'ready_to_broadcast',
+  'reported_pending_payment',
+  'awaiting_recording',
+  'production_completed',
+];
+
+function StatusRing({ cx, cy, r, statusBuckets, total }) {
+  if (!statusBuckets || !total) return null;
+  // Build an ordered list of present statuses with their fraction
+  const present = STATUS_RING_ORDER
+    .map((s) => ({ status: s, count: statusBuckets[s] || 0 }))
+    .filter((b) => b.count > 0);
+  if (present.length === 0) return null;
+
+  const RING_OFFSET = 6;        // distance from circle stroke to ring
+  const RING_RADIUS = r + RING_OFFSET;
+  const STROKE_WIDTH = 3.5;
+  const GAP = present.length > 1 ? 0.06 : 0;  // small gap (radians) between segments
+
+  // Single-status fast-path: a clean closed ring (two semicircles).
+  if (present.length === 1) {
+    return (
+      <g style={{ pointerEvents: 'none' }}>
+        <circle
+          cx={cx}
+          cy={cy}
+          r={RING_RADIUS}
+          fill="none"
+          stroke={STATUS_RING_COLORS[present[0].status] || '#CBD5E1'}
+          strokeWidth={STROKE_WIDTH}
+          strokeOpacity={0.85}
+        />
+      </g>
+    );
+  }
+
+  let cursor = -Math.PI / 2;  // start at the top
+  const segments = [];
+  present.forEach(({ status, count }) => {
+    const fraction = count / total;
+    const sweep = Math.max(0, fraction * 2 * Math.PI - GAP);
+    if (sweep <= 0) return;
+    const startA = cursor;
+    const endA = cursor + sweep;
+    const x1 = cx + Math.cos(startA) * RING_RADIUS;
+    const y1 = cy + Math.sin(startA) * RING_RADIUS;
+    const x2 = cx + Math.cos(endA) * RING_RADIUS;
+    const y2 = cy + Math.sin(endA) * RING_RADIUS;
+    const largeArc = sweep > Math.PI ? 1 : 0;
+    segments.push(
+      <path
+        key={status}
+        d={`M ${x1} ${y1} A ${RING_RADIUS} ${RING_RADIUS} 0 ${largeArc} 1 ${x2} ${y2}`}
+        stroke={STATUS_RING_COLORS[status] || '#CBD5E1'}
+        strokeWidth={STROKE_WIDTH}
+        strokeLinecap="round"
+        fill="none"
+      />
+    );
+    cursor = endA + GAP;
+  });
+  return <g style={{ pointerEvents: 'none' }}>{segments}</g>;
+}
+
+function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, statusBuckets }) {
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -238,6 +322,10 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick }) 
         stroke={color}
         strokeWidth={2}
       />
+      {/* Status-segmented ring: each arc shows what fraction of the tasks
+          in this domain are at a given workflow status. Renders OUTSIDE
+          the main circle so the count and label stay legible. */}
+      <StatusRing cx={cx} cy={cy} r={r} statusBuckets={statusBuckets} total={count} />
       <text
         x={cx}
         y={cy + 5}
@@ -410,7 +498,14 @@ export default function AyoaMiniMap({
   const placedGroups = groups.map((group, i) => {
     const pos = computeRadialPosition(i, groups.length);
     const r = Math.min(34, Math.max(18, group.tasks.length * 4));
-    return { ...group, ...pos, r };
+    // Status breakdown for the ring around the circle. Legacy statuses are
+    // remapped via migrateStatus so the buckets always match STATUS_RING_COLORS.
+    const statusBuckets = {};
+    group.tasks.forEach((t) => {
+      const s = migrateStatus(t.status) || 'not_started';
+      statusBuckets[s] = (statusBuckets[s] || 0) + 1;
+    });
+    return { ...group, ...pos, r, statusBuckets };
   });
 
   return (
@@ -505,10 +600,40 @@ export default function AyoaMiniMap({
             label={group.label}
             count={group.tasks.length}
             urgent={group.tasks.some((t) => t.priority === 'urgent')}
+            statusBuckets={group.statusBuckets}
             onClick={() => handleClick(group)}
           />
         ))}
       </svg>
+      {/* Status legend — explains the ring colors so the user can map an arc
+          on a circle directly to a workflow stage. Only the statuses that
+          actually appear among the visible groups are listed, to keep this
+          tight. */}
+      {(() => {
+        const present = new Set();
+        placedGroups.forEach((g) => {
+          Object.keys(g.statusBuckets || {}).forEach((s) => present.add(s));
+        });
+        if (present.size === 0) return null;
+        const items = STATUS_RING_ORDER.filter((s) => present.has(s));
+        return (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1" style={{ fontSize: '10.5px' }}>
+            {items.map((s) => (
+              <span key={s} className="inline-flex items-center gap-1" style={{ color: '#64748B' }}>
+                <span
+                  className="inline-block rounded-full"
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: STATUS_RING_COLORS[s],
+                  }}
+                />
+                {STATUS_CONFIG[s]?.label || s}
+              </span>
+            ))}
+          </div>
+        );
+      })()}
 
       <Drawer
         open={!!selectedGroup}
