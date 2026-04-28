@@ -88,7 +88,14 @@ export default function PayrollReportsDashboardPage() {
     try { const s = localStorage.getItem('calmplan_102_month'); if (s) return new Date(s); } catch {} return subMonths(new Date(), 1);
   });
   useEffect(() => { try { localStorage.setItem('calmplan_102_month', selectedMonth.toISOString()); } catch {} }, [selectedMonth]);
-  const [viewMode, setViewMode] = useState('table');
+  const [viewMode, setViewMode] = useState(() => searchParams.get('view') || 'table');
+  // When the URL view param changes (e.g. user clicks another navigation
+  // link with ?view=workbook), update the view state to match.
+  useEffect(() => {
+    const v = searchParams.get('view');
+    if (v && v !== viewMode) setViewMode(v);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('view')]);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);

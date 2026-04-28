@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Paperclip, Pencil, Pin, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
 import {
   TASK_STATUS_CONFIG,
@@ -206,7 +206,91 @@ function computeRadialPosition(i, n) {
   };
 }
 
-function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick }) {
+// Solid colors for each status — mirrors the STATUS_PIPELINE palette used in
+// PayrollDashboard / PayrollReportsDashboard so the ring is recognisable.
+const STATUS_RING_COLORS = {
+  waiting_for_materials:    '#F59E0B',
+  not_started:              '#94A3B8',
+  ready_to_broadcast:       '#0D9488',
+  reported_pending_payment: '#4F46E5',
+  awaiting_recording:       '#0284C7',
+  sent_for_review:          '#7C3AED',
+  review_after_corrections: '#8B5CF6',
+  needs_corrections:        '#D97706',
+  production_completed:     '#16A34A',
+};
+
+const STATUS_RING_ORDER = [
+  'waiting_for_materials',
+  'not_started',
+  'needs_corrections',
+  'sent_for_review',
+  'review_after_corrections',
+  'ready_to_broadcast',
+  'reported_pending_payment',
+  'awaiting_recording',
+  'production_completed',
+];
+
+function StatusRing({ cx, cy, r, statusBuckets, total }) {
+  if (!statusBuckets || !total) return null;
+  // Build an ordered list of present statuses with their fraction
+  const present = STATUS_RING_ORDER
+    .map((s) => ({ status: s, count: statusBuckets[s] || 0 }))
+    .filter((b) => b.count > 0);
+  if (present.length === 0) return null;
+
+  const RING_OFFSET = 6;        // distance from circle stroke to ring
+  const RING_RADIUS = r + RING_OFFSET;
+  const STROKE_WIDTH = 3.5;
+  const GAP = present.length > 1 ? 0.06 : 0;  // small gap (radians) between segments
+
+  // Single-status fast-path: a clean closed ring (two semicircles).
+  if (present.length === 1) {
+    return (
+      <g style={{ pointerEvents: 'none' }}>
+        <circle
+          cx={cx}
+          cy={cy}
+          r={RING_RADIUS}
+          fill="none"
+          stroke={STATUS_RING_COLORS[present[0].status] || '#CBD5E1'}
+          strokeWidth={STROKE_WIDTH}
+          strokeOpacity={0.85}
+        />
+      </g>
+    );
+  }
+
+  let cursor = -Math.PI / 2;  // start at the top
+  const segments = [];
+  present.forEach(({ status, count }) => {
+    const fraction = count / total;
+    const sweep = Math.max(0, fraction * 2 * Math.PI - GAP);
+    if (sweep <= 0) return;
+    const startA = cursor;
+    const endA = cursor + sweep;
+    const x1 = cx + Math.cos(startA) * RING_RADIUS;
+    const y1 = cy + Math.sin(startA) * RING_RADIUS;
+    const x2 = cx + Math.cos(endA) * RING_RADIUS;
+    const y2 = cy + Math.sin(endA) * RING_RADIUS;
+    const largeArc = sweep > Math.PI ? 1 : 0;
+    segments.push(
+      <path
+        key={status}
+        d={`M ${x1} ${y1} A ${RING_RADIUS} ${RING_RADIUS} 0 ${largeArc} 1 ${x2} ${y2}`}
+        stroke={STATUS_RING_COLORS[status] || '#CBD5E1'}
+        strokeWidth={STROKE_WIDTH}
+        strokeLinecap="round"
+        fill="none"
+      />
+    );
+    cursor = endA + GAP;
+  });
+  return <g style={{ pointerEvents: 'none' }}>{segments}</g>;
+}
+
+function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, statusBuckets }) {
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -238,6 +322,10 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick }) 
         stroke={color}
         strokeWidth={2}
       />
+      {/* Status-segmented ring: each arc shows what fraction of the tasks
+          in this domain are at a given workflow status. Renders OUTSIDE
+          the main circle so the count and label stay legible. */}
+      <StatusRing cx={cx} cy={cy} r={r} statusBuckets={statusBuckets} total={count} />
       <text
         x={cx}
         y={cy + 5}
@@ -311,8 +399,27 @@ export default function AyoaMiniMap({
   onEditTask,
   onPaymentDateChange,
   onNote,
+  onToggleStep,
 }) {
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [expandedSteps, setExpandedSteps] = useState({});
+  const navigate = useNavigate();
+
+  // Click on the row body (not on a control) navigates to the task's
+  // owning dashboard in table mode. Interactive children
+  // (Select, buttons, attachments popover) already stopPropagation,
+  // so they don't accidentally trigger this.
+  const handleRowClick = (task) => (e) => {
+    if (e.target.closest('button, a, [role="combobox"], input, select, textarea, [data-no-row-nav]')) {
+      return;
+    }
+    const url = getDashboardUrlForTask(task, { view: 'table' });
+    if (url) navigate(url);
+  };
+
+  const toggleStepsExpanded = (taskId) => {
+    setExpandedSteps((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
 
   // Stage 5.9: groupByServiceDomain replaces groupByClient. Each circle
   // now represents a WORK DOMAIN (שכר / מע"מ / ביטוח לאומי / ...), not a
@@ -410,7 +517,14 @@ export default function AyoaMiniMap({
   const placedGroups = groups.map((group, i) => {
     const pos = computeRadialPosition(i, groups.length);
     const r = Math.min(34, Math.max(18, group.tasks.length * 4));
-    return { ...group, ...pos, r };
+    // Status breakdown for the ring around the circle. Legacy statuses are
+    // remapped via migrateStatus so the buckets always match STATUS_RING_COLORS.
+    const statusBuckets = {};
+    group.tasks.forEach((t) => {
+      const s = migrateStatus(t.status) || 'not_started';
+      statusBuckets[s] = (statusBuckets[s] || 0) + 1;
+    });
+    return { ...group, ...pos, r, statusBuckets };
   });
 
   return (
@@ -505,10 +619,40 @@ export default function AyoaMiniMap({
             label={group.label}
             count={group.tasks.length}
             urgent={group.tasks.some((t) => t.priority === 'urgent')}
+            statusBuckets={group.statusBuckets}
             onClick={() => handleClick(group)}
           />
         ))}
       </svg>
+      {/* Status legend — explains the ring colors so the user can map an arc
+          on a circle directly to a workflow stage. Only the statuses that
+          actually appear among the visible groups are listed, to keep this
+          tight. */}
+      {(() => {
+        const present = new Set();
+        placedGroups.forEach((g) => {
+          Object.keys(g.statusBuckets || {}).forEach((s) => present.add(s));
+        });
+        if (present.size === 0) return null;
+        const items = STATUS_RING_ORDER.filter((s) => present.has(s));
+        return (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1" style={{ fontSize: '10.5px' }}>
+            {items.map((s) => (
+              <span key={s} className="inline-flex items-center gap-1" style={{ color: '#64748B' }}>
+                <span
+                  className="inline-block rounded-full"
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: STATUS_RING_COLORS[s],
+                  }}
+                />
+                {STATUS_CONFIG[s]?.label || s}
+              </span>
+            ))}
+          </div>
+        );
+      })()}
 
       <Drawer
         open={!!selectedGroup}
@@ -563,10 +707,18 @@ export default function AyoaMiniMap({
                   </div>
                   {statusTasks.map((task) => {
                     const cfg = TASK_STATUS_CONFIG[migrateStatus(task.status)];
+                    const taskService = getServiceForTask(task);
+                    const taskSteps = taskService?.steps || [];
+                    const stepsExpanded = !!expandedSteps[task.id];
+                    const navLabel = getDashboardLabelForTask(task);
                     return (
                       <div
                         key={task.id}
-                        className={`p-3 rounded-xl mb-1.5 ${cfg?.color || 'bg-white text-gray-700'}`}
+                        onClick={handleRowClick(task)}
+                        role="link"
+                        tabIndex={0}
+                        title={`לחיצה על השורה — פתח ב${navLabel} (טבלה)`}
+                        className={`p-3 rounded-xl mb-1.5 cursor-pointer hover:ring-2 hover:ring-emerald-200 transition-shadow ${cfg?.color || 'bg-white text-gray-700'}`}
                         style={{ border: '1px solid #EEF1F5' }}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -649,16 +801,15 @@ export default function AyoaMiniMap({
                               </button>
                             )}
                             {(() => {
-                              const url = getDashboardUrlForTask(task);
+                              const url = getDashboardUrlForTask(task, { view: 'table' });
                               if (!url) return null;
-                              const label = getDashboardLabelForTask(task);
                               return (
                                 <Link
                                   to={url}
                                   className="p-1 rounded hover:bg-white/60 text-slate-400 hover:text-emerald-700"
                                   onClick={(e) => e.stopPropagation()}
-                                  aria-label={`פתח ב${label}`}
-                                  title={`פתח ב${label}`}
+                                  aria-label={`פתח ב${navLabel}`}
+                                  title={`פתח ב${navLabel}`}
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </Link>
@@ -729,6 +880,65 @@ export default function AyoaMiniMap({
                         {task.due_date && (
                           <div className="text-[11px] mt-0.5 opacity-70">
                             {task.due_date}
+                          </div>
+                        )}
+                        {/* Inline step controls — same template as the dashboards
+                            so the user can advance a task through its workflow
+                            without navigating away. Only shown when the parent
+                            wires onToggleStep AND the task has a service template
+                            with steps. Collapsed by default to keep the drawer
+                            scannable. */}
+                        {onToggleStep && taskSteps.length > 0 && (
+                          <div className="mt-2" data-no-row-nav>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleStepsExpanded(task.id);
+                              }}
+                              className="text-[11px] font-semibold inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/70 text-slate-600 hover:bg-white"
+                              title={stepsExpanded ? 'הסתר שלבים' : 'הצג שלבים'}
+                            >
+                              <span>שלבים</span>
+                              <span className="opacity-70">
+                                {(() => {
+                                  const steps = task.process_steps || {};
+                                  const done = taskSteps.filter((s) => steps[s.key]?.done).length;
+                                  return `${done}/${taskSteps.length}`;
+                                })()}
+                              </span>
+                            </button>
+                            {stepsExpanded && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {taskSteps.map((step) => {
+                                  const stepData = (task.process_steps || {})[step.key] || { done: false };
+                                  const isDone = !!stepData.done;
+                                  return (
+                                    <button
+                                      key={step.key}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleStep(task, step.key);
+                                      }}
+                                      className={`text-[11px] inline-flex items-center gap-1 px-2 py-1 rounded-full border transition-colors ${
+                                        isDone
+                                          ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
+                                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                      }`}
+                                      title={isDone ? 'בטל סימון' : 'סמן כבוצע'}
+                                    >
+                                      <span
+                                        className={`inline-block w-3 h-3 rounded-sm border ${
+                                          isDone ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300'
+                                        }`}
+                                      />
+                                      <span>{step.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

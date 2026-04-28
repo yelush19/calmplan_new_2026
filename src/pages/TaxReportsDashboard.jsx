@@ -133,7 +133,12 @@ export default function TaxReportsDashboardPage() {
     try { const s = localStorage.getItem('calmplan_tax_month'); if (s) return new Date(s); } catch {} return subMonths(new Date(), 1);
   });
   useEffect(() => { try { localStorage.setItem('calmplan_tax_month', selectedMonth.toISOString()); } catch {} }, [selectedMonth]);
-  const [viewMode, setViewMode] = useState('table'); // Default: table (client prefers spreadsheet view)
+  const [viewMode, setViewMode] = useState(() => searchParams.get('view') || 'table'); // Default: table (client prefers spreadsheet view)
+  useEffect(() => {
+    const v = searchParams.get('view');
+    if (v && v !== viewMode) setViewMode(v);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('view')]);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [noteTask, setNoteTask] = useState(null);
