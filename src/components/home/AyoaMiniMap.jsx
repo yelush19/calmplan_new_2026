@@ -20,6 +20,7 @@ import {
 import { Paperclip, Pencil, Pin, ExternalLink } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import TaskFileAttachments from '@/components/tasks/TaskFileAttachments';
+import GroupedServiceTable from '@/components/dashboard/GroupedServiceTable';
 import {
   TASK_STATUS_CONFIG,
   STATUS_CONFIG,
@@ -328,7 +329,7 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
     const parts = [];
     if (overdueCount) parts.push(`${overdueCount} באיחור`);
     if (todayCount) parts.push(`${todayCount} היום`);
-    if (soonCount) parts.push(`${soonCount} ביומיים הקרובים`);
+    if (soonCount) parts.push(`${soonCount} ב-3 ימי עבודה הקרובים`);
     return parts.join(' · ');
   })();
 
@@ -490,16 +491,26 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
 // cards it had in Stage 5.9 — so existing callers stay unaffected.
 export default function AyoaMiniMap({
   tasks,
+  clients = [],
   onGroupClick,
   onStatusChange,
   onEditTask,
   onPaymentDateChange,
   onNote,
   onToggleStep,
+  onDateChange,
+  onSubTaskChange,
+  onAttachmentUpdate,
 }) {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [expandedSteps, setExpandedSteps] = useState({});
   const navigate = useNavigate();
+
+  const clientByName = useMemo(() => {
+    const map = {};
+    (clients || []).forEach((c) => { if (c?.name) map[c.name] = c; });
+    return map;
+  }, [clients]);
 
   // Click on the row body (not on a control) navigates to the task's
   // owning dashboard in table mode. Interactive children
@@ -562,6 +573,43 @@ export default function AyoaMiniMap({
       STATUS_ORDER.filter((s) => grouped[s]).map((s) => [s, grouped[s]])
     );
   }, [drawerTasks, selectedGroup]);
+
+  // Group drawer tasks by service template so the drawer can render the
+  // same rich row UI as the dashboards (GroupedServiceTable). One section
+  // per service: e.g. a "מע״מ" drawer shows one table for vat tasks, and
+  // (if any) a separate table for vat_874. Tasks whose category doesn't
+  // resolve to a service are bucketed under a synthetic "other" service.
+  const drawerByService = useMemo(() => {
+    if (!selectedGroup) return [];
+    const buckets = new Map();
+    drawerTasks.forEach((task) => {
+      const svc = getServiceForTask(task);
+      const key = svc?.key || 'other';
+      if (!buckets.has(key)) {
+        buckets.set(key, {
+          service: svc || {
+            key: 'other',
+            label: 'משימות אחרות',
+            taskCategories: [],
+            steps: [],
+            taskType: 'linear',
+          },
+          tasks: [],
+        });
+      }
+      buckets.get(key).tasks.push(task);
+    });
+    return Array.from(buckets.values()).map(({ service, tasks: svcTasks }) => ({
+      service,
+      clientRows: svcTasks
+        .map((task) => ({
+          clientName: task.client_name || 'ללא לקוח',
+          task,
+          client: clientByName[task.client_name] || null,
+        }))
+        .sort((a, b) => a.clientName.localeCompare(b.clientName, 'he')),
+    }));
+  }, [drawerTasks, selectedGroup, clientByName]);
 
   // Stage 5.9: unique client names for the drawer sub-title. Preserves
   // first-seen order (which itself is status-priority sorted via
@@ -841,15 +889,39 @@ export default function AyoaMiniMap({
           </DrawerHeader>
           <div
             dir="rtl"
-            className="px-4 pb-6 max-h-[60vh] overflow-y-auto"
+            className="px-4 pb-6 max-h-[80vh] overflow-y-auto"
             style={{ fontFamily: 'Heebo, sans-serif' }}
           >
-            {/* Stage 5.9: tasks bucketed by STATUS (STATUS_ORDER), not by
-                category. Bucket header uses TASK_STATUS_CONFIG[s]?.text.
-                Each card shows title → client_name → due_date, and keeps
-                the paperclip Popover wired to TaskFileAttachments so files
-                can be attached/viewed without leaving Home. */}
-            {Object.entries(drawerTasksByStatus).map(([status, statusTasks]) => {
+            {/* Full row UI — same GroupedServiceTable that PayrollReportsDashboard
+                / TaxReportsDashboard / PayrollDashboard render in their tab
+                bodies. The drawer therefore behaves like a focused mini
+                dashboard for the selected service domain: per-step circles,
+                inline status select, notes, attachments. */}
+            {drawerByService.map(({ service, clientRows }) => (
+              <div key={service.key} className="mb-4">
+                <GroupedServiceTable
+                  service={service}
+                  clientRows={clientRows}
+                  allTasks={tasks}
+                  onToggleStep={onToggleStep || (() => {})}
+                  onDateChange={onDateChange || (() => {})}
+                  onStatusChange={(task, newStatus) => handleRowStatusChange(task, newStatus)}
+                  onPaymentDateChange={onPaymentDateChange || (() => {})}
+                  onSubTaskChange={onSubTaskChange || (() => {})}
+                  onAttachmentUpdate={onAttachmentUpdate || (() => {})}
+                  getClientIds={() => []}
+                  onEdit={onEditTask || (() => {})}
+                  onDelete={null}
+                  onNote={onNote || (() => {})}
+                  bulkMode={false}
+                  selectedTaskIds={new Set()}
+                  onToggleSelect={() => {}}
+                />
+              </div>
+            ))}
+            {/* Legacy status-grouped fallback view — kept only when nothing
+                resolves to a service template (raw home tasks etc.). */}
+            {drawerByService.length === 0 && Object.entries(drawerTasksByStatus).map(([status, statusTasks]) => {
               const statusCfg = TASK_STATUS_CONFIG[status];
               return (
                 <div key={status} className="mb-3">
@@ -1098,7 +1170,7 @@ export default function AyoaMiniMap({
                 </div>
               );
             })}
-            {Object.keys(drawerTasksByStatus).length === 0 && (
+            {drawerTasks.length === 0 && (
               <div
                 className="text-center py-8 text-sm"
                 style={{ color: '#9AA5B4' }}

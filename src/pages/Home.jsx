@@ -778,6 +778,7 @@ export default function HomePage() {
             own; these props just unlock the editable drawer. */}
         <AyoaMiniMap
           tasks={data.activeTasks}
+          clients={clients}
           onStatusChange={handleStatusChange}
           onEditTask={setEditingTask}
           onPaymentDateChange={handlePaymentDateChange}
