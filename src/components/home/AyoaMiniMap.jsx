@@ -27,6 +27,7 @@ import {
   getServiceForTask,
 } from '@/config/processTemplates';
 import { getDashboardUrlForTask, getDashboardLabelForTask } from '@/utils/taskNavigation';
+import { getWorkDaysAfter } from '@/config/israeliHolidays';
 
 // Phase 2: compact SVG "mind-map" overview of today's active clients.
 // Pure SVG — NO canvas, NO Konva. Clicking a circle opens a Drawer with
@@ -247,17 +248,21 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
 
   // Single-status fast-path: a clean closed ring (two semicircles).
   if (present.length === 1) {
+    const only = present[0];
+    const label = STATUS_CONFIG[only.status]?.label || only.status;
     return (
-      <g style={{ pointerEvents: 'none' }}>
+      <g>
         <circle
           cx={cx}
           cy={cy}
           r={RING_RADIUS}
           fill="none"
-          stroke={STATUS_RING_COLORS[present[0].status] || '#CBD5E1'}
+          stroke={STATUS_RING_COLORS[only.status] || '#CBD5E1'}
           strokeWidth={STROKE_WIDTH}
           strokeOpacity={0.85}
-        />
+        >
+          <title>{`${label} — ${only.count} משימות`}</title>
+        </circle>
       </g>
     );
   }
@@ -275,6 +280,7 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
     const x2 = cx + Math.cos(endA) * RING_RADIUS;
     const y2 = cy + Math.sin(endA) * RING_RADIUS;
     const largeArc = sweep > Math.PI ? 1 : 0;
+    const label = STATUS_CONFIG[status]?.label || status;
     segments.push(
       <path
         key={status}
@@ -283,14 +289,18 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
         strokeWidth={STROKE_WIDTH}
         strokeLinecap="round"
         fill="none"
-      />
+      >
+        <title>{`${label} — ${count} משימות`}</title>
+      </path>
     );
     cursor = endA + GAP;
   });
-  return <g style={{ pointerEvents: 'none' }}>{segments}</g>;
+  // No pointerEvents:none here — segments need hover to surface their <title>
+  // tooltips. Click bubbles up to the parent <g> so the drawer still opens.
+  return <g>{segments}</g>;
 }
 
-function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, statusBuckets }) {
+function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, statusBuckets, urgency, urgentCount }) {
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -304,6 +314,23 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
   const labelBoxHeight = 34;
   const labelCenterX = cx + Math.cos(angle) * (r + LABEL_OFFSET + labelBoxHeight / 2);
   const labelCenterY = cy + Math.sin(angle) * (r + LABEL_OFFSET + labelBoxHeight / 2);
+
+  const overdueCount = urgency?.overdue || 0;
+  const todayCount = urgency?.today || 0;
+  const soonCount = urgency?.soon || 0;
+  const totalUrgent = urgentCount || 0;
+  const hasOverdue = overdueCount > 0;
+
+  // Build a human-readable summary for the urgency tooltip.
+  const urgencySummary = (() => {
+    if (!totalUrgent) return null;
+    const parts = [];
+    if (overdueCount) parts.push(`${overdueCount} באיחור`);
+    if (todayCount) parts.push(`${todayCount} היום`);
+    if (soonCount) parts.push(`${soonCount} ביומיים הקרובים`);
+    return parts.join(' · ');
+  })();
+
   return (
     <g
       style={{ cursor: 'pointer' }}
@@ -311,8 +338,42 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
       role="button"
       tabIndex={0}
       onKeyDown={handleKey}
-      aria-label={`${label} — ${count} משימות${urgent ? ', כולל משימה דחופה' : ''}`}
+      aria-label={`${label} — ${count} משימות${urgent ? ', כולל משימה דחופה' : ''}${urgencySummary ? `, ${urgencySummary}` : ''}`}
     >
+      {/* Soft halo behind circles that need attention this work-week.
+          Red = at least one task is overdue (past its deadline).
+          Orange = no overdue but tasks are due in the next 3 working days.
+          The halo sits outside the status ring so it doesn't fight the
+          per-status color cues. */}
+      {hasOverdue ? (
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r + 12}
+          fill="none"
+          stroke="#EF4444"
+          strokeWidth={2.5}
+          strokeOpacity={0.45}
+          strokeDasharray="4 3"
+          style={{ pointerEvents: 'none' }}
+        >
+          <title>{`${overdueCount} משימות באיחור${todayCount ? ` · ${todayCount} להיום` : ''}${soonCount ? ` · ${soonCount} ב-3 ימי עבודה הקרובים` : ''}`}</title>
+        </circle>
+      ) : (todayCount > 0 || soonCount > 0) ? (
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r + 12}
+          fill="none"
+          stroke="#F97316"
+          strokeWidth={2.5}
+          strokeOpacity={0.4}
+          strokeDasharray="4 3"
+          style={{ pointerEvents: 'none' }}
+        >
+          <title>{`${todayCount ? `${todayCount} להיום` : ''}${todayCount && soonCount ? ' · ' : ''}${soonCount ? `${soonCount} ב-3 ימי עבודה הקרובים` : ''}`.trim()}</title>
+        </circle>
+      ) : null}
       <circle
         cx={cx}
         cy={cy}
@@ -321,7 +382,11 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
         fillOpacity={0.18}
         stroke={color}
         strokeWidth={2}
-      />
+      >
+        <title>
+          {`${label} — ${count} משימות${urgencySummary ? `\n${urgencySummary}` : ''}`}
+        </title>
+      </circle>
       {/* Status-segmented ring: each arc shows what fraction of the tasks
           in this domain are at a given workflow status. Renders OUTSIDE
           the main circle so the count and label stay legible. */}
@@ -347,6 +412,36 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
           strokeWidth={1.5}
           style={{ pointerEvents: 'none' }}
         />
+      )}
+      {/* Compact deadline-urgency badge — top-LEFT corner of the circle
+          (top-RIGHT is reserved for the priority=urgent dot). Red filled
+          when something is overdue, orange when only "soon" (next 3 working
+          days). Number is the total urgent count; hover the badge for the
+          detailed breakdown. */}
+      {totalUrgent > 0 && (
+        <g>
+          <circle
+            cx={cx - r * 0.7}
+            cy={cy - r * 0.7}
+            r={Math.max(9, Math.min(11, r * 0.4))}
+            fill={hasOverdue ? '#EF4444' : '#F97316'}
+            stroke="#FFFFFF"
+            strokeWidth={2}
+          >
+            <title>{`דחוף — ${urgencySummary || ''}`}</title>
+          </circle>
+          <text
+            x={cx - r * 0.7}
+            y={cy - r * 0.7 + 3.5}
+            textAnchor="middle"
+            fontSize={r > 28 ? 11 : 10}
+            fontWeight={800}
+            fill="#FFFFFF"
+            style={{ fontFamily: 'Heebo, sans-serif', pointerEvents: 'none' }}
+          >
+            {totalUrgent}
+          </text>
+        </g>
       )}
       <foreignObject
         x={labelCenterX - labelBoxWidth / 2}
@@ -513,6 +608,12 @@ export default function AyoaMiniMap({
   // Precompute each circle's geometry so the connecting lines can terminate
   // at the CIRCLE's edge (not its centre), which keeps the "branch" look
   // clean for small and large circles alike.
+  // Today + the date that is 3 working days ahead (skipping Fri/Sat/holidays).
+  // Anything strictly after today and on-or-before this anchor counts as
+  // "soon" — i.e. needs attention this work-week.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const threeWorkDaysAhead = getWorkDaysAfter(todayStr, 3);
+
   const totalTasks = groups.reduce((sum, g) => sum + g.tasks.length, 0);
   const placedGroups = groups.map((group, i) => {
     const pos = computeRadialPosition(i, groups.length);
@@ -524,7 +625,23 @@ export default function AyoaMiniMap({
       const s = migrateStatus(t.status) || 'not_started';
       statusBuckets[s] = (statusBuckets[s] || 0) + 1;
     });
-    return { ...group, ...pos, r, statusBuckets };
+    // Deadline urgency breakdown. The user can't tell from a status-only ring
+    // whether the work is "soon" or "still has 2 weeks", so we surface a
+    // separate dot/badge for "needs attention now". Comparison uses ISO
+    // YYYY-MM-DD strings (lexicographic = chronological) so we don't need
+    // to spin up Date objects per task.
+    const urgency = { overdue: 0, today: 0, soon: 0 };  // soon = up to 3 working days ahead
+    group.tasks.forEach((t) => {
+      // Skip tasks that have already left the active workflow
+      if (t.status === 'production_completed' || t.status === 'awaiting_recording') return;
+      const due = (t.due_date || '').slice(0, 10);
+      if (!due) return;
+      if (due < todayStr) urgency.overdue += 1;
+      else if (due === todayStr) urgency.today += 1;
+      else if (due <= threeWorkDaysAhead) urgency.soon += 1;
+    });
+    const urgentCount = urgency.overdue + urgency.today + urgency.soon;
+    return { ...group, ...pos, r, statusBuckets, urgency, urgentCount };
   });
 
   return (
@@ -620,36 +737,66 @@ export default function AyoaMiniMap({
             count={group.tasks.length}
             urgent={group.tasks.some((t) => t.priority === 'urgent')}
             statusBuckets={group.statusBuckets}
+            urgency={group.urgency}
+            urgentCount={group.urgentCount}
             onClick={() => handleClick(group)}
           />
         ))}
       </svg>
-      {/* Status legend — explains the ring colors so the user can map an arc
-          on a circle directly to a workflow stage. Only the statuses that
-          actually appear among the visible groups are listed, to keep this
-          tight. */}
+      {/* Status + urgency legend — first line explains the OUTER ring colors
+          (workflow stage), second line explains the URGENCY badge/halo
+          (deadline pressure). Only statuses that actually appear among the
+          visible groups are listed in the first row, to keep things tight. */}
       {(() => {
         const present = new Set();
+        let anyOverdue = false;
+        let anySoon = false;
         placedGroups.forEach((g) => {
           Object.keys(g.statusBuckets || {}).forEach((s) => present.add(s));
+          if (g.urgency?.overdue > 0) anyOverdue = true;
+          if (g.urgency?.today > 0 || g.urgency?.soon > 0) anySoon = true;
         });
         if (present.size === 0) return null;
         const items = STATUS_RING_ORDER.filter((s) => present.has(s));
         return (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1" style={{ fontSize: '10.5px' }}>
-            {items.map((s) => (
-              <span key={s} className="inline-flex items-center gap-1" style={{ color: '#64748B' }}>
-                <span
-                  className="inline-block rounded-full"
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    backgroundColor: STATUS_RING_COLORS[s],
-                  }}
-                />
-                {STATUS_CONFIG[s]?.label || s}
-              </span>
-            ))}
+          <div className="mt-2 px-1" style={{ fontSize: '10.5px' }}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {items.map((s) => (
+                <span key={s} className="inline-flex items-center gap-1" style={{ color: '#64748B' }}>
+                  <span
+                    className="inline-block rounded-full"
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      backgroundColor: STATUS_RING_COLORS[s],
+                    }}
+                  />
+                  {STATUS_CONFIG[s]?.label || s}
+                </span>
+              ))}
+            </div>
+            {(anyOverdue || anySoon) && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1" style={{ color: '#64748B' }}>
+                {anyOverdue && (
+                  <span className="inline-flex items-center gap-1">
+                    <span
+                      className="inline-block rounded-full"
+                      style={{ width: '8px', height: '8px', backgroundColor: '#EF4444' }}
+                    />
+                    דחוף — באיחור
+                  </span>
+                )}
+                {anySoon && (
+                  <span className="inline-flex items-center gap-1">
+                    <span
+                      className="inline-block rounded-full"
+                      style={{ width: '8px', height: '8px', backgroundColor: '#F97316' }}
+                    />
+                    דחוף — היום / 3 ימי עבודה הקרובים
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         );
       })()}
