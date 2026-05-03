@@ -53,14 +53,30 @@ const SERVICE_NORMALIZATION = {
   'pensions': 'pensions', 'pension_reporting': 'pensions',
   'מע"מ': 'vat', 'מעמ': 'vat', 'מקדמות מס': 'vat',
   'vat_reporting': 'vat', 'work_vat_reporting': 'vat',
-  'הנהלת חשבונות': 'bookkeeping', 'ניכויים': 'bookkeeping',
+  'הנהלת חשבונות': 'bookkeeping',
   'bookkeeping': 'bookkeeping', 'bookkeeping_monthly': 'bookkeeping',
+  // ניכויים is the monthly tax-deduction report (פאיירול-side authority
+  // task), NOT a bookkeeping ledger. Pulling it out of the bookkeeping
+  // bucket so it stops getting silently mixed with הנהלת ח-ב.
+  'ניכויים': 'deductions', 'deductions': 'deductions',
   'דוח שנתי': 'annual_report', 'דו"ח שנתי': 'annual_report',
   'מאזן': 'annual_report', 'annual_report': 'annual_report',
   'annual_financials': 'annual_report',
   'ביטוח לאומי': 'national_insurance', 'בט"ל': 'national_insurance',
   'national_insurance': 'national_insurance',
-  'קליטה': 'client_onboarding', 'קליטת לקוח': 'client_onboarding',
+  // 'קליטה להנה"ח' is RECORDING completed payroll into bookkeeping
+  // ("רישום פקודות") — low-priority follow-up work, NOT real client
+  // onboarding. It used to be silently bucketed as `client_onboarding`
+  // because the loose prefix-match collapsed `'קליטה'` into the same
+  // bucket. Now it's its own bucket and it's marked LOW_PRIORITY below
+  // so the home map doesn't paint it red as overdue/urgent.
+  'קליטה להנה"ח': 'payroll_recording',
+  'קליטה להנה״ח': 'payroll_recording',
+  'payroll_closing': 'payroll_recording',
+  'bookkeeping_recording': 'payroll_recording',
+  // Real onboarding only (NOT the loose 'קליטה' prefix that used to
+  // accidentally swallow 'קליטה להנה"ח').
+  'קליטת לקוח': 'client_onboarding',
   'client_onboarding': 'client_onboarding',
   'bookkeeping_onboarding': 'client_onboarding',
   'התאמות': 'reconciliations', 'reconciliations': 'reconciliations',
@@ -72,6 +88,10 @@ const LABEL_MAP = {
   pensions: 'פנסיות',
   vat: 'מע"מ',
   bookkeeping: 'הנהלת ח-ב',
+  deductions: 'ניכויים',
+  // Made the low-priority nature of "קליטה להנה"ח" visible in the label
+  // so it can't be mistaken for urgent reporting work at a glance.
+  payroll_recording: 'רישום פקודות (לא דחוף)',
   annual_report: 'דוח שנתי',
   national_insurance: 'ביטוח לאומי',
   client_onboarding: 'קליטת לקוח',
@@ -89,6 +109,13 @@ const LABEL_MAP = {
   unknown_tax: 'מס — כללי',
   unknown_misc: 'אחר',
 };
+
+// Buckets the user explicitly tagged as "nice to have" — work that lands
+// here may be technically overdue, but painting it red on the home map
+// drowns out actually-urgent reporting work. The map skips the deadline
+// halo + urgent-count badge for these buckets and shows a muted label
+// so the bucket still appears in counts but doesn't compete for attention.
+const LOW_PRIORITY_DOMAINS = new Set(['payroll_recording']);
 
 // Map a dashboard key (as returned by getServiceForTask(task).dashboard)
 // to the corresponding unknown_* sub-bucket.
@@ -190,13 +217,15 @@ const STATUS_ORDER = [
 // Home is now map-only (no focus-tab grid below) so the map can take
 // more vertical space and breathe; the viewBox is widened a bit and the
 // ring radius pushed out so labels don't crowd the centre hub.
-const VIEW_WIDTH = 560;
-const VIEW_HEIGHT = 380;
+// Bumped further per user request: more breathing room between the hub
+// and the rim, so circles stop crowding each other at 9-domain layouts.
+const VIEW_WIDTH = 720;
+const VIEW_HEIGHT = 480;
 const CENTER_X = VIEW_WIDTH / 2;
 const CENTER_Y = VIEW_HEIGHT / 2;
-const RING_RADIUS = 132; // distance from centre to each group circle
-const HUB_RADIUS = 36;   // size of the central hub
-const LABEL_OFFSET = 10; // gap between circle edge and its label box
+const RING_RADIUS = 180; // distance from centre to each group circle
+const HUB_RADIUS = 44;   // size of the central hub
+const LABEL_OFFSET = 12; // gap between circle edge and its label box
 
 function computeRadialPosition(i, n) {
   // For a single group, park it directly above the hub so the layout
@@ -314,7 +343,7 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
   return <g>{segments}</g>;
 }
 
-function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, statusBuckets, urgency, urgentCount }) {
+function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, statusBuckets, urgency, urgentCount, lowPriority }) {
   const handleKey = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -358,8 +387,11 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
           Red = at least one task is overdue (past its deadline).
           Orange = no overdue but tasks are due in the next 3 working days.
           The halo sits outside the status ring so it doesn't fight the
-          per-status color cues. */}
-      {hasOverdue ? (
+          per-status color cues.
+          Low-priority buckets (e.g. רישום פקודות) skip the halo entirely
+          — those tasks are "nice to have" and shouldn't compete with
+          actually-urgent reporting work. */}
+      {!lowPriority && hasOverdue ? (
         <circle
           cx={cx}
           cy={cy}
@@ -373,7 +405,7 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
         >
           <title>{`${overdueCount} משימות באיחור${todayCount ? ` · ${todayCount} להיום` : ''}${soonCount ? ` · ${soonCount} ב-3 ימי עבודה הקרובים` : ''}`}</title>
         </circle>
-      ) : (todayCount > 0 || soonCount > 0) ? (
+      ) : !lowPriority && (todayCount > 0 || soonCount > 0) ? (
         <circle
           cx={cx}
           cy={cy}
@@ -416,7 +448,7 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
       >
         {count}
       </text>
-      {urgent && (
+      {urgent && !lowPriority && (
         <circle
           cx={cx + r * 0.68}
           cy={cy - r * 0.68}
@@ -431,8 +463,8 @@ function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, st
           (top-RIGHT is reserved for the priority=urgent dot). Red filled
           when something is overdue, orange when only "soon" (next 3 working
           days). Number is the total urgent count; hover the badge for the
-          detailed breakdown. */}
-      {totalUrgent > 0 && (
+          detailed breakdown. Suppressed for low-priority buckets. */}
+      {!lowPriority && totalUrgent > 0 && (
         <g>
           <circle
             cx={cx - r * 0.7}
@@ -692,20 +724,23 @@ export default function AyoaMiniMap({
     // YYYY-MM-DD strings (lexicographic = chronological) so we don't need
     // to spin up Date objects per task.
     const urgency = { overdue: 0, today: 0, soon: 0 };  // soon = up to 3 working days ahead
-    group.tasks.forEach((t) => {
-      // Skip tasks that have already left the active workflow.
-      // Uses effective status so a stale "not_started" task whose steps
-      // already say "awaiting_recording" doesn't get flagged as overdue.
-      const eff = getEffectiveStatus(t, clientByName[t.client_name] || null);
-      if (eff === 'production_completed' || eff === 'awaiting_recording') return;
-      const due = (t.due_date || '').slice(0, 10);
-      if (!due) return;
-      if (due < todayStr) urgency.overdue += 1;
-      else if (due === todayStr) urgency.today += 1;
-      else if (due <= threeWorkDaysAhead) urgency.soon += 1;
-    });
+    const lowPriority = LOW_PRIORITY_DOMAINS.has(group.normalized_key);
+    if (!lowPriority) {
+      group.tasks.forEach((t) => {
+        // Skip tasks that have already left the active workflow.
+        // Uses effective status so a stale "not_started" task whose steps
+        // already say "awaiting_recording" doesn't get flagged as overdue.
+        const eff = getEffectiveStatus(t, clientByName[t.client_name] || null);
+        if (eff === 'production_completed' || eff === 'awaiting_recording') return;
+        const due = (t.due_date || '').slice(0, 10);
+        if (!due) return;
+        if (due < todayStr) urgency.overdue += 1;
+        else if (due === todayStr) urgency.today += 1;
+        else if (due <= threeWorkDaysAhead) urgency.soon += 1;
+      });
+    }
     const urgentCount = urgency.overdue + urgency.today + urgency.soon;
-    return { ...group, ...pos, r, statusBuckets, urgency, urgentCount };
+    return { ...group, ...pos, r, statusBuckets, urgency, urgentCount, lowPriority };
   });
 
   return (
@@ -727,16 +762,16 @@ export default function AyoaMiniMap({
           {groups.length} תחומים · לחצי על עיגול
         </span>
       </div>
-      {/* Home is map-only now, so the map can occupy more horizontal space.
-          maxWidth bumped up to 760px so on wide screens the circles read
-          as the page focal point, not a tiny widget. height stays in CSS
-          (not the SVG attribute, which only accepts numeric/length values)
+      {/* Home is map-only, so the map gets the page. maxWidth bumped to
+          1000px so on wide screens it stops looking like a small widget
+          and reads as the actual focal point. height stays in CSS (not
+          the SVG attribute, which only accepts numeric/length values)
           to avoid console warnings. */}
       <svg
         width="100%"
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         preserveAspectRatio="xMidYMid meet"
-        style={{ display: 'block', maxWidth: '760px', margin: '0 auto', height: 'auto' }}
+        style={{ display: 'block', maxWidth: '1000px', margin: '0 auto', height: 'auto' }}
       >
         {/* Branches first — rendered under the circles so the circle
             strokes always sit on top of the line ends. */}
@@ -807,6 +842,7 @@ export default function AyoaMiniMap({
             statusBuckets={group.statusBuckets}
             urgency={group.urgency}
             urgentCount={group.urgentCount}
+            lowPriority={group.lowPriority}
             onClick={() => handleClick(group)}
           />
         ))}
