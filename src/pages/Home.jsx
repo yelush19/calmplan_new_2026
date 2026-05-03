@@ -1124,7 +1124,8 @@ const CURRENT_MONTH_KEY = (() => {
 // bucket the caller can skip rendering month headers.
 function groupTasksByMonth(tasks) {
   const buckets = new Map();
-  tasks.forEach(task => {
+  const list = Array.isArray(tasks) ? tasks : [];
+  list.forEach(task => {
     const key = getTaskMonth(task) || 'unknown';
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key).push(task);

@@ -239,11 +239,10 @@ const STATUS_RING_ORDER = [
 ];
 
 function StatusRing({ cx, cy, r, statusBuckets, total }) {
-  // ADHD-accessibility: hovering a segment thickens it AND surfaces an
-  // inline label next to the ring, instead of relying solely on the native
-  // <title> tooltip (which is delayed and easy to miss).
-  const [hoveredStatus, setHoveredStatus] = useState(null);
-
+  // ADHD-accessibility: hovering a segment thickens it via CSS (`:hover`)
+  // — the segment briefly enlarges so the workflow stage is easier to spot.
+  // Implemented with stroke-width transitions, no React state, so this is
+  // safe to render dozens of times across the AyoaMiniMap circles.
   if (!statusBuckets || !total) return null;
   // Build an ordered list of present statuses with their fraction
   const present = STATUS_RING_ORDER
@@ -261,7 +260,6 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
   if (present.length === 1) {
     const only = present[0];
     const label = STATUS_CONFIG[only.status]?.label || only.status;
-    const isHovered = hoveredStatus === only.status;
     return (
       <g>
         <circle
@@ -270,29 +268,19 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
           r={RING_RADIUS}
           fill="none"
           stroke={STATUS_RING_COLORS[only.status] || '#CBD5E1'}
-          strokeWidth={isHovered ? HOVER_STROKE : BASE_STROKE}
-          strokeOpacity={isHovered ? 1 : 0.85}
-          style={{ transition: 'stroke-width 0.15s ease, stroke-opacity 0.15s ease', cursor: 'pointer' }}
-          onMouseEnter={() => setHoveredStatus(only.status)}
-          onMouseLeave={() => setHoveredStatus(null)}
+          strokeWidth={BASE_STROKE}
+          strokeOpacity={0.85}
+          className="ayoa-status-ring-segment"
+          style={{ '--seg-base': `${BASE_STROKE}`, '--seg-hover': `${HOVER_STROKE}`, transition: 'stroke-width 0.15s ease, stroke-opacity 0.15s ease', cursor: 'pointer' }}
         >
           <title>{`${label} — ${only.count} משימות`}</title>
         </circle>
-        {isHovered && (
-          <RingHoverLabel
-            cx={cx}
-            cy={cy + RING_RADIUS + 14}
-            text={`${label} · ${only.count}`}
-            color={STATUS_RING_COLORS[only.status] || '#CBD5E1'}
-          />
-        )}
       </g>
     );
   }
 
   let cursor = -Math.PI / 2;  // start at the top
   const segments = [];
-  let hoverInfo = null;       // { status, count, midAngle } for the inline label
   present.forEach(({ status, count }) => {
     const fraction = count / total;
     const sweep = Math.max(0, fraction * 2 * Math.PI - GAP);
@@ -305,91 +293,25 @@ function StatusRing({ cx, cy, r, statusBuckets, total }) {
     const y2 = cy + Math.sin(endA) * RING_RADIUS;
     const largeArc = sweep > Math.PI ? 1 : 0;
     const label = STATUS_CONFIG[status]?.label || status;
-    const isHovered = hoveredStatus === status;
-    if (isHovered) {
-      const midAngle = (startA + endA) / 2;
-      hoverInfo = { status, count, label, midAngle };
-    }
     segments.push(
       <path
         key={status}
         d={`M ${x1} ${y1} A ${RING_RADIUS} ${RING_RADIUS} 0 ${largeArc} 1 ${x2} ${y2}`}
         stroke={STATUS_RING_COLORS[status] || '#CBD5E1'}
-        strokeWidth={isHovered ? HOVER_STROKE : BASE_STROKE}
+        strokeWidth={BASE_STROKE}
         strokeLinecap="round"
         fill="none"
-        style={{ transition: 'stroke-width 0.15s ease', cursor: 'pointer' }}
-        onMouseEnter={() => setHoveredStatus(status)}
-        onMouseLeave={() => setHoveredStatus(null)}
+        className="ayoa-status-ring-segment"
+        style={{ '--seg-base': `${BASE_STROKE}`, '--seg-hover': `${HOVER_STROKE}`, transition: 'stroke-width 0.15s ease', cursor: 'pointer' }}
       >
         <title>{`${label} — ${count} משימות`}</title>
       </path>
     );
     cursor = endA + GAP;
   });
-  // Inline floating label that follows the hovered segment — anchored
-  // outside the ring along the segment's midpoint angle.
-  const labelNode = hoverInfo
-    ? (() => {
-        const labelDist = RING_RADIUS + 16;
-        const lx = cx + Math.cos(hoverInfo.midAngle) * labelDist;
-        const ly = cy + Math.sin(hoverInfo.midAngle) * labelDist;
-        return (
-          <RingHoverLabel
-            cx={lx}
-            cy={ly}
-            text={`${hoverInfo.label} · ${hoverInfo.count}`}
-            color={STATUS_RING_COLORS[hoverInfo.status] || '#CBD5E1'}
-          />
-        );
-      })()
-    : null;
   // No pointerEvents:none here — segments need hover to surface their <title>
   // tooltips. Click bubbles up to the parent <g> so the drawer still opens.
-  return <g>{segments}{labelNode}</g>;
-}
-
-// Floating label rendered next to a hovered status-ring segment. Uses
-// foreignObject so the Hebrew text wraps + reads RTL, with a soft pill
-// background matching the segment color.
-function RingHoverLabel({ cx, cy, text, color }) {
-  const W = 110;
-  const H = 22;
-  return (
-    <foreignObject
-      x={cx - W / 2}
-      y={cy - H / 2}
-      width={W}
-      height={H}
-      style={{ pointerEvents: 'none' }}
-    >
-      <div
-        xmlns="http://www.w3.org/1999/xhtml"
-        dir="rtl"
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          fontFamily: 'Heebo, sans-serif',
-          fontSize: '11px',
-          fontWeight: 600,
-          color: '#FFFFFF',
-          backgroundColor: color,
-          borderRadius: '9999px',
-          padding: '0 8px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}
-      >
-        {text}
-      </div>
-    </foreignObject>
-  );
+  return <g>{segments}</g>;
 }
 
 function AyoaCircle({ cx, cy, r, color, label, count, urgent, angle, onClick, statusBuckets, urgency, urgentCount }) {
@@ -807,13 +729,14 @@ export default function AyoaMiniMap({
       </div>
       {/* ADHD-accessibility: cap the SVG width so it doesn't stretch and
           eat the entire viewport on wide screens — keeps the map in scale
-          with the rest of the page and leaves room for the focus tabs. */}
+          with the rest of the page and leaves room for the focus tabs.
+          height moves to CSS (not the SVG attribute, which only accepts
+          numeric/length values) to avoid console warnings. */}
       <svg
         width="100%"
-        height="auto"
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         preserveAspectRatio="xMidYMid meet"
-        style={{ display: 'block', maxWidth: '480px', margin: '0 auto' }}
+        style={{ display: 'block', maxWidth: '480px', margin: '0 auto', height: 'auto' }}
       >
         {/* Branches first — rendered under the circles so the circle
             strokes always sit on top of the line ends. */}
