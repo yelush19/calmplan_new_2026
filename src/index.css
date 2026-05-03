@@ -490,5 +490,12 @@ button:focus-visible {
   border-radius: var(--cp-capsule-radius);
 }
 
+/* Status-ring segment hover: thicken the segment when the user hovers it,
+   surfacing the workflow stage without waiting for the native tooltip. */
+.ayoa-status-ring-segment:hover {
+  stroke-width: var(--seg-hover, 8) !important;
+  stroke-opacity: 1 !important;
+}
+
 :root { --font-he: 'Rubik', 'Assistant', system-ui, sans-serif; }
 body { font-family: var(--font-he); }
