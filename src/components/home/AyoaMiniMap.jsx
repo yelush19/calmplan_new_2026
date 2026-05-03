@@ -577,7 +577,7 @@ export default function AyoaMiniMap({
     if (!selectedGroup) return {};
     const grouped = {};
     drawerTasks.forEach((task) => {
-      const s = getEffectiveStatus(task);
+      const s = getEffectiveStatus(task, clientByName[task.client_name] || null);
       if (!grouped[s]) grouped[s] = [];
       grouped[s].push(task);
     });
@@ -683,7 +683,7 @@ export default function AyoaMiniMap({
     // remapped via migrateStatus so the buckets always match STATUS_RING_COLORS.
     const statusBuckets = {};
     group.tasks.forEach((t) => {
-      const s = getEffectiveStatus(t);
+      const s = getEffectiveStatus(t, clientByName[t.client_name] || null);
       statusBuckets[s] = (statusBuckets[s] || 0) + 1;
     });
     // Deadline urgency breakdown. The user can't tell from a status-only ring
@@ -696,7 +696,7 @@ export default function AyoaMiniMap({
       // Skip tasks that have already left the active workflow.
       // Uses effective status so a stale "not_started" task whose steps
       // already say "awaiting_recording" doesn't get flagged as overdue.
-      const eff = getEffectiveStatus(t);
+      const eff = getEffectiveStatus(t, clientByName[t.client_name] || null);
       if (eff === 'production_completed' || eff === 'awaiting_recording') return;
       const due = (t.due_date || '').slice(0, 10);
       if (!due) return;

@@ -1242,54 +1242,63 @@ function TaskList({ tasks, onStatusChange, onPaymentDateChange, onEdit, onNote, 
   if (multiMonth) {
     return (
       <div className="space-y-3">
-        {monthSections.map(section => (
-          <div key={section.month}>
+        {monthSections.map(section => {
+          // Section colour palette:
+          //   current  → calm green   (foreground priority)
+          //   leftover → amber        (overdue reports — still urgent)
+          //   future   → soft blue    (preview)
+          //   deferred → slate/muted  (past + non-report = not urgent)
+          //   unknown  → neutral
+          const palette = section.isDeferredPast
+            ? { bg: '#F8FAFC', border: '#CBD5E1', text: '#64748B', tag: 'נדחה' }
+            : section.isCurrent
+              ? { bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46', tag: 'החודש' }
+              : section.isLeftover
+                ? { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E', tag: 'נשאר מהחודש הקודם' }
+                : section.isFuture
+                  ? { bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF', tag: '' }
+                  : { bg: '#F1F5F9', border: '#E2E8F0', text: '#475569', tag: '' };
+          return (
             <div
-              className="flex items-center gap-2 px-2 py-1 rounded-md mb-1"
-              style={{
-                backgroundColor: section.isCurrent ? '#ECFDF5' : section.isLeftover ? '#FEF3C7' : section.isFuture ? '#EFF6FF' : '#F1F5F9',
-                border: `1px solid ${section.isCurrent ? '#A7F3D0' : section.isLeftover ? '#FCD34D' : section.isFuture ? '#BFDBFE' : '#E2E8F0'}`,
-              }}
+              key={section.key || section.month}
+              style={{ opacity: section.isDeferredPast ? 0.75 : 1 }}
             >
-              <span
-                className="text-[11px] font-bold"
-                style={{ color: section.isCurrent ? '#065F46' : section.isLeftover ? '#92400E' : section.isFuture ? '#1E40AF' : '#475569' }}
+              <div
+                className="flex items-center gap-2 px-2 py-1 rounded-md mb-1"
+                style={{ backgroundColor: palette.bg, border: `1px solid ${palette.border}` }}
               >
-                {section.label}
-              </span>
-              <span
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  color: section.isCurrent ? '#065F46' : section.isLeftover ? '#92400E' : section.isFuture ? '#1E40AF' : '#475569',
-                  border: '1px solid currentColor',
-                }}
-              >
-                {section.tasks.length}
-              </span>
-              {section.isLeftover && (
-                <span className="text-[10px] font-semibold text-amber-700">
-                  נשאר מהחודש הקודם
+                <span className="text-[11px] font-bold" style={{ color: palette.text }}>
+                  {section.label}
                 </span>
-              )}
-              {section.isCurrent && (
-                <span className="text-[10px] font-semibold text-emerald-700">
-                  החודש
+                <span
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    color: palette.text,
+                    border: '1px solid currentColor',
+                  }}
+                >
+                  {section.tasks.length}
                 </span>
-              )}
+                {palette.tag && (
+                  <span className="text-[10px] font-semibold" style={{ color: palette.text }}>
+                    {palette.tag}
+                  </span>
+                )}
+              </div>
+              <SingleMonthTaskList
+                tasks={section.tasks}
+                onStatusChange={onStatusChange}
+                onPaymentDateChange={onPaymentDateChange}
+                onEdit={onEdit}
+                onNote={onNote}
+                showDeadlineContext={showDeadlineContext}
+                showDate={showDate}
+                showPaymentDate={showPaymentDate}
+              />
             </div>
-            <SingleMonthTaskList
-              tasks={section.tasks}
-              onStatusChange={onStatusChange}
-              onPaymentDateChange={onPaymentDateChange}
-              onEdit={onEdit}
-              onNote={onNote}
-              showDeadlineContext={showDeadlineContext}
-              showDate={showDate}
-              showPaymentDate={showPaymentDate}
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
